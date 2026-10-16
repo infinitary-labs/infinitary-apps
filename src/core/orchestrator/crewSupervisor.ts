@@ -157,6 +157,8 @@ import {
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
   DEFAULT_WORKSPACE_WORD,
+  MERGE_AFTER_FIXING_WORDS,
+  MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
   REVIEW_WORDS,
   SKIP_RULES_MERGE_WORDS,
@@ -326,6 +328,7 @@ import {
 } from "./intentBrief";
 import {
   ASSESSMENT_BOUND_MS,
+  approvableOffer,
   decideMergeRepair,
   isCaptainGuidance,
   mergeHold,
@@ -1246,6 +1249,7 @@ export class CrewSupervisor {
         this.ladder.noteCapAnswered(card, action, by, firstmateCard),
       closeAnsweredTask: (card, action, by) => this.settle.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts(taskId),
+      mergeLabel: (card) => this.mergeLabel(card),
       followupNotice: (taskId) => this.followupNotice(taskId),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
@@ -9895,6 +9899,29 @@ export class CrewSupervisor {
    */
   private mergeModeFor(taskId: string): "merge-pr" | "land" {
     return this.taskDelivery(taskId) === "direct-pr" ? "merge-pr" : "land";
+  }
+
+  /**
+   * What a completion card's merge says it does (INF-23): a click on checks
+   * still running keeps the captain's approval and the host merges once
+   * they pass, so it reads Merge when checks pass; on failed checks the
+   * approval waits for a fix, so it reads Merge after fixing errors;
+   * otherwise Merge the pull request. Undefined - the label as it stands -
+   * on a card whose click approves nothing (`approvableOffer`), where a
+   * click on such checks is only refused.
+   */
+  private mergeLabel(card: Card): string | undefined {
+    const record = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
+    if (!record) return undefined;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const offer = approvableOffer(record, repo, this.taskDelivery(record.id), {
+      cardId: card.id,
+      offerId: card.offerId,
+    });
+    if (!offer) return undefined;
+    const ci = record.delivery?.ci;
+    if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
+    return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
   }
 
   /**

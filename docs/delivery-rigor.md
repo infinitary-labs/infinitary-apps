@@ -340,6 +340,12 @@ The captain's merge click on a completion card is an approval of that change, an
   It is minted only on a GitHub direct-pr task for an offer with a baseline on the pull request the task still names.
   A first mate card, a seeded card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
+- **Its words (INF-23).**
+  The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while the task's checks are still running, Merge after fixing errors once they failed (the captain's words), and Merge the pull request again once they pass.
+  `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
+  A click then keeps the approval waiting on the checks, and its feed line says what the merge waits for (`keptFeedLine`, by the task's last reading): the running checks, or a fix after failed ones.
+  A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix that only brought the change up to date, or the same version passing on a rerun, merges on the kept approval once the checks pass.
+  A card whose click approves nothing keeps its words, since a click there is refused and nothing waits.
 - **The head it covers.**
   A merge under the approval runs with a `MergeGuard` (`PrCiService.merge`): only the candidate head (the approved head, or the newest accepted repair) on the pinned pull request.
   A pull request at any other head stops as `moved`, and nothing is sent.

@@ -5,12 +5,17 @@ import {
   type MergeRepairDeclaration,
   type MergeRepairImpact,
 } from "@shared/checkRepair";
+import { hasChangeRequests } from "@shared/forge";
+import type { RepoDelivery } from "@shared/repos";
+import { type ForgeRepo, forgeLocationOf } from "../forge";
 import type {
+  CompletionOffer,
   MergeAuthorization,
   MergeRepairAssessment,
   MergeRepairStep,
   MergeWait,
   TaskDelivery,
+  TaskRecord,
 } from "../storage/taskStore";
 import type { TaskService } from "../tasks/taskService";
 import type { WakeBody } from "./wakes";
@@ -35,6 +40,32 @@ import type { WakeBody } from "./wakes";
  *   typed line accepts the repair or ends the approval, so the merge
  *   neither waits on it forever nor runs on an unknown.
  */
+
+/**
+ * The offer a captain's merge click on this card approves (FI3-304): the
+ * completion offer the host published after its checks passed at a known
+ * head, on a direct-pr task whose project lives on GitHub or GitLab, for
+ * the pull request the task still names - with where that project lives.
+ * Undefined where the click approves no head and is one attempt: a first
+ * mate card, a seeded card, a plain Git host or an ambiguous baseline.
+ */
+export function approvableOffer(
+  record: TaskRecord,
+  repo: ForgeRepo | undefined,
+  delivery: RepoDelivery | undefined,
+  card: { cardId: string; offerId?: string | undefined },
+): { baseline: CompletionOffer; host: string; owner: string; name: string } | undefined {
+  if (!card.offerId || delivery !== "direct-pr") return undefined;
+  if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
+    return undefined;
+  const location = forgeLocationOf(repo);
+  if (!location.owner || !location.name || !location.host) return undefined;
+  const baseline = record.delivery?.completionOffers?.find(
+    (offer) => offer.cardId === card.cardId && offer.offerId === card.offerId,
+  );
+  if (!baseline || baseline.prNumber !== record.delivery?.prNumber) return undefined;
+  return { baseline, host: location.host, owner: location.owner, name: location.name };
+}
 
 /** The one head an approval can merge now. */
 export function candidateHead(authorization: MergeAuthorization): string {
@@ -539,9 +570,15 @@ export function decideMergeRepair(
  * The feed line for a click whose merge did not happen yet but whose
  * approval stands, in the vocabulary's words (never a raw failure). `place`
  * is where the project lives in the person's words ("GitHub", "GitLab", a
- * host's own address).
+ * host's own address); `checks` is the task's last checks reading, which
+ * tells a wait for a fix from a wait for checks still running (INF-23).
  */
-export function keptFeedLine(title: string, wait: MergeWait, place: string): string {
+export function keptFeedLine(
+  title: string,
+  wait: MergeWait,
+  place: string,
+  checks?: string,
+): string {
   const kept = "Your merge is kept";
   switch (wait) {
     case "conflict":
@@ -551,7 +588,9 @@ export function keptFeedLine(title: string, wait: MergeWait, place: string): str
     case "evidence":
       return `Cannot merge "${title}" yet: its crewmate could not tell what bringing it up to date changed, so another crewmate is checking. ${kept} and runs if that check finds it only brought the change up to date.`;
     case "checks":
-      return `Cannot merge "${title}" yet: the checks have not all passed. ${kept} and runs once they pass.`;
+      return checks === "red"
+        ? `Your merge of "${title}" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
+        : `Your merge of "${title}" waits for the checks: it runs by itself once they all pass.`;
     case "review":
       return `Cannot merge "${title}" yet: its review has not passed on the newest version. ${kept} and runs once it does.`;
     case "cap":

@@ -51,6 +51,20 @@ export const MERGE_WORDS = {
   land: "Merge the branch",
 } as const;
 
+/**
+ * The merge button on a completion card while its pull request's checks
+ * are still running (INF-23): the click keeps the captain's approval, and
+ * the app merges by itself once the checks pass.
+ */
+export const MERGE_WHEN_CHECKS_PASS_WORDS = "Merge when checks pass";
+
+/**
+ * The same button once the checks have failed (the captain's words on
+ * INF-23): the click keeps his approval for a fix, which brings a new
+ * version with fresh checks.
+ */
+export const MERGE_AFTER_FIXING_WORDS = "Merge after fixing errors";
+
 /** The host's button on a card that merges past the branch rules (FI3-1571 piece 2). */
 export const SKIP_RULES_MERGE_WORDS = "Merge, skipping the rules";
 

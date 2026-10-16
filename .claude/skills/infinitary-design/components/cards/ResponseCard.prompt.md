@@ -74,6 +74,8 @@ A GIF demo, the fallback when no MP4 could be made, shows the same poster and th
 A card carrying a settle effect shows the host-rendered `.inf-facts` strip (project, crewmate model, posture, PR link, CI state, any round caps the host has counted, and the review on a reviewed task) that the body never repeats.
 Its cells are the shape the task's own fact strip takes on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), with the same state dot and words, and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
 The strip is the first thing in the action row, pushed left of the buttons in a frame of its own, so it stays in view however long the body is; when the row cannot hold both it takes its own row above the buttons, and its hairline shows only where it follows a body, on a past card.
+The completion card's merge says what a click does, and follows the strip's checks (INF-23): "Merge the pull request" while they passed; "Merge when checks pass" while they are still running, because a click then keeps the captain's merge and the app merges once they pass; and "Merge after fixing errors" once they failed, because the kept merge then waits for a fix, which brings a new version with fresh checks.
+A card whose click keeps nothing, such as a first mate's, keeps its words.
 
 **The risk chart.**
 A crewmate's merge card carries its risk as a radar the app draws at the card's top right, level with the title's top and flush with its content edge (FI3-1127's plan; the app's `docs/card-authoring.md`, "The risk chart").

@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { CHECK_REFRESH_MS } from "../../src/core/orchestrator/checkWatch";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CHECK_WORDS } from "../../src/shared/vocabulary";
+import { CHECK_WORDS, MERGE_AFTER_FIXING_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -69,6 +69,10 @@ test("external check changes refresh the completion strip and task facts", async
     const frame = cardBody(app.page, STALE_CHECKS_CARD);
     await expect(factsStrip(frame).checks).toBeVisible();
     await expect(factsStrip(frame).checks).toHaveText(CHECK_WORDS.green);
+    // The merge names what a click does (INF-23): on passed checks it merges.
+    const merge = (words: string) =>
+      app.page.locator("[data-card-layer]").getByRole("button", { name: words, exact: true });
+    await expect(merge(MERGE_WORDS["merge-pr"])).toBeVisible();
     await app.page.screenshot({ path: test.info().outputPath("card-green.png") });
 
     // The crewmate reported and waits on the captain: its work is complete.
@@ -85,6 +89,9 @@ test("external check changes refresh the completion strip and task facts", async
     await expect.poll(() => ledger()?.delivery?.ci, { timeout: 180_000 }).toBe("red");
     expect(checkReads()).toBeGreaterThan(readsBefore);
     await expect(factsStrip(frame).checks).toHaveText(CHECK_WORDS.red);
+    // On failed checks a click keeps the approval for a fix.
+    await expect(merge(MERGE_AFTER_FIXING_WORDS)).toBeVisible();
+    await expect(merge(MERGE_WORDS["merge-pr"])).toHaveCount(0);
     const cards = await app.page.evaluate(() => window.infinitary.cards.list());
     const card = cards.find((c) => c.title === STALE_CHECKS_CARD);
     await app.page.screenshot({ path: test.info().outputPath("card-after-red.png") });

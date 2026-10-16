@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-when-checks-pass",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "The merge button says what your merge waits for",
+      "body": "While a pull request's checks are still running, the button on its card now reads Merge when checks pass: clicking it keeps your merge, and the app merges the pull request by itself once the checks pass. Once the checks have failed, it reads Merge after fixing errors: your merge waits for a fix, which brings a new version with fresh checks, and if the fix changes the work, its crewmate asks you again on a new card. The activity line after the click says which one your merge is waiting for. Once the checks pass, the button reads Merge the pull request again.",
+      "picture": {
+        "dark": "merge-when-checks-pass-dark.webp",
+        "light": "merge-when-checks-pass-light.webp",
+        "alt": "A completion card whose checks are still running, with its button reading Merge when checks pass beside Discard."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

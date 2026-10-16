@@ -128,6 +128,8 @@ export type CardServiceHost = {
   closeAnsweredTask(card: Card, action: string, by: CardActor): boolean;
   /** The fact strip and the follow-ups a settle card carries (HTML fragments). */
   settleFacts(taskId: string): string | undefined;
+  /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */
+  mergeLabel?(card: Card): string | undefined;
   followupNotice(taskId: string): string | undefined;
   broadcastCrewCounts(): void;
   broadcastEvent: (event: FmEvent) => void;
@@ -293,18 +295,31 @@ export class CardService {
     this.broadcastTimer = undefined;
   }
 
-  /** Host facts follow the record, not an author's revision or close-out. */
+  /**
+   * Host facts follow the record, not an author's revision or close-out:
+   * the fact strip, and the words of the merge it names (INF-23).
+   */
   refreshSettleFacts(taskIds?: readonly string[]): void {
     let changed = false;
+    const relabeled = (card: Card): Card => {
+      const label = this.host.mergeLabel?.(card);
+      const merges = (action: Card["actions"][number]) =>
+        action.effect?.kind === "settle" && action.effect.mode === "merge";
+      if (!label || !card.actions.some((action) => merges(action) && action.label !== label))
+        return card;
+      return {
+        ...card,
+        actions: card.actions.map((action) => (merges(action) ? { ...action, label } : action)),
+      };
+    };
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
       if (!card.actions.some((action) => action.effect?.kind === "settle")) return card;
       const facts = this.host.settleFacts(card.taskId);
-      if (!facts) return card;
-      const split = splitSettleFacts(card.body);
-      if (!split) return card;
+      const split = facts ? splitSettleFacts(card.body) : undefined;
+      if (!facts || !split) return relabeled(card);
       const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
-      return body === card.body ? card : { ...card, body };
+      return relabeled(body === card.body ? card : { ...card, body });
     };
     for (const [id, card] of this.cards) {
       const next = refreshed(card);

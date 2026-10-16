@@ -28,6 +28,11 @@ import type { WorkShape } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
+import {
+  MERGE_AFTER_FIXING_WORDS,
+  MERGE_WHEN_CHECKS_PASS_WORDS,
+  MERGE_WORDS,
+} from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { completionCardBody } from "../../../tests/helpers/completionCard";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
@@ -106,7 +111,7 @@ import {
 import { crewHoldWays } from "./holds";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
 import { REVIEW_FIX_RULES, renderRigorSection, type SpawnIntent } from "./intentBrief";
-import type { LineageFacts } from "./mergeAuthorization";
+import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
 import { Ticker } from "./ticker";
 import {
@@ -3042,6 +3047,52 @@ describe("CrewSupervisor", () => {
       return h.supervisor.policiesChanged(h.taskId, policies);
     };
 
+    /**
+     * The captain's ask on FI3-1803, as he settled it (INF-23): a click on
+     * checks that have not passed already keeps his approval, so the button
+     * says what it waits for - Merge when checks pass while they run, his
+     * "Merge after fixing errors" once they failed, Merge the pull request
+     * once they pass - and the feed line after a click on failed checks
+     * says the merge waits for a fix.
+     */
+    it("names the merge for what a click does while the checks run or have failed, and merges once they pass", async () => {
+      const h = await approved();
+      const label = () =>
+        h
+          .cards()
+          .find((card) => card.id === h.card.id)
+          ?.actions.find(
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+          )?.label;
+      expect(label()).toBe(MERGE_WORDS["merge-pr"]);
+      const readings: [ForgeCheckState[], string][] = [
+        [["failure"], MERGE_AFTER_FIXING_WORDS],
+        [["success", "pending"], MERGE_WHEN_CHECKS_PASS_WORDS],
+        [["success"], MERGE_WORDS["merge-pr"]],
+        [["failure"], MERGE_AFTER_FIXING_WORDS],
+      ];
+      for (const [states, words] of readings) {
+        // The crewmate reads its checks: the record, and the card with it.
+        h.forge.states = states;
+        await h.declare({});
+        await vi.waitFor(() => expect(label()).toBe(words));
+      }
+
+      // The click on failed checks merges nothing now, keeps the approval and says it waits for a fix.
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+      expect(h.forge.merges).toEqual([]);
+      expect(h.events).toContainEqual({
+        type: "firstmate_note",
+        text: keptFeedLine("Ship the meter", "checks", "GitHub", "red"),
+      });
+      // They pass on this version, and the next idle boundary merges it with no second click.
+      await repairTurn(h, async () => {
+        h.forge.states = ["success"];
+      });
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+    });
+
     it("an already-autonomous task can merge through its routine completion offer", async () => {
       const h = await approved();
       const repoId = h.tasks.get(h.taskId)?.repoId;
@@ -3607,6 +3658,24 @@ describe("CrewSupervisor", () => {
         status: "consumed",
         receipt: { head: APPROVED, sha: `squash-${APPROVED}` },
       });
+    });
+
+    it("leaves the merge's words alone on a card whose click approves nothing, whatever the checks read", async () => {
+      // There a click on such checks is refused and nothing waits (INF-23).
+      const { supervisor, tasks, cards } = setup(fakeCrewmate());
+      seedTask(tasks, { id: "merge", title: "Ship it", status: "idle", worktreeDir: "/pr" });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      const id = supervisor.addFirstmateCard({
+        requiredActions: [],
+        taskId: "merge",
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
+      });
+      tasks.recordDelivery("merge", { mode: "direct-pr", ci: "red", ciAt: Date.now() });
+      await tick();
+      const shown = cards().find((card) => card.id === id);
+      expect(shown?.actions.map((action) => action.label)).toEqual(["Put it in"]);
     });
 
     it("a click on an offer the host never published at a known head approves nothing", async () => {

@@ -29,6 +29,7 @@ import {
 } from "../workspace/workspaceService";
 import { type CardService, cardEmitter } from "./cardService";
 import {
+  approvableOffer,
   candidateHead,
   keptFeedLine,
   keptNote,
@@ -1426,19 +1427,13 @@ export class SettleService {
     generation: number,
     now: number,
   ): MergeAuthorization | undefined {
-    const offerId = approval.offerId;
-    if (!offerId || this.host.taskDelivery(record.id) !== "direct-pr") return undefined;
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
-      return undefined;
-    const location = forgeLocationOf(repo);
-    if (!location.owner || !location.name || !location.host) return undefined;
-    const baseline = record.delivery?.completionOffers?.find(
-      (offer) => offer.cardId === approval.cardId && offer.offerId === offerId,
-    );
     // An ambiguous baseline approves nothing: the offer must be about the
     // pull request the task still names.
-    if (!baseline || baseline.prNumber !== record.delivery?.prNumber) return undefined;
+    const offer = approvableOffer(record, repo, this.host.taskDelivery(record.id), approval);
+    const offerId = approval.offerId;
+    if (!offer || !offerId || !record.repoId || !record.branch) return undefined;
+    const { baseline } = offer;
     return {
       version: 1,
       id: randomUUID(),
@@ -1454,9 +1449,9 @@ export class SettleService {
       },
       target: {
         repoId: record.repoId,
-        host: location.host,
-        owner: location.owner,
-        name: location.name,
+        host: offer.host,
+        owner: offer.owner,
+        name: offer.name,
         prNumber: baseline.prNumber,
         branch: record.branch,
         delivery: "direct-pr",
@@ -1754,7 +1749,15 @@ export class SettleService {
           taskId,
           title,
           wait.head,
-          { ok: false, text: keptFeedLine(title, checked.wait, this.placeOf(record)) },
+          {
+            ok: false,
+            text: keptFeedLine(
+              title,
+              checked.wait,
+              this.placeOf(record),
+              this.host.tasks.get(taskId)?.delivery?.ci,
+            ),
+          },
           checked.wait,
         );
       }
@@ -1832,8 +1835,12 @@ export class SettleService {
         : {}),
     });
     if (!wakesFirstmate(wait)) return;
-    const place = this.placeOf(this.host.tasks.get(taskId));
-    this.host.broadcastEvent({ type: "firstmate_note", text: keptFeedLine(title, wait, place) });
+    const record = this.host.tasks.get(taskId);
+    const place = this.placeOf(record);
+    this.host.broadcastEvent({
+      type: "firstmate_note",
+      text: keptFeedLine(title, wait, place, record?.delivery?.ci),
+    });
     this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
       text: `${result.text}\n\n${keptNote(wait, head, place)}`,
@@ -1991,7 +1998,12 @@ export class SettleService {
     this.host.broadcastEvent({
       type: "firstmate_note",
       text: kept
-        ? keptFeedLine(title, kept, this.placeOf(this.host.tasks.get(taskId)))
+        ? keptFeedLine(
+            title,
+            kept,
+            this.placeOf(this.host.tasks.get(taskId)),
+            this.host.tasks.get(taskId)?.delivery?.ci,
+          )
         : settleFeedLine(title, mode, result),
     });
     this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, result);

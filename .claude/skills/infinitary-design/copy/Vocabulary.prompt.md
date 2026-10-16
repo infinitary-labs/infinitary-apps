@@ -19,7 +19,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | --- | --- |
 | repo, as the app's noun | your project, the project. "repository" is allowed when the sentence points at GitHub, and in text only the models read |
 | worktree, working tree, checkout | a working copy (the isolated copy this app makes). A git branch is "branch" |
-| land, landing, landed, ship, put it in | merge; "merge the pull request", "merge the branch", "Merged #N on GitHub", "Merged \"title\" into main", "Cannot merge" |
+| land, landing, landed, ship, put it in | merge; "merge the pull request", "merge the branch", "merge when checks pass", "merge after fixing errors", "Merged #N on GitHub", "Merged \"title\" into main", "Cannot merge" |
 | save point | commit; "commit subject" |
 | sent up | push; "pushed the branch", "deleted the pushed branch" |
 | tidy-up | lint; "the lint found something", "the lint refused it" |

@@ -22,9 +22,10 @@ export function motionEase(el: Element): string {
  * the panel is still drawn. Opening draws it and grows it from `--scale-pop`
  * at the centre of `trigger` over `--dur-quick`. Closing keeps the drawing,
  * inert and hidden from assistive technology, while it fades out over
- * `--dur-popover-out`, then removes it; reopening in the meantime takes it
- * back where it stands. Reduced motion makes both a cut. It checks after
- * every render, since a caller may draw the panel a render after it opens.
+ * `--dur-popover-out`, then removes it; reopening in the meantime, up to the
+ * render that removes it, takes it back where it stands. Reduced motion makes
+ * both a cut. It checks after every render, since a caller may draw the panel
+ * a render after it opens.
  */
 export function usePopoverPresence(
   open: boolean,
@@ -39,6 +40,10 @@ export function usePopoverPresence(
     const el = panel.current;
     if (!drawn || !el) {
       shown.current = false;
+      // A fade-out is let go only once its panel is removed: until then a
+      // finished one still holds the panel hidden, and a reopening must take
+      // it back.
+      if (!drawn) exit.current = null;
       return;
     }
     if (open) {
@@ -90,9 +95,7 @@ export function usePopoverPresence(
     );
     exit.current = leaving;
     leaving.onfinish = () => {
-      if (exit.current !== leaving) return;
-      exit.current = null;
-      setDrawn(false);
+      if (exit.current === leaving) setDrawn(false);
     };
   });
   return drawn;

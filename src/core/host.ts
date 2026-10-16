@@ -4,7 +4,7 @@ import type { BuildFlavor } from "@shared/userDataFolders";
 import type { VoiceDownloadProgress } from "@shared/voice";
 import type { BrowserKey } from "./browser/keys";
 import type { BrowserNode } from "./browser/outline";
-import type { MediaProbe } from "./pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "./pi/cardImages";
 /**
  * The host seam (daemon study D0, data/fm3000-daemon-process-study-s1
  * sections 1.6 and 4.5).
@@ -406,6 +406,13 @@ export type HostCapabilities = {
    * host that cannot play one, where a card naming a recording is refused.
    */
   readonly mediaProbe?: MediaProbe;
+  /**
+   * The isolated font loader a preview's project font is loaded through
+   * before the card goes up (docs/card-authoring.md "Fonts by reference");
+   * absent on a host that cannot load one, where a card naming a font file
+   * is refused.
+   */
+  readonly typefaceProbe?: TypefaceProbe;
   /** Physical memory facts in bytes; absent or unreadable is unknown, never zero. */
   readonly resourceMemory?: () => ResourceMemory | null;
   /**

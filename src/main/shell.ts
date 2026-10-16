@@ -290,7 +290,7 @@ export class Shell {
     this.core()?.services.sshConnections.suspend();
   }
 
-  /** Where a card picture's bytes come from now. */
+  /** Where a card picture's, recording's or project font's bytes come from now. */
   pictures(): PictureSource {
     const mode = this.mode;
     if (mode?.kind === "view") {
@@ -298,6 +298,7 @@ export class Shell {
         fetch: (fileName: string) => mode.view.picture(fileName),
         fetchMedia: (fileName: string, offset: number, length: number) =>
           mode.view.recordingPiece(fileName, offset, length),
+        fetchTypeface: (fileName: string) => mode.view.typeface(fileName),
       };
     }
     return { root: mode?.core.paths.crewmatesDir ?? "" };

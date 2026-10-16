@@ -1,6 +1,11 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { cardPictureUrl } from "@shared/cardPictures";
 import type { Card } from "@shared/cards";
 import { describe, expect, it } from "vitest";
+import { projectFontBytes } from "../../../tests/helpers/fontFixture";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { verifyCardImages } from "../pi/cardImages";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 
 const card = (body: string, extra: Partial<Card> = {}): Card => ({
@@ -143,5 +148,32 @@ describe("revision destinations", () => {
       revisionLinks(image(`task-${"a".repeat(32)}`, false), image(`task-${"b".repeat(32)}`, true))
         ?.targets,
     ).toEqual([]);
+  });
+});
+
+// INF-145's review: every emit kept a font preview's font under a fresh name,
+// so a revision that changed only its title or buttons read as "Preview updated".
+describe("a font preview's revisions", () => {
+  it("marks only the title when only the title changed, as the host writes both versions", async () => {
+    const base = scratchDir("fm-card-navigation-fonts-");
+    const worktree = join(base, "worktree");
+    await mkdir(worktree, { recursive: true });
+    await writeFile(join(worktree, "face.woff2"), projectFontBytes());
+    const root = {
+      worktree,
+      dir: join(base, "crewmates", "t1", "cards"),
+      taskId: "t1",
+      typefaceProbe: async (typefaces: readonly unknown[]) =>
+        typefaces.map(() => ({ ok: true as const })),
+    };
+    const written =
+      '<p>The balance screen.</p><style>@font-face{font-family:"Wallet";src:url("face.woff2")}.b{font-family:"Wallet"}</style><p class="b">$42.50</p>';
+    const first = await verifyCardImages(written, root);
+    const second = await verifyCardImages(written, root);
+    const targets = revisionLinks(
+      card(first.body),
+      card(second.body, { offerId: "w", title: "Review, renamed" }),
+    )?.targets;
+    expect(targets?.map((target) => target.label)).toEqual(["Title"]);
   });
 });

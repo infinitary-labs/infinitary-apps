@@ -11,7 +11,11 @@ import {
   actionRefusal,
 } from "@shared/actions";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
-import { parseCardMediaFileName, parseCardPictureFileName } from "@shared/cardPictures";
+import {
+  parseCardMediaFileName,
+  parseCardPictureFileName,
+  parseCardTypefaceFileName,
+} from "@shared/cardPictures";
 import type { PastCard } from "@shared/cards";
 import { CREATE_PANEL_SLOT_ID } from "@shared/createPanelSlot";
 import { isCustomApiProvider } from "@shared/customApi";
@@ -423,6 +427,23 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         throw new Error("No card picture has that name.");
       }
       return { contentType: picture.contentType, data: bytes.toString("base64") };
+    },
+
+    // The home's own copy of a project font a preview names, for a view's
+    // frames (docs/view.md), located from the minted name alone as a
+    // picture is; a refusal names no path.
+    "inf:cards:typeface": async (name) => {
+      const typeface = parseCardTypefaceFileName(name);
+      if (!typeface) throw new Error("That is not the name of a card's font.");
+      let bytes: Buffer;
+      try {
+        bytes = await readFile(
+          join(crewmateCardPicturesDir(services.paths, typeface.taskId), typeface.fileName),
+        );
+      } catch {
+        throw new Error("No card font has that name.");
+      }
+      return { contentType: typeface.contentType, data: bytes.toString("base64") };
     },
 
     // A piece of the home's own copy of a card's demo recording, for a

@@ -39,6 +39,7 @@ import {
 import { captainCardChoice, holdsSegment, latestServedTurn } from "../../tests/e2e/providerRequest";
 import { connectClient, freePort, type ReceivedPush } from "../../tests/helpers/connectionClient";
 import { recordNewerMigration } from "../../tests/helpers/database";
+import { projectFontBytes } from "../../tests/helpers/fontFixture";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { type ScriptedClient, startScriptedClient } from "../../tests/helpers/scriptedClient";
 import { startConnection } from "./connection/connection";
@@ -3273,7 +3274,7 @@ describe("the connection serves the core to paired devices", () => {
     expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
 
-  it("shows a view a card's picture by its name, and says in the feed when a view leaves", async () => {
+  it("shows a view a card's picture, recording and font by name, and says in the feed when a view leaves", async () => {
     const { grant } = await pairDevice("view", "Mac D");
     const view = await connectClient(grant);
     // The home's own copy, where the card picture host keeps it.
@@ -3307,6 +3308,16 @@ describe("the connection serves the core to paired devices", () => {
     });
     for (const asked of [name, `task-pic-${"d".repeat(32)}.mp4`])
       await expect(view.invoke("inf:cards:media", [asked, 0, 1])).rejects.toThrow(/recording/);
+    // A project font a preview names (INF-128), whole, by its minted name alone.
+    const typeface = `task-pic-${"e".repeat(32)}.woff2`;
+    const font = projectFontBytes();
+    writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", typeface), font);
+    expect(await view.invoke("inf:cards:typeface", [typeface])).toEqual({
+      contentType: "font/woff2",
+      data: font.toString("base64"),
+    });
+    for (const asked of [name, `task-pic-${"f".repeat(32)}.woff2`, "../task-pic/cards/x.woff2"])
+      await expect(view.invoke("inf:cards:typeface", [asked])).rejects.toThrow(/card('s)? font/);
 
     // Leave: the view comes off the list, cut as for a Remove, named in the feed.
     view.sendRaw(JSON.stringify({ t: "leave" }));

@@ -1,23 +1,37 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   CARD_MEDIA_TYPES,
+  CARD_TYPEFACE_TYPES,
   type CardMediaExtension,
   type CardPictureExtension,
+  type CardTypefaceExtension,
   cardMediaFileName,
   cardMediaUrl,
   cardPictureFileName,
   cardPictureUrl,
+  cardTypefaceFileName,
+  cardTypefaceUrl,
   isPictureTaskId,
 } from "@shared/cardPictures";
 import type { CardDemo, CardPicture } from "@shared/cards";
 import { hasHook, hasHookClass, hookAttributes, hookValue } from "@shared/codeNames";
 import { Parser } from "htmlparser2";
+import { readFont } from "../fontFormat";
 import { isGif, MAX_GIF_DEMO_BYTES, readDemoGif } from "../gifFormat";
 import { type PictureFormat, type PictureSize, readPicture } from "../pictureFormat";
 import { readDemoVideo } from "../videoFormat";
+import { fontFaceUrls } from "./fontFaces";
 
 /**
  * Pictures by reference (card pictures, phase 2 of the locked plan; captain's
@@ -49,6 +63,15 @@ import { readDemoVideo } from "../videoFormat";
  * the pictures and rewrites only that figure's `data-inf-demo` (to the frame
  * scheme's `media` host) and `data-inf-demo-duration` (from the file). A
  * recording is never named by a URL: one that is refuses the card.
+ *
+ * A project's font (docs/card-authoring.md "Fonts by reference") is markup
+ * too: a `url()` naming a font file inside an `@font-face` rule of a
+ * `<style>` element (`./fontFaces`). The host checks the file's own
+ * structure (`readFont`), loads all of a card's fonts in its own font
+ * engine (`TypefaceProbe`), copies each beside the pictures under a name its
+ * own bytes give it, and rewrites only that `url()` (to the frame scheme's
+ * `typefaces` host). A font named by a URL is left as written, as a
+ * picture is: the frame loads none.
  */
 
 export const MAX_PICTURE_BYTES = 8 * 1024 * 1024;
@@ -87,6 +110,29 @@ export type MediaProbe = (recording: {
   contentType: (typeof CARD_MEDIA_TYPES)["mp4"];
 }) => Promise<MediaProbeResult>;
 
+/** The largest project font a card may name; it counts toward the card's total with its pictures. */
+export const MAX_TYPEFACE_BYTES = 8 * 1024 * 1024;
+
+/** A refusal's words for a font the host's font engine could not load; a scripted stand-in recognizes them. */
+export const TYPEFACE_UNREAD_WORDS = "could not be read by the font engine";
+
+/** What the host's font engine made of a project font: it loaded, or why it did not. */
+export type TypefaceProbeResult = { ok: true } | { ok: false; reason: string };
+
+/**
+ * The host's isolated font loader (`src/main/mediaProbe.ts`): it loads a
+ * card's fonts as web fonts, all in one window of its own, with no network,
+ * sign-in or app bridge, through the same sanitizer a card's frame uses,
+ * within `MEDIA_PROBE_DEADLINE_MS`, and answers one result per font in the
+ * order given. The core stays free of Electron, so the host hands this in.
+ */
+export type TypefaceProbe = (
+  typefaces: readonly {
+    bytes: Buffer;
+    contentType: (typeof CARD_TYPEFACE_TYPES)[CardTypefaceExtension];
+  }[],
+) => Promise<TypefaceProbeResult[]>;
+
 /** The class that makes a figure one group of pictures (the frame stylesheet lays it out). */
 export const PICTURE_GROUP_CLASS = "inf-pictures";
 
@@ -109,6 +155,8 @@ export type CardPictureRoot = {
   evidenceDir?: string;
   /** The host's decoder for demo recordings; absent, a card that names one is refused. */
   probe?: MediaProbe;
+  /** The host's font loader for project fonts; absent, a card that names one is refused. */
+  typefaceProbe?: TypefaceProbe;
 };
 
 /**
@@ -122,6 +170,7 @@ export function cardPictureRoot(spec: {
   picturesDir?: string;
   evidenceDir?: string;
   probeMedia?: MediaProbe;
+  probeTypeface?: TypefaceProbe;
 }): CardPictureRoot | undefined {
   return spec.picturesDir && spec.cwd && spec.taskId
     ? {
@@ -130,6 +179,7 @@ export function cardPictureRoot(spec: {
         taskId: spec.taskId,
         ...(spec.evidenceDir ? { evidenceDir: spec.evidenceDir } : {}),
         ...(spec.probeMedia ? { probe: spec.probeMedia } : {}),
+        ...(spec.probeTypeface ? { typefaceProbe: spec.probeTypeface } : {}),
       }
     : undefined;
 }
@@ -183,16 +233,29 @@ type Found = {
   misplaced: string[];
   /** Whether a demo figure sits inside another. */
   nested: boolean;
+  /** Each `<style>` element's sheet: the byte range of its text in the body. */
+  styles: { start: number; end: number }[];
 };
 
 /** Every `<img>` in the body, in order, each tagged with its group, and every demo figure. */
 function findImages(body: string): Found {
-  const found: Found = { images: [], demos: [], misplaced: [], nested: false };
+  const found: Found = { images: [], demos: [], misplaced: [], nested: false, styles: [] };
   // Open figures, innermost last: whether each is a group, where it starts, and its demo.
   const figures: { group: boolean; start: number; demo?: FoundDemo }[] = [];
+  // The sheet of the style element open now; its text arrives raw, maybe in pieces.
+  let sheet: { start: number; end: number } | undefined;
   const parser = new Parser(
     {
+      ontext() {
+        if (!sheet) return;
+        if (sheet.end === sheet.start) sheet.start = parser.startIndex;
+        sheet.end = parser.endIndex + 1;
+      },
       onopentag(name, attribs) {
+        if (name === "style") {
+          sheet = { start: parser.endIndex + 1, end: parser.endIndex + 1 };
+          return;
+        }
         const isDemo = hasHook(attribs, "demo");
         if (isDemo && name !== "figure") found.misplaced.push(name);
         if (name === "figure") {
@@ -227,6 +290,10 @@ function findImages(body: string): Found {
       },
       onclosetag(name) {
         if (name === "figure") figures.pop();
+        if (name === "style" && sheet) {
+          if (sheet.end > sheet.start) found.styles.push(sheet);
+          sheet = undefined;
+        }
       },
     },
     { decodeEntities: true },
@@ -383,6 +450,98 @@ async function verifyDemo(
   return { file, bytes, read };
 }
 
+/** A project font file, read once: the spelling it was first named by, its real file, its bytes and kind. */
+type VerifiedTypeface = { src: string; file: string; bytes: Buffer; kind: CardTypefaceExtension };
+
+const TYPEFACE_REFUSED = "Card font refused";
+
+/**
+ * One project font file, checked as its own file: a contained regular file
+ * within the size cap and a font by its own structure (`readFont`). The
+ * bytes read here are the ones loaded, counted and copied, so a file
+ * changed after the check is never what a frame draws.
+ */
+async function readTypeface(src: string, file: string): Promise<VerifiedTypeface> {
+  const tooLarge = () =>
+    new Error(
+      `${TYPEFACE_REFUSED}: ${src} must be a regular font file no larger than ${MAX_TYPEFACE_BYTES / 1024 / 1024}MB; name a smaller subset of it.`,
+    );
+  const info = await stat(file);
+  if (!info.isFile() || info.size > MAX_TYPEFACE_BYTES) throw tooLarge();
+  const bytes = await readFile(file);
+  if (bytes.length > MAX_TYPEFACE_BYTES) throw tooLarge();
+  const read = readFont(bytes);
+  if (!read.ok) throw new Error(`${TYPEFACE_REFUSED}: ${src} ${read.reason}.`);
+  return { src, file, bytes, kind: read.kind };
+}
+
+/**
+ * Every font a card names, loaded together by the host's font engine in one
+ * window (`TypefaceProbe`): the first that does not load refuses the card,
+ * named by the spelling the body gave it.
+ */
+async function loadTypefaces(
+  typefaces: readonly VerifiedTypeface[],
+  probe: TypefaceProbe | undefined,
+): Promise<void> {
+  if (typefaces.length === 0) return;
+  if (!probe) {
+    throw new Error(
+      `${TYPEFACE_REFUSED}: this app cannot load a font here to check it, so draw the preview in the app's own typefaces.`,
+    );
+  }
+  let loaded: TypefaceProbeResult[];
+  try {
+    loaded = await probe(
+      typefaces.map(({ bytes, kind }) => ({ bytes, contentType: CARD_TYPEFACE_TYPES[kind] })),
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    loaded = typefaces.map(() => ({ ok: false, reason }));
+  }
+  typefaces.forEach((typeface, index) => {
+    const result = loaded[index] ?? { ok: false, reason: "it was not loaded" };
+    if (!result.ok) {
+      throw new Error(
+        `${TYPEFACE_REFUSED}: ${typeface.src} ${TYPEFACE_UNREAD_WORDS}: ${result.reason}. Name an undamaged copy of the font, or another of its files.`,
+      );
+    }
+  });
+}
+
+/**
+ * Keeps `bytes` at `file`, a name drawn from those bytes: a file there that
+ * already holds exactly them is left alone, and anything else is replaced
+ * whole, through a temporary file renamed over it, so a frame reading the
+ * name never meets a copy cut short. The temporary name is no minted name,
+ * so no host ever serves it.
+ */
+export function keepContentFile(file: string, bytes: Buffer): void {
+  try {
+    if (readFileSync(file).equals(bytes)) return;
+  } catch {
+    // Nothing kept by that name yet.
+  }
+  const temporary = `${file}.${randomBytes(8).toString("hex")}.partial`;
+  try {
+    writeFileSync(temporary, bytes);
+    renameSync(temporary, file);
+  } catch (error) {
+    rmSync(temporary, { force: true });
+    throw error;
+  }
+}
+
+/**
+ * The name a font's copy is kept under: the task, then 32 hex of the bytes'
+ * own SHA-256, as `keepPictureFile` names a picture - so the same font keeps
+ * one name in every version of a card, and a revision that leaves it alone
+ * leaves its style sheet's text alone too.
+ */
+function typefaceId(taskId: string, bytes: Buffer): string {
+  return `${taskId}-${createHash("sha256").update(bytes).digest("hex").slice(0, 32)}`;
+}
+
 /**
  * A demo figure's rewrite: the minted recording and its length under this
  * build's names, and under another spelling's too where the author wrote
@@ -428,10 +587,10 @@ function rewrittenTag(image: FoundImage, src: string, size: Sized): string {
 }
 
 /**
- * Verify, copy and rewrite every picture and demo recording a card body
- * names. `root` is absent where there is no working copy to name a file
- * from (the Firstmate's own cards): a body there may still carry `data:`
- * pictures, and one that names a path is refused.
+ * Verify, copy and rewrite every picture, demo recording and project font a
+ * card body names. `root` is absent where there is no working copy to name a
+ * file from (the Firstmate's own cards): a body there may still carry
+ * `data:` pictures, and one that names a path is refused.
  *
  * Every file is verified before any is copied, so a refused card leaves
  * nothing behind; each copy is written from the bytes that were verified, so
@@ -474,14 +633,30 @@ export async function verifyCardImages(
   const named = found.images
     .map((image, index) => ({ image, index }))
     .filter(({ image }) => isNamed(image));
-  if (named.length === 0) return { body, pictures: [] };
+  // Each font a style sheet's @font-face names by a path, with its url() token's range in the body.
+  const fonts = found.styles
+    .flatMap(({ start, end }) =>
+      fontFaceUrls(body.slice(start, end)).map((url) => ({
+        start: start + url.start,
+        end: start + url.end,
+        src: url.value.trim(),
+      })),
+    )
+    .filter(({ src }) => src !== "" && !isUrl(src));
+  if (named.length === 0 && fonts.length === 0) return { body, pictures: [] };
   if (!root) {
     throw new Error(
-      "Card picture refused: there is no working copy here to name a picture from; draw the figure in the body instead.",
+      named.length > 0
+        ? "Card picture refused: there is no working copy here to name a picture from; draw the figure in the body instead."
+        : "Card font refused: there is no working copy here to name a font file from; draw the body in the app's own typefaces.",
     );
   }
   if (!isPictureTaskId(root.taskId)) {
-    throw new Error("Card picture refused: this task cannot keep pictures.");
+    throw new Error(
+      named.length > 0
+        ? "Card picture refused: this task cannot keep pictures."
+        : "Card font refused: this task cannot keep font files.",
+    );
   }
 
   const worktree = await realpath(root.worktree);
@@ -492,7 +667,7 @@ export async function verifyCardImages(
   const homes: PictureHomes = { worktree, ...(evidence ? { evidence } : {}) };
   const tooMuch = () =>
     new Error(
-      `Card picture refused: a card's pictures and recordings may total at most ${MAX_CARD_PICTURE_BYTES / 1024 / 1024}MB; show fewer or smaller ones.`,
+      `Card picture refused: a card's pictures, recordings and fonts may total at most ${MAX_CARD_PICTURE_BYTES / 1024 / 1024}MB; show fewer or smaller ones.`,
     );
   const verified = new Map<number, Verified>();
   let total = 0;
@@ -518,6 +693,23 @@ export async function verifyCardImages(
     if (total > MAX_CARD_PICTURE_BYTES) throw tooMuch();
     recordings.set(poster, recording);
   }
+  // Each font file once, however many rules name it and however its path
+  // is spelled: read, counted and loaded once.
+  const typefaces = new Map<string, VerifiedTypeface>();
+  const files = new Map<string, VerifiedTypeface>();
+  for (const { src } of fonts) {
+    if (typefaces.has(src)) continue;
+    const file = await containedFile(src, homes, TYPEFACE_REFUSED);
+    let typeface = files.get(file);
+    if (!typeface) {
+      typeface = await readTypeface(src, file);
+      files.set(file, typeface);
+      total += typeface.bytes.length;
+      if (total > MAX_CARD_PICTURE_BYTES) throw tooMuch();
+    }
+    typefaces.set(src, typeface);
+  }
+  await loadTypefaces([...files.values()], root.typefaceProbe);
 
   await mkdir(root.dir, { recursive: true });
   const mint = () => `${root.taskId}-${randomBytes(16).toString("hex")}`;
@@ -586,6 +778,18 @@ export async function verifyCardImages(
       end: image.end,
       text: rewrittenTag(image, cardPictureUrl(id, picture.format.extension), picture.size),
     });
+  }
+  const typefaceCopies = new Map<string, string>();
+  for (const font of fonts) {
+    const typeface = typefaces.get(font.src) as VerifiedTypeface;
+    let url = typefaceCopies.get(typeface.file);
+    if (!url) {
+      const id = typefaceId(root.taskId, typeface.bytes);
+      keepContentFile(join(root.dir, cardTypefaceFileName(id, typeface.kind)), typeface.bytes);
+      url = cardTypefaceUrl(id, typeface.kind);
+      typefaceCopies.set(typeface.file, url);
+    }
+    edits.push({ start: font.start, end: font.end, text: `url("${url}")` });
   }
   edits.sort((a, b) => a.start - b.start);
   let rewritten = "";

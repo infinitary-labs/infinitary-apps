@@ -11,7 +11,7 @@ import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { readResourceMemory } from "./host/resourceMemory";
 import { createTaskBrowserHost } from "./host/taskBrowser";
-import { createMediaProbe } from "./mediaProbe";
+import { createMediaProbe, createTypefaceProbe } from "./mediaProbe";
 import { startOwnDisplay } from "./ownDisplay";
 import { workContext } from "./workContext";
 
@@ -181,6 +181,8 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
     // A card's demo recording plays in a hidden window of its own before
     // the card goes to the home, as it does on the home (./mediaProbe.ts).
     probeMedia: createMediaProbe(),
+    // A preview's project font loads in one the same way (./mediaProbe.ts).
+    probeTypeface: createTypefaceProbe(),
     resourceMemory: readResourceMemory,
     // Each task's own browser runs here, in hidden windows of its own, and
     // its crewmate reaches it through this computer's own task channel

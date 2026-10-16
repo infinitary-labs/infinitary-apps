@@ -1,7 +1,16 @@
 import { expect, type Page, test } from "@playwright/test";
+import { frameFontUrl } from "../../src/shared/plugins/frameDocument";
 import { cardBody, cardBodyAsHeld, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ATTACK_CARD_TITLES, ATTACK_CARDS_PROMPT_MARKER, ATTACK_MARKER } from "./mockProvider";
+import {
+  ATTACK_CARD_TITLES,
+  ATTACK_CARDS_PROMPT_MARKER,
+  ATTACK_MARKER,
+  PROJECT_FONT_CARD_TITLE,
+  PROJECT_FONT_FAMILY,
+  PROJECT_FONT_PROMPT_MARKER,
+  SPAWN_PROMPT_MARKER,
+} from "./mockProvider";
 import { promptInput } from "./prompt";
 import { pager, showCard } from "./stack";
 
@@ -167,4 +176,70 @@ test("a body's own data: image renders, and it is the only image source there is
     .poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth))
     .toBe(2);
   expect(mockProvider?.cardFetchProbeHits()).toBe(0);
+});
+
+// INF-128's plan, approved by the captain with "Yes: a project font draws, a
+// broken one is refused at send, and the card still loads nothing else".
+test("a preview draws its project's own font file, a damaged one is refused when sent, and nothing else loads", async () => {
+  const { page, mockProvider } = launched;
+  const input = promptInput(page);
+  await input.click();
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${PROJECT_FONT_PROMPT_MARKER}`);
+  await input.press("Enter");
+  // The crewmate first names a copy damaged inside its compressed data,
+  // which the host's font engine refuses with what to fix; only reading that
+  // refusal does it send the preview again, naming the real file.
+  await expect(() => showCard(page, PROJECT_FONT_CARD_TITLE)).toPass({ timeout: 60_000 });
+  // A body that draws in a project's font rides a card host, and so a
+  // renderer process, of its own - though it carries no script.
+  await expect(cardBodyElement(page, PROJECT_FONT_CARD_TITLE)).toHaveAttribute(
+    "src",
+    /^app-frame:\/\/card-[0-9a-f-]{36}\/$/,
+  );
+  const faces = () =>
+    cardBody(page, PROJECT_FONT_CARD_TITLE)
+      .locator("body")
+      .evaluate(async (_body, family) => {
+        await document.fonts.ready;
+        const rules = [...document.styleSheets].flatMap((sheet) => [...sheet.cssRules]);
+        const named = (rule: CSSRule) =>
+          rule instanceof CSSFontFaceRule &&
+          rule.style.getPropertyValue("font-family").replaceAll('"', "") === family;
+        return {
+          loaded: [...document.fonts]
+            .filter((face) => face.family.replaceAll('"', "") === family)
+            .map((face) => face.status),
+          src: rules
+            .filter(named)
+            .map((rule) => (rule as CSSFontFaceRule).style.getPropertyValue("src")),
+        };
+      }, PROJECT_FONT_FAMILY);
+  await expect.poll(async () => (await faces()).loaded, { timeout: 15_000 }).toEqual(["loaded"]);
+  // It loaded from the host's kept copy, never from the working copy's path.
+  const { src } = await faces();
+  expect(src).toHaveLength(1);
+  const kept = /^url\("(app-frame:\/\/typefaces\/[A-Za-z0-9_-]+-[0-9a-f]{32}\.woff2)"\)/.exec(
+    src[0] ?? "",
+  )?.[1];
+  expect(kept).toBeDefined();
+  // The same sheet's face named by a web address reached nothing.
+  expect(mockProvider?.cardFetchProbeHits()).toBe(0);
+
+  // INF-145's review, decided for the captain's security ask: a body on the
+  // srcdoc vehicle draws the app's own typefaces and loads no kept font,
+  // however a body comes to name its address.
+  await showCard(page, ATTACK_CARD_TITLES.srcdoc);
+  const loads = (url: string) =>
+    cardBody(page, ATTACK_CARD_TITLES.srcdoc)
+      .locator("body")
+      .evaluate(
+        (_body, file) =>
+          new FontFace("probe", `url(${file})`).load().then(
+            () => "loaded",
+            () => "refused",
+          ),
+        url,
+      );
+  expect(await loads(frameFontUrl("spacegrotesk-latin.woff2"))).toBe("loaded");
+  expect(await loads(kept as string)).toBe("refused");
 });

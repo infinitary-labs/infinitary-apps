@@ -1,9 +1,10 @@
 How a figure should look to belong in Infinitary.
 No shape is prescribed: draw whatever the explanation calls for - a diagram, a chart, a map of a flow, a picture of the thing itself - and let these rules make it look like the app.
+A drawing of a project's screens is the one exception: it takes that project's own colors, type, spacing and controls, read from its source, and for Infinitary's own screens those are these rules (`docs/card-authoring.md`, "Style").
 An explanation with several parts gets several small figures, each beside the sentence it illustrates, rather than one crowded drawing.
 
 A figure is inline SVG, written by hand.
-There is no helper to call: a card body cannot load anything, and every mark below is ordinary SVG that any body - scripted or not - can carry.
+There is no helper to call: a card body loads nothing but the host's own copies of what it names - its pictures, and a preview's project fonts - and every mark below is ordinary SVG that any body - scripted or not - can carry.
 
 ## Scaling
 

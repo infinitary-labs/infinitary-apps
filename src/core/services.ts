@@ -1916,6 +1916,7 @@ export async function createServices(
     killJobs: (taskId) => jobs.killForOwner(taskId),
     personal: personalLive,
     ...(host.mediaProbe ? { probeMedia: host.mediaProbe } : {}),
+    ...(host.typefaceProbe ? { probeTypeface: host.typefaceProbe } : {}),
     ...(browsers ? { browsers } : {}),
     ...(taskCommands ? { taskCommands } : {}),
     quotaGateRefValid,

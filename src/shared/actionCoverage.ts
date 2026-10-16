@@ -84,6 +84,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:record-knowledge": WORK_REQUEST,
   "inf:work:picture": WORK_REQUEST,
   "inf:work:media": WORK_REQUEST,
+  "inf:work:typeface": WORK_REQUEST,
   "inf:work:job-exit": WORK_REQUEST,
   "inf:work:events": WORK_REQUEST,
   "inf:work:browser": WORK_REQUEST,

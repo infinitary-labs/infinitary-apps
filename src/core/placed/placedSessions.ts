@@ -50,6 +50,7 @@ import {
   crewmatePlacedDir,
   crewmateSessionsDir,
 } from "../paths";
+import { keepContentFile } from "../pi/cardImages";
 import { CREWMATE_BROWSER_LINE, crewmateBrowserLine } from "../pi/piResources";
 import type { QuotaCatalogModel } from "../quota/auth";
 import { type ComputerPool, computerPool, heldThere } from "../routing/computerPool";
@@ -1029,6 +1030,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         return this.picture(placed, request as InvokeRequest<"inf:work:picture">[0]);
       case "inf:work:media":
         return this.recordingPiece(placed, request as InvokeRequest<"inf:work:media">[0]);
+      case "inf:work:typeface":
+        return this.typeface(placed, request as InvokeRequest<"inf:work:typeface">[0]);
       case "inf:work:job-exit": {
         const { exit } = request as InvokeRequest<"inf:work:job-exit">[0];
         if (!this.host) throw new NotHeldHere(`${HERE.This} is still starting.`);
@@ -1145,6 +1148,23 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const dir = crewmateCardPicturesDir(this.options.paths, placed.task);
     mkdirSync(dir, { recursive: true });
     writeFileSync(
+      join(dir, `${request.id}.${request.extension}`),
+      Buffer.from(request.data, "base64"),
+    );
+    return { ok: true };
+  }
+
+  /**
+   * A project font's bytes, kept beside the pictures where this Mac's frames
+   * load it from - left alone when that name already holds them, and
+   * otherwise replaced whole (`keepContentFile`), since a frame may be
+   * reading the name while the same font arrives again.
+   */
+  private typeface(placed: Placed, request: InvokeRequest<"inf:work:typeface">[0]): { ok: true } {
+    if (!request.id.startsWith(`${placed.task}-`)) throw new Error("That font is not this task's.");
+    const dir = crewmateCardPicturesDir(this.options.paths, placed.task);
+    mkdirSync(dir, { recursive: true });
+    keepContentFile(
       join(dir, `${request.id}.${request.extension}`),
       Buffer.from(request.data, "base64"),
     );

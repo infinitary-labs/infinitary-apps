@@ -2,7 +2,7 @@ import { absentKeychain, type HostCapabilities } from "@core/host";
 import { userDataFolderFor } from "@shared/userDataFolders";
 import { app, Notification, shell, utilityProcess } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
-import { createMediaProbe } from "../mediaProbe";
+import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
 import { packagedFlavor, readPackageJsonAt } from "../userDataDir";
 import { appWindows } from "../windows";
 import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartEntry";
@@ -177,6 +177,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
         : absentKeychain,
     capture: { capturePanel: captureDockedPanel },
     mediaProbe: createMediaProbe(),
+    typefaceProbe: createTypefaceProbe(),
     resourceMemory: readResourceMemory,
     browser: createTaskBrowserHost(),
     ...(sqlProcessPath ? { sqlProcess: createSqlProcessSpawner(sqlProcessPath) } : {}),

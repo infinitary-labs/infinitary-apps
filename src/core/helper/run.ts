@@ -20,7 +20,7 @@ import { HomeLink, type HomeLinkState } from "../devices/homeLink";
 import { JoinedHome } from "../devices/joinedHome";
 import type { MoveDeps } from "../folderMove/move";
 import type { HostKeychain } from "../host";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { readPlacementFacts } from "../placed/placementFacts";
 import { ResourceSampler } from "../placed/resourceSampler";
 import type { ComputerAccounts } from "./accounts";
@@ -90,6 +90,8 @@ export type StartHelperOptions = {
   keychain?: HostKeychain;
   /** This computer's decoder for a card's demo recording; absent, a card naming one is refused here. */
   probeMedia?: MediaProbe;
+  /** This computer's loader for a preview's project font; absent, a card naming one is refused here. */
+  probeTypeface?: TypefaceProbe;
   /** Host memory observations, independent of accounts and conversations. */
   resourceMemory?: () => ResourceMemory | null;
   /**
@@ -124,6 +126,8 @@ export type StartHelperOptions = {
     /** This computer's own sign-ins when it keeps or is making any, never loaded for nothing. */
     signedIn: () => Promise<ComputerAccounts> | undefined;
     probeMedia?: MediaProbe;
+    probeTypeface?: TypefaceProbe;
+    homeVersion?: () => string | null;
   }) => Promise<Conversations>;
   /**
    * Loads this computer's own sign-ins (`startSignIns`) unless a test
@@ -288,6 +292,9 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           accounts: async () => (await signingIn()).accounts,
           signedIn: () => signIns?.then((held) => held.accounts),
           ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+          ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
+          // The contract its home said in its welcome, which decides whether it keeps project fonts.
+          homeVersion: () => link.state().homeVersion,
         }),
       )
       .then((held) => {

@@ -3,10 +3,18 @@ import {
   MEDIA_PROBE_DEADLINE_MS,
   type MediaProbe,
   type MediaProbeResult,
+  type TypefaceProbe,
+  type TypefaceProbeResult,
 } from "@core/pi/cardImages";
 import { APP_FRAME_SCHEME } from "@shared/csp";
 import { BrowserWindow, session as electronSession, type Session } from "electron";
 import { mediaResponse } from "./frames/mediaResponse";
+import {
+  sanitizerReasons,
+  TYPEFACE_WINDOW_MS,
+  TYPEFACES_UNANSWERED,
+  typefaceScript,
+} from "./typefaceProbePage";
 
 /**
  * The host's decoder for a card's demo recording (docs/card-authoring.md
@@ -17,8 +25,14 @@ import { mediaResponse } from "./frames/mediaResponse";
  * pictures at its start, middle and end within `MEDIA_PROBE_DEADLINE_MS`.
  * The verdict is what Chromium decoded, never what the file says of itself.
  *
- * Probes run one at a time, each in a window of its own that is destroyed
- * when it ends, however it ends.
+ * A preview's project fonts (docs/card-authoring.md "Fonts by reference") are
+ * loaded the same way: all of a card's fonts in one window of the same kind,
+ * through the same font sanitizer a card's frame uses, each must load as a
+ * web font within the same deadline on a clock of its own, and the
+ * sanitizer's own message is a refusal's reason (`./typefaceProbePage`).
+ *
+ * Probes run one at a time, recordings and fonts alike, each in a window of
+ * its own that is destroyed when it ends, however it ends.
  *
  * The process must have registered the frame scheme's privileges before
  * `app.ready` (`./frames/frameScheme.ts`): the window does that with the
@@ -37,8 +51,27 @@ export function isMediaProbeWindow(win: BrowserWindow): boolean {
   return probeWindows.has(win);
 }
 
-/** The recording the session answers now, at its one-time name; nothing else is served. */
-let current: { token: string; bytes: Buffer; contentType: string } | undefined;
+/** The page a probe runs in: its markup and the policy it is served with. */
+type ProbePage = { html: string; csp: string };
+
+const RECORDING_PAGE: ProbePage = {
+  html: "<!doctype html><meta charset=utf-8><video muted playsinline></video>",
+  csp: `default-src 'none'; media-src ${APP_FRAME_SCHEME}://${HOST}`,
+};
+
+const TYPEFACE_PAGE: ProbePage = {
+  html: "<!doctype html><meta charset=utf-8><p>Aa</p>",
+  csp: `default-src 'none'; font-src ${APP_FRAME_SCHEME}://${HOST}`,
+};
+
+/** One file a probe's page loads: its bytes and what they are. */
+type ProbeFile = { bytes: Buffer; contentType: string };
+
+/**
+ * The files the session answers now, each at its one-time name by its
+ * place in the list, and their page; nothing else is served.
+ */
+let current: { token: string; files: readonly ProbeFile[]; page: ProbePage } | undefined;
 
 let prepared: Session | undefined;
 
@@ -49,7 +82,7 @@ function probeSession(): Session {
   ses.setPermissionCheckHandler(() => false);
   ses.setDevicePermissionHandler(() => false);
   ses.on("will-download", (event) => event.preventDefault());
-  // No request leaves the window: only the one recording and its page answer.
+  // No request leaves the window: only the one file and its page answer.
   ses.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
     callback({ cancel: !details.url.startsWith(`${APP_FRAME_SCHEME}://${HOST}/`) });
   });
@@ -58,22 +91,23 @@ function probeSession(): Session {
     const playing = current;
     if (url.host !== HOST || !playing) return new Response(null, { status: 404 });
     if (url.pathname === `/${playing.token}/page`) {
-      return new Response("<!doctype html><meta charset=utf-8><video muted playsinline></video>", {
+      return new Response(playing.page.html, {
         headers: {
           "content-type": "text/html; charset=utf-8",
-          "content-security-policy": `default-src 'none'; media-src ${APP_FRAME_SCHEME}://${HOST}`,
+          "content-security-policy": playing.page.csp,
           "x-content-type-options": "nosniff",
         },
       });
     }
-    if (url.pathname !== `/${playing.token}/recording` || request.method !== "GET") {
-      return new Response(null, { status: 404 });
-    }
+    const prefix = `/${playing.token}/file/`;
+    const index = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length) : "";
+    const file = /^\d{1,4}$/.test(index) ? playing.files[Number(index)] : undefined;
+    if (!file || request.method !== "GET") return new Response(null, { status: 404 });
     return mediaResponse(
       request.headers.get("range"),
-      playing.bytes.length,
-      playing.contentType,
-      async ({ start, end }) => new Uint8Array(playing.bytes.subarray(start, end + 1)),
+      file.bytes.length,
+      file.contentType,
+      async ({ start, end }) => new Uint8Array(file.bytes.subarray(start, end + 1)),
     );
   });
   prepared = ses;
@@ -139,9 +173,21 @@ const PROBE_SCRIPT = `(async () => {
   return { ok: true, width: video.videoWidth, height: video.videoHeight, durationMs: Math.round(duration * 1000) };
 })()`;
 
-async function probeOnce(bytes: Buffer, contentType: string): Promise<MediaProbeResult> {
+/** A refusal the probe could not give in time, or at all. */
+type Failed = { ok: false; reason: string };
+
+/** What a probe's page answered, or why it could not, and what the page's engine said meanwhile. */
+type Probed<T> = { answer: T | Failed; said: string[]; urls: string[] };
+
+async function probeOnce<T extends { ok: boolean }>(
+  files: readonly ProbeFile[],
+  page: ProbePage,
+  script: (urls: string[]) => string,
+  late: string,
+  deadlineMs: number = MEDIA_PROBE_DEADLINE_MS,
+): Promise<Probed<T>> {
   const token = randomUUID();
-  current = { token, bytes, contentType };
+  current = { token, files, page };
   const ses = probeSession();
   const win = new BrowserWindow({
     show: false,
@@ -166,33 +212,38 @@ async function probeOnce(bytes: Buffer, contentType: string): Promise<MediaProbe
     },
   });
   probeWindows.add(win);
+  // What the engine said while it worked, which a refusal names when it is the reason.
+  const said: string[] = [];
+  win.webContents.on("console-message", (event) => {
+    said.push(event.message);
+  });
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const deadline = new Promise<MediaProbeResult>((resolve) => {
+    const deadline = new Promise<Failed>((resolve) => {
       timer = setTimeout(
         () =>
           resolve({
             ok: false,
-            reason: `it showed no pictures within ${MEDIA_PROBE_DEADLINE_MS / 1000} seconds`,
+            reason: `${late} within ${deadlineMs / 1000} seconds`,
           }),
-        MEDIA_PROBE_DEADLINE_MS,
+        deadlineMs,
       );
     });
     const base = `${APP_FRAME_SCHEME}://${HOST}/${token}`;
-    const run = (async (): Promise<MediaProbeResult> => {
+    const urls = files.map((_, index) => `${base}/file/${index}`);
+    const run = (async (): Promise<T | Failed> => {
       await win.loadURL(`${base}/page`);
-      const answer = (await win.webContents.executeJavaScript(
-        PROBE_SCRIPT.replace("RECORDING", `${base}/recording`),
-      )) as MediaProbeResult;
-      return answer;
+      return (await win.webContents.executeJavaScript(script(urls))) as T | Failed;
     })();
     // A run the deadline beat still settles once its window is gone.
     run.catch(() => undefined);
-    return await Promise.race([run, deadline]);
+    const answer = await Promise.race([run, deadline]);
+    return { answer, said: [...said], urls };
   } catch (error) {
-    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+    const reason = error instanceof Error ? error.message : String(error);
+    return { answer: { ok: false, reason }, said: [...said], urls: [] };
   } finally {
     clearTimeout(timer);
     if (current?.token === token) current = undefined;
@@ -200,12 +251,47 @@ async function probeOnce(bytes: Buffer, contentType: string): Promise<MediaProbe
   }
 }
 
+/** Every probe waits for the one before it: the session answers one file at a time. */
+let queue: Promise<unknown> = Promise.resolve();
+
+function queued<T>(probe: () => Promise<T>): Promise<T> {
+  const run = queue.then(probe);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
 /** The host's `MediaProbe`: one recording at a time, each in a window of its own. */
 export function createMediaProbe(): MediaProbe {
-  let queue: Promise<unknown> = Promise.resolve();
-  return ({ bytes, contentType }) => {
-    const run = queue.then(() => probeOnce(bytes, contentType));
-    queue = run.catch(() => undefined);
-    return run;
-  };
+  return ({ bytes, contentType }) =>
+    queued(
+      async () =>
+        (
+          await probeOnce<MediaProbeResult>(
+            [{ bytes, contentType }],
+            RECORDING_PAGE,
+            ([url]) => PROBE_SCRIPT.replace("RECORDING", url ?? ""),
+            "it showed no pictures",
+          )
+        ).answer,
+    );
+}
+
+/** The host's `TypefaceProbe`: one card's fonts at a time, all in one window of their own. */
+export function createTypefaceProbe(): TypefaceProbe {
+  return (typefaces) =>
+    queued(async () => {
+      const { answer, said, urls } = await probeOnce<{ ok: true; loaded: TypefaceProbeResult[] }>(
+        typefaces,
+        TYPEFACE_PAGE,
+        (files) => typefaceScript(files),
+        // Each font has its own clock in the page; this one is the window's.
+        TYPEFACES_UNANSWERED,
+        TYPEFACE_WINDOW_MS,
+      );
+      if (!answer.ok) return typefaces.map(() => answer);
+      const reasons = sanitizerReasons(said, urls);
+      return answer.loaded.map((result, index) =>
+        result.ok ? result : { ok: false, reason: reasons.get(index) ?? result.reason },
+      );
+    });
 }

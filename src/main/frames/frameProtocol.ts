@@ -6,8 +6,10 @@ import {
   CARD_MEDIA_HOST,
   CARD_MEDIA_PIECE_BYTES,
   CARD_PICTURE_HOST,
+  CARD_TYPEFACE_HOST,
   parseCardMediaFileName,
   parseCardPictureFileName,
+  parseCardTypefaceFileName,
 } from "@shared/cardPictures";
 import { APP_FRAME_SCHEME } from "@shared/csp";
 import { CARD_MOUNT_HOST_PREFIX, PANEL_MOUNT_HOST_PREFIX } from "@shared/plugins/frameDocument";
@@ -39,6 +41,13 @@ import { mediaResponse, requestedRange } from "./mediaResponse";
  *   viewer's player in the window - a card's own frame may not load media.
  *   The viewer adds a query to start each GIF play from its first frame;
  *   only the one path segment names the file.
+ * - `app-frame://typefaces/<taskId>-<32 hex>.woff2` (or `.woff`, `.ttf`,
+ *   `.otf`): a project font a preview's `@font-face` names, the host's own
+ *   copy of a file it checked and loaded in its own font engine
+ *   (docs/card-authoring.md "Fonts by reference"), located the same way
+ *   beside the pictures and served with CORS like the design system's
+ *   typefaces, to GET alone. On an app controlling another Mac the same name
+ *   is asked of that Mac.
  * - `app-frame://panel-<id>/`: a panel drawn in the frame realm (one plugin
  *   vehicle, Phase A item 4), at a host of its own like a card; under it,
  *   exactly the compiled modules its mount read and hashed.
@@ -63,16 +72,17 @@ export type MediaPiece = { data: Uint8Array; size: number };
 export const MEDIA_PIECE_BYTES = CARD_MEDIA_PIECE_BYTES;
 
 /**
- * Where a card picture's or recording's bytes come from: `userData/crewmates`
- * on the Mac that holds Firstmate, each task's copies in its `cards/`; or,
- * on an app controlling another Mac, that Mac's answer for the name
- * (docs/view.md) - a recording a piece at a time.
+ * Where a card picture's, recording's or project font's bytes come from:
+ * `userData/crewmates` on the Mac that holds Firstmate, each task's copies in
+ * its `cards/`; or, on an app controlling another Mac, that Mac's answer for
+ * the name (docs/view.md) - a recording a piece at a time.
  */
 export type PictureSource =
   | { root: string }
   | {
       fetch: (fileName: string) => Promise<Uint8Array>;
       fetchMedia?: (fileName: string, offset: number, length: number) => Promise<MediaPiece>;
+      fetchTypeface?: (fileName: string) => Promise<Uint8Array>;
     };
 
 /** What the scheme's hosts answer from. */
@@ -246,6 +256,36 @@ export async function answerFrameRequest(
         headers: {
           "content-type": picture.contentType,
           "content-length": String(bytes.byteLength),
+          "x-content-type-options": "nosniff",
+          // A name is minted once per copy and never rewritten.
+          "cache-control": "private, max-age=31536000, immutable",
+        },
+      });
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  }
+  if (parsed.host === CARD_TYPEFACE_HOST && segments.length === 1) {
+    const typeface = parseCardTypefaceFileName(segments[0] ?? "");
+    if (!typeface || (details.method ?? "GET") !== "GET")
+      return new Response(null, { status: 404 });
+    try {
+      const source = pictures();
+      const bytes =
+        "root" in source
+          ? await read(join(source.root, typeface.taskId, "cards", typeface.fileName))
+          : source.fetchTypeface
+            ? await source.fetchTypeface(typeface.fileName)
+            : undefined;
+      if (!bytes) return new Response(null, { status: 404 });
+      return new Response(bytes as BodyInit, {
+        status: 200,
+        headers: {
+          "content-type": typeface.contentType,
+          "content-length": String(bytes.byteLength),
+          // A card's frame has an opaque origin, and a font load is a CORS
+          // fetch: without this no frame could draw it.
+          "access-control-allow-origin": "*",
           "x-content-type-options": "nosniff",
           // A name is minted once per copy and never rewritten.
           "cache-control": "private, max-age=31536000, immutable",

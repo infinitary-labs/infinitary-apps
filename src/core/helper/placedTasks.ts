@@ -309,6 +309,14 @@ export class PlacedTasks {
     throw new Error(`The card picture ${id} is not in this task's folder.`);
   }
 
+  /** A verified project font's copy, by the file name a preview names it by. */
+  typeface(task: string, fileName: string): Buffer {
+    const file = join(this.folders(task).cards, fileName);
+    if (!existsSync(file))
+      throw new Error(`The card font ${fileName} is not in this task's folder.`);
+    return readFileSync(file);
+  }
+
   /** A verified demo recording's copy, by the id and kind its poster names it by. */
   recording(task: string, id: string, kind: CardMediaExtension): Buffer {
     const file = join(this.folders(task).cards, `${id}.${kind}`);

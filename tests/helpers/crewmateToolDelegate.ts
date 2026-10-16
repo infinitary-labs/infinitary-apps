@@ -6,7 +6,10 @@ import type { CrewmateToolDelegate } from "../../src/core/session/tools";
  * of the generated tools reads back; `calls` records what reached the host.
  */
 export function crewmateToolDelegate(): Required<
-  Omit<CrewmateToolDelegate, "picturesDir" | "evidenceDir" | "cardBodiesDir" | "probeMedia">
+  Omit<
+    CrewmateToolDelegate,
+    "picturesDir" | "evidenceDir" | "cardBodiesDir" | "probeMedia" | "probeTypeface"
+  >
 > & {
   calls: { callback: string; input: unknown }[];
 } {

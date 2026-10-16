@@ -28,9 +28,9 @@ import {
 import {
   buildPrototypeSrcdoc,
   CHANGE_GUTTER_PX,
-  cardBodyHasScript,
   cardBodyHtml,
   cardBodyMarkup,
+  cardBodyMounts,
   cardStylesheet,
   INSET_SPACER,
 } from "./prototypeSrcdoc";
@@ -237,7 +237,8 @@ const frameStyle = (height: number): React.CSSProperties => ({
  * inline `<script>` (WI-16) is mounted: the host serves the same markup at a
  * card host of its own with each inline script's hash pinned into that
  * document's CSP, and the frame watchdog tears the frame down if a script
- * wedges it.
+ * wedges it. A body drawing in a project's own font is mounted too, so the
+ * font engine reads that file in a renderer process of its own.
  */
 export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
   const navigation = useRevisionNavigation();
@@ -252,7 +253,7 @@ export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
         },
       }
     : input;
-  const scripted = cardBodyHasScript(given.body);
+  const mounted = cardBodyMounts(given.body);
   // The task keys it writes link to their tasks (FI3-594), in either
   // vehicle - every key but the card's own task's (FI3-1271).
   const links = useTaskLinks(given.body, given.ownTaskId);
@@ -293,7 +294,7 @@ export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
         ...(marked ? { marginLeft: -CHANGE_GUTTER_PX } : {}),
       }}
     >
-      {scripted ? (
+      {mounted ? (
         <ScriptedCardBody {...props} links={links} knowledge={knowledge} />
       ) : (
         <SrcdocCardBody {...props} links={links} knowledge={knowledge} />

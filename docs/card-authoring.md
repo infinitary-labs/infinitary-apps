@@ -265,6 +265,7 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
 - **No network.**
   The frame CSP is `default-src 'none'`.
   No external image, font, stylesheet, media, frame, worker, `fetch`, websocket or beacon resolves, whatever the markup says.
+  A project's own font reaches a preview only by reference (Fonts by reference, below).
   An `<img src="https://...">` simply never loads.
 - **No identity, no parent.**
   The frame has an opaque origin: no storage, no cookies, and the app window and its bridge are unreachable.
@@ -309,6 +310,25 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   A GIF is drawn only once Play is pressed, as an `<img>` of the served copy laid over its poster, at a fresh address each press so it starts from its first frame; its control reads Play, Stop and Replay, Stop takes the animation away, and once its verified length has played the poster returns with Replay.
   The viewer plays only a recording the card's body names, starts it at once only on the captain's own press (the window's user activation, which a body's script cannot give), pauses an MP4 and stops a GIF when the window is hidden and never loops either; its keys are its controls' own (the design skill's `PictureViewer.prompt.md`, "A demo").
   The first mate has no working copy, so a demo in one of its cards is refused like a picture; an `app-frame://media/` address copied from another card is refused too, since a demo names a file, never a URL.
+- **Fonts by reference.**
+  A preview draws a project's screens in that project's own typeface: an `@font-face` rule in its `<style>` sheet names a font file in its `src` `url()` - a path relative to the working copy, or an absolute path inside the task's evidence folder, where a crewmate saves a font its project links from an address.
+  `font-src` admits only the host's own frame scheme, so a font named any other way loads nothing.
+  On the srcdoc vehicle it admits only that scheme's `fonts` host, which serves the design system's typefaces (`SRCDOC_FRAME_CSP`, `src/shared/plugins/containment.ts`), so a kept font loads only on the mount vehicle, however a body names it.
+  At the `emit_card` boundary `verifyCardImages` reads every `<style>` sheet (`fontFaceUrls`, `src/core/pi/fontFaces.ts`: each `url()` inside an `@font-face` block, comments and strings skipped) and, for each one that names a path, refuses a path outside its homes (symlinks included), a missing file or one that is not a regular file, one over 8 MB, one that is not a WOFF2, WOFF, TrueType or OpenType font by its own signature, a font collection, a WOFF2 or WOFF whose header does not state the file's own size, a table directory or table outside the file (`readFont`, `src/core/fontFormat.ts`), and fonts that with the card's pictures and recordings total more than 64 MB.
+  Each real file is read, counted and loaded once, however many rules name it and however its path is spelled.
+  It then loads all of the card's fonts together in the host's probe (`src/main/mediaProbe.ts`): one hidden window of the kind demo recordings play in, whose policy admits only those files as fonts, must load each as a web font within five seconds on a clock of its own, through the same sanitizer a card's frame uses (`src/main/typefaceProbePage.ts`).
+  A font that does not load or stalls refuses the card by its own name, with the sanitizer's own words when it gave any (`TYPEFACE_UNREAD_WORDS`); a window that answers for none of them within seven seconds refuses the card for all of its fonts.
+  One failure refuses the whole card with what to fix, and nothing is copied.
+  The host copies each font once to `userData/crewmates/<taskId>/cards/<taskId>-<32 hex>.<woff2|woff|ttf|otf>`, the hex the first 32 of its bytes' own SHA-256 and the kind the one those bytes state, so the same font keeps one name in every version of a card and a revision that leaves it alone does not read as a changed preview; it rewrites only that `url()` token (to `url("app-frame://typefaces/<that name>")`); every other byte of the sheet stays as written, the rule's `format()` hint included.
+  Each copy is written whole, through a temporary file renamed over its name, and a copy already holding exactly those bytes is left alone (`keepContentFile`), here and on a home a computer that runs work sends it to.
+  The frame scheme's `typefaces` host serves exactly those names to GET alone, typed `font/woff2`, `font/woff`, `font/ttf` or `font/otf`, with `access-control-allow-origin: *` (a frame's origin is opaque and a font load is a CORS fetch) and `nosniff`.
+  A body that names a kept font rides the mount vehicle, as a scripted body does, so the font engine reads the file in a renderer process of its own (`cardBodyMounts`, `src/renderer/src/cards/prototypeSrcdoc.ts`).
+  A font named by a URL - `data:`, `https:` or another card's `app-frame://typefaces/` address - is left as written; the frame loads only the last, which reaches a font the captain already has.
+  The copies never ride the body, SQLite, the `inf:cards` push or the human-supervision export, which copies pictures only; they stay beside the task's pictures until the Settings purge.
+  Only a preview carries one, since an `@font-face` needs a `<style>` sheet and a sheet makes a body a preview.
+  The first mate has no working copy, so a path in one of its cards is refused.
+  A crewmate on a computer that runs work has its fonts checked and loaded there, and each kept copy goes home before the card (`inf:work:typeface`, `docs/helper.md`), to a home on protocol 8.9 or later; a paired view asks the home for one by name (`inf:cards:typeface`, `docs/view.md`).
+  A system typeface a project names but does not ship (Apple's rounded face, say) is not a file, so a preview cannot load it.
 - **The host's own actions stay the host's.**
   A `data-inf-action` button or an `inf.action(id)` call raises one of the card's declared actions - EXCEPT any action carrying an effect (`settle`, `open`, or the app's own `host` op).
   Those are run by the host from the footer button the captain clicks, are never declared to the frame, and are checked again against the current card when dispatched; a body that raises one is refused.
@@ -316,7 +336,12 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
 ### Style
 
 Prefer the design system, so a card looks like the app: design-token CSS variables (`--fg-1`, `--accent`, `--line-2`, `--font-mono`, ...) and the helper classes `inf-mono`, `inf-muted`, `inf-row`, `inf-grid`, `inf-panel`.
-This is a preference, not a filter - a preview draws something that does not exist yet, so it may bring its own `<style>` sheet, its own classes, ordinary CSS lengths and colors, and `data-*` hooks its script reads.
+This is a preference, not a filter.
+A preview or a drawing of a project's screens takes that project's own look, read from its source: its colors, type, spacing and controls, which for Infinitary's own screens is this design system.
+It may bring its own `<style>` sheet, its own classes, ordinary CSS lengths and colors, and `data-*` hooks its script reads, and it restyles every element it draws, since the frame stylesheet dresses whatever it leaves bare.
+It loads the project's own font files by reference (Fonts by reference, above).
+The card's own answer, explanation and questions keep the app's look.
+The crewmate's instructions say this; the first mate's copy of them does not, since it never draws a preview.
 
 The vocabulary beyond plain text:
 
@@ -328,6 +353,7 @@ The vocabulary beyond plain text:
   Draw whatever figure the explanation calls for (Figures, below).
 - Pictures: an `<img>` naming a file in the crewmate's working copy (PNG, JPEG or WebP, alt saying what it proves), which the host verifies and serves; several in a `<figure class="inf-pictures">` are a group.
   A `data:` picture the body carries itself also renders.
+- Fonts: a preview's `@font-face` naming a WOFF2, WOFF, TTF or OTF file in the working copy or the evidence folder, which the host checks, loads and serves (Fonts by reference, above).
   Nothing else loads.
 - Sizing: whatever units the body needs; relative ones follow the card.
 
@@ -367,6 +393,7 @@ Mechanism and the security review: `docs/live-prototype-security.md`, "Agent scr
 
 No figure shape is prescribed.
 Draw whatever the explanation calls for - a diagram, a chart, a picture of the thing itself - and let the design system make it look like the app.
+A drawing of a project's screens is the one exception: it takes that project's own look (Style, above).
 An explanation with several parts gets several small figures, each beside the sentence it illustrates, rather than one crowded drawing; a single figure is right only when the explanation has one part.
 
 The design skill states the whole rule (`.claude/skills/infinitary-design/components/viz/Viz.prompt.md`); in brief:

@@ -19,7 +19,7 @@ import {
   automationSaveSchema,
   automationSpecSchema,
 } from "./automation";
-import { CARD_MEDIA_PIECE_BYTES, CARD_MEDIA_TYPES } from "./cardPictures";
+import { CARD_MEDIA_PIECE_BYTES, CARD_MEDIA_TYPES, CARD_TYPEFACE_TYPES } from "./cardPictures";
 import {
   CARD_REPLY_MAX_CHARS,
   type Card,
@@ -388,7 +388,7 @@ import { workRequests } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.7.0";
+export const PROTOCOL_VERSION = "8.9.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -541,6 +541,20 @@ export const INFINITARY_NAMES_SINCE = "8.4.0";
 /** Whether a computer knows the Infinitary rename's code names (`INFINITARY_NAMES_SINCE`). */
 export function speaksInfinitaryNames(deviceVersion: string): boolean {
   return speaksSince(deviceVersion, INFINITARY_NAMES_SINCE);
+}
+
+/**
+ * The first contract whose home keeps a preview's project fonts
+ * (`inf:work:typeface`, src/shared/work.ts; docs/card-authoring.md "Fonts by
+ * reference") and serves them to its views (`inf:cards:typeface`). A computer
+ * that runs work sends a card naming one only to a home on this contract or
+ * later, and refuses it in words to an older one.
+ */
+export const CARD_TYPEFACES_SINCE = "8.9.0";
+
+/** Whether a home keeps a preview's project fonts (`CARD_TYPEFACES_SINCE`). */
+export function keepsCardTypefaces(homeVersion: string): boolean {
+  return speaksSince(homeVersion, CARD_TYPEFACES_SINCE);
 }
 
 /**
@@ -1200,6 +1214,26 @@ export const invokeContract = {
     request: z.tuple([z.string().min(1).max(128)]),
     response: z.object({
       contentType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+      /** The file, base64. */
+      data: z.string(),
+    }),
+  },
+  // A project font's bytes by its file name (docs/view.md): how a view draws
+  // a preview in the home's own copy of a font its `@font-face` names, which
+  // its frame asks of the view's own shell. Only a minted font name
+  // (`@shared/cardPictures`); anything else is refused.
+  "inf:cards:typeface": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(128)]),
+    response: z.object({
+      contentType: z.enum([
+        CARD_TYPEFACE_TYPES.woff2,
+        CARD_TYPEFACE_TYPES.woff,
+        CARD_TYPEFACE_TYPES.ttf,
+        CARD_TYPEFACE_TYPES.otf,
+      ]),
       /** The file, base64. */
       data: z.string(),
     }),
@@ -2515,6 +2549,7 @@ export const invokeContract = {
   },
   "inf:work:picture": { ...workRequests["inf:work:picture"], surface: "core", reach: "work" },
   "inf:work:media": { ...workRequests["inf:work:media"], surface: "core", reach: "work" },
+  "inf:work:typeface": { ...workRequests["inf:work:typeface"], surface: "core", reach: "work" },
   "inf:work:job-exit": { ...workRequests["inf:work:job-exit"], surface: "core", reach: "work" },
   "inf:work:events": { ...workRequests["inf:work:events"], surface: "core", reach: "work" },
   // A task's browser on that computer (docs/task-browser.md, "On another computer").

@@ -63,9 +63,20 @@ export const FORBIDDEN_SANDBOX_TOKENS = [
  * served in-process from the app bundle (src/main/frames/). It is not a
  * network path - nothing behind it leaves the machine - and it is what puts
  * the design system's typefaces inside every frame (the fonts-in-frames
- * papercut, proposal section 3.2).
+ * papercut, proposal section 3.2). Its `typefaces` host serves the copy of
+ * each project font the host checked and loaded for a preview
+ * (docs/card-authoring.md "Fonts by reference"), by a name the core minted.
  */
 export const FRAME_FONT_SOURCE = `${APP_FRAME_SCHEME}:`;
+
+/**
+ * The narrower font source of a card body on the srcdoc vehicle: the frame
+ * scheme's `fonts` host alone, which serves the design system's typefaces. A project font is drawn only on the
+ * mount vehicle, in a renderer process of its own (`cardBodyMounts`), so a
+ * srcdoc body that names a kept font by an address the vehicle test did not
+ * recognize loads nothing.
+ */
+export const SRCDOC_FONT_SOURCE = `${APP_FRAME_SCHEME}://fonts`;
 
 /**
  * The two sources a frame may load an image from, neither of them a network
@@ -86,13 +97,22 @@ export const FRAME_IMAGE_SOURCE = `data: ${APP_FRAME_SCHEME}:`;
  * Every other network-capable directive (connect, media, frame, worker) is
  * deliberately absent so it inherits `default-src 'none'`.
  */
-export function frameCsp(scriptHashes: readonly string[] = []): string {
+export function frameCsp(
+  scriptHashes: readonly string[] = [],
+  fontSource: string = FRAME_FONT_SOURCE,
+): string {
   const scripts = [FRAME_BRIDGE_SHA256, ...scriptHashes].map((hash) => `'${hash}'`).join(" ");
-  return `default-src 'none'; style-src 'unsafe-inline'; font-src ${FRAME_FONT_SOURCE}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
+  return `default-src 'none'; style-src 'unsafe-inline'; font-src ${fontSource}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
 }
 
 /** The policy of a frame that runs no mount-specific script. */
 export const FRAME_CSP = frameCsp();
+
+/**
+ * The policy of a card body on the srcdoc vehicle: the frame policy with
+ * fonts from the design system's own `fonts` host alone (`SRCDOC_FONT_SOURCE`).
+ */
+export const SRCDOC_FRAME_CSP = frameCsp([], SRCDOC_FONT_SOURCE);
 
 /**
  * The script sources a PANEL mount may load modules from (one plugin
@@ -130,8 +150,8 @@ export function panelFrameCsp(inlineHashes: readonly string[], mountHost: string
  * CSP directives that would each open a network path if ever added with a
  * network source. `font-src` and `img-src` are on the list on purpose: the
  * test allows each ONLY with its own constant as its whole value - the host's
- * scheme for fonts, `data:` and the host's scheme for images - so any other
- * source stays refused.
+ * scheme for fonts (its `fonts` host alone on the srcdoc vehicle), `data:`
+ * and the host's scheme for images - so any other source stays refused.
  */
 export const NETWORK_CSP_DIRECTIVES = [
   "connect-src",

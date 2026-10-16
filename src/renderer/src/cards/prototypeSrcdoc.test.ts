@@ -1,6 +1,11 @@
 import { parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
-import { buildPrototypeSrcdoc, CARD_CHANGES_STYLE, cardBodyMarkup } from "./prototypeSrcdoc";
+import {
+  buildPrototypeSrcdoc,
+  CARD_CHANGES_STYLE,
+  cardBodyMarkup,
+  cardBodyMounts,
+} from "./prototypeSrcdoc";
 
 type Node = { name?: string; attribs?: Record<string, string>; children?: Node[] };
 
@@ -72,5 +77,38 @@ describe("cardBodyMarkup", () => {
     const document = buildPrototypeSrcdoc(body, "dark", marks);
     expect(document).toContain(CARD_CHANGES_STYLE.trim().split("\n")[0]);
     expect(document).toContain('data-inf-changed="0"');
+  });
+});
+
+// INF-128's plan, approved by the captain: a body that draws in a project's
+// own font rides the mount vehicle, so the font engine reads that file in a
+// renderer process of its own; WI-16 mounts a body with its own script.
+describe("cardBodyMounts", () => {
+  const kept = "app-frame://typefaces/t1-0123456789abcdef0123456789abcdef.woff2";
+
+  it("mounts a body carrying a script, or naming a kept project font", () => {
+    expect(cardBodyMounts("<p>A toggle.</p><script>document.body.dataset.on = '1'</script>")).toBe(
+      true,
+    );
+    expect(
+      cardBodyMounts(
+        `<style>@font-face{font-family:"Wallet";src:url("${kept}") format("woff2")}</style><p>$42.50</p>`,
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves a body on srcdoc when its fonts are the app's own, a web address or not a kept copy", () => {
+    expect(cardBodyMounts("<p>Plain prose.</p>")).toBe(false);
+    expect(
+      cardBodyMounts('<style>.b{font-family:var(--font-mono)}</style><p class="b">42</p>'),
+    ).toBe(false);
+    expect(
+      cardBodyMounts(
+        '<style>@font-face{font-family:"W";src:url("https://fonts.example/w.woff2")}</style>',
+      ),
+    ).toBe(false);
+    expect(
+      cardBodyMounts('<style>@font-face{src:url("app-frame://typefaces/x.woff2")}</style>'),
+    ).toBe(false);
   });
 });

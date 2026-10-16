@@ -24,6 +24,7 @@ import {
 } from "../../../tests/helpers/anthropicDialect";
 import { freePort } from "../../../tests/helpers/connectionClient";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
+import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { gif } from "../../../tests/helpers/gifFixture";
 import { box, mp4 } from "../../../tests/helpers/mp4Fixture";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
@@ -32,7 +33,7 @@ import { type HomeConnection, startConnection } from "../connection/connection";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import { joinHome } from "./join";
@@ -132,6 +133,7 @@ function standInHome() {
   const actors: CoreActor[] = [];
   const pictures = new Map<string, Buffer>();
   const recordings = new Map<string, Buffer>();
+  const typefaces = new Map<string, Buffer>();
   let through = 0;
   let kept = 0;
   const gates = new Map<string, { reached: () => void; open: Promise<void> }>();
@@ -144,6 +146,9 @@ function standInHome() {
         return { shown: true, cardId: `card-${cards}` };
       case "inf:work:picture":
         pictures.set(String(request.id), Buffer.from(String(request.data), "base64"));
+        return { ok: true };
+      case "inf:work:typeface":
+        typefaces.set(String(request.id), Buffer.from(String(request.data), "base64"));
         return { ok: true };
       case "inf:work:media": {
         const id = String(request.id);
@@ -206,6 +211,7 @@ function standInHome() {
     actors,
     pictures,
     recordings,
+    typefaces,
     /** The event types the home took in, in order. */
     types: () => events.map((record) => record.event.type),
     /** Holds every request of one kind until `open()`; `reached` resolves when the first arrives. */
@@ -257,7 +263,15 @@ function folderCopies(dataDir: string): WorkingCopies {
 }
 
 /** A home with the stand-in core, a computer joined to it as another user, and the helper running there. */
-async function placed(options: { copies?: boolean; probeMedia?: MediaProbe } = {}) {
+async function placed(
+  options: {
+    copies?: boolean;
+    probeMedia?: MediaProbe;
+    probeTypeface?: TypefaceProbe;
+    /** The contract the home's welcome says, in place of the one the link heard. */
+    homeVersion?: string;
+  } = {},
+) {
   const home = standInHome();
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-placed-home-"), "devices"),
@@ -298,7 +312,7 @@ async function placed(options: { copies?: boolean; probeMedia?: MediaProbe } = {
       dataDir,
       say: () => {},
       retryMs: [20],
-      conversations: async ({ dataDir: dir, ask }) => {
+      conversations: async ({ dataDir: dir, ask, homeVersion }) => {
         const copies = options.copies ? folderCopies(dir) : undefined;
         host = new SessionHost({
           tasks: new PlacedTasks(dir, copies?.worktreesDir),
@@ -307,6 +321,12 @@ async function placed(options: { copies?: boolean; probeMedia?: MediaProbe } = {
           factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
           bind: async () => ({ backend: "pi", runtime }),
           ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+          ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
+          ...(options.homeVersion
+            ? { homeVersion: () => options.homeVersion as string }
+            : homeVersion
+              ? { homeVersion }
+              : {}),
           log: () => {},
         });
         const held = host;
@@ -663,6 +683,90 @@ describe("a conversation held on a computer that runs work", () => {
     const received = at.home.recordings.get(String(demo?.id));
     expect(received).toBeDefined();
     expectBytesEqual(received as Buffer, recording);
+  });
+
+  // INF-128's plan, with the captain's "In this build" for other computers:
+  // a preview's project font, checked where the crewmate runs, goes home
+  // before the card that names it.
+  it("sends a preview's project font before the card, checked by this computer's font loader", async () => {
+    const loaded: string[] = [];
+    const at = await placed({
+      probeTypeface: async (typefaces) => {
+        loaded.push(...typefaces.map(({ contentType }) => contentType));
+        return typefaces.map(() => ({ ok: true }));
+      },
+    });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    const font = projectFontBytes();
+    writeFileSync(join(folders.evidence, "face.woff2"), font);
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "A preview from another Mac",
+              body: `<p>The balance screen.</p><style>@font-face{font-family:"Wallet";src:url("${join(folders.evidence, "face.woff2")}")}.b{font-family:"Wallet"}</style><p class="b">$42.50</p>`,
+            },
+          },
+        ],
+      },
+      { text: "Shown." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:font", task: TASK, text: "Show it." }]);
+    await at.ended(1);
+
+    expect(loaded).toEqual(["font/woff2"]);
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+      "inf:work:typeface",
+      "inf:work:card",
+    ]);
+    const [typeface, card] = at.home.effects;
+    expect(typeface?.request).toMatchObject({ extension: "woff2" });
+    expectBytesEqual(at.home.typefaces.get(String(typeface?.request.id)) as Buffer, font);
+    expect(String((card?.request.card as { body?: string } | undefined)?.body)).toContain(
+      `url("app-frame://typefaces/${typeface?.request.id}.woff2")`,
+    );
+  });
+
+  it("refuses a card naming a project font to a home too old to keep one, sending none of it", async () => {
+    const at = await placed({
+      probeTypeface: async (typefaces) => typefaces.map(() => ({ ok: true })),
+      // A minor before the one that keeps project fonts (`CARD_TYPEFACES_SINCE`).
+      homeVersion: "8.8.0",
+    });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    writeFileSync(join(folders.evidence, "face.woff2"), projectFontBytes());
+    writeFileSync(join(folders.evidence, "after.png"), png());
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "A preview for an older home",
+              // A picture beside the font: refused first, it never crosses either.
+              body: `<style>@font-face{font-family:"Wallet";src:url("${join(folders.evidence, "face.woff2")}")}</style><p>$42.50</p><img src="${join(folders.evidence, "after.png")}" alt="The screen">`,
+            },
+          },
+        ],
+      },
+      { text: "Refused." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:old", task: TASK, text: "Show it." }]);
+    await at.ended(1);
+
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([]);
+    const toolEnd = at.home.events.find(
+      (record) => record.event.type === "tool_end" && record.event.toolName === "emit_card",
+    );
+    expect(toolEnd?.event).toMatchObject({ isError: true });
+    // The crewmate reads why, and what to do instead, in the tool's answer.
+    expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+      "runs an older Infinitary that cannot show a project's fonts",
+    );
   });
 
   it("ends a turn the computer quit in the middle of as interrupted, and tells the home once it is back", async () => {

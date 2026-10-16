@@ -14,7 +14,7 @@ import type {
 } from "../forge";
 import type { RecordInput } from "../knowledge/knowledgeService";
 import type { PanelCaptureResult } from "../personal/personalExtensions";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";
 import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskService";
@@ -252,6 +252,12 @@ export type CrewmateToolDelegate = {
    * "Demo recordings"). Absent, a card that names a recording is refused.
    */
   probeMedia?: MediaProbe;
+  /**
+   * The host's isolated loader for a preview's project fonts
+   * (docs/card-authoring.md "Fonts by reference"). Absent, a card that names
+   * a font file is refused.
+   */
+  probeTypeface?: TypefaceProbe;
   /**
    * Receives cards the crewmate emits through its card tool, as declared:
    * the host words a completion decision's buttons. A completion card's

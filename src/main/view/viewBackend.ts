@@ -66,7 +66,7 @@ const OWN_APP = new Set<CoreInvokeChannel>([
   "inf:update:install",
 ]);
 
-/** The pictures this run has shown, by name, up to this many bytes; a name never changes its bytes. */
+/** The pictures and project fonts this run has shown, by name, up to this many bytes; a name never changes its bytes. */
 const PICTURE_CACHE_BYTES = 64 * 1024 * 1024;
 
 type Link = Pick<HomeLink, "start" | "invoke" | "state" | "leave" | "close">;
@@ -183,6 +183,21 @@ export class ViewBackend {
     const answer = (await this.link.invoke("inf:cards:picture", [
       fileName,
     ])) as InvokeResponse<"inf:cards:picture">;
+    const bytes = new Uint8Array(Buffer.from(answer.data, "base64"));
+    this.keepPicture(fileName, bytes);
+    return bytes;
+  }
+
+  /**
+   * A project font by its name, from the other Mac (`inf:cards:typeface`),
+   * kept for this run with the pictures.
+   */
+  async typeface(fileName: string): Promise<Uint8Array> {
+    const kept = this.pictures.get(fileName);
+    if (kept) return kept;
+    const answer = (await this.link.invoke("inf:cards:typeface", [
+      fileName,
+    ])) as InvokeResponse<"inf:cards:typeface">;
     const bytes = new Uint8Array(Buffer.from(answer.data, "base64"));
     this.keepPicture(fileName, bytes);
     return bytes;

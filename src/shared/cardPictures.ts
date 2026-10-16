@@ -45,6 +45,31 @@ export const CARD_MEDIA_KINDS = ["mp4", "gif"] as const satisfies readonly CardM
  */
 export const CARD_MEDIA_PIECE_BYTES = 1024 * 1024;
 
+/**
+ * The frame scheme's host that serves verified project fonts (docs/card-authoring.md,
+ * "Fonts by reference"): a preview's `@font-face` names a font file in the
+ * working copy, and the host keeps its copy beside the pictures under the
+ * same self-locating names, at a host of its own - never the `fonts` host,
+ * which serves only the design system's own typefaces.
+ */
+export const CARD_TYPEFACE_HOST = "typefaces";
+
+/** The formats a project font may be, by the extension its copy is stored under. */
+export const CARD_TYPEFACE_TYPES = {
+  woff2: "font/woff2",
+  woff: "font/woff",
+  ttf: "font/ttf",
+  otf: "font/otf",
+} as const;
+export type CardTypefaceExtension = keyof typeof CARD_TYPEFACE_TYPES;
+/** Every project font kind, for the schemas that name one. */
+export const CARD_TYPEFACE_KINDS = [
+  "woff2",
+  "woff",
+  "ttf",
+  "otf",
+] as const satisfies readonly CardTypefaceExtension[];
+
 /** The formats a card picture may be, by the extension its copy is stored under. */
 export const CARD_PICTURE_TYPES = {
   png: "image/png",
@@ -64,6 +89,7 @@ const TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 export const RELEASE_NOTES_PICTURE_OWNER = "release-notes";
 const FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(png|jpg|webp)$/;
 const MEDIA_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(mp4|gif)$/;
+const TYPEFACE_FILE_NAME = /^([A-Za-z0-9_-]{1,64})-([0-9a-f]{32})\.(woff2|woff|ttf|otf)$/;
 
 /** Whether a task id can name a picture (it becomes part of a file and a URL). */
 export function isPictureTaskId(taskId: string): boolean {
@@ -132,6 +158,60 @@ export function parseCardMediaFileName(name: string):
   if (!taskId || !extension) return undefined;
   const kind = extension as CardMediaExtension;
   return { taskId, fileName: name, kind, contentType: CARD_MEDIA_TYPES[kind] };
+}
+
+/** The file name a project font's copy is stored under, and the one URL segment that serves it. */
+export function cardTypefaceFileName(id: string, extension: CardTypefaceExtension): string {
+  return `${id}.${extension}`;
+}
+
+/** The URL a preview's `@font-face` names a verified project font by. */
+export function cardTypefaceUrl(id: string, extension: CardTypefaceExtension): string {
+  return `${APP_FRAME_SCHEME}://${CARD_TYPEFACE_HOST}/${cardTypefaceFileName(id, extension)}`;
+}
+
+/**
+ * Parses the one segment the `typefaces` host was asked for, as
+ * `parseCardPictureFileName` does for pictures: anything not exactly a
+ * minted font name is `undefined`.
+ */
+export function parseCardTypefaceFileName(name: string):
+  | {
+      taskId: string;
+      id: string;
+      fileName: string;
+      kind: CardTypefaceExtension;
+      contentType: (typeof CARD_TYPEFACE_TYPES)[CardTypefaceExtension];
+    }
+  | undefined {
+  const match = TYPEFACE_FILE_NAME.exec(name);
+  if (!match) return undefined;
+  const [, taskId, hex, extension] = match;
+  if (!taskId || !hex || !extension) return undefined;
+  const kind = extension as CardTypefaceExtension;
+  return {
+    taskId,
+    id: `${taskId}-${hex}`,
+    fileName: name,
+    kind,
+    contentType: CARD_TYPEFACE_TYPES[kind],
+  };
+}
+
+/**
+ * The kept project fonts a card body names, each once, by the file name the
+ * `typefaces` host serves: a body that names one rides the mount vehicle
+ * (`PrototypeBody.tsx`), and a computer that runs work sends each to its
+ * home before the card (docs/helper.md).
+ */
+export function cardTypefaceNames(body: string): string[] {
+  const prefix = `${APP_FRAME_SCHEME}://${CARD_TYPEFACE_HOST}/`;
+  const names: string[] = [];
+  for (const part of body.split(prefix).slice(1)) {
+    const name = /^[^"'\s>);]+/.exec(part)?.[0] ?? "";
+    if (parseCardTypefaceFileName(name) && !names.includes(name)) names.push(name);
+  }
+  return names;
 }
 
 /**

@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.7.0",
+  "protocolVersion": "8.9.0",
   "versionRule": {
     "majorsBehind": 1,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -7741,6 +7741,43 @@
               "image/png",
               "image/jpeg",
               "image/webp"
+            ]
+          },
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contentType",
+          "data"
+        ]
+      }
+    },
+    "inf:cards:typeface": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "font/woff2",
+              "font/woff",
+              "font/ttf",
+              "font/otf"
             ]
           },
           "data": {
@@ -36856,6 +36893,68 @@
               "extension",
               "offset",
               "size",
+              "data"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:work:typeface": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$"
+              },
+              "extension": {
+                "type": "string",
+                "enum": [
+                  "woff2",
+                  "woff",
+                  "ttf",
+                  "otf"
+                ]
+              },
+              "data": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 11200000
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "id",
+              "extension",
               "data"
             ]
           }

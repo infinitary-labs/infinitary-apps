@@ -300,6 +300,7 @@ describe("ipc contract", () => {
       "inf:cards:seen",
       "inf:cards:show-past",
       "inf:cards:thread",
+      "inf:cards:typeface",
       "inf:computers:resources",
       "inf:conversation:last-turn",
       "inf:converse",
@@ -364,6 +365,7 @@ describe("ipc contract", () => {
       "inf:work:speed",
       "inf:work:speed-note",
       "inf:work:tasks",
+      "inf:work:typeface",
     ]);
     for (const channel of WORK_INVOKE_CHANNELS)
       expect(VIEW_INVOKE_CHANNELS as readonly string[]).not.toContain(channel);

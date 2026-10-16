@@ -1,7 +1,8 @@
 import { cardNavigationParts } from "@shared/cardParts";
+import { cardTypefaceNames } from "@shared/cardPictures";
 import { REVISION_TARGETS_MAX } from "@shared/cards";
 import { isSafeCardHref, splitCardBodyUrls } from "@shared/linkify";
-import { FRAME_CSP } from "@shared/plugins/containment";
+import { SRCDOC_FRAME_CSP } from "@shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "@shared/plugins/frameDocument";
 import { frameStylesheet } from "../plugins/frames/frameStylesheet";
 
@@ -21,12 +22,20 @@ import { frameStylesheet } from "../plugins/frames/frameStylesheet";
  * carries its own inline script takes the mount path instead
  * (`PrototypeBody.tsx`), where the host hashes each script and serves the
  * markup unchanged but for the change bars (`src/main/frames/frameMounts.ts`).
+ * So does a body that draws in a project's own font, so the font engine
+ * reads a file the app did not make in a renderer process of its own; the
+ * srcdoc document's policy admits only the design system's typefaces, so a
+ * kept font named some way the vehicle test missed loads nothing there.
  */
-export const PROTOTYPE_FRAME_CSP = FRAME_CSP;
+export const PROTOTYPE_FRAME_CSP = SRCDOC_FRAME_CSP;
 
-/** Whether a body asks for the mount path: it carries a `<script>` element. */
-export function cardBodyHasScript(body: string): boolean {
-  return /<script[\s>/]/i.test(body);
+/**
+ * Whether a body asks for the mount path: it carries a `<script>` element,
+ * or it names a kept project font at the frame scheme's `typefaces` host
+ * (docs/card-authoring.md "Fonts by reference").
+ */
+export function cardBodyMounts(body: string): boolean {
+  return /<script[\s>/]/i.test(body) || cardTypefaceNames(body).length > 0;
 }
 
 /**

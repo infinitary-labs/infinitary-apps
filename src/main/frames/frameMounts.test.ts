@@ -5,6 +5,7 @@ import { FRAME_CSP, frameCsp } from "@shared/plugins/containment";
 import type { DocumentMountRequest } from "@shared/plugins/frameDocument";
 import { describe, expect, it } from "vitest";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
+import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CARD_MOUNT_CAP, FrameMountRegistry, scriptHash } from "./frameMounts";
 import { answerFrameRequest, MEDIA_PIECE_BYTES, type PictureSource } from "./frameProtocol";
@@ -269,6 +270,85 @@ describe("the frame scheme handler", () => {
       const response = await answerFrameRequest(url, { mounts, fonts, pictures }, read);
       expect(response.status, url).toBe(404);
     }
+  });
+});
+
+// INF-128's plan, approved by the captain: the typefaces host serves only the
+// host's kept copies of project fonts, with CORS for opaque-origin frames.
+describe("the frame scheme's project fonts", () => {
+  const typeface = "t1-0123456789abcdef0123456789abcdef";
+  const hosts = (pictures: () => PictureSource) => ({
+    mounts: new FrameMountRegistry(),
+    fonts: {},
+    pictures,
+  });
+
+  it("serves a kept font by its minted name, typed by its kind, to GET alone", async () => {
+    const root = scratchDir("fm-frame-typefaces-");
+    await mkdir(join(root, "t1", "cards"), { recursive: true });
+    const bytes = projectFontBytes();
+    await writeFile(join(root, "t1", "cards", `${typeface}.woff2`), bytes);
+    await writeFile(join(root, "t1", "cards", `${typeface}.otf`), bytes);
+    await writeFile(join(root, "t1", "cards", `${typeface}.png`), bytes);
+    const at = hosts(() => ({ root }));
+
+    const served = await answerFrameRequest(`app-frame://typefaces/${typeface}.woff2`, at);
+    expect(served.status).toBe(200);
+    expect(served.headers.get("content-type")).toBe("font/woff2");
+    expect(served.headers.get("content-length")).toBe(String(bytes.length));
+    expect(served.headers.get("access-control-allow-origin")).toBe("*");
+    expect(served.headers.get("x-content-type-options")).toBe("nosniff");
+    expectBytesEqual(new Uint8Array(await served.arrayBuffer()), bytes);
+    const otf = await answerFrameRequest(`app-frame://typefaces/${typeface}.otf`, at);
+    expect(otf.headers.get("content-type")).toBe("font/otf");
+
+    for (const url of [
+      // Another task's folder, a traversal, a listing, a kind it never mints,
+      // a picture's name, and a font's name at the pictures' host.
+      "app-frame://typefaces/t2-0123456789abcdef0123456789abcdef.woff2",
+      "app-frame://typefaces/..%2Fsessions%2Fsession.jsonl",
+      "app-frame://typefaces/t1/cards/x.woff2",
+      "app-frame://typefaces/",
+      `app-frame://typefaces/${typeface}.ttc`,
+      `app-frame://typefaces/${typeface}.png`,
+      `app-frame://typefaces/${typeface}.woff2/extra`,
+      `app-frame://images/${typeface}.woff2`,
+    ]) {
+      expect((await answerFrameRequest(url, at)).status, url).toBe(404);
+    }
+    const post = await answerFrameRequest(
+      `app-frame://typefaces/${typeface}.woff2`,
+      at,
+      undefined,
+      {
+        method: "POST",
+      },
+    );
+    expect(post.status).toBe(404);
+  });
+
+  it("asks the other Mac for a font a view's frame draws, and serves none where it cannot ask", async () => {
+    const bytes = projectFontBytes();
+    const asked: string[] = [];
+    const view = hosts(() => ({
+      fetch: async () => {
+        throw new Error("not a picture");
+      },
+      fetchTypeface: async (fileName) => {
+        asked.push(fileName);
+        return bytes;
+      },
+    }));
+    const served = await answerFrameRequest(`app-frame://typefaces/${typeface}.woff2`, view);
+    expect(served.status).toBe(200);
+    expect(served.headers.get("access-control-allow-origin")).toBe("*");
+    expectBytesEqual(new Uint8Array(await served.arrayBuffer()), bytes);
+    expect(asked).toEqual([`${typeface}.woff2`]);
+
+    const older = hosts(() => ({ fetch: async () => bytes }));
+    expect(
+      (await answerFrameRequest(`app-frame://typefaces/${typeface}.woff2`, older)).status,
+    ).toBe(404);
   });
 });
 

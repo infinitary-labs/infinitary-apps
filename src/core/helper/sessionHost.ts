@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
-import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
+import {
+  CARD_MEDIA_PIECE_BYTES,
+  cardTypefaceNames,
+  parseCardTypefaceFileName,
+} from "@shared/cardPictures";
 import { crewSpeedSchema } from "@shared/crewSpeed";
-import type { WorkInvokeChannel } from "@shared/ipc";
+import { HOME } from "@shared/deviceNames";
+import { keepsCardTypefaces, type WorkInvokeChannel } from "@shared/ipc";
 import {
   isWorkOrderChannel,
   PLACED_EVENTS_MAX_PER_REQUEST,
@@ -26,7 +31,7 @@ import {
   crewmateResume,
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
   LOCAL_MACHINE_ID,
@@ -103,6 +108,16 @@ export type SessionHostOptions = {
    * "Demo recordings"). Absent, a card naming one is refused here.
    */
   probeMedia?: MediaProbe;
+  /**
+   * This computer's loader for a preview's project font (docs/card-authoring.md
+   * "Fonts by reference"). Absent, a card naming one is refused here.
+   */
+  probeTypeface?: TypefaceProbe;
+  /**
+   * The contract the home said in its welcome, while it is known: a project
+   * font goes home only to a home that keeps one (`CARD_TYPEFACES_SINCE`).
+   */
+  homeVersion?: () => string | null;
   /**
    * This computer's working copies, which a conversation runs in. Absent,
    * a conversation runs in an empty folder of its task's own.
@@ -788,7 +803,21 @@ export class SessionHost {
       cardBodiesDir: folders.cardBodies,
       evidenceDir: folders.evidence,
       ...(this.options.probeMedia ? { probeMedia: this.options.probeMedia } : {}),
+      ...(this.options.probeTypeface ? { probeTypeface: this.options.probeTypeface } : {}),
       onCard: async (card) => {
+        // A card whose preview names a project font of this task's own goes
+        // only to a home that keeps one: an older home is told nothing, not
+        // even the card's pictures.
+        const typefaces = cardTypefaceNames(card.body).flatMap((name) => {
+          const typeface = parseCardTypefaceFileName(name);
+          return typeface?.taskId === held.task ? [typeface] : [];
+        });
+        const home = this.options.homeVersion?.() ?? null;
+        if (typefaces.length > 0 && home !== null && !keepsCardTypefaces(home)) {
+          throw new Error(
+            `Card font refused: ${HOME.the} runs an older Infinitary that cannot show a project's fonts; draw the preview in the app's own typefaces until it is updated.`,
+          );
+        }
         // Each picture's bytes first, so the home holds them when it shows the card.
         for (const picture of card.pictures ?? []) {
           const { extension, data } = this.options.tasks.picture(held.task, picture.id);
@@ -812,6 +841,15 @@ export class SessionHost {
               data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
             });
           }
+        }
+        // Each project font its preview names, before the card too.
+        for (const typeface of typefaces) {
+          await this.call(held, "inf:work:typeface", {
+            callId: randomUUID(),
+            id: typeface.id,
+            extension: typeface.kind,
+            data: this.options.tasks.typeface(held.task, typeface.fileName).toString("base64"),
+          });
         }
         const answer = placedCardAnswerSchema.parse(
           await this.call(held, "inf:work:card", { callId: randomUUID(), card }),

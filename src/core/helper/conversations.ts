@@ -9,7 +9,7 @@ import { ForgeSignInStore } from "../forge";
 import { captureLoginPath, hostEnv } from "../hostEnv";
 import { JobManager } from "../jobs/jobManager";
 import { Ticker } from "../orchestrator/ticker";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { SessionBinding } from "../session/session";
 import type { ComputerAccounts } from "./accounts";
@@ -160,6 +160,10 @@ export async function startConversations(options: {
   signedIn?: () => Promise<ComputerAccounts> | undefined;
   /** This computer's decoder for a card's demo recording (src/main/mediaProbe.ts). */
   probeMedia?: MediaProbe;
+  /** This computer's loader for a preview's project font (src/main/mediaProbe.ts). */
+  probeTypeface?: TypefaceProbe;
+  /** The contract the home said in its welcome, while it is known. */
+  homeVersion?: () => string | null;
   log?: (line: string) => void;
 }): Promise<Conversations> {
   // The person's search path for the crewmate's shell and the Claude client.
@@ -252,6 +256,8 @@ export async function startConversations(options: {
     runningJobCount: (task) => jobs.runningJobCount(task),
     killJobs: (task) => jobs.killForOwner(task),
     ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+    ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
+    ...(options.homeVersion ? { homeVersion: options.homeVersion } : {}),
     ...(browsers
       ? {
           browsers: {

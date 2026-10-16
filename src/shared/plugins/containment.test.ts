@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { cardTypefaceUrl } from "../cardPictures";
 import { PRODUCTION_CSP } from "../csp";
 import { FRAME_BRIDGE_SHA256 } from "./bridge";
 import {
@@ -14,8 +15,11 @@ import {
   NETWORK_CSP_DIRECTIVES,
   panelFrameCsp,
   panelScriptSources,
+  SRCDOC_FONT_SOURCE,
+  SRCDOC_FRAME_CSP,
   STRUCTURALLY_IMPOSSIBLE,
 } from "./containment";
+import { frameFontUrl } from "./frameDocument";
 import { type PluginManifestInput, parsePluginManifest } from "./manifest";
 
 /**
@@ -62,12 +66,16 @@ describe("the plugin frame boundary", () => {
   });
 
   it("keeps the frame CSP at default-src 'none'; the only network-shaped directives are fonts from the host's own scheme and inline images", () => {
-    for (const csp of [FRAME_CSP, frameCsp(["sha256-template"])]) {
+    for (const [csp, fonts] of [
+      [FRAME_CSP, FRAME_FONT_SOURCE],
+      [frameCsp(["sha256-template"]), FRAME_FONT_SOURCE],
+      [SRCDOC_FRAME_CSP, SRCDOC_FONT_SOURCE],
+    ] as const) {
       const frame = directives(csp);
       expect(frame.get("default-src")).toEqual(["'none'"]);
       for (const directive of NETWORK_CSP_DIRECTIVES) {
         if (directive === "font-src") {
-          expect(frame.get(directive)).toEqual([FRAME_FONT_SOURCE]);
+          expect(frame.get(directive)).toEqual([fonts]);
         } else if (directive === "img-src") {
           // Images the document carries inline (`data:` names no host,
           // captain decision 2026-09-15) and the host's own scheme, which
@@ -89,6 +97,25 @@ describe("the plugin frame boundary", () => {
       `'${FRAME_BRIDGE_SHA256}'`,
       "'sha256-template'",
     ]);
+  });
+
+  // INF-145's review, decided for the captain's security ask: a project font
+  // draws only on the mount vehicle, so a srcdoc body's policy admits the
+  // design system's typefaces and no kept font, however its address is spelled.
+  it("lets a srcdoc card body load the design system's typefaces and no kept project font", () => {
+    expect(SRCDOC_FONT_SOURCE).toBe("app-frame://fonts");
+    expect(frameFontUrl("spacegrotesk-latin.woff2").startsWith(`${SRCDOC_FONT_SOURCE}/`)).toBe(
+      true,
+    );
+    expect(cardTypefaceUrl(`t1-${"0".repeat(32)}`, "woff2").startsWith(SRCDOC_FONT_SOURCE)).toBe(
+      false,
+    );
+    // Only the font source differs from the frame policy a mount is served with.
+    const srcdoc = directives(SRCDOC_FRAME_CSP);
+    const frame = directives(FRAME_CSP);
+    srcdoc.delete("font-src");
+    frame.delete("font-src");
+    expect(srcdoc).toEqual(frame);
   });
 
   it("gives a panel mount module sources on the host's own scheme - the lib and its own host - and nothing else", () => {

@@ -1,15 +1,25 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import {
+  cardTypefaceNames,
   demoSources,
   isPlayableDemoSource,
   isViewablePictureSource,
   parseCardMediaFileName,
   parseCardPictureFileName,
+  parseCardTypefaceFileName,
 } from "@shared/cardPictures";
 import { describe, expect, it } from "vitest";
+import {
+  collection,
+  projectFontBytes,
+  sampleTables,
+  sfnt,
+  truncatedFontBytes,
+  woff,
+} from "../../../tests/helpers/fontFixture";
 import { gif, MOVING_BOX_GIF_SIZE, movingBoxGifBytes } from "../../../tests/helpers/gifFixture";
 import { box, MOVING_BOX, movingBoxBytes, mp4 } from "../../../tests/helpers/mp4Fixture";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -17,10 +27,14 @@ import { MAX_GIF_DEMO_BYTES } from "../gifFormat";
 import { readDemoVideo } from "../videoFormat";
 import {
   type CardPictureRoot,
+  keepContentFile,
   keepPictureFile,
   MAX_CARD_PICTURE_BYTES,
   MAX_DEMO_BYTES,
+  MAX_TYPEFACE_BYTES,
   type MediaProbe,
+  TYPEFACE_UNREAD_WORDS,
+  type TypefaceProbe,
   verifyCardImages,
 } from "./cardImages";
 
@@ -328,6 +342,32 @@ describe("verifyCardImages", () => {
   });
 });
 
+// INF-145's re-review: a copy named by its bytes is skipped only when it holds
+// exactly them, and replaced whole, so a frame reading it never meets half of one.
+describe("keepContentFile", () => {
+  it("writes a font's copy once, leaves one holding its bytes alone, and replaces any other whole", async () => {
+    const dir = scratchDir("fm-card-keep-");
+    const file = join(dir, `t1-${"a".repeat(32)}.woff2`);
+    const bytes = projectFontBytes();
+
+    keepContentFile(file, bytes);
+    expect(await readFile(file)).toEqual(bytes);
+    const first = await stat(file);
+    keepContentFile(file, bytes);
+    // Left alone: the same file, not a fresh one renamed over it.
+    expect((await stat(file)).ino).toBe(first.ino);
+
+    // Damaged in place at its own size, which a size check would have kept.
+    const damaged = Buffer.from(bytes);
+    damaged.fill(0, 400, 800);
+    await writeFile(file, damaged);
+    keepContentFile(file, bytes);
+    expect(await readFile(file)).toEqual(bytes);
+    // Nothing temporary is left beside it.
+    expect(await readdir(dir)).toEqual([`t1-${"a".repeat(32)}.woff2`]);
+  });
+});
+
 describe("keepPictureFile", () => {
   it("keeps one copy of a picture by its content, named so the frame serves and the viewer opens it", async () => {
     const base = scratchDir("fm-kept-pictures-");
@@ -568,7 +608,7 @@ describe("verifyCardImages: demo recordings", () => {
     await writeFile(join(at.worktree, "shots", "demo.mp4"), padded);
     const before = (await copies(at)).length;
     await expect(verifyCardImages(pictures.join("") + demo("shots/demo.mp4"), at)).rejects.toThrow(
-      /pictures and recordings may total at most 64MB/,
+      /pictures, recordings and fonts may total at most 64MB/,
     );
     expect(await copies(at)).toHaveLength(before);
 
@@ -660,5 +700,212 @@ describe("verifyCardImages: GIF demos", () => {
       /is a GIF; a GIF moves/,
     );
     expect(await copies(at)).toEqual([]);
+  });
+});
+
+// INF-128's plan, approved by the captain ("a way for a card to use the
+// project's own font files"): a preview's @font-face names a font file by
+// path, and the host checks, loads, keeps and serves its own copy.
+describe("verifyCardImages: project fonts", () => {
+  /** A loader that loads every font, and the content types of each card's fonts it was handed together. */
+  function loads(): TypefaceProbe & { asked: string[][] } {
+    const asked: string[][] = [];
+    return Object.assign(
+      async (typefaces: readonly { contentType: string }[]) => {
+        asked.push(typefaces.map(({ contentType }) => contentType));
+        return typefaces.map(() => ({ ok: true as const }));
+      },
+      { asked },
+    );
+  }
+
+  async function fontRoot(probe: TypefaceProbe | null = loads()): Promise<CardPictureRoot> {
+    const at = await root();
+    return probe ? { ...at, typefaceProbe: probe } : at;
+  }
+
+  const face = (src: string, family = "Wallet") =>
+    `@font-face{font-family:"${family}";src:url("${src}") format("woff2")}`;
+  const preview = (sheet: string) =>
+    `<p>The balance screen.</p><style>${sheet}.b{font-family:"Wallet"}</style><div class="b">$42.50</div>`;
+
+  it("copies a font an @font-face names by path and rewrites only that url(), once however often or however it is named", async () => {
+    const probe = loads();
+    const at = await fontRoot(probe);
+    const bytes = projectFontBytes();
+    await writeFile(join(at.worktree, "shots", "Fredoka-600.woff2"), bytes);
+    const sheet =
+      "@font-face { font-family: 'Wallet'; font-weight: 600;\n" +
+      "  /* src: url(shots/missing.woff2) */\n" +
+      "  src: local(\"Fredoka\"), url( 'shots/Fredoka-600.woff2' ) format('woff2'); }\n" +
+      `${face("./shots/../shots/Fredoka-600.woff2", "Wallet bold")}` +
+      ".hero { background: url(shots/missing.png); }";
+
+    const { body, pictures } = await verifyCardImages(preview(sheet), at);
+
+    expect(pictures).toEqual([]);
+    const [name, ...others] = cardTypefaceNames(body);
+    expect(others).toEqual([]);
+    const typeface = parseCardTypefaceFileName(name ?? "");
+    expect(typeface).toMatchObject({ taskId: "t1", kind: "woff2", contentType: "font/woff2" });
+    const kept = `url("app-frame://typefaces/${name}")`;
+    expect(body).toBe(
+      preview(
+        "@font-face { font-family: 'Wallet'; font-weight: 600;\n" +
+          "  /* src: url(shots/missing.woff2) */\n" +
+          `  src: local(\"Fredoka\"), ${kept} format('woff2'); }\n` +
+          `@font-face{font-family:"Wallet bold";src:${kept} format("woff2")}` +
+          ".hero { background: url(shots/missing.png); }",
+      ),
+    );
+    expect(await copies(at)).toEqual([name]);
+    expect(await readFile(join(at.dir, name ?? ""))).toEqual(bytes);
+    // Loaded once, as the font it is by its own bytes, though spelled two ways.
+    expect(probe.asked).toEqual([["font/woff2"]]);
+  });
+
+  // INF-145's review: a fresh name for each copy made every revision of a
+  // font preview read as "Preview updated", whatever it changed.
+  it("names a font's copy by its own bytes, so a revision keeps it and a changed font gets another", async () => {
+    const probe = loads();
+    const at = await fontRoot(probe);
+    const bytes = projectFontBytes();
+    const other = woff(sfnt("\u0000\u0001\u0000\u0000", sampleTables()));
+    await writeFile(join(at.worktree, "shots", "face.woff2"), bytes);
+    await writeFile(join(at.worktree, "shots", "other.woff"), other);
+    const named = `t1-${createHash("sha256").update(bytes).digest("hex").slice(0, 32)}.woff2`;
+
+    const first = await verifyCardImages(preview(face("shots/face.woff2")), at);
+    const again = await verifyCardImages(preview(face("shots/face.woff2")), at);
+    expect(cardTypefaceNames(first.body)).toEqual([named]);
+    expect(again.body).toBe(first.body);
+    expect(await copies(at)).toEqual([named]);
+
+    // Two fonts on one card load together, in one window.
+    const both = await verifyCardImages(
+      preview(face("shots/face.woff2") + face("shots/other.woff", "Other")),
+      at,
+    );
+    expect(probe.asked.at(-1)).toEqual(["font/woff2", "font/woff"]);
+    expect(cardTypefaceNames(both.body)).toEqual([
+      named,
+      `t1-${createHash("sha256").update(other).digest("hex").slice(0, 32)}.woff`,
+    ]);
+  });
+
+  it("takes a font from the evidence folder by absolute path, and leaves one named by a URL as written", async () => {
+    const at = await fontRoot();
+    const evidenceDir = join(at.worktree, "..", "crewmates", "t1", "evidence");
+    await mkdir(evidenceDir, { recursive: true });
+    const linked = join(evidenceDir, "NunitoSans-400.woff2");
+    await writeFile(linked, projectFontBytes());
+    const urls =
+      face("https://fonts.example/nunito.woff2", "Web") +
+      face("data:font/woff2;base64,d09GMgABAAA=", "Inline") +
+      face("app-frame://typefaces/t0-0123456789abcdef0123456789abcdef.woff2", "Copied");
+
+    const { body } = await verifyCardImages(preview(face(linked) + urls), {
+      ...at,
+      evidenceDir,
+    });
+    expect(body).not.toContain(evidenceDir);
+    expect(body).toContain(urls);
+    expect(await copies(at)).toHaveLength(1);
+    // A body whose fonts are all URLs needs no working copy: the frame loads none of them.
+    await expect(verifyCardImages(preview(urls), undefined)).resolves.toEqual({
+      body: preview(urls),
+      pictures: [],
+    });
+  });
+
+  it("refuses a font outside its homes, missing, too large, not a font, cut short or a collection, naming why", async () => {
+    const at = await fontRoot();
+    const outside = scratchDir("fm-card-outside-");
+    await writeFile(join(outside, "outside.woff2"), projectFontBytes());
+    await symlink(join(outside, "outside.woff2"), join(at.worktree, "linked.woff2"));
+    await mkdir(join(at.worktree, "folder.woff2"));
+    const big = sfnt("\u0000\u0001\u0000\u0000", [
+      { tag: "glyf", data: Buffer.alloc(MAX_TYPEFACE_BYTES) },
+    ]);
+    await writeFile(join(at.worktree, "big.ttf"), big);
+    await writeFile(join(at.worktree, "shot.woff2"), png(2, 2));
+    await writeFile(join(at.worktree, "cut.woff2"), truncatedFontBytes());
+    await writeFile(
+      join(at.worktree, "family.ttc"),
+      collection(sfnt("\u0000\u0001\u0000\u0000", sampleTables())),
+    );
+
+    const cases: [string, RegExp][] = [
+      [join(outside, "outside.woff2"), /Card font refused: src must be a path relative/],
+      ["../../outside.woff2", /Card font refused: (file not found|path must stay inside)/],
+      ["linked.woff2", /Card font refused: path must stay inside the task's working copy/],
+      ["missing.woff2", /Card font refused: file not found: missing.woff2/],
+      ["folder.woff2", /folder.woff2 must be a regular font file no larger than 8MB/],
+      ["big.ttf", /big.ttf must be a regular font file no larger than 8MB/],
+      ["shot.woff2", /shot.woff2 is not a WOFF2, WOFF, TrueType or OpenType font/],
+      [
+        "cut.woff2",
+        new RegExp(
+          `cut.woff2 is cut short or damaged: its header says ${projectFontBytes().length} bytes`,
+        ),
+      ],
+      ["family.ttc", /family.ttc is a font collection, which a preview cannot load/],
+    ];
+    for (const [src, refusal] of cases) {
+      await expect(verifyCardImages(preview(face(src)), at), src).rejects.toThrow(refusal);
+    }
+    expect(await copies(at)).toEqual([]);
+  });
+
+  it("refuses a font the host's font engine cannot load, or with no loader at all, and keeps none of the card", async () => {
+    const cases: [TypefaceProbe | null, RegExp][] = [
+      [
+        async (typefaces) =>
+          typefaces.map(() => ({
+            ok: false,
+            reason: "its sanitizer said: Failed to convert WOFF 2.0 font to SFNT",
+          })),
+        new RegExp(
+          `face.woff2 ${TYPEFACE_UNREAD_WORDS}: its sanitizer said: Failed to convert WOFF 2.0 font to SFNT\\. Name an undamaged copy`,
+        ),
+      ],
+      [
+        async () => {
+          throw new Error("it did not load within 5 seconds");
+        },
+        new RegExp(`${TYPEFACE_UNREAD_WORDS}: it did not load within 5 seconds`),
+      ],
+      [null, /cannot load a font here to check it, so draw the preview in the app's own typefaces/],
+    ];
+    for (const [probe, refusal] of cases) {
+      const at = await fontRoot(probe);
+      await writeFile(join(at.worktree, "shots", "face.woff2"), projectFontBytes());
+      await writeFile(join(at.worktree, "shots", "screen.png"), png(3, 2));
+      const body = `${preview(face("shots/face.woff2"))}<img src="shots/screen.png" alt="The screen">`;
+      await expect(verifyCardImages(body, at)).rejects.toThrow(refusal);
+      // Every file is checked before any is kept, so the picture stays behind too.
+      expect(await copies(at)).toEqual([]);
+    }
+  });
+
+  it("counts fonts in a card's total with its pictures, and refuses a font with no working copy", async () => {
+    const at = await fontRoot();
+    const big = png(1, 1, 8 * 1024 * 1024 - 64 * 1024);
+    for (let n = 0; n < 8; n += 1) await writeFile(join(at.worktree, `big${n}.png`), big);
+    const pictures = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => `<img src="big${n}.png" alt="Big ${n}">`);
+    await writeFile(
+      join(at.worktree, "face.otf"),
+      sfnt("OTTO", [{ tag: "CFF ", data: Buffer.alloc(1024 * 1024) }]),
+    );
+    await expect(verifyCardImages(pictures.join(""), at)).resolves.toBeTruthy();
+    const before = (await copies(at)).length;
+    await expect(
+      verifyCardImages(pictures.join("") + preview(face("face.otf")), at),
+    ).rejects.toThrow(/pictures, recordings and fonts may total at most 64MB/);
+    expect(await copies(at)).toHaveLength(before);
+
+    await expect(verifyCardImages(preview(face("face.otf")), undefined)).rejects.toThrow(
+      /Card font refused: there is no working copy here to name a font file from/,
+    );
   });
 });

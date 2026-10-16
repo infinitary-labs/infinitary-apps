@@ -24,7 +24,7 @@ What a view keeps is `JoinedHome`'s (`src/core/devices/joinedHome.ts`), the one 
 | `left.json` | The Mac it last stopped controlling, and whether it left or was removed |
 
 It keeps no record of the other Mac's work: a view never opens the app's database, and its cards, tasks, feed and threads live only in the window's memory and the shell's.
-Card pictures it has shown are kept in memory for the run, up to 64 MB, by their name.
+Card pictures and project fonts it has shown are kept in memory for the run, up to 64 MB, by their name.
 
 ## Joining
 
@@ -79,6 +79,7 @@ The input's line names that Mac: "Only pictures and text files can go to MacBook
 Other files were not added."
 
 Frames are built by this app, as on the Mac where the first mate lives; a card picture's name is asked of the other Mac (`inf:cards:picture`, a `views` read that answers the home's own copy as base64), and the frame scheme serves the answer (`src/main/frames/frameProtocol.ts`).
+A project font a preview's `@font-face` names is asked of the other Mac the same way (`inf:cards:typeface`, a `views` read of a minted font name answering the home's own copy as base64), and the frame scheme's `typefaces` host serves the answer; a font the home cannot answer is not served, and the preview draws in the app's own typefaces (`docs/card-authoring.md`, "Fonts by reference").
 A card's demo recording plays in this app's picture viewer a range at a time (a GIF demo is asked whole, in the same pieces, each time Play is pressed): each range is asked of the other Mac at most one piece of 1 MB at a time (`inf:cards:media`, a `views` read of a minted recording name, an offset and a length, answering that piece as base64 and the whole file's size), never kept, since the player asks again for what it needs.
 
 ## Notifications
@@ -178,7 +179,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.
 - `src/main/shell.test.ts`: the switch - joining stops this Mac's core and asks the other Mac, a view's own look, what is refused without being sent, pushes filtered, starting as a view with no core, Leave in place or by relaunch, Remove there, each join refusal, and this Mac's own update notice and release page while the other Mac is newer, never asked of it.
   Its notifications: the other Mac's new card and finished report post here as that Mac's notifier makes them, never with this window in front or for what was there at joining, follow that Mac's switch, post after a replay and seed after a reload.
-- `src/core/core.test.ts`, "the connection serves the core to paired devices": a card picture by its name from the real core, a demo recording's pieces with its size, and Leave named in the feed.
+- `src/core/core.test.ts`, "the connection serves the core to paired devices": a card picture by its name from the real core, a demo recording's pieces with its size, a project font by its name, and Leave named in the feed.
 - `src/renderer/src/devices/viewWords.test.tsx`: the words, the top line, the join aside's steps and Leave's question.
 - `src/renderer/src/attachments/intake.test.ts`: on a view, a dropped or chosen picture or text file is applied and any other file is refused by one notice, never a path.
 - `src/shared/cards.test.ts` and `src/core/orchestrator/crewSupervisor.test.ts`: which buttons open Settings, and that the core's answer to each click agrees.

@@ -85,7 +85,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   ),
   "For prose, use design-token CSS variables (--fg-1, --fg-2, --fg-3, --accent, --line-1, --bg-1, --font-mono, ...) and the inf-mono, inf-muted, inf-row, inf-grid, and inf-panel classes; <details> takes a <summary>, <mark> holds the one thing to notice, <kbd> a key.",
   crewOnly(
-    "A preview is exempt, because it draws something that does not exist yet: a decision body may bring its own <style> sheet, its own classes, ordinary CSS lengths and colors, and data-* hooks its script reads. Nothing loads either way.",
+    "A preview or a drawing of a project's screens takes that project's own look, read from its source: its colors, type, spacing and controls, which for Infinitary is the design system above. It may bring its own <style> sheet, classes, CSS lengths and colors, and data-* hooks its script reads, and it restyles every element it draws, since the app stylesheet dresses whatever it leaves bare. The card's own answer, explanation and questions keep the app's look. A preview loads a project's font file only by path: an @font-face src url() naming a WOFF2, WOFF, TTF or OTF file by its path in the working copy, or by its absolute path in the evidence folder, which the host checks, keeps and serves like a picture; nothing else loads.",
   ),
   "Card copy is sentence case, factual, free of exclamation points and emoji, and self-contained: title and body make sense with no prior conversation, and name the work in plain language rather than only a PR number or SHA.",
   crewOnly(

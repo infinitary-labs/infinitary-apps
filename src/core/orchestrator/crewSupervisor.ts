@@ -198,7 +198,7 @@ import {
 } from "../paths";
 import type { LiveTurnCommit, PanelCaptureResult } from "../personal/personalExtensions";
 import { planStepAttached, teachStepAttached } from "../personal/sequencesSkill";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { lintCrewmateCard } from "../pi/cardLint";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { type CrewStatusEntry, NOTHING_SPAWNED } from "../pi/crewTools";
@@ -680,6 +680,8 @@ export type CrewSupervisorOptions = {
   personal?: PersonalLiveDelegate;
   /** The host's decoder for crewmates' demo recordings (`HostCapabilities.mediaProbe`). */
   probeMedia?: MediaProbe;
+  /** The host's loader for crewmates' project fonts (`HostCapabilities.typefaceProbe`). */
+  probeTypeface?: TypefaceProbe;
   /**
    * The task channel (docs/axi-commands.md): a task granted its browser gets
    * `infinitary-browser-axi` in its shell. Absent, no crewmate has a browser.
@@ -4540,9 +4542,12 @@ export class CrewSupervisor {
       cardBodiesDir: there?.cardBodies ?? crewmateCardBodiesDir(this.options.paths, task.id),
       evidenceDir: there?.evidence ?? crewmateEvidenceDir(this.options.paths, task.id),
       tempDir: there?.temp ?? crewmateTempDir(this.options.paths, task.id),
-      // A task held on another computer checks its recordings where it runs.
+      // A task held on another computer checks its recordings and fonts where it runs.
       ...(machine === LOCAL_MACHINE_ID && this.options.probeMedia
         ? { probeMedia: this.options.probeMedia }
+        : {}),
+      ...(machine === LOCAL_MACHINE_ID && this.options.probeTypeface
+        ? { probeTypeface: this.options.probeTypeface }
         : {}),
       onCard: (card) => this.addCrewmateCard(task, card),
       onCardRefused: (refusal) => this.recordCardRefusal(task, refusal),

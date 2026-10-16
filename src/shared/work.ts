@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES } from "./cardPictures";
+import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
 import { cardEffectSchema, cardPictureSchema, riskDeclarationSchema } from "./cards";
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "./checkRepair";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
@@ -71,7 +71,7 @@ export const PLACED_EVENTS_MAX_PER_REQUEST = 512;
  */
 export const PLACED_COPY_CHUNK_BYTES = 4 * 1024 * 1024;
 
-/** A card picture's bytes, base64: room for the card tool's 8 MiB cap. */
+/** A card picture's or project font's bytes, base64: room for the card tool's 8 MiB cap. */
 const PICTURE_DATA_MAX_CHARS = 11_200_000;
 
 /** One piece of a demo recording, base64: room for `CARD_MEDIA_PIECE_BYTES`. */
@@ -637,6 +637,19 @@ export const workRequests = {
       offset: z.number().int().nonnegative(),
       size: z.number().int().positive().max(RECORDING_MAX_BYTES),
       data: z.string().min(1).max(RECORDING_PIECE_MAX_CHARS),
+    }),
+    response: doneSchema,
+  },
+  /**
+   * One project font's verified copy, asked before the card whose preview
+   * names it (docs/helper.md), from `CARD_TYPEFACES_SINCE` on.
+   */
+  "inf:work:typeface": {
+    effect: "change",
+    request: asked({
+      id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$/),
+      extension: z.enum(CARD_TYPEFACE_KINDS),
+      data: z.string().min(1).max(PICTURE_DATA_MAX_CHARS),
     }),
     response: doneSchema,
   },

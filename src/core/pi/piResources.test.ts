@@ -1474,7 +1474,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 it("keeps the full authoring and handoff sources word for word", () => {
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "9ac7d72effe94f3d4ec27dab11c477d26f15c1d4738a6c10f294c25388880d52",
+    "024fc749c97058a0f6190dc1f3333d267b66504c3307ac3410941f7d2b454318",
   );
   expect(hash(HANDOFF)).toBe("4155adda60c0661cc5c20be2c08985628e56a026e1bc3eded0a43fdc02707c2b");
 });

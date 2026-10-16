@@ -8,8 +8,9 @@ import { FRAME_BRIDGE_SHA256 } from "./plugins/bridge";
  * The wasm / worker / app-model allowances exist solely for the voice
  * stack. `app-frame:` is the host's own frame scheme (src/main/frames/):
  * frame-src admits the template documents it serves, font-src admits
- * the design system's typefaces it serves to every frame, and img-src
- * admits the verified card pictures it serves (card pictures, phase 2). Card-body
+ * the design system's typefaces it serves to every frame and the project
+ * fonts a preview names, and img-src admits the verified card pictures it
+ * serves (card pictures, phase 2). Card-body
  * srcdoc documents inherit this policy - the script hash permits exactly
  * the app's own frame bridge inside those frames and nothing else (see
  * docs/live-prototype-security.md).
@@ -18,8 +19,9 @@ export const APP_MODEL_SCHEME = "app-model";
 
 /**
  * The privileged scheme the host serves plugin frames over: template
- * documents at `app-frame://mount/<id>` and font files at
- * `app-frame://fonts/<file>`. A frame document loaded from here gets its
+ * documents at `app-frame://mount/<id>`, font files at
+ * `app-frame://fonts/<file>` and a preview's kept project fonts at
+ * `app-frame://typefaces/<name>`. A frame document loaded from here gets its
  * own CSP from the response rather than inheriting the app's, which is
  * what lets a mount's template script run by hash (docs/ui-plugins.md).
  */

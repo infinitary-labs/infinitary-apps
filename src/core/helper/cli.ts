@@ -15,7 +15,7 @@ import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { ownComputerName } from "../devices/computerName";
 import type { HostChildSpawner, HostKeychain, HostTaskBrowser } from "../host";
-import type { MediaProbe } from "../pi/cardImages";
+import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { hostPlatform } from "../platform";
 import { adoptBundledGit, type BundledGitApp } from "../workspace/bundledGit";
 import {
@@ -62,6 +62,8 @@ export type CliContext = {
   keychain?: HostKeychain;
   /** This computer's decoder for a card's demo recording; absent, a card naming one is refused here. */
   probeMedia?: MediaProbe;
+  /** This computer's loader for a preview's project font; absent, a card naming one is refused here. */
+  probeTypeface?: TypefaceProbe;
   resourceMemory?: () => ResourceMemory | null;
   /**
    * This computer's browser engine, the process a task's command runs in
@@ -431,6 +433,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         ...(context.gitAskpass ? { gitAskpass: context.gitAskpass } : {}),
         ...(context.keychain ? { keychain: context.keychain } : {}),
         ...(context.probeMedia ? { probeMedia: context.probeMedia } : {}),
+        ...(context.probeTypeface ? { probeTypeface: context.probeTypeface } : {}),
         ...(context.resourceMemory ? { resourceMemory: context.resourceMemory } : {}),
         ...(context.browser
           ? { browser: { ...context.browser, ...browserLookup(place.packaged) } }

@@ -24,7 +24,10 @@ export { cardParts } from "@shared/cardParts";
  * order, and text with its whitespace collapsed. Two things the host itself
  * rewrites on every call are not the author's change and are ignored: the
  * name of a picture's or a demo recording's copy (a fresh random name each
- * emit) and the host's fact strip and follow-up rows on a settle card.
+ * emit) and the host's fact strip and follow-up rows on a settle card. A
+ * project font's copy needs no such rule: the host names it by its own
+ * bytes (`verifyCardImages`), so an unchanged font keeps its name in a
+ * preview's style sheet and a changed one is the author's change.
  *
  * The comparison is a multiset match, not a sequence diff: a part that only
  * moved is not new. A part with no unmatched twin in the version last seen

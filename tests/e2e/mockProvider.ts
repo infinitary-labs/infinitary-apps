@@ -26,7 +26,7 @@ import {
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../../src/core/personal/sequencesSkill";
-import { DEMO_UNPLAYED_WORDS } from "../../src/core/pi/cardImages";
+import { DEMO_UNPLAYED_WORDS, TYPEFACE_UNREAD_WORDS } from "../../src/core/pi/cardImages";
 import {
   PREANSWERED_WORDS,
   untaggedNewMarkRefusal,
@@ -47,6 +47,7 @@ import {
   writeAnthropicToolUse,
 } from "../helpers/anthropicDialect";
 import { completionCardBody } from "../helpers/completionCard";
+import { damagedFontBytes, projectFontBytes } from "../helpers/fontFixture";
 import { mp4 } from "../helpers/mp4Fixture";
 import type { ScriptedArgs, ScriptedCall, ScriptedCardAction } from "../helpers/scriptedCalls";
 import {
@@ -608,6 +609,51 @@ function writeGifDemoCalls(): ScriptedCall[] {
     { path: LOOPING_GIF_DEMO.path, bytes: LOOPING_GIF_DEMO.bytes },
     pictureFile(DEMO_POSTER),
   ]);
+}
+
+/**
+ * Marker prompt (project fonts, `tests/e2e/card-containment.spec.ts`): the
+ * mock crewmate writes its project's own font file into its working copy,
+ * beside a copy damaged inside its compressed data, and names one in a
+ * preview's `@font-face`. It offers the preview with the damaged copy first
+ * - which the host's test load refuses - then, reading the refusal, with
+ * the real file. The same preview names a second face by a web address,
+ * first in its family list, which no frame loads.
+ */
+export const PROJECT_FONT_PROMPT_MARKER = "show the project font";
+export const PROJECT_FONT_CARD_TITLE = "The balance screen in the project's own type";
+/** The family the preview's `@font-face` names the project's file by. */
+export const PROJECT_FONT_FAMILY = "Project Face";
+export const PROJECT_FONT_REFUSAL = TYPEFACE_UNREAD_WORDS;
+const PROJECT_FONT = "shots/project-face.woff2";
+const DAMAGED_FONT = "shots/project-face-damaged.woff2";
+
+function writeProjectFontCalls(): ScriptedCall[] {
+  return writeFilesCalls([
+    { path: PROJECT_FONT, bytes: projectFontBytes() },
+    { path: DAMAGED_FONT, bytes: damagedFontBytes() },
+  ]);
+}
+
+function projectFontCardCall(font: string, port: number): ScriptedCall {
+  const probe = `http://127.0.0.1:${port}${CARD_FETCH_PROBE_PATH}`;
+  return {
+    name: "emit_card",
+    args: {
+      title: PROJECT_FONT_CARD_TITLE,
+      body:
+        "<p>The balance screen, drawn in the project's own type.</p>" +
+        "<style>" +
+        `@font-face{font-family:"${PROJECT_FONT_FAMILY}";font-weight:300 700;src:url("${font}") format("woff2")}` +
+        `@font-face{font-family:"Web Face";src:url("${probe}?font") format("woff2")}` +
+        // The web face comes first, so the frame tries it - and loads nothing - before the project's.
+        `.balance{font-family:"Web Face","${PROJECT_FONT_FAMILY}",sans-serif;background:#fbf4e6;color:#1d2a24;border-radius:16px;padding:16px 20px;max-width:320px}` +
+        ".balance h2{margin:0 0 6px;font-size:22px;font-weight:700;color:#1d2a24}.balance p{margin:0;color:#1d2a24}" +
+        ".balance .amount{font-size:40px;font-weight:700}" +
+        "</style>" +
+        `<div class="balance"><h2>Eddie's Wallet</h2><p>Balance</p><p class="amount">$42.50</p><p>Saving for a bike - 3 weeks to go</p></div>`,
+    },
+  };
 }
 
 /**
@@ -8407,6 +8453,26 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             .reduce((sum, count) => sum + count, 0);
           if (emits === 1 && latestUserTail.includes(GIF_DEMO_REFUSAL)) {
             streamToolCalls([demoCardCall(GIF_DEMO_RECORDING.path, GIF_DEMO_CARD_TITLE)]);
+            return;
+          }
+        }
+        // The project-font crewmate: write the files, offer the preview with
+        // the damaged copy, then with the real file once the host refused it.
+        if (!isFirstmate && latestUserTail.includes(PROJECT_FONT_PROMPT_MARKER) && wantsStream) {
+          const port = (server.address() as AddressInfo).port;
+          if (!hasToolResults) {
+            streamToolCalls(writeProjectFontCalls());
+            return;
+          }
+          if (!calledTool(latestUserTail, "emit_card")) {
+            streamToolCalls([projectFontCardCall(DAMAGED_FONT, port)]);
+            return;
+          }
+          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
+            .map((call) => latestUserTail.split(call).length - 1)
+            .reduce((sum, count) => sum + count, 0);
+          if (emits === 1 && latestUserTail.includes(PROJECT_FONT_REFUSAL)) {
+            streamToolCalls([projectFontCardCall(PROJECT_FONT, port)]);
             return;
           }
         }

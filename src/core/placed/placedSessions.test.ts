@@ -23,6 +23,7 @@ import {
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
 import { freePort } from "../../../tests/helpers/connectionClient";
+import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -774,6 +775,47 @@ describe("a task that runs on a computer that runs work", () => {
         offset: 0,
         size: 1,
         data: "AA==",
+      }),
+    ).rejects.toThrow(/not this task's/);
+  });
+
+  it("keeps a project font a card's preview names where this Mac's frames load it, and only this task's", async () => {
+    const at = await world();
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-font",
+      title: "Shows a preview",
+      status: "running",
+      deviceId: at.deviceId,
+    });
+    const id = `t-font-${"a".repeat(32)}`;
+    const font = projectFontBytes();
+    await home.placed.answer(at.deviceId, "inf:work:typeface", {
+      task: "t-font",
+      callId: "call-1",
+      id,
+      extension: "woff2",
+      data: font.toString("base64"),
+    });
+    const kept = join(crewmateCardPicturesDir(home.paths, "t-font"), `${id}.woff2`);
+    expect(readFileSync(kept)).toEqual(font);
+    // A copy damaged in place is replaced whole when the same font arrives again.
+    writeFileSync(kept, Buffer.alloc(font.length));
+    await home.placed.answer(at.deviceId, "inf:work:typeface", {
+      task: "t-font",
+      callId: "call-1b",
+      id,
+      extension: "woff2",
+      data: font.toString("base64"),
+    });
+    expect(readFileSync(kept)).toEqual(font);
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:typeface", {
+        task: "t-font",
+        callId: "call-2",
+        id: `t-other-${"a".repeat(32)}`,
+        extension: "woff2",
+        data: font.toString("base64"),
       }),
     ).rejects.toThrow(/not this task's/);
   });

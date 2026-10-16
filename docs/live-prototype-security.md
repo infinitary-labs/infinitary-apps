@@ -1,7 +1,7 @@
 # Live-prototype sandbox security review
 
 The checklist for the agent-authored-HTML surface (decision D-9).
-Re-run this review whenever `prototypeSrcdoc.ts`, `PrototypeBody.tsx`, the frame bridge (`src/shared/plugins/bridge.ts`), the frame document builder (`src/shared/plugins/frameDocument.ts`), the frame scheme (`src/main/frames/`), the frame watchdog (`FrameController`), the frame realm's lib or runtime (`scripts/frame-lib.ts`, `src/renderer/src/frameRealm/`), or the frame CSP changes.
+Re-run this review whenever `prototypeSrcdoc.ts`, `PrototypeBody.tsx`, the frame bridge (`src/shared/plugins/bridge.ts`), the frame document builder (`src/shared/plugins/frameDocument.ts`), the frame scheme (`src/main/frames/`), the frame watchdog (`FrameController`), the frame realm's lib or runtime (`scripts/frame-lib.ts`, `src/renderer/src/frameRealm/`), the project-font check (`src/core/fontFormat.ts`, `src/core/pi/fontFaces.ts`, the font probe in `src/main/mediaProbe.ts`), or the frame CSP changes.
 The sandbox token list, the focus policy and the frame CSP are one shared definition (`src/shared/plugins/containment.ts`, UI plugin system phases 0 and 1, `docs/ui-plugins.md`); a change there is a change here.
 Template mounts share the sandbox, CSP sources, bridge validation, and served-document vehicle.
 Their script contract differs: a plugin runs only its single `template.script`, while a card mount hash-pins each inline script in its markup.
@@ -71,6 +71,62 @@ What changed is where a script-bearing body is served, not what the frame may do
   The window takes it only from the card on screen whose frame holds its focus - the captain's own click or key, which a script cannot give - and only while the message box is not held, then puts the words at the start of the box with the caret after them.
   It sends nothing: the worst a body can do is put words in front of the captain, who reads them in the box before anything leaves, as with text he pastes.
   No `window.infinitary`, no parent DOM, no storage, no network, no top-level navigation, no popups, no forms.
+
+## Project fonts in previews (INF-128)
+
+The captain's scope of 2026-10-16: "That wording, plus a way for a card to use the project's own font files, which needs a security review."
+This section is that review, folded into the same change; its mechanism is `docs/card-authoring.md`, "Fonts by reference".
+What changed is one more thing the frame scheme serves, and one narrowing: the sandbox tokens, the mount vehicle's policy, the bridge and its hash, and the app CSP are the ones below.
+`font-src app-frame:` already admitted the whole scheme, so a mounted card needed no policy change for the new host.
+The srcdoc vehicle's own policy narrows `font-src` to that scheme's `fonts` host (`SRCDOC_FRAME_CSP`), so a body there draws the design system's typefaces and no kept font, even one whose address the vehicle test did not recognize; `containment.test.ts` pins both policies.
+
+**Threat.**
+A font file is untrusted bytes: it may come from a project cloned from a stranger, and the crewmate writes the names.
+A font file is also code for a parser - the font engines are large, written in memory-unsafe languages, and have been exploited through crafted fonts.
+
+**Layers, outermost first.**
+
+- The host's check at `emit_card`, in bounded, memory-safe TypeScript (`readFont`): a contained regular file of at most 8 MB, a WOFF2, WOFF, TrueType or OpenType font by its own signature, never a collection, its header's stated size equal to the file's, its table directory and tables inside the file.
+  The bytes read for the check are the bytes loaded, counted and copied, so nothing changes between the check and the use.
+- The host's test load (`createTypefaceProbe`, `src/main/mediaProbe.ts`): all of a card's fonts load as web fonts in one hidden window of its own - sandboxed, no preload, an in-memory session that answers only those files and refuses every permission, download and network request, a policy of `default-src 'none'; font-src` that one host - each within five seconds on a clock of its own, or the card is refused by that font's name with the sanitizer's own words.
+  The window is destroyed after each load, however it ends, and is never one of the app's windows.
+- The frame scheme's `typefaces` host serves only names the core minted (`<taskId>-<32 hex>.<woff2|woff|ttf|otf>`, parsed by `@shared/cardPictures`), in-process, to GET alone: no path segments, no listing, nothing outside `crewmates/<taskId>/cards/`, nothing that leaves the machine.
+- Chromium's OpenType Sanitizer re-parses every web font before the platform's font engine sees it, in the frame as in the probe.
+- A body that names a kept font rides the mount vehicle, at a card host of its own, so the font engine reads it in a renderer process of its own, under the frame watchdog.
+  A body on the srcdoc vehicle cannot load one at all: its policy admits fonts from the design system's `fonts` host alone.
+  The app page runs in one process and the srcdoc cards share another, while each mounted card gets one of its own.
+
+On a Mac, a font the sanitizer passes is drawn by the system's own engine (CoreText); Chrome's memory-safe Fontations engine draws web fonts only on Linux, Android and ChromeOS, and on a Mac only formats the system cannot read (Chrome, "Memory safety for web fonts", March 2025).
+
+**What each layer catches.**
+A WOFF2 cut short, or a TrueType font whose table points past its end, is refused by the host's check before any engine sees it; the sanitizer refuses both as well ("Failed to convert WOFF 2.0 font to SFNT", "DSIG: invalid table offset"), and the text falls back in either vehicle.
+The test load catches a file whose structure is sound and whose data is not, such as a WOFF2 damaged inside its compressed tables, which `tests/e2e/card-containment.spec.ts` sends and sees refused.
+
+**Residuals.**
+
+- R1, a parser flaw.
+  A crafted font that passes the check and the sanitizer could exploit the platform's font engine; precedents are CVE-2020-15999 (FreeType, exploited against Chrome) and CVE-2023-41990 (Apple's font parser, exploited on iOS).
+  It stays inside one card's sandboxed renderer process, or the probe's, with no app bridge, storage or network.
+  It is the same class of risk card pictures carry through the image decoders, and the defense is the same: keeping the app's Electron current.
+- R2, a swapped glyph.
+  A font can draw any letter as any shape, so a preview could make its text say something else.
+  The author already controls every pixel of its body; the card's own questions and labels keep the app's look, and the host's chrome - the title, the footer buttons, the fact strip, the thread - is another document the font never reaches.
+- R3, a stall.
+  A pathological font can only stall its own frame: the size caps bound it, its own process holds it, and the watchdog tears a wedged frame down.
+- R4, a font's license.
+  The copy stays beside the task's pictures until the Settings purge; it never rides the body, SQLite, the cards push or the human-supervision export, which copies pictures only.
+- R5, a copied address.
+  A body that names another card's `app-frame://typefaces/` address reaches only a font the captain already has, as with pictures.
+- R6, a font inside a picture.
+  A `data:` SVG image can carry its own `@font-face` with a `data:` font, and the font engine reads that font without `font-src` being asked, in either vehicle: `img-src` admits `data:`, and an image's own fonts answer to no frame policy.
+  It predates this change - `img-src data:` came with the captain's 2026-09-15 decision - and neither the host's font check nor the srcdoc vehicle's narrower `font-src` reaches it.
+  The boundary there is the real one everywhere: Chromium's sanitizer re-parses that font as it does any web font, and the card's sandboxed renderer process holds whatever it does.
+  A mounted card's own script has a second such path: `new FontFace(name, bytes)` takes raw bytes the script holds, and nothing on it asks `font-src`, the host's check (`readFont`) or the host's test load.
+  So the sanitizer and the card's own renderer process are the boundary for every font a card draws; the host's check and its test load only show that a font the body names by path is a font that works, and stop nothing a card's own script sets out to load.
+
+**Other computers.**
+A crewmate on a computer that runs work has the check and the test load run there, by that computer's own probe, and sends each kept copy home before the card (`inf:work:typeface`), which the home keeps only under that task's own id; a paired view asks the home for a font by its minted name (`inf:cards:typeface`), and its own frame scheme serves the answer, never a path.
+The home keeps what that computer sends as it keeps its pictures, trusting the check the paired computer ran; the frame's sanitizer and its process of its own still stand between those bytes and the home's own window.
 
 ## The frame realm (one plugin vehicle, Phase A item 4)
 
@@ -142,10 +198,10 @@ The pins protect the lib's integrity, not its correctness.
   Chromium lets a frame's script take focus for about five seconds after the captain's own click or key inside it, so the shell spends the page's user activation, which spends every frame's, each time focus comes back to the window's own page, while a frame holds focus each time the pointer moves over the page's own content, and each time it sees focus move from one frame to another (`guardFrameActivation`); `tests/e2e/frame-focus.spec.ts` proves it for the main message and for a panel's field.
   Where the pointer never crossed the page (frames that touch, a pointer already resting on the frame clicked into, Tab from one frame straight into the next), a script may still take focus back in the task right after its frame lost it; the shell then gives focus back to the frame the captain moved to, unless a click or key of his holds the page again by then.
   Residual: on that path, a script that keeps its frame's thread busy until the captain has clicked or typed again, and only then takes focus back, keeps it.
-- Frame CSP: `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '<bridge hash>'` plus, for a mount that runs scripts, that mount's own script hashes.
+- Frame CSP: `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '<bridge hash>'` plus, for a mount that runs scripts, that mount's own script hashes; a card body on the srcdoc vehicle has `font-src app-frame://fonts` instead.
   The bridge hash permits exactly the injected bridge (v2: actions, reads, fetch, theme, resize, links, drafts, pictures, demos, task keys, watchdog pong, focus notices).
   A card body's own inline script runs only on the mount path above, by the hash the host computed; on srcdoc nothing of the body's executes.
-  Every network-capable source (connect, media, frame, worker) remains at none; `font-src` admits only the shell's own scheme, which serves the vendored typefaces in-process, and `img-src` only `data:`, which names no host, and that same scheme, whose `images` host serves only verified card pictures (`containment.test.ts` pins both).
+  Every network-capable source (connect, media, frame, worker) remains at none; `font-src` admits only the shell's own scheme, which serves the vendored typefaces in-process and, at its `typefaces` host, a preview's checked project fonts, and `img-src` only `data:`, which names no host, and that same scheme, whose `images` host serves only verified card pictures (`containment.test.ts` pins both).
 - Bridge channel: postMessage only.
   The parent accepts messages exclusively from the frame's own contentWindow and zod-parses the closed envelope (`FrameController`).
   It clamps resize requests, checks links against the safe external-link policy, shows a clicked picture only when its source is one of the host's own `images` copies exactly as minted or a `data:` PNG, JPEG, GIF or WebP (`viewablePictures`, `src/shared/cardPictures.ts`) - the app page then draws it with a plain `<img>`, which runs nothing, under the app CSP's own `img-src 'self' data: app-frame:` - plays a demo only when its recording is one of the host's own `media` copies that the card's own verified body names (`demoSources`, `isPlayableDemoSource`) with a viewable poster, and starts it at once only when the window holds user activation, which a body's script cannot give - the app page plays it in its own `<video>` under the app CSP's `media-src 'self' app-frame://media`, a card's frame still loading no media - drops any action id the card did not declare, takes a task-key gesture (`rest`, `leave`, `open`) only on a key matching `TASK_KEY_EXACT` that it told that very document - so a body points only at tasks it names, and opening one is the Tasks panel's own open path, with no effect - bounds action values, refuses reads the plugin did not declare, caps subscriptions and in-flight requests per frame, and forwards `fetch` to the core's mediated seam, which refuses every call until a grant is served.
@@ -187,6 +243,13 @@ The pins protect the lib's integrity, not its correctness.
     The host opens the viewer only from a frame that holds focus, only for a recording the card's body names, and plays it at once only with the window's user activation; anything else opens nothing or rests on the poster.
   - A GIF recording is checked in core alone (`readDemoGif`, `src/core/gifFormat.ts`): every block walked to the trailer that ends the file, every frame's picture data decoded to its last pixel with a bounded table, at most 100 frames and 8 MB, and no loop instruction.
   - An MP4 recording is checked before any card names it: its boxes in core (`readDemoVideo`), then decoded at its start, middle and end in a hidden window of the host's own (`src/main/mediaProbe.ts`) with no preload, so no app bridge, an in-memory session with every permission, download and network request refused and only that one recording answered, and a five-second deadline; the window is destroyed after each probe, however it ends, and is never one of the app's windows (`appWindows`).
+- [x] Project fonts (docs/card-authoring.md, "Fonts by reference"; the review above)
+  - The mount vehicle's policy is unchanged, and so is the app CSP: `font-src app-frame:` already admitted the scheme.
+    The srcdoc vehicle's `font-src` narrows to `app-frame://fonts`, so no kept font loads outside a mounted card (`containment.test.ts`; in the real app, `tests/e2e/card-containment.spec.ts`).
+  - A font is checked by its own structure, then loaded in the host's probe, before any card names it; a failure at either refuses the card with what to fix, and nothing is copied (`cardImages.test.ts`, `fontFormat.test.ts`).
+  - The `typefaces` host answers only a minted name, typed by its kind with `nosniff` and CORS, to GET alone, and 404 to anything else (`frameMounts.test.ts`).
+  - A body naming a kept font rides the mount vehicle, so its font engine runs in a process of its own (`prototypeSrcdoc.test.ts`).
+  - In the real app, a preview draws its project's font from the kept copy, a damaged copy is refused at send, and a face the same sheet names by a web address reaches nothing (`tests/e2e/card-containment.spec.ts`).
 - [x] The containment corpus
   - Every vector the retired allowlists used to strip runs for real, in both vehicles, against a live local server that counts what arrives: `on*` handlers, `javascript:` URLs, `<img>`, `<iframe>`, `<object>`, `<embed>`, `<link rel=stylesheet>`, `@import`, `<base>`, `<form>`, `<video>`/`<audio>`/`<source>`, `<svg><image>`, `<use>` with an external href, `<set>` rewriting an href, `<foreignObject>` with a frame inside, a `<script src>`, and a script injected at run time.
     None executed, none loaded, and the server recorded zero requests (`tests/e2e/card-containment.spec.ts`).

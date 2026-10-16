@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-follow-six-words",
+      "reason": "Instructions only: a new end-to-end journey follows the six-word test rule like any other test, with no approval ask. Its review still names the promised result, the data, the completion signal, the platform prerequisites and the shared resources. Weakening or deleting a test still waits for approval. No screen changes."
+    }
+  ]
+}

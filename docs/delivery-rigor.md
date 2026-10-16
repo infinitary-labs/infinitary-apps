@@ -44,7 +44,9 @@ It names six words a test meets - intent, fixture, failure, layer, owner and gat
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
 The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
-This project keeps no testing policy of its own beyond two rulings, a new journey only on the captain's request and weakening or deleting a test only on the captain's approval (`docs/testing.md`, "This project's rulings on tests"), so the passage decides the rest.
+This project keeps no testing policy of its own beyond one ruling, weakening or deleting a test only on the captain's approval (`docs/testing.md`, "This project's rulings on tests").
+A new end-to-end journey follows the passage like any other test, with no ask, and its review still names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
+The passage decides the rest.
 The brief's `tests-required` constraint asks for tests of the task's stated intent, in the passage's sense (`src/core/orchestrator/intentBrief.ts`).
 
 ## The three tiers

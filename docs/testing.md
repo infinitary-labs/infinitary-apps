@@ -6,9 +6,10 @@ Cohorts and probes are `docs/test-cohorts.md`; the e2e harness is `docs/e2e-cont
 ## This project's rulings on tests
 
 Which tests a crewmate writes, and how it repairs a failing one, is the crew's default rule on tests (`docs/delivery-rigor.md`, "The default rule on tests").
-This project adds two rulings of the captain, which win over that default:
+A new end-to-end journey follows that rule like any other test, with no ask.
+Its review names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
+This project adds one ruling of the captain, which wins over that default:
 
-- A new end-to-end journey is written only on the captain's request, and its review names the promised result, the data, the completion signal, the platform prerequisites and the shared resources (FI3-1732).
 - Weakening, skipping or deleting an existing test waits for the captain's approval.
 
 ## Windows feasibility observations

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-crew-cutoff-time-limit",
+      "reason": "Internal test repair: the refused Claude crewmate journey starts the app three times, so it keeps a minute for each start instead of the default single minute it outran on a loaded hosted Linux runner. Its assertions are unchanged, and no user-facing behavior changes."
+    }
+  ]
+}

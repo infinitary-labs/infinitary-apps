@@ -53,6 +53,9 @@ async function taskId(page: Page, title: string): Promise<string> {
 }
 
 test("a crewmate its organisation refuses waits without a turn, is told once, and goes on when the login changes", async () => {
+  // Three launches of one app: each keeps the minute it would have as a
+  // test of its own.
+  test.setTimeout(3 * 60_000);
   const homeDir = scratchDir("infinitary-home-");
   const mockProvider: MockProviderServer = await startMockProvider();
   const firstmateBodies = () =>

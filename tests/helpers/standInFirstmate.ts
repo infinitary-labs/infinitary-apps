@@ -20,7 +20,8 @@ import { scratchDir } from "./scratchDirs";
  * openssl; `work update` and `work remove` answer as the work mode does, and
  * `work connect` speaks the controller's side of the home's SSH connection
  * (`src/shared/sshConnection.ts`) - its socket, then its route once the
- * forward is in place, each beat written down - without keeping a route
+ * forward is in place, each beat written down with that socket, which tells
+ * one connection's beats from another's - without keeping a route
  * itself, or hands it to the built app (`connect`); `agent` is what it says
  * of the work there. Every
  * start, and the bundle's marker, is written
@@ -104,7 +105,7 @@ export function standInFirstmate(
       '    case "$M" in',
       `      *'"forwarded"'*) echo "forwarded $S/s" >> "$R"; printf '{"firstmate":"route","v":1,"agent":"%s"}\\n' ${shellWord(background.agent ?? "running")};;`,
       // Its folder retired - moved into a newer app's - it says so and ends, as the real controller does.
-      `      *'"beat"'*) echo "beat" >> "$R"; if [ -f "$(dirname "$INFINITARY_HELPER_DATA_DIR")/${RETIRED_PROFILE_MARKER}" ]; then printf '{"firstmate":"refused","reason":"moved"}\\n'; exit 0; fi;;`,
+      `      *'"beat"'*) echo "beat $S/s" >> "$R"; if [ -f "$(dirname "$INFINITARY_HELPER_DATA_DIR")/${RETIRED_PROFILE_MARKER}" ]; then printf '{"firstmate":"refused","reason":"moved"}\\n'; exit 0; fi;;`,
       "    esac",
       "  done",
       "  exit 0",

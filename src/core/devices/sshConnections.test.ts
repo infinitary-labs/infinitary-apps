@@ -181,6 +181,16 @@ async function home(
     forwards: () =>
       [...(existsSync(record) ? readFileSync(record, "utf8") : "").matchAll(/^forwarded /gm)]
         .length,
+    /**
+     * Whether this Mac read the route of the connection there now. The
+     * stand-in writes its forward down before its route reaches this Mac,
+     * which beats on that connection only once it read it.
+     */
+    up: () => {
+      const now = existsSync(record) ? readFileSync(record, "utf8") : "";
+      const socket = forwarded(now);
+      return socket !== "" && now.includes(`\nbeat ${socket}\n`);
+    },
     start: () => {
       const stop = ssh2.start();
       stops.push(stop);
@@ -250,7 +260,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
         expect(state(at.connections, device.id)).toEqual({ state: "connected" }),
       );
       // Each beat reaches the controller there.
-      await vi.waitFor(() => expect(at.record().match(/^beat$/gm)?.length ?? 0).toBeGreaterThan(1));
+      await vi.waitFor(() => expect(at.record().match(/^beat /gm)?.length ?? 0).toBeGreaterThan(1));
       await client.close();
 
       // Stopped, as the app quits: the controller there let go, and nothing is left on either side.
@@ -269,10 +279,13 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       at.start();
       const device = await addChecked(at.remote, sshd.address);
       await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      // Up here too, so what drops is a connection this Mac had.
+      await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
 
       // The connection drops: it is made again by itself.
       for (const pid of sshProcesses(at.controlBase)) process.kill(Number(pid), "SIGKILL");
       await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
+      await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
 
       // The other Mac answers unlike the key that was remembered: this Mac stops, and signs in to nothing.
       const remembered = at.pairing.rememberedHost(sshd.address);
@@ -283,11 +296,15 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
         line: "ED25519 SHA256:not-this-mac",
       });
       for (const pid of sshProcesses(at.controlBase)) process.kill(Number(pid), "SIGKILL");
-      await vi.waitFor(() =>
-        expect(state(at.connections, device.id)).toEqual({
-          state: "stopped",
-          reason: "host-changed",
-        }),
+      // Tried again, it reads the check line before it stops: SSH's own work,
+      // which outlasts a second on a busy runner.
+      await vi.waitFor(
+        () =>
+          expect(state(at.connections, device.id)).toEqual({
+            state: "stopped",
+            reason: "host-changed",
+          }),
+        { timeout: 10_000 },
       );
       const lines = sshConnectionWords.stopped("host-changed", { address: sshd.address, device });
       expect(at.said.map((event) => event.text)).toEqual(lines);
@@ -302,6 +319,8 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       at.pairing.rememberHost(sshd.address, remembered);
       expect(at.connections.tryAgain()).toBe(1);
       await vi.waitFor(() => expect(at.forwards()).toBe(tried + 1), { timeout: 10_000 });
+      // Until its route reaches this Mac it reads reconnecting, as a computer seen before.
+      await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
       expect(state(at.connections, device.id)).toEqual({ state: "connecting" });
       // Its work said hello again: said once that it is back.
       const grant = new JoinedHome(them.work).read()?.grant;
@@ -670,6 +689,8 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       at.start();
       const device = await addChecked(at.remote, sshd.address);
       await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      // Up here too, so what drops is a connection this Mac had, which reads reconnecting.
+      await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
 
       at.connections.suspend();
       for (const pid of sshProcesses(at.controlBase)) process.kill(Number(pid), "SIGKILL");

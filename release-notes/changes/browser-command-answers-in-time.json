@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "browser-command-answers-in-time",
+      "kind": "fix",
+      "title": "A crewmate gets the answer from its browser action",
+      "body": "When the computer is busy, a crewmate's click or fill on a page now gets its answer in time. Before, that answer could be missed, and the crewmate could try the action again.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the crewmate gets the answer instead of trying the action again.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

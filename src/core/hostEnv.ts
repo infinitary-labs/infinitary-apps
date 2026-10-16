@@ -237,6 +237,14 @@ export function hostPath(): string {
 export const SHELL_CAP_ENV = "INFINITARY_SHELL_CAP_MS";
 
 /**
+ * When that shell started, epoch milliseconds from `Date.now()`, the clock
+ * the channel compares against (`jobs/jobManager.ts`). Pi counts its limit
+ * from this moment, so a task command does too (docs/axi-commands.md).
+ * Absent: the channel counts from when the request arrives.
+ */
+export const SHELL_STARTED_ENV = "INFINITARY_SHELL_STARTED_MS";
+
+/**
  * An environment with a session's shell laid over it (`SessionSpec.shell`):
  * its variables, and its folders first on the search path.
  */
@@ -258,8 +266,15 @@ export function withTaskShell(
  * search path (`resources/git-bin/git`) which tree to run.
  */
 export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  // An app started from a Pi shell inherits that shell's limit. A child that
+  // is not itself that shell — the Claude client among them — must not keep
+  // it: JobManager sets both again through `extra` for the shells it starts.
+  const inherited = { ...process.env };
+  delete inherited[SHELL_CAP_ENV];
+  delete inherited[SHELL_STARTED_ENV];
+  delete inherited.FM3000_SHELL_CAP_MS; // the older name still reads as this limit
   return {
-    ...process.env,
+    ...inherited,
     ...gitSignInEnv(),
     ...(bundled ? { INFINITARY_GIT_DIR: bundled.dir } : {}),
     ...extra,

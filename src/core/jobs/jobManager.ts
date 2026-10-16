@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { hostEnv, SHELL_CAP_ENV, withTaskShell } from "../hostEnv";
+import { hostEnv, SHELL_CAP_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
 import type { TaskShell } from "../session/session";
@@ -103,15 +103,21 @@ export class JobManager {
   }): Promise<BashOutcome> {
     const id = randomUUID().slice(0, 8);
     const startedAt = this.now();
+    // The channel compares this stamp with `Date.now()`, not the ticker.
+    const shellStartedAt = Date.now();
     // A crewmate's builds and tests run below the UI (../utilityQos.ts).
     const command = atUtilityQos("/bin/bash", ["-c", input.command]);
     const child = spawn(command.file, command.args, {
       cwd: input.cwd,
       // The person's search path, so node, pnpm and gh are there from a Dock
       // launch, the session's own shell over it, and the cap this command
-      // answers within, which a task command keeps to (docs/axi-commands.md).
+      // answers within, counted from this start, which a task command keeps
+      // to (docs/axi-commands.md). Pi's own timer below counts from the spawn.
       env: withTaskShell(
-        hostEnv({ [SHELL_CAP_ENV]: String(input.background ? 0 : (input.capMs ?? SYNC_CAP_MS)) }),
+        hostEnv({
+          [SHELL_CAP_ENV]: String(input.background ? 0 : (input.capMs ?? SYNC_CAP_MS)),
+          [SHELL_STARTED_ENV]: String(shellStartedAt),
+        }),
         input.shell,
       ),
       // Its own process group, so killing a job kills what it spawned.

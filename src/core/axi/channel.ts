@@ -40,9 +40,14 @@ import type {
  * keeps.
  *
  * A shell that answers within a limit (Pi's, 3 seconds, which it names in
- * `INFINITARY_SHELL_CAP_MS`) gets its answer within that limit: an operation
- * still running then goes on, and its answer is kept for the task's next
- * command, which gets it instead of running. Nothing is ever sent twice.
+ * `INFINITARY_SHELL_CAP_MS`) gets its answer within that limit, counted from
+ * when the shell started (`INFINITARY_SHELL_STARTED_MS`) while that shell can
+ * still answer, not from when this request arrives: a slow launcher must not
+ * answer after Pi has already turned the command into a background job. A
+ * request that arrives once that limit has run out counts from receipt. An
+ * operation still running then goes on, and its answer is kept for the task's
+ * next command, which gets it instead of running, even when the limit has
+ * already run out. Nothing is ever sent twice.
  */
 
 export type { TaskShell } from "../session/session";
@@ -65,7 +70,7 @@ export type AxiChannelOptions = {
 export const AXI_ADDRESS_ENV = "INFINITARY_AXI_ADDRESS";
 export const AXI_KEY_ENV = "INFINITARY_AXI_KEY";
 export const AXI_VERSION_ENV = "INFINITARY_AXI_VERSION";
-export { SHELL_CAP_ENV } from "../hostEnv";
+export { SHELL_CAP_ENV, SHELL_STARTED_ENV } from "../hostEnv";
 
 /** The header a request carries its key in; the key file is that one header line. */
 const KEY_HEADER = "x-infinitary-axi-key";
@@ -105,14 +110,39 @@ function digestOf(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }
 
-/** Wait for `work` until `deadline`, or for good without one. */
+/**
+ * When the shell's limit runs out. Count from when the shell started only
+ * while it can still answer (`received` before `started + cap`): that is the
+ * window a slow launcher would otherwise answer after Pi had given up. At or
+ * after that, or with no start, count from receipt, as before. A start after
+ * receipt cannot be this shell's start, so it must not push the deadline
+ * later. No cap: the shell waits for every answer.
+ */
+function shellDeadline(
+  received: number,
+  capRaw: string | null,
+  startedRaw: string | null,
+): number | undefined {
+  const cap = Number(capRaw || Number.NaN);
+  if (!Number.isFinite(cap) || cap <= 0) return undefined;
+  const started = Number(startedRaw || Number.NaN);
+  const stillAnswering = Number.isFinite(started) && started > 0 && received < started + cap;
+  const origin = stillAnswering ? Math.min(started, received) : received;
+  return origin + cap - CAP_MARGIN_MS;
+}
+
+/**
+ * Wait for `work` until `deadline`, or for good without one. A deadline
+ * already past still lets a settled answer win: a later command in the same
+ * shell shares that deadline, and a finished kept answer must not become
+ * `BUSY` forever.
+ */
 async function within<T>(
   work: Promise<T>,
   deadline: number | undefined,
 ): Promise<T | typeof TIMEOUT> {
   if (deadline === undefined) return work;
-  const left = deadline - Date.now();
-  if (left <= 0) return TIMEOUT;
+  const left = Math.max(0, deadline - Date.now());
   let timer: ReturnType<typeof setTimeout> | undefined;
   const late = new Promise<typeof TIMEOUT>((resolve) => {
     timer = setTimeout(() => resolve(TIMEOUT), left);
@@ -270,8 +300,7 @@ export class AxiChannel {
     const form = new URLSearchParams(body);
     // Firstmate 3000's name for a command is the same command.
     const tool = ownTaskCommand(form.get("tool") ?? "");
-    const cap = Number(form.get("cap") || Number.NaN);
-    const deadline = Number.isFinite(cap) && cap > 0 ? received + cap - CAP_MARGIN_MS : undefined;
+    const deadline = shellDeadline(received, form.get("cap"), form.get("started"));
     if (tool !== BROWSER_COMMAND || !grant.tools.browser) {
       answer(
         failed(

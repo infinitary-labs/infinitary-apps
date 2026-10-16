@@ -62,6 +62,25 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(background.kind).toBe("job");
   });
 
+  it("tells a command when its shell started, on the wall clock the channel reads", async () => {
+    // INF-181: the channel compares this stamp with Date.now(), not the ticker.
+    const before = Date.now();
+    const { jobs } = manager(() => 1_700_000_000_000);
+    const outcome = await jobs.run({
+      ownerId: "t1",
+      command: 'printf "%s|%s" "$INFINITARY_SHELL_STARTED_MS" "$INFINITARY_SHELL_CAP_MS"',
+      cwd: "/tmp",
+    });
+    const after = Date.now();
+    if (outcome.kind !== "done") throw new Error("expected a finished command");
+    const [started, cap] = outcome.output.split("|");
+    const stamp = Number(started);
+    expect(cap).toBe("3000");
+    expect(stamp).toBeGreaterThanOrEqual(before);
+    expect(stamp).toBeLessThanOrEqual(after);
+    expect(stamp).not.toBe(1_700_000_000_000);
+  });
+
   it("merges stderr and reports the exit code", async () => {
     const { jobs } = manager();
     const outcome = await jobs.run({

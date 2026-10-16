@@ -9,7 +9,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer, CrewmateBrowser } from "../browser/taskBrowsers";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
-import { AxiChannel, SHELL_CAP_ENV, type TaskShell } from "./channel";
+import { AxiChannel, SHELL_CAP_ENV, SHELL_STARTED_ENV, type TaskShell } from "./channel";
 
 /**
  * The task channel for real: the shell launcher in `resources/axi-bin`,
@@ -286,5 +286,94 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     expect(look.stdout).toContain('did: "Clicked button \\"Send\\" [g1:e2]."');
     expect(browser.act).toHaveBeenCalledTimes(1);
     expect(browser.calls.filter((call) => call.op === "inspect")).toEqual([]);
+  });
+
+  it("counts the shell's limit from when the shell started, while that shell can still answer", async () => {
+    // INF-181: a click that finishes after the start-counted deadline, and
+    // before the receipt-counted one, must answer running. Receipt counting
+    // would return the click.
+    const channel = await openChannel();
+    const browser = standIn("Sign up");
+    const cap = 3_000;
+    const started = Date.now() - 1_600;
+    let clickDone: () => void = () => {};
+    const clickSettled = new Promise<void>((resolve) => {
+      clickDone = resolve;
+    });
+    browser.act = vi.fn(
+      () =>
+        new Promise<BrowserAnswer>((done) => {
+          setTimeout(() => {
+            done(page("Sign up", 'Clicked button "Send" [g1:e2].'));
+            clickDone();
+          }, 800);
+        }),
+    );
+    const granted = channel.grant("task-a", { browser });
+
+    const click = await shell(granted, ["click", "@g1:e2"], {
+      [SHELL_CAP_ENV]: String(cap),
+      [SHELL_STARTED_ENV]: String(started),
+    });
+    expect(click.exitCode).toBe(0);
+    expect(decode(click.stdout)).toMatchObject({ running: "click" });
+    expect(browser.act).toHaveBeenCalledTimes(1);
+    await clickSettled;
+
+    // A finished kept answer wins even though this later command's deadline
+    // has passed and the shell can still answer. The early timeout used to
+    // print BUSY forever, including a poll.
+    const lookCap = 3_000;
+    const lookStarted = Date.now() - (lookCap - 650);
+    const look = await shell(granted, [], {
+      [SHELL_CAP_ENV]: String(lookCap),
+      [SHELL_STARTED_ENV]: String(lookStarted),
+    });
+    expect(look.exitCode).toBe(0);
+    expect(look.stdout).toContain("earlier: Your earlier click finished");
+    expect(look.stdout).not.toContain("BUSY");
+    expect(browser.act).toHaveBeenCalledTimes(1);
+
+    // A shell that has just started, with room to spare, still returns a fast click.
+    browser.act = vi.fn(async () => page("Sign up", 'Clicked button "Send" [g1:e2].'));
+    const fresh = await shell(granted, ["click", "@g1:e2"], {
+      [SHELL_CAP_ENV]: "30000",
+      [SHELL_STARTED_ENV]: String(Date.now()),
+    });
+    expect(fresh.exitCode).toBe(0);
+    expect(fresh.stdout).toContain('did: "Clicked button \\"Send\\" [g1:e2]."');
+    expect(fresh.stdout).not.toContain("running: click");
+    expect(browser.act).toHaveBeenCalledTimes(1);
+
+    // Once the cap has already run out, count from receipt: a short click answers.
+    browser.act = vi.fn(
+      () =>
+        new Promise<BrowserAnswer>((done) => {
+          setTimeout(() => done(page("Sign up", 'Clicked button "Send" [g1:e2].')), 200);
+        }),
+    );
+    const past = await shell(granted, ["click", "@g1:e2"], {
+      [SHELL_CAP_ENV]: "30000",
+      [SHELL_STARTED_ENV]: String(Date.now() - 30_000),
+    });
+    expect(past.exitCode).toBe(0);
+    expect(past.stdout).toContain('did: "Clicked button \\"Send\\" [g1:e2]."');
+    expect(past.stdout).not.toContain("running: click");
+
+    // A start after the request arrived cannot extend the receipt-counted limit.
+    let held: (() => void) | undefined;
+    browser.act = vi.fn(
+      () =>
+        new Promise<BrowserAnswer>((done) => {
+          held = () => done(page("Sign up", 'Clicked button "Send" [g1:e2].'));
+        }),
+    );
+    const late = await shell(granted, ["click", "@g1:e2"], {
+      [SHELL_CAP_ENV]: "1500",
+      [SHELL_STARTED_ENV]: String(Date.now() + 60_000),
+    });
+    held?.();
+    expect(late.exitCode).toBe(0);
+    expect(decode(late.stdout)).toMatchObject({ running: "click" });
   });
 });

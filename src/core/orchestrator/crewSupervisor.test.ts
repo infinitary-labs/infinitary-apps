@@ -15,6 +15,12 @@ import {
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import type { FmEvent } from "@shared/events";
+import {
+  AUTOMATIC_COMPUTER,
+  type PlacementWait,
+  type PlacementWaitRow,
+  placementWait,
+} from "@shared/placement";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import type { RiskDeclaration } from "@shared/risk";
@@ -54,6 +60,8 @@ import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
+import type { AutomaticPlacement } from "../placed/automaticPlacement";
+import type { CrewMachines } from "../placed/placedSessions";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionSpec } from "../session/session";
@@ -226,6 +234,12 @@ type RecordUsageInput = {
 };
 
 type SetupExtras = {
+  /**
+   * Automatic placement's answers for a project set to Automatic, with the
+   * routing switch on and computers that run work on the list (docs/helper.md,
+   * "Automatic starts"); nothing asks those computers anything here.
+   */
+  automatic?: Pick<AutomaticPlacement, "choose">;
   reasoningChoice?: import("../routing/router").Router["reasoningChoice"];
   accounts?: AccountAttachment;
   routedModel?: { provider: string; id: string };
@@ -371,6 +385,13 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
             // to the raw id when the catalog holds no label.
             modelLabel: (ref: { provider: string; id: string }) => ref.id,
           } as unknown as import("../routing/router").Router,
+        }
+      : {}),
+    ...(extras.automatic
+      ? {
+          automaticPlacement: extras.automatic as AutomaticPlacement,
+          machines: {} as CrewMachines,
+          router: { dynamicEnabled: () => true } as unknown as import("../routing/router").Router,
         }
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
@@ -19973,5 +19994,138 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     expect(await supervisor.interruptFromCrewmateTab(taskId)).toMatchObject({ ok: false });
     await supervisor.interruptCrewmate(taskId, "cancel");
     await tick();
+  });
+});
+
+/**
+ * INF-67's F1 (decided: no spam in Activity): an Automatic wait's words come
+ * from each comparison's live readings, so they change from one sweep to the
+ * next, and every line about a task is a row in its Activity. A wait says so
+ * once, and again only when its kind changes; Details keep the latest words.
+ */
+describe("an Automatic wait in Activity", () => {
+  const STANDARD = { cpu: 0.5, memoryBytes: 2 * 1024 ** 3 };
+  /** This computer's comparison, through the words' own owner. */
+  const compared = (row: Partial<PlacementWaitRow>): PlacementWait =>
+    placementWait([{ name: "This Mac", rejections: [], capacity: null, ...row }], STANDARD);
+
+  it("says a wait again only when its kind changes, while Details read its latest words", async () => {
+    const dir = scratchDir("infinitary-automatic-wait-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const waits = [
+      compared({ rejections: ["resources-stale"] }),
+      compared({ rejections: ["project-unknown"] }),
+      compared({ rejections: ["cpu-busy"], capacity: { cpu: 0.2, memoryBytes: 5 * 1024 ** 3 } }),
+      compared({
+        rejections: ["cpu-busy", "memory-busy"],
+        capacity: { cpu: 0.2, memoryBytes: 5 * 1024 ** 3 },
+      }),
+    ];
+    let next = 0;
+    const { supervisor, repos, tasks, events } = setup(fakeCrewmate(), {
+      // A later comparison reads as the last one did.
+      automatic: {
+        choose: async () => ({ wait: waits[Math.min(next++, waits.length - 1)] as PlacementWait }),
+      },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "footer",
+      title: "Fix the ledger footer",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "when-ready",
+    });
+    const lines = () =>
+      events.flatMap((event) =>
+        event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
+      );
+    const details = () => supervisor.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
+    const [stale, unknown, busy, held] = waits as [
+      PlacementWait,
+      PlacementWait,
+      PlacementWait,
+      PlacementWait,
+    ];
+    // Two other reasons, then processing capacity, then processing capacity
+    // with memory set aside for other starts: two kinds, four sets of words.
+    expect([stale.kind, unknown.kind, busy.kind, held.kind]).toEqual([
+      "other",
+      "other",
+      "room",
+      "room",
+    ]);
+    expect(new Set(waits.map((wait) => wait.words)).size).toBe(4);
+
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(lines()).toEqual([`"Fix the ledger footer": ${stale.words}`]);
+    expect(details()).toBe(stale.words);
+
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(lines()).toHaveLength(1);
+    expect(details()).toBe(unknown.words);
+
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(lines()).toEqual([
+      `"Fix the ledger footer": ${stale.words}`,
+      `"Fix the ledger footer": ${busy.words}`,
+    ]);
+    expect(details()).toBe(busy.words);
+
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(lines()).toHaveLength(2);
+    expect(details()).toBe(held.words);
+    // Start now answers with the latest words too, and says nothing new in Activity.
+    expect(await supervisor.startQueuedNow(task.id)).toContain(`: ${held.words}`);
+    expect(lines()).toHaveLength(2);
+  });
+
+  // INF-67's R1: under load the quarter-second processor reading flickers,
+  // so one sweep reads processing capacity short and the next only memory.
+  it("says a wait for room once while memory stays short and the processor reading flickers", async () => {
+    const dir = scratchDir("infinitary-automatic-room-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const GIB = 1024 ** 3;
+    const waits = [
+      compared({
+        rejections: ["cpu-busy", "memory-busy"],
+        capacity: { cpu: 0.2, memoryBytes: GIB },
+      }),
+      compared({ rejections: ["memory-busy"], capacity: { cpu: 4.9, memoryBytes: GIB } }),
+      compared({
+        rejections: ["cpu-busy", "memory-busy"],
+        capacity: { cpu: 0.2, memoryBytes: GIB },
+      }),
+      // The typecheck ended; another task that is starting still holds its room.
+      compared({ rejections: ["memory-busy"], capacity: { cpu: 4.9, memoryBytes: 3 * GIB } }),
+    ];
+    let next = 0;
+    const { supervisor, repos, tasks, events } = setup(fakeCrewmate(), {
+      automatic: { choose: async () => ({ wait: waits[next++] as PlacementWait }) },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "totals",
+      title: "Fix the ledger totals",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "when-ready",
+    });
+    const lines = () =>
+      events.flatMap((event) =>
+        event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
+      );
+    const details = () => supervisor.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
+    // Three sets of words across four sweeps, each naming its own check.
+    expect(new Set(waits.map((wait) => wait.words)).size).toBe(3);
+    for (const wait of waits) {
+      await supervisor.dispatchQueuedTask(task.id);
+      expect(details()).toBe(wait.words);
+    }
+    expect(lines()).toEqual([`"Fix the ledger totals": ${waits[0]?.words}`]);
   });
 });

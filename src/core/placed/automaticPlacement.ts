@@ -9,6 +9,7 @@ import {
   PLACEMENT_FACTS_SINCE,
   type PlacementFacts,
   type PlacementSnapshot,
+  type PlacementWait,
   placementFactsAnswerSchema,
   placementReason,
   placementWait,
@@ -53,7 +54,7 @@ export type AutomaticChoice = {
  * the route of a wait for the level the task asked for (`floorHold`), which
  * the supervisor holds on that level's reset as it holds a This computer start.
  */
-export type AutomaticWait = { wait: string; held?: RouteResult };
+export type AutomaticWait = { wait: PlacementWait; held?: RouteResult };
 
 /** The one start-time admission owner. Resource demand uses the screen/panel feed,
  * not a second sampler. Fresh compatibility is transient; only commitments persist.
@@ -62,7 +63,7 @@ export class AutomaticPlacement {
   private readonly generations = new Map<string, number>();
   private readonly reads = new Map<string, Read>();
   private readonly runningSince = new Map<string, number>();
-  private readonly stop: () => void;
+  private readonly stop: (() => void)[];
 
   constructor(
     private readonly options: {
@@ -75,6 +76,7 @@ export class AutomaticPlacement {
       router: Router;
       repo: (id: string) => RepoView | undefined;
       catalog: () => readonly QuotaCatalogModel[];
+      /** The resource receiver's clock: a witness is compared with when its samples began. */
       now?: () => number;
       /** Evidence that the conversation is running, including one reconciled after restart. */
       running: (task: TaskRecord) => boolean;
@@ -83,17 +85,22 @@ export class AutomaticPlacement {
       eligible?: (record: TaskRecord) => boolean;
     },
   ) {
-    this.stop = options.work.onWorkDevice(({ deviceId }) => {
-      this.generations.set(deviceId, (this.generations.get(deviceId) ?? 0) + 1);
-      for (const key of this.reads.keys())
-        if (key.startsWith(`${deviceId}\n`)) this.reads.delete(key);
-      for (const record of options.tasks.pendingPlacements())
-        if (record.deviceId === deviceId) this.runningSince.delete(record.id);
-    });
+    this.stop = [
+      options.work.onWorkDevice(({ deviceId }) => {
+        this.generations.set(deviceId, (this.generations.get(deviceId) ?? 0) + 1);
+        for (const key of this.reads.keys())
+          if (key.startsWith(`${deviceId}\n`)) this.reads.delete(key);
+        for (const record of options.tasks.pendingPlacements())
+          if (record.deviceId === deviceId) this.runningSince.delete(record.id);
+      }),
+      // Witnessed before every sample, so the next reading can free a running
+      // task's room, however long since the last start (FI3-1757).
+      options.resources.onSample(() => this.witness()),
+    ];
   }
 
   dispose(): void {
-    this.stop();
+    for (const stop of this.stop) stop();
     this.reads.clear();
     this.runningSince.clear();
   }
@@ -192,7 +199,7 @@ export class AutomaticPlacement {
     if (!this.stillCurrent(record, repo)) return undefined;
     let now = this.now();
     const live = this.options.resources.snapshot();
-    this.reconcile(live);
+    this.reconcile();
     const candidates: PlacementCandidate[] = computers.map((computer, index) => {
       const read = facts[index];
       const valid =
@@ -263,17 +270,24 @@ export class AutomaticPlacement {
         ...(existing ? { boundComputer: { computerId: existing.snapshot.computerId } } : {}),
       });
       const chosen = decision.chosen;
+      const nameOf = (id: string | null) =>
+        computers.find((row) => row.computerId === id)?.name ?? "The other computer";
       if (!chosen) {
         const held = floorHold(decision.candidates);
         wait = {
-          wait: placementWait(decision.candidates.map((row) => row.rejections)),
+          wait: placementWait(
+            decision.candidates.map((row) => ({
+              name: nameOf(row.computerId),
+              rejections: row.rejections,
+              capacity: row.capacity,
+            })),
+            requirements.demand,
+          ),
           ...(held ? { held } : {}),
         };
         return undefined;
       }
       routed = this.options.router.commit(record.id, chosen.model);
-      const nameOf = (id: string | null) =>
-        computers.find((row) => row.computerId === id)?.name ?? "The other computer";
       const model = chosen.model.result.choice;
       // A commitment names its model. The runtime default names none, so that
       // start takes the existing unrouted start there, the way it would with
@@ -351,8 +365,9 @@ export class AutomaticPlacement {
 
   /** A sample begun after running was confirmed includes demand; never subtract it twice.
    * After restart/reconnect running must be witnessed again, then a NEW sample must follow.
+   * A sample's start is the receiver's own, never rebuilt from its age and a second clock read.
    */
-  reconcile(view = this.options.resources.snapshot()): void {
+  reconcile(): void {
     const now = this.now();
     for (const task of this.options.tasks.pendingPlacements()) {
       const placement = task.placement;
@@ -365,13 +380,21 @@ export class AutomaticPlacement {
         this.runningSince.set(task.id, now);
         continue;
       }
-      const read = view.computers.find(
-        (row) => row.computerId === placement.snapshot.computerId,
-      )?.reading;
-      if (read?.status === "fresh" && now - read.ageMs > since) {
+      const began = this.options.resources.sampledAt(placement.snapshot.computerId);
+      // A witness taken just before a sample was asked for counts for that sample.
+      if (began !== undefined && began >= since) {
         this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "observed");
         this.runningSince.delete(task.id);
       }
+    }
+  }
+
+  /** Notes each pending task running now, before a sample that will include it. */
+  private witness(): void {
+    const now = this.now();
+    for (const task of this.options.tasks.pendingPlacements()) {
+      if (!this.options.running(task)) this.runningSince.delete(task.id);
+      else if (!this.runningSince.has(task.id)) this.runningSince.set(task.id, now);
     }
   }
 

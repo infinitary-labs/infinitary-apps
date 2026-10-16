@@ -16,12 +16,13 @@ export class ComputerResourceFeed {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private readonly refreshing = new Map<string | null, Promise<void>>();
   private readonly started = new Map<string | null, number>();
+  private readonly sampling = new Set<() => void>();
   private readonly stop: (() => void)[];
   private stopped = false;
 
   constructor(
     private readonly options: {
-      resources: Pick<ComputerResources, "read" | "refresh">;
+      resources: Pick<ComputerResources, "read" | "refresh" | "sampledAt">;
       /** Home first, then paired work computers; never control-only devices. */
       computers: () => { computerId: string | null; label: string }[];
       onComputers: (listener: () => void) => () => void;
@@ -62,6 +63,20 @@ export class ComputerResourceFeed {
     return this.snapshot();
   }
 
+  /**
+   * Runs just before this feed asks for new readings, so whatever a listener
+   * notes there happened before every sample those readings carry.
+   */
+  onSample(listener: () => void): () => void {
+    this.sampling.add(listener);
+    return () => this.sampling.delete(listener);
+  }
+
+  /** When a computer's fresh reading was asked for, on the receiver's clock; undefined unless fresh. */
+  sampledAt(computerId: string | null): number | undefined {
+    return this.options.resources.sampledAt(computerId);
+  }
+
   /** Current receiver ages, without extending demand or initiating a sample. */
   snapshot(): ComputerResourcesView {
     return {
@@ -77,6 +92,7 @@ export class ComputerResourceFeed {
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
     this.started.clear();
+    this.sampling.clear();
     for (const stop of this.stop) stop();
   }
 
@@ -96,11 +112,15 @@ export class ComputerResourceFeed {
     for (const computerId of this.started.keys()) {
       if (!known.has(computerId)) this.started.delete(computerId);
     }
-    for (const { computerId } of computers) {
-      if (this.refreshing.has(computerId)) continue;
-      const now = this.now();
+    const now = this.now();
+    const due = computers.filter(({ computerId }) => {
+      if (this.refreshing.has(computerId)) return false;
       const started = this.started.get(computerId);
-      if (started !== undefined && now >= started && now - started < RESOURCE_REFRESH_MS) continue;
+      return started === undefined || now < started || now - started >= RESOURCE_REFRESH_MS;
+    });
+    if (due.length === 0) return;
+    for (const listener of this.sampling) listener();
+    for (const { computerId } of due) {
       this.started.set(computerId, now);
       const reading = this.options.resources
         .refresh(computerId)

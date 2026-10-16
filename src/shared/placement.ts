@@ -156,14 +156,27 @@ export type CommittedPlacement = z.infer<typeof committedPlacementSchema>;
 export function placementReason(snapshot: Pick<PlacementSnapshot, "computerName">): string {
   return `Automatic chose ${snapshot.computerName}: it can run this project and had room to start.`;
 }
-export const PLACEMENT_WAIT =
-  "Waiting for a compatible computer with room to start. Existing work stays where it started.";
-export const PLACEMENT_MODEL_WAIT =
-  "Waiting for a computer with a model that can take this task. Existing work stays where it started.";
+const STAYS = "Existing work stays where it started.";
+/** A wait whose computers have not been compared yet. */
+export const PLACEMENT_WAIT = `Waiting for a compatible computer with room to start. ${STAYS}`;
+export const PLACEMENT_MODEL_WAIT = `Waiting for a computer with a model that can take this task. ${STAYS}`;
+export const PLACEMENT_HELD_WAIT = `Waiting for room set aside for other tasks that are starting. ${STAYS}`;
 
+/**
+ * What a wait waits for, as Activity tells waits apart: a model, room on a
+ * computer, or each computer's other reasons. Room covers spare processing
+ * capacity, spare memory and room set aside for other starts, which one
+ * quarter-second reading to the next can trade, and a wait not yet compared.
+ * The words name the check from the latest readings; Activity says a wait
+ * again only when this changes.
+ */
+export type PlacementWaitKind = "model" | "room" | "other";
+export type PlacementWait = { kind: PlacementWaitKind; words: string };
+export const UNCOMPARED_WAIT: PlacementWait = { kind: "room", words: PLACEMENT_WAIT };
+
+const BUSY_REJECTIONS: readonly PlacementRejection[] = ["cpu-busy", "memory-busy"];
 const ROOM_REJECTIONS: readonly PlacementRejection[] = [
-  "cpu-busy",
-  "memory-busy",
+  ...BUSY_REJECTIONS,
   "model-preferred-elsewhere",
 ];
 const MODEL_REJECTIONS: readonly PlacementRejection[] = ["model-unavailable", "model-floor"];
@@ -179,15 +192,88 @@ function onlyFor(
   );
 }
 
+/** One compared computer, as a wait reads it. */
+export type PlacementWaitRow = {
+  /** The computer's name, as Task Details writes it. */
+  name: string;
+  rejections: readonly PlacementRejection[];
+  /** Its own room before pending starts are taken off; null when unknown. */
+  capacity: PlacementDemand | null;
+};
+
+/** The room checks, in the order a wait names them. */
+const ROOM_CHECKS = [
+  {
+    reason: "cpu-busy",
+    words: "processing capacity",
+    fits: (room, demand) => room.cpu >= demand.cpu,
+  },
+  {
+    reason: "memory-busy",
+    words: "memory",
+    fits: (room, demand) => room.memoryBytes >= demand.memoryBytes,
+  },
+] as const satisfies readonly {
+  reason: PlacementRejection;
+  words: string;
+  fits: (room: PlacementDemand, demand: PlacementDemand) => boolean;
+}[];
+
 /**
  * Why an Automatic start waits, from each computer's typed rejections: the
  * model when a computer that could otherwise take the task was refused only
- * for its model and none waits only for room; room otherwise.
+ * for its model and none waits only for room. Otherwise the check that
+ * refused the computers that could take it but for room: its own spare
+ * processing capacity or memory, or only the room set aside for other tasks
+ * that are starting. With no such computer, each computer's own reasons.
  */
-export function placementWait(rejections: readonly (readonly PlacementRejection[])[]): string {
-  return onlyFor(rejections, MODEL_REJECTIONS) && !onlyFor(rejections, ROOM_REJECTIONS)
-    ? PLACEMENT_MODEL_WAIT
-    : PLACEMENT_WAIT;
+export function placementWait(
+  rows: readonly PlacementWaitRow[],
+  demand: PlacementDemand,
+): PlacementWait {
+  const rejections = rows.map((row) => row.rejections);
+  if (onlyFor(rejections, MODEL_REJECTIONS) && !onlyFor(rejections, ROOM_REJECTIONS))
+    return { kind: "model", words: PLACEMENT_MODEL_WAIT };
+  const busy = rows.filter(
+    (row) =>
+      row.rejections.length > 0 &&
+      row.rejections.every((reason) => BUSY_REJECTIONS.includes(reason)),
+  );
+  if (busy.length > 0) {
+    // Short on its own reading, or short only once other starts' room is taken off.
+    const short = new Set<PlacementRejection>();
+    let held = false;
+    for (const row of busy)
+      for (const check of ROOM_CHECKS) {
+        if (!row.rejections.includes(check.reason)) continue;
+        if (row.capacity && check.fits(row.capacity, demand)) held = true;
+        else short.add(check.reason);
+      }
+    if (short.size === 0) return { kind: "room", words: PLACEMENT_HELD_WAIT };
+    const what = ROOM_CHECKS.filter((check) => short.has(check.reason))
+      .map((check) => check.words)
+      .join(" and ");
+    return {
+      kind: "room",
+      words: [
+        `Waiting for a compatible computer with spare ${what} to start.`,
+        ...(held ? ["Other tasks that are starting also hold some of its room."] : []),
+        STAYS,
+      ].join(" "),
+    };
+  }
+  const why = rows
+    .filter((row) => row.rejections.length > 0)
+    .map(
+      (row) =>
+        `${row.name}: ${row.rejections.map((reason) => REJECTION_WORDS[reason]).join("; ")}.`,
+    );
+  return why.length > 0
+    ? {
+        kind: "other",
+        words: ["Waiting for a computer that can take this task.", ...why, STAYS].join(" "),
+      }
+    : UNCOMPARED_WAIT;
 }
 
 /**

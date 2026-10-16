@@ -76,9 +76,10 @@ import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import {
   AUTOMATIC_COMPUTER,
   AUTOMATIC_WORD,
-  PLACEMENT_WAIT,
+  type PlacementWait,
   placementCandidateLines,
   placementReason,
+  UNCOMPARED_WAIT,
 } from "@shared/placement";
 import type { TypedFailure } from "@shared/plainProblem";
 import { projectPagePathRefusal } from "@shared/projectPage";
@@ -1619,8 +1620,8 @@ export class CrewSupervisor {
     return target === AUTOMATIC_COMPUTER ? null : target;
   }
 
-  /** Each Automatic task that waits to start, with the words that say why. */
-  private readonly automaticWaits = new Map<string, string>();
+  /** Each Automatic task that waits to start, with the latest words that say why. */
+  private readonly automaticWaits = new Map<string, PlacementWait>();
 
   automaticFor(record: PlacementRecord): boolean {
     return Boolean(
@@ -1634,16 +1635,21 @@ export class CrewSupervisor {
     );
   }
 
-  /** Says once why a task waits, and again only when the reason changes. */
-  private sayAutomaticWait(record: TaskRecord, words = PLACEMENT_WAIT): void {
-    if (this.automaticWaits.get(record.id) === words) return;
-    this.automaticWaits.set(record.id, words);
+  /**
+   * Keeps the latest words for Details and Start now, and says why a task
+   * waits once, then again only when the kind of wait changes: each new
+   * reading can change the words, and every line is a row in Activity.
+   */
+  private sayAutomaticWait(record: TaskRecord, wait = UNCOMPARED_WAIT): void {
+    const said = this.automaticWaits.get(record.id);
+    this.automaticWaits.set(record.id, wait);
+    if (said?.kind === wait.kind) return;
     this.options.broadcastEvent({
       type: "firstmate_note",
       taskId: record.id,
       text: record.placement
         ? `"${record.title}" waits for its chosen computer to confirm preparation. It will not start elsewhere.`
-        : `"${record.title}": ${words}`,
+        : `"${record.title}": ${wait.words}`,
     });
   }
 
@@ -1824,7 +1830,7 @@ export class CrewSupervisor {
           ? {
               reason:
                 record.startPolicy === "when-ready"
-                  ? (this.automaticWaits.get(record.id) ?? PLACEMENT_WAIT)
+                  ? (this.automaticWaits.get(record.id) ?? UNCOMPARED_WAIT).words
                   : "Your first mate chooses a computer when this task starts. It stays there.",
             }
           : {}),
@@ -8761,9 +8767,9 @@ export class CrewSupervisor {
       if (automatic && !selected) {
         // A wait whose computers were compared says why; another keeps what was said.
         const waiting = choice && "wait" in choice ? choice : undefined;
-        const words = waiting?.wait ?? this.automaticWaits.get(taskId) ?? PLACEMENT_WAIT;
-        this.options.tasks.waitForPlacement(taskId, ignoreAsk, words);
-        this.sayAutomaticWait(record, words);
+        const wait = waiting?.wait ?? this.automaticWaits.get(taskId) ?? UNCOMPARED_WAIT;
+        this.options.tasks.waitForPlacement(taskId, ignoreAsk, wait.words);
+        this.sayAutomaticWait(record, wait);
         // No computer serves the level it asked for: held on that level's
         // reset with one wake, as a This computer start is (P7 + R1).
         if (waiting?.held) {
@@ -9044,7 +9050,7 @@ export class CrewSupervisor {
         return updateStartRefusal(handle, place?.who ?? "the computer it runs on");
       }
     }
-    const automaticWait = this.automaticWaits.get(record.id);
+    const automaticWait = this.automaticWaits.get(record.id)?.words;
     if (now?.status !== "active" && automaticWait) return `${handle}: ${automaticWait}`;
     if (now?.status !== "active") {
       const notice = readStartNotice(now?.startNotice);

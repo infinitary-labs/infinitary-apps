@@ -70,6 +70,14 @@ export class ComputerResources {
     return { status: "fresh", observation: held.observation, ageMs };
   }
 
+  /**
+   * When the fresh reading this receiver holds for a computer was asked for,
+   * on its own clock - the moment its age counts from; undefined unless fresh.
+   */
+  sampledAt(deviceId: string | null): number | undefined {
+    return this.read(deviceId).status === "fresh" ? this.held.get(deviceId)?.started : undefined;
+  }
+
   refresh(deviceId: string | null): Promise<ComputerResourceReading> {
     const unavailable = this.unavailable(deviceId);
     if (unavailable) return Promise.resolve(unavailable);

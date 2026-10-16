@@ -10,6 +10,7 @@ import type {
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
+import type { ReasoningChoice } from "@shared/modelSlots";
 import {
   type CommittedPlacement,
   PLACEMENT_WAIT,
@@ -27,7 +28,7 @@ import {
   TASK_CARD_VIA,
 } from "@shared/provenance";
 import type { IntelligenceBucket } from "@shared/quota";
-import type { Reasoning } from "@shared/reasoning";
+import { type Reasoning, reasoningWord } from "@shared/reasoning";
 import {
   DROP_BEFORE_START,
   DROP_REVIEW_STALE,
@@ -259,6 +260,12 @@ export type UpdateTaskPatch = {
    */
   model?: string;
   speed?: import("@shared/crewSpeed").CrewSpeed | null;
+  /**
+   * The reasoning effort the captain named for open work no crewmate holds
+   * yet, stored as the shape's `override_reasoning`, so its crewmate opens
+   * at it in place of the Settings → Models choice. Null clears it.
+   */
+  reasoning?: ReasoningChoice | null;
   /**
    * Where the task runs, on the captain's words before it starts
    * (docs/helper.md, "A task's own Runs on"): stored as the shape's
@@ -1577,6 +1584,11 @@ export class TaskService {
           "A model can only be named on open work that no crewmate has taken.",
         );
       }
+      if (patch.reasoning !== undefined && (record.status !== "open" || record.kind !== "work")) {
+        throw new TaskGraphRefusal(
+          "A reasoning effort can only be named on open work that no crewmate has taken.",
+        );
+      }
 
       if (
         patch.runsOn !== undefined &&
@@ -1642,11 +1654,25 @@ export class TaskService {
           ...shape,
           ...(patch.speed === null ? {} : { override_speed: patch.speed }),
         };
-        changes.push(
+        const words =
           patch.speed === null
             ? "crew speed follows the model default"
-            : `crew speed ${patch.speed}`,
-        );
+            : `crew speed ${patch.speed}`;
+        changes.push(`${words}${from}`);
+      }
+      if (patch.reasoning !== undefined) {
+        const reasoning = patch.reasoning ?? undefined;
+        const current = update.shape ?? record.shape;
+        if (reasoning !== current?.override_reasoning) {
+          const { override_reasoning: _oldReasoning, ...shape } = current ?? {
+            kind: "unclear" as const,
+          };
+          update.shape = { ...shape, ...(reasoning ? { override_reasoning: reasoning } : {}) };
+          const words = reasoning
+            ? `reasoning ${reasoningWord({ level: reasoning }).toLowerCase()}`
+            : "reasoning follows Models";
+          changes.push(`${words}${from}`);
+        }
       }
       if (patch.model !== undefined) {
         const model = patch.model.trim() || undefined;
@@ -2512,13 +2538,16 @@ export class TaskService {
   recordShape(id: string, shape: WorkShape, difficulty: TaskRecord["difficulty"]): void {
     const run = this.write(() => {
       // Classification/routing awaited outside this writer must not overwrite
-      // a policy or Runs on edit accepted while it was in flight. Runs on is
-      // only ever the record's own: an edit may have cleared it.
+      // a policy, Runs on, speed or reasoning edit accepted while it was in
+      // flight. Those are only ever the record's own: an edit may have
+      // cleared them.
       const current = this.mustGet(id).shape;
       const {
         runs_on_ask: _seen,
         placement_requirements: _requirements,
         placement_fallback_accepted: _acceptance,
+        override_speed: _speed,
+        override_reasoning: _reasoning,
         ...rest
       } = shape;
       this.patch(id, {
@@ -2526,6 +2555,10 @@ export class TaskService {
           ...rest,
           ...(current?.policies ? { policies: current.policies } : {}),
           ...(current?.runs_on_ask ? { runs_on_ask: current.runs_on_ask } : {}),
+          ...(current?.override_speed ? { override_speed: current.override_speed } : {}),
+          ...(current?.override_reasoning
+            ? { override_reasoning: current.override_reasoning }
+            : {}),
           ...(current?.placement_requirements
             ? { placement_requirements: current.placement_requirements }
             : {}),

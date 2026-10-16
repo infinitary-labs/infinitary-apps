@@ -68,6 +68,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Haiku 5.5 receives medium for ordinary low-slot work and low for Quick; saved slot choices remain untouched.
   Settings → Intelligence → Models offers a reasoning menu beside each model in each used level.
   An explicit provider/model/served-level choice overrides that default, after routing, and keeps its chosen level under Quick care, bounded by the executing backend's capabilities.
+  A reasoning effort the captain named for the task (`override_reasoning` on its shape) outranks that choice for this task alone and is treated the same way; the Settings choice is unchanged.
   An inherited choice whose derived rigor is Quick moves one offered rung below that clamped level, if possible.
   Standard and reviewed rigor, answers, reviewers and the personal workspace do not step down.
   A named model or premium ask with inherited reasoning still takes the adjustment; an escalation raises the slot first.

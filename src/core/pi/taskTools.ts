@@ -1,3 +1,4 @@
+import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
@@ -49,6 +50,8 @@ export type TaskToolsDelegate = {
     /** The model the user named (override_model_id); empty clears it. */
     model?: string;
     speed?: import("@shared/crewSpeed").CrewSpeed | null;
+    /** The reasoning effort the user named (override_reasoning); null inherits Models. */
+    reasoning?: ReasoningChoice | null;
     /** Where the captain said it runs: a device id or `this-mac`; null follows its parent's or project's again. */
     runsOn?: string | null;
     placementRequirements?: PlacementRequirements | null;
@@ -215,20 +218,24 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "As spawn_crewmate.shape.override_model_id; routes when this open task starts. Empty clears it.",
         }),
       ),
+      reasoning: Type.Optional(
+        Type.Union([stringEnum(reasoningChoiceSchema.options), Type.Null()], {
+          description: "Captain-named effort when this open task starts; null inherits Models.",
+        }),
+      ),
       delivery: Type.Optional(
         stringEnum(["direct-pr", "local-only", "project"], {
-          description: "The captain's requested delivery, or project to reset this task's override",
+          description: "The captain's requested delivery",
         }),
       ),
       autonomy: Type.Optional(
         stringEnum(["on", "off", "project"], {
-          description:
-            "on: the captain permits self-merging; off: asks first; project: reset this task's override",
+          description: "on: the captain permits self-merging; off: asks first",
         }),
       ),
       rigor: Type.Optional(
         stringEnum(["quick", "standard", "reviewed", "project"], {
-          description: "The captain's requested care, or project to reset this task's override",
+          description: "The captain's requested care",
         }),
       ),
       placement_requirements: Type.Optional(
@@ -245,7 +252,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       direction: Type.Optional(
         Type.String({
           description:
-            "The id (d:...) of the standing direction behind this call's autonomy, delivery, rigor, override_model_id or runs_on edit; the record names it.",
+            "The id (d:...) of the standing direction behind this call's edit; the record names it.",
         }),
       ),
       start_again: Type.Optional(
@@ -342,6 +349,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.basis !== undefined ? { basis: params.basis } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),
         ...(params.override_model_id !== undefined ? { model: params.override_model_id } : {}),
+        ...(params.reasoning !== undefined ? { reasoning: params.reasoning } : {}),
         ...(params.placement_requirements !== undefined
           ? { placementRequirements: params.placement_requirements }
           : {}),

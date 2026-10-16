@@ -1,3 +1,4 @@
+import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
@@ -219,8 +220,8 @@ const SHAPE_FIELD_RULES = {
   basis: BASIS_DESCRIPTION,
   premium_ask:
     'True only when the user asked for premium or the best model in words, or clicked your "Try a premium model" action. Never your own judgment.',
-  override_speed:
-    "Captain-named task speed; omit inherits Models. Scope, cost and fallback as update_task.crew_speed.",
+  override_speed: "As update_task.crew_speed.",
+  override_reasoning: "As update_task.reasoning.",
   override_model_id:
     "The model the user named: an exact model id (e.g. gpt-6-astra), or a provider-qualified key (e.g. anthropic-claude/claude-fable-5-1) when the provider matters. Only when the user named one; it wins when available, else normal routing.",
   escalate_from:
@@ -264,6 +265,7 @@ const SHAPE_FIELDS = {
   premium_ask: "boolean",
   override_model_id: "string",
   override_speed: "string",
+  override_reasoning: "string",
   escalate_from: "string",
   rigor_ask: "string",
   autonomy_ask: "boolean",
@@ -353,10 +355,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         Type.String({ description: "A registered repo id from the context block" }),
       ),
       personal_ui: Type.Optional(
-        Type.Boolean({
-          description:
-            "True for lessons or the user's own panels on the rails; omit repo_id, never use for a new game or app",
-        }),
+        Type.Boolean({ description: "As above; never for a new game or app" }),
       ),
       constraints: CONSTRAINTS_PARAM,
       delivery_note: DELIVERY_NOTE_PARAM,
@@ -387,6 +386,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             premium_ask: Type.Optional(Type.Boolean()),
             override_model_id: Type.Optional(Type.String()),
             override_speed: Type.Optional(stringEnum(["standard", "fast", "ultrafast"])),
+            override_reasoning: Type.Optional(stringEnum(reasoningChoiceSchema.options)),
             escalate_from: Type.Optional(Type.String()),
             rigor_ask: Type.Optional(stringEnum(["quick", "standard", "reviewed"])),
             autonomy_ask: Type.Optional(Type.Boolean()),
@@ -621,6 +621,7 @@ function shapeAskFrom(params: {
   premium_ask?: boolean;
   override_model_id?: string;
   override_speed?: import("@shared/crewSpeed").CrewSpeed;
+  override_reasoning?: ReasoningChoice;
   escalate_from?: string;
   rigor_ask?: Rigor;
   delivery_ask?: RepoDelivery;
@@ -642,6 +643,7 @@ function shapeAskFrom(params: {
     ...(params.premium_ask ? { premium_ask: true as const } : {}),
     ...(override ? { override_model_id: override } : {}),
     ...(params.override_speed ? { override_speed: params.override_speed } : {}),
+    ...(params.override_reasoning ? { override_reasoning: params.override_reasoning } : {}),
     ...(escalateFrom ? { escalate_from: escalateFrom } : {}),
     ...(params.rigor_ask ? { rigor_ask: params.rigor_ask } : {}),
     ...(params.delivery_ask ? { delivery_ask: params.delivery_ask } : {}),

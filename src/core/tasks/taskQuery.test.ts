@@ -54,6 +54,17 @@ describe("the tasks query's text", () => {
   });
 });
 
+describe("the tasks query's named choices", () => {
+  it("reads back the reasoning effort the captain named for a task, and nothing once it is cleared (FI3-1812)", () => {
+    const { tasks, query } = setup();
+    tasks.create({ id: "effort", title: "Trim the log", prompt: "p", repoId: null });
+    tasks.updateFields("effort", { reasoning: "xhigh" }, "firstmate");
+    expect(query({ key: "effort" }).rows[0]).toMatchObject({ reasoning: "xhigh" });
+    tasks.updateFields("effort", { reasoning: null }, "firstmate");
+    expect(query({ key: "effort" }).rows[0]).not.toHaveProperty("reasoning");
+  });
+});
+
 describe("the tasks query by key (Task B)", () => {
   it("carries the report, its summary and the newest card body", () => {
     const { tasks, bodies, query } = setup();

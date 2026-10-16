@@ -1562,6 +1562,75 @@ describe("CrewSupervisor", () => {
     expect(sessionSpecs[0]?.thinking).toEqual({ level: "high" });
   });
 
+  // FI3-1812: the captain names a reasoning effort for one task, the way he
+  // names a model, without changing the model's choice in Settings.
+  it("opens a task at the reasoning the captain named for it, over the model's saved choice and Quick care", async () => {
+    const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+      reasoningChoice: () => "low",
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-6.1-sol" },
+        bucket: "medium",
+        servedBucket: "medium",
+        rule: "R4",
+      },
+    });
+    await supervisor.commission({
+      title: "Build the approved change",
+      intent: intentOf("build from this plan at extra high reasoning"),
+      shape: { rigor_ask: "quick", override_reasoning: "xhigh" },
+    });
+    await supervisor.commission({
+      title: "Build the next change",
+      intent: intentOf("build the next part"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    expect(sessionSpecs.map((spec) => spec.thinking)).toEqual([
+      { level: "xhigh" },
+      { level: "low" },
+    ]);
+  });
+
+  // FI3-1812 re-review W1: an effort named while the working copy is being
+  // prepared is never recorded and then lost. The task is already active, so
+  // the edit is refused in words, and the crewmate opens at what the record
+  // holds when its session opens.
+  it("never records a reasoning effort named while the working copy is being prepared without opening at it", async () => {
+    const { supervisor, tasks, sessionSpecs, workspace, paths } = setup(fakeCrewmate(), {
+      reasoningChoice: () => "low",
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-6.1-sol" },
+        bucket: "medium",
+        servedBucket: "medium",
+        rule: "R4",
+      },
+    });
+    const refusals: string[] = [];
+    vi.mocked(workspace.createTaskWorktree).mockImplementation(async (id: string) => {
+      try {
+        tasks.updateFields(id, { reasoning: "xhigh" }, "firstmate");
+      } catch (caught) {
+        refusals.push(caught instanceof Error ? caught.message : String(caught));
+      }
+      return {
+        taskId: id,
+        cwd: join(paths.worktreesDir, id),
+        branch: `fm/task-${id}`,
+        repoDir: paths.defaultWorkspaceDir,
+      };
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Build the approved change",
+      intent: intentOf("build from this plan"),
+    });
+    await tick();
+    expect(refusals).toEqual([
+      "A reasoning effort can only be named on open work that no crewmate has taken.",
+    ]);
+    expect(tasks.get(taskId)?.shape).not.toHaveProperty("override_reasoning");
+    expect(sessionSpecs[0]?.thinking).toEqual({ level: "low" });
+  });
+
   it("records the reasoning the crewmate's session opened at beside its model", async () => {
     const crewmate = fakeCrewmate({ reasoning: { level: "high", lower: "quick" } });
     const { supervisor, tasks } = setup(crewmate, {
@@ -5457,6 +5526,38 @@ describe("the task graph (R1)", () => {
     expect(crew.promptCalls[0]).toContain("Goal: Responsive width and reduced motion");
   });
 
+  it("opens at a reasoning effort the captain named while queued classification is in flight (FI3-1812)", async () => {
+    let release:
+      | ((value: { kind: "implement"; source: string; version: string }) => void)
+      | undefined;
+    const classified = new Promise<{ kind: "implement"; source: string; version: string }>(
+      (resolve) => {
+        release = resolve;
+      },
+    );
+    const { supervisor, tasks, sessionSpecs } = setup(fakeCrewmate(), {
+      classifier: { classify: async () => classified },
+      reasoningChoice: () => "low",
+      routeResult: {
+        choice: { provider: "fm-mock", id: "mock-1" },
+        bucket: "high",
+        servedBucket: "high",
+        rule: "R3",
+      },
+    });
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const starting = supervisor.startQueuedNow(planned.key);
+    tasks.updateFields(planned.id, { reasoning: "xhigh" }, "firstmate");
+    release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
+    await starting;
+    await tick();
+    expect(sessionSpecs[0]?.thinking).toEqual({ level: "xhigh" });
+    expect(tasks.get(planned.id)?.shape).toMatchObject({
+      kind: "implement",
+      override_reasoning: "xhigh",
+    });
+  });
+
   it("delivers historical full reports and uncut card amendments, then pins the served content", async () => {
     const crew = fakeCrewmate();
     const { supervisor, tasks, specs, repos, cardStore } = setup(crew);
@@ -5663,6 +5764,38 @@ describe("the task graph (R1)", () => {
     );
   });
 
+  it("starts a filed task at the reasoning the captain named, which only open work can change (FI3-1812)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessionSpecs } = setup(crewmate, {
+      reasoningChoice: () => "low",
+      routeResult: {
+        choice: { provider: "fm-mock", id: "mock-1" },
+        bucket: "high",
+        servedBucket: "high",
+        rule: "R3",
+      },
+    });
+    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    expect(tasks.updateFields(filed.id, { reasoning: "medium" }, "firstmate")).toEqual([
+      "reasoning medium",
+    ]);
+    expect(tasks.updateFields(filed.id, { reasoning: null }, "firstmate")).toEqual([
+      "reasoning follows Models",
+    ]);
+    expect(tasks.get(filed.id)?.shape).not.toHaveProperty("override_reasoning");
+    expect(tasks.updateFields(filed.id, { reasoning: "xhigh" }, "firstmate")).toEqual([
+      "reasoning extra high",
+    ]);
+    expect(await supervisor.startQueuedNow(filed.key)).toBe(`Started ${filed.key} "Trim the log".`);
+    await tick();
+    expect(sessionSpecs[0]?.thinking).toEqual({ level: "xhigh" });
+    expect(tasks.get(filed.id)?.shape).toMatchObject({ override_reasoning: "xhigh" });
+    // A running conversation keeps the level it opened at.
+    expect(() => tasks.updateFields(filed.id, { reasoning: "low" }, "firstmate")).toThrow(
+      "only be named on open work",
+    );
+  });
+
   it("says which model took a filed task when the one the captain named could not", async () => {
     // Routing fell back to the model it could serve.
     const crewmate = fakeCrewmate();
@@ -5717,6 +5850,7 @@ describe("the task graph (R1)", () => {
         kind: "fix",
         basis: basis.key,
         override_model_id: "fm-mock/mock-1",
+        override_reasoning: "high",
         delivery_ask: "local-only",
         autonomy_ask: false,
         rigor_ask: "reviewed",
@@ -5766,6 +5900,7 @@ describe("the task graph (R1)", () => {
       shape: {
         basis: basis.key,
         override_model_id: "fm-mock/mock-1",
+        override_reasoning: "high",
         delivery_ask: "local-only",
         autonomy_ask: false,
         rigor_ask: "reviewed",

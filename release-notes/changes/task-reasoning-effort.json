@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-reasoning-effort",
+      "kind": "feature",
+      "title": "Choose the reasoning for one task",
+      "body": "Ask your first mate to run a task at low, medium, high or extra high reasoning, when you start it or before a crewmate takes it. That task's crewmate works at it, up to the most its model offers, and the reasoning you chose for that model in Models stays as it was. The crewmate's summary shows the reasoning it works at.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "task-reasoning-effort-dark.webp",
+        "light": "task-reasoning-effort-light.webp",
+        "alt": "A crewmate's summary on claude-haiku-5-5 at the low level, with its reasoning at Extra high"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -234,3 +234,4 @@ Failed writes keep the saved view and show an inline explanation, and a keyboard
 The existing computer sign-in catalog carries optional backend capability metadata for models served elsewhere.
 The home sends a chosen request through the existing placed-session spec, and the executing backend validates it against its own runtime.
 Only new crew conversations read these choices; resumed and running conversations, the first mate, Decisions, routing, pins and account selection retain their existing behavior.
+A reasoning effort the captain names for one task (`spawn_crewmate.shape.override_reasoning`, `update_task reasoning`) takes that task's place in this menu: its crewmate opens at it, under the same cap and exact for Quick care, and the saved choice stays as it was (`docs/task-record.md`, "Requested reasoning").

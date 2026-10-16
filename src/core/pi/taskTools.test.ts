@@ -216,6 +216,31 @@ describe("task tools", () => {
     expect(delegate.startNow).toHaveBeenCalledTimes(1);
   });
 
+  it("names the user's reasoning effort on the filed row before starting it, in one call (FI3-1812)", async () => {
+    const order: string[] = [];
+    const { delegate, byName } = toolset({
+      update: vi.fn((input) => {
+        order.push(`update ${input.reasoning}`);
+        return { text: "Updated SCR-3: reasoning high.", ok: true };
+      }),
+      startNow: vi.fn(async () => {
+        order.push("start");
+        return 'Started SCR-3 "Fix meter".';
+      }),
+    });
+    await byName.get("update_task")?.execute("named", {
+      task: "SCR-3",
+      reasoning: "high",
+      start_now: true,
+    });
+    expect(delegate.update).toHaveBeenCalledWith({ task: "SCR-3", reasoning: "high" });
+    expect(order).toEqual(["update high", "start"]);
+    // Null follows Models again, and naming alone starts nothing.
+    await byName.get("update_task")?.execute("cleared", { task: "SCR-3", reasoning: null });
+    expect(delegate.update).toHaveBeenLastCalledWith({ task: "SCR-3", reasoning: null });
+    expect(delegate.startNow).toHaveBeenCalledTimes(1);
+  });
+
   it("does not dispatch when a combined edit is refused", async () => {
     const { delegate, byName } = toolset({
       update: vi.fn(() => ({ text: "Cannot move started work", ok: false })),

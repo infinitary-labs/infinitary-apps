@@ -119,6 +119,12 @@ export const workShapeSchema = z.object({
   override_model_id: z.string().optional(),
   /** Only the captain requests a faster speed; absent inherits the model default. */
   override_speed: crewSpeedSchema.optional(),
+  /**
+   * The captain named this task's reasoning effort. It wins over the
+   * Settings → Models choice and the level's default for this task alone,
+   * capped to what the serving model offers; absent inherits them.
+   */
+  override_reasoning: reasoningChoiceSchema.optional(),
   /** The task the captain rejected; the Firstmate's escalation ask (S4). */
   escalate_from: z.string().optional(),
   /** The host's stamp for that ask (S4). */
@@ -229,6 +235,7 @@ export const workShapeAskSchema = workShapeSchema
     premium_ask: true,
     override_model_id: true,
     override_speed: true,
+    override_reasoning: true,
     escalate_from: true,
     rigor_ask: true,
     delivery_ask: true,

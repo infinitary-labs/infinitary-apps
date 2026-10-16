@@ -297,6 +297,63 @@ describe("live task policies", () => {
     expect(current(tasks, task.id).shape?.runs_on_ask).toBeUndefined();
   });
 
+  // FI3-1812 review R1: the captain's own speed and reasoning for a task are
+  // edits like Runs on, which a classifier's earlier snapshot never undoes.
+  it("an awaited classifier keeps the task's own crew speed and reasoning, set or cleared while it ran", () => {
+    const { tasks } = setup();
+    const task = seedTask(tasks, {
+      id: "named",
+      title: "Name",
+      repoId: "project",
+      status: "queued",
+      shape: { kind: "unclear", override_speed: "fast", override_reasoning: "low" },
+    });
+    const stale = { ...(task.shape ?? { kind: "unclear" as const }), kind: "fix" as const };
+    tasks.updateFields(task.id, { speed: "ultrafast", reasoning: "xhigh" }, "firstmate");
+    tasks.recordShape(task.id, stale, "high");
+    expect(current(tasks, task.id).shape).toMatchObject({
+      kind: "fix",
+      override_speed: "ultrafast",
+      override_reasoning: "xhigh",
+    });
+    tasks.updateFields(task.id, { speed: null, reasoning: null }, "firstmate");
+    tasks.recordShape(task.id, stale, "high");
+    expect(current(tasks, task.id).shape).not.toHaveProperty("override_speed");
+    expect(current(tasks, task.id).shape).not.toHaveProperty("override_reasoning");
+  });
+
+  // FI3-1812 review R3: update_task's direction says the record names it.
+  it("names the standing direction behind a crew speed or reasoning edit", () => {
+    const { tasks } = setup();
+    const task = seedTask(tasks, {
+      id: "directed",
+      title: "Direct",
+      repoId: "project",
+      status: "queued",
+      shape: { kind: "unclear" },
+    });
+    expect(
+      tasks.updateFields(
+        task.id,
+        { speed: "fast", reasoning: "high", direction: "d:careful-reviews" },
+        "firstmate",
+      ),
+    ).toEqual([
+      "crew speed fast, from d:careful-reviews",
+      "reasoning high, from d:careful-reviews",
+    ]);
+    expect(
+      tasks.updateFields(
+        task.id,
+        { speed: null, reasoning: null, direction: "d:careful-reviews" },
+        "firstmate",
+      ),
+    ).toEqual([
+      "crew speed follows the model default, from d:careful-reviews",
+      "reasoning follows Models, from d:careful-reviews",
+    ]);
+  });
+
   it("changes where a task runs only before it starts, and says what changed", () => {
     const { tasks } = setup();
     const filed = seedTask(tasks, {

@@ -308,6 +308,14 @@ The task query names it as `crew_speed`; absent means the selected model’s cur
 Speed notes use ordinary task notes, not progress notes, so they never replace or refuse a crewmate’s saved plan.
 Each note carries the typed requested, sent and provider-confirmed service with the actual model, and explains any Standard fallback.
 
+## Requested reasoning
+
+A reasoning effort the captain names for a task - low, medium, high or extra high - is its shape's `override_reasoning`: `spawn_crewmate.shape.override_reasoning` at the start, or `update_task reasoning` on open work no crewmate holds, which null clears.
+It is the captain's own word for that task, never the first mate's judgment, and never inherited from a parent, basis or failed attempt; start again copies it with the task's other asks.
+Its crewmate opens at it in place of the model's Settings → Models choice and the level's default, capped to what the model offers and not stepped down for Quick care (`docs/routing.md`, "Reasoning effort"); the Settings choice is unchanged.
+A started conversation keeps the level it opened at, so the edit is refused once a crewmate holds the task.
+The task query names it as `reasoning`; the crewmate summary shows the level the session opened at.
+
 ## Placement commitments
 
 `tasks.placement_json` is one bounded historical commitment and its reservation state, written only through `TaskService`.

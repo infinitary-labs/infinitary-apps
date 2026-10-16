@@ -64,6 +64,8 @@ export type TaskQueryRow = {
   goal?: string;
   /** Explicit task override; absent inherits the selected model’s default. */
   crew_speed?: import("@shared/crewSpeed").CrewSpeed;
+  /** The captain's named effort for this task; absent inherits Settings → Models. */
+  reasoning?: import("@shared/modelSlots").ReasoningChoice;
   /**
    * The row's latest report. Only a fetch BY KEY carries it (Task B): a
    * builder that names an investigation as its basis reads the answer back
@@ -256,6 +258,7 @@ function toRow(
     ...(record.closedReason ? { closed_reason: record.closedReason } : {}),
     ...(record.goal ? { goal: record.goal } : {}),
     ...(record.shape?.override_speed ? { crew_speed: record.shape.override_speed } : {}),
+    ...(record.shape?.override_reasoning ? { reasoning: record.shape.override_reasoning } : {}),
     ...(record.shape?.basis ? { basis: record.shape.basis } : {}),
     ...(cardBody ? { reports, decisions, ...(brief ? { brief } : {}) } : {}),
     ...(cardBody && record.outcome ? { outcome: record.outcome } : {}),

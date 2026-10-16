@@ -2770,6 +2770,7 @@ export class FirstmateAgent {
               ...(input.basis !== undefined ? { basis: input.basis } : {}),
               ...(input.speed !== undefined ? { speed: input.speed } : {}),
               ...(input.model !== undefined ? { model: input.model } : {}),
+              ...(input.reasoning !== undefined ? { reasoning: input.reasoning } : {}),
               ...(input.placementRequirements !== undefined
                 ? { placementRequirements: input.placementRequirements }
                 : {}),

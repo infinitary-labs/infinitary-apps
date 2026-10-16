@@ -3601,6 +3601,7 @@ export class CrewSupervisor {
         ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
         ...(ask?.override_model_id ? { override_model_id: ask.override_model_id } : {}),
         ...(ask?.override_speed ? { override_speed: ask.override_speed } : {}),
+        ...(ask?.override_reasoning ? { override_reasoning: ask.override_reasoning } : {}),
         ...(basisRef ? { basis: basisRef, basis_verified: this.basisHolds(basisRef) } : {}),
         ...(ask?.rigor_ask ? { rigor_ask: ask.rigor_ask } : {}),
         ...(deliveryAsk ? { delivery_ask: deliveryAsk } : {}),
@@ -3624,6 +3625,7 @@ export class CrewSupervisor {
       ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
       ...(ask?.override_model_id ? { override_model_id: ask.override_model_id } : {}),
       ...(ask?.override_speed ? { override_speed: ask.override_speed } : {}),
+      ...(ask?.override_reasoning ? { override_reasoning: ask.override_reasoning } : {}),
       ...(basis ? { basis, basis_verified: this.basisHolds(basis) } : {}),
       ...(ask?.rigor_ask ? { rigor_ask: ask.rigor_ask } : {}),
       ...(ask?.delivery_ask ? { delivery_ask: ask.delivery_ask } : {}),
@@ -4197,8 +4199,13 @@ export class CrewSupervisor {
       // already carries the model's chosen effort.
       const rigor = this.deriveRigor(taskId);
       const servedLevel = routed?.servedBucket ?? routed?.bucket ?? "medium";
+      // The captain's word on this task's effort outranks the model's
+      // Settings choice, which outranks the level's default. Read as the
+      // record stands now, as the requested speed is, never from the copy
+      // taken before the working copy was prepared.
       const chosenReasoning = routedModel
-        ? this.options.router?.reasoningChoice?.(routedModel, servedLevel)
+        ? (this.options.tasks.get(taskId)?.shape?.override_reasoning ??
+          this.options.router?.reasoningChoice?.(routedModel, servedLevel))
         : undefined;
       const session = await this.openCrewmate(
         task,

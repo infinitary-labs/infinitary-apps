@@ -204,6 +204,19 @@ describe("crew tools", () => {
     );
   });
 
+  it("carries the reasoning effort the user named for the work through (FI3-1812)", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Redesign the dock",
+      goal: "The dock layout is settled",
+      user_words: "run this one at extra high reasoning",
+      shape: { override_reasoning: "xhigh" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ shape: { override_reasoning: "xhigh" } }),
+    );
+  });
+
   it("answers with the model that took the work when the user named one (FI3-444)", async () => {
     const spawn = async (model: { named: string; took: string | null }) => {
       const { byName } = toolset({
@@ -550,6 +563,7 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
       "premium_ask",
       "override_model_id",
       "override_speed",
+      "override_reasoning",
       "escalate_from",
       "rigor_ask",
       "autonomy_ask",

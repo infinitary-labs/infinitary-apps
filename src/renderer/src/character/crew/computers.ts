@@ -490,7 +490,11 @@ export class ComputerOrbits extends CrewOrbit {
         const center = this.positions.get(computer.id);
         const dx = (center?.x ?? 0) - (local.frozenCenter?.x ?? 0);
         const dy = (center?.y ?? 0) - (local.frozenCenter?.y ?? 0);
-        frame = { ...frame, crew: frame.crew.map((c) => ({ ...c, x: c.x + dx, y: c.y + dy })) };
+        frame = {
+          ...frame,
+          crew: frame.crew.map((c) => ({ ...c, x: c.x + dx, y: c.y + dy })),
+          orbits: frame.orbits.map((o) => ({ ...o, x: o.x + dx, y: o.y + dy })),
+        };
       }
       const visible = clusters.some((c) => c.id === computer.id);
       const onPage = this.pagePeers().some((peer) => peer.id === computer.id);
@@ -534,6 +538,7 @@ export class ComputerOrbits extends CrewOrbit {
       clustered: true,
       scene: this.sceneNeed(clusters),
       crew: frames.flatMap((f) => f.crew).sort((a, b) => a.depth - b.depth),
+      orbits: frames.flatMap((f) => f.orbits),
       packets: frames.flatMap((f) => f.packets),
       links: frames.flatMap((f) => f.links),
     };

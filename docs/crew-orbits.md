@@ -262,9 +262,13 @@ At rate 1 stage time is real time minus a constant
 | Where the pointer is | Rate |
 | --- | ---: |
 | Away from the formation, absent, or nobody out | 1 |
-| Inside the zone: the outermost occupied orbit (164, 210 or 256 px, times the formation's fit) plus 40 px | 0.1 |
+| Inside the zone: over an occupied orbit, or within 28 px of its painted ellipse or of a crewmate | 0.1 |
 | On a crewmate, or its name has the keyboard | 0 |
 
+The zone follows the orbits the crew travel, not a circle around the stage (captain's ask INF-56, 2026-10-15: "right now it seems my mouse is nowhere near the animation but it would already trigger the slow motion").
+Each frame the orbit model hands over its occupied orbits (`OrbitFrame.orbits`): one ellipse for each plane a crewmate that is not leaving is on or headed for, traced through the same ring-to-planes blend and projection as the crew, so another computer's cluster has its own orbits at its seat.
+The zone is each of those ellipses with both semi-axes widened by 28 px, and 28 px round every crewmate there to point at, such as a reviewer circling off its orbit, in screen pixels after the formation's fit (`inCrewZone`, `crew/hover.ts`).
+28 px is past the reach of the largest glyph, so the stage slows just before the pointer lands on a crewmate; the air above and below a flattened orbit, beyond the outermost one, and above and below another computer's cluster runs at full speed.
 Every drop eases with a 0.11 s time constant (settled in about a third of a second) and every rise with 0.23 s (about 0.7 s), integrated exactly so the result does not depend on frame timing.
 A pointer that rests inside the zone for 3 s, on no crewmate, lets the stage go; its next move slows it again.
 A pointer resting on a crewmate holds the pause indefinitely.
@@ -333,7 +337,7 @@ A key in a panel - Activity, Knowledge - points as a Tasks row does (`point.peek
 The same window rules let it go, and also any other key press in the window, the card's frame leaving the window, the frame taking a new document, and a window key leaving the window.
 `tests/e2e/card-task-keys.spec.ts` drives it: the key's summary reads the same facts as its Tasks row's, clear of the key and input in roomy and narrow windows, a slide into the key from either side of the card with the synthetic mouse opens it, and a key in a record, a thread line, Activity and Settings › Usage rests and opens the same way.
 
-`stageClock.test.ts` covers the clock (bit-identical at rest, one answer per frame, the two easing constants, an exactly still stage at rate 0, the exact integral, stamps between frames, the rate rules); `crew/hover.test.ts` the zone, the hit test's acquire/stick/release radii and preferences, and the summary's placement beside a crewmate and beside a Tasks row; `crew/useCrewBoard.test.ts` the summary's facts, `src/shared/taskFacts.test.ts` the shared projection and `design/core/TaskFacts.test.tsx` that the summary and the record show the same values, with the record's model readout after its rows.
+`stageClock.test.ts` covers the clock (bit-identical at rest, one answer per frame, the two easing constants, an exactly still stage at rate 0, the exact integral, stamps between frames, the rate rules); `crew/hover.test.ts` the zone on the orbit model's own frames (each orbit's shape, every crewmate's reach at every crew size, a reviewer off its orbit, the fit, the glide into the planes, other computers' clusters), the hit test's acquire/stick/release radii and preferences, and the summary's placement beside a crewmate and beside a Tasks row; `crew/useCrewBoard.test.ts` the summary's facts, `src/shared/taskFacts.test.ts` the shared projection and `design/core/TaskFacts.test.tsx` that the summary and the record show the same values, with the record's model readout after its rows.
 `tests/e2e/crew-hover.spec.ts` drives the real home view: pointing opens the summary, Esc closes it, a click opens the record, nothing opens under a card, and the summary and record show the same task facts.
 Stage-clock rates and easing belong to `stageClock.test.ts`; summary placement journeys use `expectClearOf` from `tests/e2e/layout.ts` rather than asserting a side, gap or hairline alignment.
 Its second journey rests on a backlog, an idle and a done Tasks row: each opens its summary clear of the row and input inside the window, the idle row's matches the summary its crewmate opens on the stage, leaving, Esc and a press close it, the press still opens the record, and a row's summary reads over an open record.

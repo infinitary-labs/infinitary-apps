@@ -29,7 +29,7 @@ import {
   type Box,
   CREW_HOVER,
   crewHit,
-  crewZoneRadius,
+  inCrewZone,
   placeCrewSummary,
   type SummaryRoom,
 } from "./hover";
@@ -75,7 +75,7 @@ import "./stateWords.css";
 // shorter than it. The single-computer stage is the 560 px square it was.
 //
 // Both loops read the one stage clock (../stageClock.ts), and this component
-// is what watches the pointer for it (FI3-398): inside the formation's zone
+// is what watches the pointer for it (FI3-398): over an occupied orbit
 // the stage eases to a tenth of its speed, and on a crewmate it pauses and
 // that crewmate's summary opens beside it. The crew canvases ignore the
 // pointer, so pointing is a hit test (./hover.ts) against the painted frames,
@@ -689,15 +689,14 @@ export function CrewOrbit({
     }
     // What the stage eases toward from the next frame on. Reduced motion has
     // no rate: its one settled frame is already still.
-    const zone = crewZoneRadius(frame, scale);
     const pointer = pointerRef.current;
     if (reducedMotion) stageClock.settle();
     else
       stageClock.target = stageRateTarget(
         interactiveRef.current
           ? {
-              crew: zone !== null,
-              inZone: pointer !== null && zone !== null && Math.hypot(pointer.x, pointer.y) <= zone,
+              crew: frame.orbits.length > 0,
+              inZone: pointer !== null && inCrewZone(frame, pointer.x, pointer.y, scale),
               onCrewmate: there,
               restedMs: pointer ? real - pointer.movedAt : Number.POSITIVE_INFINITY,
             }

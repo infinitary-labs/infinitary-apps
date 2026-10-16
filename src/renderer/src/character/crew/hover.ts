@@ -1,5 +1,4 @@
 import type { CrewmateFrame, OrbitFrame } from "./orbit";
-import { CROWDED_PLANES } from "./orbitalPlanes";
 
 // Pointing at the crew (FI3-398): where the stage's slow zone ends, which
 // crewmate the pointer is on, and where that crewmate's summary sits. The crew
@@ -14,8 +13,12 @@ export const CREW_HOVER = {
   minPx: 18,
   /** It stays on that crewmate out to this many times the acquire radius. */
   release: 1.6,
-  /** The stage slows this far outside the outermost occupied orbit, px. */
-  zoneMarginPx: 40,
+  /**
+   * The stage slows this far outside an occupied orbit or from a crewmate,
+   * px: past the reach of the largest glyph, so it slows just before the
+   * pointer lands.
+   */
+  zoneMarginPx: 28,
   /** The summary opens this long after the pointer lands, ms. */
   dwellMs: 130,
   /** The corner brackets stand this far outside the glyph, px. */
@@ -28,34 +31,44 @@ export const CREW_HOVER = {
 
 type Target = Pick<CrewmateFrame, "id" | "x" | "y" | "size" | "depth" | "phase" | "unfold">;
 
+/** A departing crewmate, or a spark not yet unfolded, is not there to point at. */
+const pointable = (c: Pick<CrewmateFrame, "phase" | "unfold">) =>
+  c.phase !== "leaving" && c.unfold >= 0.5;
+
 /** How close the pointer must come to a crewmate's painted centre, px on screen. */
 export function crewHitRadius(size: number, scale = 1): number {
   return Math.max((size * scale) / 2 + CREW_HOVER.padPx, CREW_HOVER.minPx);
 }
 
 /**
- * The radius of the slow zone: the outermost occupied orbit plus a margin, so
- * it grows when a second or third orbit opens. Null with nobody out - there
- * is nothing to inspect, so nothing slows.
+ * Whether the pointer is in the slow zone: over an occupied orbit (the
+ * frame's `orbits`, every computer's) - inside its ellipse with both
+ * semi-axes widened by the margin - or within the margin of a crewmate
+ * there to point at, such as a reviewer circling off the orbit. The air
+ * above and below a flattened orbit is not in it. In screen pixels from the
+ * formation's centre: the fit shrinks the orbits, not the margin.
  */
-export function crewZoneRadius(
-  frame: Pick<OrbitFrame, "ringRadius"> & {
-    crew: readonly (Pick<CrewmateFrame, "plane" | "phase"> &
-      Partial<Pick<CrewmateFrame, "x" | "y" | "computerId">>)[];
-  },
+export function inCrewZone(
+  frame: { orbits: OrbitFrame["orbits"]; crew: readonly Target[] },
+  x: number,
+  y: number,
   scale = 1,
-): number | null {
-  let radius: number | null = null;
-  for (const c of frame.crew) {
-    if (c.phase === "leaving") continue;
-    const r = c.computerId
-      ? Math.hypot(c.x ?? 0, c.y ?? 0)
-      : c.plane === undefined
-        ? frame.ringRadius
-        : (CROWDED_PLANES[c.plane]?.radius ?? 0);
-    if (radius === null || r > radius) radius = r;
-  }
-  return radius === null ? null : radius * scale + CREW_HOVER.zoneMarginPx;
+): boolean {
+  const margin = CREW_HOVER.zoneMarginPx;
+  const near = (c: Target) =>
+    pointable(c) && Math.hypot(x - c.x * scale, y - c.y * scale) <= margin;
+  return (
+    frame.crew.some(near) ||
+    frame.orbits.some((orbit) => {
+      const dx = x - orbit.x * scale;
+      const dy = y - orbit.y * scale;
+      const cos = Math.cos(orbit.angle);
+      const sin = Math.sin(orbit.angle);
+      const along = (dx * cos + dy * sin) / (orbit.major * scale + margin);
+      const across = (dy * cos - dx * sin) / (orbit.minor * scale + margin);
+      return along * along + across * across <= 1;
+    })
+  );
 }
 
 /**
@@ -63,8 +76,7 @@ export function crewZoneRadius(
  * acquire radius wins, and the one nearer the camera when two are equally
  * near. A crewmate already held keeps the pointer out to its release radius,
  * so the pointer does not flutter at the edge; a neighbour takes over only
- * once the pointer has left the held one's own acquire radius. A departing
- * crewmate, or a spark not yet unfolded, is not there to point at.
+ * once the pointer has left the held one's own acquire radius.
  */
 export function crewHit(
   crew: readonly Target[],
@@ -77,7 +89,7 @@ export function crewHit(
   let heldDistance: number | null = null;
   let heldRadius = 0;
   for (const c of crew) {
-    if (c.phase === "leaving" || c.unfold < 0.5) continue;
+    if (!pointable(c)) continue;
     const distance = Math.hypot(x - c.x * scale, y - c.y * scale);
     const radius = crewHitRadius(c.size, scale);
     if (c.id === held) {

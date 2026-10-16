@@ -47,7 +47,8 @@ No tour, legend, setting or dismiss control; colors, motion, the summary and the
 Under reduced motion the fade is opacity only.
 
 Reading a crewmate (captain, FI3-398, 2026-10-01; replaces "inspecting never pauses or changes the animation"): the character and its crew read ONE stage clock, so they slow and stop together and stay one coherent picture.
-While the pointer is inside the formation - the outermost occupied orbit plus 40px - the whole stage eases to a tenth of its speed; while the pointer is on a crewmate it pauses completely; away from the formation, with nobody out, under a card, or with the window out of focus it runs at full speed.
+While the pointer is over the formation - on or inside an occupied orbit as painted, or within 28px of one or of a crewmate - the whole stage eases to a tenth of its speed; while the pointer is on a crewmate it pauses completely; away from the formation, with nobody out, under a card, or with the window out of focus it runs at full speed.
+The zone follows each orbit's own tilted ellipse, and each other computer's cluster's, so empty air above and below the crew never slows the stage (captain, INF-56: "right now it seems my mouse is nowhere near the animation but it would already trigger the slow motion").
 Every change eases (about a third of a second down, 0.7s back up), never a cut.
 A pointer resting inside the formation for 3s, on no crewmate, lets the stage go and its next move slows it again; one resting on a crewmate holds the pause for as long as it stays.
 During the pause every structure stops - crew and character alike - but the first mate's eyes keep blinking and following the pointer: that is what tells a paused stage from a stopped app.

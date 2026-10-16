@@ -166,6 +166,27 @@ function unit(point: Point): Point {
   const len = Math.hypot(point.x, point.y);
   return len > 0 ? { x: point.x / len, y: point.y / len } : { x: 1, y: 0 };
 }
+
+/**
+ * The ellipse `centre + u cos t + v sin t` by its axes. A blend of the ring
+ * and a plane leaves `u` and `v` oblique, so the axes come from the
+ * ellipse's own shape: the eigenvalues of u uᵀ + v vᵀ are the squared
+ * semi-axes, and its leading eigenvector is the major axis.
+ */
+function ellipseOf(centre: Point, u: Point, v: Point): OrbitPath {
+  const xx = u.x * u.x + v.x * v.x;
+  const yy = u.y * u.y + v.y * v.y;
+  const xy = u.x * u.y + v.x * v.y;
+  const mid = (xx + yy) / 2;
+  const spread = Math.hypot((xx - yy) / 2, xy);
+  return {
+    x: centre.x,
+    y: centre.y,
+    major: Math.sqrt(mid + spread),
+    minor: Math.sqrt(Math.max(0, mid - spread)),
+    angle: Math.atan2(2 * xy, xx - yy) / 2,
+  };
+}
 /** Where the spark starts and the fall home ends, as a fraction of the ring radius. */
 const CORE_FRACTION = 0.09;
 /** Ring crowding: past this many the ring widens and the glyphs shrink. */
@@ -238,6 +259,13 @@ export type PacketFrame = {
 /** A tether from a waiting crewmate to the crewmate it waits on. */
 export type DependencyLink = { fromId: string; toId: string };
 
+/**
+ * An orbit as the crew travel it on screen: an ellipse around `x, y` with
+ * semi-axes `major` and `minor`, its major axis at `angle` radians, px from
+ * the Firstmate's center.
+ */
+export type OrbitPath = { x: number; y: number; major: number; minor: number; angle: number };
+
 export type OrbitFrame = {
   /** Multi-computer fitted scene; absent on the unchanged single-computer path. */
   clustered?: boolean;
@@ -247,6 +275,11 @@ export type OrbitFrame = {
    */
   scene?: { halfWidth: number; halfHeight: number };
   crew: CrewmateFrame[];
+  /**
+   * The occupied orbits: one for each plane a crewmate that is not leaving
+   * travels or is headed for, at the radius it settles at. Empty with nobody out.
+   */
+  orbits: OrbitPath[];
   packets: PacketFrame[];
   formation: "ring" | "planes";
   planeBlend: number;
@@ -676,8 +709,11 @@ export class CrewOrbit {
     return best;
   }
 
-  /** The slot in scene space, before a remote cluster's scale and a dependency offset. */
-  private scenePoint(c: Crewmate, angle: number, radius: number) {
+  /**
+   * The slot in scene space, before a remote cluster's scale and a dependency
+   * offset, on plane `onPlane` (a crewmate's painted plane, between two while it glides).
+   */
+  private scenePoint(onPlane: number, angle: number, radius: number) {
     const mix = this.planeBlend.x;
     const ring = {
       x: Math.cos(angle) * radius,
@@ -686,9 +722,9 @@ export class CrewOrbit {
       depth: 0.5 + 0.5 * Math.sin(angle),
     };
     if (mix === 0) return ring;
-    const lower = Math.max(0, Math.min(CROWDED_PLANES.length - 1, Math.floor(c.planePosition.x)));
+    const lower = Math.max(0, Math.min(CROWDED_PLANES.length - 1, Math.floor(onPlane)));
     const upper = Math.min(CROWDED_PLANES.length - 1, lower + 1);
-    const between = clamp01(c.planePosition.x - lower);
+    const between = clamp01(onPlane - lower);
     const from = projectPlane(lower, angle, radius);
     const to = between === 0 ? from : projectPlane(upper, angle, radius);
     const plane = {
@@ -712,7 +748,27 @@ export class CrewOrbit {
   }
 
   private position(c: Crewmate, angle: number, radius: number) {
-    return this.projectScene(this.scenePoint(c, angle, radius), radius);
+    return this.projectScene(this.scenePoint(c.planePosition.x, angle, radius), radius);
+  }
+
+  /**
+   * The orbits on `planes` as painted this frame, through the same blend and
+   * projection as every crewmate: each at the radius its crew settle at, the
+   * ring's idle one blending to the plane's own. The ring is one orbit
+   * whatever the planes.
+   */
+  private orbitPaths(planes: ReadonlySet<number>, ringR: number, mix: number): OrbitPath[] {
+    const ringOut = ringR * (1 + this.tuning.idleOffset);
+    const traced = mix === 0 ? [...planes].slice(0, 1) : [...planes];
+    return traced.map((plane) => {
+      const radius = ringOut + ((CROWDED_PLANES[plane]?.radius ?? ringOut) - ringOut) * mix;
+      const centre = this.projectScene({ x: 0, y: 0, depth: 0.5 }, radius);
+      const along = (angle: number) => {
+        const point = this.projectScene(this.scenePoint(plane, angle, radius), radius);
+        return { x: point.x - centre.x, y: point.y - centre.y };
+      };
+      return ellipseOf(centre, along(0), along(Math.PI / 2));
+    });
   }
 
   private layout(): { ringR: number; glyphK: number; n: number } {
@@ -784,6 +840,8 @@ export class CrewOrbit {
     const packets: PacketFrame[] = [];
     const anchors = new Map<string, { c: Crewmate; wobble: number }>();
     const gone: string[] = [];
+    /** The planes of the painted crewmates that are not leaving. */
+    const occupied = new Set<number>();
     let working = 0;
     let idle = 0;
 
@@ -933,7 +991,7 @@ export class CrewOrbit {
         r = c.radius.x;
       }
 
-      const scene = this.scenePoint(c, a, r);
+      const scene = this.scenePoint(c.planePosition.x, a, r);
       scenes.set(c.id, { x: scene.x, y: scene.y, z: scene.z, depth: scene.depth, radius: r });
       const slot = this.projectScene(scene, r);
       const position = screen ? { x: screen.x, y: screen.y, depth: slot.depth } : slot;
@@ -954,6 +1012,7 @@ export class CrewOrbit {
       const nudge = settled ? 0 : clamp01(1 - (now - c.nudgeAt) / NUDGE_MS);
       const flash = settled ? 0 : clamp01(1 - (now - c.flashAt) / FLASH_MS);
       const flicker = settled ? 0 : flickerEnvelope(now - c.flickerAt) * c.flickerBoost;
+      if (c.phase !== "leaving") occupied.add(c.plane);
       crewFrames.push({
         id: c.id,
         status: c.status,
@@ -993,6 +1052,7 @@ export class CrewOrbit {
 
     return {
       crew: mix > 0 ? crewFrames.sort((a, b) => a.depth - b.depth) : crewFrames,
+      orbits: this.orbitPaths(occupied, ringR, mix),
       packets,
       links,
       formation: this.crowded ? "planes" : "ring",

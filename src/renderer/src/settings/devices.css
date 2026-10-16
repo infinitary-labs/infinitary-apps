@@ -85,7 +85,7 @@
 }
 
 /* The mono state on a row's right (components/machines/MachineRow): its
-   tasks in the accent, idle, or out of reach in warn. */
+   tasks in the accent, idle, connecting, or out of reach in warn. */
 .fm-devices-state {
   font-family: var(--font-mono);
   font-size: var(--text-xs);

@@ -109,4 +109,34 @@ describe("one task status", () => {
       read({ status: "active", activity: "running", children: { total: 2, closed: 0 } }).reason,
     ).toBe("");
   });
+
+  it("says a task on a computer whose connection is being made is connecting, with no warn mark", () => {
+    const place = { name: "Mac mini", where: "on Mac mini" };
+    const away = read({
+      status: "active",
+      activity: "running",
+      place: { ...place, outOfReach: true },
+    });
+    expect(away).toMatchObject({
+      mark: "working",
+      reason: "Mac mini is out of reach",
+      outOfReach: true,
+    });
+    const connecting = read({
+      status: "active",
+      activity: "running",
+      place: { ...place, connecting: true },
+    });
+    expect(connecting).toMatchObject({ mark: "working", reason: "Mac mini is connecting" });
+    expect(connecting.outOfReach).toBeUndefined();
+    // As sent on the wire: `outOfReach` beside `connecting`, for a paired view on protocol 8.5.
+    const sent = read({
+      status: "active",
+      activity: "running",
+      place: { ...place, outOfReach: true, connecting: true },
+    });
+    expect(sent).toMatchObject({ mark: "working", reason: "Mac mini is connecting" });
+    expect(sent.outOfReach).toBeUndefined();
+    expect(read({ place: { ...place, connecting: true } }).reason).toBe("Mac mini is connecting");
+  });
 });

@@ -69,4 +69,11 @@ describe("a computer's own GitHub row", () => {
       "not signed in to GitHub · out of reach",
     );
   });
+
+  it("says a computer whose connection is being made is connecting", () => {
+    const [row] = deviceForgeRows([
+      computer({ deviceId: "mini", inReach: false, connecting: true }),
+    ]);
+    expect(row && deviceForgeRowView(row).line).toBe("not signed in to GitHub · connecting");
+  });
 });

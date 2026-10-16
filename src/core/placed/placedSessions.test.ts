@@ -151,6 +151,8 @@ const stops: (() => Promise<void> | void)[] = [];
 /** The home's one clock: the wall clock, moved on when a case waits out a backoff. */
 let ahead = 0;
 const now = () => Date.now() + ahead;
+/** Computers a test calls out of reach only because their connection is being made. */
+const connectingNow = new Set<string>();
 
 afterEach(async () => {
   for (const stop of stops.splice(0).reverse()) await stop();
@@ -179,6 +181,7 @@ function startHome(
       pi: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }).controlProfile,
     },
     ...(forgeFor ? { forgeFor } : {}),
+    connecting: (deviceId) => connectingNow.has(deviceId),
     ...(extra.routing ? { routing: extra.routing } : {}),
     ...(extra.runsForAnotherFirstmate
       ? { runsForAnotherFirstmate: extra.runsForAnotherFirstmate }
@@ -562,6 +565,17 @@ describe("a task that runs on a computer that runs work", () => {
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
 
+    // The Tasks row says it is out of reach; while its connection is being
+    // made it says connecting instead, with no warn mark (INF-49).
+    const dropped = home.tasks.get("t-drop");
+    if (!dropped) throw new Error("no task");
+    expect(home.supervisor.taskPlace(dropped)).toMatchObject({ outOfReach: true });
+    connectingNow.add(at.deviceId);
+    const connectingPlace = home.supervisor.taskPlace(dropped);
+    connectingNow.clear();
+    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
+    expect(connectingPlace).toMatchObject({ connecting: true, outOfReach: true });
+
     // Out of reach: words wait on its lane, nothing calls it stuck, and after
     // a minute the feed says so once.
     expect(await home.supervisor.steerCrewmate("t-drop", "Make it blue too.")).toBe(
@@ -570,10 +584,15 @@ describe("a task that runs on a computer that runs work", () => {
     const before = kinds(home, "t-drop").length;
     home.supervisor.checkQuietTasks(now() + 3 * 60 * 60 * 1000);
     expect(kinds(home, "t-drop").slice(before)).not.toContain("note");
-    home.placed.tick(now() + 61_000);
-    home.placed.tick(now() + 120_000);
     const lines = () =>
       home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+    // While its connection is still being made the line is held, not said as out of reach.
+    connectingNow.add(at.deviceId);
+    home.placed.tick(now() + 61_000);
+    expect(lines().filter((line) => line.includes("out of reach"))).toEqual([]);
+    connectingNow.clear();
+    home.placed.tick(now() + 61_000);
+    home.placed.tick(now() + 120_000);
     expect(lines().filter((line) => line.includes("out of reach"))).toEqual([
       "Mac mini is out of reach. Its work on website catches up here when it is back.",
     ]);

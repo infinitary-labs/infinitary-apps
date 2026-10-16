@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import { constants, type Stats, statfsSync } from "node:fs";
-import { chmod, cp, lstat, mkdir, readdir, rm, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
+import { chmod, cp, lstat, mkdir, readdir, rm, utimes } from "./plainFs";
 import { COPIED_ONE_BY_ONE, leftBehind } from "./tree";
 
 /**

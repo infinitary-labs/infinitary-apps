@@ -6,6 +6,7 @@ import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { DeviceSignInAside, type Flow } from "./DeviceSignIns";
 import { DEVICE_FORGE_ROLE } from "./deviceForgeWords";
+import { awayWord } from "./devicesWords";
 
 /**
  * Settings -> Projects, "Where your projects live", for each computer that
@@ -27,6 +28,8 @@ export type DeviceForgeRow = {
   hostName: string;
   place: ReturnType<typeof signInPlace>;
   inReach: boolean;
+  /** Out of reach only because its connection is being made. */
+  connecting: boolean;
   /** Its sign-in there, or null when it has none. */
   signIn: ComputerForges["signIns"][number] | null;
 };
@@ -42,6 +45,7 @@ export function deviceForgeRows(devices: DeviceSignIns[]): DeviceForgeRow[] {
       hostName: host.name,
       place: signInPlace(device),
       inReach: device.inReach,
+      connecting: device.connecting === true,
       signIn: forges.signIns.find((entry) => entry.host === host.host) ?? null,
     }));
   });
@@ -55,7 +59,7 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
   line: string;
   reauth: boolean;
 } {
-  const away = row.inReach ? "" : " · out of reach";
+  const away = row.inReach ? "" : ` · ${awayWord(row.connecting)}`;
   if (!row.signIn)
     return {
       tone: "idle",

@@ -98,6 +98,11 @@ Protocol 8.6 adds the optional `system` to the pair request (`POST /pair`, `docs
 A phone always sends `system`: a first join can read no version, since the welcome comes after pairing and `/pair` exposes none.
 A home on an older minor reads the request strictly, so its `malformed` answer to a well-formed request from a phone means the Mac needs updating, and the phone says so.
 
+Protocol 8.6 also adds the optional `connecting` to a computer's sign-ins (`DeviceSignIns`), to a task's place and to a saved placement's candidate.
+A candidate keeps the `out-of-reach` rejection, so an older build still reads the saved placement.
+A computer out of reach only because its connection is being made says so (`docs/devices.md`, "Reached over your SSH").
+A task's place with `connecting` also carries `outOfReach`, so a paired view on 8.5 keeps its marker and only a view that reads `connecting` says it differently.
+
 Protocol 8.7 adds the optional `accountList` to each account a computer's sign-ins serve: the ids a Codex or Grok account's own model list named there, beside Pi's catalog for it, which the home narrows behind its own rail (`docs/helper.md`, "Its own sign-ins").
 A home on an older minor ignores it and routes among Pi's catalog for that account; a computer on an older minor sends none, and the home narrows nothing.
 

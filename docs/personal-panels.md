@@ -92,6 +92,7 @@ The values are physical-system facts rather than process limits or scheduling ca
 `tasks.search` (piece 7) is the app's own search over every task, closed ones included, `reads.subscribe("tasks.search", { query }, listener)`: the rows it found, so a panel's Find reaches done and dropped work the board no longer lists, and the panel may open and point at what it found.
 A live work row also says which of the six moves it allows now and why not (`PanelTaskRow.moves`), and whether its waiting card merges (`waitingCardMerges`); a panel that asked for `moves` makes one with `tasks.run` on the captain's click or key, and a panel that reads the board points at tasks with `point` and sees what he has open in `view` (`docs/ui-plugins.md`, "A panel's cards").
 A row another computer runs says where (`PanelTaskRow.place`): that computer by name, where after its project ("on Mac mini"), and `outOfReach` while open or underway work's computer is out of reach (`docs/helper.md`, "Runs on").
+`connecting` comes with `outOfReach` while that computer's connection is being made, and a panel reads it first.
 
 ## The lint
 

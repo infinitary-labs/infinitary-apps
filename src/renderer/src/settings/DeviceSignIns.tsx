@@ -27,6 +27,7 @@ import { HERE } from "@shared/deviceNames";
 import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
+import { awayWord } from "./devicesWords";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
 
 /**
@@ -82,6 +83,20 @@ export type DeviceAccountRowProps = {
   onSignIn: () => void;
   menu: RowMenuItem[];
 };
+
+/** Under a computer's label while it is not in reach: out of reach, or connecting while its connection is being made. */
+export function OutOfReachNote({ device }: { device: DeviceSignIns }) {
+  if (device.inReach) return null;
+  return (
+    <div
+      style={{ ...MONO_NOTE_STYLE, marginBottom: "var(--space-2)" }}
+      data-device-out-of-reach={device.connecting ? "connecting" : ""}
+    >
+      {awayWord(device.connecting)}
+      {device.asOf ? ` · as of ${timeOf(device.asOf)}` : ""}
+    </div>
+  );
+}
 
 /** The computer groups, below this Mac's own list; nothing while there are none. */
 export function DeviceSignInGroups({
@@ -294,14 +309,7 @@ export function DeviceSignInGroups({
             <div style={{ ...LINE_STYLE, margin: `${LABEL_GAP} 0 ${ROW_GAP}` }}>
               Its own sign-ins. A task that runs {place.where} uses only these.
             </div>
-            {!device.inReach && (
-              <div
-                style={{ ...MONO_NOTE_STYLE, marginBottom: "var(--space-2)" }}
-                data-device-out-of-reach=""
-              >
-                out of reach{device.asOf ? ` · as of ${timeOf(device.asOf)}` : ""}
-              </div>
-            )}
+            <OutOfReachNote device={device} />
             <div
               data-subscriptions-list
               style={{

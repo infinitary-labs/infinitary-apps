@@ -61,7 +61,8 @@ const words: Record<TaskStatus, string> = {
  * parts is the reason beside the word, never a different word. Open,
  * working or idle work whose computer is out of reach says so: its mark in
  * `--warn`, and its reason ("Mac mini is out of reach", or "Mac mini takes no new work" while it
- * is connected on an older Firstmate) unless a blocker, a
+ * is connected on an older Firstmate; "Mac mini is connecting", with the mark as it was, while its
+ * connection is being made) unless a blocker, a
  * hold or its parts already give one. An interruption, a start and a ready
  * decision keep their own reading.
  */
@@ -71,11 +72,17 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
     word: words[mark],
     reason: reason === words[mark] ? "" : reason,
   });
-  const away = task.place?.outOfReach ? task.place.name : null;
-  const awayWords = task.place?.noNewWork ? `${away} takes no new work` : `${away} is out of reach`;
+  const connecting = task.place?.connecting === true;
+  const away = task.place?.outOfReach || connecting ? task.place?.name : null;
+  const awayWords = connecting
+    ? `${away} is connecting`
+    : task.place?.noNewWork
+      ? `${away} takes no new work`
+      : `${away} is out of reach`;
+  // Connecting keeps the mark as it was: only out of reach draws it in warn.
   const awayReading = (mark: TaskStatus, reason: string | null): TaskStatusReading => ({
     ...reading(mark, reason ?? awayWords),
-    outOfReach: true,
+    ...(connecting ? {} : { outOfReach: true as const }),
   });
   if (task.status === "done") {
     return reading(

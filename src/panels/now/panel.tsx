@@ -588,6 +588,7 @@ export function Group({
                 data-now-selected={selectedTaskIds.includes(task.id) ? "" : undefined}
                 data-now-trailing={trailing.name || trailing.place ? "" : undefined}
                 data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
+                data-now-connecting={trailing.connecting ? "" : undefined}
                 data-now-nav={rowNavKey(group, task.id)}
                 tabIndex={stop === rowNavKey(group, task.id) ? 0 : -1}
                 style={{ "--depth": String(depth) } as CSSProperties}

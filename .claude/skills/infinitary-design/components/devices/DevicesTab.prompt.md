@@ -30,8 +30,8 @@ Then one list box (`--bg-1`, `--line-1` hairline, `--radius-m`), the Projects li
 
 The summary line is "Runs website and api" or "Runs no project yet", then "Signed in to Codex, Claude and GitHub" or "No sign-ins yet".
 It leads with "Controlling your first mate now" while Infinitary is open on that computer.
-On the right a mono state - "1 task" in `--accent`, "idle", or "out of reach" in `--warn` - then a small secondary Button "Remove".
-The dot is `ok` while the device answers and `warn` while it is out of reach.
+On the right a mono state - "1 task" in `--accent`, "idle", "connecting" while its SSH connection is being made, or "out of reach" in `--warn` - then a small secondary Button "Remove".
+The dot is `ok` while the device answers, `idle` while its connection is being made (its state on the right reads "connecting"), and `warn` while it is out of reach.
 Out of reach, the mono line ends "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
 The box's foot is the `ConnectChips` row shape: the micro label `ADD` and two chips, "+ A computer" and "+ Running as another user".
 A phone chip joins them only when the iPhone app exists.
@@ -64,8 +64,8 @@ A private network's address, such as Tailscale's, is not the local network, and 
 A computer whose command named an address this computer no longer has takes "Bringing a computer back" instead: the old address is the first thing to mend.
 
 **Reached over your SSH.**
-A computer added by its address is reached over this computer's own SSH connection while Infinitary runs here, and its row says where that connection stands in its mono line, after its address: "a computer · sam@mini.local · connected using SSH" only once its work said hello through it, "connecting using SSH…" before that, "reconnecting using SSH…" while this computer tries again by itself, "starts the next time sam logs in there" while nobody is logged in there as that user, and "could not start" when that user's session holds no background work, which no login mends.
-Its dot is `ok` only while connected; its state reads "out of reach" in `--warn` otherwise.
+A computer added by its address is reached over this computer's own SSH connection while Infinitary runs here, and its row says where that connection stands in its mono line, after its address: "a computer · sam@mini.local · connected using SSH" only once its work said hello through it, "connecting using SSH…" before that, "reconnecting using SSH…" while this computer tries again by itself after a connection it had before, "connecting using SSH…" for every try of a computer never seen, whether a first attempt failed or it dropped before its first hello, "starts the next time sam logs in there" while nobody is logged in there as that user, and "could not start" when that user's session holds no background work, which no login mends.
+Its dot is `ok` only while connected, `idle` while connecting; its state reads "connecting" while the connection is being made for the first time, after an operation held it (an update, a change of address, finding it again), or after its work moved folders, or after its work stopped answering while SSH stays up, until an attempt fails or five minutes pass from when it began, whichever comes first, and "out of reach" in `--warn` otherwise, including while it reconnects after a real drop.
 When only the captain can mend it, this computer stops trying: the mono line ends "out of reach since 14:02", the reason's two lines stand under the summary as one `--text-sm` line in `--warn` - "sam@mini.local does not answer as the computer this computer reached before.
 If you did not set it up again, someone may be in between.
 Check it, then try again.", or a refused or locked key, a key the app that holds it did not approve ("Could not sign in to sam@mini.local.
@@ -145,9 +145,10 @@ There is no code to scan beside a link until the iPhone app exists (captain's pi
   Infinitary then removes what it set up there, with its sign-ins." and "website and api run on this computer after.", with a danger "Remove".
   The row then reads "Bringing website's unmerged work here…", then "Removing what Infinitary set up on Mac mini…", and leaves the list.
 - Out of reach: "Remove Mac mini?
-  It is out of reach." over "Its unmerged work on website is still there.
+  It is out of reach."
+  ("It is connecting." while its connection is being made) over "Its unmerged work on website is still there.
   Wait, and it comes here before Mac mini is removed.", with a secondary "Remove when it is back" and a danger "Remove now".
-  Waiting turns the mono line to "out of reach · removed when it is back", with a ghost "Keep it" in place of Remove.
+  Waiting turns the mono line to "out of reach · removed when it is back" ("connecting · removed when it is back" for a computer whose connection is being made), with a ghost "Keep it" in place of Remove.
   "Remove now" leaves that work on the other computer, and Infinitary removes what it set up there when that computer is back.
 - A computer that left your first mate: "Remove Mac mini?
   It runs work for another first mate now." over "Its unmerged work on website stays there.

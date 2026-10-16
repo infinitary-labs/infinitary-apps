@@ -112,6 +112,8 @@ export type SshConnectionsOptions = {
   quietRetryMs?: number;
   /** How long a connection must stay up before tries start over from the first wait. */
   stableMs?: number;
+  /** How long a connection may read connecting before it reads reconnecting, which Devices says is out of reach. */
+  connectingMs?: number;
   /** Waits between tries to remove what Firstmate set up on a removed computer; the last repeats. */
   cleanupRetryMs?: readonly number[];
   /** How long a removed computer's connection is kept for it to hear it was removed. */
@@ -122,6 +124,15 @@ const RETRY_MS = [1_000, 2_000, 4_000, 8_000, 15_000, 30_000] as const;
 const QUIET_RETRY_MS = 5 * 60_000;
 const BEAT_MS = 15_000;
 const STABLE_MS = 60_000;
+/**
+ * How long a connection may read "connecting" - being made for the first
+ * time, after an operation held it, or after its work's folder moved - before
+ * it reads "reconnecting", which every surface says as out of reach. A few
+ * minutes covers an update restarting a Mac and a move of its folder; past
+ * that a person should see that the computer is not coming up. Not the move
+ * lock's own limit, `MOVE_LOCK_TRUST_MS`, which bounds the probe's wait.
+ */
+export const CONNECTING_MS = 5 * 60_000;
 const CLEANUP_RETRY_MS = [60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000] as const;
 const REVOCATION_WAIT_MS = 15_000;
 /** How long a removed computer's cleanup is tried, as the connection listens for one removed out of reach. */
@@ -161,6 +172,15 @@ class DeviceLine {
   failures = 0;
   /** It was up since this Mac started: a drop is reconnecting, not connecting. */
   wasUp = false;
+  /**
+   * Made again by design, after any operation held it or its work's folder
+   * moved: until an attempt fails it is connecting, not reconnecting.
+   */
+  fresh = false;
+  /** When it began reading connecting, for `CONNECTING_MS`. */
+  connectingSince = 0;
+  /** The push that says the limit passed: one a line, replaced on a restart, ended with the line. */
+  connectingTimer: ReturnType<typeof setTimeout> | null = null;
   upAt: number | null = null;
   master: SshMaster | null = null;
   timer: ReturnType<typeof setTimeout> | null = null;
@@ -235,10 +255,15 @@ export class SshConnections {
       case "up":
         if (line.agent === "at-login") return { state: "at-login" };
         if (line.agent === "failed") return { state: "not-started" };
-        return { state: "connecting" };
+        return { state: this.timedOut(line) ? "reconnecting" : "connecting" };
       case "waiting":
       case "connecting":
-        return { state: line.wasUp || line.failures > 0 ? "reconnecting" : "connecting" };
+        return {
+          state:
+            this.timedOut(line) || (!line.fresh && (line.wasUp || line.failures > 0))
+              ? "reconnecting"
+              : "connecting",
+        };
       case "held":
       case "closed":
         return undefined;
@@ -262,6 +287,7 @@ export class SshConnections {
       line.reason = undefined;
       line.toldReason = undefined;
       line.quiet = false;
+      this.startConnecting(line, false, true);
       line.phase = "waiting";
       tried += 1;
       this.attempt(line);
@@ -304,6 +330,7 @@ export class SshConnections {
         after.phase = "waiting";
         after.failures = 0;
         after.reason = undefined;
+        this.startConnecting(after, true, true);
         this.attempt(after);
       }
       release();
@@ -391,6 +418,7 @@ export class SshConnections {
       const line = this.lines.get(deviceId);
       if (!line) {
         const made = new DeviceLine(deviceId, address);
+        this.startConnecting(made, false);
         this.lines.set(deviceId, made);
         if (this.setups > 0) {
           made.phase = "held";
@@ -444,6 +472,9 @@ export class SshConnections {
   private async close(line: DeviceLine): Promise<void> {
     line.phase = "closed";
     this.clearTimer(line);
+    // Not in `clearTimer`: every attempt calls that, and would lose the push.
+    if (line.connectingTimer) clearTimeout(line.connectingTimer);
+    line.connectingTimer = null;
     await line.master?.stop();
   }
 
@@ -479,6 +510,7 @@ export class SshConnections {
     this.options.changed();
     let stopFor: SshStopReason | null = null;
     let routed = false;
+    let movedAway = false;
     let master: SshMaster;
     // What this attempt's controller says counts only while the line is still
     // its own: once an operation holds the line, or it closed, a late word -
@@ -524,6 +556,7 @@ export class SshConnections {
           this.options.changed();
           return;
         case "refused":
+          movedAway = message.reason === "moved";
           stopFor = stopForRefusal(message.reason);
           return;
       }
@@ -535,6 +568,7 @@ export class SshConnections {
       if (!this.running || line.tries !== turn || line.phase !== "connecting") return;
       if ("refusal" in live) {
         // Could not read the check line: nothing was signed in to. Try later.
+        line.fresh = false;
         line.phase = "waiting";
         this.retryLater(line);
         return;
@@ -564,6 +598,7 @@ export class SshConnections {
         ...(this.options.controlBase ? { controlBase: this.options.controlBase } : {}),
       });
     } catch {
+      line.fresh = false;
       line.phase = "waiting";
       this.retryLater(line);
       return;
@@ -584,6 +619,10 @@ export class SshConnections {
       if (line.upAt !== null && this.now() - line.upAt >= (this.options.stableMs ?? STABLE_MS))
         line.failures = 0;
       line.upAt = null;
+      // Its work's folder moved: made again by design, so connecting, not a drop.
+      // Its tries keep backing off: a far end that keeps ending this way is not coming up.
+      if (movedAway) this.startConnecting(line, true);
+      else line.fresh = false;
       line.agent = "unknown";
       line.toldNotStarted = false;
       // Past what stopped it: dropped like any other, so tried again as one.
@@ -619,6 +658,7 @@ export class SshConnections {
    */
   private stopped(line: DeviceLine, reason: SshStopReason): void {
     line.phase = "stopped";
+    line.fresh = false;
     line.reason = reason;
     line.quiet = false;
     line.upAt = null;
@@ -673,6 +713,11 @@ export class SshConnections {
   private heard(contact: WorkDeviceContact): void {
     const line = this.lines.get(contact.deviceId);
     if (!line) return;
+    // Welcomed, the episode of connecting by design is over; the next one starts its own clock.
+    if (contact.contact === "in-reach") line.fresh = false;
+    // Its work stopped answering while SSH stays up, such as a run restarting:
+    // the few minutes before it reads out of reach count from now.
+    else if (line.phase === "up") this.startConnecting(line, false, true);
     if (contact.contact === "in-reach" && line.toldStopped) {
       line.toldStopped = false;
       line.toldReason = undefined;
@@ -757,6 +802,30 @@ export class SshConnections {
 
   private device(deviceId: string): DeviceView | undefined {
     return this.options.pairing.list().find((entry) => entry.id === deviceId);
+  }
+
+  /** It has read connecting for longer than `CONNECTING_MS`. */
+  private timedOut(line: DeviceLine): boolean {
+    return this.now() - line.connectingSince >= (this.options.connectingMs ?? CONNECTING_MS);
+  }
+
+  /**
+   * It begins reading connecting now - made for the first time, tried again
+   * by design, or its work's folder moved - unless it has been reading it
+   * already (unless `restart`, a new operation), so a far end that keeps
+   * ending that way times out as one. Says
+   * so once the limit passes, since nothing else changes then.
+   */
+  private startConnecting(line: DeviceLine, fresh: boolean, restart = false): void {
+    if (line.fresh && fresh && !restart) return;
+    line.fresh = fresh;
+    line.connectingSince = this.now();
+    if (line.connectingTimer) clearTimeout(line.connectingTimer);
+    line.connectingTimer = setTimeout(
+      () => this.options.changed(),
+      (this.options.connectingMs ?? CONNECTING_MS) + 1,
+    );
+    line.connectingTimer.unref?.();
   }
 
   private now(): number {

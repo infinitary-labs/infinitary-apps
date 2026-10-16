@@ -256,6 +256,10 @@
 .reach {
   color: var(--warn);
 }
+/* Still connecting is not a warning: the word reads in the quiet color. */
+[data-now-connecting] .reach {
+  color: var(--fg-3);
+}
 [data-now-row]:not([data-now-trailing]) {
   grid-template-columns: 12px minmax(0, 1fr);
 }

@@ -11,7 +11,7 @@ Automatic's description is "Choose a compatible computer with room for each new 
 A started task stays there."
 Automatic uses the same select, Tab reach, arrow keys and focus ring; there is no extra command or task editor.
 Open, it lists "Automatic", "This computer", then the group "Your computers" with each computer by name, then the group "As another user" with "Running as Builder".
-An option for a device that cannot take work now names why after a middle dot: "MacBook Air · no sign-ins yet", "Mac mini · out of reach".
+An option for a device that cannot take work now names why after a middle dot: "MacBook Air · no sign-ins yet", "Mac mini · out of reach" ("Mac mini · connecting" while its connection is being made; Subscriptions' device sign-ins and the device forge rows say it the same way).
 A project kept on this computer only shows "This computer" as text, with the description "Kept on this computer only, so its tasks run here."
 The personal workspace stays on this computer too, locked like its other rows.
 Collapsed, an Automatic project adds the accent badge "runs automatically".

@@ -181,3 +181,40 @@ describe("placementWait names the check that refused a start", () => {
     expect(waitFor([noModel])).toEqual({ kind: "model", words: PLACEMENT_MODEL_WAIT });
   });
 });
+
+describe("a computer refused for its connection", () => {
+  it("is out of reach either way, marked connecting only while its connection is being made", () => {
+    const evaluated = (candidate: PlacementCandidate) =>
+      evaluatePlacement({
+        requirements: resolvePlacementRequirements({
+          home: { system: "macos", chip: "arm64" },
+          workingCopy: true,
+        }),
+        candidates: [thisMac, candidate],
+        reservations: [],
+      }).candidates[1];
+    const connecting = evaluated({ ...olderMacMini, inReach: false, connecting: true });
+    expect(connecting?.rejections).toContain("out-of-reach");
+    expect(connecting?.connecting).toBe(true);
+    const gone = evaluated({ ...olderMacMini, inReach: false });
+    expect(gone?.rejections).toContain("out-of-reach");
+    expect(gone?.connecting).toBeUndefined();
+  });
+
+  it("reads connecting in a waiting start's words for a computer whose connection is being made", () => {
+    const wait = (connecting: true | undefined) =>
+      placementWait(
+        [
+          {
+            name: "Mac mini",
+            rejections: ["out-of-reach"],
+            ...(connecting ? { connecting } : {}),
+            capacity: null,
+          },
+        ],
+        { cpu: 0.5, memoryBytes: 2 * 1024 ** 3 },
+      ).words;
+    expect(wait(true)).toContain("Mac mini: connecting.");
+    expect(wait(undefined)).toContain("Mac mini: out of reach.");
+  });
+});

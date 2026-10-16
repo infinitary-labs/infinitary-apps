@@ -4,6 +4,7 @@ import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
 import { COMPUTER, HERE } from "@shared/deviceNames";
+import { awayWord } from "./devicesWords";
 
 /**
  * A project's Runs on (design skill `components/devices/RunsOn`;
@@ -43,7 +44,7 @@ export function useWorkComputers(): DeviceSignIns[] | null {
 
 /** Why a computer cannot take work now, after a middle dot, or nothing. */
 function notNow(computer: DeviceSignIns): string {
-  if (!computer.inReach) return " · out of reach";
+  if (!computer.inReach) return ` · ${awayWord(computer.connecting)}`;
   if (computer.signIns && computer.signIns.accounts.length === 0) return " · no sign-ins yet";
   return "";
 }

@@ -13,6 +13,7 @@ import {
   type DeviceInviteRequest,
   type DeviceSystem,
   type DeviceView,
+  deviceConnecting,
   deviceLabel,
   deviceRunsWork,
 } from "@shared/devices";
@@ -1422,6 +1423,12 @@ export async function createServices(
     emit: (event) => broadcastEvent(event),
     changed: () => devicesChanged(),
   });
+  // A computer out of reach only because its connection is being made.
+  const connecting = (deviceId: string): boolean =>
+    deviceConnecting({
+      inReach: workDevices.inReach(deviceId),
+      ssh: sshConnections.state(deviceId),
+    });
   const remoteLogin: RemoteLogin = new RemoteLogin({
     pairing: devices,
     ssh,
@@ -1477,6 +1484,7 @@ export async function createServices(
     changed: (deviceId) => onDeviceSignIns(deviceId),
     // A computer's Codex and Grok lists are judged by this Mac's rail.
     protectedIds: (providerId) => slots.protectedIds(providerId),
+    ssh: (deviceId) => sshConnections.state(deviceId),
   });
   computerSignIns.view = () => deviceSignIns.view();
   // Each computer's setup card, made once the supervisor holds the stack.
@@ -1514,6 +1522,7 @@ export async function createServices(
     refreshSignIns: (deviceId) => deviceSignIns.refresh(deviceId),
     catalogModels: quotaCatalogModels,
     runsForAnotherFirstmate: (deviceId) => runsForAnotherFirstmate(sshConnections.state(deviceId)),
+    connecting,
     // Late-bound: the board's presentation refresh is set up with the crew below.
     reachMoved: () => scheduleWorkPresentation(),
     broadcastEvent: (event) => broadcastEvent(event),
@@ -1817,6 +1826,7 @@ export async function createServices(
   let olderComputers: Computers | undefined;
   const automaticPlacement: AutomaticPlacement = new AutomaticPlacement({
     takesNoWorkUntilUpdated,
+    connecting,
     tasks,
     resources: computerResourceFeed,
     work: workDevices,
@@ -1836,6 +1846,7 @@ export async function createServices(
     sessions: sessionFactories,
     machines: placed,
     takesNoWorkUntilUpdated,
+    connecting,
     // A task began waiting for an update: its card comes back, even after Not now.
     recallUpdateCard: (deviceId) => updateNudge?.refresh(deviceId, true),
     bind: async (accountId, providerId) => {
@@ -2133,7 +2144,12 @@ export async function createServices(
     bootedAt: () => Date.now() - uptime() * 1000,
   });
   olderComputers = computers;
-  devicesChanged = () => computers.refresh();
+  devicesChanged = () => {
+    // Task rows say connecting by the same state: they follow it at once.
+    scheduleWorkPresentation();
+    computers.refresh();
+    deviceSignIns.pushView();
+  };
   // Its work comes here first, or once it is back, as Remove's would.
   leaveWithWork = (device) => {
     computers.remove(device.id, "when-back").catch((error: unknown) =>

@@ -8,6 +8,7 @@ import { writePrivate } from "../devices/identity";
 import { pathsOf } from "../folderMove/due";
 import { readMoveRecord } from "../folderMove/record";
 import { hostEnv } from "../hostEnv";
+import { moveLockPathFor, moveLockRunning } from "../storage/moveLock";
 import { folderHolder } from "./lock";
 
 /**
@@ -631,11 +632,15 @@ const IDLE_BEATS_BEFORE_FAILED = 2;
  * `backgroundState` for the connection's beats: an agent the service manager holds that
  * leaves the data folder with no live run on two beats in a row keeps
  * exiting, so the work cannot start (`failed`) rather than `running`.
- * One beat with no run is a start in progress and answers `unknown`.
+ * One beat with no run is a start in progress and answers `unknown`, and so
+ * does a live move of the data folder: the run moves it before it takes the
+ * folder, and a move of a large folder outlasts both beats. A move that has
+ * run past `MOVE_LOCK_TRUST_MS` no longer counts, so a stuck one reads failed.
  */
 export function agentProbe(
   context: BackgroundContext,
   service: Service,
+  now: () => number = Date.now,
 ): () => Promise<"running" | "at-login" | "failed" | "unknown"> {
   let idle = 0;
   return async () => {
@@ -647,6 +652,10 @@ export function agentProbe(
     if (folderHolder(context.dataDir) !== null) {
       idle = 0;
       return "running";
+    }
+    if (moveLockRunning(moveLockPathFor(dirname(context.dataDir)), now)) {
+      idle = 0;
+      return "unknown";
     }
     idle += 1;
     return idle >= IDLE_BEATS_BEFORE_FAILED ? "failed" : "unknown";

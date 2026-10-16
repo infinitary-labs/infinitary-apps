@@ -17,7 +17,7 @@ A waiting child separates into Waiting on you while its nonwaiting parent and si
 
 A row is a shared task status mark, the task key in dim mono at the start of the title, the title (one line, ellipsized), and, when space permits, the project name in dim mono at the end (ellipsized; the trailing track is `fit-content(40%)` so short names size to content and long names cap at 40%).
 Hide the project name and its grid track when the panel content is 320px wide or less, or when exactly one registered, non-archived repo project exists (Scratch and archived projects do not count).
-A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn` (`../devices/RunsOn.prompt.md`).
+A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn`, and while its connection is being made it ends `connecting` in `--fg-3` with no warn mark (`../devices/RunsOn.prompt.md`).
 A part that does not fit leaves whole, the project name first and then the place; `out of reach` always stays, so the narrow panel keeps the track for those words alone.
 Count from the full board, not the visible-task filter.
 The row keeps the full project name in its accessible label; the preview shows it, and the row has no hover title.
@@ -73,7 +73,7 @@ Starting is the still open cyan ring, used only while a start is being prepared,
 A confirmed manual start that did not begin reads Backlog · Could not start, and the Tasks row adds the dim word could not start.
 Open work reads by its start policy, as the panel groups it: Backlog waits for Start, Queued starts by itself.
 A blocker, a hold or a parent's parts is the reason beside the word, never another word: `Queued · Blocked by another task`, `Queued · Held`, `Backlog · Its 2 parts do the work`.
-Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
+Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; either way, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
 Keep rows otherwise minimal.
 
 Marks occupy a fixed 12px square, using a 16-unit viewBox: Backlog is a hollow circle, Queued adds a central dot, Working/Idle/Interrupted are filled circles in ember/cyan/lava, Waiting on you is an accent dot inside an accent ring, Done is a neutral check, Dropped is a tertiary cross.

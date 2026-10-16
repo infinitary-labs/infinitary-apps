@@ -1,9 +1,11 @@
 import {
+  awayWord,
   type DeviceOtherVersion,
   type DeviceRemovalStage,
   type DeviceRemoveWhen,
   type DeviceSsh,
   type DeviceView,
+  deviceConnecting,
   deviceControls,
   deviceLabel,
   deviceRunsWork,
@@ -221,8 +223,9 @@ export class Computers {
       return this.viewOf(deviceId) ?? device;
     }
     if (when === "now") return this.removeNow(device);
+    const away = awayWord(deviceConnecting({ inReach: false, ssh: this.options.ssh?.(deviceId) }));
     throw new Error(
-      `${label} is out of reach. Choose to remove it when it is back, with its work, or now.`,
+      `${label} is ${away}. Choose to remove it when it is back, with its work, or now.`,
     );
   }
 

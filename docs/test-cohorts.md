@@ -89,7 +89,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/prCi.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s |
 | `src/core/workspace/conventional.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
 | `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s |
-| `src/core/folderMove/move.test.ts` | real git, the system's copier and SQLite: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.430 s) |
+| `src/core/folderMove/move.test.ts` | real git, the system's copier, SQLite, a vite build and the Electron binary: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.400 s) |
 | `src/core/helper/workingCopies.test.ts` | real git: a computer's clones, working copies and bundles, at the run's own priority | 10 s |
 | `src/core/placed/placedSessions.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
 | `src/core/placed/placedAccounts.test.ts` | real git for each side's workspace of a placed task, at the run's own priority | 5 s default |

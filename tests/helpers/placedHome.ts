@@ -130,6 +130,8 @@ export function startPlacedHome(options: {
   };
   /** Whether Firstmate on a computer runs work for another Firstmate now, as this Mac's own SSH connection found. */
   runsForAnotherFirstmate?: (deviceId: string) => boolean;
+  /** Whether a computer is out of reach only because its connection is being made. */
+  connecting?: (deviceId: string) => boolean;
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -214,6 +216,7 @@ export function startPlacedHome(options: {
     ...(options.runsForAnotherFirstmate
       ? { runsForAnotherFirstmate: options.runsForAnotherFirstmate }
       : {}),
+    ...(options.connecting ? { connecting: options.connecting } : {}),
     broadcastEvent: (event) => events.push(event),
     now,
     log: options.log ?? (() => {}),
@@ -255,6 +258,7 @@ export function startPlacedHome(options: {
       claude: { ...nothingHere, backend: "claude" },
     },
     machines: placed,
+    ...(options.connecting ? { connecting: options.connecting } : {}),
     bind: async () => options.binding,
     ...(router ? { router } : {}),
     workspace,

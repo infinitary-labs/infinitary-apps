@@ -1,7 +1,9 @@
 import type { DeviceMake } from "../../../shared/cards";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 import {
+  awayWord,
   type DeviceView,
+  deviceConnecting,
   deviceLabel,
   deviceRunsWork,
   namesInWords,
@@ -74,10 +76,14 @@ export const PANEL_WORDS: Record<
 /** Whether a device answers now, or since when it has not: the end of its mono line. */
 export const SEEN_WORDS = {
   now: "seen just now",
-  outOfReach: "out of reach",
+  /** The two words a computer not in reach reads as have one home, `awayWord`. */
+  outOfReach: awayWord(false),
+  /** The state on a row's right, and the mono line, of a computer whose connection is being made. */
+  connecting: awayWord(true),
   /** Followed by when it was last in reach: "out of reach since 14:02". */
-  since: "out of reach since",
-  removedWhenBack: "out of reach · removed when it is back",
+  since: `${awayWord(false)} since`,
+  removedWhenBack: `${awayWord(false)} · removed when it is back`,
+  removedWhenBackConnecting: `${awayWord(true)} · removed when it is back`,
   removedOnceUpdated: "takes no new work · removed once it is updated",
   restarted: `not logged in since ${HERE.this} restarted`,
 };
@@ -90,6 +96,8 @@ export const RUNS_NO_PROJECT = "Runs no project yet";
 
 /** The mono state on the right of a computer that takes no new work. */
 export const NO_NEW_WORK = "no new work";
+
+export { awayWord };
 
 /** The words of Remove's question (design skill `components/devices/DevicesTab`, "Remove"). */
 export function removeLines(device: DeviceView): [string, ...string[]] {
@@ -113,7 +121,7 @@ export function removeLines(device: DeviceView): [string, ...string[]] {
     ];
   if (!device.inReach)
     return [
-      `Remove ${label}? It is out of reach.`,
+      `Remove ${label}? It is ${awayWord(deviceConnecting(device))}.`,
       `${work} is still there. Wait, and it comes here before ${label} is removed.`,
     ];
   const tasks = device.tasks ?? 0;

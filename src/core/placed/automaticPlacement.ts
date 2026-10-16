@@ -74,6 +74,8 @@ export class AutomaticPlacement {
       devices: () => readonly DeviceView[];
       /** Whether a computer is connected on an older Firstmate and takes no new work. */
       takesNoWorkUntilUpdated?: (deviceId: string) => boolean;
+      /** Whether a computer is out of reach only because its connection is being made. */
+      connecting?: (deviceId: string) => boolean;
       router: Router;
       repo: (id: string) => RepoView | undefined;
       catalog: () => readonly QuotaCatalogModel[];
@@ -226,6 +228,9 @@ export class AutomaticPlacement {
         this.options.takesNoWorkUntilUpdated?.(computer.computerId)
           ? { olderFirstmate: true }
           : {}),
+        ...(computer.computerId !== null && this.options.connecting?.(computer.computerId)
+          ? { connecting: true }
+          : {}),
         workEnabled: true,
         ...(valid ? { system: read.facts.system, chip: read.facts.chip } : {}),
         physicalComputerId: valid ? read.facts.physicalComputerId : null,
@@ -282,6 +287,7 @@ export class AutomaticPlacement {
             decision.candidates.map((row) => ({
               name: nameOf(row.computerId),
               rejections: row.rejections,
+              ...(row.connecting ? { connecting: true as const } : {}),
               capacity: row.capacity,
             })),
             requirements.demand,
@@ -332,6 +338,7 @@ export class AutomaticPlacement {
             name: nameOf(row.computerId),
             physicalComputerId: row.physicalComputerId,
             rejections: row.rejections,
+            ...(row.connecting ? { connecting: true as const } : {}),
             missingTools: row.missingTools,
             reading: row.resources,
             factsAgeMs: read ? Math.max(0, now - read.started) : null,

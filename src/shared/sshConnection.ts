@@ -157,14 +157,15 @@ function nextLogin(device: Named): string {
 /** The words for this Mac's SSH connection to a computer, in the design skill's words. */
 export const sshConnectionWords = {
   /** The end of a row's mono line, after the address. */
-  detail(ssh: DeviceSsh, device: Named): string {
+  detail(ssh: DeviceSsh, device: Named & Pick<DeviceView, "seenAt">): string {
     switch (ssh.state) {
       case "connected":
         return "connected using SSH";
       case "connecting":
         return "connecting using SSH…";
       case "reconnecting":
-        return "reconnecting using SSH…";
+        // One that never connected keeps trying as it was, though Devices says out of reach once connecting timed out.
+        return device.seenAt === undefined ? "connecting using SSH…" : "reconnecting using SSH…";
       case "at-login":
         return `starts ${nextLogin(device)}`;
       case "not-started":

@@ -494,6 +494,8 @@ export type CrewSupervisorOptions = {
    * waiting for it says so, not that it is out of reach.
    */
   takesNoWorkUntilUpdated?: (deviceId: string) => boolean;
+  /** Whether a computer is out of reach only because its connection is being made (`deviceConnecting`). */
+  connecting?: (deviceId: string) => boolean;
   /** A task began waiting for that computer's update: its Update card returns, even after Not now. */
   recallUpdateCard?: (deviceId: string) => void;
   /**
@@ -1857,10 +1859,14 @@ export class CrewSupervisor {
     const live = record.status === "open" || record.status === "active";
     const away = live && machines.ready(device, record.id) !== true;
     const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
+    // Still connecting says so, with no warn mark where `connecting` is read;
+    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
+    const connecting = away && !older && this.options.connecting?.(device) === true;
     return {
       name: label,
       where,
       ...(away ? { outOfReach: true as const } : {}),
+      ...(connecting ? { connecting: true as const } : {}),
       ...(older ? { noNewWork: true as const } : {}),
     };
   }

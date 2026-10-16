@@ -73,6 +73,8 @@ export type PlacementCandidate = {
   inReach: boolean;
   /** Connected on an older Firstmate, so it takes no new work: not out of reach. */
   olderFirstmate?: boolean;
+  /** Out of reach only because its connection is being made: still refused as out of reach, and marked so it reads connecting. */
+  connecting?: boolean;
   workEnabled: boolean;
   system?: DeviceSystem;
   /** Execution architecture, not a guess about the underlying hardware. */
@@ -108,6 +110,8 @@ export type PlacementEvaluation = {
   computerId: string | null;
   physicalComputerId: string | null;
   rejections: PlacementRejection[];
+  /** Refused as out of reach only because its connection was being made. */
+  connecting?: true;
   /** Exact tool identities for the typed missing-tool reasons. */
   missingTools: string[];
   resources: ComputerResourceReading;
@@ -207,6 +211,9 @@ export function evaluatePlacement(input: {
       computerId: candidate.computerId,
       physicalComputerId: candidate.physicalComputerId,
       rejections,
+      ...(candidate.connecting && !candidate.inReach && !candidate.olderFirstmate
+        ? { connecting: true as const }
+        : {}),
       missingTools,
       resources: candidate.resources,
       model: candidate.model,

@@ -210,6 +210,13 @@ export const taskPlaceSchema = z.object({
    * takes no new work until it is updated, which is not being out of reach.
    */
   noNewWork: z.literal(true).optional(),
+  /**
+   * With `outOfReach`: the computer is out of reach only because its
+   * connection is being made (`deviceConnecting`), so the task says
+   * connecting, with no warn mark. `outOfReach` stays so a paired view on
+   * protocol 8.5, which knows only that marker, still draws it.
+   */
+  connecting: z.literal(true).optional(),
 });
 export type TaskPlace = z.infer<typeof taskPlaceSchema>;
 

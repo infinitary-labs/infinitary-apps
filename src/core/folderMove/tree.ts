@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { createReadStream, type Dirent, type Stats } from "node:fs";
-import { lstat, readdir, readlink } from "node:fs/promises";
+import type { Dirent, Stats } from "node:fs";
 import { isAbsolute, join, sep } from "node:path";
+import { createReadStream, lstat, readdir, readlink } from "./plainFs";
 
 /**
  * Reading a data folder's tree for the one-time move (./move.ts): what it

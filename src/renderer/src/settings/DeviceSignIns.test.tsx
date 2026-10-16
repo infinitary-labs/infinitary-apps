@@ -7,7 +7,7 @@ import {
 import { returnsToLoopback, signInPlace } from "@shared/signIns";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { DeviceSignInAside, type Flow } from "./DeviceSignIns";
+import { DeviceSignInAside, type Flow, OutOfReachNote } from "./DeviceSignIns";
 import { AccountRow } from "./SubscriptionsTab";
 
 /**
@@ -242,5 +242,16 @@ describe("a computer's Claude account row", () => {
     expect(row(refused(KEYCHAIN_VALUE_FAILURE_DETAIL.keychain_needs_grant), noop)).toContain(
       ">Retry<",
     );
+  });
+});
+
+describe("the note under a computer that is not in reach", () => {
+  const mini = { deviceId: "mini", name: "Mac mini", onThisMac: false, signIns: null };
+  const note = (over: { inReach: boolean; connecting?: boolean }) =>
+    renderToStaticMarkup(<OutOfReachNote device={{ ...mini, ...over }} />);
+  it("says connecting while its connection is being made, out of reach otherwise, and nothing in reach", () => {
+    expect(note({ inReach: false, connecting: true })).toContain(">connecting<");
+    expect(note({ inReach: false })).toContain(">out of reach<");
+    expect(note({ inReach: true })).toBe("");
   });
 });

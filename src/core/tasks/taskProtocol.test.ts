@@ -44,6 +44,9 @@ function setup(
   options: {
     deltaTrigger?: { rows: number; bytes: number };
     workPosture?: (record: import("../storage/taskStore").TaskRecord) => WorkPosture;
+    place?: (
+      record: import("../storage/taskStore").TaskRecord,
+    ) => import("@shared/tasks").TaskPlace;
     modelLabel?: (model: string) => string | undefined;
     actions?: (
       record: import("../storage/taskStore").TaskRecord,
@@ -71,6 +74,7 @@ function setup(
   const protocol = new TaskProtocol({
     tasks,
     workPosture: options.workPosture,
+    ...(options.place ? { place: options.place } : {}),
     repos: {
       get: (id) =>
         id === "r1"
@@ -1656,5 +1660,26 @@ describe("provenance events on the wire (R2)", () => {
     const streamed = events.flatMap((event) => (event.type === "task_event" ? [event.kind] : []));
     expect(streamed).not.toContain("decided");
     expect(streamed).toContain("steered");
+  });
+
+  it("publishes a computer going from out of reach to connecting as a presentation change, with no record write", async () => {
+    let place: import("@shared/tasks").TaskPlace = {
+      name: "Mac mini",
+      where: "on Mac mini",
+      outOfReach: true,
+    };
+    const f = setup({ place: () => place });
+    f.tasks.create({ id: "t", title: "On the mini", prompt: "p", repoId: "r1" });
+    await f.settle();
+    f.protocol.refreshPresentation();
+    expect(f.protocol.board().tasks[0]?.place).toMatchObject({ outOfReach: true });
+    // The connection starts being made: the services call this at once on a connection change.
+    place = { name: "Mac mini", where: "on Mac mini", outOfReach: true, connecting: true };
+    expect(f.protocol.refreshPresentation()).toBe(true);
+    const row = f.protocol.board().tasks[0]?.place;
+    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
+    expect(row).toMatchObject({ connecting: true, outOfReach: true });
+    f.protocol.dispose();
+    f.db.close();
   });
 });

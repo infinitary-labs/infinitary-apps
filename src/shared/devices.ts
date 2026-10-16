@@ -316,8 +316,13 @@ export type SshStopReason = z.infer<typeof sshStopReasonSchema>;
  *
  * - `connected`: the connection is up and the computer's work said hello
  *   through it. Never before that welcome.
- * - `connecting`: the first attempt since this Mac started, or the
- *   connection is up and the work there has not said hello yet.
+ * - `connecting`: the first attempt since this Mac started, the attempt
+ *   right after an operation held the connection or its work's folder moved
+ *   (until one fails), or the connection is up and the work there has not
+ *   said hello yet, including after a connected work stopped answering. It
+ *   reads reconnecting once five minutes have passed since it began
+ *   (`CONNECTING_MS`). Devices says "connecting" for it, not "out of reach"
+ *   (`deviceConnecting`).
  * - `reconnecting`: it dropped or could not be made, and this Mac tries
  *   again on its own.
  * - `at-login`: the connection is up, and nobody is logged in there as the
@@ -331,6 +336,24 @@ export const deviceSshSchema = z.strictObject({
   reason: sshStopReasonSchema.optional(),
 });
 export type DeviceSsh = z.infer<typeof deviceSshSchema>;
+
+/**
+ * Whether a computer is out of reach only because its connection is being
+ * made, such as one just updated: every surface that names a computer out of
+ * reach says "connecting" for it instead. One whose connection stopped, failed
+ * or dropped is out of reach.
+ */
+export function deviceConnecting(device: {
+  inReach?: boolean | undefined;
+  ssh?: DeviceSsh | undefined;
+}): boolean {
+  return !device.inReach && device.ssh?.state === "connecting";
+}
+
+/** What a computer not in reach reads as: connecting while its connection is being made (`deviceConnecting`), out of reach otherwise. */
+export function awayWord(connecting: boolean | undefined): string {
+  return connecting ? "connecting" : "out of reach";
+}
 
 /** One device on the home's list, as every reader sees it: never its secret. */
 export const deviceViewSchema = z.strictObject({

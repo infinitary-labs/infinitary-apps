@@ -1,6 +1,7 @@
 import { appendFileSync, chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { shellWord } from "../../src/core/devices/joinCommand";
+import { RETIRED_PROFILE_MARKER } from "../../src/core/storage/retiredProfile";
 import {
   type BackgroundState,
   type WorkOutcome,
@@ -102,7 +103,8 @@ export function standInFirstmate(
       "  while IFS= read -r M; do",
       '    case "$M" in',
       `      *'"forwarded"'*) echo "forwarded $S/s" >> "$R"; printf '{"firstmate":"route","v":1,"agent":"%s"}\\n' ${shellWord(background.agent ?? "running")};;`,
-      `      *'"beat"'*) echo "beat" >> "$R";;`,
+      // Its folder retired - moved into a newer app's - it says so and ends, as the real controller does.
+      `      *'"beat"'*) echo "beat" >> "$R"; if [ -f "$(dirname "$INFINITARY_HELPER_DATA_DIR")/${RETIRED_PROFILE_MARKER}" ]; then printf '{"firstmate":"refused","reason":"moved"}\\n'; exit 0; fi;;`,
       "    esac",
       "  done",
       "  exit 0",

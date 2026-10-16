@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { type DeviceSsh, deviceLabel } from "@shared/devices";
 import { type RemoteLoginAddOptions, remoteLoginWords } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
@@ -18,6 +18,7 @@ import { type HomeConnection, startConnection } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { WorkDevices } from "../placed/workDevices";
+import { RETIRED_PROFILE_MARKER } from "../storage/retiredProfile";
 import { claimLink, findHomeAgain } from "./dial";
 import { JoinedHome } from "./joinedHome";
 import { DevicePairing } from "./pairing";
@@ -36,7 +37,7 @@ import { CLEANUP_HORIZON_MS, type DeviceConnectionEvent, SshConnections } from "
  * sides is tests/e2e/run-work.spec.ts's.
  */
 
-// Real processes: sshd, ssh, tar, curl and openssl (slowest measured 2.1 s).
+// Real processes: sshd, ssh, tar, curl and openssl (slowest measured 4.8 s, the fastest of three runs).
 vi.setConfig({ testTimeout: 15_000 });
 
 /** Add it after saying this is the Mac, so the check is not what these tests are about. */
@@ -90,7 +91,13 @@ async function server(options?: { forwarding?: boolean }): Promise<SshServer> {
  */
 async function home(
   ssh: SshProgram,
-  options: { now?: () => number; agent?: string; quietRetryMs?: number } = {},
+  options: {
+    now?: () => number;
+    agent?: string;
+    quietRetryMs?: number;
+    connectingMs?: number;
+    retryMs?: readonly number[];
+  } = {},
 ) {
   const port = await freePort();
   const pairing = new DevicePairing({
@@ -133,7 +140,8 @@ async function home(
       for (const device of pairing.list()) seen.push(ssh2.state(device.id));
     },
     controlBase,
-    retryMs: [50, 100],
+    retryMs: options.retryMs ?? [50, 100],
+    ...(options.connectingMs ? { connectingMs: options.connectingMs } : {}),
     quietRetryMs: options.quietRetryMs ?? 200,
     cleanupRetryMs: [100],
     beatMs: 100,
@@ -461,12 +469,158 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
 
       // Updated: the connection lets go first, the copy is replaced, and it is made again to it.
       await at.remote.update(device.id);
+      // Made again by design, so Devices says connecting: reconnecting reads as out of reach.
+      expect(state(at.connections, device.id)).toEqual({ state: "connecting" });
+      await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
+      expect(at.seen.filter((each) => each?.state === "reconnecting")).toEqual([]);
       const record = at.record();
       const update = record.lastIndexOf("started: work update");
       expect(record.lastIndexOf("connect ended")).toBeLessThan(update);
       expect(record.lastIndexOf("connect ended")).toBeGreaterThan(record.indexOf("forwarded "));
       await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
       expect(at.record().lastIndexOf("forwarded ")).toBeGreaterThan(update);
+    });
+
+    it("after an operation, a computer that cannot be reached reads reconnecting, not connecting for good", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const at = await home(sshd.ssh({ remote: them.env }));
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+
+      // The other Mac goes away while an operation holds the connection: made
+      // again, it fails, and that is a drop to say, however fresh the attempt.
+      await at.connections.hold(device.id, async () => {
+        await sshd.stop();
+      });
+      await vi.waitFor(
+        () => expect(at.seen.filter((each) => each?.state === "reconnecting")).not.toEqual([]),
+        { timeout: 10_000 },
+      );
+      expect(state(at.connections, device.id)?.state).toBe("reconnecting");
+    });
+
+    it("after an operation, a connection that cannot even be started reads reconnecting", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const at = await home(sshd.ssh({ remote: them.env }));
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+
+      // The folder for its control sockets is gone while it is held, so making
+      // the connection again throws: a failed attempt, not one still starting.
+      await at.connections.hold(device.id, async () => {
+        rmSync(at.controlBase, { recursive: true, force: true });
+      });
+      await vi.waitFor(
+        () => expect(at.seen.filter((each) => each?.state === "reconnecting")).not.toEqual([]),
+        { timeout: 10_000 },
+      );
+    });
+
+    it("its work's folder moving ends the connection, which is made again as connecting, not as a drop", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const at = await home(sshd.ssh({ remote: them.env }));
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+
+      // The older app's folder there is retired: its controller says moved on the next beat.
+      const from = at.seen.length;
+      writeFileSync(join(dirname(them.work), RETIRED_PROFILE_MARKER), "{}");
+      await vi.waitFor(() => expect(at.record()).toContain("connect ended"), { timeout: 10_000 });
+      await vi.waitFor(() => expect(at.forwards()).toBeGreaterThanOrEqual(2), { timeout: 10_000 });
+      expect(state(at.connections, device.id)).toEqual({ state: "connecting" });
+      expect(at.seen.slice(from).filter((each) => each?.state === "reconnecting")).toEqual([]);
+    });
+
+    it("connecting times out to reconnecting, which Devices says is out of reach, once the limit passes (INF-49)", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      // No Firstmate answers there: the connection is made, and its work never says hello.
+      // The clock is the test's own, so setup's slowness cannot move the limit.
+      let clock = Date.now();
+      const at = await home(sshd.ssh({ remote: them.env }), {
+        now: () => clock,
+        connectingMs: 60_000,
+      });
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      expect(state(at.connections, device.id)).toEqual({ state: "connecting" });
+      clock += 60_001;
+      expect(state(at.connections, device.id)).toEqual({ state: "reconnecting" });
+    });
+
+    it("a far end that keeps ending as moved keeps backing off, and times out as one", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const at = await home(sshd.ssh({ remote: them.env }), {
+        retryMs: [300, 10_000],
+        connectingMs: 1_500,
+      });
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      writeFileSync(join(dirname(them.work), RETIRED_PROFILE_MARKER), "{}");
+      await vi.waitFor(() => expect(at.record()).toContain("connect ended"), { timeout: 10_000 });
+      // Each ending makes the next wait longer: after the first retry the next is ten seconds off.
+      await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
+      await new Promise((resolve) => setTimeout(resolve, 1_800));
+      expect(at.forwards()).toBe(2);
+      // And it does not read connecting for good: it times out to out of reach.
+      expect(state(at.connections, device.id)?.state).toBe("reconnecting");
+    });
+
+    it("a welcomed computer whose work stops answering while SSH stays up reads connecting first, then out of reach after the limit", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      // The test's own clock drives the limit, so no wall-clock sleep stands for it.
+      let clock = Date.now();
+      const at = await home(sshd.ssh({ remote: them.env }), {
+        now: () => clock,
+        connectingMs: 60_000,
+      });
+      at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      const grant = new JoinedHome(them.work).read()?.grant;
+      if (!grant) throw new Error("Nothing joined there.");
+      const client = await connectClient(grant, {
+        dial: { target: { socket: forwarded(at.record()) } },
+      });
+      await vi.waitFor(() =>
+        expect(state(at.connections, device.id)).toEqual({ state: "connected" }),
+      );
+      // Long connected: the clock from its first connecting ran out meanwhile.
+      clock += 60_001;
+      // Its run restarts, SSH staying up: it says hello again, so it reads connecting, counted from now.
+      await client.close();
+      await vi.waitFor(() =>
+        expect(state(at.connections, device.id)).toEqual({ state: "connecting" }),
+      );
+      expect(at.seen.slice(-3).some((each) => each?.state === "reconnecting")).toBe(false);
+      clock += 60_001;
+      expect(state(at.connections, device.id)).toEqual({ state: "reconnecting" });
+    });
+
+    it("stopping ends the connecting timer: nothing pushes after the limit passes", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const limit = 800;
+      const at = await home(sshd.ssh({ remote: them.env }), { connectingMs: limit });
+      const stop = at.start();
+      const device = await addChecked(at.remote, sshd.address);
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      // A no-op operation starts a fresh connecting clock just before the stop, whatever setup took.
+      await at.connections.hold(device.id, async () => {});
+      await stop();
+      const settled = at.changes();
+      await new Promise((resolve) => setTimeout(resolve, limit + 500));
+      expect(at.changes()).toBe(settled);
     });
 
     it("a computer found again by its address waits for the find to end before its connection is made", async () => {

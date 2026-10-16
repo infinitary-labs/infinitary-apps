@@ -170,7 +170,7 @@ Its grant then says `via: "ssh"`, and the run never dials the grant's address: i
 
 1. It checks the folder runs work for that home as that computer, and through the home's SSH; anything else is refused (`other-home`, `not-joined`, `not-ssh`) before anything is touched.
 2. It takes a new generation, makes a fresh folder only this user may enter under `/tmp` and says its socket's path to the home, one typed line on stdout (`controllerSaysSchema`, `src/shared/sshConnection.ts`).
-3. Told on stdin that the forward is in place, it checks the home answers through the socket with its own key, sending nothing, then publishes the route and says whether the background runs (`backgroundState`: `running`, `at-login`, `failed`), asking again on each beat until it runs; a loaded agent that leaves the folder with no live run on two beats in a row is `failed` (`agentProbe`), so Devices says the work could not start rather than "connecting".
+3. Told on stdin that the forward is in place, it checks the home answers through the socket with its own key, sending nothing, then publishes the route and says whether the background runs (`backgroundState`: `running`, `at-login`, `failed`), asking again on each beat until it runs; a loaded agent that leaves the folder with no live run on two beats in a row is `failed` (`agentProbe`), so Devices says the work could not start rather than "connecting"; while a move of the folder holds its move lock the probe answers `unknown`, since the run moves the folder before it takes the folder, until the lock is older than `MOVE_LOCK_TRUST_MS` (30 minutes, far past the few minutes a large folder takes), after which the probe reads `failed` again, as a stuck move should.
 4. Each beat renews the route; a route a later connection took ends it (`superseded`), and so does its folder moving into a newer app's (`moved`), which the home tries again as any dropped connection.
 5. The end of its input, or 75 seconds with no beat, withdraws its generation's route, removes its own folder and nothing else, and ends it.
 
@@ -456,6 +456,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   After a minute without a computer that has work the feed says "Mac mini is out of reach.
   Its work on website catches up here when it is back.", and once every task there caught up, "Mac mini is back.
   Its work on website caught up.", in the design skill's words (`components/devices/RunsOn`).
+  The first line is held while the computer's connection is still being made (`connecting`), and said once it is really out of reach.
   One whose Infinitary runs work for another first mate now, as the home's SSH connection found (`other-home`), is never said to catch up: "Mac mini runs work for another first mate now.
   Its work on website stops when you remove it here."
 - **Back in reach.**
@@ -559,7 +560,8 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   `inf:devices:runs-on` sets it to `automatic`, this computer (`null`), or a listed device that may run work (`mac` or `work`).
   The personal workspace and a project with no origin run only here (`runsHereOnly`), since no other computer could clone them.
 - **In Settings and by talking.**
-  Settings -> Projects draws a fourth row, Runs on, for an eligible project or once a computer that runs work is on the list, with one select: Automatic, This computer, then "Your computers", then "As another user", each naming why it cannot take work now ("out of reach", "no sign-ins yet").
+  Settings -> Projects draws a fourth row, Runs on, for an eligible project or once a computer that runs work is on the list, with one select: Automatic, This computer, then "Your computers", then "As another user", each naming why it cannot take work now ("out of reach", "connecting" while its connection is being made, "no sign-ins yet").
+  A task on a computer whose connection is being made reads "connecting" in the Tasks panel and the task footer, with its mark as it was, not warn (`TaskPlace.connecting`).
   A project that runs only here shows "This computer" as text with its reason, and a collapsed project that runs elsewhere adds an accent badge, "runs on Mac mini" or "runs as Builder".
   The first mate sets the same row with `app_change` `project-runs-on`, a line offered only where this build offers devices.
   The feed says "website runs on Mac mini now.
@@ -591,11 +593,11 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   A completion card's fact strip has a Runs cell after the project ("on Mac mini", `device`).
 - **The Tasks row, the summary and the status.**
   A task another computer runs carries where on the board, in words (`TaskView.place`, `CrewSupervisor.taskPlace`): where it started, or where it would start now, and `outOfReach` while open or underway work's computer is out of reach, or back and not yet caught up.
-  Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
+  Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, "connecting" in `--fg-3` with no warn mark while its connection is being made (`place.connecting`, which comes with `place.outOfReach` and is read first), or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
   A part that does not fit leaves whole, the project's name first and then the place, so the narrow panel says "out of reach" alone, as it leaves out the project's name.
-  The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
+  The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary; "Mac mini is connecting", with the mark as it was, while its connection is being made), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
   The crew summary's Project row reads "website · on Mac mini", and the record names the computer in Details (below, "A task's own Runs on").
-  A computer going out of reach or catching up writes no record, so the placed sessions say so (`reachMoved`) and the board is published again at once (`TaskProtocol.refreshPresentation`).
+  A computer going out of reach or catching up writes no record, so the placed sessions say so (`reachMoved`) and the board is published again at once (`TaskProtocol.refreshPresentation`); so does a change of its connection, out of reach to connecting and back (`devicesChanged` calls `scheduleWorkPresentation`).
 
 ## Independent reviews
 

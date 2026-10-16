@@ -1,4 +1,4 @@
-import { closeSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
+import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 
@@ -48,6 +48,51 @@ export function moveLockHeld(lockPath: string, alive: (pid: number) => boolean =
   }
   const lock = parseMoveLock(raw);
   return lock === undefined || alive(lock.pid);
+}
+
+/**
+ * How long a move's lock is believed for a reader that only reports on it
+ * (`moveLockRunning`). A move of a large folder takes minutes - the Mac
+ * mini's 2.5 GB took about three - so half an hour covers a slow disk
+ * several times over; a lock older than that belongs to a move that is stuck
+ * or abandoned, and what waits on it should say so again rather than wait
+ * on it for good.
+ */
+export const MOVE_LOCK_TRUST_MS = 30 * 60 * 1000;
+
+/**
+ * Whether a move is under way now, for a reader that only reports on it: the
+ * lock is held (`moveLockHeld`) and began within `MOVE_LOCK_TRUST_MS`. A lock
+ * that cannot be read counts from when its file was written, as an
+ * unreadable lock is still held for the move itself.
+ */
+export function moveLockRunning(
+  lockPath: string,
+  now: () => number = Date.now,
+  alive: (pid: number) => boolean = processAlive,
+): boolean {
+  // One read answers both whether it is held (as `moveLockHeld`) and when it began.
+  let began = Number.NaN;
+  let raw: string | undefined;
+  try {
+    raw = readFileSync(lockPath, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+  }
+  const lock = raw === undefined ? undefined : parseMoveLock(raw);
+  if (lock) {
+    if (!alive(lock.pid)) return false;
+    began = Date.parse(lock.startedAt);
+  }
+  // Unreadable: held, and counted from the file's own time.
+  if (Number.isNaN(began)) {
+    try {
+      began = statSync(lockPath).mtimeMs;
+    } catch {
+      return false;
+    }
+  }
+  return now() - began < MOVE_LOCK_TRUST_MS;
 }
 
 function parseMoveLock(raw: string): MoveLock | undefined {

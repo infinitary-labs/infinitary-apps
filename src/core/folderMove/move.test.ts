@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -14,8 +14,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { hostname } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import Database from "better-sqlite3";
+import { build } from "vite";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
@@ -30,9 +31,9 @@ import { dueMove, type FolderMove, stagedFolderFor, stagedFolders } from "./due"
 import { type MoveDeps, runMove, stageMove } from "./move";
 import { readMoveRecord, writeMoveRecord } from "./record";
 
-// Integration budget (docs/test-cohorts.md): real git, the system's copier
-// and SQLite on scratch folders; the slowest case's fastest of three Mac
-// runs is 0.430 s.
+// Integration budget (docs/test-cohorts.md): real git, the system's copier,
+// SQLite, a vite build and the Electron binary on scratch folders; the slowest
+// case's fastest of three Mac runs is 0.400 s.
 vi.setConfig({ testTimeout: 10_000 });
 
 function git(cwd: string, ...args: string[]): string {
@@ -460,5 +461,73 @@ describe("the one-time move of a data folder", () => {
     });
     expect(lstatSync(newer.from).isDirectory()).toBe(true);
     expect(isProfileRetired(newer.from)).toBe(false);
+  });
+});
+
+// An installed app keeps its code in app.asar, which Electron's own file reads
+// show as a folder; the move's check read it that way and stopped every later
+// start of a Mac that runs work (INF-49), and its Node copier fails on it the
+// same way. Run inside Electron, both hold the file as a file.
+// An archive of one file and one link to it, as electron's asar packs them.
+function asarWithLink(): Buffer {
+  const json = Buffer.from(
+    JSON.stringify({
+      files: { "a.txt": { size: 2, offset: "0" }, "b.txt": { link: "a.txt" } },
+    }),
+  );
+  const padded = Math.ceil(json.length / 4) * 4;
+  const header = Buffer.alloc(16 + padded);
+  header.writeUInt32LE(4, 0);
+  header.writeUInt32LE(8 + padded, 4);
+  header.writeUInt32LE(4 + padded, 8);
+  header.writeUInt32LE(json.length, 12);
+  json.copy(header, 16);
+  return Buffer.concat([header, Buffer.from("hi")]);
+}
+
+describe("the copy and its check inside Electron", () => {
+  it("copy a folder holding an installed app's app.asar, and the check passes on the copy", async () => {
+    const root = resolve(__dirname, "../../..");
+    // The binary the app runs on; its package names it, and core imports no electron.
+    const electronPath = join(
+      root,
+      "node_modules/electron/dist",
+      readFileSync(join(root, "node_modules/electron/path.txt"), "utf8"),
+    );
+    const bundleDir = scratchDir("infinitary-move-bundle-");
+    await build({
+      configFile: false,
+      logLevel: "silent",
+      root,
+      resolve: {
+        alias: { "@core": resolve(root, "src/core"), "@shared": resolve(root, "src/shared") },
+      },
+      ssr: { noExternal: true, target: "node" },
+      build: {
+        ssr: resolve(root, "tests/helpers/folderMoveProcess.ts"),
+        outDir: bundleDir,
+        emptyOutDir: false,
+        minify: false,
+        target: "node24",
+        rollupOptions: { output: { format: "es", entryFileNames: "move.mjs" } },
+      },
+    });
+    const inElectron = (...args: string[]) =>
+      spawnSync(electronPath, [join(bundleDir, "move.mjs"), ...args], {
+        encoding: "utf8",
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      });
+    const folder = scratchDir("infinitary-asar-from-");
+    const staged = scratchDir("infinitary-asar-to-");
+    const app = join(folder, "work/app/Infinitary.app/Contents/Resources");
+    mkdirSync(app, { recursive: true });
+    writeFileSync(join(app, "app.asar"), asarWithLink());
+    const copied = inElectron("copy", folder, staged);
+    expect(copied.status, copied.stderr).toBe(0);
+    expect(
+      readFileSync(join(staged, "work/app/Infinitary.app/Contents/Resources/app.asar")),
+    ).toEqual(asarWithLink());
+    const checked = inElectron("compare", folder, staged);
+    expect(checked.status, checked.stderr).toBe(0);
   });
 });

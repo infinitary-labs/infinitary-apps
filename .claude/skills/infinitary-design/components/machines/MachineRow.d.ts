@@ -8,9 +8,9 @@ export interface MachineRowProps {
   detail?: string;
   /** e.g. "Runs website and api · Signed in to Codex, Claude and GitHub". */
   summary?: string;
-  /** The mono state on the right, e.g. "1 task", "idle", "out of reach". */
+  /** The mono state on the right, e.g. "1 task", "idle", "connecting", "out of reach". */
   state?: string;
-  /** ok while it answers, warn while it is out of reach, idle while it is being set up. */
+  /** ok while it answers, warn while it is out of reach, idle while it is being set up or connecting. */
   tone?: "ok" | "warn" | "idle";
   /** The state is work in flight, drawn in the accent. */
   busy?: boolean;

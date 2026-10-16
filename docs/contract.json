@@ -4141,6 +4141,9 @@
             "inReach": {
               "type": "boolean"
             },
+            "connecting": {
+              "type": "boolean"
+            },
             "signIns": {
               "anyOf": [
                 {
@@ -19799,6 +19802,10 @@
                     "noNewWork": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "connecting": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -21041,6 +21048,10 @@
                 "const": true
               },
               "noNewWork": {
+                "type": "boolean",
+                "const": true
+              },
+              "connecting": {
                 "type": "boolean",
                 "const": true
               }
@@ -22463,6 +22474,10 @@
                           "model-preferred-elsewhere"
                         ]
                       }
+                    },
+                    "connecting": {
+                      "type": "boolean",
+                      "const": true
                     },
                     "missingTools": {
                       "maxItems": 65,
@@ -24450,6 +24465,10 @@
                   "const": true
                 },
                 "noNewWork": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "connecting": {
                   "type": "boolean",
                   "const": true
                 }
@@ -43102,6 +43121,10 @@
                     "noNewWork": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "connecting": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -44344,6 +44367,10 @@
                       "const": true
                     },
                     "noNewWork": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "connecting": {
                       "type": "boolean",
                       "const": true
                     }
@@ -47720,6 +47747,9 @@
               "type": "boolean"
             },
             "inReach": {
+              "type": "boolean"
+            },
+            "connecting": {
               "type": "boolean"
             },
             "signIns": {

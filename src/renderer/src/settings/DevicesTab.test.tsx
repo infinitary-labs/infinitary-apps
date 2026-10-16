@@ -798,6 +798,36 @@ describe("Settings -> Devices", () => {
     );
     expect(deviceState({ ...BUILDER, tasks: 0 })).toEqual({ text: "idle", tone: "idle" });
     expect(deviceState({ ...BUILDER, tasks: 2 })).toEqual({ text: "2 tasks", tone: "busy" });
+    // Just updated and still connecting, it is not out of reach; a connection
+    // that stopped, or whose work did not start, is.
+    const remote = { ...MINI, remoteLogin: "sam@mini.local" };
+    expect(deviceState({ ...remote, ssh: { state: "connecting" } })).toEqual({
+      text: "connecting",
+      tone: "idle",
+    });
+    for (const state of ["reconnecting", "at-login", "not-started", "stopped"] as const)
+      expect(deviceState({ ...remote, ssh: { state } })).toEqual({
+        text: "out of reach",
+        tone: "warn",
+      });
+    expect(deviceState(MINI)).toEqual({ text: "out of reach", tone: "warn" });
+    // Every line that names it out of reach says connecting while it connects.
+    const connecting = { ...remote, ssh: { state: "connecting" } } as const;
+    expect(removeLines(connecting)[0]).toBe("Remove Mac mini? It is connecting.");
+    expect(removeLines({ ...remote, ssh: { state: "stopped" } })[0]).toBe(
+      "Remove Mac mini? It is out of reach.",
+    );
+    expect(deviceDetail({ ...connecting, removal: "when-back" }, NOW)).toContain(
+      "connecting · removed when it is back",
+    );
+    expect(deviceDetail({ ...remote, removal: "when-back" }, NOW)).toContain(
+      "out of reach · removed when it is back",
+    );
+    // The dot is grey while it connects, orange once it is out of reach.
+    expect(render({ devices: [connecting] })).toContain('class="fm-devices-dot" data-tone="idle"');
+    expect(render({ devices: [{ ...remote, ssh: { state: "stopped" } }] })).toContain(
+      'class="fm-devices-dot" data-tone="warn"',
+    );
   });
 
   it("says when a computer in reach has another version of Firstmate, and offers Update", () => {

@@ -1,10 +1,25 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { writeMoveRecord } from "../folderMove/record";
 import {
+  acquireMoveLock,
+  MOVE_LOCK_TRUST_MS,
+  moveLockPathFor,
+  releaseMoveLock,
+} from "../storage/moveLock";
+import {
+  agentProbe,
   type BackgroundContext,
   moveInBackground,
   readInstalled,
@@ -279,5 +294,62 @@ describe("moving the background between the app's two names", () => {
     await retireStrays(ctx);
     expect(existsSync(other)).toBe(true);
     expect(asked).toEqual([]);
+  });
+});
+
+/**
+ * INF-49: a run that moves its older folder in holds no run lock until the
+ * move ends, and a move of a large folder outlasts the probe's two beats; the
+ * connection said "could not start" while the work was moving.
+ */
+describe("the connection's probe of a loaded agent", () => {
+  it("says the work cannot start after two beats with no run, but not while its folder is moving", async () => {
+    const { ctx } = context();
+    await startInBackground(ctx, { launcher: LAUNCHER, env: {}, app: null });
+    const { service } = readInstalled(ctx.dataDir);
+    if (!service) throw new Error("no agent");
+    const lock = moveLockPathFor(dirname(ctx.dataDir));
+    expect(acquireMoveLock(lock, process.pid, () => new Date())).toBe(true);
+    const probe = agentProbe(ctx, service);
+    for (let beat = 0; beat < 4; beat++) expect(await probe()).toBe("unknown");
+    releaseMoveLock(lock);
+    expect(await probe()).toBe("unknown");
+    expect(await probe()).toBe("failed");
+  });
+
+  /**
+   * A move believed for `MOVE_LOCK_TRUST_MS` only: past it the lock belongs to
+   * a move that is stuck or abandoned, and the row says "could not start"
+   * again rather than connecting for good.
+   */
+  it("stops waiting on a move whose lock is older than the limit, readable or not", async () => {
+    const { ctx } = context();
+    await startInBackground(ctx, { launcher: LAUNCHER, env: {}, app: null });
+    const { service } = readInstalled(ctx.dataDir);
+    if (!service) throw new Error("no agent");
+    const lock = moveLockPathFor(dirname(ctx.dataDir));
+    const beats = async (now: () => number) => {
+      const probe = agentProbe(ctx, service, now);
+      return [await probe(), await probe()];
+    };
+    const old = new Date(Date.now() - MOVE_LOCK_TRUST_MS - 60_000);
+
+    // Written long ago by a live process: not believed.
+    expect(acquireMoveLock(lock, process.pid, () => old)).toBe(true);
+    expect(await beats(Date.now)).toEqual(["unknown", "failed"]);
+    releaseMoveLock(lock);
+
+    // Written just now: believed.
+    expect(acquireMoveLock(lock, process.pid, () => new Date())).toBe(true);
+    expect(await beats(Date.now)).toEqual(["unknown", "unknown"]);
+    releaseMoveLock(lock);
+
+    // Unreadable: counted from when its file was written.
+    writeFileSync(lock, "not a lock");
+    expect(await beats(Date.now)).toEqual(["unknown", "unknown"]);
+    utimesSync(lock, old, old);
+    expect(await beats(Date.now)).toEqual(["unknown", "failed"]);
+    releaseMoveLock(lock);
+    rmSync(lock, { force: true });
   });
 });

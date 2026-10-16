@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { HERE } from "@shared/deviceNames";
-import { type DeviceView, deviceRunsWork } from "@shared/devices";
+import { type DeviceSsh, type DeviceView, deviceConnecting, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { speaksCustomApi } from "@shared/ipc";
 import { catalogEntry } from "@shared/providers";
@@ -67,6 +67,8 @@ export type DeviceSignInsOptions = {
    * computer's Codex and Grok lists stay as Pi's catalog serves them.
    */
   protectedIds?: (providerId: string) => readonly string[];
+  /** Where this Mac's SSH connection to a computer stands, when it is reached over SSH. */
+  ssh?: (deviceId: string) => DeviceSsh | undefined;
   now?: () => number;
 };
 
@@ -86,12 +88,16 @@ export class DeviceSignIns {
   view(): DeviceSignInsView[] {
     return this.computers().map((device) => {
       const said = this.said.get(device.id);
+      const inReach = this.options.work.inReach(device.id);
       return {
         deviceId: device.id,
         name: device.name,
         ...(device.user ? { user: device.user } : {}),
         onThisMac: device.onThisMac === true,
-        inReach: this.options.work.inReach(device.id),
+        inReach,
+        ...(deviceConnecting({ inReach, ssh: this.options.ssh?.(device.id) })
+          ? { connecting: true }
+          : {}),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         signIns: this.narrowed(said?.signIns ?? null),
         ...(said?.asOf !== undefined ? { asOf: said.asOf } : {}),
@@ -395,6 +401,11 @@ export class DeviceSignIns {
       step,
     };
     this.options.emit("inf:devices:sign-in", event);
+  }
+
+  /** A computer's connection moved: the window draws it again. */
+  pushView(): void {
+    this.push();
   }
 
   private push(): void {

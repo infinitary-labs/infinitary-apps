@@ -6,6 +6,7 @@ import {
   type DeviceInvite,
   type DeviceRemoveWhen,
   type DeviceView,
+  deviceConnecting,
   deviceJoinedLine,
   deviceLabel,
   deviceRunsWork,
@@ -44,6 +45,7 @@ import { isView } from "../devices/viewWords";
 import { ControllingTab } from "./ControllingTab";
 import "./devices.css";
 import {
+  awayWord,
   CONTROLLING_NOW,
   NO_NEW_WORK,
   PANEL_WORDS,
@@ -81,8 +83,10 @@ import { SECTION_GAP, SectionLabel, SettingError, SettingRow } from "./settingRo
  *
  * A computer added by its address is reached over this Mac's own SSH, which
  * follows this Mac wherever it listens: its row says where that connection
- * stands - connected using SSH only once its work said hello, reconnecting
- * while this Mac tries again by itself, when its work starts or that it
+ * stands - connected using SSH only once its work said hello, connecting
+ * while the connection is being made (also right after an operation held it
+ * or its work's folder moved), reconnecting while this Mac tries again by
+ * itself after a drop, when its work starts or that it
  * could not start, and, when only a person can mend it, why, with Try
  * again - and Change address reaches it somewhere else (design skill
  * `components/devices/DevicesTab`, "Reached over your SSH").
@@ -290,7 +294,11 @@ function sinceWhen(at: number, now: number): string {
 /** Whether a device answers now, or since when it has not. */
 function seenWords(device: DeviceView, now: number): string {
   if (device.removal === "when-back")
-    return device.otherVersion ? SEEN_WORDS.removedOnceUpdated : SEEN_WORDS.removedWhenBack;
+    return device.otherVersion
+      ? SEEN_WORDS.removedOnceUpdated
+      : deviceConnecting(device)
+        ? SEEN_WORDS.removedWhenBackConnecting
+        : SEEN_WORDS.removedWhenBack;
   // On another version it is connected, whether or not it takes work.
   if (device.inReach || device.otherVersion) return SEEN_WORDS.now;
   if (device.restartedSince) return SEEN_WORDS.restarted;
@@ -360,10 +368,18 @@ export function deviceSummary(device: DeviceView, signIns: DeviceSignIns | undef
   return parts.join(" · ");
 }
 
-/** The mono state on a computer's right: its tasks, idle, no new work, or out of reach. */
+/**
+ * The mono state on a computer's right: its tasks, idle, no new work,
+ * connecting, or out of reach. A computer whose connection is still being
+ * made, such as one just updated, is connecting; out of reach is for one
+ * whose connection stopped, failed or dropped.
+ */
 export function deviceState(device: DeviceView): { text: string; tone: "busy" | "idle" | "warn" } {
   if (device.otherVersion?.takesWork === false) return { text: NO_NEW_WORK, tone: "warn" };
-  if (!device.inReach) return { text: "out of reach", tone: "warn" };
+  if (!device.inReach) {
+    const connecting = deviceConnecting(device);
+    return { text: awayWord(connecting), tone: connecting ? "idle" : "warn" };
+  }
   const tasks = device.tasks ?? 0;
   if (tasks > 0) return { text: tasks === 1 ? "1 task" : `${tasks} tasks`, tone: "busy" };
   return { text: "idle", tone: "idle" };
@@ -1587,7 +1603,13 @@ function DeviceRow({
     >
       <span
         className="fm-devices-dot"
-        data-tone={device.inReach && other?.takesWork !== false ? "ok" : "warn"}
+        data-tone={
+          device.inReach && other?.takesWork !== false
+            ? "ok"
+            : deviceConnecting(device)
+              ? "idle"
+              : "warn"
+        }
       />
       <span className="fm-devices-text">
         <span className="fm-devices-name">{label}</span>

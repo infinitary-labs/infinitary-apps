@@ -170,6 +170,10 @@ A field's new text is marked as the crewmate's own in its current ref book, as o
 A scroll without a ref accepts `top` or `bottom` as well as `up` and `down`.
 Top and bottom scroll the document to its edge, and answer with the lines on screen, as other scrolls do.
 Up and down send a real wheel, and the host does not return until that scroll has ended, or until a one-second bound when the page never says so, so the answer is not read at the old position.
+The wait follows the scroller under the wheel, or the document when the page itself scrolls, and ignores a scroll end from any other scroller.
+A scroller inside a frame or a shadow root is not followed.
+A page that locks scrolling can still take the bound, because the wheel then never ends.
+The host also stops a moment after that bound, so a page that replaces its own timer cannot hold the answer.
 A wheel that cannot move the page, because it is already at that edge, is still sent and does not wait the bound.
 An element photograph accepts its page-named ref (`--uid`), or a whole-page photograph `--full-page`, never both.
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.

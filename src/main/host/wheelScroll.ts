@@ -1,13 +1,18 @@
 /**
  * A wheel scroll of a task page (docs/task-browser.md, "Input actions").
  * The wheel is real input. It lands on a later frame than the protocol
- * call returns, later still on a busy computer, so the call waits for the
- * page's next `scrollend` before it returns. A wheel that cannot move the
+ * call returns, later still on a busy computer, so the call waits for that
+ * scroller's `scrollend` before it returns. A wheel that cannot move the
  * page does not wait that bound.
  */
 
 /** How long a wheel scroll waits for the page to say its scroll ended. */
 export const SCROLL_END_MS = 1_000;
+/**
+ * How long after that bound the host stops waiting. A page that replaces
+ * its own timer or listener cannot hold the answer for the command's limit.
+ */
+export const SCROLL_END_MARGIN_MS = 50;
 
 /** One command over a page's own protocol, answered as the protocol answers it. */
 export type ProtocolSend = <T = Record<string, unknown>>(
@@ -16,12 +21,17 @@ export type ProtocolSend = <T = Record<string, unknown>>(
 ) => Promise<T>;
 
 /**
- * Whether a wheel at this point can still move a scroller that way.
- * Only a real scroller counts: the document, or an element whose overflow
- * scrolls. One already at that edge does not, and neither does a box that
- * merely paints past its bounds.
+ * Finds the scroller a wheel at this point can still move, and arms a wait
+ * for that scroller's next scroll end. Returns false when nothing there can
+ * move. A document scroll ends on the document, so that target accepts the
+ * document as well. Any other scroller's end is ignored.
  */
-export function canStillScrollExpression(direction: "up" | "down", x: number, y: number): string {
+export function canStillScrollExpression(
+  direction: "up" | "down",
+  x: number,
+  y: number,
+  boundMs: number,
+): string {
   return `(() => {
     const direction = ${JSON.stringify(direction)};
     const epsilon = 1;
@@ -36,24 +46,44 @@ export function canStillScrollExpression(direction: "up" | "down", x: number, y:
       const overflow = getComputedStyle(node).overflowY;
       return overflow === "auto" || overflow === "scroll" || overflow === "overlay";
     };
+    let target = null;
     let node = document.elementFromPoint(${x}, ${y});
     while (node) {
-      if (scrolls(node) && canMove(node)) return true;
+      if (scrolls(node) && canMove(node)) { target = node; break; }
       node = node.parentElement;
     }
-    return false;
+    if (!target) return false;
+    const documentScroller =
+      target === document ||
+      target === document.documentElement ||
+      target === document.scrollingElement ||
+      target === document.body;
+    return new Promise((done) => {
+      const onEnd = (event) => {
+        const scrolled = event.target;
+        const ours =
+          scrolled === target ||
+          (documentScroller &&
+            (scrolled === document ||
+              scrolled === document.documentElement ||
+              scrolled === document.scrollingElement));
+        if (!ours) return;
+        removeEventListener("scrollend", onEnd, { capture: true });
+        done(true);
+      };
+      addEventListener("scrollend", onEnd, { capture: true });
+      setTimeout(() => {
+        removeEventListener("scrollend", onEnd, { capture: true });
+        done(false);
+      }, ${boundMs});
+    });
   })()`;
 }
 
-/** Settles true when the page's next scroll ends, or false after the bound. */
-export function scrollEndExpression(boundMs: number): string {
-  return `new Promise((done) => { addEventListener("scrollend", () => done(true), { once: true, capture: true }); setTimeout(() => done(false), ${boundMs}); })`;
-}
-
 /**
- * Send one wheel and return only after that scroll has ended, or after the
- * bound when the page never says so. Already at that edge: send the wheel
- * and return, so a scroll that cannot move does not wait the bound.
+ * Send one wheel and return only after that scroller's scroll has ended, or
+ * after the bound when the page never says so. Already at that edge: send
+ * the wheel and return, so a scroll that cannot move does not wait the bound.
  */
 export async function wheelScroll(
   send: ProtocolSend,
@@ -63,27 +93,18 @@ export async function wheelScroll(
 ): Promise<void> {
   const x = size.width / 2;
   const y = size.height / 2;
-  let wait = true;
-  try {
-    const read = await send<{ result?: { value?: unknown } }>("Runtime.evaluate", {
-      expression: canStillScrollExpression(direction, x, y),
-      returnByValue: true,
-    });
-    if (read.result?.value === false) wait = false;
-  } catch {
-    // An unreadable layout can still move. Wait, rather than read too soon.
-  }
   let objectId: string | undefined;
-  if (wait) {
-    try {
-      const armed = await send<{ result?: { objectId?: string } }>("Runtime.evaluate", {
-        expression: scrollEndExpression(boundMs),
+  try {
+    const armed = await send<{ result?: { objectId?: string; value?: unknown } }>(
+      "Runtime.evaluate",
+      {
+        expression: canStillScrollExpression(direction, x, y, boundMs),
         awaitPromise: false,
-      });
-      objectId = armed.result?.objectId;
-    } catch {
-      // The wheel still goes out. Without a listener the caller cannot wait.
-    }
+      },
+    );
+    if (armed.result?.value !== false) objectId = armed.result?.objectId;
+  } catch {
+    // The wheel still goes out. Without a listener the caller cannot wait.
   }
   await send("Input.dispatchMouseEvent", {
     type: "mouseWheel",
@@ -92,9 +113,21 @@ export async function wheelScroll(
     deltaX: 0,
     deltaY: (direction === "down" ? 1 : -1) * Math.round(size.height * 0.8),
   });
-  if (objectId) {
-    await send("Runtime.awaitPromise", { promiseObjectId: objectId, returnByValue: true }).catch(
-      () => undefined,
-    );
+  if (!objectId) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const hostBound = new Promise<void>((done) => {
+    timer = setTimeout(done, boundMs + SCROLL_END_MARGIN_MS);
+  });
+  const page = send("Runtime.awaitPromise", {
+    promiseObjectId: objectId,
+    returnByValue: true,
+  }).then(
+    () => undefined,
+    () => undefined,
+  );
+  try {
+    await Promise.race([page, hostBound]);
+  } finally {
+    clearTimeout(timer);
   }
 }

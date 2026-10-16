@@ -37,7 +37,7 @@ import {
   type Session,
   type WebContents,
 } from "electron";
-import { wheelScroll } from "./wheelScroll";
+import { type ProtocolSend, wheelScroll } from "./wheelScroll";
 
 /**
  * The task browser's pages (docs/task-browser.md; docs/architecture.md
@@ -942,12 +942,6 @@ function cookieJar(ses: Session): HostBrowserCookies {
     },
   };
 }
-
-/** One command over a page's own protocol, answered as the protocol answers it. */
-type ProtocolSend = <T = Record<string, unknown>>(
-  method: string,
-  params?: Record<string, unknown>,
-) => Promise<T>;
 
 /**
  * The storage key a page's top document keeps its own storage under: its

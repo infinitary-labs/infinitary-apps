@@ -5,7 +5,7 @@ import { canStillScrollExpression, wheelScroll } from "./wheelScroll";
  * The task browser's scroll up and down returned as soon as the wheel was
  * sent, so a read on a busy Linux runner could still see the top
  * (task-browser.spec.ts, "a page too long for one answer"). The wheel is
- * real input; the call waits until that scroll has ended.
+ * real input; the call waits until that scroller's scroll has ended.
  */
 
 type Call = { method: string; params?: Record<string, unknown> };
@@ -25,21 +25,17 @@ describe("a wheel scroll waits until the page has moved", () => {
     const calls: Call[] = [];
     const ended = deferred<void>();
     const reachedWait = deferred<void>();
-    let objectId: string | undefined;
     let returned = false;
     const send = async <T>(method: string, params?: Record<string, unknown>): Promise<T> => {
       calls.push({ method, params });
-      if (method === "Runtime.evaluate" && String(params?.expression).includes("canMove")) {
-        return { result: { value: true } } as T;
-      }
       if (method === "Runtime.evaluate") {
-        objectId = "promise-1";
         expect(params?.awaitPromise).toBe(false);
         expect(String(params?.expression)).toContain("scrollend");
-        return { result: { objectId } } as T;
+        expect(String(params?.expression)).toContain("canMove");
+        return { result: { objectId: "promise-1" } } as T;
       }
       if (method === "Runtime.awaitPromise") {
-        expect(params?.promiseObjectId).toBe(objectId);
+        expect(params?.promiseObjectId).toBe("promise-1");
         reachedWait.resolve();
         await ended.promise;
         return { result: { value: true } } as T;
@@ -53,11 +49,10 @@ describe("a wheel scroll waits until the page has moved", () => {
     expect(returned).toBe(false);
     expect(calls.map((call) => call.method)).toEqual([
       "Runtime.evaluate",
-      "Runtime.evaluate",
       "Input.dispatchMouseEvent",
       "Runtime.awaitPromise",
     ]);
-    expect(calls[2]?.params).toMatchObject({
+    expect(calls[1]?.params).toMatchObject({
       type: "mouseWheel",
       x: 400,
       y: 300,
@@ -89,38 +84,28 @@ describe("a wheel scroll waits until the page has moved", () => {
     expect(String(calls[0]?.params?.expression)).toContain("elementFromPoint");
   });
 
-  it("still waits when the page's position cannot be read", async () => {
+  it("still sends the wheel when the scroller cannot be read", async () => {
     const calls: Call[] = [];
     const send = async <T>(method: string, params?: Record<string, unknown>): Promise<T> => {
       calls.push({ method, params });
-      if (method === "Runtime.evaluate" && params?.returnByValue === true) {
-        throw new Error("layout unread");
-      }
-      if (method === "Runtime.evaluate") return { result: { objectId: "promise-2" } } as T;
+      if (method === "Runtime.evaluate") throw new Error("layout unread");
+      if (method === "Runtime.awaitPromise") throw new Error("an unread page must not hang");
       return {} as T;
     };
     await wheelScroll(send, "down", size);
     expect(calls.map((call) => call.method)).toEqual([
       "Runtime.evaluate",
-      "Runtime.evaluate",
       "Input.dispatchMouseEvent",
-      "Runtime.awaitPromise",
     ]);
   });
 
-  it("still sends the wheel when the scroll listener cannot be armed", async () => {
-    const calls: Call[] = [];
-    const send = async <T>(method: string, params?: Record<string, unknown>): Promise<T> => {
-      calls.push({ method, params });
-      if (method === "Runtime.evaluate" && params?.returnByValue === true) {
-        return { result: { value: true } } as T;
-      }
-      if (method === "Runtime.evaluate") throw new Error("cannot arm");
+  it("returns on the host bound when the page never settles the scroll", async () => {
+    const send = async <T>(method: string): Promise<T> => {
+      if (method === "Runtime.evaluate") return { result: { objectId: "promise-3" } } as T;
+      if (method === "Runtime.awaitPromise") return new Promise(() => undefined) as T;
       return {} as T;
     };
-    await wheelScroll(send, "down", size);
-    expect(calls.map((call) => call.method)).toContain("Input.dispatchMouseEvent");
-    expect(calls.map((call) => call.method)).not.toContain("Runtime.awaitPromise");
+    await wheelScroll(send, "down", size, 0);
   });
 });
 
@@ -132,23 +117,46 @@ type Box = {
   parentElement: Box | null;
 };
 
+type Armed = {
+  settled: Promise<boolean> | false;
+  fire: (target: unknown) => void;
+  document: object;
+};
+
 /** Run the page expression against a small document, not a string match. */
-function pageCanStillScroll(
-  direction: "up" | "down",
-  hit: Box | null,
-  scrollingElement: Box,
-): boolean {
+function armScroll(direction: "up" | "down", hit: Box | null, scrollingElement: Box): Armed {
+  const listeners: Array<(event: { target: unknown }) => void> = [];
   const document = {
     scrollingElement,
     documentElement: scrollingElement,
+    body: scrollingElement,
     elementFromPoint: () => hit,
   };
   const getComputedStyle = (node: Box): { overflowY: string } => ({ overflowY: node.overflowY });
-  const expression = canStillScrollExpression(direction, 400, 300);
-  return new Function("document", "getComputedStyle", `return (${expression})`)(
+  const expression = canStillScrollExpression(direction, 400, 300, 1_000);
+  const settled = new Function(
+    "document",
+    "getComputedStyle",
+    "addEventListener",
+    "removeEventListener",
+    "setTimeout",
+    `return (${expression})`,
+  )(
     document,
     getComputedStyle,
-  ) as boolean;
+    (_type: string, fn: (event: { target: unknown }) => void) => {
+      listeners.push(fn);
+    },
+    () => undefined,
+    () => 0,
+  ) as Promise<boolean> | false;
+  return {
+    settled,
+    document,
+    fire: (target) => {
+      for (const fn of [...listeners]) fn({ target });
+    },
+  };
 }
 
 describe("whether a wheel can still move the page", () => {
@@ -162,8 +170,8 @@ describe("whether a wheel can still move the page", () => {
 
   it("can move down from the top and not up", () => {
     const page = root(0);
-    expect(pageCanStillScroll("down", page, page)).toBe(true);
-    expect(pageCanStillScroll("up", page, page)).toBe(false);
+    expect(armScroll("down", page, page).settled).toBeInstanceOf(Promise);
+    expect(armScroll("up", page, page).settled).toBe(false);
   });
 
   it("cannot move down when the document is already at its end", () => {
@@ -175,7 +183,7 @@ describe("whether a wheel can still move the page", () => {
       overflowY: "visible",
       parentElement: page,
     };
-    expect(pageCanStillScroll("down", painted, page)).toBe(false);
+    expect(armScroll("down", painted, page).settled).toBe(false);
   });
 
   it("can move a nested scroller that is not at its edge", () => {
@@ -187,9 +195,9 @@ describe("whether a wheel can still move the page", () => {
       overflowY: "auto",
       parentElement: page,
     };
-    expect(pageCanStillScroll("down", nested, page)).toBe(true);
+    expect(armScroll("down", nested, page).settled).toBeInstanceOf(Promise);
     nested.scrollTop = 800;
-    expect(pageCanStillScroll("down", nested, page)).toBe(false);
+    expect(armScroll("down", nested, page).settled).toBe(false);
   });
 
   it("keeps looking when a nested scroller is stuck and the document can still move", () => {
@@ -201,6 +209,47 @@ describe("whether a wheel can still move the page", () => {
       overflowY: "auto",
       parentElement: page,
     };
-    expect(pageCanStillScroll("down", nested, page)).toBe(true);
+    expect(armScroll("down", nested, page).settled).toBeInstanceOf(Promise);
+  });
+
+  it("accepts that scroller's scroll end, and the document when the page itself scrolls", async () => {
+    const page = root(0);
+    const other = {
+      scrollHeight: 400,
+      clientHeight: 100,
+      scrollTop: 0,
+      overflowY: "auto",
+      parentElement: page,
+    };
+    const documentScroll = armScroll("down", page, page);
+    expect(documentScroll.settled).toBeInstanceOf(Promise);
+    documentScroll.fire(other);
+    let settled = false;
+    void Promise.resolve(documentScroll.settled).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    documentScroll.fire(documentScroll.document);
+    await expect(documentScroll.settled).resolves.toBe(true);
+
+    const nested: Box = {
+      scrollHeight: 900,
+      clientHeight: 100,
+      scrollTop: 0,
+      overflowY: "auto",
+      parentElement: page,
+    };
+    const inner = armScroll("down", nested, page);
+    inner.fire(inner.document);
+    inner.fire(page);
+    let innerSettled = false;
+    void Promise.resolve(inner.settled).then(() => {
+      innerSettled = true;
+    });
+    await Promise.resolve();
+    expect(innerSettled).toBe(false);
+    inner.fire(nested);
+    await expect(inner.settled).resolves.toBe(true);
   });
 });

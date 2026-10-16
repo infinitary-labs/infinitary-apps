@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "something-else-on-card-questions",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "Answer a card question in your own words",
+      "body": "A card question with options now ends with Something else. Pick it, write what you want instead, and your words reach the card's author as your answer. A question whose options are the only possible answers says Only these options.",
+      "area": "cards",
+      "picture": {
+        "dark": "something-else-on-card-questions-dark.webp",
+        "light": "something-else-on-card-questions-light.webp",
+        "alt": "A card question with Something else picked and its text field holding your own answer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

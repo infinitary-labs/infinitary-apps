@@ -1,0 +1,11 @@
+{
+  "version": "0.1.1",
+  "channel": "stable",
+  "sourceCommit": "6221e63d7e2c5decdfe9ec6eb66d25a96602473b",
+  "date": "2026-09-22",
+  "promotedFrom": null,
+  "entryIds": [
+    "bf-7daabe5cd",
+    "bf-c6630d027"
+  ]
+}

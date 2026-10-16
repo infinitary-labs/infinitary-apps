@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "live-pull-request-checks",
+      "kind": "fix",
+      "title": "Pull request checks stay up to date",
+      "body": "Firstmate refreshes checks on open pull requests every five minutes, even after they finish. Completion cards and task records now show the same result when GitHub changes it.",
+      "area": "cards",
+      "picture": {
+        "dark": "live-pull-request-checks-dark.webp",
+        "light": "live-pull-request-checks-light.webp",
+        "alt": "The completion card and task summary both show the checks failed after GitHub changed them"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

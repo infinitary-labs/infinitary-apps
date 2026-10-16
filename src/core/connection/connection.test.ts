@@ -1,0 +1,1118 @@
+import { once } from "node:events";
+import { request as httpsRequest } from "node:https";
+import { connect as plainConnect } from "node:net";
+import { join } from "node:path";
+import { connect, createServer as createTlsServer } from "node:tls";
+import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
+import { HOME } from "@shared/deviceNames";
+import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
+import { HOME_CAPABILITIES, PLACED_WORK_SINCE, PROTOCOL_VERSION } from "@shared/ipc";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import {
+  claimLink,
+  type DeviceKey,
+  dialHome,
+  HomeKeyMismatchError,
+  type PairRefusedError,
+  pinnedSocket,
+} from "../devices/dial";
+import { createKeyIdentity } from "../devices/identity";
+import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
+import type { CoreDispatch } from "../dispatcher";
+import { CoreEventBus } from "../events";
+import {
+  type ConnectionOptions,
+  DeviceOutOfReachError,
+  type HomeConnection,
+  type PairedDevices,
+  startConnection,
+  type ViewDeviceContact,
+  type WorkDeviceContact,
+} from "./connection";
+
+/**
+ * The connection with the real event bus, the real pairing over a scratch
+ * folder, and a stand-in core behind `dispatch`, so each rule is driven on
+ * its own: when it listens, how a device joins and proves itself, how pushes
+ * are numbered and caught up, which requests reach the core, and what is
+ * refused before any frame. src/core/core.test.ts drives the real core.
+ */
+
+function standInCore() {
+  const asked: { channel: string; args: unknown; actor: unknown }[] = [];
+  const dispatch = (async (channel, args, actor) => {
+    asked.push({ channel, args, actor });
+    if (channel === "inf:app:healthcheck")
+      return {
+        ok: true,
+        version: "9.9.9",
+        platform: "test-os",
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: [...HOME_CAPABILITIES],
+      };
+    if (channel === "inf:work:progress") return { text: "Noted." };
+    throw new Error(`Rejected ${channel}: malformed request`);
+  }) as CoreDispatch;
+  return { dispatch, asked, events: new CoreEventBus() };
+}
+
+/**
+ * A version too old to hold a conversation: one minor before `PLACED_WORK_SINCE` while
+ * the home is on that major, otherwise the major before the home's (which takes no new work).
+ */
+function beforePlacedWork(): string {
+  const [major, minor] = PLACED_WORK_SINCE.split(".").map(Number);
+  const [homeMajor = 1] = PROTOCOL_VERSION.split(".").map(Number);
+  if (homeMajor > (major ?? 1)) return `${homeMajor - 1}.0.0`;
+  return minor ? `${major}.${minor - 1}.0` : `${(major ?? 1) - 1}.99.0`;
+}
+
+/** Whether anything accepts a connection on loopback at that port. */
+function answersAt(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect({ port, host: "127.0.0.1", rejectUnauthorized: false });
+    socket.once("secureConnect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
+  });
+}
+
+/** A clock and a timer list the test moves by hand. */
+function manualClock() {
+  let now = 1_000_000;
+  const timers: { at: number; run: () => void }[] = [];
+  return {
+    now: () => now,
+    schedule: ((ms, run) => {
+      const timer = { at: now + ms, run };
+      timers.push(timer);
+      return () => timers.splice(timers.indexOf(timer), 1);
+    }) satisfies DevicePairingOptions["schedule"],
+    advance(ms: number) {
+      now += ms;
+      for (const timer of timers.filter((candidate) => candidate.at <= now)) {
+        timers.splice(timers.indexOf(timer), 1);
+        timer.run();
+      }
+    },
+  };
+}
+
+const open: HomeConnection[] = [];
+const pairings: DevicePairing[] = [];
+afterEach(async () => {
+  await Promise.all(open.splice(0).map((connection) => connection.close()));
+  for (const pairing of pairings.splice(0)) pairing.dispose();
+});
+
+async function home(
+  options: Partial<Omit<ConnectionOptions, "devices">> & {
+    pairing?: Omit<DevicePairingOptions, "dir">;
+  } = {},
+) {
+  const { pairing: pairingOptions, ...connectionOptions } = options;
+  const core = standInCore();
+  const pairing = new DevicePairing({
+    dir: join(scratchDir("infinitary-connection-"), "devices"),
+    onProblem: () => {},
+    ...pairingOptions,
+  });
+  pairings.push(pairing);
+  const port = options.port ?? (await freePort());
+  const connection = startConnection({ ...core, ...connectionOptions, devices: pairing, port });
+  open.push(connection);
+  const at = `127.0.0.1:${port}`;
+  return {
+    ...core,
+    pairing,
+    connection,
+    port,
+    at,
+    link: (kind: DeviceKind = "view") => pairing.invite({ kind, at }).link,
+    /** Makes a link, waits for the listener, and joins with it as the device itself would. */
+    join: async (kind: DeviceKind = "view", name = "Test Mac"): Promise<DeviceGrant> => {
+      const { link } = pairing.invite({ kind, at });
+      await connection.settled();
+      return claimLink(link, { kind, name, ...(kind === "work" ? { user: ANOTHER_USER } : {}) });
+    },
+  };
+}
+
+/**
+ * A computer that runs work dials these homes from loopback, so it runs as a
+ * user other than the one this process runs as, as another user on the
+ * home's own Mac would (docs/helper.md).
+ */
+const ANOTHER_USER = { name: "builder", uid: (process.getuid?.() ?? 0) + 1 };
+
+const changed = (events: CoreEventBus) => events.emit("inf:models:changed", { ok: true });
+
+/**
+ * Posts to `/pair` over a pinned socket, the way a device would but with any
+ * body or header, showing a fresh key of its own unless told which or none.
+ */
+async function postPair(
+  at: string,
+  key: string,
+  request: {
+    method?: string;
+    contentType?: string;
+    origin?: string;
+    body?: string;
+    device?: DeviceKey | null;
+    /** Sends the body without a length, in chunks. */
+    chunked?: boolean;
+  },
+): Promise<{ status: number; body: string }> {
+  const device = request.device === undefined ? createKeyIdentity("Device") : request.device;
+  const socket = await pinnedSocket({ address: at }, key, device);
+  const [host, port] = at.split(":");
+  return new Promise((resolve, reject) => {
+    const asked = httpsRequest(
+      {
+        host,
+        port: Number(port),
+        method: request.method ?? "POST",
+        path: PAIR_PATH,
+        headers: {
+          ...(request.contentType === undefined
+            ? { "content-type": "application/json" }
+            : request.contentType
+              ? { "content-type": request.contentType }
+              : {}),
+          ...(request.origin ? { origin: request.origin } : {}),
+        },
+        createConnection: () => socket,
+      },
+      (response) => {
+        let body = "";
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => resolve({ status: response.statusCode ?? 0, body }));
+      },
+    );
+    asked.on("error", reject);
+    if (request.chunked && request.body) {
+      asked.write(request.body);
+      asked.end();
+    } else asked.end(request.body);
+  });
+}
+
+/** A real device that stops reading before the home quits, delaying its close reply. */
+async function pausedDevice(grant: DeviceGrant, hello = true) {
+  const ws = await dialHome(grant);
+  const closed = once(ws, "close").then(([code]) => code as number);
+  await once(ws, "open");
+  if (hello) {
+    ws.send(JSON.stringify({ t: "hello", protocolVersion: PROTOCOL_VERSION }));
+    await once(ws, "message");
+  }
+  ws.pause();
+  return { ws, closed };
+}
+
+describe("the home's connection", () => {
+  it("waits for every device to hear closing before quit resolves, including a repeated close", async () => {
+    const at = await home();
+    const fast = await connectClient(await at.join());
+    const slow = await pausedDevice(await at.join());
+    const workGrant = await at.join("work");
+    const work = await pausedDevice(workGrant);
+    const quiet = await pausedDevice(await at.join(), false);
+    const gone: WorkDeviceContact[] = [];
+    at.connection.onWorkDevice((contact) => gone.push(contact));
+    const asked = at.connection.ask(workGrant.deviceId, "inf:session:roster", []);
+    void asked.catch(() => {});
+    let finished = false;
+    let repeatedFinished = false;
+    const closing = at.connection.close().then(() => {
+      finished = true;
+    });
+    const repeated = at.connection.close().then(() => {
+      repeatedFinished = true;
+    });
+    try {
+      expect(await fast.closed).toBe(CONNECTION_CLOSE.closing);
+      expect(at.connection.listening()).toEqual([]);
+      expect(await answersAt(at.port)).toBe(false);
+      expect(finished).toBe(false);
+      expect(repeatedFinished).toBe(false);
+      // One slow view does not delay sending closing to the others, and
+      // hearing just one device is not enough to finish quitting.
+      slow.ws.resume();
+      expect(await slow.closed).toBe(CONNECTION_CLOSE.closing);
+      work.ws.resume();
+      expect(await work.closed).toBe(CONNECTION_CLOSE.closing);
+      expect(finished).toBe(false);
+      quiet.ws.resume();
+      expect(await quiet.closed).toBe(CONNECTION_CLOSE.closing);
+      await Promise.all([closing, repeated]);
+      await expect(asked).rejects.toThrow(DeviceOutOfReachError);
+      expect(gone).toEqual([{ deviceId: workGrant.deviceId, contact: "gone" }]);
+    } finally {
+      for (const device of [slow, work, quiet]) device.ws.resume();
+      await Promise.all([closing, repeated, slow.closed, work.closed, quiet.closed]);
+    }
+  });
+
+  it("ends unresponsive devices after one shared two-second grace, rather than holding quit open", async () => {
+    const at = await home();
+    const fast = await connectClient(await at.join());
+    const slow = await pausedDevice(await at.join());
+    const work = await pausedDevice(await at.join("work"));
+    // Only the shutdown timers are virtual; the TLS sockets remain real.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    let finished = false;
+    const closing = at.connection.close().then(() => {
+      finished = true;
+    });
+    try {
+      expect(await fast.closed).toBe(CONNECTION_CLOSE.closing);
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(finished).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await closing;
+      expect(finished).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+      slow.ws.resume();
+      work.ws.resume();
+      await Promise.all([closing, slow.closed, work.closed]);
+    }
+  });
+
+  it("listens while a link is open or something is paired, and stops when the last pairing goes", async () => {
+    const at = await home();
+    await at.connection.settled();
+    expect(at.connection.listening()).toEqual([]);
+    expect(await answersAt(at.port)).toBe(false);
+
+    const grant = await at.join();
+    expect(at.connection.listening()).toEqual([`127.0.0.1:${at.port}`]);
+    const a = await connectClient(grant);
+    expect(a.welcome.protocolVersion).toBe(PROTOCOL_VERSION);
+
+    at.pairing.remove(grant.deviceId);
+    expect(await a.closed).toBe(CONNECTION_CLOSE.unpaired);
+    await at.connection.settled();
+    expect(at.connection.listening()).toEqual([]);
+    expect(await answersAt(at.port)).toBe(false);
+  });
+
+  it("stops listening when an unused link expires with nothing paired", async () => {
+    const clock = manualClock();
+    const at = await home({ pairing: clock });
+    at.link();
+    await at.connection.settled();
+    expect(at.connection.listening()).toHaveLength(1);
+
+    clock.advance(10 * 60 * 1000);
+    await at.connection.settled();
+    expect(at.connection.listening()).toEqual([]);
+    expect(await answersAt(at.port)).toBe(false);
+  });
+
+  it("joins once with a link, and refuses a wrong, used or expired link", async () => {
+    const clock = manualClock();
+    const at = await home({ pairing: clock });
+    const link = at.link("view");
+    await at.connection.settled();
+    const grant = await claimLink(link, { kind: "view", name: "Studio Mac" });
+    expect(grant).toMatchObject({ at: at.at, kind: "view", homeKey: parsePairingLink(link).key });
+    expect(at.pairing.list()).toEqual([
+      // It dialed loopback, so the home saw it join from this Mac.
+      {
+        id: grant.deviceId,
+        kind: "view",
+        name: "Studio Mac",
+        pairedAt: clock.now(),
+        onThisMac: true,
+      },
+    ]);
+
+    const refusal = (text: string) =>
+      claimLink(text, { kind: "view", name: "Another Mac" }).then(
+        () => "joined",
+        (error: PairRefusedError) => error.refused,
+      );
+    expect(await refusal(link)).toBe("used");
+    const wrong = link.replace(/code=[^&]+/, `code=${"A".repeat(43)}`);
+    expect(await refusal(wrong)).toBe("unknown");
+    const late = at.link("view");
+    clock.advance(10 * 60 * 1000 - 1);
+    const stillOpen = at.link("view");
+    clock.advance(1);
+    expect(await refusal(late)).toBe("expired");
+    expect(await refusal(stillOpen)).toBe("joined");
+    expect(at.pairing.list().map((device) => device.name)).toEqual(["Studio Mac", "Another Mac"]);
+  });
+
+  it("refuses a link for the other kind without spending it", async () => {
+    const at = await home();
+    const link = at.link("work");
+    await at.connection.settled();
+    // The device refuses before it dials...
+    await expect(claimLink(link, { kind: "view", name: "Laptop" })).rejects.toMatchObject({
+      refused: "kind",
+    });
+    // ...and the home refuses a device that says it is the other kind.
+    const { key, code } = parsePairingLink(link);
+    const asked = await postPair(at.at, key, {
+      body: JSON.stringify({ code, kind: "view", name: "Laptop" }),
+    });
+    expect(asked.status).toBe(409);
+    expect(JSON.parse(asked.body)).toMatchObject({ refused: "kind" });
+    expect(asked.body).not.toContain(code);
+    // The link is still good for the computer it was made for.
+    await expect(
+      claimLink(link, { kind: "work", name: "Mini", user: ANOTHER_USER }),
+    ).resolves.toMatchObject({ kind: "work" });
+  });
+
+  it("refuses work run as the home's own user on its own Mac, and keeps the link", async () => {
+    const at = await home();
+    const link = at.link("work");
+    await at.connection.settled();
+    const asHome = { name: "sam", uid: process.getuid?.() ?? 0 };
+    await expect(
+      claimLink(link, { kind: "work", name: "MacBook Pro", user: asHome }),
+    ).rejects.toMatchObject({ refused: "same-user" });
+    expect(at.pairing.list()).toEqual([]);
+    const grant = await claimLink(link, { kind: "work", name: "MacBook Pro", user: ANOTHER_USER });
+    expect(at.pairing.list()).toEqual([
+      expect.objectContaining({ id: grant.deviceId, user: "builder", onThisMac: true }),
+    ]);
+  });
+
+  it("keeps /pair to one bounded JSON post from a device showing a key of its own, never from a browser", async () => {
+    const at = await home();
+    const link = at.link();
+    await at.connection.settled();
+    const { key, code } = parsePairingLink(link);
+    const body = JSON.stringify({ code, kind: "view", name: "Laptop" });
+    const statuses = [
+      (await postPair(at.at, key, { body, device: null })).status,
+      (await postPair(at.at, key, { body, origin: "https://example.com" })).status,
+      (await postPair(at.at, key, { method: "GET" })).status,
+      (await postPair(at.at, key, { body, contentType: "text/plain" })).status,
+      (await postPair(at.at, key, { body: JSON.stringify({ code, pad: "x".repeat(5000) }) }))
+        .status,
+      (
+        await postPair(at.at, key, {
+          body: JSON.stringify({ code, pad: "x".repeat(5000) }),
+          chunked: true,
+        })
+      ).status,
+      (await postPair(at.at, key, { body: "{not json" })).status,
+      (await postPair(at.at, key, { body: JSON.stringify({ code, kind: "view" }) })).status,
+    ];
+    expect(statuses).toEqual([401, 403, 405, 415, 413, 413, 400, 400]);
+    expect(at.pairing.list()).toEqual([]);
+    // None of those spent the link.
+    const device = createKeyIdentity("Laptop");
+    const joined = await postPair(at.at, key, { body, device });
+    expect(joined.status).toBe(201);
+    expect(Object.keys(JSON.parse(joined.body)).sort()).toEqual(["deviceId", "kind"]);
+    // The same key cannot join twice, so Remove always cuts it off.
+    const again = parsePairingLink(at.link());
+    const twice = await postPair(at.at, again.key, {
+      body: JSON.stringify({ code: again.code, kind: "view", name: "Laptop again" }),
+      device,
+    });
+    expect([twice.status, JSON.parse(twice.body).refused]).toEqual([409, "paired"]);
+  });
+
+  it("sends nothing to a computer that answers with another key", async () => {
+    const at = await home();
+    const link = at.link();
+    await at.connection.settled();
+    // An impostor with a key of its own, holding a port as another macOS
+    // user could while the home is not listening.
+    const impostor = new DevicePairing({
+      dir: join(scratchDir("infinitary-impostor-"), "devices"),
+    });
+    const heard: Buffer[] = [];
+    const ended: Promise<void>[] = [];
+    const server = createTlsServer({ ...impostor.identity(), minVersion: "TLSv1.3" }, (socket) => {
+      socket.on("data", (chunk: Buffer) => heard.push(chunk));
+      ended.push(new Promise((resolve) => socket.once("close", () => resolve())));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    const pointedAway = link.replace(/at=[^&]+/, `at=127.0.0.1%3A${port}`);
+    await expect(claimLink(pointedAway, { kind: "view", name: "Laptop" })).rejects.toBeInstanceOf(
+      HomeKeyMismatchError,
+    );
+    await Promise.all(ended);
+    expect(Buffer.concat(heard).length).toBe(0);
+    await new Promise((resolve) => server.close(resolve));
+    // The real home's link is untouched.
+    await expect(claimLink(link, { kind: "view", name: "Laptop" })).resolves.toMatchObject({
+      kind: "view",
+    });
+  });
+
+  it("speaks only TLS, even on loopback", async () => {
+    const at = await home();
+    at.link();
+    await at.connection.settled();
+    const answer = await new Promise<string>((resolve) => {
+      let text = "";
+      const socket = plainConnect(at.port, "127.0.0.1", () =>
+        socket.write(
+          "GET /connection HTTP/1.1\r\nHost: 127.0.0.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n",
+        ),
+      );
+      socket.on("data", (chunk) => {
+        text += chunk.toString("latin1");
+      });
+      socket.on("close", () => resolve(text));
+      socket.on("error", () => resolve(text));
+    });
+    expect(answer).not.toContain("HTTP/1.1 101");
+    expect(answer).not.toContain("HTTP/1.1 401");
+  });
+
+  it("resumes no session, so every connection shows both keys again", async () => {
+    const at = await home();
+    const grant = await at.join();
+    const handshake = (session?: Buffer) =>
+      new Promise<{ reused: boolean; session?: Buffer }>((resolve, reject) => {
+        let offered: Buffer | undefined;
+        const socket = connect(
+          {
+            port: at.port,
+            host: "127.0.0.1",
+            servername: "",
+            rejectUnauthorized: false,
+            key: grant.key,
+            cert: grant.cert,
+            session,
+          },
+          // A TLS 1.3 ticket comes right after the handshake, so once an
+          // answer to a request is back, any ticket the home sent is here.
+          () => socket.write("GET /elsewhere HTTP/1.1\r\nHost: home\r\n\r\n"),
+        );
+        socket.on("session", (next: Buffer) => {
+          offered = next;
+        });
+        socket.once("data", () => {
+          resolve({ reused: socket.isSessionReused(), session: offered });
+          socket.destroy();
+        });
+        socket.once("error", reject);
+      });
+    const first = await handshake();
+    expect(first.session).toBeDefined();
+    const second = await handshake(first.session);
+    expect(second.reused).toBe(false);
+  });
+
+  it("cuts a device in the same call that removes it, and only that device", async () => {
+    const at = await home();
+    const gone = await at.join("view", "Old Mac");
+    const kept = await at.join("view", "New Mac");
+    const a = await connectClient(gone);
+    const b = await connectClient(kept);
+
+    // A request already on its way when the device is removed is never answered.
+    void a.invoke("inf:app:healthcheck", []).catch(() => {});
+    at.pairing.remove(gone.deviceId);
+    // A push made right after Remove returns reaches only the device that stays.
+    changed(at.events);
+    await b.push((push) => push.channel === "inf:models:changed");
+    expect(await a.closed).toBe(CONNECTION_CLOSE.unpaired);
+    expect(a.pushes).toEqual([]);
+    expect(at.asked).toEqual([]);
+    await expect(connectClient(gone)).rejects.toThrow("refused: 401");
+  });
+
+  it("refuses a device removed while its connection was being admitted", async () => {
+    const at = await home();
+    const kept = await at.join("view", "Kept Mac");
+    const gone = await at.join("view", "Old Mac");
+    // The same pairing behind a seam whose admission removes the device it
+    // has just admitted.
+    const pairing = at.pairing;
+    const seam: PairedDevices = {
+      any: () => pairing.any(),
+      subscribe: (listener) => pairing.subscribe(listener),
+      identity: () => pairing.identity(),
+      holds: (id) => pairing.holds(id),
+      claim: (body, request) => pairing.claim(body, request),
+      leave: (id) => pairing.leave(id),
+      admit: (request) => {
+        const device = pairing.admit(request);
+        if (device?.id === gone.deviceId) pairing.remove(gone.deviceId);
+        return device;
+      },
+    };
+    await at.connection.close();
+    const connection = startConnection({
+      dispatch: at.dispatch,
+      events: at.events,
+      devices: seam,
+      port: at.port,
+    });
+    open.push(connection);
+    await connection.settled();
+    await expect(connectClient(gone)).rejects.toThrow("refused: 401");
+    await expect(connectClient(kept)).resolves.toMatchObject({ welcome: { catchUp: "reload" } });
+  });
+
+  it("numbers each push once, so two devices see the same push under the same number", async () => {
+    const at = await home();
+    const a = await connectClient(await at.join());
+    const b = await connectClient(await at.join());
+    expect(a.welcome.epoch).toBe(b.welcome.epoch);
+    expect(a.welcome.catchUp).toBe("reload");
+
+    changed(at.events);
+    at.events.emit("inf:cards", []);
+    const seen = (push: { channel: string }) => push.channel === "inf:cards";
+    const [fromA, fromB] = await Promise.all([a.push(seen), b.push(seen)]);
+    expect(fromA).toEqual(fromB);
+    expect(a.pushes.map((push) => push.seq)).toEqual([1, 2]);
+    expect(b.pushes).toEqual(a.pushes);
+  });
+
+  it("hands a returning device exactly the pushes it missed, then carries on", async () => {
+    const at = await home();
+    const grant = await at.join();
+    const first = await connectClient(grant);
+    changed(at.events);
+    await first.push(() => true);
+    const cursor = first.cursor();
+    await first.close();
+
+    changed(at.events);
+    at.events.emit("inf:cards", []);
+    const back = await connectClient(grant, { cursor });
+    expect(back.welcome.catchUp).toBe("replay");
+    expect(back.welcome.seq).toBe(cursor.seq + 2);
+    expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
+      [cursor.seq + 1, "inf:models:changed"],
+      [cursor.seq + 2, "inf:cards"],
+    ]);
+    changed(at.events);
+    await back.push((push) => push.seq === cursor.seq + 3);
+    expect(back.pushes).toHaveLength(3);
+  });
+
+  it("tells a device to reload when its cursor cannot be caught up", async () => {
+    const at = await home({ journal: { entries: 2, bytes: 1_000_000 } });
+    const grant = await at.join();
+    const first = await connectClient(grant);
+    const { epoch } = first.welcome;
+    for (let i = 0; i < 4; i++) changed(at.events);
+    await first.push((push) => push.seq === 4);
+
+    // Too old: only pushes 3 and 4 are kept.
+    const old = await connectClient(grant, { cursor: { epoch, seq: 1 } });
+    expect(old.welcome).toMatchObject({ catchUp: "reload", epoch, seq: 4 });
+    expect(old.pushes).toEqual([]);
+    // Kept: pushes 3 and 4 come back.
+    const recent = await connectClient(grant, { cursor: { epoch, seq: 2 } });
+    expect(recent.welcome.catchUp).toBe("replay");
+    expect(recent.pushes.map((push) => push.seq)).toEqual([3, 4]);
+    // Another run of the home, or a number it never wrote.
+    for (const cursor of [
+      { epoch: "an-earlier-run", seq: 4 },
+      { epoch, seq: 9 },
+    ]) {
+      const stale = await connectClient(grant, { cursor });
+      expect(stale.welcome.catchUp).toBe("reload");
+    }
+  });
+
+  it("forwards what a view may ask as the captain, and refuses the rest without asking the core", async () => {
+    const at = await home();
+    const a = await connectClient(await at.join("view"));
+
+    const health = await a.invoke("inf:app:healthcheck", []);
+    expect(health.capabilities).toEqual(["connection"]);
+    expect(at.asked).toEqual([
+      { channel: "inf:app:healthcheck", args: [], actor: { kind: "captain" } },
+    ]);
+    // The core's own refusal comes back as the answer.
+    await expect(a.invoke("inf:cards:act", ["card-1"])).rejects.toThrow("malformed request");
+
+    for (const channel of [
+      "inf:settings:routing:set",
+      "inf:devices:invite",
+      "inf:devices:remove",
+      "inf:devices:list",
+    ])
+      await expect(a.invoke(channel as never, [{}])).rejects.toThrow(
+        `answered only on ${HOME.the}`,
+      );
+    for (const channel of ["inf:app:open-external", "inf:not-a-channel", "__proto__", "toString"])
+      await expect(a.invoke(channel as never, [])).rejects.toThrow(
+        "not a request this home answers",
+      );
+    expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:app:healthcheck", "inf:cards:act"]);
+  });
+
+  it("answers a device on the home's major or the one before in full, and only the reads of any other", async () => {
+    // A home two majors past this app's, so a device further behind than the
+    // window exists; the rule only reads the two versions.
+    const at = await home({ protocolVersion: "3.2.0" });
+    const grant = await at.join("view");
+    const speaking = (protocolVersion: string) => connectClient(grant, { protocolVersion });
+    const current = await speaking("3.0.1");
+    const behind = await speaking("2.9.0");
+    const older = await speaking("1.56.0");
+    const newer = await speaking("4.0.0");
+    expect(current.welcome).toMatchObject({ protocolVersion: "3.2.0", access: "full" });
+    expect([behind, older, newer].map((device) => device.welcome.access)).toEqual([
+      "full",
+      "read",
+      "read",
+    ]);
+
+    // In the window a change reaches the core, whose stand-in refuses it.
+    for (const device of [current, behind])
+      await expect(device.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
+        "malformed request",
+      );
+    // Outside it a device still reads and is sent every push, and changes nothing.
+    for (const device of [older, newer]) {
+      expect(await device.invoke("inf:app:healthcheck", [])).toMatchObject({ ok: true });
+      await expect(device.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
+        "only reads from a home on 3.2.0 until it is updated",
+      );
+    }
+    changed(at.events);
+    await Promise.all(
+      [older, newer].map((device) => device.push((push) => push.channel === "inf:models:changed")),
+    );
+    expect(at.asked.map((ask) => ask.channel)).toEqual([
+      "inf:cards:close",
+      "inf:cards:close",
+      "inf:app:healthcheck",
+      "inf:app:healthcheck",
+    ]);
+  });
+
+  it("lets a computer that runs work take new work only on the home's own major", async () => {
+    const at = await home({ protocolVersion: "3.2.0" });
+    const grant = await at.join("work", "Mini");
+    const speaking = (protocolVersion: string) => connectClient(grant, { protocolVersion });
+    const [current, behind, newer] = await Promise.all(
+      ["3.0.1", "2.9.0", "4.0.0"].map((version) => speaking(version)),
+    );
+    expect(current?.welcome).toMatchObject({ access: "full", takesWork: true });
+    // The major before is answered in full as a client, and still takes no work.
+    expect(behind?.welcome).toMatchObject({ access: "full", takesWork: false });
+    expect(newer?.welcome).toMatchObject({ access: "read", takesWork: false });
+    const view = await connectClient(await at.join("view"), { protocolVersion: "3.0.1" });
+    expect(view.welcome.takesWork).toBeUndefined();
+  });
+
+  it("gives work only to a computer whose version can hold a conversation", async () => {
+    const at = await home();
+    const grant = await at.join("work", "Mini");
+    const older = await connectClient(grant, { protocolVersion: beforePlacedWork() });
+    expect(older.welcome).toMatchObject({ access: "full", takesWork: false });
+    // It stays in reach, and is asked nothing and answered no work.
+    await expect(at.connection.ask(grant.deviceId, "inf:session:roster", [])).rejects.toThrow(
+      DeviceOutOfReachError,
+    );
+    await expect(
+      older.invoke("inf:work:progress", [{ task: "t1", callId: "c1", text: "Hi." }]),
+    ).rejects.toThrow("takes no work from a home");
+    expect(at.asked).toEqual([]);
+    const current = await connectClient(grant);
+    expect(current.welcome).toMatchObject({ takesWork: true });
+  });
+
+  it("hears what each connected computer says of its version, taking work or not, and reaches one that takes none only with anyVersion", async () => {
+    const at = await home();
+    const grant = await at.join("work", "Mini");
+    const heard: unknown[] = [];
+    at.connection.onWorkVersion((deviceId, version) => heard.push({ deviceId, version }));
+    // Too old to take work: connected, said, and asked only the update order.
+    const older = await connectClient(grant, {
+      protocolVersion: beforePlacedWork(),
+      appVersion: "0.1.12",
+      answer: (channel) => ({ asked: channel }),
+    });
+    await expect
+      .poll(() => heard)
+      .toEqual([
+        {
+          deviceId: grant.deviceId,
+          version: { contract: beforePlacedWork(), app: "0.1.12", takesWork: false },
+        },
+      ]);
+    await expect(at.connection.ask(grant.deviceId, "fm:firstmate:update", [])).rejects.toThrow(
+      DeviceOutOfReachError,
+    );
+    expect(
+      await at.connection.ask(grant.deviceId, "fm:firstmate:update", [], { anyVersion: true }),
+    ).toEqual({ asked: "fm:firstmate:update" });
+    await older.close();
+    await expect.poll(() => heard.at(-1)).toEqual({ deviceId: grant.deviceId, version: null });
+
+    // One too old to say its version is told by its contract alone.
+    const unsaid = await connectClient(grant);
+    await expect
+      .poll(() => heard.at(-1))
+      .toEqual({
+        deviceId: grant.deviceId,
+        version: { contract: PROTOCOL_VERSION, takesWork: true },
+      });
+    // One connection going while another is up says nothing; a view's
+    // version is never told; the last going is the next word heard.
+    const second = await connectClient(grant, { appVersion: "0.1.30" });
+    await expect.poll(() => heard.length).toBe(4);
+    await unsaid.close();
+    await connectClient(await at.join("view"), { appVersion: "0.1.30" });
+    await second.close();
+    await expect.poll(() => heard.at(-1)).toEqual({ deviceId: grant.deviceId, version: null });
+    expect(heard).toHaveLength(5);
+  });
+
+  it("keeps what a device says it is in its hello beside its kind", async () => {
+    const at = await home();
+    const grant = await at.join("view", "Pocket");
+    const phone = await connectClient(grant, { system: { system: "ios", chip: "arm64" } });
+    await expect
+      .poll(() => at.pairing.list().find((device) => device.id === grant.deviceId))
+      .toMatchObject({ kind: "view", system: "ios", chip: "arm64" });
+    await phone.close();
+    // A device too old to say keeps what it said before.
+    await (await connectClient(grant)).close();
+    expect(at.pairing.list().find((device) => device.id === grant.deviceId)).toMatchObject({
+      system: "ios",
+    });
+  });
+
+  it("welcomes a join that dials only to hear the home's name, and hears nothing of it as that computer", async () => {
+    const at = await home({ name: () => "MacBook Pro" });
+    const grant = await at.join("work", "Mini");
+    const contacts: WorkDeviceContact[] = [];
+    const versions: unknown[] = [];
+    at.connection.onWorkDevice((contact) => contacts.push(contact));
+    at.connection.onWorkVersion((deviceId, version) => versions.push({ deviceId, version }));
+    // The join hears the name and whether its version takes work, as any connection does.
+    const join = await connectClient(grant, { appVersion: "0.1.30", nameOnly: true });
+    expect(join.welcome).toMatchObject({ name: "MacBook Pro", takesWork: true });
+    // Never that computer in reach, its version, or asked anything, while open or once gone.
+    await expect(at.connection.ask(grant.deviceId, "inf:session:roster", [])).rejects.toThrow(
+      DeviceOutOfReachError,
+    );
+    await expect(
+      at.connection.ask(grant.deviceId, "fm:firstmate:update", [], { anyVersion: true }),
+    ).rejects.toThrow(DeviceOutOfReachError);
+    await join.close();
+    // Its work's own connection is that computer in reach, as ever.
+    const work = await connectClient(grant, { appVersion: "0.1.30" });
+    await expect.poll(() => contacts).toEqual([{ deviceId: grant.deviceId, contact: "in-reach" }]);
+    expect(versions).toEqual([
+      {
+        deviceId: grant.deviceId,
+        version: { contract: PROTOCOL_VERSION, app: "0.1.30", takesWork: true },
+      },
+    ]);
+    // A join hearing the name while its work is connected changes nothing either.
+    const again = await connectClient(grant, { nameOnly: true });
+    await again.close();
+    await work.close();
+    await expect.poll(() => contacts.at(-1)).toEqual({ deviceId: grant.deviceId, contact: "gone" });
+    expect(contacts).toHaveLength(2);
+    expect(versions).toHaveLength(2);
+  });
+
+  it("ignores a frame's fields this version does not know, so adding one is a minor change", async () => {
+    const at = await home();
+    const grant = await at.join("view");
+    const device = await connectClient(grant, { hello: false });
+    device.sendRaw(
+      JSON.stringify({ t: "hello", protocolVersion: PROTOCOL_VERSION, later: { field: 1 } }),
+    );
+    device.sendRaw(
+      JSON.stringify({ t: "invoke", id: 1, channel: "inf:app:healthcheck", args: [], later: 2 }),
+    );
+    await expect.poll(() => at.asked.length).toBe(1);
+    expect(at.asked).toEqual([
+      { channel: "inf:app:healthcheck", args: [], actor: { kind: "captain" } },
+    ]);
+    await device.close();
+  });
+
+  it("sends a computer that runs work no push, and answers it only the work requests", async () => {
+    const at = await home();
+    const view = await connectClient(await at.join("view"));
+    const work = await connectClient(await at.join("work", "Mini"));
+
+    changed(at.events);
+    await view.push((push) => push.channel === "inf:models:changed");
+    // A request's answer follows any push already sent on the same socket.
+    await expect(work.invoke("inf:app:healthcheck", [])).rejects.toThrow(
+      `answered only on ${HOME.the}`,
+    );
+    expect(work.pushes).toEqual([]);
+    expect(at.asked).toEqual([]);
+  });
+
+  it("lets a Mac hold its window's view and its work at once, each by what its hello says", async () => {
+    const at = await home({ pairing: { joinsFromAnotherMac: true } });
+    const { link } = at.pairing.invite({ kind: "mac", at: at.at });
+    await at.connection.settled();
+    const grant = await claimLink(link, { kind: "mac", name: "Mini", user: ANOTHER_USER });
+    expect(grant.kind).toBe("mac");
+    const views: ViewDeviceContact[] = [];
+    const works: WorkDeviceContact[] = [];
+    at.connection.onViewDevice((contact) => views.push(contact));
+    at.connection.onWorkDevice((contact) => works.push(contact));
+
+    const work = await connectClient(grant, { as: "work" });
+    const view = await connectClient(grant, { as: "view" });
+    await expect.poll(() => works).toEqual([{ deviceId: grant.deviceId, contact: "in-reach" }]);
+    await expect.poll(() => views).toEqual([{ deviceId: grant.deviceId, contact: "in-reach" }]);
+
+    // The view is sent pushes and asks as the captain; the work is sent none
+    // and asks only the work requests, as the computer it is.
+    changed(at.events);
+    await view.push((push) => push.channel === "inf:models:changed");
+    expect(await view.invoke("inf:app:healthcheck", [])).toMatchObject({ ok: true });
+    await expect(work.invoke("inf:app:healthcheck", [])).rejects.toThrow(
+      `answered only on ${HOME.the}`,
+    );
+    const request = [{ task: "t1", callId: "c1", text: "Started." }];
+    expect(await work.invoke("inf:work:progress", request)).toEqual({ text: "Noted." });
+    await expect(view.invoke("inf:work:progress", request)).rejects.toThrow(
+      "asked only by a computer that runs work",
+    );
+    expect(work.pushes).toEqual([]);
+    expect(at.asked.map(({ channel, actor }) => ({ channel, actor }))).toEqual([
+      { channel: "inf:app:healthcheck", actor: { kind: "captain" } },
+      { channel: "inf:work:progress", actor: { kind: "device", deviceId: grant.deviceId } },
+    ]);
+
+    // Closing its window leaves its work in reach, and the other way round.
+    await view.close();
+    await expect.poll(() => views.at(-1)).toEqual({ deviceId: grant.deviceId, contact: "gone" });
+    expect(works).toHaveLength(1);
+    await work.close();
+    await expect.poll(() => works.at(-1)).toEqual({ deviceId: grant.deviceId, contact: "gone" });
+  });
+
+  it("cuts a device whose hello says it does what its kind never does", async () => {
+    const at = await home();
+    const said = async (grant: DeviceGrant, as: "view" | "work") => {
+      const ws = await dialHome(grant);
+      const closed = once(ws, "close").then(([code]) => code as number);
+      await once(ws, "open");
+      ws.send(JSON.stringify({ t: "hello", protocolVersion: PROTOCOL_VERSION, as }));
+      return closed;
+    };
+    // A Mac saved when it could only control never runs work, and one saved
+    // when it could only run work never controls: each until added again.
+    expect(await said(await at.join("view"), "work")).toBe(CONNECTION_CLOSE.protocol);
+    expect(await said(await at.join("work", "Mini"), "view")).toBe(CONNECTION_CLOSE.protocol);
+    expect(at.asked).toEqual([]);
+  });
+
+  it("forwards a work request as the computer that asked it, and refuses it from a view", async () => {
+    const at = await home();
+    const grant = await at.join("work", "Mini");
+    const work = await connectClient(grant);
+    const view = await connectClient(await at.join("view"));
+    const request = [{ task: "t1", callId: "c1", text: "Started." }];
+
+    expect(await work.invoke("inf:work:progress", request)).toEqual({ text: "Noted." });
+    await expect(view.invoke("inf:work:progress", request)).rejects.toThrow(
+      "asked only by a computer that runs work",
+    );
+    expect(at.asked).toEqual([
+      {
+        channel: "inf:work:progress",
+        args: request,
+        actor: { kind: "device", deviceId: grant.deviceId },
+      },
+    ]);
+  });
+
+  it("asks a computer that runs work, hears it come and go, and refuses at once what cannot reach it", async () => {
+    const at = await home();
+    const grant = await at.join("work", "Mini");
+    const heard: WorkDeviceContact[] = [];
+    at.connection.onWorkDevice((contact) => heard.push(contact));
+    // Not connected: refused at once, nothing queued.
+    await expect(at.connection.ask(grant.deviceId, "inf:session:roster", [])).rejects.toThrow(
+      DeviceOutOfReachError,
+    );
+
+    const answering = await connectClient(grant, {
+      answer: (channel) => {
+        if (channel === "inf:session:roster") return { tasksDir: "/w/tasks", tasks: [] };
+        throw new Error(`${channel} is not a request this computer answers.`);
+      },
+    });
+    await expect.poll(() => heard).toEqual([{ deviceId: grant.deviceId, contact: "in-reach" }]);
+    expect(await at.connection.ask(grant.deviceId, "inf:session:roster", [])).toEqual({
+      tasksDir: "/w/tasks",
+      tasks: [],
+    });
+    // The device's refusal is the answer.
+    await expect(at.connection.ask(grant.deviceId, "inf:session:launch", [])).rejects.toThrow(
+      "not a request this computer answers",
+    );
+    expect(answering.asked.map((ask) => ask.channel)).toEqual([
+      "inf:session:roster",
+      "inf:session:launch",
+    ]);
+    await answering.close();
+    await expect.poll(() => heard.at(-1)).toEqual({ deviceId: grant.deviceId, contact: "gone" });
+
+    // One that goes before it answers: refused, and never asked again here.
+    const silent = await connectClient(grant);
+    const waiting = at.connection.ask(grant.deviceId, "inf:session:roster", []);
+    // Observe rejection when the ask is created, before either socket can close.
+    // Keep the original promise rejected for the refusal assertion below.
+    void waiting.catch(() => {});
+    await expect.poll(() => silent.asked.length).toBe(1);
+    await silent.close();
+    await expect.poll(() => heard.at(-1)).toEqual({ deviceId: grant.deviceId, contact: "gone" });
+    // Let the disconnect rejection cross an event-loop turn before asserting it.
+    // Handling it must not depend on which end observes the socket close first.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await expect(waiting).rejects.toThrow(DeviceOutOfReachError);
+    expect(silent.asked).toEqual([{ channel: "inf:session:roster", args: [] }]);
+
+    // A view is never asked anything.
+    const viewGrant = await at.join("view");
+    const view = await connectClient(viewGrant);
+    await expect(at.connection.ask(viewGrant.deviceId, "inf:session:roster", [])).rejects.toThrow(
+      DeviceOutOfReachError,
+    );
+    expect(view.asked).toEqual([]);
+  });
+
+  it("hears a Mac that controls this Firstmate connect, and go only once its last connection goes", async () => {
+    const at = await home();
+    const air = await at.join("view", "MacBook Air");
+    const heard: ViewDeviceContact[] = [];
+    const work: WorkDeviceContact[] = [];
+    at.connection.onViewDevice((contact) => heard.push(contact));
+    at.connection.onWorkDevice((contact) => work.push(contact));
+
+    // A connection that never says hello controls nothing, so its going says nothing.
+    const silent = await connectClient(air, { hello: false });
+    await silent.close();
+    const first = await connectClient(air);
+    await expect.poll(() => heard).toEqual([{ deviceId: air.deviceId, contact: "in-reach" }]);
+    // A second connection of the same Mac, then the first goes: it is still here until both are gone.
+    const second = await connectClient(air);
+    await expect.poll(() => heard.length).toBe(2);
+    await first.close();
+    await second.close();
+    await expect.poll(() => heard.at(-1)?.contact).toBe("gone");
+    expect(heard.map((contact) => contact.contact)).toEqual(["in-reach", "in-reach", "gone"]);
+
+    // Removed while connected: cut, and gone.
+    const again = await connectClient(air);
+    await expect.poll(() => heard.at(-1)?.contact).toBe("in-reach");
+    at.pairing.remove(air.deviceId);
+    expect(await again.closed).toBe(CONNECTION_CLOSE.unpaired);
+    await expect.poll(() => heard.at(-1)).toEqual({ deviceId: air.deviceId, contact: "gone" });
+    // A view is never a computer that runs work.
+    expect(work).toEqual([]);
+  });
+
+  it("closes a connection that breaks the protocol", async () => {
+    const at = await home();
+    const grant = await at.join();
+
+    const early = await connectClient(grant, { hello: false });
+    early.sendRaw(JSON.stringify({ t: "invoke", id: 1, channel: "inf:app:healthcheck", args: [] }));
+    expect(await early.closed).toBe(CONNECTION_CLOSE.protocol);
+
+    const garbled = await connectClient(grant);
+    garbled.sendRaw("{not json");
+    expect(await garbled.closed).toBe(CONNECTION_CLOSE.protocol);
+
+    const twice = await connectClient(grant);
+    twice.sendRaw(JSON.stringify({ t: "hello", protocolVersion: PROTOCOL_VERSION }));
+    expect(await twice.closed).toBe(CONNECTION_CLOSE.protocol);
+    expect(at.asked).toEqual([]);
+  });
+
+  it("refuses before any frame a device without its key, a browser, or another path", async () => {
+    const at = await home();
+    const grant = await at.join();
+    const refused = (tamper: Parameters<typeof connectClient>[1]) =>
+      connectClient(grant, tamper).then(
+        () => "accepted",
+        (error: Error) => error.message,
+      );
+
+    // Loopback is no shortcut: another macOS user on this Mac reaches the
+    // same port and must show a key the home paired.
+    expect(await refused({ tamper: { device: null } })).toBe("refused: 401");
+    expect(await refused({ tamper: { device: createKeyIdentity("Stranger") } })).toBe(
+      "refused: 401",
+    );
+    expect(await refused({ tamper: { origin: "https://example.com" } })).toBe("refused: 403");
+    expect(await refused({ tamper: { path: "/elsewhere" } })).toBe("refused: 404");
+    expect(await refused({})).toBe("accepted");
+  });
+
+  it("does not cut a device when the named address still binds the same set", async () => {
+    // Loopback named as 127.0.0.1 binds the same set as no address. The
+    // connection restarts only when the set itself changes.
+    let chosen: string | undefined;
+    const at = await home({ address: () => chosen });
+    const grant = await at.join();
+    const a = await connectClient(grant);
+    expect(at.connection.listening()).toEqual([`127.0.0.1:${at.port}`]);
+
+    chosen = "127.0.0.1";
+    at.link();
+    await at.connection.settled();
+    expect(at.connection.listening()).toEqual([`127.0.0.1:${at.port}`]);
+    expect(await a.invoke("inf:app:healthcheck", [])).toMatchObject({
+      protocolVersion: PROTOCOL_VERSION,
+    });
+  });
+
+  it("says where it listens each time that changes, and only then", async () => {
+    let chosen: string | undefined;
+    const at = await home({ address: () => chosen });
+    const heard: string[][] = [];
+    at.connection.onListening((listening) => heard.push(listening));
+    const first = at.pairing.invite({ kind: "view", at: at.at });
+    await at.connection.settled();
+    expect(heard).toEqual([[`127.0.0.1:${at.port}`]]);
+    // Another link, or a new run where it listened before, moves nothing.
+    const second = at.pairing.invite({ kind: "view", at: at.at });
+    chosen = "127.0.0.1";
+    at.pairing.stop(second.id);
+    await at.connection.settled();
+    expect(heard).toEqual([[`127.0.0.1:${at.port}`]]);
+    // No link open and nothing paired: it listens nowhere, and says so.
+    at.pairing.stop(first.id);
+    await at.connection.settled();
+    expect(heard).toEqual([[`127.0.0.1:${at.port}`], []]);
+  });
+
+  it("names a refused address and stays off", async () => {
+    const problems: string[] = [];
+    const at = await home({ address: "0.0.0.0", onProblem: (text) => problems.push(text) });
+    await at.join().catch(() => {});
+    await at.connection.settled();
+    expect(at.connection.listening()).toEqual([]);
+    expect(problems[0]).toBe(
+      "not listening: The connection never listens on every address at once. Choose one.",
+    );
+  });
+});

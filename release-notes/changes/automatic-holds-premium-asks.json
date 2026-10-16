@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "automatic-holds-premium-asks",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Automatic tells you when no computer has the premium model you asked for",
+      "body": "When you ask for a premium model and no computer can run one right now, a task in a project set to Automatic now waits for premium allowance to come back, and Firstmate tells you so it can offer to start the task on a lesser model. The same goes for a task you asked to retry on a stronger model. Before, the task waited and Firstmate never heard. A project kept on This computer already worked this way.",
+      "noPicture": "What changes is that Firstmate hears of the wait and answers in its own words; the task itself shows the same Held mark a This computer task already shows.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,801 @@
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/personal/manifest";
+import { describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import type { CoreEventSink } from "../events";
+import { openInMemoryDatabase } from "../storage/db";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import { PersonalExtensions } from "./personalExtensions";
+import { PersonalStore } from "./personalStore";
+
+// This file chains real git and is not about the utility-QoS clamp, so what
+// the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
+vi.mock("../utilityQos", async (importOriginal) =>
+  (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
+
+/**
+ * The Step 2 acceptance, against the real service over a temp workspace:
+ * a fixture renders (a panel URL in the snapshot) and disappears when its
+ * presence source is empty; an unsupported import is refused with the path
+ * named; a background task under 60 s is clamped; a task on the extension
+ * lights the running dot; an edit is a new version; a removal unmounts.
+ */
+async function harness() {
+  const root = realpathSync(scratchDir("infinitary-personal-svc-"));
+  const workspaceDir = join(root, "personal");
+  const cacheRoot = join(root, "cache");
+  const db = openInMemoryDatabase();
+  const store = new PersonalStore(db);
+  const tasks = new TaskService({ db, strict: true });
+  const pushes: { channel: string; payload: unknown }[] = [];
+  const emit: CoreEventSink = (channel, payload) => {
+    pushes.push({ channel, payload });
+  };
+  const write = (path: string, content: string) => {
+    mkdirSync(join(workspaceDir, path, ".."), { recursive: true });
+    writeFileSync(join(workspaceDir, path), content);
+  };
+  return { workspaceDir, cacheRoot, store, tasks, pushes, emit, write };
+}
+
+const PANEL =
+  'import type { PanelProps } from "@firstmate/contracts";\nexport default (props: PanelProps) => props.id;';
+
+/** Commits the whole workspace the way a turn's report does, under a test identity. */
+function commitAll(dir: string, message = "chore: build"): void {
+  execFileSync("git", ["-C", dir, "add", "-A"]);
+  execFileSync("git", [
+    "-C",
+    dir,
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@localhost",
+    "commit",
+    "-q",
+    "-m",
+    message,
+  ]);
+}
+
+describe("PersonalExtensions", () => {
+  it("serves a server module's sql over the views its manifest names now, and mounts nothing for a retired one", async () => {
+    const h = await harness();
+    const asked: unknown[] = [];
+    const sql = async (request: unknown) => {
+      asked.push(request);
+      return { columns: ["n"], rows: [{ n: 2 }], truncated: false, elapsedMs: 1 };
+    };
+    h.write("tokens/manifest.json", JSON.stringify({ title: "Tokens", sql: ["v_usage_v1"] }));
+    h.write("tokens/panel.tsx", PANEL);
+    h.write(
+      "tokens/server.ts",
+      'import type { ServerContext } from "@firstmate/contracts";\nexport const actions = { count: (input: unknown, context: ServerContext) => context.sql("SELECT COUNT(*) AS n FROM v_usage_v1", [input as number]) };',
+    );
+    h.write("newer/manifest.json", JSON.stringify({ title: "Newer", sql: ["v_usage_v2"] }));
+    h.write("newer/panel.tsx", PANEL);
+    h.write("typo/manifest.json", JSON.stringify({ title: "Typo", sql: ["v_usgae_v1"] }));
+    h.write(
+      "gone/manifest.json",
+      JSON.stringify({ title: "Gone", sql: ["v_usage_v1", "v_quota_v1"] }),
+    );
+    h.write("gone/panel.tsx", PANEL);
+    h.write("typo/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false, sql });
+    try {
+      const [, newer, tokens, typo] = service.snapshot().extensions;
+      expect(tokens).toMatchObject({ sql: ["v_usage_v1"], present: true, error: null });
+      expect(await service.invoke("tokens", "count", 5)).toEqual({
+        ok: true,
+        result: { columns: ["n"], rows: [{ n: 2 }], truncated: false, elapsedMs: 1 },
+      });
+      expect(asked).toEqual([
+        { sql: "SELECT COUNT(*) AS n FROM v_usage_v1", params: [5], views: ["v_usage_v1"] },
+      ]);
+      // Written against views this version does not publish: nothing mounts,
+      // and the line says why in plain words.
+      expect(newer).toMatchObject({ panel: null, present: false, server: null });
+      expect(newer?.error?.message).toContain("written for a newer version of the app");
+      expect(typo?.panel).toBeNull();
+      expect(service.snapshot().extensions.map((e) => e.id)).toEqual([
+        "gone",
+        "newer",
+        "tokens",
+        "typo",
+      ]);
+      expect(typo?.error?.message).toContain("asks for data the app does not publish");
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("carries a panel's cards, buttons and commands, and names one that points at nothing", async () => {
+    const h = await harness();
+    const cards = { reader: { view: "reader", title: "Reading", width: "regular" } };
+    const header = [{ id: "open", icon: "open", label: "Open reading", emits: "reader" }];
+    const commands = [{ id: "open", label: "Open reading", emits: "reader", key: "⌘J" }];
+    h.write("reading/manifest.json", JSON.stringify({ title: "Reading", cards, header, commands }));
+    h.write("reading/panel.tsx", PANEL);
+    h.write("reading/cards/reader.tsx", PANEL);
+    h.write("broken/manifest.json", JSON.stringify({ title: "Broken", cards, header }));
+    h.write("broken/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const [broken, reading] = service.snapshot().extensions;
+      expect(reading).toMatchObject({
+        cardViews: ["reader"],
+        cards,
+        header,
+        commands,
+        present: true,
+        error: null,
+      });
+      // Its card view sits beside its panel in the same version.
+      expect(
+        existsSync(
+          join(h.cacheRoot, "reading", reading?.panel?.version ?? "", "cards", "reader.mjs"),
+        ),
+      ).toBe(true);
+      // A name that points at nothing: the panel still draws, without them.
+      expect(broken).toMatchObject({
+        cardViews: [],
+        cards: {},
+        header: [],
+        commands: [],
+        present: true,
+      });
+      expect(broken?.error?.message).toContain("there is no cards/reader.tsx");
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("seeds the workspace, mounts a fixture, and follows its presence source", async () => {
+    const h = await harness();
+    h.write("prs/panel.tsx", PANEL);
+    h.write(
+      "prs/manifest.json",
+      JSON.stringify({
+        title: "Open PRs",
+        presence: { store: "items", when: "nonEmpty" },
+        placement: { x: "left", y: "top" },
+      }),
+    );
+    h.write("always/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const snapshot = service.snapshot();
+      expect(snapshot.extensions.map((e) => e.id)).toEqual(["always", "prs"]);
+      const prs = snapshot.extensions[1];
+      expect(prs).toMatchObject({
+        title: "Open PRs",
+        placement: { x: "left", y: "top" },
+        present: false,
+        running: false,
+        server: null,
+        error: null,
+      });
+      expect(prs?.panel?.url).toMatch(/^app-plugin:\/\/personal\/prs\/[0-9a-f]{16}\/panel\.mjs$/);
+      expect(snapshot.extensions[0]).toMatchObject({
+        title: "always",
+        present: true,
+        // A panel that names no place lands where the create-your-own-panel slot was.
+        placement: { x: "left", y: "top" },
+      });
+      // The workspace was seeded around the fixture.
+      expect(() => rmSync(join(h.workspaceDir, "AGENTS.md"))).not.toThrow();
+
+      h.pushes.length = 0;
+      h.store.set("prs", "items", [1]);
+      expect(h.pushes.map((p) => p.channel)).toEqual(["inf:plugins:db", "inf:plugins:personal"]);
+      expect(h.pushes[0]?.payload).toEqual({ extensionId: "prs", key: "items" });
+      expect(service.snapshot().extensions[1]?.present).toBe(true);
+      h.pushes.length = 0;
+      h.store.set("prs", "other", "x");
+      // A key the presence rule does not read changes nothing on the snapshot.
+      expect(h.pushes.map((p) => p.channel)).toEqual(["inf:plugins:db"]);
+      h.store.set("prs", "items", []);
+      expect(service.snapshot().extensions[1]?.present).toBe(false);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("refuses an unsupported import with the path named, keeping the panel absent, and recovers on the fix", async () => {
+    const h = await harness();
+    h.write("bad/panel.tsx", 'import _ from "lodash";\nexport default () => _;');
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const [bad] = service.snapshot().extensions;
+      expect(bad?.panel).toBeNull();
+      expect(bad?.present).toBe(false);
+      expect(bad?.error).toEqual({
+        stage: "panel",
+        message:
+          'bad/panel.tsx imports "lodash", which a panel cannot use (react, @infinitary/ui, and files inside bad/)',
+      });
+      expect(service.errors()).toEqual([{ id: "bad", error: bad?.error }]);
+      h.write("bad/panel.tsx", PANEL);
+      await service.refresh();
+      const fixed = service.snapshot().extensions[0];
+      expect(fixed?.error).toBeNull();
+      expect(fixed?.present).toBe(true);
+      h.write("bad/panel.tsx", "export default (props => {");
+      await service.refresh();
+      expect(service.snapshot().extensions[0]?.error?.message).toMatch(/^bad\/panel\.tsx:1: /);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("loads server.ts, clamps a fast background task, answers invoke, and reloads on edit", async () => {
+    const h = await harness();
+    h.write(
+      "meter/server.ts",
+      [
+        'import type { ServerModule } from "@firstmate/contracts";',
+        "export const actions: ServerModule['actions'] = {",
+        "  fill: (input, context) => { context.db.set('items', input as never); return 'filled'; },",
+        "  boom: () => { throw new Error('no'); },",
+        "};",
+        "export const background: ServerModule['background'] = {",
+        "  sample: { everyMs: 1000, run: (context) => context.db.set('sampled', 1) },",
+        "};",
+      ].join("\n"),
+    );
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const [meter] = service.snapshot().extensions;
+      expect(meter?.panel).toBeNull();
+      expect(meter?.server).toEqual({
+        actions: ["fill", "boom"],
+        background: [{ id: "sample", everyMs: MIN_BACKGROUND_INTERVAL_MS }],
+      });
+      // runOnStart ran the task once through the bound store.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(h.store.get("meter", "sampled")).toBe(1);
+      expect(await service.invoke("meter", "fill", [1, 2])).toEqual({ ok: true, result: "filled" });
+      expect(h.store.get("meter", "items")).toEqual([1, 2]);
+      expect(await service.invoke("meter", "boom", null)).toEqual({ ok: false, error: "no" });
+      expect(await service.invoke("meter", "nope", null)).toEqual({
+        ok: false,
+        error: '"meter" has no action "nope" (it has fill, boom)',
+      });
+      expect(await service.invoke("ghost", "x", null)).toEqual({
+        ok: false,
+        error: '"ghost" is not in the personal workspace',
+      });
+      expect(service.storeRequest({ op: "get", extensionId: "meter", key: "items" })).toEqual({
+        value: [1, 2],
+      });
+      expect(service.storeRequest({ op: "get", extensionId: "meter", key: "none" })).toEqual({});
+      expect(
+        service.storeRequest({ op: "list", extensionId: "meter", prefix: "it" }),
+      ).toMatchObject({ entries: [{ key: "items" }] });
+      service.storeRequest({ op: "delete", extensionId: "meter", key: "items" });
+      expect(h.store.get("meter", "items")).toBeUndefined();
+
+      h.write("meter/server.ts", "export const actions = { fill: () => 'v2' };");
+      await service.refresh();
+      expect(service.snapshot().extensions[0]?.server).toEqual({
+        actions: ["fill"],
+        background: [],
+      });
+      expect(await service.invoke("meter", "fill", null)).toEqual({ ok: true, result: "v2" });
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("lights the running dot while the origin task is active, versions an edit, and unmounts a removal", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-1", title: "Build clock", status: "running" });
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      // A build that reported once and is still open: its last commit names it.
+      h.write("clock/panel.tsx", PANEL);
+      h.write("clock/manifest.json", JSON.stringify({ origin: { taskId: "t-1" } }));
+      commitAll(h.workspaceDir);
+      await service.refresh();
+      const first = service.snapshot().extensions[0];
+      expect(first?.running).toBe(true);
+      h.pushes.length = 0;
+      h.tasks.close("t-1", { status: "done", reason: "finished", actor: "host" });
+      expect(service.snapshot().extensions[0]?.running).toBe(false);
+      expect(h.pushes.some((p) => p.channel === "inf:plugins:personal")).toBe(true);
+
+      h.write("clock/panel.tsx", `${PANEL}\n// edited`);
+      await service.refresh();
+      const edited = service.snapshot().extensions[0];
+      expect(edited?.panel?.version).not.toBe(first?.panel?.version);
+      expect(edited?.panel?.url).not.toBe(first?.panel?.url);
+
+      rmSync(join(h.workspaceDir, "clock"), { recursive: true });
+      await service.refresh();
+      expect(service.snapshot().extensions).toEqual([]);
+
+      await service.purge();
+      expect(service.snapshot().extensions).toEqual([]);
+    } finally {
+      service.dispose();
+    }
+  });
+});
+
+/**
+ * The live build loop (talk-to-personalize Step 4), against the real
+ * service over a temp workspace that the seeder made a git repo: a live
+ * task's saves are stamped onto the manifest (the running dot follows the
+ * first save), the turn's commit carries the report and lints what it
+ * touched, a lint answers findings and the compiler's verdict, a removal
+ * waits for the building task, and a capture without a host says so.
+ */
+describe("PersonalExtensions live build loop (Step 4)", () => {
+  const log = (dir: string) =>
+    execFileSync("git", ["-C", dir, "log", "--format=%s"], { encoding: "utf8" })
+      .split("\n")
+      .filter(Boolean);
+
+  it("stamps a live task onto touched extensions, commits the turn with the report, and lints at the commit", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-live", title: "Tokyo clock", status: "running" });
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const seeded = log(h.workspaceDir).length;
+      service.beginLiveTask("t-live");
+      h.write("clock/panel.tsx", `${PANEL}\nconst color = "#ff0000";`);
+      await service.refresh();
+      // The stamp landed before the load read the manifest: the draft is
+      // the task's, and a new panel is on no rail until its first commit.
+      expect(JSON.parse(readFileSync(join(h.workspaceDir, "clock/manifest.json"), "utf8"))).toEqual(
+        {
+          origin: { taskId: "t-live" },
+        },
+      );
+      expect(service.snapshot().extensions).toEqual([]);
+      expect(service.snapshot().drafts?.[0]).toMatchObject({ id: "clock", running: true });
+      expect(await service.touched()).toEqual(["clock"]);
+
+      const commit = await service.commitTurn("t-live", "Tokyo clock panel added. It is small.");
+      expect(commit.committed).toBe(true);
+      expect(commit.touched).toEqual(["clock"]);
+      expect(commit.findings.map((finding) => finding.rule)).toEqual(["raw-color"]);
+      expect(log(h.workspaceDir)).toHaveLength(seeded + 1);
+      expect(log(h.workspaceDir)[0]).toBe("chore: Tokyo clock panel added.");
+      expect(await service.touched()).toEqual([]);
+      // The commit is the report: the panel is on its rail, its build still open.
+      expect(service.snapshot().extensions[0]).toMatchObject({ id: "clock", running: true });
+      expect(service.snapshot().drafts).toBeUndefined();
+      // Nothing changed since: no empty commit.
+      expect((await service.commitTurn("t-live", "again")).committed).toBe(false);
+      expect(log(h.workspaceDir)).toHaveLength(seeded + 1);
+      service.endLiveTask("t-live");
+      h.tasks.close("t-live", { status: "done", reason: "finished", actor: "host" });
+      expect(service.snapshot().extensions[0]?.running).toBe(false);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("lints one extension or every touched one, naming the compiler's verdict, and refuses a capture without a host", async () => {
+    const h = await harness();
+    h.write("good/panel.tsx", PANEL);
+    h.write(
+      "bad/panel.tsx",
+      'import lodash from "lodash";\nexport default () => String(lodash);\n',
+    );
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      expect(await service.lint("good")).toBe("good: No findings.");
+      const bad = await service.lint("bad");
+      expect(bad).toContain("bad: No findings.");
+      expect(bad).toContain('compile: bad/panel.tsx imports "lodash"');
+      // Both are uncommitted: an id-less lint covers every touched one.
+      const all = await service.lint();
+      expect(all).toContain("bad:");
+      expect(all).toContain("good:");
+      expect(await service.lint("missing")).toContain("no files found");
+      expect(await service.capture("good", "t-1")).toEqual({
+        ok: false,
+        id: "good",
+        reason: "captures are not available in this build",
+      });
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("captures a docked panel in both themes through the host and writes the files under the task", async () => {
+    const h = await harness();
+    h.write("clock/panel.tsx", PANEL);
+    const captureCalls: { panelId: string; theme: string }[] = [];
+    const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      capture: {
+        capturePanel: async (input) => {
+          captureCalls.push(input);
+          return { png, width: 300, height: 120 };
+        },
+      },
+      captureDirFor: (taskId) => join(h.cacheRoot, "..", "captures", taskId),
+    });
+    try {
+      const result = await service.capture("clock", "t-9");
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("expected a capture");
+      expect(captureCalls).toEqual([
+        { panelId: "clock", theme: "dark" },
+        { panelId: "clock", theme: "light" },
+      ]);
+      expect(result.images.map((image) => [image.theme, image.width, image.height])).toEqual([
+        ["dark", 300, 120],
+        ["light", 300, 120],
+      ]);
+      for (const image of result.images) {
+        expect(image.path.endsWith(`captures/t-9/clock-${image.theme}.png`)).toBe(true);
+        expect(readFileSync(image.path).equals(png)).toBe(true);
+        expect(image.data).toBe(png.toString("base64"));
+      }
+      expect(await service.capture("nope", "t-9")).toMatchObject({ ok: false, id: "nope" });
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("refuses a removal while a task is building the extension, and allows it once the task closed", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-b", title: "Build clock", status: "running" });
+    h.write("clock/panel.tsx", PANEL);
+    h.write("clock/manifest.json", JSON.stringify({ title: "Clock", origin: { taskId: "t-b" } }));
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      await service.commitTurn("t-b", "Clock added");
+      await expect(service.remove("clock")).rejects.toThrow(/still being built/);
+      h.tasks.close("t-b", { status: "done", reason: "finished", actor: "host" });
+      expect(await service.remove("clock")).toEqual({ removed: true, committed: true });
+      expect(log(h.workspaceDir)[0]).toBe("chore: remove clock on the captain's word");
+      expect(service.snapshot().extensions).toEqual([]);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("removes an extension that was never committed, with no commit to make", async () => {
+    const h = await harness();
+    h.write("draft/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      expect(await service.remove("draft")).toEqual({ removed: true, committed: false });
+      expect(service.snapshot().extensions).toEqual([]);
+    } finally {
+      service.dispose();
+      rmSync(join(h.workspaceDir, ".."), { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * A build runs apart from the rails (docs/personal-panels.md, "Built
+ * apart"): while a crewmate is building an extension, the rails keep its
+ * last commit - the same version, the same server module, the same store -
+ * and the working files run as a draft with a store and server of their
+ * own; the report's commit swaps the new version in and the draft goes.
+ */
+describe("PersonalExtensions builds apart from the rails", () => {
+  const SERVER = (word: string) =>
+    [
+      'import type { ServerModule } from "@firstmate/contracts";',
+      `export const actions: ServerModule["actions"] = { word: () => "${word}" };`,
+      "",
+    ].join("\n");
+
+  it("keeps the rails on the last commit while a live task saves, runs the draft apart, and swaps in at the report", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-live", title: "Change the clock", status: "running" });
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      h.write("clock/panel.tsx", PANEL);
+      h.write("clock/server.ts", SERVER("before"));
+      h.write("clock/manifest.json", JSON.stringify({ title: "Clock" }));
+      commitAll(h.workspaceDir);
+      await service.refresh();
+      h.store.set("clock", "note", "the captain's");
+      const before = service.snapshot().extensions[0];
+      expect(before?.panel?.version).toMatch(/^[0-9a-f]{16}$/);
+      expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "before" });
+
+      service.beginLiveTask("t-live");
+      h.write("clock/panel.tsx", `${PANEL}\n// smaller rows`);
+      h.write("clock/server.ts", SERVER("after"));
+      h.write("clock/manifest.json", JSON.stringify({ title: "Clock, smaller" }));
+      h.pushes.length = 0;
+      await service.refresh();
+      // The rails: the same version and title as before, with the running dot.
+      const during = service.snapshot();
+      expect(during.extensions[0]).toMatchObject({
+        id: "clock",
+        title: "Clock",
+        running: true,
+        panel: before?.panel,
+      });
+      // The draft: the working files, compiled.
+      expect(during.drafts?.[0]).toMatchObject({ id: "clock", title: "Clock, smaller" });
+      expect(during.drafts?.[0]?.panel?.version).not.toBe(before?.panel?.version);
+      // Each runs its own server.
+      expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "before" });
+      expect(await service.invoke("clock", "word", null, { draft: true })).toEqual({
+        ok: true,
+        result: "after",
+      });
+      // The draft's store starts as the panel's, and what it writes stays its own.
+      expect(
+        service.storeRequest({ op: "get", extensionId: "clock", key: "note", draft: true }),
+      ).toEqual({ value: "the captain's" });
+      service.storeRequest({
+        op: "set",
+        extensionId: "clock",
+        key: "note",
+        value: "the build's",
+        draft: true,
+      });
+      expect(h.pushes).toContainEqual({
+        channel: "inf:plugins:db",
+        payload: { extensionId: "clock", key: "note", draft: true },
+      });
+      expect(h.store.get("clock", "note")).toBe("the captain's");
+
+      // A save that does not compile is the draft's to show, never the rails'.
+      h.write("clock/panel.tsx", "export default () => <div>");
+      await service.refresh();
+      expect(service.snapshot().extensions[0]).toMatchObject({ panel: before?.panel, error: null });
+      expect(service.snapshot().drafts?.[0]?.error?.stage).toBe("panel");
+      expect(await service.lint("clock")).toContain("compile: clock/panel.tsx");
+      h.write("clock/panel.tsx", `${PANEL}\n// smaller rows`);
+      await service.refresh();
+      const draftVersion = service.snapshot().drafts?.[0]?.panel?.version;
+      // Every push while the build went on drew the rails' panel as it was.
+      const railVersions = h.pushes
+        .filter((push) => push.channel === "inf:plugins:personal")
+        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.panel?.version);
+      expect(new Set(railVersions)).toEqual(new Set([before?.panel?.version]));
+
+      // The report's commit: the rails take the version the draft had, and the draft goes.
+      h.pushes.length = 0;
+      await service.commitTurn("t-live", "The clock rows are smaller.");
+      const after = service.snapshot();
+      expect(after.extensions[0]).toMatchObject({ title: "Clock, smaller", running: true });
+      expect(after.extensions[0]?.panel?.version).toBe(draftVersion);
+      expect(after.drafts).toBeUndefined();
+      expect(await service.invoke("clock", "word", null)).toEqual({ ok: true, result: "after" });
+      expect(await service.invoke("clock", "word", null, { draft: true })).toEqual({
+        ok: false,
+        error: '"clock" is not being built right now',
+      });
+      // The build's store went with it; the panel's own is as the captain left it.
+      expect(h.store.get("clock", "note")).toBe("the captain's");
+      expect(h.store.slices()).toEqual(["clock"]);
+      expect(() =>
+        service.storeRequest({
+          op: "set",
+          extensionId: "clock",
+          key: "note",
+          value: "late",
+          draft: true,
+        }),
+      ).toThrow(/not being built/);
+      const lastRail = h.pushes
+        .filter((push) => push.channel === "inf:plugins:personal")
+        .map((push) => (push.payload as PersonalSnapshot).extensions[0]?.panel?.version);
+      expect(lastRail.at(-1)).toBe(draftVersion);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("puts a new panel on no rail until its first commit, and captures its draft", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-new", title: "Build a clock", status: "running" });
+    const captureCalls: { panelId: string; theme: string }[] = [];
+    const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      capture: {
+        capturePanel: async (input) => {
+          captureCalls.push(input);
+          return { png, width: 300, height: 120 };
+        },
+      },
+    });
+    try {
+      service.beginLiveTask("t-new");
+      h.write("fresh/panel.tsx", PANEL);
+      await service.refresh();
+      expect(service.snapshot().extensions).toEqual([]);
+      expect(service.snapshot().drafts?.map((draft) => [draft.id, draft.present])).toEqual([
+        ["fresh", true],
+      ]);
+      // The capture photographs the version being built, where the window draws it.
+      expect((await service.capture("fresh", "t-new")).ok).toBe(true);
+      expect(captureCalls).toEqual([
+        { panelId: "fresh.draft", theme: "dark" },
+        { panelId: "fresh.draft", theme: "light" },
+      ]);
+      // "Remove it" names what is on the rails; a panel still being built is not.
+      expect(await service.remove("fresh")).toEqual({ removed: false, committed: false });
+
+      await service.commitTurn("t-new", "A clock panel.");
+      expect(service.snapshot().extensions.map((e) => [e.id, e.present])).toEqual([
+        ["fresh", true],
+      ]);
+      expect(service.snapshot().drafts).toBeUndefined();
+      captureCalls.length = 0;
+      expect((await service.capture("fresh", "t-new")).ok).toBe(true);
+      expect(captureCalls.map((call) => call.panelId)).toEqual(["fresh", "fresh"]);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("keeps a build that stopped before its report apart, and lets a hand edit through", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-gone", title: "Change the clock", status: "running" });
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      h.write("clock/panel.tsx", PANEL);
+      h.write("hand/panel.tsx", PANEL);
+      commitAll(h.workspaceDir);
+      await service.refresh();
+      const committed = Object.fromEntries(
+        service.snapshot().extensions.map((e) => [e.id, e.panel?.version]),
+      );
+      // Left by a build whose session is gone (the app restarted mid-build):
+      // the files name the task, which has not finished.
+      h.write("clock/panel.tsx", `${PANEL}\n// half done`);
+      h.write("clock/manifest.json", JSON.stringify({ origin: { taskId: "t-gone" } }));
+      // Edited by hand, with no task behind it: it hot-reloads as it always has.
+      h.write("hand/panel.tsx", `${PANEL}\n// by hand`);
+      await service.refresh();
+      const [clock, hand] = service.snapshot().extensions;
+      expect(clock).toMatchObject({ id: "clock", running: true });
+      expect(clock?.panel?.version).toBe(committed.clock);
+      expect(hand?.panel?.version).not.toBe(committed.hand);
+      // No session, no draft: nothing reads one.
+      expect(service.snapshot().drafts).toBeUndefined();
+
+      // Dropped before its report: still not ready, so still apart.
+      h.tasks.close("t-gone", { status: "dropped", reason: "cancelled", actor: "host" });
+      await service.refresh();
+      expect(service.snapshot().extensions[0]).toMatchObject({ id: "clock", running: false });
+      expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed.clock);
+    } finally {
+      service.dispose();
+    }
+  });
+});
+
+describe("PersonalExtensions and the host-owned switch (Step 5)", () => {
+  /**
+   * Off is not a renderer trick: the core stops every server module and pushes ONE empty
+   * snapshot, which is what unmounts the panels. A background task still
+   * ticking, or a `server.ts` still answering, would mean the switch did
+   * not take back what it promises to.
+   */
+  it("off unmounts everything personal in one push and stops the server modules; on brings them back", async () => {
+    const h = await harness();
+    h.write("prs/panel.tsx", PANEL);
+    h.write(
+      "meter/server.ts",
+      [
+        "let ticks = 0;",
+        "export const actions = { count: () => ticks };",
+        "export const background = {",
+        "  sample: { everyMs: 1000, run: (context) => { ticks += 1; context.db.set('ticks', ticks); } },",
+        "};",
+      ].join("\n"),
+    );
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      expect(service.isEnabled).toBe(true);
+      expect(service.snapshot().extensions.map((e) => e.id)).toEqual(["meter", "prs"]);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(h.store.get("meter", "ticks")).toBe(1);
+
+      h.pushes.length = 0;
+      await service.setEnabled(false);
+      // One tick: one push, and it is empty.
+      expect(h.pushes).toEqual([{ channel: "inf:plugins:personal", payload: { extensions: [] } }]);
+      expect(service.isEnabled).toBe(false);
+      expect(service.snapshot()).toEqual({ extensions: [] });
+      // The server module is gone, not merely hidden: its action is
+      // unreachable and its background timer is disposed with it.
+      expect(await service.invoke("meter", "count", null)).toEqual({
+        ok: false,
+        error: '"meter" is not in the personal workspace',
+      });
+      const ticksWhenOff = h.store.get("meter", "ticks");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(h.store.get("meter", "ticks")).toBe(ticksWhenOff);
+
+      // Setting it to what it already is changes nothing and pushes nothing.
+      h.pushes.length = 0;
+      await service.setEnabled(false);
+      expect(h.pushes).toEqual([]);
+
+      // On again: the workspace is scanned and the panels come back.
+      await service.setEnabled(true);
+      expect(service.snapshot().extensions.map((e) => e.id)).toEqual(["meter", "prs"]);
+      expect(await service.invoke("meter", "count", null)).toMatchObject({ ok: true });
+    } finally {
+      service.dispose();
+      rmSync(join(h.workspaceDir, ".."), { recursive: true, force: true });
+    }
+  });
+
+  it("a rescan that changed nothing does not push again", async () => {
+    const h = await harness();
+    h.write("prs/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      h.pushes.length = 0;
+      await service.refresh();
+      expect(h.pushes.filter((p) => p.channel === "inf:plugins:personal")).toEqual([]);
+    } finally {
+      service.dispose();
+      rmSync(join(h.workspaceDir, ".."), { recursive: true, force: true });
+    }
+  });
+
+  it("a save on disk reloads without a manual refresh", async () => {
+    const h = await harness();
+    h.write("clock/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, debounceMs: 20, pollMs: 25 });
+    try {
+      const first = service.snapshot().extensions[0]?.panel?.version;
+      expect(first).toMatch(/^[0-9a-f]{16}$/);
+      h.write("clock/panel.tsx", `${PANEL}\n// edited`);
+      await vi.waitFor(
+        () => {
+          expect(service.snapshot().extensions[0]?.panel?.version).not.toBe(first);
+        },
+        { timeout: 3_000, interval: 20 },
+      );
+    } finally {
+      service.dispose();
+      rmSync(join(h.workspaceDir, ".."), { recursive: true, force: true });
+    }
+  });
+
+  it("starting off runs nothing at all: no seed, no scan, no compile", async () => {
+    const h = await harness();
+    h.write("prs/panel.tsx", PANEL);
+    const service = await PersonalExtensions.start({ ...h, watch: false, enabled: false });
+    try {
+      expect(service.isEnabled).toBe(false);
+      expect(service.snapshot()).toEqual({ extensions: [] });
+      // The workspace was never seeded and nothing was compiled into the cache.
+      expect(existsSync(join(h.workspaceDir, "AGENTS.md"))).toBe(false);
+      expect(existsSync(h.cacheRoot)).toBe(false);
+      // The two crewmate-facing checks say why rather than answering blankly.
+      expect(await service.lint("prs")).toContain("turned off right now");
+      expect(await service.capture("prs", "task-1")).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining("turned off right now"),
+      });
+
+      // The switch is the only way in, and it seeds on the way.
+      await service.setEnabled(true);
+      expect(service.snapshot().extensions.map((e) => e.id)).toEqual(["prs"]);
+      expect(existsSync(join(h.workspaceDir, "AGENTS.md"))).toBe(true);
+    } finally {
+      service.dispose();
+      rmSync(join(h.workspaceDir, ".."), { recursive: true, force: true });
+    }
+  });
+});

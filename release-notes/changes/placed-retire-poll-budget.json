@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-retire-poll-budget",
+      "reason": "The tests of a task that runs on another computer now wait up to five seconds instead of one for work that runs on both computers, such as bringing a closed task's working copy home before it is removed, so a busy check machine no longer fails them. The removal itself is unchanged, and nothing a person sees changes."
+    }
+  ]
+}

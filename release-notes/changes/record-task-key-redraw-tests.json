@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-task-key-redraw-tests",
+      "reason": "Internal test repair: the shared task-key helpers bring a key into view again when an opening record draws it anew mid-scroll. No user-facing behavior changes."
+    }
+  ]
+}

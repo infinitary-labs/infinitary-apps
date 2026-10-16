@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "offline-tools-know-every-firstmate-tool",
+      "reason": "Internal developer tooling: the offline dispatch corpus gives the plugin, label and knowledge tools a class, and the replay harness answers their recorded calls. Nothing in the app changes."
+    }
+  ]
+}

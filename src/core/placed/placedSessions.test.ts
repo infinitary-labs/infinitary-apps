@@ -1,0 +1,2015 @@
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import type { ServerResponse } from "node:http";
+import { join } from "node:path";
+import type { AccountView } from "@shared/accounts";
+import {
+  deviceForgeGateRef,
+  deviceForgeSignInCardId,
+  deviceForgeWaitLine,
+  noSignInsWaitLine,
+} from "@shared/deviceSetup";
+import type { DeviceView } from "@shared/devices";
+import type { ComputerForges } from "@shared/signIns";
+import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  beginAnthropicStream,
+  finishAnthropicStream,
+  type StubApi,
+  type StubRequest,
+  startStubApi,
+  writeAnthropicText,
+  writeAnthropicToolUse,
+} from "../../../tests/helpers/anthropicDialect";
+import { freePort } from "../../../tests/helpers/connectionClient";
+import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
+import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { Computers } from "../devices/computers";
+import { DevicePairing } from "../devices/pairing";
+import { createForgeResolver, type Forge } from "../forge";
+import type { ComputerAccounts } from "../helper/accounts";
+import { cleanUp } from "../helper/cleanUp";
+import type { HeldForges } from "../helper/forges";
+import { removeFromHome } from "../helper/fromHome";
+import { joinHome } from "../helper/join";
+import { PlacedTasks } from "../helper/placedTasks";
+import { type HelperRun, startHelper } from "../helper/run";
+import { SessionHost } from "../helper/sessionHost";
+import { startSignIns } from "../helper/signIns";
+import { WorkingCopies } from "../helper/workingCopies";
+import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
+import type { AccountVault } from "../pi/accountVault";
+import { createPiSessionFactory } from "../pi/sessionFactory";
+import type { ModelRuntime } from "../pi/types";
+import { SettingsStore } from "../storage/settingsStore";
+import { seedTask } from "../tasks/seedTask";
+import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
+import { git } from "../workspace/git";
+import { keptRefFor } from "../workspace/workspaceService";
+import { NO_PLACED_TASK } from "./placedWork";
+
+/**
+ * A task whose crewmate runs on a computer that runs work, end to end from
+ * the home's side (docs/helper.md, "Holding a conversation"): the real
+ * supervisor and task record over a real database, `PlacedSessions` behind
+ * the real connection and pairing, and the helper as the work mode composes
+ * it holding a real Pi conversation against a local stub of the model's API.
+ * A home restart is a new home over the same folder and port; a computer
+ * restart is a new helper over the same folder.
+ */
+
+// Integration budget (docs/test-cohorts.md): real git on the computer and
+// here, the slowest test 1.28 s at its fastest of nineteen runs on an Apple
+// silicon Mac, with git unclamped as below. A poll waits for work that
+// crosses the connection and runs git on both sides - a closed task's
+// working copy kept, brought home and deleted took 0.46 s alone and 1.7 s
+// with sixteen copies of this file running at once - so it waits up to
+// 5 s, never Vitest's 1 s.
+vi.setConfig({ testTimeout: 10_000, expect: { poll: { timeout: 5_000 } } });
+
+// On a Mac the product runs every git below the UI (`taskpolicy -c
+// utility`, utilityQos.ts), where it yields to every busier process. A case
+// here runs up to about a hundred gits one after another, so on a Mac
+// loaded by other runs it waited on that load rather than its own work and
+// ran past its budget. This file is about placed tasks, not that clamp
+// (utilityQos.test.ts holds it), so its git runs as on a Mac without
+// taskpolicy, at this run's own priority (tests/helpers/unclampedQos.ts).
+vi.mock("../utilityQos", async (importOriginal) =>
+  (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
+
+const PROVIDER = "fm-placed";
+const MODEL = "stub-1";
+const BUILDER = { name: "builder", uid: 502 };
+
+let api: StubApi;
+let runtime: ModelRuntime;
+
+beforeAll(async () => {
+  api = await startStubApi(() => true);
+  runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+});
+
+afterAll(async () => {
+  await api.close();
+});
+
+/** What the model does on one request: call tools, answer, or answer once a test lets it. */
+type Step =
+  | { tools: { name: string; args: Record<string, unknown> }[] }
+  | { text: string }
+  | { held: Promise<void>; text: string };
+
+/** The model, one step per request from now on; past the last step it answers "Done." */
+function model(steps: Step[]): void {
+  const first = api.requests.length;
+  api.answer((request: StubRequest, res: ServerResponse) => {
+    const step = steps[request.n - first - 1] ?? { text: "Done." };
+    beginAnthropicStream(res, 100, request.n);
+    if ("held" in step) {
+      void step.held.then(() => {
+        writeAnthropicText(res, 0, step.text);
+        finishAnthropicStream(res, "end_turn", 3);
+      });
+      return;
+    }
+    if ("text" in step) {
+      writeAnthropicText(res, 0, step.text);
+      finishAnthropicStream(res, "end_turn", 3);
+      return;
+    }
+    for (const [index, tool] of step.tools.entries())
+      writeAnthropicToolUse(res, index, {
+        id: `toolu_${request.n}_${index}`,
+        name: tool.name,
+        args: tool.args,
+      });
+    finishAnthropicStream(res, "tool_use", 5);
+  });
+}
+
+/** A gate a model step waits at. */
+function gate(): { held: Promise<void>; open: () => void } {
+  let open!: () => void;
+  const held = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { held, open };
+}
+
+/** The words of every user turn a request carried. */
+function said(request: StubRequest | undefined): string {
+  return JSON.stringify(request?.body.messages ?? []);
+}
+
+const stops: (() => Promise<void> | void)[] = [];
+
+/** The home's one clock: the wall clock, moved on when a case waits out a backoff. */
+let ahead = 0;
+const now = () => Date.now() + ahead;
+
+afterEach(async () => {
+  for (const stop of stops.splice(0).reverse()) await stop();
+  ahead = 0;
+  vi.unstubAllEnvs();
+});
+
+/** The home over its folder, with this file's clock, on real Pi's control plane. */
+function startHome(
+  userData: string,
+  port: number,
+  pairing: () => DevicePairing,
+  forgeFor?: () => Forge,
+  extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> = {},
+): PlacedHome {
+  const home = startPlacedHome({
+    userData,
+    port,
+    pairing,
+    now,
+    binding: { backend: "pi", runtime },
+    profiles: {
+      pi: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }).controlProfile,
+    },
+    ...(forgeFor ? { forgeFor } : {}),
+    ...(extra.routing ? { routing: extra.routing } : {}),
+    ...(extra.runsForAnotherFirstmate
+      ? { runsForAnotherFirstmate: extra.runsForAnotherFirstmate }
+      : {}),
+    log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[home] ${line}\n`),
+  });
+  stops.push(home.quit);
+  return home;
+}
+
+/**
+ * The computer's own sign-ins as it lists them for its home, answered by the
+ * real sign-in host over the account rows it holds and the models each
+ * serves there; nothing is signed in.
+ */
+function signedInTo(
+  accounts: AccountView[],
+  forgesView?: () => ComputerForges,
+  served: ServedThere[] = [],
+) {
+  const held = {
+    vault: {
+      views: async () => accounts,
+      swept: async () => {},
+      onCutOffChange: () => () => true,
+      customViews: () => [],
+      availableModelsByAccount: () =>
+        served.map((row) => ({
+          ...row,
+          accountLabel: row.accountId,
+          providerId:
+            accounts.find((account) => account.id === row.accountId)?.providerId ?? "unknown",
+        })),
+    } as unknown as AccountVault,
+    providers: () => [],
+    allowance: () => null,
+    readAllowance: async () => null,
+    close: () => {},
+  } satisfies ComputerAccounts;
+  const forges = {
+    view: () => forgesView?.() ?? { signIns: [], hosts: [] },
+    start: async () => {},
+    cancel: () => {},
+    signOut: () => {},
+    checkHealth: async () => {},
+    close: () => {},
+  } satisfies HeldForges;
+  return (start: Parameters<typeof startSignIns>[0]) =>
+    startSignIns({ ...start, accounts: async () => held, forges: () => forges });
+}
+
+/** A home and a computer joined to it as another user, running work with real Pi. */
+async function world(
+  forgeFor?: () => Forge,
+  options: {
+    remoteLogin?: string;
+    /** This Mac's own subscriptions, for a home that routes. */
+    routing?: Parameters<typeof startPlacedHome>[0]["routing"];
+    /** The accounts the computer lists as its own sign-ins. */
+    signedInTo?: AccountView[];
+    /** The models each of those accounts serves there, as that computer reads them. */
+    served?: ServedThere[];
+    /** The computer's own sign-ins where projects live, as it lists them. */
+    forges?: () => ComputerForges;
+    /** Whether the computer's clone is refused by GitHub for want of its own sign-in there. */
+    refuseClone?: () => boolean;
+    /** What the computer's conversations run on; this file's stub unless named. */
+    runtime?: ModelRuntime;
+    /** Whether Firstmate there runs work for another Firstmate now, as the home's SSH connection found. */
+    runsForAnotherFirstmate?: (deviceId: string) => boolean;
+  } = {},
+) {
+  const userData = scratchDir("infinitary-placed-home-");
+  let pairing: DevicePairing | undefined;
+  const pairingNow = () => {
+    pairing ??= new DevicePairing({
+      dir: join(userData, "devices"),
+      onProblem: () => {},
+      interfaces: () => ({}),
+      ownUid: 501,
+    });
+    return pairing;
+  };
+  stops.push(() => pairing?.dispose());
+  const port = await freePort();
+  let home = startHome(userData, port, pairingNow, forgeFor, options);
+  await home.listen();
+  const { link } = pairingNow().invite(
+    { kind: "work", at: `127.0.0.1:${port}` },
+    // Added by its address, as the home does over Remote Login.
+    options.remoteLogin ? { remoteLogin: options.remoteLogin } : {},
+  );
+  await home.settled();
+  const dataDir = scratchDir("infinitary-placed-computer-");
+  const joined = await joinHome({
+    text: link,
+    dataDir,
+    io: { say: () => {}, ask: async () => "yes" },
+    device: { name: "Mac mini", user: BUILDER },
+    timeoutMs: 2_000,
+  });
+  if (!joined.ok) throw new Error(joined.reason);
+  const deviceId = joined.grant.deviceId;
+
+  let run: HelperRun | undefined;
+  /** The computer refuses to open a conversation, as one with no sign-in for its provider does. */
+  let refusing = false;
+  /** Every binding the home asked the computer to resolve with its own sign-ins. */
+  const bound: PlacedSpec["binding"][] = [];
+  const startComputer = () => {
+    const started = startHelper({
+      dataDir,
+      say: () => {},
+      retryMs: [20],
+      ...(options.signedInTo
+        ? { signIns: signedInTo(options.signedInTo, options.forges, options.served) }
+        : {}),
+      // Removed, it removes what Firstmate set up here; no agent was set up.
+      cleanUp: () => cleanUp({ dataDir, background: null }),
+      conversations: async ({ dataDir: dir, ask }) => {
+        const copies = new WorkingCopies(dir, { pool: false });
+        if (options.refuseClone) {
+          // GitHub refuses the clone for want of this computer's own sign-in,
+          // as its git would say it (`forgeAuthRequired`).
+          const prepare = copies.prepare.bind(copies);
+          copies.prepare = async (task, project, seed) => {
+            if (options.refuseClone?.())
+              throw new ForgeAuthRequiredError("GitHub requires sign-in to fetch this project.");
+            return prepare(task, project, seed);
+          };
+        }
+        const host = new SessionHost({
+          tasks: new PlacedTasks(dir, copies.worktreesDir),
+          copies,
+          ask,
+          factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+          bind: async (binding) => {
+            bound.push(binding);
+            if (refusing) throw new Error(`This computer has no sign-in for ${PROVIDER} here.`);
+            return { backend: "pi", runtime: options.runtime ?? runtime };
+          },
+          log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[computer] ${line}\n`),
+        });
+        return { host, close: () => host.close() };
+      },
+    });
+    if (!started.ok) throw new Error(started.reason);
+    run = started.run;
+  };
+  stops.push(() => run?.stop());
+  startComputer();
+
+  /** Resolves once the computer is in reach and its roster read. */
+  const inReach = async (taskId = "none") => {
+    await expect.poll(() => home.placed.ready(deviceId, taskId)).toBe(true);
+  };
+  await inReach();
+  return {
+    deviceId,
+    dataDir,
+    home: () => home,
+    pairing: pairingNow,
+    /** Whether the computer's own process still runs. */
+    running: () => run,
+    inReach,
+    /** A queued task placed on the computer, started now that it is in reach. */
+    start: async (id: string, prompt = "Fix the footer.", repoId?: string) => {
+      seedTask(home.tasks, {
+        id,
+        title: "website",
+        prompt,
+        status: "queued",
+        deviceId,
+        ...(repoId ? { repoId } : {}),
+      });
+      await home.supervisor.dispatchQueuedTask(id);
+      expect(home.tasks.get(id)?.status).toBe("active");
+    },
+    /** Firstmate on the home quits and starts again over the same folder and port. */
+    restartHome: async () => {
+      await home.quit();
+      pairing?.dispose();
+      pairing = undefined;
+      home = startHome(userData, port, pairingNow, forgeFor, options);
+      await home.listen();
+    },
+    /** The computer's own process quits, and starts again from the same folder. */
+    restartComputer: async () => {
+      await run?.stop();
+      startComputer();
+    },
+    /** The computer's own process quits, as when nobody is logged in there. */
+    stopComputer: async () => {
+      await run?.stop();
+    },
+    /** The computer's folder for a task. */
+    folders: (taskId: string) =>
+      placedTaskFolders(join(dataDir, "tasks"), taskId, join(dataDir, "worktrees")),
+    /** Every binding the home asked the computer to resolve, oldest first. */
+    bound,
+    /** Whether the computer refuses to open a conversation from now on. */
+    refuseOpens: (on: boolean) => {
+      refusing = on;
+    },
+    /** What the computer holds: a folder per task, and a working copy per task. */
+    holds: () => ({
+      tasks: listed(join(dataDir, "tasks")),
+      workingCopies: listed(join(dataDir, "worktrees")),
+    }),
+  };
+}
+
+/** This Mac signed in to Codex alone, with allowance to spare, and the catalog it lists. */
+const THIS_MAC_ON_CODEX = {
+  available: [{ provider: "openai-codex", id: "gpt-6-sol" }],
+  catalog: [
+    { provider: "codex", id: "gpt-6-sol", label: "GPT-6 Sol", effectivePercentRemaining: 90 },
+  ],
+  catalogModels: [
+    { provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" },
+    { provider: "xai", id: "grok-stub", name: "Grok stub" },
+  ],
+};
+
+/** The models one account on a computer serves, as that computer's own runtime lists them. */
+type ServedThere = { accountId: string; models: { provider: string; id: string; name?: string }[] };
+
+/**
+ * OpenRouter's list as Pi reads it on a computer signed in to it: more than
+ * four hundred models (405 on 2026-10-09, Pi's own list merged with pi.dev's),
+ * of which the board lists only OpenRouter's own aliases.
+ */
+function openRouterList(listed: readonly string[]): ServedThere["models"] {
+  const others = Array.from({ length: 450 }, (_, n) => `vendor-${n}/model-${n}`);
+  return [...listed, ...others].map((id) => ({ provider: "openrouter", id, name: id }));
+}
+
+/** An account row as a computer lists it: signed in and serving unless a test says otherwise. */
+function computerAccount(
+  id: string,
+  providerId: string,
+  extra: Partial<AccountView> = {},
+): AccountView {
+  return {
+    id,
+    providerId,
+    kind: "subscription_oauth",
+    label: id,
+    enabled: true,
+    connected: true,
+    pinned: false,
+    createdAt: 1,
+    ...extra,
+  };
+}
+
+/** The reasons a task's routing decisions recorded, oldest first. */
+function routingReasons(home: PlacedHome, taskId: string): string[] {
+  const rows = home.db
+    .prepare("SELECT reasons_json FROM decisions WHERE kind = 'routing' AND task_id = ?")
+    .all(taskId) as { reasons_json: string }[];
+  return rows.flatMap((row) => JSON.parse(row.reasons_json) as string[]);
+}
+
+/** The folders under `dir`, none when it is absent. */
+function listed(dir: string): string[] {
+  return existsSync(dir) ? readdirSync(dir).sort() : [];
+}
+
+/** The timeline kinds a task's record holds, oldest first. */
+function kinds(home: PlacedHome, taskId: string): string[] {
+  return home.tasks.timeline(taskId).map((event) => event.kind);
+}
+
+it("carries only the opt-in to the running computer, which reads its own local files", async () => {
+  const at = await world();
+  const computerHome = scratchDir("fm-personal-computer-home-");
+  writeFileSync(join(computerHome, "AGENTS.md"), "Computer user's local style.");
+  const skill = join(computerHome, ".agents", "skills", "computer-rivets");
+  mkdirSync(skill, { recursive: true });
+  writeFileSync(
+    join(skill, "SKILL.md"),
+    "---\nname: computer-rivets\ndescription: Computer rivet rules.\n---\nCount here.",
+  );
+  const sent = vi.spyOn(at.home().devices, "ask");
+  new SettingsStore(at.home().db).setPersonalResourcesEnabled(true);
+  vi.stubEnv("HOME", computerHome);
+  model([
+    { tools: [{ name: "report", args: { text: "Local resources served.", summary: "Served." } }] },
+    { text: "Reported." },
+  ]);
+  const first = api.requests.length;
+  await at.start("t-personal");
+  await expect
+    .poll(() => at.home().tasks.get("t-personal")?.outcome)
+    .toBe("Local resources served.");
+  const system = JSON.stringify(api.requests[first]?.body.system);
+  expect(system).toContain("Computer user's local style.");
+  expect(system).toContain("Computer rivet rules.");
+  const open = sent.mock.calls.find((call) => call[1] === "inf:session:open");
+  expect(open).toBeDefined();
+  const [order] = workOrders["inf:session:open"].request.parse(open?.[2]);
+  expect(order?.spec.personalResources).toBe(true);
+  expect(order?.spec.instructions).not.toContain("Computer user's local style.");
+  expect(order?.spec.instructions).not.toContain(computerHome);
+  sent.mockRestore();
+  const record = at.home().tasks.get("t-personal")?.sessionFile;
+  expect(record).toBeTruthy();
+  await expect
+    .poll(() => (record ? readFileSync(record, "utf8") : ""))
+    .toContain("personal-resources");
+  console.info("Placed resources:", system.slice(system.indexOf("Personal instructions from")));
+});
+
+describe("a task that runs on a computer that runs work", () => {
+  it("starts there, does each callback once here, and keeps its report and a copy of its record", async () => {
+    const at = await world();
+    model([
+      { tools: [{ name: "note_progress", args: { text: "Started on the footer." } }] },
+      { tools: [{ name: "report", args: { text: "The footer is fixed.", summary: "Fixed." } }] },
+      { text: "Reported." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-first");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-first")?.outcome).toBe("The footer is fixed.");
+    expect(home.tasks.get("t-first")).toMatchObject({
+      deviceId: at.deviceId,
+      activity: "idle",
+      worktreeDir: "",
+      sessionFile: expect.stringContaining(at.folders("t-first").sessions),
+    });
+    // Its brief reached the model there, as a crewmate told that computer's folders.
+    const brief = api.requests[requests];
+    expect(said(brief)).toContain("Fix the footer.");
+    expect(JSON.stringify(brief?.body.system)).toContain(at.folders("t-first").evidence);
+    // Each callback had its effect here once, and the brief left the lane.
+    expect(kinds(home, "t-first").filter((kind) => kind === "progress")).toHaveLength(1);
+    expect(home.inbox.allFor("t-first")).toEqual([]);
+    expect(home.inbox.inFlight("t-first")).toEqual([]);
+    expect(api.requests.length - requests).toBe(3);
+    // The crew's events reached the feed as any crewmate's do, named by where it runs.
+    expect(home.events).toContainEqual(
+      expect.objectContaining({ type: "task_started", taskId: "t-first", machineId: at.deviceId }),
+    );
+    expect(home.events).toContainEqual(
+      expect.objectContaining({ type: "tool_start", taskId: "t-first", toolName: "report" }),
+    );
+    // A copy of its record is here, the same bytes as there.
+    const there = at.folders("t-first").sessions;
+    const [file] = readdirSync(there);
+    expect(file).toBeDefined();
+    const copy = join(crewmateSessionsDir(home.paths, "t-first"), file ?? "");
+    expect(readFileSync(copy, "utf8")).toBe(readFileSync(join(there, file ?? ""), "utf8"));
+    // Every callback's answer is kept here, by its id.
+    const calls = readFileSync(
+      join(crewmatePlacedDir(home.paths, "t-first"), "calls.jsonl"),
+      "utf8",
+    )
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { channel: string });
+    expect(calls.map((call) => call.channel)).toEqual(["inf:work:progress", "inf:work:report"]);
+  });
+
+  it("holds the task out of reach while the connection is gone, and catches up exactly once it is back", async () => {
+    const at = await world();
+    const slow = gate();
+    model([
+      { held: slow.held, text: "The footer is fixed after a wait." },
+      { text: "The footer is blue now." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-drop");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    const home = at.home();
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+
+    // Out of reach: words wait on its lane, nothing calls it stuck, and after
+    // a minute the feed says so once.
+    expect(await home.supervisor.steerCrewmate("t-drop", "Make it blue too.")).toBe(
+      "recorded-held",
+    );
+    const before = kinds(home, "t-drop").length;
+    home.supervisor.checkQuietTasks(now() + 3 * 60 * 60 * 1000);
+    expect(kinds(home, "t-drop").slice(before)).not.toContain("note");
+    home.placed.tick(now() + 61_000);
+    home.placed.tick(now() + 120_000);
+    const lines = () =>
+      home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+    expect(lines().filter((line) => line.includes("out of reach"))).toEqual([
+      "Mac mini is out of reach. Its work on website catches up here when it is back.",
+    ]);
+
+    // The turn goes on there and ends while the home cannot hear it.
+    slow.open();
+    await expect.poll(() => api.openRequests()).toBe(0);
+    expect(home.tasks.get("t-drop")?.activity).toBe("running");
+
+    await home.listen();
+    await expect.poll(() => home.tasks.get("t-drop")?.outcome).toBe("The footer is blue now.");
+    // Caught up exactly: the first turn's end, then the held words as the next turn, each once.
+    expect(api.requests.length - requests).toBe(2);
+    expect(said(api.requests.at(-1))).toContain("Make it blue too.");
+    expect(home.inbox.allFor("t-drop")).toEqual([]);
+    expect(lines()).toContain("Mac mini is back. Its work on website caught up.");
+  });
+
+  it("never says the work of a computer that runs work for another Firstmate now catches up when it is back", async () => {
+    let left = false;
+    const at = await world(undefined, { runsForAnotherFirstmate: () => left });
+    model([{ text: "Waiting for review." }]);
+    await at.start("t-left");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-left")?.activity).toBe("idle");
+
+    // It left this Firstmate for another one, and this Mac's SSH connection found that.
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    left = true;
+    home.placed.tick(now() + 61_000);
+    home.placed.tick(now() + 120_000);
+    const lines = home.events.flatMap((event) =>
+      event.type === "firstmate_note" && event.text.startsWith("Mac mini") ? [event.text] : [],
+    );
+    expect(lines).toEqual([
+      "Mac mini runs work for another first mate now. Its work on website stops when you remove it here.",
+    ]);
+  });
+
+  it("never nudges, wakes about or calls stuck an idle task whose computer is out of reach", async () => {
+    const at = await world();
+    model([{ text: "Waiting for review." }]);
+    await at.start("t-idle");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-idle")?.activity).toBe("idle");
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    const wakes = home.wakes.length;
+    // Hours of its idle clock pass while that computer is gone.
+    for (const hours of [1, 2, 3]) home.supervisor.reconcileIdle(now() + hours * 60 * 60 * 1000);
+    expect(home.inbox.allFor("t-idle")).toEqual([]);
+    expect(home.wakes.slice(wakes)).toEqual([]);
+    expect(home.tasks.get("t-idle")?.recoveryRung ?? 0).toBe(0);
+  });
+
+  it("follows a turn a home restart left running there, with no second prompt, and keeps the report it already gave", async () => {
+    const at = await world();
+    const slow = gate();
+    model([
+      { tools: [{ name: "report", args: { text: "Reported before the restart." } }] },
+      { held: slow.held, text: "Still finishing." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-restart");
+    // The report is answered here, and the turn goes on there.
+    await expect
+      .poll(() => existsSync(join(crewmatePlacedDir(at.home().paths, "t-restart"), "calls.jsonl")))
+      .toBe(true);
+    await expect.poll(() => api.openRequests()).toBe(1);
+
+    await at.restartHome();
+    const home = at.home();
+    // The restart did not mark it interrupted: the turn there is followed here.
+    await expect.poll(() => home.tasks.get("t-restart")?.activity).toBe("running");
+    await expect.poll(() => home.placed.ready(at.deviceId, "t-restart")).toBe(true);
+
+    slow.open();
+    await expect.poll(() => home.tasks.get("t-restart")?.activity).toBe("idle");
+    expect(home.tasks.get("t-restart")?.outcome).toBe("Reported before the restart.");
+    // One brief, asked of the model once: no turn ran twice.
+    expect(api.requests.length - requests).toBe(2);
+    expect(home.inbox.inFlight("t-restart")).toEqual([]);
+    expect(home.inbox.allFor("t-restart")).toEqual([]);
+  });
+
+  it("fails a turn the computer's restart cut off, and its lane runs the words there again", async () => {
+    const at = await world();
+    const never = gate();
+    model([{ held: never.held, text: "Never said." }, { text: "Picked the footer up again." }]);
+    const requests = api.requests.length;
+    await at.start("t-computer");
+    await expect.poll(() => api.openRequests()).toBe(1);
+
+    await at.restartComputer();
+    const home = at.home();
+    // That turn failed here, saying why; its brief waits on the lane for the honest retry.
+    await expect.poll(() => home.tasks.get("t-computer")?.activity).toBe("idle");
+    // The Firstmate hears it as the honest retry's first failure, in words a person reads.
+    expect(home.wakes.map((wake) => wake.facts?.kind)).toContain("outage-failed");
+    expect(JSON.stringify(home.wakes)).toContain("Mac mini quit before this turn finished");
+    expect(home.inbox.allFor("t-computer")).toHaveLength(1);
+
+    // The lane runs it again there, in the conversation reopened from its record.
+    never.open();
+    ahead = 10 * 60_000;
+    await home.supervisor.sweepInbox(now());
+    await expect
+      .poll(() => home.tasks.get("t-computer")?.outcome)
+      .toBe("Picked the footer up again.");
+    expect(api.requests.length - requests).toBe(2);
+    expect(said(api.requests.at(-1))).toContain("Fix the footer.");
+  });
+
+  it("closes the conversation there when its record closes, now or once the computer is back", async () => {
+    const at = await world();
+    model([{ text: "Done here." }, { text: "Done there." }]);
+    await at.start("t-close-now");
+    await at.start("t-close-later");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-close-later")?.activity).toBe("idle");
+    const roster = async () =>
+      (await home.devices.ask(at.deviceId, "inf:session:roster", [])) as {
+        tasks: { task: string; closed: boolean }[];
+      };
+
+    await home.supervisor.interruptCrewmate("t-close-now", "cancel");
+    await expect
+      .poll(async () => (await roster()).tasks.find((task) => task.task === "t-close-now")?.closed)
+      .toBe(true);
+
+    await home.drop();
+    await home.supervisor.interruptCrewmate("t-close-later", "cancel");
+    await home.listen();
+    await expect
+      .poll(
+        async () => (await roster()).tasks.find((task) => task.task === "t-close-later")?.closed,
+      )
+      .toBe(true);
+  });
+
+  it("keeps a card's demo recording once its last piece arrives, and never a piece past its end", async () => {
+    const at = await world();
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-demo",
+      title: "Shows a demo",
+      status: "running",
+      deviceId: at.deviceId,
+    });
+    const id = `t-demo-${"e".repeat(32)}`;
+    const recording = Buffer.from(Array.from({ length: 10 }, (_, at) => at));
+    const kept = join(crewmateCardPicturesDir(home.paths, "t-demo"), `${id}.mp4`);
+    const piece = (callId: string, offset: number, bytes: Buffer, size = recording.length) =>
+      home.placed.answer(at.deviceId, "inf:work:media", {
+        task: "t-demo",
+        callId,
+        id,
+        extension: "mp4",
+        offset,
+        size,
+        data: bytes.toString("base64"),
+      });
+    await piece("call-1", 0, recording.subarray(0, 6));
+    // Part of it is no recording a card may name yet.
+    expect(existsSync(kept)).toBe(false);
+    await piece("call-2", 6, recording.subarray(6));
+    expect(readFileSync(kept)).toEqual(recording);
+    await expect(piece("call-3", 8, recording.subarray(0, 4))).rejects.toThrow(
+      /past the recording's end/,
+    );
+    // Another task's recording is not this task's to keep.
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:media", {
+        task: "t-demo",
+        callId: "call-4",
+        id: `t-other-${"e".repeat(32)}`,
+        extension: "mp4",
+        offset: 0,
+        size: 1,
+        data: "AA==",
+      }),
+    ).rejects.toThrow(/not this task's/);
+  });
+
+  it("refuses what a computer asks about a task this Mac does not run there", async () => {
+    const at = await world();
+    const home = at.home();
+    seedTask(home.tasks, { id: "t-here", title: "Runs here", status: "running" });
+    seedTask(home.tasks, {
+      id: "t-elsewhere",
+      title: "Runs on another computer",
+      status: "running",
+      deviceId: "another-mac",
+    });
+    for (const task of ["t-here", "t-elsewhere", "t-missing"])
+      await expect(
+        home.placed.answer(at.deviceId, "inf:work:report", {
+          task,
+          callId: "call-1",
+          text: "Not yours.",
+        }),
+      ).rejects.toThrow(NO_PLACED_TASK);
+  });
+
+  it("works in a working copy cloned there, opens its change from here once its branch is home, and takes its kept work home before that computer deletes the copy", async () => {
+    const project = await gitProject();
+    const artifact = Buffer.from("the failing test's log\n");
+    const at = await world(() => project.forge(artifact));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    model([
+      { text: "Started on the footer." },
+      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", body: "Intent" } }] },
+      { tools: [{ name: "download_artifact", args: { runId: 41, artifactId: 9 } }] },
+      { text: "Opened, and read the artifact." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-copy", "Make the footer blue.", repo.id);
+
+    // The computer cloned the project and made the task's working copy there.
+    const work = at.folders("t-copy").work;
+    await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
+    expect(await git(work, ["rev-parse", "HEAD"])).toBe(project.main);
+    expect(await git(work, ["symbolic-ref", "--short", "HEAD"])).toBe("fm/task-t-copy");
+    expect(home.tasks.get("t-copy")).toMatchObject({
+      branch: "fm/task-t-copy",
+      worktreeDir: "",
+      workspaceState: "present",
+    });
+    expect(feed(home)).toContain("Mac mini cloned home.");
+    expect(home.tasks.timeline("t-copy").map((event) => event.text)).toContain(
+      "a new working copy was made on Mac mini, starting from the latest origin/main",
+    );
+    // Its first turn ran there, in that working copy.
+    expect(JSON.stringify(api.requests[requests]?.body.system)).toContain(work);
+
+    // The crewmate's work there: one commit, and an edit not yet committed.
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+    writeFileSync(join(work, "notes.txt"), "still thinking\n");
+    await home.supervisor.steerCrewmate("t-copy", "Open the change.");
+    // The brief's turn, then this one: open_change, download_artifact, its answer.
+    await expect.poll(() => api.requests.length - requests).toBe(4);
+    await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
+
+    // open_change ran here: the branch came home over the connection, and
+    // this Mac sent it up to where the project lives.
+    expect(await git(project.home, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
+    expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
+    expect(said(api.requests.at(-2))).toContain("Opened the pushed branch fm/task-t-copy");
+    // download_artifact downloaded here and wrote the file there, never here.
+    const written = join(work, ".infinitary-artifacts", "run-41", "artifact-9.zip");
+    expect(readFileSync(written).equals(artifact)).toBe(true);
+    expect(said(api.requests.at(-1))).toContain(
+      createHash("sha256").update(artifact).digest("hex"),
+    );
+    expect(existsSync(join(project.home, ".infinitary-artifacts"))).toBe(false);
+
+    // The task closes: its work is kept there, comes home, and only then is
+    // the working copy deleted there.
+    await home.supervisor.interruptCrewmate("t-copy", "cancel");
+    await expect.poll(() => home.tasks.get("t-copy")?.workspaceState).toBe("removed");
+    expect(existsSync(work)).toBe(false);
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-copy")]);
+    expect(await git(project.home, ["show", `${kept}:notes.txt`])).toBe("still thinking");
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
+    expect(await git(project.home, ["branch", "--list", "fm/task-t-copy"])).toBe("");
+    expect(home.tasks.timeline("t-copy").at(-1)?.text).toBe(
+      "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first",
+    );
+  });
+
+  it("keeps a closed task's working copy there while that computer is out of reach, and brings its work home once it is back", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started." }]);
+    await at.start("t-away", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-away")?.activity).toBe("idle");
+    const work = at.folders("t-away").work;
+    writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
+
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await home.supervisor.interruptCrewmate("t-away", "cancel");
+    expect(home.tasks.get("t-away")?.status).toBe("dropped");
+    // Nothing is deleted there, and nothing is counted as gone here.
+    expect(existsSync(work)).toBe(true);
+    expect(home.tasks.get("t-away")?.workspaceState).toBe("present");
+
+    await home.listen();
+    await expect.poll(() => home.tasks.get("t-away")?.workspaceState).toBe("removed");
+    expect(existsSync(work)).toBe(false);
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-away")]);
+    expect(await git(project.home, ["show", `${kept}:footer.html`])).toBe("<footer></footer>");
+  });
+
+  it("asks that computer what a task's working copy holds before discarding it, and holds the discard while nobody can tell", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started." }]);
+    await at.start("t-discard", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-discard")?.activity).toBe("idle");
+    const work = at.folders("t-discard").work;
+    writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
+    await commit(work, "feat: add the footer");
+
+    const refused = await home.supervisor.settleTaskDetailed("t-discard", "discard");
+    expect(refused.refusal?.refused).toBe("unlanded-work");
+    expect(refused.text).toContain("1 commit that were never merged");
+
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    const held = await home.supervisor.settleTaskDetailed("t-discard", "discard");
+    expect(held.refusal?.refused).toBe("unlanded-work");
+    expect(held.text).toContain("out of reach, so nobody can tell");
+    expect(home.tasks.get("t-discard")?.status).toBe("active");
+  });
+
+  it("takes its model among the subscriptions that computer is signed in to, on its own account there, never this Mac's", async () => {
+    const grok = await piStubRuntime(api.url, { provider: "xai", id: "grok-stub" });
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      // The computer is signed in to Grok alone, which this Mac is not.
+      signedInTo: [
+        computerAccount("acct_codex_off", "openai-codex", { enabled: false }),
+        computerAccount("acct_grok_there", "xai"),
+      ],
+      runtime: grok,
+    });
+    const home = at.home();
+    const requests = api.requests.length;
+    model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
+    await at.start("t-routed");
+    await expect.poll(() => home.tasks.get("t-routed")?.outcome).toBe("The footer is fixed.");
+    // Routed among that computer's own sign-ins, with the record saying so.
+    const [routed] = home.decisions.routing({ taskIds: ["t-routed"], chosen: true });
+    expect(routed).toMatchObject({ provider: "xai", model: "grok-stub" });
+    const who = home.placed.placeOf(at.deviceId).who;
+    expect(routingReasons(home, "t-routed")).toContain(
+      `routed among ${who}'s own sign-ins (xai): 1 model`,
+    );
+    // The computer was asked to bind its own account for that provider,
+    // and no account of this Mac's serves the task.
+    expect(at.bound).toEqual([{ backend: "pi", provider: "xai", accountId: "acct_grok_there" }]);
+    expect(home.tasks.get("t-routed")?.accountId).toBeNull();
+    expect(
+      home.tasks.timeline("t-routed").find((event) => event.kind === "dispatched")?.text,
+    ).toContain("xai/grok-stub");
+    // Its brief reached the model there.
+    expect(said(api.requests[requests])).toContain("Fix the footer.");
+  });
+
+  it("starts a task on a computer signed in only to OpenRouter, on one of that account's OpenRouter models there (FI3-1355)", async () => {
+    // OpenRouter is the one subscription this Mac's catalog does not list:
+    // the computer's own list is what its tasks route among.
+    const alias = "~anthropic/claude-sonnet-latest";
+    const openrouter = await piStubRuntime(api.url, { provider: "openrouter", id: alias });
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_or_there", "openrouter", { kind: "api_key" })],
+      served: [{ accountId: "acct_or_there", models: openRouterList([alias]) }],
+      runtime: openrouter,
+    });
+    const home = at.home();
+    const requests = api.requests.length;
+    model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
+    await at.start("t-openrouter");
+    await expect.poll(() => home.tasks.get("t-openrouter")?.outcome).toBe("The footer is fixed.");
+    // Routed among that computer's OpenRouter models, none of them this Mac's.
+    const [routed] = home.decisions.routing({ taskIds: ["t-openrouter"], chosen: true });
+    expect(routed).toMatchObject({ provider: "openrouter", model: alias });
+    const who = home.placed.placeOf(at.deviceId).who;
+    expect(routingReasons(home, "t-openrouter")).toContain(
+      `routed among ${who}'s own sign-ins (openrouter): 451 models`,
+    );
+    // The computer bound its own OpenRouter account, and its brief reached the model there.
+    expect(at.bound).toEqual([
+      { backend: "pi", provider: "openrouter", accountId: "acct_or_there" },
+    ]);
+    expect(home.tasks.get("t-openrouter")?.accountId).toBeNull();
+    expect(said(api.requests[requests])).toContain("Fix the footer.");
+  });
+
+  it("does not start a task whose computer is signed in to no subscription that can take it, and makes nothing there", async () => {
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      // Its only account is switched off there.
+      signedInTo: [computerAccount("acct_grok_off", "xai", { enabled: false })],
+    });
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-bare",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    await home.supervisor.dispatchQueuedTask("t-bare");
+    const who = home.placed.placeOf(at.deviceId).who;
+    expect(home.tasks.get("t-bare")).toMatchObject({
+      status: "open",
+      gate: {
+        kind: "captain",
+        ref: "dispatch-failed",
+        reason: `${who} has no subscription of its own that can take this task now. Sign it in to one in Settings → Intelligence.`,
+      },
+    });
+    // Neither this Mac's Codex nor anything else was chosen in its place.
+    expect(home.decisions.routing({ taskIds: ["t-bare"], chosen: true })).toEqual([]);
+    expect(at.bound).toEqual([]);
+    expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
+  });
+
+  it("waits for a computer with no sign-ins yet, says so once, and starts by itself once it has one (FI3-1350)", async () => {
+    // The computer lists no account at all; one appears once the captain signs it in there.
+    const accounts: AccountView[] = [];
+    const at = await world(undefined, { routing: THIS_MAC_ON_CODEX, signedInTo: accounts });
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-none",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    const { label } = home.placed.placeOf(at.deviceId);
+    await home.supervisor.dispatchQueuedTask("t-none");
+    // Queued work with no gate: nothing to press, nothing tried there.
+    expect(home.tasks.get("t-none")).toMatchObject({ status: "open", gate: null });
+    expect(at.bound).toEqual([]);
+    expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    const waits = () =>
+      feed(home).filter((line) => line === noSignInsWaitLine(label, "website's next task"));
+    expect(waits()).toHaveLength(1);
+    // Tried again at the next sweep, it still waits, and the feed says nothing twice.
+    await home.supervisor.sweepGates(now());
+    expect(home.tasks.get("t-none")?.status).toBe("open");
+    expect(waits()).toHaveLength(1);
+    expect(await home.supervisor.startQueuedNow("t-none", "captain")).toContain(
+      "has no sign-ins yet",
+    );
+
+    // Signed in there: the computer says so, and the task starts by itself.
+    model([{ text: "Done." }]);
+    accounts.push(computerAccount("acct_grok_there", "xai"));
+    await home.signIns.refresh(at.deviceId);
+    await expect.poll(() => home.tasks.get("t-none")?.status).toBe("active");
+    await expect
+      .poll(() => at.bound)
+      .toEqual([{ backend: "pi", provider: "xai", accountId: "acct_grok_there" }]);
+    await expect
+      .poll(() => feed(home))
+      .toContain(`website's next task started ${home.placed.placeOf(at.deviceId).where}.`);
+  });
+
+  it("holds a task for a GitHub project until its computer has its own GitHub sign-in, with the card and one feed line, and starts it once it does (FI3-1350)", async () => {
+    const forges: ComputerForges = { hosts: [{ host: "github.com", name: "GitHub" }], signIns: [] };
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_grok_there", "xai")],
+      forges: () => forges,
+    });
+    const home = at.home();
+    // A project that lives on GitHub, adopted here from a clone whose origin names it.
+    const project = await gitProject();
+    await git(project.home, ["remote", "set-url", "origin", "https://github.com/octo/website.git"]);
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, {
+      id: "t-github",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      repoId: repo.id,
+    });
+    await home.supervisor.dispatchQueuedTask("t-github");
+    const place = home.placed.placeOf(at.deviceId);
+    const ref = deviceForgeGateRef("github.com", at.deviceId);
+    expect(home.tasks.get("t-github")).toMatchObject({
+      status: "open",
+      deviceId: at.deviceId,
+      gate: { kind: "captain", ref },
+    });
+    // Nothing was tried there: no clone, no conversation.
+    expect(at.bound).toEqual([]);
+    expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    expect(
+      feed(home).filter(
+        (line) => line === deviceForgeWaitLine(`${repo.name}'s next task`, place.who),
+      ),
+    ).toHaveLength(1);
+    const cardId = deviceForgeSignInCardId("github.com", at.deviceId);
+    await expect
+      .poll(() => home.cards().find((card) => card.id === cardId))
+      .toMatchObject({
+        author: "host",
+        title: `Sign in to GitHub ${place.where}`,
+        actions: [
+          expect.objectContaining({
+            effect: {
+              kind: "open",
+              target: "projects",
+              forgeSignInOn: { deviceId: at.deviceId, host: "github.com" },
+            },
+          }),
+        ],
+      });
+
+    // The captain signed it in there: the computer says so, the card comes
+    // down, and the task starts by itself, cloning with that sign-in.
+    model([{ text: "Done." }]);
+    forges.signIns.push({
+      host: "github.com",
+      name: "GitHub",
+      login: "octo",
+      state: "ok",
+      since: 1,
+    });
+    await git(project.home, ["remote", "set-url", "origin", project.origin]);
+    await home.signIns.refresh(at.deviceId);
+    await expect.poll(() => home.tasks.get("t-github")?.status).toBe("active");
+    await expect.poll(() => home.cards().some((card) => card.id === cardId)).toBe(false);
+    await expect.poll(() => at.holds().workingCopies).toEqual(["t-github"]);
+  });
+
+  it("holds a task whose clone GitHub refused on its computer, typed, for that computer's own sign-in (FI3-1350)", async () => {
+    let refuse = true;
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_grok_there", "xai")],
+      // It offers no GitHub sign-in from here, so nothing holds it before the clone.
+      refuseClone: () => refuse,
+    });
+    const home = at.home();
+    const project = await gitProject();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, {
+      id: "t-refused",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      repoId: repo.id,
+    });
+    await home.supervisor.dispatchQueuedTask("t-refused");
+    const place = home.placed.placeOf(at.deviceId);
+    expect(home.tasks.get("t-refused")).toMatchObject({
+      status: "open",
+      deviceId: at.deviceId,
+      gate: { kind: "captain", ref: deviceForgeGateRef("github.com", at.deviceId) },
+    });
+    // Nothing was cloned there; the task's own folder there is a failed start's, cleaned later.
+    expect(at.holds().workingCopies).toEqual([]);
+    expect(feed(home)).toContain(deviceForgeWaitLine(`${repo.name}'s next task`, place.who));
+    await expect
+      .poll(() =>
+        home.cards().some((card) => card.id === deviceForgeSignInCardId("github.com", at.deviceId)),
+      )
+      .toBe(true);
+    // Lifted once that computer reports the sign-in: the clone goes through.
+    model([{ text: "Done." }]);
+    refuse = false;
+    await home.supervisor.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");
+    await expect.poll(() => home.tasks.get("t-refused")?.status).toBe("active");
+    expect(at.holds().workingCopies).toEqual(["t-refused"]);
+  });
+
+  it("starts nothing for a task whose computer takes no work, and never runs it here", async () => {
+    const at = await world();
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-waits",
+      title: "website",
+      status: "queued",
+      deviceId: "a-mac-on-another-version",
+    });
+    await home.supervisor.dispatchQueuedTask("t-waits");
+    expect(home.tasks.get("t-waits")?.status).toBe("open");
+    expect(home.placed.ready("a-mac-on-another-version", "t-waits")).toBe(false);
+  });
+});
+
+/**
+ * A project's Runs on (docs/helper.md, "Runs on"): the project's next task
+ * starts on the computer it names, waits while that computer is out of
+ * reach and says so once, and never runs here instead; moving the project
+ * leaves a started task where it is.
+ */
+describe("a project that runs on a computer that runs work", () => {
+  it("waits for that computer, says so once and again after a day, and starts its next task there once it is back", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+
+    // Out of reach: the task waits as queued work, placed there, and the
+    // feed says so once however often the sweep looks.
+    seedTask(home.tasks, { id: "t-next", title: "footer", status: "queued", repoId: repo.id });
+    await home.supervisor.dispatchQueuedTask("t-next");
+    await home.supervisor.dispatchQueuedTask("t-next");
+    expect(home.tasks.get("t-next")).toMatchObject({
+      status: "open",
+      deviceId: at.deviceId,
+      worktreeDir: "",
+    });
+    const waits = () => feed(home).filter((line) => line.includes("next task"));
+    expect(waits()).toEqual([
+      "home's next task waits for Builder. It never runs on this computer instead.",
+    ]);
+    expect(await home.supervisor.startQueuedNow("t-next")).toBe(
+      `${home.tasks.get("t-next")?.key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
+    );
+    expect(home.tasks.get("t-next")?.status).toBe("open");
+
+    // A day later the feed says it once more, with the way to run it here.
+    ahead += 24 * 60 * 60 * 1000;
+    await home.supervisor.dispatchQueuedTask("t-next");
+    await home.supervisor.dispatchQueuedTask("t-next");
+    expect(waits().slice(1)).toEqual([
+      "Running as Builder has been out of reach for a day. home's next task still waits.",
+    ]);
+    expect(feed(home)).toContain("To run it here instead, set home to run on this computer.");
+
+    // Back: it starts there, in a working copy that computer made, and its
+    // cards name where it runs.
+    model([
+      { tools: [{ name: "emit_card", args: { title: "Footer started", body: "<p>On it.</p>" } }] },
+      { text: "Started on the footer." },
+    ]);
+    await home.listen();
+    await at.inReach("t-next");
+    // Its coming back runs the ready sweep, which starts the task.
+    await home.supervisor.dispatchQueuedTask("t-next");
+    await expect.poll(() => home.tasks.get("t-next")?.branch).toBe("fm/task-t-next");
+    expect(home.tasks.get("t-next")).toMatchObject({
+      status: "active",
+      deviceId: at.deviceId,
+      branch: "fm/task-t-next",
+      worktreeDir: "",
+    });
+    expect(waits().at(-1)).toBe("home's next task started as Builder.");
+    // Where it runs rides beside the task's title, never inside it, so a
+    // long title gives way and the place stays whole.
+    await expect
+      .poll(() => home.cards().find((card) => card.title === "Footer started"))
+      .toMatchObject({ meta: "footer", place: "as Builder" });
+    expect(await git(at.folders("t-next").work, ["symbolic-ref", "--short", "HEAD"])).toBe(
+      "fm/task-t-next",
+    );
+
+    // Moved back here: the started task stays there, and the next one starts here.
+    home.repos.setRunsOn(repo.id, null);
+    seedTask(home.tasks, { id: "t-after", title: "header", status: "queued", repoId: repo.id });
+    await home.supervisor.dispatchQueuedTask("t-after");
+    expect(home.tasks.get("t-next")?.deviceId).toBe(at.deviceId);
+    expect(home.tasks.get("t-after")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-after")?.gate?.reason).toBe(
+      "A placed task asked this Mac's workspace for createTaskWorktree.",
+    );
+  });
+
+  it("queues a task commissioned while that computer is out of reach, and a task moved back here before it starts runs here", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+
+    const { taskId, crewmate } = await home.supervisor.commission({
+      title: "footer",
+      intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
+      repoId: repo.id,
+    });
+    expect(crewmate).toBe("queued");
+    expect(home.tasks.get(taskId)).toMatchObject({ status: "open", deviceId: at.deviceId });
+    expect(feed(home)).toContain(
+      "home's next task waits for Builder. It never runs on this computer instead.",
+    );
+
+    // The captain sets it to run here before it starts: it starts here.
+    home.repos.setRunsOn(repo.id, null);
+    await home.supervisor.dispatchQueuedTask(taskId);
+    expect(home.tasks.get(taskId)?.deviceId ?? null).toBeNull();
+    // This test's home keeps no working copies, so the start here is refused there.
+    expect(home.tasks.get(taskId)?.gate?.reason).toBe(
+      "A placed task asked this Mac's workspace for createTaskWorktree.",
+    );
+  });
+
+  it("starts a project kept on this Mac only here, and refuses to move it", async () => {
+    const at = await world();
+    const home = at.home();
+    const { repo } = await home.repos.setup({ kind: "init", name: "notes" });
+    expect(() => home.repos.setRunsOn(repo.id, at.deviceId)).toThrow(
+      "notes: Kept on this computer only, so its tasks run here.",
+    );
+    seedTask(home.tasks, { id: "t-notes", title: "notes", status: "queued", repoId: repo.id });
+    await home.supervisor.dispatchQueuedTask("t-notes");
+    // It started here: this test's home keeps no working copies of its own,
+    // so this Mac's workspace refusing to make one is the start here.
+    expect(home.tasks.get("t-notes")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-notes")?.gate?.reason).toBe(
+      "A placed task asked this Mac's workspace for createTaskWorktree.",
+    );
+  });
+});
+
+/**
+ * The captain's word on where a filed task runs, as update_task's runs_on
+ * carries it (the Firstmate's update delegate): refused in plain words, or
+ * kept on the record, and the task and its parts that have not started go
+ * there. Answers the refusal, or the change the record keeps.
+ */
+function askRunsOn(home: PlacedHome, taskId: string, ask: string | null): string {
+  const refused = home.supervisor.runsOnRefusal(taskId, ask);
+  if (refused) return refused;
+  const words = home.supervisor.runsOnWords(taskId, ask);
+  const changes = home.tasks.updateFields(taskId, { runsOn: { ask, words } }, "firstmate");
+  home.supervisor.runsOnChanged(taskId);
+  return changes.join(", ");
+}
+
+/** The task's record, which the case knows exists. */
+function recordOf(home: PlacedHome, taskId: string) {
+  const record = home.tasks.get(taskId);
+  if (!record) throw new Error(`No task ${taskId}`);
+  return record;
+}
+
+/** Manual-placement journeys name their starting computer instead of borrowing a default. */
+async function adoptHere(repos: PlacedHome["repos"], path: string) {
+  const result = await repos.setup({ kind: "adopt", path });
+  return { ...result, repo: repos.setRunsOn(result.repo.id, null) };
+}
+
+/** Where this Mac's workspace refused to start a task here: this test's home keeps no working copies. */
+const STARTED_HERE = "A placed task asked this Mac's workspace for createTaskWorktree.";
+
+/**
+ * A task's own Runs on (docs/helper.md, "A task's own Runs on"): the
+ * captain tells Firstmate where one task runs, before it starts. It wins
+ * over its project's Runs on, for the task and each part of it with none
+ * of its own, and stays when the project moves.
+ */
+describe("a task's own Runs on", () => {
+  it("starts a task on the computer the captain named while its project runs here, and its card says where", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    expect(home.repos.get(repo.id)?.runsOn).toBeNull();
+    model([
+      { tools: [{ name: "emit_card", args: { title: "Footer started", body: "<p>On it.</p>" } }] },
+      { text: "Started on the footer." },
+    ]);
+    const { taskId, crewmate } = await home.supervisor.commission({
+      title: "footer",
+      intent: { goal: "Make the footer blue.", userWords: "make the footer blue on the mini" },
+      repoId: repo.id,
+      shape: { runs_on_ask: at.deviceId },
+    });
+    expect(crewmate).not.toBe("queued");
+    await expect.poll(() => home.tasks.get(taskId)?.branch).toBe(`fm/task-${taskId}`);
+    expect(home.tasks.get(taskId)).toMatchObject({
+      status: "active",
+      deviceId: at.deviceId,
+      worktreeDir: "",
+    });
+    await expect
+      .poll(() => home.cards().find((card) => card.title === "Footer started"))
+      .toMatchObject({ meta: "footer", place: "as Builder" });
+    expect(home.supervisor.runsOnFact(recordOf(home, taskId))).toEqual({
+      label: "Running as Builder",
+      source: "task",
+    });
+    // Started, it finishes there.
+    expect(askRunsOn(home, taskId, "this-mac")).toBe(
+      `${recordOf(home, taskId).key} "footer" has started, so it finishes where it started, as Builder.`,
+    );
+
+    // The project's next task, with nothing said, starts here as before.
+    seedTask(home.tasks, { id: "t-here", title: "header", status: "queued", repoId: repo.id });
+    expect(home.supervisor.runsOnFact(recordOf(home, "t-here"))).toEqual({
+      label: "This computer",
+      source: "project",
+    });
+    await home.supervisor.dispatchQueuedTask("t-here");
+    expect(home.tasks.get("t-here")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-here")?.gate?.reason).toBe(STARTED_HERE);
+  });
+
+  it("waits by its own name for the computer the captain named, stays when its project moves, and runs here once reset", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    seedTask(home.tasks, { id: "t-own", title: "footer", status: "queued", repoId: repo.id });
+    seedTask(home.tasks, { id: "t-follows", title: "header", status: "queued", repoId: repo.id });
+
+    expect(askRunsOn(home, "t-own", at.deviceId)).toBe("Runs on: Running as Builder (This task)");
+    // The record keeps it, and the feed shows it as it shows a policy edit.
+    expect(home.tasks.timeline("t-own").at(-1)).toMatchObject({
+      actor: "firstmate",
+      text: "updated: Runs on: Running as Builder (This task)",
+      feed: true,
+    });
+
+    // Out of reach, it waits as queued work, and the feed names the task.
+    await home.supervisor.dispatchQueuedTask("t-own");
+    await home.supervisor.dispatchQueuedTask("t-own");
+    expect(home.tasks.get("t-own")).toMatchObject({ status: "open", deviceId: at.deviceId });
+    const waits = () => feed(home).filter((line) => line.includes('"footer"'));
+    expect(waits()).toEqual([
+      '"footer" waits for Builder. It never runs on this computer instead.',
+    ]);
+    expect(await home.supervisor.startQueuedNow("t-own")).toBe(
+      `${recordOf(home, "t-own").key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
+    );
+    ahead += 24 * 60 * 60 * 1000;
+    await home.supervisor.dispatchQueuedTask("t-own");
+    await home.supervisor.dispatchQueuedTask("t-own");
+    expect(waits().slice(1)).toEqual([
+      'Running as Builder has been out of reach for a day. "footer" still waits.',
+      'To run it here instead, ask your first mate to run "footer" on this computer.',
+    ]);
+
+    // The project moves there and back: the captain's word stands, and the
+    // task he said nothing about follows its project.
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    expect(home.tasks.get("t-follows")?.deviceId).toBe(at.deviceId);
+    home.repos.setRunsOn(repo.id, null);
+    expect(home.tasks.get("t-follows")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-own")?.deviceId).toBe(at.deviceId);
+
+    // project: it follows its project again, which runs here, and starts here.
+    expect(askRunsOn(home, "t-own", null)).toBe("Runs on: This computer (Project setting)");
+    expect(home.tasks.get("t-own")?.shape?.runs_on_ask).toBeUndefined();
+    await home.supervisor.dispatchQueuedTask("t-own");
+    expect(home.tasks.get("t-own")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-own")?.gate?.reason).toBe(STARTED_HERE);
+  });
+
+  it("keeps a task on this Mac when the captain says so while its project runs on the computer", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, { id: "t-stays", title: "footer", status: "queued", repoId: repo.id });
+    expect(home.supervisor.runsOnFact(recordOf(home, "t-stays"))).toEqual({
+      label: "Running as Builder",
+      source: "project",
+    });
+    expect(askRunsOn(home, "t-stays", "this-mac")).toBe("Runs on: This computer (This task)");
+    await home.supervisor.dispatchQueuedTask("t-stays");
+    expect(home.tasks.get("t-stays")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-stays")?.gate?.reason).toBe(STARTED_HERE);
+  });
+
+  it("gives each part its parent's Runs on unless the part has its own", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    const queued = { status: "queued", repoId: repo.id, startPolicy: "on-request" } as const;
+    seedTask(home.tasks, { id: "t-parent", title: "site", ...queued });
+    seedTask(home.tasks, { id: "t-part", title: "footer", parentId: "t-parent", ...queued });
+    seedTask(home.tasks, { id: "t-own-part", title: "header", parentId: "t-parent", ...queued });
+
+    expect(askRunsOn(home, "t-own-part", "this-mac")).toBe("Runs on: This computer (This task)");
+    expect(askRunsOn(home, "t-parent", at.deviceId)).toBe(
+      "Runs on: Running as Builder (This task)",
+    );
+    expect(home.tasks.get("t-part")?.deviceId).toBe(at.deviceId);
+    expect(home.tasks.get("t-own-part")?.deviceId ?? null).toBeNull();
+    expect(home.supervisor.runsOnFact(recordOf(home, "t-part"))).toEqual({
+      label: "Running as Builder",
+      source: "parent",
+    });
+    expect(home.supervisor.runsOnFact(recordOf(home, "t-own-part"))).toEqual({
+      label: "This computer",
+      source: "task",
+    });
+
+    // A part commissioned under it later waits for the same computer.
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    const { taskId, crewmate } = await home.supervisor.commission({
+      title: "nav",
+      intent: { goal: "Fix the nav.", userWords: "fix the nav" },
+      repoId: repo.id,
+      parent: "t-parent",
+    });
+    expect(crewmate).toBe("queued");
+    expect(home.tasks.get(taskId)?.deviceId).toBe(at.deviceId);
+  });
+
+  it("forgets the captain's word for a computer being removed, so the task and its parts follow the project", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    const queued = { status: "queued", repoId: repo.id, startPolicy: "on-request" } as const;
+    seedTask(home.tasks, { id: "t-parent", title: "site", ...queued });
+    seedTask(home.tasks, { id: "t-part", title: "footer", parentId: "t-parent", ...queued });
+    askRunsOn(home, "t-parent", at.deviceId);
+    expect(home.tasks.get("t-part")?.deviceId).toBe(at.deviceId);
+
+    await home.supervisor.stopTasksOn(at.deviceId);
+    expect(home.tasks.get("t-parent")?.shape?.runs_on_ask).toBeUndefined();
+    expect(home.tasks.get("t-parent")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-part")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.timeline("t-parent").at(-1)?.text).toBe(
+      "Runs on: the computer it named was removed, so it runs where its parent or project says",
+    );
+  });
+
+  it("keeps the captain's word on where a task runs through Start again and a stronger-model retry", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    const own = { kind: "fix", runs_on_ask: at.deviceId } as const;
+
+    seedTask(home.tasks, {
+      id: "t-dropped",
+      title: "footer",
+      status: "cancelled",
+      repoId: repo.id,
+      shape: own,
+    });
+    const again = home.supervisor.startAgain("t-dropped");
+    if (!again.ok) throw new Error(again.text);
+    expect(again.task.shape?.runs_on_ask).toBe(at.deviceId);
+    expect(await again.started).toContain("waits for Builder, which is out of reach");
+    expect(home.tasks.get(again.task.id)).toMatchObject({ status: "open", deviceId: at.deviceId });
+
+    seedTask(home.tasks, {
+      id: "t-tried",
+      title: "header",
+      status: "completed",
+      outcome: "Made the header blue.",
+      repoId: repo.id,
+      shape: own,
+    });
+    const retry = await home.supervisor.commission({
+      title: "header",
+      intent: { goal: "Make the header blue.", userWords: "not good enough, try a stronger one" },
+      shape: { escalate_from: "t-tried" },
+    });
+    expect(retry.crewmate).toBe("queued");
+    expect(home.tasks.get(retry.taskId)).toMatchObject({
+      repoId: repo.id,
+      deviceId: at.deviceId,
+      shape: expect.objectContaining({ runs_on_ask: at.deviceId }),
+    });
+  });
+
+  it("refuses in plain words a started task, the personal workspace, a project kept here, a review, a task with no project and a computer that runs no work", async () => {
+    const project = await gitProject();
+    const at = await world();
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    const { repo: notes } = await home.repos.setup({ kind: "init", name: "notes" });
+    const personal = home.repos.ensurePersonal(scratchDir("infinitary-placed-personal-"));
+    const refusal = (id: string, ask: string | null = at.deviceId) =>
+      home.supervisor.runsOnRefusal(id, ask)?.replace(recordOf(home, id).key, "KEY");
+
+    seedTask(home.tasks, { id: "t-going", title: "footer", status: "running", repoId: repo.id });
+    expect(refusal("t-going")).toBe(
+      'KEY "footer" has started, so it finishes where it started, on this computer.',
+    );
+    expect(refusal("t-going", null)).toBe(
+      'KEY "footer" has started, so it finishes where it started, on this computer.',
+    );
+    seedTask(home.tasks, { id: "t-panel", title: "panel", status: "queued", repoId: personal.id });
+    expect(refusal("t-panel")).toBe(
+      'KEY "panel" builds in your personal workspace, which stays on this computer.',
+    );
+    seedTask(home.tasks, { id: "t-notes", title: "notes", status: "queued", repoId: notes.id });
+    expect(refusal("t-notes")).toBe(
+      'KEY "notes" is in notes. Kept on this computer only, so its tasks run here.',
+    );
+    seedTask(home.tasks, {
+      id: "t-review",
+      title: "review",
+      status: "queued",
+      repoId: repo.id,
+      shape: { kind: "review" },
+    });
+    expect(refusal("t-review")).toBe(
+      'KEY "review" is a review and follows its builder\'s computer; its location cannot be chosen separately.',
+    );
+    seedTask(home.tasks, { id: "t-loose", title: "loose", status: "queued" });
+    expect(refusal("t-loose")).toBeUndefined();
+    expect(refusal("t-loose", "a-mac-that-only-controls")).toBe(
+      "No computer that runs work has that deviceId. Look with app_state.",
+    );
+    seedTask(home.tasks, { id: "t-fine", title: "fine", status: "queued", repoId: repo.id });
+    expect(refusal("t-fine", "a-mac-that-only-controls")).toBe(
+      "No computer that runs work has that deviceId. Look with app_state.",
+    );
+    expect(refusal("t-fine")).toBeUndefined();
+    expect(refusal("t-fine", "this-mac")).toBeUndefined();
+    expect(refusal("t-fine", null)).toBeUndefined();
+
+    // Asked at the spawn, a refusal starts nothing.
+    const before = home.tasks.list().length;
+    await expect(
+      home.supervisor.commission({
+        title: "notes",
+        intent: { goal: "Tidy the notes.", userWords: "tidy the notes on the mini" },
+        repoId: notes.id,
+        shape: { runs_on_ask: at.deviceId },
+      }),
+    ).rejects.toThrow(
+      'Nothing was spawned. "notes" is in notes. Kept on this computer only, so its tasks run here.',
+    );
+    await expect(
+      home.supervisor.commission({
+        title: "review",
+        intent: { goal: "Review the footer.", userWords: "review the footer on the mini" },
+        repoId: repo.id,
+        shape: { review_of: "t-going", runs_on_ask: at.deviceId },
+      }),
+    ).rejects.toThrow(
+      "Nothing was spawned. A review follows its builder's computer; omit runs_on_ask.",
+    );
+    expect(home.tasks.list()).toHaveLength(before);
+  });
+});
+
+/**
+ * What a computer that runs work holds for a task this Mac no longer
+ * records there (docs/helper.md, "Leftovers"): it goes by the rule this
+ * Mac's own leftover working copies follow - its unmerged work here first,
+ * on the task's kept ref in the project it was cloned from, then its
+ * working copy and folder there - and stays there only while its work has
+ * nowhere to go here.
+ */
+describe("leftovers on a computer that runs work", () => {
+  it("removes the working copy and folder a fresh start left there when it failed after the copy was made", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    at.refuseOpens(true);
+
+    // That computer made the working copy, then refused the conversation:
+    // the start failed, and this Mac kept no record of it.
+    await expect(
+      home.supervisor.commission({
+        title: "footer",
+        intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
+        repoId: repo.id,
+      }),
+    ).rejects.toThrow(`no sign-in for ${PROVIDER} here`);
+    expect(home.tasks.list()).toEqual([]);
+    expect(feed(home)).toContain("Mac mini cloned home.");
+
+    // What it left there goes at once, without waiting for that computer to come back.
+    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+  });
+
+  it("brings a purged task's unmerged work home onto its kept ref in the project it was cloned from, then removes its working copy and folder there", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-purged", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-purged")?.activity).toBe("idle");
+    const work = at.folders("t-purged").work;
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+    writeFileSync(join(work, "notes.txt"), "still thinking\n");
+
+    await home.supervisor.purgeAllTasks();
+    expect(home.tasks.get("t-purged")).toBeUndefined();
+
+    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-purged")]);
+    expect(await git(project.home, ["show", `${kept}:notes.txt`])).toBe("still thinking");
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
+    // Its work came home whole, so nothing was said.
+    expect(feed(home).filter((line) => line.includes("leftover"))).toEqual([]);
+  });
+
+  it("keeps a leftover working copy there while its work has nowhere to go here, says so once, and brings it home once its project is back", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-stays", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-stays")?.activity).toBe("idle");
+    const work = at.folders("t-stays").work;
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+
+    // Out of reach, the record goes and so does its project here.
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await home.supervisor.purgeAllTasks();
+    home.repos.unregister(repo.id);
+
+    // Back: its work has nowhere to go here, so it stays there, said once.
+    const said = () => feed(home).filter((line) => line.includes("leftover"));
+    await home.listen();
+    await expect
+      .poll(said)
+      .toEqual([
+        "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: fm/task-t-stays.",
+      ]);
+    expect(at.holds()).toEqual({ tasks: ["t-stays"], workingCopies: ["t-stays"] });
+    expect(await git(work, ["rev-parse", "HEAD"])).toBe(tip);
+
+    // Its project is here again: the next time that computer is back, its
+    // work comes home and the copy goes, with nothing said twice.
+    await adoptHere(home.repos, project.home);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await home.listen();
+    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-stays")]);
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
+    expect(said()).toHaveLength(1);
+  });
+
+  it("removes the working copy a failed start left there once its task is set to run elsewhere, at that computer's next contact", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    at.refuseOpens(true);
+
+    // A queued start there fails after the copy was made: the record waits
+    // for the captain, still placed there, and its copy stays for its next start.
+    seedTask(home.tasks, { id: "t-moved", title: "footer", status: "queued", repoId: repo.id });
+    await home.supervisor.dispatchQueuedTask("t-moved");
+    expect(home.tasks.get("t-moved")).toMatchObject({ status: "open", deviceId: at.deviceId });
+    expect(at.holds().workingCopies).toEqual(["t-moved"]);
+
+    // Set to run here before it ever ran there: the copy there is no
+    // longer its own, and goes the next time that computer is back.
+    home.repos.setRunsOn(repo.id, null);
+    expect(home.tasks.get("t-moved")?.deviceId ?? null).toBeNull();
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await home.listen();
+    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    expect(home.tasks.get("t-moved")?.status).toBe("open");
+  });
+});
+
+/** The feed's lines, oldest first. */
+describe("removing a computer that runs work", () => {
+  /** Your devices over this world's home, as createServices composes them. */
+  function devicesOf(
+    at: Awaited<ReturnType<typeof world>>,
+    removeThere?: (device: DeviceView) => Promise<boolean>,
+  ) {
+    const home = at.home();
+    const pushed: DeviceView[][] = [];
+    const problems: string[] = [];
+    const computers = new Computers({
+      pairing: at.pairing(),
+      work: home.devices,
+      tasks: home.tasks,
+      repos: home.repos,
+      stopTasks: (deviceId) => home.supervisor.stopTasksOn(deviceId),
+      bringHome: (deviceId) => home.placed.bringHome(deviceId),
+      ...(removeThere ? { removeThere } : {}),
+      emit: (list) => pushed.push(list),
+      onProblem: (text) => problems.push(text),
+      now,
+      bootedAt: () => 0,
+    });
+    return { computers, pushed, problems };
+  }
+
+  /** A project that runs on the computer, with a task working there that holds a commit never merged. */
+  async function busyComputer(options: { remoteLogin?: string } = {}) {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)), options);
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    model([{ text: "Started." }]);
+    await at.start("t-gone", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-gone")?.activity).toBe("idle");
+    const work = at.folders("t-gone").work;
+    writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
+    const tip = await commit(work, "feat: a footer");
+    return { project, at, home, repo, work, tip };
+  }
+
+  it("stops its task, brings its unmerged work home, runs its project here, and only then takes it off the list", async () => {
+    const { project, at, home, repo, work, tip } = await busyComputer();
+    const { computers, pushed } = devicesOf(at);
+    expect(computers.list()).toEqual([
+      expect.objectContaining({ id: at.deviceId, inReach: true, tasks: 1, runs: ["home"] }),
+    ]);
+
+    const gone = await computers.remove(at.deviceId);
+    expect(gone).toMatchObject({ id: at.deviceId, runs: ["home"] });
+    // Its stages, in order, as Devices draws them.
+    const stages = pushed
+      .flatMap((list) => list.map((device) => device.removal ?? null))
+      .filter((stage, index, all) => stage !== null && stage !== all[index - 1]);
+    expect(stages).toEqual(["bringing-work", "cleaning-up"]);
+    // The task stopped, and its work came home before the working copy went there.
+    expect(home.tasks.get("t-gone")?.status).toBe("dropped");
+    expect(home.tasks.get("t-gone")?.workspaceState).toBe("removed");
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-gone")]);
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
+    expect(home.repos.get(repo.id)?.runsOn).toBeNull();
+    expect(at.pairing().list()).toEqual([]);
+    expect(computers.list()).toEqual([]);
+    // Cut off, it removes what Firstmate set up there, and stops.
+    await expect.poll(() => existsSync(join(at.dataDir, "repos"))).toBe(false);
+    expect(existsSync(work)).toBe(false);
+    expect(existsSync(join(at.dataDir, "home.json"))).toBe(false);
+  });
+
+  it("refuses connected removal without falsifying retirement, and retries successfully after work history is repaired", async () => {
+    const { project, at, home, work } = await busyComputer();
+    const { computers } = devicesOf(at);
+    writeFileSync(join(work, "only-copy.txt"), "unique work\n");
+    const metadata = readFileSync(join(work, ".git"), "utf8");
+    writeFileSync(join(work, ".git"), `gitdir: ${join(at.dataDir, "missing")}\n`);
+    await expect(computers.remove(at.deviceId)).rejects.toThrow("It stays on your list");
+    expect(home.tasks.get("t-gone")?.workspaceState).toBe("present");
+    expect(
+      home.tasks.timeline("t-gone").some((event) => event.text.includes("saved here first")),
+    ).toBe(false);
+    expect(
+      at
+        .pairing()
+        .list()
+        .map((device) => device.id),
+    ).toContain(at.deviceId);
+    expect(readFileSync(join(work, "only-copy.txt"), "utf8")).toBe("unique work\n");
+    writeFileSync(join(work, ".git"), metadata);
+    await computers.remove(at.deviceId);
+    expect(home.tasks.get("t-gone")?.workspaceState).toBe("removed");
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-gone")]);
+    expect(await git(project.home, ["show", `${kept}:only-copy.txt`])).toBe("unique work");
+    await expect.poll(() => existsSync(work)).toBe(false);
+    expect(at.pairing().list()).toEqual([]);
+  });
+
+  it("out of reach, asks first, then waits until it is back and brings its work home before removing it", async () => {
+    const { project, at, home, tip } = await busyComputer();
+    const { computers } = devicesOf(at);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    expect(computers.list()[0]).toMatchObject({ inReach: false, seenAt: expect.any(Number) });
+    await expect(computers.remove(at.deviceId)).rejects.toThrow("out of reach");
+    expect(await computers.remove(at.deviceId, "when-back")).toMatchObject({
+      removal: "when-back",
+    });
+    // Keep it takes the wait back, and asking again waits once more.
+    expect(computers.keep(at.deviceId).removal).toBeUndefined();
+    await computers.remove(at.deviceId, "when-back");
+    expect(at.pairing().list()).toHaveLength(1);
+
+    await home.listen();
+    await expect.poll(() => at.pairing().list(), { timeout: 8_000 }).toEqual([]);
+    expect(home.tasks.get("t-gone")?.workspaceState).toBe("removed");
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-gone")]);
+    expect(
+      await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
+    ).toBe(true);
+  });
+
+  it("out of reach, removes it now, stops its task here and leaves its unmerged work there", async () => {
+    const { at, home, repo, work } = await busyComputer();
+    const { computers } = devicesOf(at);
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await computers.remove(at.deviceId, "now");
+    expect(at.pairing().list()).toEqual([]);
+    expect(home.tasks.get("t-gone")?.status).toBe("dropped");
+    expect(home.tasks.get("t-gone")?.workspaceState).toBe("removed");
+    expect(home.tasks.timeline("t-gone").at(-1)?.text).toBe(
+      "working copy left on Running as Builder - it was removed while out of reach, so any unmerged work stays there",
+    );
+    expect(home.repos.get(repo.id)?.runsOn).toBeNull();
+
+    // Back, it learns it was removed: what Firstmate set up goes, its unmerged work stays.
+    await home.listen();
+    await expect
+      .poll(() => existsSync(join(at.dataDir, "home.json")), { timeout: 8_000 })
+      .toBe(false);
+    await expect.poll(() => existsSync(join(at.dataDir, "tasks"))).toBe(false);
+    expect(existsSync(join(work, "footer.html"))).toBe(true);
+    expect(await git(work, ["log", "-1", "--format=%s"])).toBe("feat: a footer");
+  });
+
+  it("out of reach, a Mac added by its address has what Firstmate set up there removed over Remote Login now, keeps its unmerged work there, and stops listening for it", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)), {
+      remoteLogin: "sam@mini.local",
+    });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    model([{ text: "Started." }]);
+    await at.start("t-gone", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-gone")?.activity).toBe("idle");
+    const work = at.folders("t-gone").work;
+    writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
+    await commit(work, "feat: a footer");
+    // Nobody is logged in there: its run stops, and it is out of reach.
+    await at.stopComputer();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    expect(at.pairing().list()[0]?.remoteLogin).toBe("sam@mini.local");
+
+    // Over Remote Login the home starts the copy kept there as `work remove`.
+    const reached: string[] = [];
+    const removeThere = async (device: DeviceView) => {
+      reached.push(device.remoteLogin ?? "");
+      const outcome = await removeFromHome({
+        dataDir: at.dataDir,
+        background: null,
+        backgroundEnv: {},
+        expected: { homeKey: at.pairing().identity().pin, deviceId: device.id },
+      });
+      return outcome.firstmate === "removed";
+    };
+    const { computers } = devicesOf(at, removeThere);
+    await computers.remove(at.deviceId, "now");
+    expect(reached).toEqual(["sam@mini.local"]);
+    expect(at.pairing().list()).toEqual([]);
+    expect(home.tasks.get("t-gone")?.status).toBe("dropped");
+    // What Firstmate set up there is gone now; the working copy with its unmerged work stays.
+    expect(existsSync(join(at.dataDir, "home.json"))).toBe(false);
+    expect(existsSync(join(at.dataDir, "tasks"))).toBe(false);
+    expect(await git(work, ["log", "-1", "--format=%s"])).toBe("feat: a footer");
+    // Nothing is left there to hear it was removed, so the home listens for nothing.
+    expect(at.pairing().any()).toBe(false);
+  });
+});
+
+function feed(home: PlacedHome): string[] {
+  return home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+}
+
+async function commit(dir: string, message: string): Promise<string> {
+  await git(dir, ["add", "-A"]);
+  await git(dir, [
+    "-c",
+    "user.name=Crewmate",
+    "-c",
+    "user.email=crew@localhost",
+    "commit",
+    "-q",
+    "-m",
+    message,
+  ]);
+  return git(dir, ["rev-parse", "HEAD"]);
+}
+
+/**
+ * A project where it lives - a bare repository on disk with one commit on
+ * `main` - and the home's own clone of it, named `home`. Its forge is a plain
+ * Git host over that origin, whose workflow evidence answers one artifact.
+ */
+async function gitProject() {
+  const root = scratchDir("infinitary-placed-project-");
+  const origin = join(root, "origin.git");
+  await git(root, ["init", "--quiet", "--bare", "--initial-branch=main", origin]);
+  const seed = join(root, "seed");
+  await git(root, ["clone", "--quiet", origin, seed]);
+  writeFileSync(join(seed, "README.md"), "# website\n");
+  const main = await commit(seed, "chore: start the website");
+  await git(seed, ["push", "--quiet", "origin", "HEAD:main"]);
+  const home = join(root, "home");
+  await git(root, ["clone", "--quiet", origin, home]);
+  const forge = (bytes: Buffer): Forge =>
+    Object.assign(
+      // A plain Git host: open_change sends the branch up from this Mac's own repository.
+      createForgeResolver({
+        github: () => {
+          throw new Error("This project does not live on GitHub.");
+        },
+      })({
+        path: home,
+        origin: "https://git.example.com/me/website.git",
+        host: { kind: "git", name: "git.example.com" },
+      }),
+      {
+        workflows: {
+          run: async (id: number) => ({
+            id,
+            name: "checks",
+            headSha: main,
+            branch: null,
+            attempt: 1,
+            status: "completed",
+            conclusion: "failure",
+            url: "https://git.example.com/runs/41",
+          }),
+          jobs: async () => ({ jobs: [], total: 0, complete: true }),
+          jobLog: async () => {
+            throw new Error("No job logs here.");
+          },
+          download: async (_runId: number, artifactId: number) => ({
+            artifact: {
+              id: artifactId,
+              name: "logs",
+              sizeBytes: bytes.length,
+              expired: false,
+              expiresAt: "2026-11-01T00:00:00Z",
+            },
+            bytes,
+          }),
+        },
+      },
+    );
+  return { origin, home, main, forge };
+}

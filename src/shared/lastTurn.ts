@@ -1,0 +1,37 @@
+import { z } from "zod";
+
+/**
+ * The last turn above the input (FI3-1089's plan, the captain's Approve and
+ * build; docs/composer.md "The last turn"): the captain's last message and
+ * the Firstmate's reply line beside it, one line each.
+ *
+ * The reply line is typed, never the closing words: the Firstmate's own
+ * emote words, else the title of the card it showed, else the title of the
+ * work it started, else the app's own words for what took effect. A failed
+ * turn's line is the plain words for the problem (`problem`).
+ */
+/**
+ * Whether a reply line may fade (docs/composer.md "The last turn").
+ * `completed` is a finished acknowledgment. `queued` is a receipt for a
+ * message the paused seat keeps. Absent means unknown, an older saved
+ * line, and the line stays.
+ */
+export const lastTurnEligibilitySchema = z.enum(["completed", "queued"]);
+export type LastTurnEligibility = z.infer<typeof lastTurnEligibilitySchema>;
+
+export const lastTurnReplySchema = z.object({
+  text: z.string(),
+  /** The turn failed or paused: the line says what went wrong, in plain words. */
+  problem: z.boolean().optional(),
+  /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
+  eligibility: lastTurnEligibilitySchema.optional(),
+});
+export type LastTurnReply = z.infer<typeof lastTurnReplySchema>;
+
+export const lastTurnSchema = z.object({
+  /** The captain's words; empty for a message that was only pictures. */
+  you: z.string(),
+  /** The Firstmate's reply line, or null while none has been given. */
+  reply: lastTurnReplySchema.nullable(),
+});
+export type LastTurn = z.infer<typeof lastTurnSchema>;

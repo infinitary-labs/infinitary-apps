@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "cards-keep-room-at-larger-sizes",
+      "kind": "fix",
+      "title": "Cards keep room to read at a larger size in a short window",
+      "body": "At 110, 125 or 150% in Settings → Appearance, a card in a short window now has as much room to read as at 100% in the smallest window, and its close button, its buttons and its reply field are never cut off. At 150% in the smallest window, the card's title and text scroll between its top row and its buttons.",
+      "area": "cards",
+      "picture": {
+        "dark": "cards-keep-room-at-larger-sizes-dark.webp",
+        "light": "cards-keep-room-at-larger-sizes-light.webp",
+        "alt": "A decision card at 150% in a short window with the start of its text, its Not now and Ship the notes buttons and its reply field all in view above the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

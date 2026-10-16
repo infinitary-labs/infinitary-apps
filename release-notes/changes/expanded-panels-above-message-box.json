@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "expanded-panels-above-message-box",
+      "kind": "fix",
+      "title": "An open Activity or Tasks panel no longer runs under the message box",
+      "body": "In a narrow window or at a larger Size, an open Activity or Tasks panel now ends just above the message box and your last exchange instead of running under them. Activity keeps its newest line in sight when it gets shorter.",
+      "area": "message-box",
+      "picture": {
+        "dark": "expanded-panels-above-message-box-dark.webp",
+        "light": "expanded-panels-above-message-box-light.webp",
+        "alt": "At 125% the open Activity panel ends above the message box and the last exchange, with its newest line in sight"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

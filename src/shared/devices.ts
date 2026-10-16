@@ -1,0 +1,742 @@
+import { z } from "zod";
+import { COMPUTER, HERE } from "./deviceNames";
+
+/**
+ * Devices and pairing (docs/devices.md): what a device is, the link that
+ * pairs one, and the grant a device keeps afterwards. The home writes the
+ * list (`src/core/devices/pairing.ts`); a device reads a link and dials with
+ * its grant (`src/core/devices/dial.ts`). Both read these shapes, so a link
+ * one side writes is the link the other parses.
+ */
+
+/**
+ * What a device is, set at the home and never by the device
+ * (docs/devices.md, "The shape"): `mac` is another Mac, which can control
+ * this Firstmate while Firstmate is open there and can run work; `work`
+ * runs work only - another macOS user on this Mac, or another Mac added
+ * before a Mac could do both; `view` only controls - a Mac that joined with
+ * a link before then, or a second app on this Mac. A device keeps its kind
+ * until it is added again.
+ */
+export const deviceKindSchema = z.enum(["mac", "work", "view"]);
+export type DeviceKind = z.infer<typeof deviceKindSchema>;
+
+/** Whether a device of this kind may control this Firstmate. */
+export function deviceControls(kind: DeviceKind): boolean {
+  return kind !== "work";
+}
+
+/** Whether a device of this kind may run work: a project may be set to run on it. */
+export function deviceRunsWork(kind: DeviceKind): boolean {
+  return kind !== "view";
+}
+
+/**
+ * What one connection of a device does (docs/connection.md, "Hello"): a
+ * `view` is Firstmate open on it, controlling this one; `work` is its work,
+ * which runs with no window. A Mac that does both holds one of each.
+ */
+export const deviceRoleSchema = z.enum(["view", "work"]);
+export type DeviceRole = z.infer<typeof deviceRoleSchema>;
+
+/** Whether a device of this kind may hold a connection in this role. */
+export function deviceMayBe(kind: DeviceKind, role: DeviceRole): boolean {
+  return role === "view" ? deviceControls(kind) : deviceRunsWork(kind);
+}
+
+/**
+ * What system a device runs (docs/devices.md, "What a device is"): the
+ * device's own word, said in each hello and kept beside its kind, never a
+ * kind of its own. A phone is a view whose system is `ios`. The words a
+ * person reads name the device by it (`src/shared/deviceNames.ts`); a
+ * device that never said one is a computer.
+ */
+export const deviceSystemSchema = z.enum(["macos", "linux", "windows", "ios"]);
+export type DeviceSystem = z.infer<typeof deviceSystemSchema>;
+
+/** The chip a device runs on, as its system names it: Apple silicon and Arm are `arm64`. */
+export const deviceChipSchema = z.enum(["arm64", "x64"]);
+export type DeviceChip = z.infer<typeof deviceChipSchema>;
+
+/** How long a link stays good after the home makes it. */
+export const PAIRING_LINK_TTL_MS = 10 * 60 * 1000;
+
+/** The link's scheme and path, as this build writes it; nothing in a browser answers it. */
+export const PAIRING_LINK_PREFIX = "infinitary://join?";
+
+/**
+ * Every scheme a pasted link may carry: Infinitary's, which this build
+ * writes, and Firstmate 3000's, which a computer from before the Infinitary
+ * rename wrote and still shows. Both read the same link.
+ */
+export const PAIRING_LINK_PREFIXES = [PAIRING_LINK_PREFIX, "firstmate3000://join?"] as const;
+
+/**
+ * 32 bytes as base64url, unpadded: a link's random code, and a pin (SHA-256
+ * of a public key) both have this shape.
+ */
+export const KEY_TEXT_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const keyTextSchema = z.string().regex(KEY_TEXT_PATTERN);
+
+/**
+ * A device's own label, such as its computer name: the device's words, so it
+ * is bounded and may carry no control or formatting character that could
+ * reorder the text drawn around it.
+ */
+export const deviceNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .regex(/^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u);
+
+const hostLabel = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const HOST_NAME = new RegExp(`^(?=.{1,253}$)${hostLabel}(?:\\.${hostLabel})*$`, "i");
+const IPV6 = /^[0-9a-f:.]{2,45}$/i;
+
+/**
+ * Where a device dials, as `host:port`: an IPv4 address, a bracketed IPv6
+ * address, or a name the device resolves. It is what a link advertises,
+ * which is separate from where the connection listens.
+ */
+export const dialAddressSchema = z.string().refine((text) => splitDialAddress(text) !== null, {
+  message: "Expected host:port",
+});
+
+/** A dial address's host and port, or null when it is not one. */
+export function splitDialAddress(text: string): { host: string; port: number } | null {
+  const match = /^(?:\[([^\]]+)\]|([^:[\]]+)):(\d{1,5})$/.exec(text);
+  if (!match) return null;
+  const [, v6, name, portText] = match;
+  const port = Number(portText);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) return null;
+  if (v6 !== undefined) return IPV6.test(v6) && v6.includes(":") ? { host: v6, port } : null;
+  return name !== undefined && HOST_NAME.test(name) ? { host: name, port } : null;
+}
+
+/**
+ * How a device reaches its home (docs/devices.md, "Through the home's SSH"):
+ * `ssh` when it reaches the home only through the private socket the home's
+ * own SSH connection forwards to it, and never at the address its link or
+ * grant names. The home decides it when it makes the link; a device whose
+ * link or grant says nothing dials that address itself.
+ */
+export const homeViaSchema = z.literal("ssh");
+export type HomeVia = z.infer<typeof homeViaSchema>;
+
+/** Where one dial address sits, for the words a person reads. A name ending in `.local` is this network. */
+export function dialNetwork(at: string): "local" | "private" | "name" | "other" {
+  const host = splitDialAddress(at)?.host ?? at;
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)) return "private";
+  if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return "local";
+  if (/\.local$/i.test(host)) return "name";
+  return "other";
+}
+
+/** Every address a link names, first to last, with no repeat (docs/devices.md, "The link"). */
+export function linkAddresses(link: {
+  at: string;
+  also?: readonly string[] | undefined;
+}): string[] {
+  return [...new Set([link.at, ...(link.also ?? [])])];
+}
+
+/** Whether a link names a private-network address besides the first, so the confirm question says so. */
+export function linkNamesPrivateToo(link: {
+  at: string;
+  also?: readonly string[] | undefined;
+}): boolean {
+  return (link.also ?? []).some((at) => dialNetwork(at) === "private");
+}
+
+/** A link's parts (docs/devices.md, "The link"). */
+export const pairingLinkSchema = z.strictObject({
+  /** The kind the home made the link for. */
+  kind: deviceKindSchema,
+  /** Where to dial, unless `via` says the device reaches the home another way. */
+  at: dialAddressSchema,
+  /** The home's pin: SHA-256 of its public key, base64url. */
+  key: keyTextSchema,
+  /** The one-use code. */
+  code: keyTextSchema,
+  /** How the device reaches the home; absent, at `at`. */
+  via: homeViaSchema.optional(),
+  /**
+   * The other addresses to try, after `at`, when the first does not answer.
+   * One optional part, so a link without it reads as before.
+   */
+  also: z.array(dialAddressSchema).max(8).optional(),
+});
+export type PairingLink = z.infer<typeof pairingLinkSchema>;
+
+const LINK_PARTS = {
+  as: "kind",
+  at: "at",
+  key: "key",
+  code: "code",
+  via: "via",
+  also: "also",
+} as const;
+
+export function buildPairingLink(link: PairingLink): string {
+  const parsed = pairingLinkSchema.parse(link);
+  const query = new URLSearchParams({
+    as: parsed.kind,
+    at: parsed.at,
+    key: parsed.key,
+    code: parsed.code,
+    ...(parsed.via ? { via: parsed.via } : {}),
+    ...(parsed.also?.length ? { also: parsed.also.join(",") } : {}),
+  });
+  return `${PAIRING_LINK_PREFIX}${query.toString()}`;
+}
+
+/**
+ * Reads a link a person pasted. Throws a reason that never repeats the link,
+ * because the link carries its code.
+ */
+export function parsePairingLink(text: string): PairingLink {
+  const trimmed = text.trim();
+  const prefix = PAIRING_LINK_PREFIXES.find((known) => trimmed.startsWith(known));
+  if (!prefix) throw new Error(`This is not a link to join Infinitary on another ${COMPUTER.one}.`);
+  const query = new URLSearchParams(trimmed.slice(prefix.length));
+  const parts: Record<string, string> = {};
+  for (const [name, value] of query) {
+    const part = LINK_PARTS[name as keyof typeof LINK_PARTS];
+    if (!part || part in parts)
+      throw new Error(`This link to join Infinitary on another ${COMPUTER.one} is damaged.`);
+    parts[part] = value;
+  }
+  const parsed = pairingLinkSchema.safeParse({
+    ...parts,
+    ...(parts.also ? { also: parts.also.split(",").filter((at) => at.length > 0) } : {}),
+  });
+  if (!parsed.success)
+    throw new Error(`This link to join Infinitary on another ${COMPUTER.one} is damaged.`);
+  return parsed.data;
+}
+
+/**
+ * A macOS user's short name, such as `builder`: the account a computer that
+ * runs work runs as (docs/helper.md). The device's words, bounded to the
+ * characters a short name may carry.
+ */
+export const deviceUserNameSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9_][A-Za-z0-9_.@-]*$/);
+
+/** Where the removal of a computer that runs work stands (docs/devices.md, "Remove"). */
+export const deviceRemovalStageSchema = z.enum(["when-back", "bringing-work", "cleaning-up"]);
+export type DeviceRemovalStage = z.infer<typeof deviceRemovalStageSchema>;
+
+/**
+ * Remove for a computer that runs work out of reach: `when-back` removes it
+ * the next time it is in reach, once its work is here; `now` removes it at
+ * once and leaves its unmerged work there.
+ */
+export const deviceRemoveWhenSchema = z.enum(["when-back", "now"]);
+export type DeviceRemoveWhen = z.infer<typeof deviceRemoveWhenSchema>;
+
+/**
+ * What a computer that runs work has when it joins (docs/helper.md,
+ * "Joining"): git and Claude Code, as it looked for them. The home's feed
+ * line names them; it is the device's own word, and decides nothing.
+ */
+export const foundToolsSchema = z.strictObject({
+  git: z.boolean(),
+  claudeCode: z.boolean(),
+});
+export type FoundTools = z.infer<typeof foundToolsSchema>;
+
+/**
+ * How this Mac brings a computer that runs work to its own version of
+ * Firstmate (docs/devices.md, "Updating"): over Remote Login for one added
+ * by its address, over the connection for one that takes the update order
+ * (`takesUpdate`, src/shared/ipc.ts), or by a new command run there for one
+ * too old to take it.
+ */
+export const deviceUpdateBySchema = z.enum(["remote-login", "connection", "command"]);
+export type DeviceUpdateBy = z.infer<typeof deviceUpdateBySchema>;
+
+/**
+ * A computer that runs work, connected now, on another version of Firstmate
+ * than this Mac's (docs/devices.md, "Another version"): the version it said
+ * it runs, when it said one; whether that is older or newer than this Mac's,
+ * when both read as versions; whether it still takes new work; and how this
+ * Mac brings it to its own version.
+ */
+export const deviceOtherVersionSchema = z.strictObject({
+  app: z.string().min(1).max(64).optional(),
+  than: z.enum(["older", "newer"]).optional(),
+  takesWork: z.boolean(),
+  updateBy: deviceUpdateBySchema,
+});
+export type DeviceOtherVersion = z.infer<typeof deviceOtherVersionSchema>;
+
+/**
+ * Why this Mac stopped trying its SSH connection to a computer until the
+ * captain's Try again: something only a person can mend.
+ *
+ * - `host-unknown`: this Mac has not checked that address, and the check could not be asked.
+ * - `host-changed`: it answers unlike the Mac this Mac reached before.
+ * - `key-refused`: it did not accept the captain's SSH key.
+ * - `key-locked`: it accepted the key, but it is locked with a passphrase, or its app did not answer.
+ * - `agent-declined`: it accepted the key, but the app that holds it did not approve signing in.
+ * - `agent-not-running`: the app that holds the key is not open, so nothing answered for it.
+ * - `forwarding-refused`: its Remote Login does not let the connection through.
+ * - `not-set-up`: Firstmate is not set up there any more.
+ * - `other-home`: the address reaches a Mac whose Firstmate runs work for
+ *   another home, or as another computer: it no longer runs work as this
+ *   one, so it is removed here. Nothing there is touched.
+ */
+export const sshStopReasonSchema = z.enum([
+  "host-unknown",
+  "host-changed",
+  "key-refused",
+  "key-locked",
+  "agent-declined",
+  "agent-not-running",
+  "forwarding-refused",
+  "not-set-up",
+  "other-home",
+]);
+export type SshStopReason = z.infer<typeof sshStopReasonSchema>;
+
+/**
+ * Where this Mac's SSH connection to a computer stands, as Settings ->
+ * Devices says it (design skill `components/devices/DevicesTab`, "Reached
+ * over your SSH"):
+ *
+ * - `connected`: the connection is up and the computer's work said hello
+ *   through it. Never before that welcome.
+ * - `connecting`: the first attempt since this Mac started, or the
+ *   connection is up and the work there has not said hello yet.
+ * - `reconnecting`: it dropped or could not be made, and this Mac tries
+ *   again on its own.
+ * - `at-login`: the connection is up, and nobody is logged in there as the
+ *   user it runs work as, so the work starts when they log in.
+ * - `not-started`: the connection is up, and that user's session there
+ *   holds no background work, which no login mends.
+ * - `stopped`: this Mac stopped trying until Try again, with why.
+ */
+export const deviceSshSchema = z.strictObject({
+  state: z.enum(["connected", "connecting", "reconnecting", "at-login", "not-started", "stopped"]),
+  reason: sshStopReasonSchema.optional(),
+});
+export type DeviceSsh = z.infer<typeof deviceSshSchema>;
+
+/** One device on the home's list, as every reader sees it: never its secret. */
+export const deviceViewSchema = z.strictObject({
+  id: z.string().min(1).max(64),
+  kind: deviceKindSchema,
+  name: deviceNameSchema,
+  /** When it joined, in milliseconds since the epoch. */
+  pairedAt: z.number().int().nonnegative(),
+  /**
+   * The macOS user a computer that runs work runs as, as it said when it
+   * joined; absent for a view.
+   */
+  user: deviceUserNameSchema.optional(),
+  /**
+   * Whether it joined from this Mac itself - another macOS user here, or a
+   * second app on this Mac - as the home saw where it dialed from. Absent on
+   * a device that joined before the home recorded it.
+   */
+  onThisMac: z.boolean().optional(),
+  /**
+   * The address its person added it at over Remote Login, such as
+   * `sam@mini.local` (docs/devices.md, "Adding a computer by its address"): the
+   * home updates Firstmate there, and removes what it set up there, the same
+   * way. Absent on a device added by a link or a command.
+   */
+  remoteLogin: z.string().min(1).max(255).optional(),
+  /**
+   * The system it runs and its chip, as its last hello said them
+   * (docs/devices.md, "What a device is"); absent on a device that has not
+   * said them since the home began keeping them.
+   */
+  system: deviceSystemSchema.optional(),
+  chip: deviceChipSchema.optional(),
+  // What the home reads of each device right now, for Settings -> Devices
+  // (docs/devices.md, "Your devices"); never saved in the list.
+  /** It is in reach: a computer that runs work takes work, a Mac that controls this Firstmate is connected. */
+  inReach: z.boolean().optional(),
+  /**
+   * Connected now on another version of Firstmate than this Mac's, whether
+   * or not it takes work; absent while it runs this Mac's version, and while
+   * it is out of reach, when the home cannot tell.
+   */
+  otherVersion: deviceOtherVersionSchema.optional(),
+  /** When it was last in reach, in milliseconds since the epoch. */
+  seenAt: z.number().int().nonnegative().optional(),
+  /** Firstmate is open on it, controlling this Firstmate now. */
+  controlling: z.boolean().optional(),
+  /** Another user on this Mac, out of reach since this Mac restarted: nobody has logged in as it since. */
+  restartedSince: z.boolean().optional(),
+  /**
+   * Out of reach, and this Mac's address changed since it was last in
+   * reach: it still looks for this Mac where it found it then, until it
+   * hears where this Mac is now (docs/devices.md, "Finding the home again").
+   */
+  addressChanged: z.boolean().optional(),
+  /**
+   * Out of reach, never in reach since it joined from another Mac, and it
+   * dials this Mac itself on the local network, where macOS there holds its
+   * work's dial until someone at that Mac allows it; adding it by its
+   * address reaches it over this Mac's own SSH instead (docs/devices.md,
+   * "Held on the local network").
+   */
+  heldOnLocalNetwork: z.boolean().optional(),
+  /**
+   * Where it last reached this computer, from what pairing keeps: on this
+   * network, or on the private network. Absent when it has not, or it
+   * reached this computer itself.
+   */
+  reachedOn: z.enum(["local", "private"]).optional(),
+  /** How many tasks run there now. */
+  tasks: z.number().int().nonnegative().optional(),
+  /** The projects whose Runs on names it. */
+  runs: z.array(z.string()).optional(),
+  /**
+   * Where this Mac's own SSH connection to it stands, for a computer added
+   * by its address (docs/devices.md, "Through the home's SSH"); absent for
+   * every other device, and while this Mac keeps no such connection.
+   */
+  ssh: deviceSshSchema.optional(),
+  /**
+   * Where its removal stands: waiting until it is back, bringing its
+   * unmerged work here, then taking it off the list so it removes what
+   * Firstmate set up there.
+   */
+  removal: deviceRemovalStageSchema.optional(),
+});
+export type DeviceView = z.infer<typeof deviceViewSchema>;
+
+/**
+ * Who a command is for (docs/devices.md, "Joining by a command"): another
+ * Mac, which gets Firstmate from this one and joins as a Mac, or another
+ * macOS user on this Mac, which runs this Mac's own app and only runs work.
+ */
+export const deviceCommandForSchema = z.enum(["another-mac", "another-user"]);
+export type DeviceCommandFor = z.infer<typeof deviceCommandForSchema>;
+
+/**
+ * What the home is asked for when it makes a link (docs/devices.md, "The
+ * link"): `mac` adds another Mac, by a link, a command or its address;
+ * `work` another macOS user on this Mac, by its command. The home makes no
+ * new link for a `view`, which only controls, and refuses one.
+ */
+export const deviceInviteRequestSchema = z.strictObject({
+  kind: deviceKindSchema,
+  /**
+   * Where the link tells the device to dial; when absent, the private
+   * address in use, or loopback for another user on this Mac or a Mac with none.
+   */
+  at: dialAddressSchema.optional(),
+  /**
+   * Wrap the link in the command for one: `another-mac` for kind `mac`,
+   * `another-user` for kind `work`, which only a command adds.
+   */
+  command: deviceCommandForSchema.optional(),
+});
+export type DeviceInviteRequest = z.infer<typeof deviceInviteRequestSchema>;
+
+/** A link the home made, for this Mac's own window and nothing else. */
+export const deviceInviteSchema = z.strictObject({
+  /** The link's own handle, which Stop it names; not a secret, and not the link. */
+  id: z.string().min(1).max(64),
+  link: z.string().startsWith(PAIRING_LINK_PREFIX),
+  kind: deviceKindSchema,
+  expiresAt: z.number().int().nonnegative(),
+  /** The command that carries the link, when one was asked for: as secret as the link. */
+  command: z
+    .strictObject({ for: deviceCommandForSchema, text: z.string().min(1).max(16_384) })
+    .optional(),
+});
+export type DeviceInvite = z.infer<typeof deviceInviteSchema>;
+
+/**
+ * The kind of network one of this Mac's own private addresses is on:
+ * `local` for the network it shares with nearby devices, `private` for the
+ * shared range a private network service hands out (docs/devices.md,
+ * "Where devices find this Mac").
+ */
+export const deviceAddressNetworkSchema = z.enum(["local", "private"]);
+export type DeviceAddressNetwork = z.infer<typeof deviceAddressNetworkSchema>;
+
+/**
+ * A Linux home's own firewall that may keep its devices out (docs/devices.md,
+ * "A Linux home's firewall"): `ufw`, `firewalld`, or NixOS's own `nixos`,
+ * with the port a device dials, which it may not let through.
+ */
+export const deviceFirewallSchema = z.strictObject({
+  name: z.enum(["ufw", "firewalld", "nixos"]),
+  port: z.number().int().min(1).max(65_535),
+});
+export type DeviceFirewall = z.infer<typeof deviceFirewallSchema>;
+
+/**
+ * What Settings -> Devices says of a Linux home's firewall (design skill
+ * `components/devices/DevicesTab`, "A Linux home's firewall"): two lines,
+ * and the way to let devices in, in mono.
+ */
+export function firewallWords(firewall: DeviceFirewall): { lines: [string, string]; way: string } {
+  const { port } = firewall;
+  const run = "To let them in, run this once in a terminal:";
+  switch (firewall.name) {
+    case "ufw":
+      return {
+        lines: [`The firewall on ${HERE.this} may keep your other ${COMPUTER.many} out.`, run],
+        way: `sudo ufw allow ${port}/tcp`,
+      };
+    case "firewalld":
+      return {
+        lines: [`The firewall on ${HERE.this} may keep your other ${COMPUTER.many} out.`, run],
+        way: `sudo firewall-cmd --permanent --add-port=${port}/tcp && sudo firewall-cmd --reload`,
+      };
+    case "nixos":
+      return {
+        lines: [
+          `The firewall on ${HERE.this} may keep your other ${COMPUTER.many} out.`,
+          "To let them in, add this to your NixOS configuration and rebuild it:",
+        ],
+        way: `networking.firewall.allowedTCPPorts = [ ${port} ];`,
+      };
+  }
+}
+
+/**
+ * Where devices find this Mac: its own private addresses right now, bridges
+ * left out. `chosen` stays null: a saved choice is read no more, and the
+ * field remains so an older client still reads the answer. `current` is the
+ * first address. `name` is this computer's name on the local network, when
+ * it has one. `firewall`, on a Linux home, is its firewall that may keep
+ * devices out; absent when none is known to.
+ */
+export const deviceAddressesSchema = z.strictObject({
+  addresses: z.array(
+    z.strictObject({ address: z.string().min(1).max(64), network: deviceAddressNetworkSchema }),
+  ),
+  chosen: z.string().min(1).max(64).nullable(),
+  current: z.string().min(1).max(64).nullable(),
+  /** This computer's name on the local network, such as `kuns-macbook-pro.local`, when it has one. */
+  name: z.string().min(1).max(253).optional(),
+  firewall: deviceFirewallSchema.optional(),
+});
+export type DeviceAddresses = z.infer<typeof deviceAddressesSchema>;
+
+/**
+ * What a device keeps after joining, private to itself (0600 in its own data
+ * folder): where it dials, the home's pin, who it is on the home's list, and
+ * its own key and certificate, which prove it in TLS. The key never leaves
+ * the device. Its mode is `via`: a grant that reaches its home only through
+ * the home's SSH connection never dials `at` (docs/helper.md, "Through the
+ * home's SSH").
+ */
+export const deviceGrantSchema = z.strictObject({
+  at: dialAddressSchema,
+  /** The home's pin. */
+  homeKey: keyTextSchema,
+  deviceId: z.string().min(1).max(64),
+  kind: deviceKindSchema,
+  /** The device's own private key, PKCS#8 PEM. */
+  key: z.string().min(1).max(8192),
+  /** The device's own self-signed certificate, PEM. */
+  cert: z.string().min(1).max(8192),
+  /** How it reaches its home; absent, at `at`. */
+  via: homeViaSchema.optional(),
+});
+export type DeviceGrant = z.infer<typeof deviceGrantSchema>;
+
+/**
+ * Why this Mac stopped controlling another (docs/view.md): its person chose
+ * Leave here, or that Mac removed this one from its devices.
+ */
+export const leftReasonSchema = z.enum(["left", "removed"]);
+export type LeftReason = z.infer<typeof leftReasonSchema>;
+
+/**
+ * Whether this Mac hears the Mac it controls right now (docs/view.md):
+ * `reaching` before it has heard anything since it started, `in-reach`
+ * while it does, `lost` once contact is gone, and `closed` when Firstmate
+ * quit there.
+ */
+export const viewContactSchema = z.enum(["reaching", "in-reach", "lost", "closed"]);
+export type ViewContact = z.infer<typeof viewContactSchema>;
+
+/**
+ * What this app is on the Mac it runs on (docs/view.md). `home` holds
+ * Firstmate and its record itself; `left` is the Mac it last stopped
+ * controlling, said once on its first launch. `view` controls Firstmate on
+ * another Mac and keeps no record: `name` is that Mac's own name (its
+ * address until it has said it), `heardAt` the last moment this Mac heard
+ * from it, `readOnly` set when the two Firstmates are too far apart to make
+ * changes, `caughtUp` counts the times this Mac had to read everything
+ * again after a gap, which the window follows, and `runsWork` says this Mac
+ * also runs that Mac's work, so leaving it stops that too.
+ */
+export const thisMacSchema = z.discriminatedUnion("role", [
+  z.strictObject({
+    role: z.literal("home"),
+    left: z
+      .strictObject({
+        name: z.string().min(1).max(128),
+        reason: leftReasonSchema,
+        at: z.number().int().nonnegative(),
+      })
+      .nullable(),
+  }),
+  z.strictObject({
+    role: z.literal("view"),
+    name: z.string().min(1).max(128),
+    address: z.string().min(1).max(256),
+    joinedAt: z.number().int().nonnegative(),
+    contact: viewContactSchema,
+    readOnly: z.enum(["newer-there", "older-there"]).nullable(),
+    heardAt: z.number().int().nonnegative().nullable(),
+    caughtUp: z.number().int().nonnegative(),
+    runsWork: z.boolean().optional(),
+  }),
+]);
+export type ThisMac = z.infer<typeof thisMacSchema>;
+
+/**
+ * How joining another Mac with a pasted link went (docs/view.md). A refusal
+ * names what happened, never the link: `not-a-link` text that is not one,
+ * `kind` a link made for another user on that Mac, `used`, `expired` and
+ * `unknown` (no open link has that code) as the other Mac answered,
+ * `unreachable` nothing answered at its address, `not-that-mac` something
+ * answered there that is not the Mac that made the link, and `other` any
+ * other failure.
+ */
+export const joinOutcomeSchema = z.discriminatedUnion("ok", [
+  z.strictObject({ ok: z.literal(true) }),
+  z.strictObject({
+    ok: z.literal(false),
+    refused: z.enum([
+      "not-a-link",
+      "kind",
+      "used",
+      "expired",
+      "unknown",
+      "unreachable",
+      "not-that-mac",
+      "other",
+    ]),
+  }),
+]);
+export type JoinOutcome = z.infer<typeof joinOutcomeSchema>;
+
+/** A macOS user's short name as the design names it: "Builder" for builder. */
+export function userDisplayName(user: string): string {
+  return `${user.charAt(0).toUpperCase()}${user.slice(1)}`;
+}
+
+/** What a computer that runs work has, after it joined (design skill `components/devices/DevicesTab`). */
+function foundWords(found: FoundTools): string {
+  if (found.git && found.claudeCode) return "It has git and Claude Code, and no sign-ins yet.";
+  if (found.git) return "It has git, and no Claude Code or sign-ins yet.";
+  if (found.claudeCode) return "It has Claude Code, and no git or sign-ins yet.";
+  return "It has no git, Claude Code or sign-ins yet.";
+}
+
+/**
+ * What the home says once a device joined: the feed line, and the words
+ * Settings -> Devices' panel turns to. A Mac that joined at Firstmate's
+ * first launch there says what it can do; one a command or its address set
+ * up what it has there; another user on this Mac that it is set up to run
+ * work only. One already on the list that used the link to find this Mac
+ * again says only that.
+ */
+export function deviceJoinedLine(joined: {
+  name: string;
+  kind: DeviceKind;
+  user?: string | undefined;
+  onThisMac?: boolean | undefined;
+  found?: FoundTools | undefined;
+  again?: boolean | undefined;
+  reachedOn?: "local" | "private" | undefined;
+}): string {
+  const way =
+    joined.reachedOn === "private"
+      ? ` It reached ${HERE.this} on your private network.`
+      : joined.reachedOn === "local"
+        ? ` It reached ${HERE.this} on this network.`
+        : "";
+  if (joined.again)
+    return `${deviceLabel(joined)} found ${HERE.this} again. It runs work as before.${way}`;
+  if (joined.kind === "view")
+    return `${joined.name} joined. It can control your first mate. Your first mate's tasks and conversation stay on ${HERE.this}.${way}`;
+  if (joined.kind === "mac" && !joined.found)
+    return `${joined.name} joined. It can control your first mate and run its work. Your first mate's tasks and conversation stay on ${HERE.this}.${way}`;
+  if (joined.onThisMac && joined.user)
+    return `Running as ${userDisplayName(joined.user)} is set up. It runs work only, and has no sign-ins yet.`;
+  return joined.found
+    ? `${joined.name} joined your devices. ${foundWords(joined.found)}${way}`
+    : `${joined.name} joined your devices.${way}`;
+}
+
+/** Names in a sentence: "website", "website and api", "website, api and docs". */
+export function namesInWords(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/**
+ * How the home names a device (design skill `components/devices/DevicesTab`):
+ * another Mac by its own name, another macOS user on this Mac as "Running
+ * as Builder".
+ */
+export function deviceLabel(device: {
+  name: string;
+  user?: string | undefined;
+  onThisMac?: boolean | undefined;
+}): string {
+  return device.onThisMac && device.user
+    ? `Running as ${userDisplayName(device.user)}`
+    : device.name;
+}
+
+/** The words of Remove, for a card and the feed. */
+export const deviceWords = {
+  label: deviceLabel,
+
+  /**
+   * What Settings -> Devices says of a computer on another version of
+   * Firstmate (design skill `components/devices/DevicesTab`, "Another
+   * version"): which version it has, and whether it still takes work.
+   */
+  otherVersion(other: DeviceOtherVersion): string {
+    const has =
+      other.app && other.than
+        ? `Has Infinitary ${other.app}, ${other.than} than ${HERE.this}'s.`
+        : other.app
+          ? `Has Infinitary ${other.app}, another version than ${HERE.this}'s.`
+          : other.than
+            ? `Has ${other.than === "older" ? "an older" : "a newer"} Infinitary than ${HERE.this}.`
+            : `Has another version of Infinitary than ${HERE.this}.`;
+    return other.takesWork ? has : `${has} It takes no new work until it is updated.`;
+  },
+
+  /** What a computer that runs work stops when it is removed, before its work comes here. */
+  removeStops(device: DeviceView): string {
+    const tasks = device.tasks ?? 0;
+    const runs = device.runs ?? [];
+    if (tasks === 0) return "Its unmerged work comes here first.";
+    const which = `${tasks === 1 ? "Its task" : `Its ${tasks} tasks`}${runs.length > 0 ? ` on ${namesInWords(runs)}` : ""}`;
+    return `${which} ${tasks === 1 ? "stops" : "stop"}, and its unmerged work comes here first.`;
+  },
+
+  /** The feed's line once Remove did what it does. */
+  removed(device: DeviceView): string {
+    if (!deviceRunsWork(device.kind)) return `Removed ${device.name}`;
+    const label = deviceLabel(device);
+    if (device.removal === "when-back") return `${label} is removed once it is back`;
+    const runs = device.runs ?? [];
+    return runs.length === 0
+      ? `Removed ${label}.`
+      : `Removed ${label}. ${namesInWords(runs)} ${runs.length === 1 ? "runs" : "run"} on ${HERE.this} now.`;
+  },
+};

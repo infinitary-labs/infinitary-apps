@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-connect-keeps-saved-login",
+      "kind": "fix",
+      "title": "Connecting Claude keeps a login already on this computer",
+      "body": "When you connect Claude and it is already signed in on this computer, Connect uses that login. It no longer opens the browser just because a saved login could not be read, or an old copy looked expired.",
+      "area": "subscriptions",
+      "noPicture": "The change is that the browser stays closed. Connect draws no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "project-testing-rules",
+      "kind": "improvement",
+      "highlight": 2,
+      "title": "Your project rules go into the project itself",
+      "body": "Tell Firstmate how a project should be built, such as how its tests, code style or commit messages work, and a crewmate writes that rule into the project's own instructions file. Every crewmate that works there follows it, and so does anyone else who works on the project.",
+      "area": "firstmate",
+      "noPicture": "The change is what Firstmate does when you state a rule: a crewmate's change to the project's instructions file, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

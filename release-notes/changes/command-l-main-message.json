@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "command-l-main-message",
+      "kind": "feature",
+      "title": "Press ⌘L to get back to your message",
+      "body": "From anywhere in the window, even inside a card, a card's reply or the Tasks panel, ⌘L puts you back in the main message box. Your words and the cursor stay where you left them. From Settings it takes you home first.",
+      "area": "message-box",
+      "noPicture": "A key moves the cursor: a still picture of the message box after ⌘L looks the same as after a click.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

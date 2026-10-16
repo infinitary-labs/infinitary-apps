@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-publication-test-channel",
+      "reason": "Test-only isolation of release channel environment variables so the alpha signing job can run stable publication cases. No product behavior changes."
+    }
+  ]
+}

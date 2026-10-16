@@ -1,0 +1,276 @@
+import { createHash } from "node:crypto";
+import { afterEach, describe, expect, it } from "vitest";
+import { ForgeError } from "../src/core/forge/forge";
+import { readOpenChanges } from "../src/core/forge/providers/github/changes";
+import { GitHubForge } from "../src/core/forge/providers/github/githubForge";
+import { requestDeviceCode } from "../src/core/forge/providers/github/oauth";
+import { type GitHubStub, STUB_USER_CODE, startGitHubStub } from "./e2e/githubStub";
+
+/**
+ * The GitHub stand-in the e2e journeys put changes in through
+ * (`tests/e2e/githubStub.ts`), driven by the app's real GitHub forge rather
+ * than by the stand-in's own accessors: what a journey relies on is what the
+ * forge reads from it and asks of it. The branch heads are this test's map,
+ * standing in for a repository's branches, so nothing here spawns git.
+ */
+
+/** A commit id as git would print one, distinct per name. */
+const sha = (name: string) => createHash("sha1").update(name).digest("hex");
+
+const TITLE = "fix: the meter reads on time";
+const BODY = "## Intent\nThe meter reads on time.";
+
+let github: GitHubStub | undefined;
+
+afterEach(async () => {
+  await github?.close();
+  github = undefined;
+});
+
+async function forgeOver(heads: Record<string, string>) {
+  const stub = await startGitHubStub();
+  github = stub;
+  stub.headOf((branch) => {
+    const head = heads[branch];
+    if (!head) throw new Error(`no branch ${branch}`);
+    return head;
+  });
+  const forge = new GitHubForge(
+    { kind: "github", host: "github.com", owner: "octo", name: "meterlab", dir: "/r" },
+    { token: async () => "gho_e2e_sign_in", apiBaseUrl: stub.url },
+  );
+  return { github: stub, forge };
+}
+
+const mergeRequests = (stub: GitHubStub) =>
+  stub.requests().filter((line) => line.endsWith("/merge"));
+
+describe("the GitHub stand-in, through the app's forge", () => {
+  it("serves the current user-facing code through the real device-flow reader", async () => {
+    github = await startGitHubStub();
+    const options = { baseUrl: github.url };
+    expect(await requestDeviceCode(options)).toMatchObject({
+      userCode: STUB_USER_CODE,
+      verificationUri: `${github.url}/login/device`,
+    });
+    github.device.setCode("FRESH-CODE");
+    expect(await requestDeviceCode(options)).toMatchObject({
+      userCode: "FRESH-CODE",
+      verificationUri: `${github.url}/login/device`,
+    });
+  });
+
+  it("accepts verification only for a pushed branch and lists its queued run at that version", async () => {
+    const branch = "fm/task-verify";
+    const { github, forge } = await forgeOver({ [branch]: sha("verification") });
+    const path = "/repos/octo/meterlab/actions/workflows/verify.yml/dispatches";
+    expect((await forge.api.call("POST", path, JSON.stringify({ ref: "missing" }))).status).toBe(
+      422,
+    );
+    expect(github.dispatches()).toEqual([]);
+    expect(
+      (
+        await forge.api.call(
+          "POST",
+          path,
+          JSON.stringify({ ref: branch, inputs: { profile: "alpha", perf: true } }),
+        )
+      ).status,
+    ).toBe(204);
+    const result = await forge.api.call(
+      "GET",
+      `/repos/octo/meterlab/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch`,
+    );
+    expect(JSON.parse(result.body)).toMatchObject({
+      total_count: 1,
+      workflow_runs: [
+        {
+          head_sha: sha("verification"),
+          head_branch: branch,
+          event: "workflow_dispatch",
+          status: "queued",
+          conclusion: null,
+        },
+      ],
+    });
+    expect(github.dispatches()).toEqual([
+      {
+        workflow: "verify.yml",
+        ref: branch,
+        headSha: sha("verification"),
+        inputs: { profile: "alpha", perf: true },
+      },
+    ]);
+    expect(
+      (await forge.api.call("POST", "/repos/octo/meterlab/actions/runs/1000/cancel")).status,
+    ).toBe(202);
+    const cancelled = await forge.api.call(
+      "GET",
+      `/repos/octo/meterlab/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch`,
+    );
+    expect(JSON.parse(cancelled.body).workflow_runs[0]).toMatchObject({
+      status: "completed",
+      conclusion: "cancelled",
+    });
+    const absent = await forge.api.call(
+      "GET",
+      "/repos/octo/meterlab/actions/runs?branch=other&event=workflow_dispatch",
+    );
+    expect(JSON.parse(absent.body)).toEqual({ total_count: 0, workflow_runs: [] });
+  });
+
+  it("keeps the title and body a change was opened with, follows its branch's head, and squashes at the head asked for", async () => {
+    const branch = "fm/task-meter";
+    const heads = { [branch]: sha("first") };
+    const { github, forge } = await forgeOver(heads);
+
+    const opened = await forge.openChange({ branch, title: TITLE, body: BODY });
+    expect(opened).toMatchObject({
+      number: 100,
+      branch,
+      headSha: sha("first"),
+      title: TITLE,
+      body: BODY,
+    });
+    expect(await forge.changeFor(branch)).toEqual(opened);
+
+    // The crewmate pushes again: the change's head is its branch's new commit.
+    heads[branch] = sha("second");
+    const read = await forge.changeFor(branch);
+    expect(read).toMatchObject({ headSha: sha("second"), title: TITLE, body: BODY });
+
+    await forge.putIn(read as NonNullable<typeof read>, sha("second"));
+    expect(github.merges()).toEqual([
+      { number: 100, sha: sha("second"), method: "squash", title: TITLE, message: BODY },
+    ]);
+    // A change that went in is no longer open for its branch.
+    expect(await forge.changeFor(branch)).toBeNull();
+  });
+
+  it("serves a seeded change with its own title and body, for the one branch it belongs to", async () => {
+    const { github, forge } = await forgeOver({ "fm/task-a": sha("a"), "fm/task-b": sha("b") });
+    github.servePull({ number: 55, title: "feat: the crewmate's work", body: "Why it matters." });
+
+    expect(await forge.changeFor("fm/task-a")).toEqual({
+      number: 55,
+      url: "https://github.com/octo/meterlab/pull/55",
+      branch: "fm/task-a",
+      headSha: sha("a"),
+      title: "feat: the crewmate's work",
+      body: "Why it matters.",
+    });
+    // Another branch has no change: one change never answers for two.
+    expect(await forge.changeFor("fm/task-b")).toBeNull();
+  });
+
+  it("lists each open change the app opened by its own title", async () => {
+    const { github, forge } = await forgeOver({ "fm/task-meter": sha("first") });
+    await forge.openChange({ branch: "fm/task-meter", title: TITLE, body: BODY });
+    const rows = await readOpenChanges({
+      host: "github.com",
+      token: "gho_e2e_sign_in",
+      apiBaseUrl: github.url,
+    });
+    expect(rows.map((row) => [row.number, row.title])).toEqual([[100, TITLE]]);
+  });
+
+  describe("refuses what GitHub refuses, and records no merge", () => {
+    it("a put-in at a head the change has moved on from (409)", async () => {
+      const branch = "fm/task-meter";
+      const heads = { [branch]: sha("checked") };
+      const { github, forge } = await forgeOver(heads);
+      const checked = await forge.openChange({ branch, title: TITLE, body: BODY });
+      heads[branch] = sha("pushed-after");
+
+      const refusal = await forge.putIn(checked, sha("checked")).catch((caught: unknown) => caught);
+      expect(refusal).toBeInstanceOf(ForgeError);
+      expect(refusal).toMatchObject({ failure: "refused" });
+      expect(String((refusal as Error).message)).toContain("409");
+      expect(mergeRequests(github)).toHaveLength(1);
+      expect(github.merges()).toEqual([]);
+    });
+
+    it("a change in conflict with newer work (405), until a later head carries that work - read back by its number", async () => {
+      const branch = "fm/task-meter";
+      const heads = { [branch]: sha("approved") };
+      const { github, forge } = await forgeOver(heads);
+      const change = await forge.openChange({ branch, title: TITLE, body: BODY });
+      github.conflicts((head) => head === sha("approved"));
+      // GitHub's mergeability read lags: only the merge request finds the conflict.
+      expect(await forge.pull(change.number as number)).toMatchObject({
+        state: "open",
+        merged: false,
+        headSha: sha("approved"),
+        base: "main",
+        readiness: "clean",
+      });
+      await expect(forge.putIn(change, sha("approved"))).rejects.toMatchObject({
+        failure: "refused",
+        message: expect.stringContaining("405"),
+      });
+      expect(github.merges()).toEqual([]);
+      heads[branch] = sha("repaired");
+      const repaired = (await forge.changeFor(branch)) as NonNullable<
+        Awaited<ReturnType<typeof forge.changeFor>>
+      >;
+      await expect(forge.putIn(repaired, sha("repaired"))).resolves.toEqual({
+        sha: sha("repaired"),
+      });
+      expect(github.merges().map((merge) => merge.sha)).toEqual([sha("repaired")]);
+      // Merged, it reads closed and merged by its number, no longer open for its branch.
+      expect(await forge.pull(change.number as number)).toMatchObject({
+        state: "closed",
+        merged: true,
+      });
+      expect(await forge.changeFor(branch)).toBeNull();
+    });
+
+    it("a push that lands between the check and the put-in", async () => {
+      const branch = "fm/task-meter";
+      const heads = { [branch]: sha("checked") };
+      const { github, forge } = await forgeOver(heads);
+      const checked = await forge.openChange({ branch, title: TITLE, body: BODY });
+      github.onMergeRequest(() => {
+        heads[branch] = sha("late-push");
+      });
+
+      await expect(forge.putIn(checked, sha("checked"))).rejects.toMatchObject({
+        failure: "refused",
+      });
+      expect(github.merges()).toEqual([]);
+      // Still open, now at the late push: nothing went in.
+      expect(await forge.changeFor(branch)).toMatchObject({ headSha: sha("late-push") });
+    });
+
+    it("a change GitHub has no record of", async () => {
+      const { github, forge } = await forgeOver({ "fm/task-meter": sha("first") });
+      await expect(
+        forge.putIn(
+          { number: 99, url: null, branch: "fm/task-meter", headSha: sha("first"), title: TITLE },
+          sha("first"),
+        ),
+      ).rejects.toMatchObject({ failure: "not-found" });
+      expect(github.merges()).toEqual([]);
+    });
+
+    it("hands back an unconventional title as it was, so the app's own guard sees it and never asks to merge", async () => {
+      const { github, forge } = await forgeOver({ "fm/task-meter": sha("first") });
+      github.servePull({ number: 55, title: "Crewmate's work" });
+      const change = await forge.changeFor("fm/task-meter");
+      expect(change?.title).toBe("Crewmate's work");
+
+      await expect(forge.putIn(change as NonNullable<typeof change>, sha("first"))).rejects.toThrow(
+        /conventional name/,
+      );
+      expect(mergeRequests(github)).toEqual([]);
+    });
+
+    it("reads failing checks as red", async () => {
+      const { github, forge } = await forgeOver({ "fm/task-meter": sha("first") });
+      github.servePull({ number: 55, title: TITLE });
+      github.setChecks([{ name: "linux-checks", status: "completed", conclusion: "failure" }]);
+      const change = await forge.changeFor("fm/task-meter");
+      expect((await forge.checks(change as NonNullable<typeof change>)).overall).toBe("red");
+    });
+  });
+});

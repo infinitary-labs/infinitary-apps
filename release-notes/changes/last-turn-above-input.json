@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-above-input",
+      "kind": "improvement",
+      "title": "Your last message and Firstmate's reply now sit above the message box",
+      "body": "Your last message and Firstmate's reply now show as two small chat bubbles above the message box. While Firstmate works, its bubble shows three dots and \"Working…\", then turns into its reply: its own few words, the title of the card it showed you, or the task it started. The pair stays until your next message, even after you reopen the app, and a click opens Activity. Nothing else passes above the message box or above the character now; Activity still lists everything.",
+      "highlight": 2,
+      "area": "message-box",
+      "picture": {
+        "dark": "last-turn-above-input-dark.webp",
+        "light": "last-turn-above-input-light.webp",
+        "alt": "A message bubble on the right and Firstmate's reply \"On it\" on the left, just above the message box"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

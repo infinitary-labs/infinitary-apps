@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "disclosure-caret-centered",
+      "kind": "fix",
+      "title": "Expandable rows center their arrow",
+      "body": "The arrow on rows that open, such as Details in a task's record and What would leave this Mac in Settings, now sits on the row's center line instead of slightly low.",
+      "area": "other",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

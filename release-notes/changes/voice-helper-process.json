@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "voice-helper-process",
+    "kind": "fix",
+    "area": "message-box",
+    "title": "Voice no longer slows the window while it turns speech into text",
+    "body": "On Macs with Apple silicon, the voice model now runs in a process of its own. The window keeps drawing smoothly while your words are transcribed, and it no longer holds several gigabytes of memory after you talk. Transcripts are the same, and what you say still stays on this Mac.",
+    "noPicture": "The voice controls look the same; the change is in where transcription runs and how much memory the window holds.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

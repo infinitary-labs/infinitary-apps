@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "session-footprint-claude",
+      "reason": "Internal offline session-size measurement now counts Firstmate's app-owned Claude copies and sidecars; no app behavior or screen changes."
+    }
+  ]
+}

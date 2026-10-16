@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-new-actions",
+      "kind": "improvement",
+      "title": "A crewmate can do more on a web page",
+      "body": "In a task's browser, a crewmate can now point at a menu to open it, fill in many fields at once, drag something from one place to another, jump to the top or bottom of a page, and take a picture of one part of a page. It still does none of this while you have control.",
+      "area": "tasks",
+      "noPicture": "The change is in what a crewmate can do on a page; no view of the app changed.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["c6c6911c5b5056184bcda9385af80b7ad15945de"]
+      }
+    }
+  ]
+}

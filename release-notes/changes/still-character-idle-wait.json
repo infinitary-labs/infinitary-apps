@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "still-character-idle-wait",
+      "reason": "Test-only repair: the shared idle wait requires a drawn character before accepting idle, preventing a reduced-motion journey from freezing the opening greet. No shipped behavior changed."
+    }
+  ]
+}

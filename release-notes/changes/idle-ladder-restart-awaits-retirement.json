@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "idle-ladder-restart-awaits-retirement",
+      "reason": "Internal, tests only: the core idle ladder restart test gives its stuck task a real working copy and waits for dropping the task to remove it before deleting its scratch data, so no git command runs on a deleted folder afterwards. No shipped behavior changed."
+    }
+  ]
+}

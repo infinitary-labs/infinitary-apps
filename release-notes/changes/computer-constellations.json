@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "computer-constellations",
+      "kind": "feature",
+      "highlight": 3,
+      "area": "crewmates",
+      "title": "Crewmates gather by the computer they work on",
+      "body": "When your work runs on more than one computer, the crewmates around Firstmate gather in one group per computer, with the computer's name beneath its group. A computer that is out of reach keeps showing the crewmates it last had. The crewmates on this Mac look and move as before.",
+      "picture": {
+        "dark": "computer-constellations-dark.webp",
+        "light": "computer-constellations-light.webp",
+        "alt": "One Firstmate in the home cluster, with separate named crew clusters for two other work computers."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

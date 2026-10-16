@@ -1,0 +1,18 @@
+{
+  "exclusions": [
+    {
+      "id": "demo-guidance-every-card",
+      "reason": "Tells crewmates, and documents, that a demo recording fits any crewmate card, not only a merge card. The demo-recordings-on-cards note already says a crewmate's card can show a demo, so nothing new reaches a person.",
+      "covers": ["107b584cd8b9d1e206b8925a3c122cbb85f855f3"]
+    },
+    {
+      "id": "openrouter-sign-in-egress-docs",
+      "reason": "Documentation only: names OpenRouter's browser sign-in and its network activity in the architecture, first-launch and design docs. Nothing in the app changes.",
+      "covers": ["1a258bcd3a7e794bfa3b7e2deb66711ac76bfd35"]
+    },
+    {
+      "id": "alpha-review-after-0-1-31",
+      "reason": "Release review after stable 0.1.31: ranks what a crewmate did in Activity, links to what changed on a card and the last turn as two plain lines as highlights, and marks the Tasks-above-Knowledge fix alpha only. Nothing in the app changes."
+    }
+  ]
+}

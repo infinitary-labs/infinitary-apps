@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmates-load-project-instructions",
+      "kind": "improvement",
+      "title": "Crewmates start with your project's own instructions and skills",
+      "body": "Every crewmate now starts its work with your project's AGENTS.md (or its CLAUDE.md) already in hand, and with the skills your project keeps in .claude/skills or .agents/skills listed for it. Before, a crewmate had to open AGENTS.md itself, and saw a skill only when AGENTS.md named it. Nothing from folders outside your project, and none of your own Claude setup, comes with them.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a crewmate starts its work with.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

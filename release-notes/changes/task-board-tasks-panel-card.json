@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-board-tasks-panel-card",
+      "kind": "improvement",
+      "title": "The task board's chips and Find sit on a row of their own",
+      "body": "On the task board, the count of tasks, the project chips and Find now sit on a row under the board's title.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-tasks-panel-card-dark.webp",
+        "light": "task-board-tasks-panel-card-light.webp",
+        "alt": "The task board titled Tasks, with its count, project chips and Find on the row beneath"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

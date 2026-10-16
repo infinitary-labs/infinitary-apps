@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "verification-workflow-dispatch",
+      "kind": "fix",
+      "title": "Crewmates can manage GitHub workflows and project settings",
+      "body": "Crewmates can use your GitHub sign-in in Firstmate to start and manage project workflows, choose their branches and settings, and manage the project itself. Account administration stays unavailable.",
+      "area": "crewmates",
+      "noPicture": "This changes which project API requests crewmates can make, without changing a visible view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

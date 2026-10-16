@@ -1,0 +1,16 @@
+{
+  "exclusions": [
+    {
+      "id": "disposable-linux-journey-probe",
+      "reason": "CI only: a disposable workflow that probed the Linux journeys was added to main and removed again; nothing it added remains. Nothing in the app changes.",
+      "covers": [
+        "bd3a3db06e0fa1e69de0d41824e1a1358078fecf",
+        "5f032a8447335deba86cedc321eeae2b0b5e4c3d"
+      ]
+    },
+    {
+      "id": "alpha-review-after-0-3-1-alpha-69",
+      "reason": "Release review after alpha 0.3.1-alpha.69: ranks the panel's directions in Knowledge, preferences becoming directions, and checking a project change before it applies as the highlights; corrects 32 notes against their changes in plain words; folds the first Directions browser note into the later one and makes the circular-wait refusal an exclusion. Nothing in the app changes."
+    }
+  ]
+}

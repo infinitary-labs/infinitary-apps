@@ -1,0 +1,9 @@
+// Runtime platform facts have one owner; adapters and their explicit test inputs read it.
+language js
+
+`process.platform` as $read where {
+  $filename <: r".*src/.*",
+  not { $filename <: r".*src/core/platform\.ts" },
+  not { $filename <: r".*\.test\.ts" },
+  register_diagnostic(span=$read, message="Read the host platform through src/core/platform.ts and the shared platform profile.", severity="error")
+}

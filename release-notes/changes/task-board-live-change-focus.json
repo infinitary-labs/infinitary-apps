@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-board-live-change-focus",
+      "kind": "fix",
+      "title": "Focus stays put when a task changes while the task board asks",
+      "body": "If a task changes elsewhere while the task board asks you to confirm a move, the board cancels the move as before. Focus now lands at once on the task, or on the row nearest where it was, instead of jumping to the task later when you switch views.",
+      "area": "tasks",
+      "noPicture": "This changes where keyboard focus goes after a rare live change, not how the board looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

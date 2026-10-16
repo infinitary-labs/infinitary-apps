@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "microphone-line-under-the-input",
+      "kind": "improvement",
+      "title": "Microphone access is explained under the message box",
+      "body": "The first time you talk, a line under the message box says macOS is asking, and it goes away once you answer. No card covers Firstmate any more. If microphone access is off, the line says so and opens System Settings for you.",
+      "area": "message-box",
+      "picture": {
+        "dark": "microphone-line-under-the-input-dark.webp",
+        "light": "microphone-line-under-the-input-light.webp",
+        "alt": "While you talk for the first time, a line under the message box says macOS is asking to use the microphone"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

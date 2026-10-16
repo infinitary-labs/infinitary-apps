@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "no-window-memory-note-as-exclusion",
+      "reason": "Turns the unshipped maintenance note lighter-work-with-no-window into an exclusion, so the release-notes ledger check passes. Nothing in the app changes."
+    }
+  ]
+}

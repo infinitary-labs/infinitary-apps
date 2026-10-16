@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "runner-session-out-of-test-box",
+      "reason": "Test runs drop the Claude session variables of whoever started them, so the end-to-end app and the boxed Claude client in tests start the way they do in CI. Only the test harness and its docs changed; no shipped behavior changed."
+    }
+  ]
+}

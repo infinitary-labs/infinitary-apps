@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "working-copies-pool-readiness-tests",
+      "reason": "Internal test repair: wait for the warm-pool return to complete, and exercise a deliberately paused reset with real git. No user-facing behavior changes."
+    }
+  ]
+}

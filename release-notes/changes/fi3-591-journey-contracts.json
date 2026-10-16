@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fi3-591-journey-contracts",
+      "reason": "Test-only changes remove copied presentation and prompt details from ten end-to-end journeys while retaining user outcomes and boundary checks; no product behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "composer-undo-by-run",
+      "kind": "fix",
+      "title": "⌘Z in the message box undoes what you typed, not one letter",
+      "body": "In the message box and a card's reply, ⌘Z now takes back what you typed since the cursor last moved, a line at a time, as in other Mac apps. Before, it took back one letter at a time. ⇧⌘Z puts it back.",
+      "area": "message-box",
+      "noPicture": "Undo is a key: a still picture of the message box looks the same before and after the fix.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

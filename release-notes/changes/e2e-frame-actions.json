@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-frame-actions",
+      "reason": "Test-only cleanup: frame interactions dispatch in-frame, intentional native-input journeys carry reasons, and a scoped lint prevents native pointer actions through frame locator and helper chains. No product behavior changes."
+    }
+  ]
+}

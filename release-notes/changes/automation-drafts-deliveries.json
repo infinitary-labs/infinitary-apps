@@ -1,0 +1,45 @@
+{
+  "entries": [
+    {
+      "id": "automation-drafts",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "Check an automation before it runs",
+      "body": "A new automation is saved as a draft until you turn it on. Enable shows what it will do first: when it runs, its time zone and project, the exact prompt Firstmate gets, the next dates, what it sends and what happens if Firstmate is closed at that time. When you ask Firstmate for an automation and leave details open, or Firstmate sets up a repeating one on its own, it waits as a draft for you to check.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-drafts-dark.webp",
+        "light": "automation-drafts-light.webp",
+        "alt": "The check before an automation turns on, listing when it runs, its time zone, the prompt Firstmate gets and a Turn on button"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "automation-delivery-history",
+      "kind": "feature",
+      "title": "An automation's history shows what each run led to",
+      "body": "Each run in an automation's history now says whether Firstmate handled it, is still waiting, is trying again, or had it taken back, and links to the tasks and cards it led to. Pausing, changing or deleting an automation takes back a prompt Firstmate has not read yet, and an automation never piles up more than one waiting prompt.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-delivery-history-dark.webp",
+        "light": "automation-delivery-history-light.webp",
+        "alt": "An automation's history with runs marked retrying, handled, cancelled and sent, and a handled run linking to a task and a card"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "automation-controlling-computer",
+      "kind": "feature",
+      "title": "Automation works from a computer that controls your Firstmate",
+      "body": "A computer that controls your Firstmate on another computer now has the Automation tab, panel and commands too, with the same automations. Changes you make there take effect on the computer where Firstmate lives, which is still the only one that runs them.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-controlling-computer-dark.webp",
+        "light": "automation-controlling-computer-light.webp",
+        "alt": "Settings on a computer that controls Firstmate, with an Automation tab listing three automations"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

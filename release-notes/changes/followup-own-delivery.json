@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "followup-own-delivery",
+      "kind": "fix",
+      "title": "Follow-up work ships the way it will be merged",
+      "body": "When a crewmate picks up follow-up work another crewmate filed, it now opens a pull request or keeps a local branch by your project's setting at the moment the work starts, the same way the work is merged. Before, it could follow the setting of the task that found the work, or one you had changed while the work waited.",
+      "area": "crewmates",
+      "noPicture": "The change is in what a crewmate is told when follow-up work starts, which is not drawn on screen.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

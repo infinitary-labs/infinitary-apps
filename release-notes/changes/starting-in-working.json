@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "starting-in-working",
+      "kind": "improvement",
+      "highlight": 2,
+      "title": "Starting shows in Working as soon as you press Start",
+      "body": "A backlog task moves into Working as soon as you press Start, and reads Starting until its crewmate begins. If it cannot start, it returns to Backlog and says why.",
+      "area": "tasks",
+      "picture": {
+        "dark": "starting-in-working-dark.webp",
+        "light": "starting-in-working-light.webp",
+        "alt": "The task board after Start, with the started task in the Working column"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

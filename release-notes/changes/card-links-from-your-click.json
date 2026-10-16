@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-links-from-your-click",
+      "kind": "fix",
+      "title": "A card opens a web page only when you click its link",
+      "body": "A card's link opens in your browser when you click it or press Enter on it. A card can no longer open a page by itself while you are typing somewhere else.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes: a link you click opens as before, and a page a card would have opened on its own stays closed.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "now-panel-care-row-spec",
+      "reason": "Internal test repair: the Tasks panel journey reads a task's care from the record's own Care row, which the live task policies change split out of Delivery, instead of expecting it inside the Delivery row. No product behavior changes."
+    }
+  ]
+}

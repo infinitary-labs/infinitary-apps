@@ -1,0 +1,104 @@
+name: ci
+
+# The PR checks (captain decision B, 2026-09-15, scout
+# fm3000-ci-release-only-s1): everything that runs on hosted Linux. The
+# macOS work - the full Playwright e2e suite, the universal package smoke,
+# the replay gate - lives in verify.yml's mac lane and runs inside every
+# alpha and on demand, never per PR or per push: that job was 98% of a
+# ~$200/month bill. The one Mac check a pull request does get is
+# journeys.yml's: only the journey files the change can break, on the Mac
+# mini (FI3-1305).
+# The local green gate (AGENTS.md) is the e2e gate before a push. It runs
+# only the unit tests relevant to the change, so these jobs' tests are
+# where the full unit suite runs on every PR.
+# Several machines at once (FI3-1204, captain's direction 2026-10-07): the
+# hosted runner has two processors and no larger one is on offer, so the
+# commands one job used to run in a row are split across jobs. Together
+# they run exactly verify.yml's linux-checks lane: every vitest project, the
+# integration project in shards that cover it, and the probes a change
+# reaches, where linux-checks runs them all (FI3-1756's plan, approved by
+# the captain on 2026-10-14).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every pull request, a release's notes and record included, runs these
+# jobs unconditionally: every Linux gate must run. A job skipped by its own
+# condition would satisfy both GitHub and the app's green rule, so the probe
+# job picks its probes inside its one test step and passes with none.
+jobs:
+  typecheck-lint-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm check
+      - run: pnpm lint:adherence
+      - run: pnpm build
+
+  # The in-memory cohorts (docs/test-cohorts.md).
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test --project pure --project unit --project unit-isolated
+
+  # The integration cohort, split by vitest's own --shard (a hash of each
+  # file's path), on machines of their own so nothing else loads the host
+  # its budgets measure. Each shard reports even when the other fails.
+  integration-tests:
+    name: integration-tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test --project integration --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  # The probes (docs/test-cohorts.md, "Probes"): integration files that can
+  # fail with no code change - SSH and Remote Login stand-ins, dns-sd, release
+  # rehearsals, the connection listener, real Playwright runs. This job runs
+  # only the probes whose paths the change edits, from its merge base with
+  # main on a pull request and from the previous main on a push, and its
+  # summary says which and why. A base it cannot read runs them all.
+  probe-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:probes --base "$BASE"
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}

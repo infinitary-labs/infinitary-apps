@@ -1,0 +1,19 @@
+.lesson-panel { display: flex; flex-direction: column; gap: var(--space-3); color: var(--fg-2); font-size: var(--text-sm); line-height: var(--leading-body); }
+.lesson-panel section { display: flex; flex-direction: column; gap: var(--space-1); }
+.lesson-panel p { margin: 0; }
+.lesson-panel .lesson-goal { color: var(--fg-1); overflow-wrap: anywhere; }
+.lesson-number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.lesson-muted { color: var(--fg-3); }
+.lesson-days { display: flex; gap: var(--space-1); }
+.lesson-days i { display: block; width: 12px; height: 12px; border-radius: var(--radius-xs); background: var(--bg-3); box-sizing: border-box; }
+.lesson-days i[data-state="practised"] { background: var(--ok); }
+.lesson-days i[data-state="rest"] { background: transparent; border: 1px dashed var(--fg-3); }
+.lesson-days i[data-state="paused"] { background: transparent; border: 1px dashed var(--idle); }
+.lesson-days i[data-state="today"] { background: transparent; border: 1px solid var(--fg-2); }
+.lesson-bar { height: 3px; background: var(--bg-3); border-radius: var(--radius-xs); overflow: hidden; }
+.lesson-bar i { display: block; height: 100%; background: var(--fg-3); }
+.lesson-next { display: flex; gap: var(--space-2); align-items: center; justify-content: space-between; width: 100%; border: 0; border-radius: var(--radius-s); padding: var(--space-2); background: var(--accent-dim); color: var(--fg-1); font: inherit; text-align: left; cursor: pointer; }
+.lesson-next > :first-child { overflow-wrap: anywhere; }
+.lesson-next .lesson-number { white-space: nowrap; font-size: var(--text-xs); color: var(--fg-2); }
+.lesson-next:hover { background: var(--bg-3); }
+.lesson-next:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }

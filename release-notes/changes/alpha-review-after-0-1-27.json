@@ -1,0 +1,112 @@
+{
+  "entries": [
+    {
+      "id": "add-files-to-a-message",
+      "kind": "feature",
+      "title": "Add files to a message",
+      "body": "Drop files on the main input or a card reply, or choose them with Add files. Pictures and text files stay with the message. A file the app cannot attach is written in as its location on disk.",
+      "area": "message-box",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["92e023f451e3c4c759cfc5334948e4da5cdbc071"]
+      }
+    },
+    {
+      "id": "tasks-row-summary",
+      "kind": "feature",
+      "title": "Rest on a Tasks row to see its summary",
+      "body": "Rest on a planned, idle or done Tasks row. The same summary you see for a crewmate opens beside the row, and a click still opens the record.",
+      "highlight": 2,
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-row-summary-dark.webp",
+        "light": "tasks-row-summary-light.webp",
+        "alt": "The summary that opens beside a planned row in Tasks while the pointer rests on it"
+      },
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["1a4479b144f1e001eb60fb80b1d1182c97d69258"]
+      }
+    },
+    {
+      "id": "message-gets-an-action",
+      "kind": "feature",
+      "title": "A message with no action is tried once more",
+      "body": "If a message of yours gets no action, Firstmate tries once more. It then shows a note with your words, and you can ask again or leave it.",
+      "area": "firstmate",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["2c0a2a988560af7224e3729afb115c9edc7fec4f"]
+      }
+    },
+    {
+      "id": "show-closed-card",
+      "kind": "improvement",
+      "title": "Ask Firstmate to bring a closed card forward",
+      "body": "Ask Firstmate to show a closed card. It brings that same card forward to read, and nothing on it runs.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["4bb8b5d04b591d6b352a386a71117a7add4cdde1"]
+      }
+    },
+    {
+      "id": "design-reaches-the-builder",
+      "kind": "improvement",
+      "title": "An approved design reaches the builder intact",
+      "body": "An approved design now reaches the builder in words and as pictures it can open. That build is no longer sent to a weaker model.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the builder now receives the design in words and pictures.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["f9eea2e0349bb262798210dd546b872a29dde5e6"]
+      }
+    },
+    {
+      "id": "card-revision-marks",
+      "kind": "improvement",
+      "title": "A revised card keeps the marks you saw",
+      "body": "When a card you have seen is revised, the app tells its author which parts changed. The marks you already saw can stay.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["8a3419f8a22808cdaafe11f7904c7f580c27683a"]
+      }
+    },
+    {
+      "id": "next-owner-after-approval",
+      "kind": "improvement",
+      "title": "An approved build names who does the work next",
+      "body": "After you approve a build, the card names who does the work next. It also says no further approval is needed.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["1a993106a23f7527f9f2e644becec1ee577008f0"]
+      }
+    },
+    {
+      "id": "codex-one-percent-used",
+      "kind": "fix",
+      "title": "Codex at 1% used no longer reads as used up",
+      "body": "A Codex allowance at 1% used was shown as used up, so another provider was offered. It now reads as 1% used, and the allowance stays available.",
+      "area": "subscriptions",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["52a95872195af943acdd7480b376acc22d8584ae"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "docs-history-cleanup",
+      "reason": "Documentation only: history sections were removed from lasting docs and the rules rewritten in the present tense. Nothing in the shipped app changed.",
+      "covers": ["eea6bfdc75b312da03f6e461a35f4c0a36cbbd68"]
+    }
+  ]
+}

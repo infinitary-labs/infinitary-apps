@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-link-during-refresh",
+      "kind": "fix",
+      "title": "A merge card's pull request link opens even as the card updates",
+      "body": "A merge card updates its facts while it is up, such as how long ago the checks were read. A click on its pull request link that landed during an update did nothing. Now it opens the pull request.",
+      "area": "cards",
+      "noPicture": "The card looks the same; the change is that a click on its link is no longer lost.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

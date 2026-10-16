@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "every-note-after-untracked-version",
+      "kind": "fix",
+      "title": "After an upgrade from an older version, the release note lists every recorded change",
+      "body": "Versions before alpha 0.1.28-alpha.23 did not record what you had seen, so that upgrade showed no release note. Now the first launch after such a version puts one note on top of your cards with every recorded change, grouped by release. If you already ran alpha 0.1.28-alpha.23, you get that note once, on your next upgrade.",
+      "area": "updates",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

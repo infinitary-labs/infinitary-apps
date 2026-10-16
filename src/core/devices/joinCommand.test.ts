@@ -1,0 +1,438 @@
+import { spawn } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { request } from "node:https";
+import { userInfo } from "node:os";
+import { join } from "node:path";
+import { FETCH_APP_PATH } from "@shared/connection";
+import { buildPairingLink, parsePairingLink } from "@shared/devices";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { freePort } from "../../../tests/helpers/connectionClient";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { type HomeConnection, startConnection } from "../connection/connection";
+import type { CoreDispatch } from "../dispatcher";
+import { CoreEventBus } from "../events";
+import { commandClosed, commandExpired, commandUsed, macAsk, sandboxOff } from "../helper/words";
+import { claimLink } from "./dial";
+import { createKeyIdentity } from "./identity";
+import { joinCommand, shellWord } from "./joinCommand";
+import { DevicePairing } from "./pairing";
+
+/**
+ * The one command that joins a computer to this home (docs/devices.md,
+ * "Joining by a command"), run as a person runs it: by the Mac's own
+ * `/bin/sh`, its own curl and tar, against the real pairing and connection,
+ * with a stand-in Firstmate bundle the home sends. The stand-in's program
+ * writes down how it was started and what it found beside it, so the test
+ * reads whether the command asked first, got the right app, started it with
+ * the link, and left nothing behind. The real app joining from a fetched
+ * copy is `tests/e2e/run-work.spec.ts`.
+ */
+
+// Real processes: sh, curl, tar, and the home's own tar.
+vi.setConfig({ testTimeout: 30_000 });
+
+const standIn = (async (channel) => {
+  throw new Error(`Rejected ${channel}`);
+}) as CoreDispatch;
+
+const connections: HomeConnection[] = [];
+const pairings: DevicePairing[] = [];
+afterEach(async () => {
+  await Promise.all(connections.splice(0).map((connection) => connection.close()));
+  for (const pairing of pairings.splice(0)) pairing.dispose();
+});
+
+/** A stand-in Firstmate bundle: its program writes down its words and its bundle's marker, then answers `exit`. */
+function standInBundle(record: string, exit = 0): string {
+  const bundle = join(scratchDir("infinitary-command-app-"), "Firstmate 3000.app");
+  mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
+  mkdirSync(join(bundle, "Contents", "Resources"), { recursive: true });
+  writeFileSync(join(bundle, "Contents", "Resources", "marker"), "the home's own copy\n");
+  const program = join(bundle, "Contents", "MacOS", "Firstmate 3000");
+  writeFileSync(
+    program,
+    [
+      "#!/bin/sh",
+      `printf '%s\\n' "$@" > ${shellWord(record)}`,
+      `cat "$4/Contents/Resources/marker" >> ${shellWord(record)}`,
+      `echo "Joined (stand-in)."`,
+      `exit ${exit}`,
+      "",
+    ].join("\n"),
+  );
+  chmodSync(program, 0o755);
+  return bundle;
+}
+
+async function home(options: { now?: () => number; bundle?: string | null } = {}) {
+  const pairing = new DevicePairing({
+    dir: join(scratchDir("infinitary-command-home-"), "devices"),
+    onProblem: () => {},
+    interfaces: () => ({}),
+    ...(options.now ? { now: options.now } : {}),
+  });
+  pairings.push(pairing);
+  const port = await freePort();
+  const at = `127.0.0.1:${port}`;
+  let fetched = 0;
+  const connection = startConnection({
+    dispatch: standIn,
+    events: new CoreEventBus(),
+    devices: pairing,
+    port,
+    name: () => "MacBook Pro",
+    app: () => {
+      fetched += 1;
+      return options.bundle ?? null;
+    },
+  });
+  connections.push(connection);
+  return {
+    pairing,
+    at,
+    fetched: () => fetched,
+    invite: async () => {
+      const invite = pairing.invite({ kind: "work", at });
+      await connection.settled();
+      return invite;
+    },
+  };
+}
+
+const LAUNCHER = {
+  executable: "/Applications/Firstmate 3000.app/Contents/MacOS/Firstmate 3000",
+  args: [],
+};
+
+/** Runs a command as Terminal would, typing `answer` when it asks; answers its words and exit. */
+/** A folder whose `uname` says Darwin, first on the search path; none on a Mac. */
+function macUname(): string {
+  if (process.platform === "darwin") return "";
+  const bin = scratchDir("infinitary-command-mac-bin-");
+  writeFileSync(join(bin, "uname"), "#!/bin/sh\necho Darwin\n", { mode: 0o755 });
+  return `${bin}:`;
+}
+
+/**
+ * A folder that stands in a Linux computer on x64, first on the search path:
+ * its `uname`, and the `unshare` the AppImage's launcher probes, which makes
+ * a user namespace only where `namespaces` says this user may.
+ */
+function linuxTools(namespaces: boolean): string {
+  const bin = scratchDir("infinitary-command-linux-bin-");
+  writeFileSync(
+    join(bin, "uname"),
+    '#!/bin/sh\nif [ "$1" = -m ]; then echo x86_64; else echo Linux; fi\n',
+    { mode: 0o755 },
+  );
+  writeFileSync(join(bin, "unshare"), `#!/bin/sh\nexit ${namespaces ? 0 : 1}\n`, { mode: 0o755 });
+  return `${bin}:`;
+}
+
+function run(
+  command: string,
+  answer: string,
+  tools = macUname(),
+): Promise<{ out: string; code: number | null }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("/bin/sh", ["-c", command], {
+      // A person's Terminal: the Mac's own programs first, in a UTF-8 locale.
+      // The command stops at once on a computer that is not a Mac, so on any
+      // other system a stand-in `uname` says Darwin, as the bundle the home
+      // sends stands in a Mac's app.
+      env: {
+        PATH: `${tools}/usr/bin:/bin:/usr/sbin:/sbin`,
+        HOME: scratchDir("infinitary-command-user-"),
+        LANG: "en_US.UTF-8",
+      },
+      cwd: scratchDir("infinitary-command-cwd-"),
+    });
+    let out = "";
+    child.stdout.on("data", (chunk) => {
+      out += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      out += String(chunk);
+    });
+    // A command that finishes without reading its answer (one that asks nothing, or stops
+    // before asking) can close the pipe before this write lands; its words and exit are the answer.
+    child.stdin.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code !== "EPIPE") reject(error);
+    });
+    child.stdin.end(answer);
+    child.once("close", (code) => resolve({ out, code }));
+  });
+}
+
+const ME = userInfo().username;
+
+describe("the command that adds another Mac", () => {
+  it("asks first, then gets Firstmate from this Mac with the link, starts it to join, and leaves nothing behind", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ bundle: standInBundle(record) });
+    const invite = await at.invite();
+    const command = joinCommand({
+      for: "another-mac",
+      link: invite.link,
+      homeName: "MacBook Pro",
+      launcher: LAUNCHER,
+    });
+    // One line, with the link in it and nothing from the shell's own words.
+    expect(command).not.toContain("\n");
+    expect(command.startsWith("'/bin/sh' '-c' ")).toBe(true);
+
+    const { out, code } = await run(command, "yes\n");
+    expect(code).toBe(0);
+    expect(out).toBe(
+      [
+        ...macAsk("MacBook Pro", ME),
+        "Type yes to agree: Getting Infinitary from MacBook Pro… done.",
+        "Joined (stand-in).",
+        "",
+      ].join("\n"),
+    );
+    const [work, join_, fetched, bundle, link, marker] = readFileSync(record, "utf8").split("\n");
+    expect([work, join_, fetched, link, marker]).toEqual([
+      "work",
+      "join",
+      "--fetched",
+      invite.link,
+      "the home's own copy",
+    ]);
+    expect(bundle?.endsWith("/Firstmate 3000.app")).toBe(true);
+    // What it unpacked is gone, and the link is still open for the join to use.
+    expect(existsSync(bundle ?? "")).toBe(false);
+    expect(at.fetched()).toBe(1);
+    expect(at.pairing.opened({ code: parsePairingLink(invite.link).code })).toBeNull();
+  });
+
+  it("changes nothing on a no, and asks nothing of a Mac that is out of reach or is not that Mac", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ bundle: standInBundle(record) });
+    const invite = await at.invite();
+    const command = (link: string) =>
+      joinCommand({ for: "another-mac", link, homeName: "MacBook Pro", launcher: LAUNCHER });
+
+    const no = await run(command(invite.link), "no\n");
+    expect(no.code).toBe(1);
+    expect(no.out).toBe(
+      [
+        ...macAsk("MacBook Pro", ME),
+        "Type yes to agree: Nothing changed on this computer.",
+        "",
+      ].join("\n"),
+    );
+
+    const link = parsePairingLink(invite.link);
+    const nobody = buildPairingLink({ ...link, at: `127.0.0.1:${await freePort()}` });
+    const away = await run(command(nobody), "yes\n");
+    expect(away.code).toBe(1);
+    expect(away.out).toBe(
+      "Could not reach MacBook Pro at 127.0.0.1.\nBoth computers need the same network, or the same private network.\n",
+    );
+
+    const impostor = buildPairingLink({ ...link, key: createKeyIdentity("x").pin });
+    const other = await run(command(impostor), "yes\n");
+    expect(other.code).toBe(1);
+    expect(other.out).toBe(
+      "Something answered at 127.0.0.1, but not the computer that made this command.\nNothing was sent to it.\n",
+    );
+    expect(at.fetched()).toBe(0);
+    expect(existsSync(record)).toBe(false);
+  });
+
+  it("says a command was used, expired or stopped, and gets nothing", async () => {
+    let now = 1_000_000;
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ now: () => now, bundle: standInBundle(record) });
+    const command = (link: string) =>
+      joinCommand({ for: "another-mac", link, homeName: "MacBook Pro", launcher: LAUNCHER });
+    const tail = (lines: readonly string[]) => [
+      ...macAsk("MacBook Pro", ME),
+      "Type yes to agree: Getting Infinitary from MacBook Pro… ",
+      ...lines,
+      "",
+    ];
+
+    const used = await at.invite();
+    await claimLink(used.link, {
+      kind: "work",
+      name: "Another Mac",
+      user: { name: "sam", uid: (process.getuid?.() ?? 0) + 1000 },
+    });
+    expect((await run(command(used.link), "yes\n")).out).toBe(
+      tail(commandUsed("MacBook Pro")).join("\n"),
+    );
+
+    const stopped = await at.invite();
+    at.pairing.stop(stopped.id);
+    expect((await run(command(stopped.link), "yes\n")).out).toBe(
+      tail(commandClosed("MacBook Pro")).join("\n"),
+    );
+
+    const late = await at.invite();
+    now += 10 * 60 * 1000;
+    expect((await run(command(late.link), "yes\n")).out).toBe(
+      tail(commandExpired("MacBook Pro")).join("\n"),
+    );
+    expect(existsSync(record)).toBe(false);
+  });
+
+  it("reads every value as words, so a Mac's name cannot change what runs", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ bundle: standInBundle(record) });
+    const invite = await at.invite();
+    const name = `Sam's "$(touch /tmp/x)" \`id\` Mac`;
+    const { out } = await run(
+      joinCommand({ for: "another-mac", link: invite.link, homeName: name, launcher: LAUNCHER }),
+      "no\n",
+    );
+    expect(out.split("\n")[0]).toBe(macAsk(name, ME)[0]);
+  });
+});
+
+describe("the command run on a Linux computer", () => {
+  it("stops before anything where the AppImage would run without its sandbox, and asks as before where it would not", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ bundle: standInBundle(record) });
+    const invite = await at.invite();
+    const command = joinCommand({
+      for: "another-mac",
+      link: invite.link,
+      homeName: "MacBook Pro",
+      launcher: LAUNCHER,
+    });
+
+    const off = await run(command, "yes\n", linuxTools(false));
+    expect(off.code).toBe(1);
+    expect(off.out).toBe([...sandboxOff("MacBook Pro"), ""].join("\n"));
+    expect(at.fetched()).toBe(0);
+    expect(existsSync(record)).toBe(false);
+
+    const on = await run(command, "no\n", linuxTools(true));
+    expect(on.code).toBe(1);
+    expect(on.out).toBe(
+      [
+        ...macAsk("MacBook Pro", ME),
+        "Type yes to agree: Nothing changed on this computer.",
+        "",
+      ].join("\n"),
+    );
+    expect(at.fetched()).toBe(0);
+  });
+});
+
+describe("the command that runs work as another user on this Mac", () => {
+  it("starts this Mac's own app in its work mode with the link", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const bundle = standInBundle(record);
+    const at = await home();
+    const invite = await at.invite();
+    const command = joinCommand({
+      for: "another-user",
+      link: invite.link,
+      homeName: "MacBook Pro",
+      launcher: { executable: join(bundle, "Contents", "MacOS", "Firstmate 3000"), args: [] },
+    });
+    expect(command).toBe(
+      [join(bundle, "Contents", "MacOS", "Firstmate 3000"), "work", "join", invite.link]
+        .map(shellWord)
+        .join(" "),
+    );
+    const { code } = await run(command, "");
+    expect(code).toBe(0);
+    expect(readFileSync(record, "utf8").split("\n").slice(0, 3)).toEqual([
+      "work",
+      "join",
+      invite.link,
+    ]);
+    expect(at.fetched()).toBe(0);
+  });
+});
+
+describe("getting Firstmate from this Mac", () => {
+  /** One request to the fetch path, as a client that checks nothing; answers its status and body. */
+  function fetchApp(
+    at: string,
+    options: { method?: string; body?: string; headers?: Record<string, string> } = {},
+  ): Promise<{ status: number; body: string }> {
+    const [host, port] = at.split(":");
+    return new Promise((resolve, reject) => {
+      const asked = request(
+        {
+          host,
+          port: Number(port),
+          method: options.method ?? "POST",
+          path: FETCH_APP_PATH,
+          rejectUnauthorized: false,
+          headers: { "content-type": "application/json", ...options.headers },
+        },
+        (response) => {
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => chunks.push(chunk));
+          response.once("end", () =>
+            resolve({
+              status: response.statusCode ?? 0,
+              body: Buffer.concat(chunks).toString("latin1"),
+            }),
+          );
+        },
+      );
+      asked.once("error", reject);
+      asked.end(options.body ?? "");
+    });
+  }
+
+  it("sends the app only for an open link made for a computer that runs work, and never spends it", async () => {
+    const record = join(scratchDir("infinitary-command-record-"), "started");
+    const at = await home({ bundle: standInBundle(record) });
+    const invite = await at.invite();
+    const code = parsePairingLink(invite.link).code;
+    const sent = await fetchApp(at.at, { body: JSON.stringify({ code }) });
+    expect(sent.status).toBe(200);
+    // A gzip stream: its first two bytes.
+    expect(sent.body.charCodeAt(0)).toBe(0x1f);
+    expect(sent.body.charCodeAt(1)).toBe(0x8b);
+    expect(at.pairing.opened({ code })).toBeNull();
+
+    const view = at.pairing.invite({ kind: "view", at: at.at });
+    const viewCode = parsePairingLink(view.link).code;
+    expect(await fetchApp(at.at, { body: JSON.stringify({ code: viewCode }) })).toMatchObject({
+      status: 409,
+    });
+    expect(await fetchApp(at.at, { body: JSON.stringify({ code: "C".repeat(43) }) })).toMatchObject(
+      { status: 401 },
+    );
+    expect(await fetchApp(at.at, { body: JSON.stringify({ code: 7 }) })).toMatchObject({
+      status: 400,
+    });
+    // With no code, only a computer already on the list gets it, by its key.
+    expect(await fetchApp(at.at, { body: "{}" })).toMatchObject({ status: 401 });
+    expect(await fetchApp(at.at, { method: "GET" })).toMatchObject({ status: 405 });
+    expect(
+      await fetchApp(at.at, { body: JSON.stringify({ code }), headers: { origin: "https://x" } }),
+    ).toMatchObject({ status: 403 });
+    expect(
+      await fetchApp(at.at, {
+        body: JSON.stringify({ code }),
+        headers: { "content-type": "text/plain" },
+      }),
+    ).toMatchObject({ status: 415 });
+    // No refusal echoes the code.
+    for (const body of [
+      JSON.stringify({ code: viewCode }),
+      JSON.stringify({ code: "C".repeat(43) }),
+    ])
+      expect((await fetchApp(at.at, { body })).body).not.toContain(viewCode);
+  });
+
+  it("says when this copy cannot send itself", async () => {
+    const at = await home({ bundle: null });
+    const invite = await at.invite();
+    const answer = await fetchApp(at.at, {
+      body: JSON.stringify({ code: parsePairingLink(invite.link).code }),
+    });
+    expect(answer.status).toBe(404);
+    expect(JSON.parse(answer.body)).toMatchObject({ refused: "none" });
+  });
+});

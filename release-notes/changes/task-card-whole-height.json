@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-card-whole-height",
+      "kind": "fix",
+      "title": "Task cards open tall enough to show everything",
+      "body": "A task card with a long Progress list now grows to show Goal, Activity and Details when it opens, instead of hiding them until you scroll. Its buttons stay put: Drop task at the left edge, and Start, Continue or Show the card at the right. The sentence beside the buttons that repeated the task's status is gone.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-whole-height-dark.webp",
+        "light": "task-card-whole-height-light.webp",
+        "alt": "A task card waiting on you, shown whole: its Progress list, the model readout, Drop task at the left edge and Show the card at the right"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

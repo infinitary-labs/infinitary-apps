@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "stand-in-pairing-code-on-input",
+      "reason": "Internal, tests only: the stand-in Firstmate the SSH tests send now gives curl its one-use pairing code on its input, and the tests check curl's arguments never hold it."
+    }
+  ]
+}

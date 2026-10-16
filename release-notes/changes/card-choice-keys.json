@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-choice-keys",
+      "kind": "feature",
+      "highlight": 1,
+      "area": "cards",
+      "title": "Press a card's choice from the keyboard",
+      "body": "The first four choices on the card in front of you each show a key, ⌘1 through ⌘4 from left to right, or Ctrl+1 through Ctrl+4 on Linux. A key presses its choice the same way a click does. An empty reply box shows ⇧⌘L, or Ctrl+Shift+L on Linux, which puts the cursor there.",
+      "picture": {
+        "dark": "card-choice-keys-dark.webp",
+        "light": "card-choice-keys-light.webp",
+        "alt": "A decision card on a Mac whose Not now and Approve buttons show ⌘1 and ⌘2, and whose empty reply field shows ⇧⌘L"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

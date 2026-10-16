@@ -1,0 +1,48 @@
+/**
+ * @startingPoint section="Cards" subtitle="How the first mate communicates — never chat bubbles" viewport="700x340"
+ */
+export interface ResponseCardProps {
+  /**
+   * Derived from what the card is, never declared on the wire: decision = has actions (the user
+   * chooses); note = no actions (a fact); attention = the app's own card (a provider needs sign
+   * in, Firstmate is down); working = mid-revision; record = a task's record (no card actions,
+   * ever; its footer is the host's lifecycle toggles).
+   */
+  kind?: "decision" | "note" | "attention" | "working" | "record";
+  title?: React.ReactNode;
+  /** Small mono metadata, e.g. "2m ago · crewmate 4". */
+  meta?: React.ReactNode;
+  /**
+   * The quiet revised line under the title - "Revised 14:02 · 2 parts new · 1 removed", or
+   * "Rewritten 14:02" - on a card revised since the captain last saw it. Mono
+   * xs fg-3. The app derives it; the body's change bars beside new parts come with it.
+   */
+  revised?: React.ReactNode;
+  /** Footer action row — Button elements. */
+  actions?: React.ReactNode;
+  /**
+   * Host chrome between the body and the action row: the card's live attachment, a micro label,
+   * one line of what it is now, and the author's label as a small secondary Button
+   * (`ResponseCard.prompt.md`, "A live attachment"). Never a card action.
+   */
+  attachment?: React.ReactNode;
+  /**
+   * Host chrome at the top right of the reading area, level with the title's top: a merge card's
+   * risk chart (`ResponseCard.prompt.md`, "The risk chart"). The title gives way by its width.
+   */
+  aside?: { node: React.ReactNode; width: number };
+  /** Top-right chrome close; not a declared card action. */
+  onClose?: () => void;
+  /** The close button itself, for a popover that hangs from it. */
+  closeRef?: React.Ref<HTMLButtonElement>;
+  /** Host chrome anchored under the close: the question a close asks first. */
+  closeAsk?: React.ReactNode;
+  /** The close is asking: the button says its popover is open. */
+  closeAsking?: boolean;
+  /** Card body. Any HTML artifact; keep it on system tokens. */
+  children?: React.ReactNode;
+  width?: number | string;
+  /** Default 340 — sized to fully cover the 300px Firstmate behind the stack. Actions pin to the bottom. */
+  minHeight?: number | string;
+  style?: React.CSSProperties;
+}

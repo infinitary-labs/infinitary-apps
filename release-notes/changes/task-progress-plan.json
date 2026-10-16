@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "task-progress-plan",
+      "kind": "feature",
+      "title": "See where a task stands at a glance",
+      "body": "A crewmate now reports its plan as a short list of what the task takes, each item done, current, next or skipped. The summary that opens when you rest on a task shows it as dots on a line with a short label under each, and the task's record shows the whole list under its facts, with the time each finished item finished. Long lists fold their finished items away.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

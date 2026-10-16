@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-crewmate-current-instructions",
+      "kind": "fix",
+      "title": "Claude crewmates follow this version's instructions after an update",
+      "body": "A Claude crewmate that was still working when you updated used to carry on with the earlier version's instructions. It now carries on in a new conversation on this version's own, picking up from its task's brief and record. Its task's timeline notes the move.",
+      "area": "crewmates",
+      "noPicture": "The only trace on screen is one line on the task's timeline; the change is in what a reopened crewmate is told.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

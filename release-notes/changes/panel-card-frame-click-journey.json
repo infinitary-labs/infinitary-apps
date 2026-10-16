@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "panel-card-frame-click-journey",
+      "reason": "Repairs the end-to-end test of a panel from elsewhere putting up a card from a click inside its own card, which failed every Mac check on the Mac mini. No shipped behavior changed."
+    }
+  ]
+}

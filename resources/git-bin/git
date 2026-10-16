@@ -1,0 +1,47 @@
+#!/bin/sh
+# Firstmate 3000's git on a crewmate's search path (git integration phase 2,
+# docs/forge.md "The app's own git").
+#
+# The app puts this directory - it holds only this file - first on the
+# search path of every child it starts (src/core/hostEnv.ts), so `git` in a
+# crewmate's shell, and in whatever Claude's client runs, is the app's own
+# git, and every other program the Mac has stays visible behind it.
+# INFINITARY_GIT_DIR (or the older FM3000_GIT_DIR) names the app's git
+# tree. That git is built to be told where its parts are: these are the
+# three variables dugite's setupEnvironment gives the app's own git calls on
+# macOS
+# (src/core/workspace/bundledGit.ts; bundledGit.test.ts holds the two
+# together). Only shell builtins run here: the search path may hold nothing
+# else.
+
+dir=${INFINITARY_GIT_DIR:-${FM3000_GIT_DIR:-}}
+if [ -n "$dir" ] && [ -x "$dir/bin/git" ]; then
+  GIT_EXEC_PATH=$dir/libexec/git-core
+  GIT_TEMPLATE_DIR=$dir/share/git-core/templates
+  GIT_CONFIG_SYSTEM=$dir/etc/gitconfig
+  export GIT_EXEC_PATH GIT_TEMPLATE_DIR GIT_CONFIG_SYSTEM
+  exec "$dir/bin/git" "$@"
+fi
+
+# No app git named: step aside for the next git on the search path.
+if [ -n "${INFINITARY_GIT_STEPPED_ASIDE:-}${FM3000_GIT_STEPPED_ASIDE:-}" ]; then
+  echo "git: not found" >&2
+  exit 127
+fi
+INFINITARY_GIT_STEPPED_ASIDE=1
+export INFINITARY_GIT_STEPPED_ASIDE
+here=${0%/*}
+rest=
+IFS=:
+for entry in $PATH; do
+  [ "$entry" = "$here" ] && continue
+  rest=${rest:+$rest:}$entry
+done
+unset IFS
+if [ -z "$rest" ]; then
+  echo "git: not found" >&2
+  exit 127
+fi
+PATH=$rest
+export PATH
+exec git "$@"

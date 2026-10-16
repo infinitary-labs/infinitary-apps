@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "default-card-size",
+      "kind": "feature",
+      "highlight": 1,
+      "area": "cards",
+      "title": "Choose how large cards open",
+      "body": "Settings → Appearance now offers Usual, Wide, Full or Maximized as your default card size. You can still resize or restore each card.",
+      "picture": {
+        "dark": "default-card-size-dark.webp",
+        "light": "default-card-size-light.webp",
+        "alt": "Appearance settings with Wide selected under Default card size, beside Usual, Full and Maximized."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

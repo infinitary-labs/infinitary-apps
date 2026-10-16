@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "options-only-tag-removed",
+      "kind": "improvement",
+      "title": "Card questions no longer say Only these options",
+      "body": "A card question that offers no Something else row no longer carries an Only these options tag beside its wording. The question and its choices stay as they were.",
+      "area": "cards",
+      "noPicture": "A small tag beside a question's wording was removed; there is no new view to show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

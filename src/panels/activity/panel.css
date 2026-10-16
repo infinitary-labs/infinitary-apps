@@ -1,0 +1,167 @@
+/* The activity feed (./panel.tsx; the design skill's ActivityFeed): a
+   chromeless thread tied together by a 1px rail, a kind dot at the far
+   left and the age at the right, newest at the bottom. Drawn in the
+   panel's own page, so every rule is the panel's own. */
+:where([data-feed]),
+:where([data-feed]) * {
+  box-sizing: border-box;
+}
+[data-feed] {
+  --feed-fade: 40px;
+  --feed-thumb: 3px;
+  --feed-dot: 5px;
+  --feed-time: 32px;
+  font-size: var(--text-base);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  min-height: 0;
+  overflow: hidden;
+}
+[data-feed-scroller] {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  flex: 0 1 auto;
+  /* The feed pins itself to the newest line; Chromium's scroll anchoring
+     would otherwise hold a middle row in place when rows above it grow
+     (the typefaces landing after the first paint) and unpin the list. */
+  overflow-anchor: none;
+  /* Mirror so Chromium paints the native thumb on the left rail. */
+  transform: scaleX(-1);
+}
+[data-feed-scroller]::-webkit-scrollbar {
+  width: var(--feed-thumb);
+  height: var(--feed-thumb);
+}
+[data-feed-scroller]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-feed-scroller]::-webkit-scrollbar-thumb {
+  background: var(--fg-3);
+}
+[data-feed-scroller]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-feed-scroller]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+[data-feed-rows] {
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-left: 14px;
+  padding-top: var(--space-1);
+  border-left: 1px solid var(--line-1);
+  margin-left: 2px;
+  transform: scaleX(-1);
+}
+[data-feed-row] {
+  display: grid;
+  grid-template-columns: var(--feed-dot) minmax(0, 1fr) var(--feed-time);
+  column-gap: var(--space-3);
+  align-items: center;
+}
+.dot {
+  width: var(--feed-dot);
+  height: var(--feed-dot);
+  border-radius: var(--radius-pill);
+  background: var(--fg-3);
+}
+.dot.info {
+  background: var(--fg-2);
+}
+.dot.ok {
+  background: var(--ok);
+}
+.dot.warn {
+  background: var(--warn);
+}
+.dot.danger {
+  background: var(--danger);
+}
+.dot.you {
+  background: var(--captain);
+}
+.time {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  text-align: right;
+}
+.line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  line-height: var(--leading-body);
+}
+.key {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+/* The keyboard reads every line whole, as the pointer reads one. The
+   list fills the frame, which would cut a ring drawn outside it, and its
+   edges dissolve, so the feed draws the ring, glow and all, inside its
+   own edge. */
+[data-feed-scroller]:focus-visible .line {
+  white-space: normal;
+}
+[data-feed-scroller]:focus-visible {
+  box-shadow: none;
+}
+[data-feed]:has(> [data-feed-scroller]:focus-visible) {
+  box-shadow: var(--focus-ring-inset);
+  border-radius: var(--radius-m);
+}
+/* Fade content alpha only where more rows exist. Limiting each ramp to a
+   quarter of the viewport keeps both ramps ordered in very short frames. A
+   mask reads only its gradient's alpha, so any opaque color draws it: the
+   text color. */
+[data-feed][data-feed-above]:not([data-feed-below]) [data-feed-scroller] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--fg-1) min(var(--feed-fade), 25%)
+  );
+  mask-image: linear-gradient(to bottom, transparent, var(--fg-1) min(var(--feed-fade), 25%));
+}
+[data-feed][data-feed-below]:not([data-feed-above]) [data-feed-scroller] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    var(--fg-1) calc(100% - min(var(--feed-fade), 25%)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    var(--fg-1) calc(100% - min(var(--feed-fade), 25%)),
+    transparent
+  );
+}
+[data-feed][data-feed-above][data-feed-below] [data-feed-scroller] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--fg-1) min(var(--feed-fade), 25%),
+    var(--fg-1) calc(100% - min(var(--feed-fade), 25%)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--fg-1) min(var(--feed-fade), 25%),
+    var(--fg-1) calc(100% - min(var(--feed-fade), 25%)),
+    transparent 100%
+  );
+}

@@ -1,0 +1,653 @@
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { inflateSync } from "node:zlib";
+import { expect, test } from "@playwright/test";
+import { reportSummary } from "@shared/feed";
+import Database from "better-sqlite3";
+import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
+import { MANAGED_FILES } from "../../src/core/personal/workspace";
+import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundaryWords";
+import { AUTONOMY_SWITCH_NAME, AUTONOMY_WORDS } from "../../src/shared/vocabulary";
+import { scratchDir } from "../helpers/scratchDirs";
+import { type LaunchedApp, launchApp } from "./launch";
+import {
+  MOCK_PANEL_ID,
+  MOCK_PANEL_REPORT,
+  MOCK_PANEL_REVISED_REPORT,
+  MOCK_PANEL_TITLE,
+  type MockProviderServer,
+  PERSONAL_CHANGE_PROMPT_MARKER,
+  PERSONAL_PANEL_PROMPT_MARKER,
+  PERSONAL_REMOVE_PROMPT_MARKER,
+  startMockProvider,
+} from "./mockProvider";
+import { projectRow } from "./projects";
+import { promptInput } from "./prompt";
+import { expandDock, feedLine, reportLine, statusLine, taskKey } from "./rails";
+import { oneNewSavePoint, savePointCount } from "./savePoints";
+import { setThemeViaSettings } from "./theme";
+
+/**
+ * The personal extension host, end to end (talk-to-personalize Step 2,
+ * docs/ui-plugins.md "Personal extensions"): the built app boots against a
+ * userData whose personal workspace already holds the three fixture
+ * extensions under tests/fixtures/personal/, and the spec drives them the
+ * way a crewmate and the captain would - through the store, a server
+ * action, and a file saved on disk.
+ */
+type Snapshot = Awaited<ReturnType<Window["firstmate"]["plugins"]["personal"]["list"]>>;
+
+/** The line tests/fixtures/personal/shaky/panel.tsx draws, and the one the spec saves over it. */
+const SHAKY_LINE = "steady as she goes";
+const SHAKY_REVISED_LINE = "steadier still";
+
+test.describe("the personal extension host (Step 2)", () => {
+  let launched: LaunchedApp;
+  let workspace: string;
+
+  function snapshot(): Promise<Snapshot> {
+    return launched.page.evaluate(() => window.infinitary.plugins.personal.list());
+  }
+
+  test.beforeAll(async () => {
+    const userDataDir = scratchDir("infinitary-e2e-personal-");
+    workspace = join(userDataDir, "fleet", "personal");
+    mkdirSync(workspace, { recursive: true });
+    cpSync(join(process.cwd(), "tests", "fixtures", "personal"), workspace, { recursive: true });
+    launched = await launchApp({ userDataDir });
+    await expect
+      .poll(async () => (await snapshot()).extensions.map((e) => e.id), { timeout: 30_000 })
+      .toEqual(["bad", "open-items", "shaky"]);
+  });
+
+  test.afterAll(async () => {
+    await launched.close();
+  });
+
+  test("seeds every file the app manages with the very text the app was built from", () => {
+    // Read from what the built bundle wrote, not from the source: a build step
+    // that edits a string (electron-vite's CommonJS shim, docs/architecture.md
+    // section 10) breaks the workspace's types and shows up nowhere else.
+    for (const file of MANAGED_FILES) {
+      expect(readFileSync(join(workspace, file.path), "utf8"), file.path).toBe(file.content);
+    }
+  });
+
+  test("a fixture renders on the rail from the app's own components while its presence source holds data, and disappears when it is empty", async () => {
+    const { page } = launched;
+    const panel = page.locator('[data-side-panel="open-items"]');
+    await expect(panel).toHaveCount(0);
+
+    const filled = await page.evaluate(() =>
+      window.infinitary.plugins.invoke("open-items", "fill", ["alpha", "beta", "gamma"]),
+    );
+    expect(filled).toEqual({ ok: true, result: { filled: 3, host: "string" } });
+
+    await expect(panel).toBeVisible();
+    await expect(panel.locator("header")).toContainText("Open items");
+    await expect(panel.locator("[data-side-panel-attribution]")).toHaveText("yours");
+    await expect(panel.locator("[data-fixture-item]")).toHaveCount(3);
+    await expect(panel.getByText("3 open")).toBeVisible();
+    // It sits in the right rail, docked at a real width beside the stage.
+    await expect(page.locator('[data-rail="right"] [data-side-panel="open-items"]')).toHaveCount(1);
+
+    // The panel's own button calls its server action; the store change hides it.
+    await panel.locator("[data-fixture-clear]").click();
+    await expect(panel).toHaveCount(0);
+    await expect
+      .poll(async () => (await snapshot()).extensions.find((e) => e.id === "open-items")?.present)
+      .toBe(false);
+  });
+
+  test("a thrown render shows the quiet line and the rail stays; saving the file on disk reloads it", async () => {
+    const { page } = launched;
+    const panel = page.locator('[data-side-panel="shaky"]');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator("[data-fixture]")).toHaveText(SHAKY_LINE);
+    await expect(panel.locator("[data-fixture]")).toHaveAttribute("data-fixture-theme", "dark");
+    await expect(panel.locator("[data-side-panel-running]")).toHaveCount(0);
+
+    await page.evaluate(() =>
+      window.infinitary.plugins.db.request({
+        op: "set",
+        extensionId: "shaky",
+        key: "explode",
+        value: true,
+      }),
+    );
+    await expect(panel.locator("[data-personal-stopped]")).toHaveText(PANEL_STOPPED_LINE);
+    await expect(panel.locator("header")).toContainText("Shaky");
+    // The chrome and the rail stay (Activity docks there by default too).
+    await expect(page.locator('[data-rail="left"] [data-side-panel="shaky"]')).toHaveCount(1);
+    await expect(page.locator('[data-rail="left"] [data-side-panel="activity"]')).toHaveCount(1);
+
+    // The crewmate fixes forward: a save is a new version, and the boundary resets.
+    const source = join(workspace, "shaky", "panel.tsx");
+    writeFileSync(
+      source,
+      readFileSync(source, "utf8")
+        .replace('if (explode) throw new Error("shaky panel asked to fail");', "")
+        .replace(SHAKY_LINE, SHAKY_REVISED_LINE),
+    );
+    await expect(panel.locator("[data-fixture]")).toHaveText(SHAKY_REVISED_LINE, {
+      timeout: 15_000,
+    });
+    await expect(panel.locator("[data-personal-stopped]")).toHaveCount(0);
+  });
+});
+
+/**
+ * The build loop, end to end (talk-to-personalize Step 4, report section 7
+ * Step 4 row): through the mock provider, an ask becomes a panel. The mock
+ * Firstmate spawns with personal_ui; the mock crewmate writes the
+ * extension with Pi's own write tool, lints, captures, and reports; the
+ * host stamps the task onto the manifest (the running dot), commits the
+ * workspace with the report as the message, and closes the task done with
+ * no card and no settle. The build runs apart from the rails
+ * (docs/personal-panels.md, "Built apart"): the crewmate's version is drawn
+ * out of sight, where its capture photographs it, and the rail takes it at
+ * the report. The panel persists across a relaunch, a second ask is a
+ * second commit on the same directory that the rail takes only at its
+ * report, and "remove it" is the host removing and committing.
+ * Screenshots in both themes ride along.
+ */
+type TaskRow = {
+  id: string;
+  key: string;
+  status: string;
+  closed_reason: string | null;
+  worktree_dir: string;
+  branch: string;
+  repo_dir: string;
+  outcome: string | null;
+};
+
+function withDb<T>(userDataDir: string, read: (db: Database.Database) => T): T {
+  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
+  try {
+    return read(db);
+  } finally {
+    db.close();
+  }
+}
+
+function readTasks(userDataDir: string): TaskRow[] {
+  return withDb(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT id, key, status, closed_reason, worktree_dir, branch, repo_dir, outcome FROM tasks WHERE kind = 'work' ORDER BY created_at",
+        )
+        .all() as TaskRow[],
+  );
+}
+
+/**
+ * What the host's commit at the end of a live turn left on the task's
+ * timeline (`commitLiveTurn`): the commit it made, or git's own words for
+ * why it made none. A failed commit keeps the task open and its panel off
+ * the rail, so a journey reads this first to say why in git's words.
+ */
+function turnCommit(
+  userDataDir: string,
+  taskId: string,
+): { commit: string } | { commitFailed: string } | null {
+  const notes = withDb(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT data_json FROM task_events WHERE task_id = ? AND kind = 'note' ORDER BY at, id",
+        )
+        .all(taskId) as { data_json: string | null }[],
+  );
+  for (const { data_json } of notes) {
+    const data = JSON.parse(data_json ?? "{}") as { commit?: string; commitFailed?: string };
+    if (typeof data.commitFailed === "string") return { commitFailed: data.commitFailed };
+    if (typeof data.commit === "string") return { commit: data.commit };
+  }
+  return null;
+}
+
+/** The turn's commit note on the task with this key, once the host has written it. */
+async function awaitTurnCommit(
+  userDataDir: string,
+  key: string,
+): Promise<ReturnType<typeof turnCommit>> {
+  const read = () => {
+    const task = readTasks(userDataDir).find((row) => row.key === key);
+    return task ? turnCommit(userDataDir, task.id) : null;
+  };
+  await expect.poll(read, { timeout: 30_000 }).not.toBeNull();
+  return read();
+}
+
+/** A PNG's width and height from its IHDR chunk. */
+function pngSize(file: string): { width: number; height: number } {
+  const bytes = readFileSync(file);
+  expect(bytes.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
+
+/** Mean luminance, and the share of pixels that are not the corner color. */
+function pngPaint(file: string): { lum: number; contrast: number } {
+  const bytes = readFileSync(file);
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  const idat: Buffer[] = [];
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    const type = bytes.toString("ascii", offset + 4, offset + 8);
+    const data = bytes.subarray(offset + 8, offset + 8 + length);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      colorType = data[9] ?? 0;
+    } else if (type === "IDAT") {
+      idat.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+    offset += 12 + length;
+  }
+  const channels = colorType === 6 ? 4 : colorType === 2 ? 3 : 0;
+  expect(channels, `png color type ${colorType}`).toBeGreaterThan(0);
+  const raw = inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(stride * height);
+  let src = 0;
+  let prev = Buffer.alloc(stride);
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[src] ?? 0;
+    src += 1;
+    const row = Buffer.from(raw.subarray(src, src + stride));
+    src += stride;
+    for (let i = 0; i < stride; i += 1) {
+      const left = i >= channels ? (row[i - channels] ?? 0) : 0;
+      const up = prev[i] ?? 0;
+      const upLeft = i >= channels ? (prev[i - channels] ?? 0) : 0;
+      const value = row[i] ?? 0;
+      if (filter === 1) row[i] = (value + left) & 255;
+      else if (filter === 2) row[i] = (value + up) & 255;
+      else if (filter === 3) row[i] = (value + Math.floor((left + up) / 2)) & 255;
+      else if (filter === 4) {
+        const p = left + up - upLeft;
+        // biome-ignore lint/plugin/e2e-measured-box: PNG Paeth decoding compares byte values, not layout gaps.
+        const pa = Math.abs(p - left);
+        const pb = Math.abs(p - up);
+        const pc = Math.abs(p - upLeft);
+        const pr = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+        row[i] = (value + pr) & 255;
+      } else row[i] = value;
+    }
+    row.copy(pixels, y * stride);
+    prev = row;
+  }
+  const count = width * height;
+  const bgR = pixels[0] ?? 0;
+  const bgG = pixels[1] ?? 0;
+  const bgB = pixels[2] ?? 0;
+  let lumSum = 0;
+  let contrast = 0;
+  for (let i = 0; i < pixels.length; i += channels) {
+    const r = pixels[i] ?? 0;
+    const g = pixels[i + 1] ?? 0;
+    const b = pixels[i + 2] ?? 0;
+    lumSum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    if (Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB) > 48) contrast += 1;
+  }
+  return { lum: lumSum / count, contrast: contrast / count };
+}
+
+/**
+ * Records, in order, every distinct state of a panel on its rail and of its
+ * draft out of sight - whether each is drawn, its mock rows, and the
+ * running dot - so a journey can say what the rail drew while a build went
+ * on, as an order rather than a moment.
+ */
+async function watchBuild(page: import("@playwright/test").Page, id: string): Promise<void> {
+  await page.evaluate((panelId) => {
+    const target = window as Window & { __fmBuild?: string[] };
+    target.__fmBuild = [];
+    const state = (panel: Element | null) => {
+      if (!panel) return "none";
+      const rows = panel.querySelector("[data-mock-rows]")?.getAttribute("data-mock-rows") ?? "-";
+      return `rows=${rows}${panel.querySelector("[data-side-panel-running]") ? " running" : ""}`;
+    };
+    const record = () => {
+      const rail = document.querySelector(`[data-rail] [data-side-panel="${CSS.escape(panelId)}"]`);
+      const draft = document.querySelector(
+        `[data-panel-draft="${CSS.escape(panelId)}"] [data-side-panel]`,
+      );
+      const now = `rail ${state(rail)} | draft ${state(draft)}`;
+      const states = target.__fmBuild ?? [];
+      if (states[states.length - 1] !== now) states.push(now);
+    };
+    record();
+    new MutationObserver(record).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+    window.setInterval(record, 16);
+  }, id);
+}
+
+async function buildStates(page: import("@playwright/test").Page): Promise<string[]> {
+  return page.evaluate(() => (window as Window & { __fmBuild?: string[] }).__fmBuild ?? []);
+}
+
+/** Where, in the recorded order, the draft was last drawn: -1 when it never was. */
+function lastDrafted(states: readonly string[]): number {
+  return states.map((state) => !state.endsWith("draft none")).lastIndexOf(true);
+}
+
+type FlashSample = { theme: string; bg: string; lum: number };
+
+/**
+ * Records every distinct body background while a panel is built. The e2e
+ * window stays hidden, so this is the page's own painted background (the
+ * surface a shown window would flash), sampled from a mutation observer
+ * plus a timer rather than an OS screen recording.
+ */
+async function watchPageBackground(page: import("@playwright/test").Page): Promise<void> {
+  await page.evaluate(() => {
+    const target = window as Window & { __fmFlash?: FlashSample[] };
+    target.__fmFlash = [];
+    const record = () => {
+      const theme = document.body?.dataset.theme ?? "";
+      const bg = getComputedStyle(document.body).backgroundColor;
+      const nums = bg.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+      const lum =
+        (0.2126 * (nums[0] ?? 0) + 0.7152 * (nums[1] ?? 0) + 0.0722 * (nums[2] ?? 0)) / 255;
+      const samples = target.__fmFlash ?? [];
+      const last = samples[samples.length - 1];
+      if (!last || last.theme !== theme || Math.abs(last.lum - lum) > 0.02) {
+        samples.push({ theme, bg, lum });
+      }
+    };
+    record();
+    new MutationObserver(record).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class", "style"],
+    });
+    new MutationObserver(record).observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class", "style"],
+    });
+    window.setInterval(record, 32);
+  });
+}
+
+async function pageBackgroundSamples(
+  page: import("@playwright/test").Page,
+): Promise<FlashSample[]> {
+  return page.evaluate(() => {
+    const target = window as Window & { __fmFlash?: FlashSample[] };
+    return target.__fmFlash ?? [];
+  });
+}
+
+test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
+  let mockProvider: MockProviderServer;
+  /** The personal workspace's repo id, for the Projects row locator. */
+  const repoId = (dir: string): string =>
+    withDb(dir, (db) => (db.prepare("SELECT id FROM repos").get() as { id: string }).id);
+  let live: LaunchedApp;
+  let userDataDir: string;
+  let workspace: string;
+
+  const panel = () => live.page.locator(`[data-side-panel="${MOCK_PANEL_ID}"]`);
+  const ask = async (text: string) => {
+    const input = promptInput(live.page);
+    await input.click();
+    await input.fill(text);
+    await input.press("Enter");
+  };
+
+  test.beforeAll(async () => {
+    mockProvider = await startMockProvider();
+    live = await launchApp({ reuseMockProvider: mockProvider });
+    userDataDir = live.userDataDir;
+    workspace = join(userDataDir, "fleet", "personal");
+  });
+
+  test.afterAll(async () => {
+    await live.close();
+    await mockProvider.close();
+  });
+
+  test("an ask becomes a panel, persists, reads in both themes, takes a follow-up and is removed", async () => {
+    // One story, so one test: each step starts where the last one left the
+    // panel. The budget is the six one-minute tests these steps replace.
+    test.setTimeout(6 * 60_000);
+    let panelTaskId = "";
+    /** The first build's capture, of its regular rows, for the follow-up's to compare with. */
+    let regularCaptureHeight = 0;
+    await test.step("an ask builds the panel out of sight, the report puts it on the rail, the workspace commits, and the task closes done", async () => {
+      const { page } = live;
+      const before = savePointCount(workspace);
+      await watchPageBackground(page);
+      await watchBuild(page, MOCK_PANEL_ID);
+      await ask(`${PERSONAL_PANEL_PROMPT_MARKER} ${MOCK_PANEL_TITLE}`);
+      // Mount the Activity frame before the delayed report and close so both
+      // lifecycle pushes are rendered before their assertions begin.
+      await expandDock(page, "activity");
+
+      // The report puts the panel on its rail, on the app's own components.
+      const key = await taskKey(page, MOCK_PANEL_TITLE);
+      await expect(
+        reportLine(page, key).filter({ hasText: reportSummary(MOCK_PANEL_REPORT) }),
+      ).toBeVisible({ timeout: 45_000 });
+      // The report's commit, or git's own words for why there is none.
+      expect(await awaitTurnCommit(userDataDir, key)).toEqual({ commit: expect.any(String) });
+      await expect(panel()).toBeVisible({ timeout: 30_000 });
+      await expect(panel().locator("header")).toContainText(MOCK_PANEL_TITLE);
+      await expect(panel().locator("[data-side-panel-attribution]")).toHaveText("yours");
+      await expect(panel().locator("[data-mock-rows='regular']")).toHaveCount(1);
+      // It was built apart: drawn out of sight while the rail had nothing of
+      // it, and on the rail only once it was a draft no more.
+      const states = await buildStates(page);
+      expect(states, states.join("\n")).toContain("rail none | draft rows=regular");
+      expect(
+        states.findIndex((state) => !state.startsWith("rail none")),
+        states.join("\n"),
+      ).toBeGreaterThan(lastDrafted(states));
+      // The declared `feed.recent` read reaches the panel: the feed already
+      // holds the spawn line, so the count is a real number, never a blank.
+      await expect(panel().getByText("Activity")).toBeVisible();
+      await expect
+        .poll(async () =>
+          (await panel().locator("[data-mock-panel] span").allInnerTexts()).some((text) =>
+            /^[1-9]\d*$/.test(text.trim()),
+          ),
+        )
+        .toBe(true);
+
+      // The report is the feed line; the close is the record's own line; no card.
+      await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
+      await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
+      await expect(page.locator("[data-panel-draft]")).toHaveCount(0);
+      expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+
+      // The record: done, finished, on the personal repo, with no worktree.
+      const tasks = readTasks(userDataDir);
+      expect(tasks).toHaveLength(1);
+      const task = tasks[0] as TaskRow;
+      panelTaskId = task.id;
+      expect(task).toMatchObject({
+        status: "done",
+        closed_reason: "finished",
+        // The feed is capped, not the saved report.
+        outcome: MOCK_PANEL_REPORT,
+        worktree_dir: "",
+        branch: "",
+      });
+      expect(task.repo_dir).toBe(workspace);
+
+      // One save point holds the panel, named as the host's guard wants and
+      // keeping the report whole, with nothing left unsaved. The subject it
+      // makes of an untyped report is liveWorkspace.test.ts's.
+      const built = await oneNewSavePoint(workspace, before);
+      expect(built.paths).toContain(`${MOCK_PANEL_ID}/manifest.json`);
+      expect(built.message).toContain(MOCK_PANEL_REPORT);
+      const manifest = JSON.parse(
+        readFileSync(join(workspace, MOCK_PANEL_ID, "manifest.json"), "utf8"),
+      ) as { title: string; reads: string[]; origin?: { taskId?: string } };
+      expect(manifest.title).toBe(MOCK_PANEL_TITLE);
+      expect(manifest.reads).toEqual(["feed.recent"]);
+      expect(manifest.origin?.taskId).toBe(task.id);
+
+      // The capture wrote both themes under the task's own directory; the
+      // words the lint and the capture answer with are pluginLint.test.ts's
+      // and personalExtensions.test.ts's.
+      const paints: Record<string, { lum: number; contrast: number }> = {};
+      for (const theme of ["dark", "light"]) {
+        const file = join(
+          userDataDir,
+          "crewmates",
+          task.id,
+          "captures",
+          `${MOCK_PANEL_ID}-${theme}.png`,
+        );
+        expect(existsSync(file), file).toBe(true);
+        const size = pngSize(file);
+        expect(size.width).toBeGreaterThan(0);
+        expect(size.height).toBeGreaterThan(0);
+        if (theme === "dark") regularCaptureHeight = size.height;
+        paints[theme] = pngPaint(file);
+        // A blank window of the theme color has no contrasting pixels. The
+        // panel's own text and chrome have to be in the picture.
+        expect(paints[theme]?.contrast ?? 0).toBeGreaterThan(0.005);
+      }
+      expect(paints.dark?.lum ?? 1).toBeLessThan(0.35);
+      expect(paints.light?.lum ?? 0).toBeGreaterThan(0.6);
+      // The captain's own theme was left alone by the captures, and the
+      // window never passed through a light or blank frame while the panel
+      // was built. Dark void (#05070d) sits near luminance 0.03; the light
+      // theme (#eef1f7) and an unstyled white document sit above 0.5.
+      expect(await page.evaluate(() => document.body.dataset.theme)).toBe("dark");
+      const flash = await pageBackgroundSamples(page);
+      const lightFrames = flash.filter((sample) => sample.theme === "light" || sample.lum > 0.5);
+      expect(
+        lightFrames,
+        `page background while the panel was built: ${JSON.stringify(flash)}`,
+      ).toEqual([]);
+
+      // Settings -> Projects shows that workspace as what it is: one locked
+      // row that reads "builds in place" (the captain's words, AGENTS.md)
+      // instead of a delivery posture, an autonomy switch or a rigor tier.
+      await page.getByRole("button", { name: "Settings", exact: true }).click();
+      await page.getByRole("tab", { name: "Projects" }).click();
+      const row = projectRow(page, repoId(userDataDir));
+      await expect(row).toBeVisible();
+      await expect(row.getByText("builds in place").first()).toBeVisible();
+      await row.getByRole("button").first().click();
+      await expect(row.getByText(AUTONOMY_WORDS.putsInItself)).toBeVisible();
+      await expect(row.getByRole("switch", { name: AUTONOMY_SWITCH_NAME })).toHaveCount(0);
+      // Nothing on the row is writable: no posture pills, no autonomy
+      // switch, no rigor pills.
+      await expect(row.locator('input[type="radio"]')).toHaveCount(0);
+      await expect(row.locator('input[type="checkbox"]')).toHaveCount(0);
+      await page.screenshot({ path: test.info().outputPath("projects-personal-row.png") });
+      await page.keyboard.press("Escape");
+    });
+
+    await test.step("the panel persists across a relaunch, with no running dot", async () => {
+      await live.close();
+      live = await launchApp({ userDataDir, reuseMockProvider: mockProvider });
+      await expect(panel()).toBeVisible({ timeout: 45_000 });
+      await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
+      await expect
+        .poll(async () =>
+          live.page.evaluate(() =>
+            window.infinitary.plugins.personal
+              .list()
+              .then((snapshot) => snapshot.extensions.map((e) => [e.id, e.present, e.running])),
+          ),
+        )
+        .toEqual([[MOCK_PANEL_ID, true, false]]);
+    });
+
+    await test.step("reads as one surface in both themes", async () => {
+      const testInfo = test.info();
+      const { page } = live;
+      await expect(panel()).toBeVisible();
+      const dark = await panel().screenshot();
+      await testInfo.attach(`${MOCK_PANEL_ID}-dark.png`, { body: dark, contentType: "image/png" });
+      await setThemeViaSettings(page, "light");
+      await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe("light");
+      const light = await panel().screenshot();
+      await testInfo.attach(`${MOCK_PANEL_ID}-light.png`, {
+        body: light,
+        contentType: "image/png",
+      });
+      await setThemeViaSettings(page, "dark");
+      await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe("dark");
+    });
+
+    await test.step("a follow-up ask resolves to the same surface, is built apart, and is a second commit the rail takes at its report", async () => {
+      const { page } = live;
+      const before = savePointCount(workspace);
+      await watchBuild(page, MOCK_PANEL_ID);
+      await ask(`${PERSONAL_CHANGE_PROMPT_MARKER}${MOCK_PANEL_ID}: make the rows smaller`);
+      const key = await taskKey(page, `Change the ${MOCK_PANEL_ID} panel`);
+      await expect(
+        reportLine(page, key).filter({ hasText: reportSummary(MOCK_PANEL_REVISED_REPORT) }),
+      ).toBeVisible({ timeout: 45_000 });
+      // The report's commit, or git's own words for why there is none.
+      expect(await awaitTurnCommit(userDataDir, key)).toEqual({ commit: expect.any(String) });
+      await expect(panel().locator("[data-mock-rows='small']")).toHaveCount(1, { timeout: 30_000 });
+      // While the change was built the rail kept the panel as it was, with
+      // the running dot, and drew the smaller rows only once they were committed.
+      const states = await buildStates(page);
+      expect(states, states.join("\n")).toContain("rail rows=regular running | draft rows=small");
+      expect(
+        states.findIndex((state) => state.startsWith("rail rows=small")),
+        states.join("\n"),
+      ).toBeGreaterThan(lastDrafted(states));
+      // The close follows the commit.
+      await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
+      const revisedTask = readTasks(userDataDir).find((task) => task.key === key) as TaskRow;
+      // Its capture photographed the version it was building, never the
+      // rail's: smaller rows make a shorter picture than the first build's.
+      const changed = pngSize(
+        join(userDataDir, "crewmates", revisedTask.id, "captures", `${MOCK_PANEL_ID}-dark.png`),
+      );
+      expect(changed.height).toBeLessThan(regularCaptureHeight);
+      const revised = await oneNewSavePoint(workspace, before);
+      expect(revised.paths.some((path) => path.startsWith(`${MOCK_PANEL_ID}/`))).toBe(true);
+      expect(revised.message).toContain(MOCK_PANEL_REVISED_REPORT);
+      await expect
+        .poll(() => readTasks(userDataDir).map((task) => task.status))
+        .toEqual(["done", "done"]);
+      const tasks = readTasks(userDataDir);
+      expect(tasks[1]?.id).not.toBe(panelTaskId);
+      const manifest = JSON.parse(
+        readFileSync(join(workspace, MOCK_PANEL_ID, "manifest.json"), "utf8"),
+      ) as { origin?: { taskId?: string } };
+      expect(manifest.origin?.taskId).toBe(tasks[1]?.id);
+      await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
+      await expect(page.locator("[data-panel-draft]")).toHaveCount(0);
+    });
+
+    await test.step("remove it: the host takes the panel off the rails and commits the removal", async () => {
+      const { page } = live;
+      const before = savePointCount(workspace);
+      await ask(`${PERSONAL_REMOVE_PROMPT_MARKER}${MOCK_PANEL_ID}`);
+      await expect(panel()).toHaveCount(0, { timeout: 30_000 });
+      await expect(feedLine(page, personalPanelRemovedLine(MOCK_PANEL_TITLE))).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect.poll(() => existsSync(join(workspace, MOCK_PANEL_ID))).toBe(false);
+      // One save point removes the panel's files, so git keeps them one
+      // revert away; its words are personalExtensions.test.ts's.
+      const removed = await oneNewSavePoint(workspace, before);
+      expect(removed.paths).toContain(`${MOCK_PANEL_ID}/panel.tsx`);
+      expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+    });
+  });
+});

@@ -1,0 +1,269 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+import { scratchDir } from "../helpers/scratchDirs";
+import { launchClaudeCrew } from "./claudeCrew";
+import { launchApp } from "./launch";
+import { resizeWindow } from "./layout";
+import {
+  claudeDefaultStore,
+  seedSignedInClaudeStore,
+  writeMockClaudeClient,
+} from "./mockClaudeClient";
+import { CLAUDE_CREW_PROMPT_MARKER } from "./mockProvider";
+import { levelLane, openModelsBoard } from "./modelsBoard";
+import { regionShot } from "./pictures";
+import { promptInput } from "./prompt";
+import { claudeStarter } from "./starters";
+
+const GROK_DISABLED = "acct_grok_off";
+const GROK_PERSONAL = "acct_grok1";
+const CLAUDE_PERSONAL = "acct_claude1";
+
+function seedAccounts(userDataDir: string): void {
+  const accountsDir = join(userDataDir, "accounts");
+  const grokDir = join(accountsDir, "xai", GROK_DISABLED);
+  mkdirSync(grokDir, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(grokDir, "auth.json"),
+    JSON.stringify({ xai: { type: "api_key", key: "x" } }),
+    {
+      mode: 0o600,
+    },
+  );
+  const grokOnDir = join(accountsDir, "xai", GROK_PERSONAL);
+  mkdirSync(grokOnDir, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(grokOnDir, "auth.json"),
+    JSON.stringify({ xai: { type: "api_key", key: "y" } }),
+    { mode: 0o600 },
+  );
+  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+    recursive: true,
+    mode: 0o700,
+  });
+  writeFileSync(
+    join(accountsDir, "registry.json"),
+    JSON.stringify({
+      version: 1,
+      accounts: [
+        {
+          id: GROK_DISABLED,
+          providerId: "xai",
+          kind: "api_key",
+          label: "Old key",
+          // Signed in, but switched off: it leaves the selection pool, so it
+          // leaves this section too.
+          enabled: false,
+          createdAt: Date.parse("2026-08-01T00:00:00Z"),
+        },
+        {
+          id: CLAUDE_PERSONAL,
+          providerId: "anthropic-claude",
+          kind: "subscription_oauth",
+          label: "Personal Max",
+          enabled: true,
+          createdAt: Date.parse("2026-08-02T00:00:00Z"),
+        },
+        {
+          id: GROK_PERSONAL,
+          providerId: "xai",
+          kind: "api_key",
+          label: "Personal",
+          enabled: true,
+          createdAt: Date.parse("2026-08-03T00:00:00Z"),
+        },
+      ],
+      pins: {},
+    }),
+    { mode: 0o600 },
+  );
+}
+
+import { reasoningLabel } from "../../src/renderer/src/settings/reasoningWords";
+import { offeringKey } from "../../src/shared/modelSlots";
+import type { LaunchedApp } from "./launch";
+import { closeModelPanel, modelPill, openModelPanel, setLevelInPanel } from "./modelsBoard";
+import { refuseNext } from "./settings";
+import { focusOn, pressKey } from "./windowKeys";
+
+async function open(app: LaunchedApp) {
+  await resizeWindow(app.app, app.page, { width: 1280, height: 1000 });
+  await app.page.getByRole("button", { name: "Settings", exact: true }).click();
+  await app.page.getByRole("tab", { name: "Intelligence", exact: true }).click();
+  return openModelsBoard(app.page);
+}
+
+test("independent model reasoning persists, restores inherited defaults and recovers a refused save by keyboard", async () => {
+  const userDataDir = scratchDir("infinitary-reasoning-");
+  seedAccounts(userDataDir);
+  const env = {
+    INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-stub-")),
+    INFINITARY_GROK_USAGE_URL: "http://127.0.0.1:9/usage",
+  };
+  const launch = () =>
+    launchApp({
+      withMockProvider: true,
+      userDataDir,
+      prepareHome: (home) => seedSignedInClaudeStore(claudeDefaultStore(home)),
+      env,
+    });
+  let app = await launch();
+  try {
+    const board = await open(app);
+    const view = await app.page.evaluate(() => window.infinitary.models.slots());
+    const opus = view.models.find(
+      (model) => model.provider === "anthropic-claude" && model.id === claudeStarter("high").id,
+    );
+    if (!opus) throw new Error("The isolated Claude account did not serve Opus");
+    const key = offeringKey(opus);
+    const panel = await openModelPanel(app.page, levelLane(board, "high"), opus.label);
+    await setLevelInPanel(panel, opus.label, "medium", true);
+    await closeModelPanel(board);
+    const high = board.getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true });
+    const medium = board.getByRole("combobox", {
+      name: reasoningLabel(opus, "medium"),
+      exact: true,
+    });
+    await expect(high).toHaveValue("");
+    await expect(medium).toHaveValue("");
+    await high.selectOption("high");
+    await expect(high).toHaveValue("high");
+    await medium.selectOption("low");
+    await expect(medium).toHaveValue("low");
+    const snapshot = await app.page.evaluate(() => window.infinitary.models.slots());
+    expect(
+      snapshot.models.find((model) => `${model.provider}/${model.id}` === key)?.reasoning,
+    ).toMatchObject({
+      high: { chosen: "high", effective: { level: "high" } },
+      medium: { chosen: "low", effective: { level: "low" } },
+    });
+    await refuseNext(app.app, "inf:models:reasoning:set");
+    await high.selectOption("low");
+    await expect(modelPill(board, "high", key).locator("..").getByRole("alert")).toBeVisible();
+    await expect(high).toHaveValue("high");
+    if (process.env.FM_REASONING_EVIDENCE_DIR)
+      await regionShot(
+        levelLane(board, "high"),
+        join(process.env.FM_REASONING_EVIDENCE_DIR, "refusal-after.png"),
+      );
+    await expect(high).toBeEnabled();
+    await expect(high).toHaveAttribute("aria-busy", "false");
+    await focusOn(high);
+    await pressKey(high, "l");
+    await pressKey(high, "Enter");
+    await expect(high).toHaveValue("low");
+    await expect(high).toBeFocused();
+    await expect(modelPill(board, "high", key).locator("..").getByRole("alert")).toHaveCount(0);
+    await expect
+      .poll(
+        async () =>
+          (await app.page.evaluate(() => window.infinitary.models.slots())).models.find(
+            (model) => `${model.provider}/${model.id}` === key,
+          )?.reasoning?.high?.chosen,
+      )
+      .toBe("low");
+    await high.selectOption("high");
+    await expect(high).toHaveValue("high");
+    await app.close();
+    app = await launch();
+    const reopened = await open(app);
+    await expect(
+      reopened.getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true }),
+    ).toHaveValue("high");
+    await expect(
+      reopened.getByRole("combobox", { name: reasoningLabel(opus, "medium"), exact: true }),
+    ).toHaveValue("low");
+    await reopened
+      .getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true })
+      .selectOption("");
+    await expect(
+      reopened.getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true }),
+    ).toHaveValue("");
+    expect(
+      (await app.page.evaluate(() => window.infinitary.models.slots())).models.find(
+        (model) => `${model.provider}/${model.id}` === key,
+      )?.reasoning?.medium?.chosen,
+    ).toBe("low");
+  } finally {
+    await app.close();
+  }
+});
+
+test("new Quick crew conversations use the saved level while running conversations keep their opening reasoning", async () => {
+  const app = await launchClaudeCrew();
+  try {
+    const board = await open(app);
+    const starter = claudeStarter("low");
+    const view = await app.page.evaluate(() => window.infinitary.models.slots());
+    const model = view.models.find(
+      (row) => row.provider === "anthropic-claude" && row.id === starter.id,
+    );
+    if (!model) throw new Error("The crew account did not offer its low starter");
+    const control = board.getByRole("combobox", {
+      name: reasoningLabel(model, "low"),
+      exact: true,
+    });
+    await control.selectOption("high");
+    await expect(control).toHaveValue("high");
+    await pressKey(control, "Escape");
+    const input = promptInput(app.page);
+    const firstTitle = `reasoning first ${CLAUDE_CREW_PROMPT_MARKER}`;
+    await input.fill(`commission a crewmate: ${firstTitle}`);
+    await pressKey(input, "Enter");
+    const findTask = async (title: string) =>
+      (await app.page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+        (row) => row.title === title,
+      );
+    await expect.poll(async () => (await findTask(firstTitle))?.id).toBeTruthy();
+    const first = await findTask(firstTitle);
+    if (!first) throw new Error("The first crew did not start");
+    const detail = (id: string) =>
+      app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
+    await expect.poll(async () => (await detail(first.id)).reasoning).toEqual({ level: "high" });
+    await expect.poll(() => app.mockProvider?.heldRequests()).toBe(1);
+    const reopened = await open(app);
+    const next = reopened.getByRole("combobox", {
+      name: reasoningLabel(model, "low"),
+      exact: true,
+    });
+    await next.selectOption("");
+    await expect(next).toHaveValue("");
+    await pressKey(next, "Escape");
+    const secondTitle = `reasoning second ${CLAUDE_CREW_PROMPT_MARKER}`;
+    await input.fill(`commission a crewmate: ${secondTitle}`);
+    await pressKey(input, "Enter");
+    await expect.poll(async () => (await findTask(secondTitle))?.id).toBeTruthy();
+    const second = await findTask(secondTitle);
+    if (!second) throw new Error("The second crew did not start");
+    await expect
+      .poll(async () => (await detail(second.id)).reasoning)
+      .toEqual({ level: "low", lower: "quick" });
+    expect((await detail(first.id)).reasoning).toEqual({ level: "high" });
+    await expect.poll(() => app.mockProvider?.heldRequests()).toBe(2);
+    const evidence = {
+      first: await detail(first.id),
+      second: await detail(second.id),
+      requests: app.mockProvider?.requestBodies().flatMap((body) => {
+        const request = JSON.parse(body) as { model?: string; output_config?: { effort?: string } };
+        return request.output_config
+          ? [{ model: request.model, output_config: request.output_config }]
+          : [];
+      }),
+    };
+    writeFileSync(
+      join(
+        process.env.FM_REASONING_EVIDENCE_DIR ?? test.info().outputPath("."),
+        "crew-reasoning.json",
+      ),
+      JSON.stringify(evidence, null, 2),
+    );
+    expect(evidence.requests?.some((request) => request.output_config.effort === "high")).toBe(
+      true,
+    );
+    expect(evidence.requests?.some((request) => request.output_config.effort === "low")).toBe(true);
+    app.mockProvider?.releaseHeldCrew();
+  } finally {
+    await app.close();
+  }
+});

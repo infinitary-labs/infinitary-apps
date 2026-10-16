@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "linux-address-needs-libraries",
+      "kind": "fix",
+      "title": "Adding a Linux computer names the packages it still needs",
+      "body": "When you add a Linux computer by its address, Firstmate now also checks for the system software it needs to start there. If any is missing, it names the packages to install, as that computer's package manager calls them, before it sends anything. It used to send all of Firstmate, then say only that it could not set it up.",
+      "area": "devices",
+      "noPicture": "The change is the words of a refusal under the address field, which read the same in a picture as in this note.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

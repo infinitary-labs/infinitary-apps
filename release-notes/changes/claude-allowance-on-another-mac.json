@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-allowance-on-another-mac",
+      "kind": "fix",
+      "title": "Claude's allowance shows on a Mac with many saved passwords",
+      "body": "On a Mac that keeps many saved passwords, such as a Mac that runs work, the Claude row now shows the allowance instead of saying the sign-in could not be read.",
+      "area": "subscriptions",
+      "noPicture": "The row already draws the allowance when the read succeeds. What changed is that the read finishes, which has no new control to photograph.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "purge-removes-firstmate-claude-copies",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Purging task data also clears Firstmate's Claude conversations",
+      "body": "Purge now also clears the Claude conversations Firstmate saved. Its other saved conversations were already removed, and Claude's own copies on your Mac stay.",
+      "noPicture": "Nothing on screen changes: the copies are removed from disk when you purge.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

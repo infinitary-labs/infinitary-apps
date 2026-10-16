@@ -1,0 +1,28 @@
+<!-- part: progress. Dots and the item count. Paste once per card, before quiz. -->
+<style>
+  .lesson-dots { display: flex; gap: 6px; align-items: center; }
+  .lesson-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--fg-3); box-sizing: border-box; }
+  .lesson-dot[data-state="clean"] { background: var(--ok); border-color: var(--ok); }
+  .lesson-dot[data-state="helped"] { background: var(--warn); border-color: var(--warn); }
+  .lesson-dot[data-state="now"] { border-color: var(--accent); background: var(--accent-dim); }
+</style>
+<script>
+window.FMLesson = window.FMLesson || {};
+(function (L) {
+  // results: one entry per answered item, { firstTry: boolean }. current: the index being asked.
+  L.drawProgress = function (dotsEl, countEl, results, current, total) {
+    dotsEl.textContent = "";
+    dotsEl.className = "lesson-dots";
+    dotsEl.setAttribute("role", "img");
+    dotsEl.setAttribute("aria-label", "Question " + Math.min(current + 1, total) + " of " + total);
+    for (var index = 0; index < total; index++) {
+      var dot = document.createElement("span");
+      dot.className = "lesson-dot";
+      dot.setAttribute("data-state", index < results.length ? (results[index].firstTry ? "clean" : "helped")
+        : index === current ? "now" : "todo");
+      dotsEl.appendChild(dot);
+    }
+    countEl.textContent = Math.min(current + 1, total) + " of " + total;
+  };
+})(window.FMLesson);
+</script>

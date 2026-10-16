@@ -1,0 +1,9 @@
+{
+  "api": 1,
+  "title": "Activity",
+  "placement": { "x": "left", "y": "bottom" },
+  "order": 10,
+  "size": "content",
+  "newestLast": true,
+  "reads": ["feed.recent", "tasks.board", "tasks.search"]
+}

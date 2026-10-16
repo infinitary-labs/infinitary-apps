@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "codex-crew-speed",
+      "kind": "feature",
+      "title": "Choose Codex crew speed by model or task",
+      "body": "In Models, choose Standard, Fast or Ultrafast for each Codex model, shared by every account that offers it, and ask Firstmate to change it for one task. Standard is the default. Fast uses 2.5× your plan’s allowance or 2× purchased credits, and Ultrafast 8× or 6×. Crew work and its conversation summaries use the choice; Firstmate and Decisions stay Standard. When the chosen speed is unavailable, the task explains why it uses Standard on the same model and account.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "codex-crew-speed-dark.webp",
+        "light": "codex-crew-speed-light.webp",
+        "alt": "GPT-6.1 Sol’s model panel with Ultrafast selected, its allowance warning and the crew-only scope"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "api": 1,
+  "title": "Automation",
+  "placement": { "x": "right", "y": "bottom" },
+  "order": 30,
+  "size": "content",
+  "presence": { "code": true },
+  "reads": ["automation.list"]
+}

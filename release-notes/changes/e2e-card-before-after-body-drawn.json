@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-card-before-after-body-drawn",
+      "reason": "Test-only change: the before-and-after picture journeys wait for the card body to draw before reading it; no product behavior changes."
+    }
+  ]
+}

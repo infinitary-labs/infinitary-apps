@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-paging-interrupted-reveal",
+      "kind": "fix",
+      "title": "Quick card paging keeps the next card ready",
+      "body": "After you page away from a card and straight back, the next card is ready behind it again, so paging on shows it at once instead of after a short wait.",
+      "area": "cards",
+      "noPicture": "The fix releases an interrupted animation's preparation gate; the next card is prepared invisibly and the card layout is unchanged.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

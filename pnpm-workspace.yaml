@@ -1,0 +1,50 @@
+packages:
+  - "."
+# Universal mac builds need both architectures' native prebuilds present so
+# electron-builder can lipo them together (see docs/architecture.md section 10).
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+  cpu:
+    - current
+    - x64
+    - arm64
+allowBuilds:
+  electron: true
+  esbuild: true
+  better-sqlite3: true
+  # koffi is a direct dep for the host Keychain FFI (CD-5=B) and also arrives
+  # transitively via pi-tui. It must be allowed to install its prebuilds.
+  koffi: true
+  # Transitive build scripts (via pi-coding-agent and electron-builder),
+  # allowed to match hi-bit's vetted set.
+  '@google/genai': true
+  electron-winstaller: true
+  protobufjs: true
+  # The voice helper runs Whisper on onnxruntime-node (docs/architecture.md
+  # section 8). Its npm package already carries the macOS binary; its
+  # install script only fetches GPU libraries for other platforms, so it
+  # stays off. sharp comes with @huggingface/transformers for image work,
+  # which nothing here does (the main build stands it in, src/main/voice/noSharp.ts).
+  onnxruntime-node: false
+  sharp: false
+  # dugite's own postinstall fetches git for the installing machine's
+  # architecture only; the universal build ships both, so
+  # scripts/ensure-bundled-git.ts (our postinstall) fetches them from
+  # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
+  dugite: false
+minimumReleaseAge: 0
+# Each patch carries one fix its package's next release already has; drop it
+# when the package is upgraded to that release.
+# - electron-vite: its CommonJS shim goes after a main chunk's last real
+#   import, found by parsing the chunk, never inside a string or comment that
+#   reads like an import (electron-vite 6.0.0-beta.4, docs/architecture.md
+#   section 10).
+# - playwright-core: one line of Playwright's own fix, which its 1.64 beta
+#   has: a reply that arrives after a page crashed is ignored instead of
+#   failing the test with "Target crashed" (docs/e2e-contracts.md, "A crashed
+#   page").
+patchedDependencies:
+  electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
+  playwright-core@1.62.1: patches/playwright-core@1.62.1.patch

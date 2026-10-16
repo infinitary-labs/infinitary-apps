@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-public-websites",
+      "reason": "Internal, behind the development-only task browser gate: a task's browser reaches public websites over https through a connection guard that refuses private addresses, a page's popup opens as a second page named by its own site, and a browser handed back after a sign-in keeps only what the task needs; an installed app shows none of it."
+    }
+  ]
+}

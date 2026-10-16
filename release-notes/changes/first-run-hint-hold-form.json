@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "first-run-hint-hold-form",
+      "reason": "Part of the Infinitary rename's note: its longer first-run hint gains a shorter form, so Linux keeps the talk key at the default window, and the AppImage check finds only the window on the screen."
+    }
+  ]
+}

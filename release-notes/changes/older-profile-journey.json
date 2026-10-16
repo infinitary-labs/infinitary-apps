@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "older-profile-journey",
+      "reason": "Test-only: an end-to-end journey and fixture open a custom-API-only profile saved by an older release and check it works after one fresh check; no product behavior changes."
+    }
+  ]
+}

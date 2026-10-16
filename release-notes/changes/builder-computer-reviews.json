@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "builder-computer-reviews",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Reviews stay with their builders",
+      "body": "Independent reviews now run on the computer doing the work, with access to its evidence. A review approves only the version it read.",
+      "picture": {
+        "dark": "builder-computer-reviews-dark.webp",
+        "light": "builder-computer-reviews-light.webp",
+        "alt": "A review task’s Details show Runs on Mac mini, inherited from its parent task."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

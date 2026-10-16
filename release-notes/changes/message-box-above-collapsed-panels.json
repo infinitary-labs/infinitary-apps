@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "message-box-above-collapsed-panels",
+      "kind": "fix",
+      "title": "The message box no longer covers the side panels at larger sizes",
+      "body": "At 125% or 150% Size, the message box now sits just above the collapsed Activity and Tasks panels instead of over them. While a card is open, those collapsed panels are hidden so the card keeps its room, and they come back when you close the last card.",
+      "area": "message-box",
+      "picture": {
+        "dark": "message-box-above-collapsed-panels-dark.webp",
+        "light": "message-box-above-collapsed-panels-light.webp",
+        "alt": "At 150% the message box sits just above the collapsed Activity and Tasks panels at the bottom of the window"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

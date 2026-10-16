@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-flakiness-root-patterns",
+      "reason": "Test and CI tooling only: journeys read frames, focus and saved data through shared helpers with lints, and a pull request runs the journey files its change can break; no product behavior changes."
+    }
+  ]
+}

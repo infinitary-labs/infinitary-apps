@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The production CSP meta (fallback for the packaged file:// load) is
+         injected at build time by the fm-csp-meta plugin in
+         electron.vite.config.ts, so dev HMR's inline preamble keeps working
+         while packaged builds carry the exact section 4 policy. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infinitary</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

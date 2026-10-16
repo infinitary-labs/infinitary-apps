@@ -1,0 +1,23 @@
+/* The Automation panel (./panel.tsx; docs/automation.md, "The Automation
+   panel"): one shared row per saved rule - its state, its name and its
+   next run - and the app's words when the rules cannot be read. */
+
+.fm-automation-panel {
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+}
+
+.fm-automation-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-automation-panel-said {
+  margin: 0;
+  padding: 5px 6px;
+  color: var(--fg-3);
+}

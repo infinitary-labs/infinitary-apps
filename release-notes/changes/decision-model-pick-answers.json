@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "decision-model-pick-answers",
+      "kind": "fix",
+      "title": "The model you choose for decisions now answers them",
+      "body": "Under Decisions, a model you choose with Use a specific model now answers, even one that is not in use. When it cannot answer, the row says so, along with what answers in its place.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "decision-model-pick-answers-dark.webp",
+        "light": "decision-model-pick-answers-light.webp",
+        "alt": "The Decisions row under the model levels saying the chosen model is unavailable and your cheapest slotted model answers instead"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

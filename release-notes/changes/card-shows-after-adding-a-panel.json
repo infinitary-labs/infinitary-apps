@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-shows-after-adding-a-panel",
+      "kind": "fix",
+      "title": "The next card shows after you add a panel",
+      "body": "When you added a panel from its card, the card behind it could stay hidden, so the window looked empty. It now shows as soon as it has drawn. A card that comes up after another closes now shows within a few seconds, even while its contents are still loading.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-shows-after-adding-a-panel-dark.webp",
+        "light": "card-shows-after-adding-a-panel-light.webp",
+        "alt": "A card shown in the middle of the window beside a panel that was just added on the right"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

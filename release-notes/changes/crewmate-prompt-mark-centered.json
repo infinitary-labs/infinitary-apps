@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-prompt-mark-centered",
+      "kind": "fix",
+      "title": "The > in the Crewmate tab's message box lines up with your words",
+      "body": "In a task card's Crewmate tab, the > at the start of the message box sat a little above the words beside it. It now sits level with them, and stays beside the first line as a longer message grows.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "crewmate-prompt-mark-centered-dark.webp",
+        "light": "crewmate-prompt-mark-centered-light.webp",
+        "alt": "A task card's Crewmate tab, with the > in its message box level with the words Tell the crewmate what to do next"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

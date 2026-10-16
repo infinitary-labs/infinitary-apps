@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "device-journeys-on-loopback",
+      "reason": "Keeps each end-to-end test's connection on loopback at a free port, so the device join journeys no longer time out at the test Mac's own network address. A development run may stand in that port; an installed build ignores it. Nothing a person sees changes."
+    }
+  ]
+}

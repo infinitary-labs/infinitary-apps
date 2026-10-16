@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "devices-find-every-way",
+      "kind": "improvement",
+      "title": "A link finds this computer every way it can",
+      "body": "Settings → Devices now shows how other devices find this computer: on this network and on your private network, with no address to choose. Over the internet stays off. Copy a link or Copy a command carries every address at once, and the other computer keeps the first one that answers. The other computer needs this version to use a new link.",
+      "area": "devices",
+      "picture": {
+        "dark": "devices-find-every-way-dark.webp",
+        "light": "devices-find-every-way-light.webp",
+        "alt": "Settings, Devices, with On this network and On your private network ready, Over the internet off, and Copy a link and Copy a command under them"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

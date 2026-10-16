@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-allowance-stays-current",
+      "kind": "fix",
+      "title": "Your Claude allowance stays current",
+      "body": "The Claude row on Subscriptions no longer turns gray for minutes at a time. Firstmate keeps your Claude sign-in between refreshes, tries again when macOS is slow to hand it over, and checks Claude's usage at most every five minutes.",
+      "area": "subscriptions",
+      "noPicture": "A reading that stays current has no new view to photograph.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

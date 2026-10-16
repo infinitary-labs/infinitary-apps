@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "dependency-wait-read-only-observer",
+      "reason": "Test-only repair: the dependency-wait journey observes the running app without repeating TaskService boot writes; no product behavior changes."
+    }
+  ]
+}

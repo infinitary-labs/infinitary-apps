@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-0",
+      "reason": "Release review after stable 0.2.0: ranks the task browser, Firstmate on other Macs and the task card's fact strip as highlights; folds the multi-machine fixes into your-devices, since multi-machine support first ships in this release; folds the custom connection re-check fix into custom-connection-fresh-check; and rewords two notes more plainly. Nothing in the app changes."
+    }
+  ]
+}

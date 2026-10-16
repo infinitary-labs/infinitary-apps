@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-sessions-home",
+      "reason": "Internal, behind the development-only multi-machine gate: the home opens and drives a crewmate's conversation on a computer that runs work, holds its task while that computer is out of reach, and catches up with nothing run twice; nothing in an installed app places a task there."
+    }
+  ]
+}

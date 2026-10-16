@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "normal-quit-message-says-so",
+      "kind": "fix",
+      "title": "A message cut off when you quit says so",
+      "body": "If you quit the app while Firstmate is answering you, that message's task record now says the app closed before the turn ended. Before, the record gave no reason, as if Firstmate had finished.",
+      "area": "tasks",
+      "picture": {
+        "dark": "normal-quit-message-says-so-dark.webp",
+        "light": "normal-quit-message-says-so-light.webp",
+        "alt": "A question's task record says it hit a problem because the app closed before the turn ended."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

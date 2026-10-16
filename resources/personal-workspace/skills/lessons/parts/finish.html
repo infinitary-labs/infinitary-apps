@@ -1,0 +1,17 @@
+<!-- part: finish. The screen after the last item. Paste once per card, before quiz. -->
+<script>
+window.FMLesson = window.FMLesson || {};
+(function (L) {
+  // summary: { n, firstTry }. nextGoal: the one thing to practise next, in the learner's words.
+  L.drawFinish = function (el, summary, nextGoal) {
+    el.textContent = "";
+    var line = document.createElement("p");
+    line.style.fontSize = "14px";
+    line.textContent = "You got " + summary.firstTry + " of " + summary.n + " right the first time.";
+    var next = document.createElement("p");
+    next.textContent = "Next, let's practise: " + nextGoal;
+    el.appendChild(line);
+    el.appendChild(next);
+  };
+})(window.FMLesson);
+</script>

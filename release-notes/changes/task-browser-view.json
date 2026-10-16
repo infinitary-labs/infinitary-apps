@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-view",
+      "reason": "Internal, behind the development-only task browser gate: the captain opens a task's browser from its record and watches its crewmate drive it, and an installed app shows none of it."
+    }
+  ]
+}

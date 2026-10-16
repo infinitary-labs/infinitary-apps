@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "merge-a-pull-request-you-did-not-open",
+      "kind": "feature",
+      "title": "Merge a pull request this task did not open",
+      "body": "A task can ask you to merge a pull request someone else opened, such as a release pull request. Your button still merges it. The task stays open so it can watch what the merge starts. When the project asks before merging, nothing merges until you press that button.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-a-pull-request-you-did-not-open-dark.webp",
+        "light": "merge-a-pull-request-you-did-not-open-light.webp",
+        "alt": "A card asking to merge a release pull request the task did not open, with Merge the pull request and Not now"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

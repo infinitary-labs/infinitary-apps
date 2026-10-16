@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "quit-mid-turn-replay",
+      "kind": "fix",
+      "title": "Quitting while a crewmate works no longer sets its work aside",
+      "body": "Quitting the app three times while a crewmate was working set its message aside. Now each restart gives the crewmate its message again and says the app restarted, so it checks what it already did before repeating a step.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the crewmate carries on after a restart instead of its message being set aside.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

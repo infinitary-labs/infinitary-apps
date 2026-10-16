@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "showcard-waits-for-ready-card",
+      "reason": "Repairs the end-to-end paging helper so it waits for the shown card to finish drawing before paging, which fixes the task-key card journey. No shipped behavior changed."
+    }
+  ]
+}

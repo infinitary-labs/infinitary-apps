@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "test-assumption-review",
+      "reason": "Documentation only: the testing rules gain a review of the assumptions behind a test; nothing a person using the app notices."
+    }
+  ]
+}

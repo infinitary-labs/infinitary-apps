@@ -1,0 +1,793 @@
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import type { ServerResponse } from "node:http";
+import { join } from "node:path";
+import { crc32, deflateSync } from "node:zlib";
+import { CARD_MEDIA_PIECE_BYTES } from "@shared/cardPictures";
+import type { CardPicture } from "@shared/cards";
+import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
+import {
+  type PlacedEventRecord,
+  type PlacedSpec,
+  placedTaskFolders,
+  type WorkOrderChannel,
+  type WorkOrderResponse,
+} from "@shared/work";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  beginAnthropicStream,
+  finishAnthropicStream,
+  type StubApi,
+  type StubRequest,
+  startStubApi,
+  writeAnthropicText,
+  writeAnthropicToolUse,
+} from "../../../tests/helpers/anthropicDialect";
+import { freePort } from "../../../tests/helpers/connectionClient";
+import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
+import { gif } from "../../../tests/helpers/gifFixture";
+import { box, mp4 } from "../../../tests/helpers/mp4Fixture";
+import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { type HomeConnection, startConnection } from "../connection/connection";
+import { DevicePairing } from "../devices/pairing";
+import type { CoreActor, CoreDispatch } from "../dispatcher";
+import { CoreEventBus } from "../events";
+import type { MediaProbe } from "../pi/cardImages";
+import { createPiSessionFactory } from "../pi/sessionFactory";
+import type { ModelRuntime } from "../pi/types";
+import { joinHome } from "./join";
+import { PlacedTasks } from "./placedTasks";
+import { type HelperRun, startHelper } from "./run";
+import { SessionHost } from "./sessionHost";
+import type { WorkingCopies } from "./workingCopies";
+
+/**
+ * A crewmate's conversation held on a computer that runs work
+ * (docs/helper.md, "Holding a conversation"), end to end on this side: the
+ * helper as the app's work mode composes it, joined through the real
+ * pairing, over the real connection, holding a real Pi conversation against
+ * a local stub of the model's API. The home is a stand-in that answers the
+ * work requests the way the home keeps them (src/shared/work.ts): every
+ * answer under the id it was asked by, every event once, in order. Nothing
+ * reaches the network, and no sign-in is read.
+ */
+
+const PROVIDER = "fm-placed";
+const MODEL = "stub-1";
+const TASK = "task-placed";
+const BUILDER = { name: "builder", uid: 502 };
+
+let api: StubApi;
+let runtime: ModelRuntime;
+
+beforeAll(async () => {
+  api = await startStubApi(() => true);
+  runtime = await piStubRuntime(api.url, { provider: PROVIDER, id: MODEL });
+});
+
+afterAll(async () => {
+  await api.close();
+});
+
+/** A real 4x3 grayscale PNG, the smallest picture a card verifies. */
+function png(): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const typed = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(typed));
+    return Buffer.concat([length, typed, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(4, 0);
+  header.writeUInt32BE(3, 4);
+  header[8] = 8;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(Buffer.alloc(5 * 3))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+/** What the model does on one request: call tools, or answer and end the turn. */
+type Step = { tools: { name: string; args: Record<string, unknown> }[] } | { text: string };
+
+/** The model, one step per request from now on; past the last step it answers "Done." */
+function model(steps: Step[]): void {
+  const first = api.requests.length;
+  api.answer((request: StubRequest, res: ServerResponse) => {
+    const step = steps[request.n - first - 1] ?? { text: "Done." };
+    beginAnthropicStream(res, 100, request.n);
+    if ("text" in step) {
+      writeAnthropicText(res, 0, step.text);
+      finishAnthropicStream(res, "end_turn", 3);
+      return;
+    }
+    for (const [index, tool] of step.tools.entries())
+      writeAnthropicToolUse(res, index, {
+        id: `toolu_${request.n}_${index}`,
+        name: tool.name,
+        args: tool.args,
+      });
+    finishAnthropicStream(res, "tool_use", 5);
+  });
+}
+
+/** One first-time effect of a work request at the home, and how many events it had taken in by then. */
+type Effect = { channel: string; callId: string; request: Record<string, unknown>; after: number };
+
+/**
+ * The home's side as a stand-in: what the real home keeps (src/shared/work.ts)
+ * - an answer per call id, kept before it is returned and answered again
+ * from there; each event once, in order; `kept` at each turn's end - and a
+ * gate a test can hold one kind of request at.
+ */
+function standInHome() {
+  const ledger = new Map<string, unknown>();
+  const effects: Effect[] = [];
+  const asked: { channel: string; callId: string }[] = [];
+  const events: PlacedEventRecord[] = [];
+  const actors: CoreActor[] = [];
+  const pictures = new Map<string, Buffer>();
+  const recordings = new Map<string, Buffer>();
+  let through = 0;
+  let kept = 0;
+  const gates = new Map<string, { reached: () => void; open: Promise<void> }>();
+  let cards = 0;
+
+  const answerFor = (channel: string, request: Record<string, unknown>): unknown => {
+    switch (channel) {
+      case "inf:work:card":
+        cards += 1;
+        return { shown: true, cardId: `card-${cards}` };
+      case "inf:work:picture":
+        pictures.set(String(request.id), Buffer.from(String(request.data), "base64"));
+        return { ok: true };
+      case "inf:work:media": {
+        const id = String(request.id);
+        const piece = Buffer.from(String(request.data), "base64");
+        recordings.set(id, Buffer.concat([recordings.get(id) ?? Buffer.alloc(0), piece]));
+        return { ok: true };
+      }
+      case "inf:work:tasks":
+        return { rows: [{ key: "FI3-1", title: "A task" }], total: 1 };
+      case "inf:work:card-refused":
+      case "inf:work:job-exit":
+        return { ok: true };
+      default:
+        return { text: `${channel} done` };
+    }
+  };
+
+  const dispatch = (async (channel: string, rawArgs: unknown, actor?: CoreActor) => {
+    if (channel === "inf:app:healthcheck")
+      return {
+        ok: true,
+        version: "9.9.9",
+        platform: "test-os",
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: [...HOME_CAPABILITIES],
+      };
+    if (actor) actors.push(actor);
+    const [request] = rawArgs as [Record<string, unknown>];
+    if (channel === "inf:work:events") {
+      for (const record of request.events as PlacedEventRecord[]) {
+        if (record.seq <= through) continue;
+        if (record.seq !== through + 1) break;
+        events.push(record);
+        through = record.seq;
+        if (record.event.type === "turn_end" || record.event.type === "turn_ended") kept = through;
+      }
+      return { through, kept };
+    }
+    const callId = String(request.callId);
+    asked.push({ channel, callId });
+    if (ledger.has(callId)) return ledger.get(callId);
+    const gate = gates.get(channel);
+    if (gate) {
+      gate.reached();
+      await gate.open;
+    }
+    // Asked again while the first one waited: one effect, one answer.
+    if (ledger.has(callId)) return ledger.get(callId);
+    effects.push({ channel, callId, request, after: through });
+    const answer = answerFor(channel, request);
+    ledger.set(callId, answer);
+    return answer;
+  }) as CoreDispatch;
+
+  return {
+    dispatch,
+    effects,
+    asked,
+    events,
+    actors,
+    pictures,
+    recordings,
+    /** The event types the home took in, in order. */
+    types: () => events.map((record) => record.event.type),
+    /** Holds every request of one kind until `open()`; `reached` resolves when the first arrives. */
+    hold(channel: string) {
+      let reached!: () => void;
+      let open!: () => void;
+      const arrived = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      gates.set(channel, {
+        reached,
+        open: new Promise<void>((resolve) => {
+          open = resolve;
+        }),
+      });
+      return {
+        reached: arrived,
+        open: () => {
+          gates.delete(channel);
+          open();
+        },
+      };
+    },
+  };
+}
+
+const connections: HomeConnection[] = [];
+const pairings: DevicePairing[] = [];
+const runs: HelperRun[] = [];
+
+afterEach(async () => {
+  await Promise.all(runs.splice(0).map((run) => run.stop()));
+  await Promise.all(connections.splice(0).map((connection) => connection.close()));
+  for (const pairing of pairings.splice(0)) pairing.dispose();
+});
+
+/**
+ * The working copies a computer keeps, as far as a conversation reads them:
+ * a task's is its folder under `worktrees/`, made and deleted by the test as
+ * `WorkingCopies` makes and retires one, with no git.
+ */
+function folderCopies(dataDir: string): WorkingCopies {
+  const worktreesDir = join(dataDir, "worktrees");
+  return {
+    worktreesDir,
+    has: (task: string) => existsSync(join(worktreesDir, task)),
+    list: () => (existsSync(join(worktreesDir, TASK)) ? [TASK] : []),
+  } as Partial<WorkingCopies> as WorkingCopies;
+}
+
+/** A home with the stand-in core, a computer joined to it as another user, and the helper running there. */
+async function placed(options: { copies?: boolean; probeMedia?: MediaProbe } = {}) {
+  const home = standInHome();
+  const pairing = new DevicePairing({
+    dir: join(scratchDir("infinitary-placed-home-"), "devices"),
+    onProblem: () => {},
+    interfaces: () => ({}),
+    ownUid: 501,
+  });
+  pairings.push(pairing);
+  const port = await freePort();
+  const listen = () => {
+    const connection = startConnection({
+      dispatch: home.dispatch,
+      events: new CoreEventBus(),
+      devices: pairing,
+      port,
+      name: () => "MacBook Pro",
+    });
+    connections.push(connection);
+    return connection;
+  };
+  let connection = listen();
+  const { link } = pairing.invite({ kind: "work", at: `127.0.0.1:${port}` });
+  await connection.settled();
+  const dataDir = scratchDir("infinitary-placed-");
+  const joined = await joinHome({
+    text: link,
+    dataDir,
+    io: { say: () => {}, ask: async () => "yes" },
+    device: { name: "Mac mini", user: BUILDER },
+    timeoutMs: 2_000,
+  });
+  if (!joined.ok) throw new Error(joined.reason);
+  const deviceId = joined.grant.deviceId;
+
+  let host: SessionHost | undefined;
+  const start = () => {
+    const started = startHelper({
+      dataDir,
+      say: () => {},
+      retryMs: [20],
+      conversations: async ({ dataDir: dir, ask }) => {
+        const copies = options.copies ? folderCopies(dir) : undefined;
+        host = new SessionHost({
+          tasks: new PlacedTasks(dir, copies?.worktreesDir),
+          ...(copies ? { copies } : {}),
+          ask,
+          factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+          bind: async () => ({ backend: "pi", runtime }),
+          ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+          log: () => {},
+        });
+        const held = host;
+        return { host: held, close: () => held.close() };
+      },
+    });
+    if (!started.ok) throw new Error(started.reason);
+    runs.push(started.run);
+    return started.run;
+  };
+  let run = start();
+  const inReach = async () => {
+    await expect
+      .poll(() =>
+        connection.ask(deviceId, "inf:session:roster", []).then(
+          () => true,
+          () => false,
+        ),
+      )
+      .toBe(true);
+  };
+  await inReach();
+
+  /** The home asks the computer one order. */
+  const order = <C extends WorkOrderChannel>(channel: C, args: unknown) =>
+    connection.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
+  const spec: PlacedSpec = {
+    binding: { backend: "pi", provider: PROVIDER },
+    model: { provider: PROVIDER, id: MODEL },
+    thinking: { level: "off" },
+    instructions: "You are a crewmate on another Mac.",
+    tools: ["emit_card", "report", "note_progress", "file_followup", "tasks"],
+  };
+  return {
+    home,
+    deviceId,
+    dataDir,
+    order,
+    spec,
+    host: () => {
+      if (!host) throw new Error("No conversation was opened.");
+      return host;
+    },
+    open: () => order("inf:session:open", [{ orderId: `open:${TASK}:1`, task: TASK, spec }]),
+    /** The home's turn ends: the computer said `turn_ended` for this turn. */
+    ended: (turn: number) =>
+      expect
+        .poll(() =>
+          home.events.some(
+            (record) => record.event.type === "turn_ended" && record.event.turn === turn,
+          ),
+        )
+        .toBe(true),
+    /** Firstmate quits on the home and opens again: the connection drops and comes back. */
+    dropAndReturn: async () => {
+      await connection.close();
+      connection = listen();
+      await connection.settled();
+      await inReach();
+    },
+    /** The computer's own process quits, and starts again from the same folder. */
+    restartComputer: async () => {
+      await run.stop();
+      host = undefined;
+      run = start();
+      await inReach();
+    },
+  };
+}
+
+describe("a conversation held on a computer that runs work", () => {
+  it("runs the home's prompt there, does each callback once at the home, and tells the home every event once, in order", async () => {
+    const at = await placed();
+    const opened = await at.open();
+    expect(opened.state).toMatchObject({
+      backend: "pi",
+      streaming: false,
+      model: { provider: PROVIDER, id: MODEL },
+      controlProfile: { backgroundWork: "host" },
+    });
+    model([
+      { tools: [{ name: "note_progress", args: { text: "Started." } }] },
+      { tools: [{ name: "report", args: { text: "All done.", summary: "It is done." } }] },
+      { text: "Reported." },
+    ]);
+    expect(
+      await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Do it." }]),
+    ).toEqual({ turn: 1 });
+    await at.ended(1);
+
+    // The model's request carried the home's instructions and the forwarded tools.
+    const served = api.requests.at(-1)?.body;
+    expect(JSON.stringify(served?.system)).toContain("You are a crewmate on another Mac.");
+    expect(served?.tools?.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(["emit_card", "report", "note_progress", "file_followup", "tasks"]),
+    );
+
+    // Each callback once, as the computer itself, after every event before it.
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+      "inf:work:progress",
+      "inf:work:report",
+    ]);
+    expect(at.home.effects[1]?.request).toMatchObject({
+      task: TASK,
+      text: "All done.",
+      summary: "It is done.",
+    });
+    expect(at.home.actors.length).toBeGreaterThan(0);
+    for (const actor of at.home.actors)
+      expect(actor).toEqual({ kind: "device", deviceId: at.deviceId });
+    const reportStart = at.home.events.find(
+      (record) => record.event.type === "tool_start" && record.event.toolName === "report",
+    );
+    expect(at.home.effects[1]?.after).toBeGreaterThanOrEqual(reportStart?.seq ?? Number.NaN);
+
+    // Every event once, numbered from 1 with no gap, the turn's start first and its end last.
+    expect(at.home.events.map((record) => record.seq)).toEqual(
+      at.home.events.map((_, index) => index + 1),
+    );
+    const types = at.home.types();
+    expect(types[0]).toBe("turn_started");
+    expect(types.at(-1)).toBe("turn_ended");
+    expect(types).toEqual(expect.arrayContaining(["tool_start", "tool_end", "turn_end"]));
+    expect(at.home.events.at(-1)?.event).toMatchObject({
+      type: "turn_ended",
+      turn: 1,
+      outcome: "done",
+      undelivered: [],
+      state: { streaming: false, resume: expect.stringMatching(/\.jsonl$/) },
+    });
+    // What the home keeps, the computer forgets: its outbox holds nothing kept.
+    const outbox = join(placedTaskFolders(join(at.dataDir, "tasks"), TASK).root, "outbox.jsonl");
+    await expect.poll(() => readFileSync(outbox, "utf8")).toBe("");
+  });
+
+  it("answers an order it already applied as it did, without doing it again", async () => {
+    const at = await placed();
+    const opened = await at.open();
+    model([{ text: "Once." }]);
+    const prompt = [{ orderId: "rows:7", task: TASK, text: "Say it once." }];
+    expect(await at.order("inf:session:prompt", prompt)).toEqual({ turn: 1 });
+    await at.ended(1);
+    const requests = api.requests.length;
+
+    expect(await at.order("inf:session:prompt", prompt)).toEqual({ turn: 1 });
+    expect((await at.open()).state.sessionId).toBe(opened.state.sessionId);
+    expect(api.requests.length).toBe(requests);
+    expect(at.home.types().filter((type) => type === "turn_started")).toHaveLength(1);
+
+    // A steer after the turn ended reached nothing, so the home puts its words back.
+    expect(
+      await at.order("inf:session:steer", [{ orderId: "rows:8", task: TASK, text: "Late." }]),
+    ).toEqual({ delivered: false });
+  });
+
+  it("keeps the turn running through a drop: a waiting callback is asked again under its id, done once, and the home catches up exactly", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Across the drop." } }] },
+      { text: "Carried on." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Report." }]);
+    await report.reached;
+
+    await at.dropAndReturn();
+    // The same call, asked again on the new connection, while the first still waits.
+    await expect
+      .poll(() => at.home.asked.filter((ask) => ask.channel === "inf:work:report").length)
+      .toBe(2);
+    const [first, second] = at.home.asked.filter((ask) => ask.channel === "inf:work:report");
+    expect(second?.callId).toBe(first?.callId);
+    report.open();
+    await at.ended(1);
+
+    expect(at.home.effects.filter((effect) => effect.channel === "inf:work:report")).toHaveLength(
+      1,
+    );
+    expect(at.home.events.map((record) => record.seq)).toEqual(
+      at.home.events.map((_, index) => index + 1),
+    );
+    expect(at.home.types().filter((type) => type === "turn_ended")).toHaveLength(1);
+    expect(at.home.events.at(-1)?.event).toMatchObject({ type: "turn_ended", outcome: "done" });
+  });
+
+  it("holds several callbacks waiting at once, and answers each once after a drop", async () => {
+    const at = await placed();
+    await at.open();
+    const progress = at.home.hold("inf:work:progress");
+    const followup = at.home.hold("inf:work:followup");
+    model([
+      {
+        tools: [
+          { name: "note_progress", args: { text: "Two at once." } },
+          {
+            name: "file_followup",
+            args: { title: "A gap", goal: "Close it.", why: "Found it." },
+          },
+        ],
+      },
+      { text: "Both answered." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:3", task: TASK, text: "Both." }]);
+    await Promise.all([progress.reached, followup.reached]);
+
+    await at.dropAndReturn();
+    await expect.poll(() => at.home.asked.length).toBe(4);
+    progress.open();
+    followup.open();
+    await at.ended(1);
+    expect(at.home.effects.map((effect) => effect.channel).sort()).toEqual([
+      "inf:work:followup",
+      "inf:work:progress",
+    ]);
+  });
+
+  it("sends a card's picture before the card, from the folder the crewmate wrote it in", async () => {
+    const at = await placed();
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    const picture_ = png();
+    writeFileSync(join(folders.evidence, "after.png"), picture_);
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "Done on another Mac",
+              body: `<p>It works.</p><img src="${join(folders.evidence, "after.png")}" alt="It works">`,
+            },
+          },
+        ],
+      },
+      { text: "Shown." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:4", task: TASK, text: "Show it." }]);
+    await at.ended(1);
+
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+      "inf:work:picture",
+      "inf:work:card",
+    ]);
+    const [picture, card] = at.home.effects;
+    expect(at.home.pictures.get(String(picture?.request.id))).toEqual(picture_);
+    expect(card?.request.card).toMatchObject({
+      title: "Done on another Mac",
+      pictures: [{ id: picture?.request.id, alt: "It works" }],
+    });
+    expect(String((card?.request.card as { body?: string } | undefined)?.body)).toContain(
+      `${picture?.request.id}.png`,
+    );
+    const toolEnd = at.home.events.find(
+      (record) => record.event.type === "tool_end" && record.event.toolName === "emit_card",
+    );
+    expect(toolEnd?.event).toMatchObject({ isError: false });
+  });
+
+  it("sends a demo's recording in pieces after its poster and before the card, checked by this computer's decoder", async () => {
+    const decoded: number[] = [];
+    const at = await placed({
+      probeMedia: async ({ bytes }) => {
+        decoded.push(bytes.length);
+        return { ok: true, width: 400, height: 300, durationMs: 2000 };
+      },
+    });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    // Past one piece, so it crosses in two.
+    const recording = Buffer.concat([
+      mp4({ width: 400, height: 300 }),
+      box("free", Buffer.alloc(CARD_MEDIA_PIECE_BYTES)),
+    ]);
+    writeFileSync(join(folders.evidence, "demo.mp4"), recording);
+    writeFileSync(join(folders.evidence, "demo.png"), png());
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "A demo from another Mac",
+              body: `<p>It moves.</p><figure data-inf-demo="${join(folders.evidence, "demo.mp4")}"><img src="${join(folders.evidence, "demo.png")}" alt="It moves"></figure>`,
+            },
+          },
+        ],
+      },
+      { text: "Shown." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:demo", task: TASK, text: "Show it." }]);
+    await at.ended(1);
+
+    expect(decoded).toEqual([recording.length]);
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+      "inf:work:picture",
+      "inf:work:media",
+      "inf:work:media",
+      "inf:work:card",
+    ]);
+    const card = at.home.effects.at(-1)?.request.card as { pictures?: CardPicture[] };
+    const demo = card.pictures?.[0]?.demo;
+    expect(demo).toMatchObject({ kind: "mp4", bytes: recording.length });
+    const received = at.home.recordings.get(String(demo?.id));
+    expect(received).toBeDefined();
+    expectBytesEqual(received as Buffer, recording);
+    expect(at.home.effects[1]?.request).toMatchObject({ offset: 0, size: recording.length });
+    expect(at.home.effects[2]?.request).toMatchObject({
+      offset: CARD_MEDIA_PIECE_BYTES,
+      size: recording.length,
+    });
+  });
+
+  it("sends a GIF demo as a GIF after its poster, by its own walk with no decoder asked", async () => {
+    const decoded: number[] = [];
+    const at = await placed({
+      probeMedia: async ({ bytes }) => {
+        decoded.push(bytes.length);
+        return { ok: false, reason: "a GIF is never probed" };
+      },
+    });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    const recording = gif({ width: 400, height: 300, frames: 4 });
+    writeFileSync(join(folders.evidence, "demo.gif"), recording);
+    writeFileSync(join(folders.evidence, "demo.png"), png());
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "A GIF demo from another Mac",
+              body: `<p>It moves.</p><figure data-inf-demo="${join(folders.evidence, "demo.gif")}"><img src="${join(folders.evidence, "demo.png")}" alt="It moves"></figure>`,
+            },
+          },
+        ],
+      },
+      { text: "Shown." },
+    ]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:gif", task: TASK, text: "Show it." }]);
+    await at.ended(1);
+
+    expect(decoded).toEqual([]);
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual([
+      "inf:work:picture",
+      "inf:work:media",
+      "inf:work:card",
+    ]);
+    expect(at.home.effects[1]?.request).toMatchObject({ extension: "gif", offset: 0 });
+    const card = at.home.effects.at(-1)?.request.card as { pictures?: CardPicture[] };
+    const demo = card.pictures?.[0]?.demo;
+    expect(demo).toMatchObject({ kind: "gif", bytes: recording.length, durationMs: 400 });
+    const received = at.home.recordings.get(String(demo?.id));
+    expect(received).toBeDefined();
+    expectBytesEqual(received as Buffer, recording);
+  });
+
+  it("ends a turn the computer quit in the middle of as interrupted, and tells the home once it is back", async () => {
+    const at = await placed();
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([{ tools: [{ name: "report", args: { text: "Never answered." } }] }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:5", task: TASK, text: "Go." }]);
+    await report.reached;
+
+    await at.restartComputer();
+    await at.ended(1);
+    expect(at.home.events.at(-1)?.event).toMatchObject({
+      type: "turn_ended",
+      turn: 1,
+      outcome: "interrupted",
+    });
+    // The roster says what it holds now: nothing open, nothing running.
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks).toEqual([
+      expect.objectContaining({ task: TASK, open: false, closed: false }),
+    ]);
+    expect(roster.tasks[0]?.running).toBeUndefined();
+    // The prompt asked again after the quit is the one that started that turn.
+    expect(
+      await at.order("inf:session:prompt", [{ orderId: "rows:5", task: TASK, text: "Go." }]),
+    ).toEqual({ turn: 1 });
+    report.open();
+  });
+
+  it("copies the conversation's record to the home, from where its copy ends", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Recorded." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:6", task: TASK, text: "Note it." }]);
+    await at.ended(1);
+
+    const first = await at.order("inf:session:copy", [{ task: TASK, from: [] }]);
+    expect(first.more).toBe(false);
+    expect(first.files).toHaveLength(1);
+    const [file] = first.files;
+    const text = Buffer.from(file?.data ?? "", "base64").toString("utf8");
+    expect(text).toContain("Note it.");
+    expect(file?.size).toBe(Buffer.byteLength(text));
+
+    const again = await at.order("inf:session:copy", [
+      { task: TASK, from: [{ name: file?.name ?? "", offset: file?.size ?? 0 }] },
+    ]);
+    expect(again).toEqual({ files: [], more: false });
+  });
+
+  it("closes a conversation for good when the home closes the record", async () => {
+    const at = await placed();
+    await at.open();
+    expect(await at.order("inf:session:close", [{ orderId: "close:1", task: TASK }])).toEqual({
+      ok: true,
+    });
+    await expect(at.open()).rejects.toThrow("opens no more");
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks).toEqual([expect.objectContaining({ task: TASK, closed: true })]);
+  });
+
+  it("removes a closed conversation's folder for the home only once its working copy is gone, and answers the same when asked again", async () => {
+    const at = await placed({ copies: true });
+    const work = join(at.dataDir, "worktrees", TASK);
+    mkdirSync(work, { recursive: true });
+    await at.open();
+    const folder = join(at.dataDir, "tasks", TASK);
+    const remove = (orderId: string) => at.order("inf:session:remove", [{ orderId, task: TASK }]);
+    await expect(remove("remove:1")).rejects.toThrow("still open here");
+    await at.order("inf:session:close", [{ orderId: "close:1", task: TASK }]);
+    await expect(remove("remove:2")).rejects.toThrow("working copy is still here");
+    expect(existsSync(folder)).toBe(true);
+
+    // The working copy retired, the folder goes, and nothing writes it again.
+    rmSync(work, { recursive: true });
+    expect(await remove("remove:3")).toEqual({ ok: true });
+    expect(existsSync(folder)).toBe(false);
+    expect((await at.order("inf:session:roster", [])).tasks).toEqual([]);
+    expect(await remove("remove:3")).toEqual({ ok: true });
+    expect(existsSync(folder)).toBe(false);
+  });
+
+  it("tells the home when a job the crewmate's shell started there ends", async () => {
+    const at = await placed();
+    await at.open();
+    at.host().jobExit({
+      jobId: "job1",
+      ownerId: TASK,
+      command: "pnpm test",
+      exitCode: 0,
+      durationMs: 1200,
+      tail: "passed",
+    });
+    await expect
+      .poll(() => at.home.effects.map((effect) => effect.channel))
+      .toEqual(["inf:work:job-exit"]);
+    expect(at.home.effects[0]).toMatchObject({
+      callId: "job:job1",
+      request: { task: TASK, exit: { jobId: "job1", exitCode: 0, tail: "passed" } },
+    });
+  });
+
+  it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {
+    const at = await placed();
+    await expect(at.order("inf:session:launch" as WorkOrderChannel, [])).rejects.toThrow(
+      "not a request this computer answers",
+    );
+    await expect(at.order("inf:session:prompt", [{ task: TASK }])).rejects.toThrow("malformed");
+    await expect(
+      at.order("inf:session:prompt", [{ orderId: "rows:9", task: TASK, text: "Hi." }]),
+    ).rejects.toThrow("No conversation is open");
+    // Nothing open to stop: nothing done, and nothing kept for a task it never held.
+    expect(await at.order("inf:session:abort", [{ orderId: "stop:1", task: TASK }])).toEqual({
+      ok: true,
+    });
+    expect((await at.order("inf:session:roster", [])).tasks).toEqual([]);
+    // A computer that keeps no working copies holds a task's work in its
+    // folder, so it never removes one.
+    await expect(
+      at.order("inf:session:remove", [{ orderId: "remove:1", task: TASK }]),
+    ).rejects.toThrow("keeps a task's work in its folder");
+    await expect(
+      at.order("inf:session:open", [{ orderId: "open:x", task: "../escape", spec: at.spec }]),
+    ).rejects.toThrow("malformed");
+    expect(existsSync(join(at.dataDir, "escape"))).toBe(false);
+  });
+});

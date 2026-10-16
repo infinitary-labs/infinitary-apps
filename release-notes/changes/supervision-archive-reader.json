@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "supervision-archive-reader",
+      "reason": "Clarifies developer-only supervision archive extraction and replay fixture preservation; no app behavior changes."
+    }
+  ]
+}

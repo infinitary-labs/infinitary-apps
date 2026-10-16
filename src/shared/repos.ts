@@ -1,0 +1,391 @@
+import { z } from "zod";
+import { HERE } from "./deviceNames";
+import type { ForgeKind } from "./forge";
+import { placementRequirementsSchema } from "./placement";
+import { rigorSchema } from "./rigor";
+
+/**
+ * Managed work repos (decision D-8, fleet-root revision). Every repo is set
+ * up by Settings or the Firstmate agent and indexed in the app-owned fleet root
+ * (userData/fleet): `clone` and `init` create real directories in the
+ * projects folder - the fleet root itself unless the person chose another
+ * one (`ProjectsFolderView`), which the fleet root then links; `adopt`
+ * keeps an existing folder in place and links it from the fleet root, so
+ * `path` is always the repo's real working directory. The default
+ * local-only workspace is not listed here - it is the implicit fallback for
+ * repo-less tasks.
+ */
+
+export const repoSetupKindSchema = z.enum(["clone", "init", "adopt"]);
+export type RepoSetupKind = z.infer<typeof repoSetupKindSchema>;
+
+/**
+ * The task key a new project's tasks are numbered with (`INF` for `INF-1`),
+ * when the person or Firstmate chose one; the app otherwise derives it from
+ * the name. The core refuses, in words, a key that is not 2-4 letters or
+ * digits or that another project has (`freeProjectKey`).
+ */
+export const projectKeyChoiceSchema = z.string().trim().min(1).max(16);
+
+export const repoSetupSpecSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("clone"),
+    origin: z.string().trim().min(1),
+    name: z.string().optional(),
+    key: projectKeyChoiceSchema.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("init"),
+    name: z.string().trim().min(1),
+    key: projectKeyChoiceSchema.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("adopt"),
+    path: z.string().trim().min(1),
+    name: z.string().optional(),
+    key: projectKeyChoiceSchema.optional(),
+  }),
+]);
+export type RepoSetupSpec = z.infer<typeof repoSetupSpecSchema>;
+
+/**
+ * What kind of workspace a registered repo is. A `project` is ordinary
+ * managed work: a crewmate takes a worktree on a branch and the change
+ * leaves through a gate. `personal` is the app's own personal workspace
+ * (talk-to-personalize Step 4) and there is exactly one: a crewmate builds
+ * in place there, with no worktree, no branch and no pull request, the host
+ * commits the workspace at the end of each of its turns, and a completion
+ * report closes the task - nothing to merge, land, or discard. The kind is
+ * the workspace's nature, never a delivery: delivery says only where a
+ * change lands, and a personal task lands nowhere because it is already
+ * there.
+ */
+export const repoKindSchema = z.enum(["project", "personal"]);
+export type RepoKind = z.infer<typeof repoKindSchema>;
+
+/**
+ * How the agent ships finished work on the repo. `direct-pr` pushes a
+ * branch and opens a PR; `local-only` lands on a local branch and never
+ * leaves the machine. New postures (a validation pipeline, say) extend this
+ * enum - the registry and display render whatever it carries.
+ */
+export const repoDeliverySchema = z.enum(["direct-pr", "local-only"]);
+export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
+
+/**
+ * The delivery a single task ships at. The captain's ask (in words, as
+ * `delivery_ask`) overrides the repository's default for that task alone;
+ * omit it and the repo stands. The personal workspace's tasks carry a
+ * delivery nobody reads: they build in place, which is its kind's business
+ * rather than a posture of its own.
+ */
+export type DeliveryInput = {
+  /** The repository's standing posture; undefined = no repo (local-only). */
+  repo?: RepoDelivery | undefined;
+  /** The captain asked for a specific posture for this task. */
+  ask?: RepoDelivery | undefined;
+};
+
+export type DeliveryDecision = {
+  delivery: RepoDelivery;
+  reason: string;
+};
+
+export function deliveryFor(input: DeliveryInput): DeliveryDecision {
+  if (input.ask) {
+    return {
+      delivery: input.ask,
+      reason: `the captain asked for ${input.ask}`,
+    };
+  }
+  const repo = input.repo ?? "local-only";
+  return {
+    delivery: repo,
+    reason: input.repo ? `the repository ships ${input.repo}` : "no repository: local-only",
+  };
+}
+
+/** The posture a stored task ships at: its ask, else the repo, else local-only. */
+export function deliveryForRecord(
+  record: {
+    shape?: { delivery_ask?: RepoDelivery; policies?: { delivery?: RepoDelivery | null } } | null;
+  },
+  repo?: RepoDelivery,
+): RepoDelivery {
+  return deliveryFor({
+    repo,
+    ask:
+      record.shape?.policies?.delivery === undefined
+        ? record.shape?.delivery_ask
+        : (record.shape.policies.delivery ?? undefined),
+  }).delivery;
+}
+
+/**
+
+ * Whether the fleet may land a task's own green work, or must bring it to
+ * the captain (captain ruling, 2026-09-20: "this should actually be the
+ * same - repo default, per-task ask allowed"). Autonomy now has the shape
+ * delivery and rigor have: a repository default, a per-task ask on the
+ * captain's own words, and one effective value every reader takes.
+ */
+export type AutonomyInput = {
+  /** The repository's standing flag; undefined = no repository, so no policy. */
+  repo?: boolean | undefined;
+  /** The captain said in words, for this task alone. `false` is an ask too. */
+  ask?: boolean | undefined;
+};
+
+export type AutonomyDecision = {
+  autonomy: boolean;
+  reason: string;
+};
+
+/**
+ * The derivation, in the captain's order: the ask, then the repository.
+ *
+ * A repo-less task - the default workspace - is not held. Autonomy is a
+ * REPOSITORY's standing answer to "who merges my green work", and the hold
+ * enforces that answer; where there is no repository there is no answer to
+ * enforce, and nothing ships out of the app either, so holding it would be
+ * the host inventing a policy the captain never set. This is the one case
+ * the ruling did not name.
+ */
+export function autonomyFor(input: AutonomyInput): AutonomyDecision {
+  if (input.ask !== undefined) {
+    return {
+      autonomy: input.ask,
+      reason: input.ask
+        ? "the captain asked for this task to merge itself"
+        : "the captain asked to be asked before this task merges",
+    };
+  }
+  if (input.repo === undefined) {
+    return { autonomy: true, reason: "no repository: nothing to hold" };
+  }
+  return {
+    autonomy: input.repo,
+    reason: `the repository ${input.repo ? "merges green work itself" : "asks before merging"}`,
+  };
+}
+
+/**
+ * The autonomy a stored task ships at: its ask, else the repo. Derived
+ * live, exactly like `deliveryForRecord` - the shape's stamped `autonomy`
+ * is what the task was commissioned under, not what a merge attempt reads,
+ * so flipping a repository's default reaches work already in flight.
+ */
+export function autonomyForRecord(
+  record: { shape?: { autonomy_ask?: boolean; policies?: { autonomy?: boolean | null } } | null },
+  repo?: boolean,
+): boolean {
+  return autonomyFor({
+    ...(repo !== undefined ? { repo } : {}),
+    ask:
+      record.shape?.policies?.autonomy === undefined
+        ? record.shape?.autonomy_ask
+        : (record.shape.policies.autonomy ?? undefined),
+  }).autonomy;
+}
+
+/**
+ * Policy fields Settings and `app_change project-settings` may write. The personal
+ * workspace takes none of them (its registry refuses the whole patch): it
+ * builds in place, so there is nothing to deliver, land, or review.
+ */
+/**
+ * Where a registered project lives (git integration PR 1.1, migration 40):
+ * the host kind read from its origin (`forgeOf` in `./forge.ts`) and the
+ * host's name. Null for a project kept only on this Mac. GitLab and
+ * Bitbucket are recognised so a surface can name them; until their own
+ * forge files exist they behave as a plain Git host. A remote on this Mac's
+ * own disk is a plain host with no name.
+ */
+export const repoHostSchema = z
+  .object({
+    kind: z.enum(["github", "gitlab", "bitbucket", "git"]),
+    name: z.string().nullable(),
+  })
+  .nullable();
+export type RepoHost = z.infer<typeof repoHostSchema>;
+
+/** A parsed origin (`forgeOf`) as a project's host, or null when it lives only on this Mac. */
+export function repoHostFrom(where: { kind: ForgeKind; host: string | null }): RepoHost {
+  return where.kind === "none" ? null : { kind: where.kind, name: where.host };
+}
+
+export const repoPolicyPatchSchema = z
+  .object({
+    placementRequirements: placementRequirementsSchema.nullable().optional(),
+    delivery: repoDeliverySchema.optional(),
+    autonomy: z.boolean().optional(),
+    rigor: rigorSchema.nullable().optional(),
+    name: z.string().trim().min(1).max(120).optional(),
+    path: z.string().trim().min(1).max(4096).optional(),
+    origin: z.string().trim().min(1).max(4096).nullable().optional(),
+  })
+  .strict()
+  .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
+    message: "pass delivery, autonomy, rigor, name, path, origin, or several",
+  });
+export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
+
+export const repoViewSchema = z.object({
+  id: z.string(),
+  /** The fleet name (unique; names the fleet-root entry), shown in surfaces. */
+  name: z.string(),
+  /** The repo's real working directory (external for adopted repos). */
+  path: z.string(),
+  setupKind: repoSetupKindSchema,
+  /**
+   * The workspace's nature (`project` or `personal`), migration 37. There
+   * is exactly one `personal` row - the app's own personal workspace - and
+   * it takes no delivery, autonomy or rigor.
+   */
+  kind: repoKindSchema,
+  /** Remote URL when known: the clone source, or a detected origin on adopt. */
+  origin: z.string().nullable(),
+  /** Where the project lives, read from `origin`; null = kept on this Mac. */
+  host: repoHostSchema,
+  delivery: repoDeliverySchema,
+  /** On = the agent may land green finished work on this repo by itself. */
+  autonomy: z.boolean(),
+  /**
+   * The repository's standing delivery rigor (delivery rigor phase 3), set
+   * by talking or Settings → Projects; null = the host derives it per task
+   * from the posture and the intelligence tier (`rigorFor` in `./rigor.ts`).
+   */
+  rigor: rigorSchema.nullable(),
+  /**
+   * Where the project's next task starts (multi-machine piece 11,
+   * docs/helper.md "Runs on"): the id of a paired computer that runs work,
+   * or null for this Mac.
+   */
+  runsOn: z.string().nullable(),
+  placementRequirements: placementRequirementsSchema.optional(),
+});
+export type RepoView = z.infer<typeof repoViewSchema>;
+
+/**
+ * Why a project's tasks can run only on this Mac, or null when its Runs on
+ * may name another computer: the personal workspace builds in place here,
+ * and a project with no origin has nowhere another computer could clone it
+ * from (docs/helper.md, "Its working copies").
+ */
+export function runsHereOnly(repo: Pick<RepoView, "kind" | "origin">): string | null {
+  if (repo.kind === "personal") return `The personal workspace stays on ${HERE.this}.`;
+  if (!repo.origin) return `Kept on ${HERE.this} only, so its tasks run here.`;
+  return null;
+}
+
+/**
+ * A task's own Runs on that names this Mac (`WorkShape.runs_on_ask`,
+ * docs/helper.md "A task's own Runs on"); any other value is a device id.
+ */
+export const RUNS_ON_THIS_MAC = "this-mac";
+
+/**
+ * The feed line when a project's Runs on changes (design skill
+ * `components/devices/RunsOn`). `where` places the computer after a verb,
+ * as `signInPlace` does ("on Mac mini", "as Builder"); null is this Mac.
+ * `fromHere` says the project ran on this Mac before.
+ */
+export function runsOnLine(
+  name: string,
+  where: string | null,
+  fromHere: boolean,
+  automatic = false,
+): string {
+  if (automatic)
+    return `Infinitary chooses a computer for each new task in ${name}. Started tasks stay where they started.`;
+  if (where === null) return `${name} runs on ${HERE.this} now. Its next task starts here.`;
+  return fromHere
+    ? `${name} runs ${where} now. Its next task starts there; the one running here finishes here.`
+    : `${name} runs ${where} now. Its next task starts there; one already running finishes where it started.`;
+}
+
+export const repoSetupResultSchema = z.object({
+  repo: repoViewSchema,
+  created: z.boolean(),
+  initializedGit: z.boolean().optional(),
+  createdInitialCommit: z.boolean().optional(),
+});
+export type RepoSetupResult = z.infer<typeof repoSetupResultSchema>;
+
+/**
+ * What a setup would do, read without doing any of it (the setup card,
+ * `./projectSetup.ts`): the project already on the list, or the name it
+ * would get, where it lives, whether adding a plain folder starts a git
+ * repository in it, and the task key it was asked to take, normalized.
+ */
+export type RepoSetupCheck =
+  | { existing: RepoView }
+  | { name: string; origin: string | null; host: RepoHost; startsGit: boolean; key?: string };
+
+/** Tasks still on a project. Any open or active task blocks its removal. */
+export const repoRemovalSchema = z.object({
+  tasks: z.array(
+    z.object({
+      key: z.string(),
+      title: z.string(),
+      status: z.enum(["planned", "working"]),
+    }),
+  ),
+});
+export type RepoRemoval = z.infer<typeof repoRemovalSchema>;
+
+/** Settings and Firstmate say the same thing when tasks are in the way. */
+export function repoRemovalRefusal(name: string, tasks: RepoRemoval["tasks"]): string {
+  const named = tasks.map((task) => `${task.key} "${task.title}" (${task.status})`);
+  const list =
+    named.length > 1 ? `${named.slice(0, -1).join(", ")} and ${named.at(-1)}` : (named[0] ?? "");
+  return `${name} still has ${tasks.length === 1 ? "1 task" : `${tasks.length} tasks`}: ${list}. Finish or drop ${tasks.length === 1 ? "it" : "them"}, then remove it.`;
+}
+
+/** What Remove does to a project, said on its row before anything is asked. */
+export const REPO_REMOVAL_LINE = "Takes it off this list. Its folder and finished tasks stay.";
+
+export function repoRemovalQuestion(name: string, path: string): string {
+  return `Remove ${name}? Its folder stays at ${path}, and its finished tasks stay readable.`;
+}
+
+/**
+ * Where new projects go: the folder `clone` and `init` create their real
+ * directories in. `custom` is false while it is the app's own fleet root,
+ * the default; a folder the person chose in Settings -> Projects is
+ * `custom`. Projects already set up never move when it changes.
+ */
+export const projectsFolderViewSchema = z.object({
+  path: z.string(),
+  custom: z.boolean(),
+});
+export type ProjectsFolderView = z.infer<typeof projectsFolderViewSchema>;
+
+/** The one `repo_configured` payload Settings and `app_change project-settings` broadcast. */
+export function repoConfiguredEvent(repo: RepoView): {
+  type: "repo_configured";
+  repoId: string;
+  name: string;
+  delivery: RepoDelivery;
+  autonomy: boolean;
+  rigor: z.infer<typeof rigorSchema> | null;
+} {
+  return {
+    type: "repo_configured",
+    repoId: repo.id,
+    name: repo.name,
+    delivery: repo.delivery,
+    autonomy: repo.autonomy,
+    rigor: repo.rigor,
+  };
+}
+
+/** The one outcome line Settings and `app_change project-settings` write. */
+export function repoPolicyOutcome(repo: RepoView): string {
+  return `${repo.name} now ships ${repo.delivery} with autonomy ${
+    repo.autonomy ? "on" : "off"
+  }, rigor ${repo.rigor ?? "standard"}.`;
+}
+
+/** The picker's sentinel for the app-managed default workspace. */
+export const DEFAULT_WORKSPACE_ID = "default";

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "command-linux-sandbox-off",
+      "kind": "fix",
+      "title": "The command stops where Firstmate would run without its sandbox",
+      "body": "Some Linux computers, such as Ubuntu 24.04 and later, keep apps from making their sandbox. There, the command from Settings → Devices used to set up Firstmate's work without one. The command now stops before it asks or gets anything. It says to install the Firstmate package for that system and paste a link at its first launch instead.",
+      "area": "devices",
+      "noPicture": "The change is in the words the command prints in the other computer's terminal; no Firstmate window changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

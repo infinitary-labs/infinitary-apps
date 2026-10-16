@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crew-workflow-listing-through-github-read",
+      "reason": "Internal: crewmates list a version's check runs, jobs and artifacts through github_read instead of read_workflow. They can read everything they could before, and nothing a person sees or receives changes."
+    }
+  ]
+}

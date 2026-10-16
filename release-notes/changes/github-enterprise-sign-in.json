@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "github-enterprise-sign-in",
+      "kind": "feature",
+      "title": "Sign in to your GitHub Enterprise",
+      "body": "Settings → Projects now offers GitHub Enterprise beside GitHub. Enter your GitHub Enterprise address, make a key there with one click, and paste it in. Firstmate checks the key with your GitHub Enterprise before keeping it on this Mac. Your projects there then work the way projects on GitHub do: Firstmate lists them, clones them, pushes to them, and opens, checks and merges pull requests there.",
+      "area": "projects",
+      "picture": {
+        "dark": "github-enterprise-sign-in-dark.webp",
+        "light": "github-enterprise-sign-in-light.webp",
+        "alt": "Where your projects live, signed in to GitHub and to github.example.com, with the GitHub Enterprise sign-in open for another address"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

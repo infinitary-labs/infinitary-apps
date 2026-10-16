@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "join-command-test-closed-pipe",
+      "reason": "Tests only: the join command's unit test no longer fails when a command it runs finishes before reading the answer the test types. Nothing in the shipped app changed."
+    }
+  ]
+}

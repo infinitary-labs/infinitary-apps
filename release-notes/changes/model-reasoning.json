@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "model-reasoning",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Choose reasoning for each model in each intelligence level",
+      "body": "In Settings → Intelligence → Models, a menu beside each model now sets its reasoning at that intelligence level only. New crewmates use your choice, as far as the model supports it, even on Quick care. Auto keeps the level's usual reasoning, which Quick care still lowers one step. Moving a model to another level leaves each choice with the level where you made it.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "model-reasoning-dark.webp",
+        "light": "model-reasoning-light.webp",
+        "alt": "The high intelligence level with a reasoning menu beside Claude Opus and High chosen, including Quick care"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

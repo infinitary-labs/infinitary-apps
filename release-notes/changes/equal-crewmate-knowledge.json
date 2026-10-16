@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "equal-crewmate-knowledge",
+    "kind": "improvement",
+    "area": "crewmates",
+    "title": "Any crewmate can save knowledge you ask to keep",
+    "body": "You can ask any crewmate to save an article it reads, including in a later reply and on a task without a project. It saves the article's ideas and findings with short quotes and the link. Every crewmate can now read your saved personal context and sources, including ones saved for another project. A crewmate saves personal context only from your own words, and looks things up only when the work needs them.",
+    "noPicture": "This changes what crewmates can read and save, not the Knowledge browser or another screen.",
+    "provenance": { "origin": "change" }
+  }]
+}

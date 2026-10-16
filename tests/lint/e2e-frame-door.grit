@@ -1,0 +1,32 @@
+// A card's or panel's frame is read through the door in tests/e2e/frames.ts
+// (docs/e2e-contracts.md, "Frames are read through the door"), never by a
+// spec naming an `iframe` or calling `frameLocator` / `contentFrame`
+// itself. A frame's title shows while its page still holds the empty first
+// document, and a one-shot read of it answers "nothing there" once in a few
+// runs; the door selects a frame only once the app has marked it drawn.
+// Helper files (everything in tests/e2e that is not a *.spec.ts) are the
+// door's own and exempt. A spec whose subject is a frame it builds itself,
+// or the iframes an attack plants, says so where it counts them, in a
+// `biome-ignore` naming this rule and why. Runs inside `pnpm check`
+// through biome.json's plugins, as an error since every spec moved.
+
+language js
+
+or {
+  `$target.$method($...)` where {
+    $method <: or {
+      `frameLocator`,
+      `contentFrame`
+    },
+    $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
+    register_diagnostic(span=$method, message="A frame is read through the door in tests/e2e/frames.ts (cardBody, panelBody, bodyIn, shownCardFrame, recordFrame, ...), which selects it only once its page has drawn; a spec that names frameLocator or contentFrame reads the empty first document (docs/e2e-contracts.md, Frames are read through the door).", severity="error")
+  },
+  or {
+    JsStringLiteralExpression() as $literal,
+    JsTemplateExpression() as $literal
+  } where {
+    $literal <: r"(?s).*\biframe\b.*",
+    $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
+    register_diagnostic(span=$literal, message="A frame is read through the door in tests/e2e/frames.ts, never by an iframe selector in a spec: its helpers select a frame only once its page has drawn (docs/e2e-contracts.md, Frames are read through the door).", severity="error")
+  }
+}

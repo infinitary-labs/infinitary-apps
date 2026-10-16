@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "published-contract",
+      "reason": "Publishes the shapes another Mac or device reads and writes, with the rule for which app versions may make changes, and adds a test client that uses only that file. Nothing in the app can pair a device yet, so nothing changes for anyone."
+    }
+  ]
+}

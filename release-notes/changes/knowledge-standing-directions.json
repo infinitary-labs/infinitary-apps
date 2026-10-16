@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-directions-browser",
+      "reason": "Release review: the Directions tab this change added reaches people only in the form the later knowledge-directions-in-words change gave it, and that note describes it, inspector included. The collection picker and older-notes view this change showed never reached a release, so its note and its out-of-date hero pair are removed."
+    }
+  ]
+}

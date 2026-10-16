@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shared-computer-resource-read",
+      "reason": "Adds the permission-checked shared live CPU/RAM read for screens and personal panels; no existing screen, project default or task placement changes yet."
+    }
+  ]
+}

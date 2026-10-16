@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-quit-drain",
+      "reason": "Inside multi-machine support before it reached any installed build: the home waits briefly for connected devices to hear it is closing before quitting, so views do not mistake an intentional quit for lost contact. Multi-machine support first ships in this release, already with this, and the your-devices note describes it."
+    }
+  ]
+}

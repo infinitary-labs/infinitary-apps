@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "devices-tab-offered-in-every-build",
+      "reason": "Corrects the devices guide so Settings → Devices says every build offers the tab, matching the code. Documentation only; nothing a person notices."
+    }
+  ]
+}

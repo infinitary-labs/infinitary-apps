@@ -1,0 +1,242 @@
+{
+  "entries": [
+    {
+      "id": "bf-bf18f802f",
+      "kind": "feature",
+      "title": "Name pictures in the body, group them, and serve them by reference",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bf18f802fba3a9033fba270209e248b924564538"
+        ]
+      }
+    },
+    {
+      "id": "bf-cf893c3b5",
+      "kind": "feature",
+      "title": "Open any card picture large in a viewer over the window",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "cf893c3b5b42356bdc65ba24f64cfc6e0ab2fd6b"
+        ]
+      }
+    },
+    {
+      "id": "bf-b1c99fd13",
+      "kind": "feature",
+      "title": "Show active work in card threads",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b1c99fd130d0cdc5adbb40ab35d4a2e28aaaa776"
+        ]
+      }
+    },
+    {
+      "id": "bf-9324ee38b",
+      "kind": "feature",
+      "title": "Put every question about where a project lives behind one seam",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9324ee38b2cff78f9bcf45235f5dc67ba9cfde50"
+        ]
+      }
+    },
+    {
+      "id": "bf-37064df44",
+      "kind": "feature",
+      "title": "Sign in to GitHub in the app, and git that never prompts",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "37064df44ac0628f35c3615b1ecba2d81b76c5d5"
+        ]
+      }
+    },
+    {
+      "id": "bf-04d30376f",
+      "kind": "feature",
+      "title": "Tell the Firstmate where each project lives and name the host in every change string",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "04d30376fa8886c00a106e918044db9152121917"
+        ]
+      }
+    },
+    {
+      "id": "bf-ab275a447",
+      "kind": "feature",
+      "title": "Bring the app's own git, for every host git and a crewmate's shell",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ab275a447475f67058f4839411621034ca4b665b"
+        ]
+      }
+    },
+    {
+      "id": "bf-7fdb1fc53",
+      "kind": "feature",
+      "title": "Read the app's record through versioned SQL views",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7fdb1fc53722dc92e2d7b2d5d65ecba7e67c1e92"
+        ]
+      }
+    },
+    {
+      "id": "bf-9d6558ee4",
+      "kind": "feature",
+      "title": "Drop Cursor; only Pi subscriptions, Claude the exception",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9d6558ee41456918f8f55eb430d892616ad52413"
+        ]
+      }
+    },
+    {
+      "id": "bf-ba0678f6a",
+      "kind": "feature",
+      "title": "Prefix rows with task keys",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ba0678f6adb2d647744795046ead221eb300709c"
+        ]
+      }
+    },
+    {
+      "id": "bf-a4dd4df76",
+      "kind": "fix",
+      "title": "Bring answered cards back and update stale e2e after [#304](https://github.com/kunchenguid/firstmate-3000/issues/304)/[#305](https://github.com/kunchenguid/firstmate-3000/issues/305)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a4dd4df76feb69badfd3f21ec21b240cfde0283e"
+        ]
+      }
+    },
+    {
+      "id": "bf-1fcff36d4",
+      "kind": "fix",
+      "title": "Keep pictures inside the card and letterbox tall ones",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1fcff36d420d1ce3e84615d1bf287aa2d003a996"
+        ]
+      }
+    },
+    {
+      "id": "bf-fcbe57b3d",
+      "kind": "fix",
+      "title": "E2e timing asserted as order or work, budgets graded on demand; lost captain steer",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "fcbe57b3dd530d550375ba5ae6bd7dd1ce50e883"
+        ]
+      }
+    },
+    {
+      "id": "bf-68b110121",
+      "kind": "fix",
+      "title": "Every child the core starts sees the person's search path",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "68b110121f8f76faa74da56121fd0e86ebd752c6"
+        ]
+      }
+    },
+    {
+      "id": "bf-f88a47e2f",
+      "kind": "fix",
+      "title": "Let local signers share the search list instead of queueing on one lock",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f88a47e2fe7b1ce8ddcb8a9ce283d717de4edc59"
+        ]
+      }
+    },
+    {
+      "id": "bf-66d68e3a3",
+      "kind": "fix",
+      "title": "Keep active task trees together",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "66d68e3a3155ae47cc84032dcee486852b0540f5",
+          "4e2ec39969535327370b58997d6cebe7f1750bb9"
+        ]
+      }
+    },
+    {
+      "id": "bf-714d8f0be",
+      "kind": "fix",
+      "title": "Put the local signing keychain on the search list while signing",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "714d8f0be8f7ea1260573507ed2b3e9f832b5ec4"
+        ]
+      }
+    },
+    {
+      "id": "bf-e357a09eb",
+      "kind": "fix",
+      "title": "Read the checks honestly, discard quietly, and say settle failures plainly",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e357a09eba165035de8e6a4e48f8865e3f36ab07"
+        ]
+      }
+    },
+    {
+      "id": "bf-4eb5c5a42",
+      "kind": "fix",
+      "title": "Ask for the end-to-end tests a change touches, and start follow-ups at the repo's rigor",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4eb5c5a42b1d8ebfef4143ee4b5183d281c824ae"
+        ]
+      }
+    },
+    {
+      "id": "bf-de025b7c6",
+      "kind": "fix",
+      "title": "Give every test run a private temp root and fail the run on a leak",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "de025b7c66558833d78fbe49c863bd9b03ef8f6f"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-9-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.9: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "b95e371d20755801815fe4004709d9835f8f3703",
+        "7c4063fa119134bb32be6b65748dcfa2a941407b",
+        "97298bc9ef3211e957e738ba6dce14fcf1ffc0b0",
+        "bb9676e296866ce08213c1911a9bcb75dc35d807",
+        "61889ed8e5e06bbffe8be823c5291025c16f955f",
+        "06e6b3d8898d969bfd2a7d7823a58dfee020f0f8",
+        "70c5edc0d571bfd00315c3f4b90677596aaa9975",
+        "136e306414916924749ff0ba75cc01ccc72f0f2d",
+        "545c74495c293395178c1ddf2e96a714d7d96413"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-follows-the-next-click",
+      "kind": "fix",
+      "title": "F6 goes on from the panel you click after switching back",
+      "body": "When you had clicked into a card and a new card arrived while you were in another app, clicking into a panel after switching back could leave the window treating the card as where you were, so F6 took you to the wrong place. The window now follows your click.",
+      "area": "cards",
+      "noPicture": "The fix is which part of the window the keyboard's own keys count from, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

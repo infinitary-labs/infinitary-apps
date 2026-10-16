@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "design-run-work-on-your-devices",
+      "reason": "Design-system pages and vocabulary for one list of your devices that can control Firstmate and run its work, a feature not built yet. The app's screens and behavior do not change."
+    }
+  ]
+}

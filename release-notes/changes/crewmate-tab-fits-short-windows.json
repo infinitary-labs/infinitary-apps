@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-tab-fits-short-windows",
+      "reason": "Release review: this first fix for the Crewmate tab's message box in a short window reaches people only together with the later crewmate-short-window change, and that note describes the result as it ships. Its note and hero pair are removed."
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+/* The Tasks panel (./panel.tsx; the design skill's NowPanel): its search,
+   its project chips, the groups and their rows. Drawn in the panel's own
+   page, so every rule is the panel's own. */
+:where([data-now]),
+:where([data-now]) * {
+  box-sizing: border-box;
+}
+:where([data-now]) button {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-m);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+:where([data-now]) button:hover {
+  background: var(--bg-3);
+}
+:where([data-now]) input {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--fg-1);
+  background: var(--surface-input);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+}
+:where([data-now]) input:focus {
+  border-color: var(--line-2);
+  box-shadow: var(--focus-ring);
+}
+:where([data-now]) :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+[data-now] {
+  --now-thumb: 3px;
+  --now-dot: 6px;
+  font-size: var(--text-base);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  gap: var(--space-2);
+}
+[data-now] {
+  container-type: inline-size;
+}
+[data-now-groups] {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+/* The frame cuts what is drawn past its edge, so the search keeps its focus
+   glow's reach clear on every side: the ring's 24px blur less the 6px it
+   is drawn in by. Below, the list's gap makes up the rest. */
+[data-now-filters] {
+  --now-glow: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: var(--now-glow) var(--now-glow) calc(var(--now-glow) - var(--space-2));
+}
+[data-now-filters][hidden] {
+  display: none;
+}
+/* The field, and Close search 6px after it. */
+[data-now-query-row] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-now-query] {
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+  flex: 1;
+  min-width: 0;
+}
+/* Close search and Esc do what the field's own cross did. */
+[data-now-query]::-webkit-search-cancel-button {
+  display: none;
+}
+[data-now-close] {
+  flex: 0 0 auto;
+  padding: 0;
+}
+[data-now-projects] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+[data-now-projects]:empty {
+  display: none;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+.chip[aria-pressed="true"] {
+  color: var(--fg-1);
+  background: var(--bg-3);
+}
+[data-now-groups] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  position: relative;
+}
+[data-now-groups]::-webkit-scrollbar {
+  width: var(--now-thumb);
+  height: var(--now-thumb);
+}
+[data-now-groups]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-now-groups]::-webkit-scrollbar-thumb {
+  background: var(--fg-3);
+}
+[data-now-groups]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-now-group] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* Even vertical padding: the expand chevron centers on the row the way the
+   Activity header centers its own. 6px over 2px left it low in the row. */
+[data-now-group-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+[data-now-group-header][aria-expanded] {
+  cursor: pointer;
+}
+[data-now-group-header][aria-expanded]:hover {
+  background: var(--bg-2);
+}
+.label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.n {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+[data-now-row] {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) fit-content(40%);
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 6px;
+  padding-left: calc(6px + var(--depth, 0) * 12px);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+[data-now-row]:hover {
+  background: var(--bg-3);
+}
+/* Headers and rows span the frame, which cuts what is drawn past its
+   edge, so they draw the focus ring inside their own edge. */
+[data-now-group-header]:focus-visible,
+[data-now-row]:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.title {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--leading-body);
+}
+[data-now-group="waiting"] .title {
+  color: var(--fg-1);
+}
+.title-key {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.word {
+  color: var(--fg-3);
+}
+.word[data-now-word="could not start"] {
+  color: var(--warn);
+}
+.key {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+/* A task another computer runs: its project, where, and that its computer
+   is out of reach. Drawn last first from the right, a part that does not
+   fit wraps onto the hidden second line whole - the project's name first,
+   then the place - so "out of reach" always shows. */
+.key[data-now-place] {
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  height: 1lh;
+}
+.key[data-now-place] > span {
+  flex-shrink: 0;
+  white-space: pre;
+}
+.reach {
+  color: var(--warn);
+}
+[data-now-row]:not([data-now-trailing]) {
+  grid-template-columns: 12px minmax(0, 1fr);
+}
+/* Rows whose records are open in the main stack: an
+   accent-tinted surface and the title at full strength, and no border at
+   all - the captain's call on the pane prototype. */
+[data-now-row][data-now-selected] {
+  background: var(--accent-dim);
+}
+[data-now-row][data-now-selected] .title {
+  color: var(--fg-1);
+}
+[data-now-row][data-now-selected] .key {
+  color: var(--fg-2);
+}
+/* A narrow panel: the row drops its project name and where it runs, and
+   keeps only that its computer is out of reach. (With one project the
+   panel leaves the name out itself.) After the rows' own rules, which
+   these narrow. */
+@container (max-width: 320px) {
+  [data-now-row]:not([data-now-out-of-reach]) {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+  [data-now-row]:not([data-now-out-of-reach]) .key,
+  .name,
+  .place {
+    display: none;
+  }
+}

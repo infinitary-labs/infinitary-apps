@@ -1,0 +1,173 @@
+/* The settings a captain's reply carried, apart from his words (FI3-617;
+   the design skill's components/cards/CardThread.prompt.md). Collapsed by
+   default to one quiet mono line; opened, a boxed panel of readable rows. */
+
+[data-thread-settings-toggle] {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--fg-3);
+  background: none;
+  border: 0;
+  padding: 1px var(--space-1) 1px 0;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-xs);
+  text-align: left;
+}
+[data-thread-settings-toggle]:hover {
+  color: var(--fg-2);
+}
+[data-thread-settings-toggle]:focus-visible,
+[data-thread-settings-scroll]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+[data-thread-settings-caret] {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+[aria-expanded="true"] > [data-thread-settings-caret] {
+  transform: rotate(90deg);
+}
+
+[data-thread-settings] {
+  align-self: stretch;
+  container-type: inline-size;
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  padding: 6px var(--space-2);
+  margin-top: 2px;
+}
+[data-thread-settings-scroll] {
+  max-height: 240px;
+  overflow: auto;
+  border-radius: var(--radius-xs);
+}
+[data-thread-settings-rows] {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  margin: 0;
+}
+[data-thread-settings-rows] dt {
+  color: var(--fg-3);
+  overflow-wrap: anywhere;
+}
+[data-thread-settings-rows] dd {
+  margin: 0;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+[data-thread-settings-state] {
+  color: var(--fg-3);
+}
+/* The narrowest thread stacks each key over its value. */
+@container (max-width: 250px) {
+  [data-thread-settings-rows] {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+  }
+  [data-thread-settings-rows] dd {
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-2);
+  }
+}
+[data-thread-settings-note] {
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  margin-top: 6px;
+}
+
+/* A collapsed thread's latest line at the card's foot (FI3-1130; the design
+   skill's components/cards/CardThread.prompt.md): one quiet row, between the
+   hairline and the reply field, that opens the thread beside the card. */
+[data-thread-cue] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 26px;
+  margin: 0 -4px;
+  padding: 3px 6px 3px 4px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+[data-thread-cue]:hover {
+  background: var(--bg-3);
+}
+[data-thread-cue-who] {
+  flex: 0 0 34px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+[data-thread-cue-said] {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+[data-thread-cue-said][data-quiet] {
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+[data-thread-cue-state] {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+[data-thread-cue] > svg {
+  flex: none;
+}
+
+.revision-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+.revision-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+.revision-link:hover {
+  color: var(--accent);
+}
+.revision-link:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+[data-revision-highlight] {
+  background: var(--accent-dim);
+  box-shadow: var(--focus-ring-inset);
+}

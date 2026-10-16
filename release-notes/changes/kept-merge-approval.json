@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-approval",
+      "kind": "improvement",
+      "title": "A kept merge sticks to the version you approved",
+      "body": "After a refusal, the app merges only the version on the card you clicked, or one its crewmate shows only brought it up to date. It waits for GitHub's own rules, such as a required review, and carries on after a restart without merging twice.",
+      "area": "cards",
+      "noPicture": "Nothing new on screen: the app merges the version you approved.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+import { join } from "node:path";
+import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
+import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
+import { FirstmateAgent } from "../../src/core/orchestrator/firstmateAgent";
+import type { Scheduler } from "../../src/core/orchestrator/scheduler";
+import { appPathsFor } from "../../src/core/paths";
+import type { ModelRuntime } from "../../src/core/pi/types";
+import { ShellPreferencesService } from "../../src/core/preferences/shellPreferences";
+import type { BoundTool } from "../../src/core/session/tools";
+import { CardStore } from "../../src/core/storage/cardStore";
+import { InboxStore } from "../../src/core/storage/inboxStore";
+import { SettingsStore } from "../../src/core/storage/settingsStore";
+import { TaskService } from "../../src/core/tasks/taskService";
+import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
+import type { WorkspaceService } from "../../src/core/workspace/workspaceService";
+import { freshDatabase } from "./database";
+import { fakeBinding, fakeSessionFactory } from "./fakeSession";
+import { scratchDir } from "./scratchDirs";
+
+/**
+ * The Firstmate's whole tool set, read off the live agent: a
+ * `FirstmateAgent` with every optional host side present attaches once, and
+ * these are the bound tools its session factory received - the one list
+ * both seats serve. The self-source pin, the Claude-side check and the
+ * Claude census read it, so none of them keeps a second copy of the set.
+ * A census reads what the tools say; nothing here runs one.
+ */
+export async function firstmateTools(): Promise<BoundTool[]> {
+  const paths = appPathsFor(scratchDir("infinitary-firstmate-tools-"));
+  const db = freshDatabase();
+  const settings = new SettingsStore(db);
+  const repos = new RepoRegistry(db, paths.fleetDir);
+  const tasks = new TaskService({ db, strict: true });
+  const supervisor = new CrewSupervisor({
+    sessions: { pi: fakeSessionFactory() },
+    bind: async (accountId) => fakeBinding(accountId),
+    workspace: {} as WorkspaceService,
+    repos,
+    tasks,
+    cardStore: new CardStore(db),
+    inbox: new InboxStore(db),
+    paths,
+    broadcastEvent: () => {},
+    broadcastCards: () => {},
+  });
+  // The factory the agent opens its seat through: it keeps the spec it was handed.
+  const seat = fakeSessionFactory("pi");
+  const agent = new FirstmateAgent({
+    paths,
+    inbox: new InboxStore(db),
+    settings,
+    modelRuntime: {} as ModelRuntime,
+    availableModels: () => [{ provider: "fm-mock", id: "mock-1" }],
+    quotaModels: () => undefined,
+    quotaLine: () => "",
+    repos,
+    supervisor,
+    tasks,
+    knowledge: new KnowledgeService({
+      projects: { get: (id) => repos.get(id), list: () => repos.list() },
+      gitFacts: async () => ({ commit: null, dirty: true }),
+    }),
+    scheduler: {} as Scheduler,
+    supervisionLog: () => [],
+    flagMissedEscalation: ({ taskId }) => ({ status: "no-outcome", taskId }),
+    flagDuplicate: (input) => supervisor.flagDuplicate(input),
+    personalize: {
+      preferences: new ShellPreferencesService(settings, () => {}),
+      personal: () => ({ extensions: [] }),
+      removePersonal: async () => ({ removed: false, committed: false }),
+      uninstallPlugin: async () => ({ removed: false }),
+      personalWorkspaceDir: join(paths.userData, "fleet", "personal"),
+      gates: () => ({ knowledge: true }),
+    },
+    installPlugin: async () => "not called",
+    broadcastEvent: () => {},
+    selfSourceDir: join(paths.userData, "self-source"),
+    seats: { pi: seat },
+  });
+  await agent.rebind("census");
+  const served = seat.specs[0]?.tools;
+  if (!served) throw new Error("the Firstmate never attached a session");
+  return [...served];
+}

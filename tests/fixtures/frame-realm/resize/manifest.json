@@ -1,0 +1,8 @@
+{
+  "name": "Resize probe",
+  "version": "1.0.0",
+  "title": "Resize probe",
+  "placement": { "x": "right", "y": "top" },
+  "size": "content",
+  "order": 10
+}

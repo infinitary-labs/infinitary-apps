@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-runs-on",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "Run one task on another Mac",
+      "body": "Ask Firstmate to run a task on another Mac, or to keep it on this Mac, before it starts, whatever its project's Runs on says. A parent task's parts go with it unless you say otherwise, and moving the project leaves the task where you put it. The task's record shows where it runs under Details, and whether that came from the task, its parent or its project.",
+      "area": "devices",
+      "picture": {
+        "dark": "task-runs-on-dark.webp",
+        "light": "task-runs-on-light.webp",
+        "alt": "A filed task's record, whose Details read Runs on, Running as Builder, This task, under Delivery, Merging and Care"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "design-remote-control-from-another-mac",
+      "reason": "Design-system pages and vocabulary for controlling Firstmate from another Mac, a feature not built yet. The app's screens and behavior do not change."
+    }
+  ]
+}

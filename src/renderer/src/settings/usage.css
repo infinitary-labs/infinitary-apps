@@ -1,0 +1,550 @@
+/* Settings → Usage (docs/usage.md; the design skill's
+   components/usage/UsageTab.prompt.md): the header with its unit switch,
+   the filters, the readouts, the daily bars, models beside where usage
+   went, a model's details, the milestone strip and the recent tasks.
+   What inline styles cannot express lives here: hover, the bars' and the
+   recent tasks' layout, and the container queries that stack them in a
+   narrow window. Rows are apart by space, never by rules. */
+
+.fm-usage {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--fg-2);
+}
+
+.fm-usage-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-usage-muted {
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-usage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.fm-usage-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.fm-usage-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.fm-usage-filters select {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  padding: var(--space-1) var(--space-2);
+}
+
+.fm-usage-notice {
+  margin-top: var(--space-3);
+  padding: 10px var(--space-3);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  font-size: var(--text-sm);
+}
+
+.fm-usage-notice[data-tone="warn"] {
+  color: var(--warn);
+  border-color: var(--warn-dim);
+}
+
+.fm-usage-readouts {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: var(--space-5);
+  margin: var(--space-6) 0 0;
+}
+
+.fm-usage-readout + .fm-usage-readout {
+  border-left: 1px solid var(--line-1);
+  padding-left: var(--space-5);
+}
+
+.fm-usage-readout-label {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-usage-readout-value {
+  display: block;
+  margin: var(--space-2) 0;
+  font-size: 26px;
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-regular);
+  color: var(--fg-1);
+}
+
+.fm-usage-section {
+  margin-top: var(--space-6);
+  min-width: 0;
+}
+
+.fm-usage-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.fm-usage-section-head h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.fm-usage-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.fm-usage-day {
+  flex: 1;
+  min-width: 1px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.fm-usage-day > span {
+  display: block;
+  width: 100%;
+  background: var(--fg-3);
+  border-radius: 2px 2px 0 0;
+}
+
+.fm-usage-day > span[data-active] {
+  min-height: 2px;
+}
+
+.fm-usage-day[data-today] > span {
+  background: var(--accent);
+}
+
+.fm-usage-day:hover > span {
+  background: var(--fg-2);
+}
+
+.fm-usage-day[data-today]:hover > span {
+  background: var(--accent-strong);
+}
+
+.fm-usage-chart-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-usage-legend {
+  margin: 10px 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-usage details {
+  margin-top: var(--space-3);
+}
+
+.fm-usage summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  width: fit-content;
+  border-radius: var(--radius-s);
+}
+
+.fm-usage table {
+  width: 100%;
+  margin-top: var(--space-2);
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.fm-usage th {
+  text-align: right;
+  font-weight: 400;
+  color: var(--fg-3);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line-1);
+}
+
+.fm-usage td {
+  text-align: right;
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+}
+
+.fm-usage th:first-child,
+.fm-usage td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.fm-usage-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 28px;
+}
+
+.fm-usage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  font-size: var(--text-sm);
+}
+
+.fm-usage-row-name {
+  display: block;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+/* Where it went: each project under its name and subtotal, its kinds of
+   work indented beneath, other work apart at the end. */
+.fm-usage-project {
+  margin-top: var(--space-4);
+}
+
+.fm-usage-project-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
+}
+
+.fm-usage-project-head h4 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.fm-usage-subtotal {
+  text-align: right;
+  color: var(--fg-1);
+}
+
+.fm-usage-subtotal-label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-usage-kind {
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+}
+
+.fm-usage-kind .fm-usage-row-name {
+  color: var(--fg-2);
+}
+
+.fm-usage-other {
+  margin-top: var(--space-4);
+}
+
+.fm-usage-model {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  overflow-wrap: anywhere;
+}
+
+.fm-usage-model:hover,
+.fm-usage-model[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+.fm-usage-track {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  margin-top: 0;
+  background: var(--bg-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fm-usage-track > span {
+  display: block;
+  height: 3px;
+  background: var(--fg-3);
+  border-radius: 3px;
+}
+
+.fm-usage-detail {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+}
+
+.fm-usage-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: var(--space-4) 0;
+}
+
+.fm-usage-detail-grid strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--fg-1);
+}
+
+.fm-usage-detail p {
+  margin: var(--space-1) 0 0;
+}
+
+.fm-usage-milestone {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: var(--space-6);
+  padding-top: 18px;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-usage-milestone svg {
+  flex: none;
+}
+
+.fm-usage-milestone p {
+  margin: 0;
+}
+
+/* Recent tasks: a task's name beside its five figures, the total the
+   strongest; in a narrow window the figures go under the name, labeled. */
+.fm-usage-recent {
+  margin-top: var(--space-6);
+}
+
+.fm-usage-recent-lead {
+  margin: 0 0 var(--space-1);
+}
+
+.fm-usage-tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fm-usage-task {
+  display: grid;
+  grid-template-columns: minmax(200px, 2.6fr) repeat(5, minmax(82px, 1fr));
+  align-items: start;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-s);
+}
+
+.fm-usage-task:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.fm-usage-task-head {
+  margin-top: var(--space-4);
+  padding: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-usage-task-head > span:not(:first-child) {
+  text-align: right;
+}
+
+.fm-usage-task-name {
+  min-width: 0;
+}
+
+.fm-usage-task-name > span {
+  display: block;
+}
+
+.fm-usage-figures {
+  display: contents;
+}
+
+.fm-usage-figures > div {
+  min-width: 0;
+  text-align: right;
+}
+
+.fm-usage-figures dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fm-usage-figures dd {
+  margin: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.fm-usage-figures [data-usage-figure="total"] dd {
+  color: var(--fg-1);
+  font-weight: 500;
+}
+
+.fm-usage-figures .fm-usage-coverage {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-3);
+}
+
+.fm-usage-task-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-usage-tasks-empty {
+  margin: var(--space-4) 0 0;
+}
+
+.fm-usage-tasks-retry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.fm-usage-tasks-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.fm-usage-empty {
+  padding: var(--space-7) 0;
+  text-align: center;
+}
+
+.fm-usage-empty h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.fm-usage-empty p {
+  margin: 0;
+}
+
+@container (max-width: 850px) {
+  .fm-usage-task {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .fm-usage-task-head {
+    display: none;
+  }
+
+  .fm-usage-task-name {
+    grid-column: 1 / -1;
+  }
+
+  .fm-usage-figures > div {
+    text-align: left;
+  }
+
+  .fm-usage-figures dt {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    margin-bottom: 2px;
+    font-size: var(--text-xs);
+    color: var(--fg-3);
+  }
+}
+
+@container (max-width: 540px) {
+  .fm-usage-task {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fm-usage-figures [data-usage-figure="total"] {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 640px) {
+  .fm-usage-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .fm-usage-readouts {
+    gap: var(--space-3);
+  }
+
+  .fm-usage-readout + .fm-usage-readout {
+    padding-left: var(--space-3);
+  }
+
+  .fm-usage-readout-value {
+    font-size: 22px;
+  }
+
+  .fm-usage-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

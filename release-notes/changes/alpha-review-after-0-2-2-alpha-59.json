@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "model-reasoning-auto",
+      "kind": "improvement",
+      "title": "Reasoning menus read Auto, with less text beside them",
+      "body": "In Settings → Intelligence → Models, the reasoning menu beside each model now names its usual choice Auto instead of Use level default. The short line beside the menu that repeated the reasoning in use is gone. Choosing works as before.",
+      "area": "subscriptions",
+      "noPicture": "A small change of words in a menu whose picture the per-model reasoning note already carries; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["353c27682690034745d93fe9803170eaf37c9bf2"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-2-alpha-59",
+      "reason": "Release review after alpha 0.2.2-alpha.59: ranks lessons, Starting in Working and cards that stay in front as highlights; rewords four notes in plain words; adds a note for the reasoning menus' Auto, which its change did not cover. Nothing in the app changes."
+    }
+  ]
+}

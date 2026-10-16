@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "now-infinitary",
+      "kind": "improvement",
+      "title": "Firstmate 3000 is now Infinitary",
+      "body": "The app is called Infinitary, and the one you talk to is your first mate. Its welcome reads \"Welcome to Infinitary, captain. I'm your first mate.\" The first time Infinitary opens, it brings your saved work over from Firstmate 3000. The older copy stays where it was, untouched.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "now-infinitary-dark.webp",
+        "light": "now-infinitary-light.webp",
+        "alt": "The welcome note, titled Welcome to Infinitary, captain. I'm your first mate."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "infinitary-identity",
+      "reason": "Step 10 of the Infinitary rename behind the note above: the bundle id, the data folders with the one-time move switched on, the Linux packages, the development signer, the release names and the old-cask switch's publisher, which stays off until steps 13 and 14."
+    }
+  ]
+}

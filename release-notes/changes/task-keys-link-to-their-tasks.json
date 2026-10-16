@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-keys-link-to-their-tasks",
+      "kind": "improvement",
+      "title": "Task keys open their tasks wherever you see them",
+      "body": "A task key in a task's record, a card's title or thread, Activity, or Settings → Usage is now a link, as it already was in a card's words. Rest on it to see that task's summary, and click it or press Enter to open the task. A task's own key on its own card stays as it is.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-keys-link-to-their-tasks-dark.webp",
+        "light": "task-keys-link-to-their-tasks-light.webp",
+        "alt": "A blocked task's record with its other tasks' keys underlined as links, and the summary of the task it waits on open beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

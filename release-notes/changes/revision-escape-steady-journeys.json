@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "revision-escape-steady-journeys",
+      "reason": "Fixes a timing gap in the unreleased revision links, which the revision-links note already describes: an Escape taken in the frame or so before a keyboard navigation settled returned to the previous link. Also steadies two card-thread journeys: the revision journey waits for its destination to hold the keyboard, and the shared card cleanup reads the stage once. Nothing a person has seen changes."
+    }
+  ]
+}

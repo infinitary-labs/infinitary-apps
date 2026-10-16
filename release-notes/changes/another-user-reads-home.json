@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "another-user-reads-home",
+      "reason": "Running work as another user on this Mac now says it can read files in the person's home folder, instead of promising it cannot; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

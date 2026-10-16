@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "command-search-pending-focus",
+      "kind": "fix",
+      "title": "Command search keeps your typing",
+      "body": "Opening command search cancels a focus move still waiting for an earlier card to draw. Moving to another card cancels it too, so returning later cannot pull focus from where you are typing.",
+      "area": "cards",
+      "noPicture": "This fixes a delayed keyboard focus move, not the window's appearance; a still picture cannot show the timing.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

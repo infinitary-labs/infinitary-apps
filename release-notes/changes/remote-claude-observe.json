@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "remote-claude-observe",
+      "kind": "fix",
+      "title": "Alpha only: Observe shows Claude crewmates from another computer",
+      "body": "In alpha builds, Observe now shows the conversation of a Claude crewmate whose task ran on another computer, instead of an empty one.",
+      "area": "settings",
+      "picture": {
+        "dark": "remote-claude-observe-dark.webp",
+        "light": "remote-claude-observe-light.webp",
+        "alt": "Observe shows a Claude crewmate's saved request and reply from another computer."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

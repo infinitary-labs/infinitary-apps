@@ -1,0 +1,146 @@
+name: Source desktop journeys
+
+# The app built from source on a desktop (docs/testing.md, "The Linux source
+# desktop"): a pull request's starter journeys (journeys.yml), and with suite
+# full every journey in the suite, split across hosted machines, before every
+# alpha and on demand (verify.yml). Packaging comes later.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+      runner:
+        required: false
+        type: string
+        default: ubuntu-24.04
+      suite:
+        description: starter, a pull request's journeys; or full, every journey in shards
+        required: false
+        type: string
+        default: starter
+
+jobs:
+  source-desktop:
+    # A pull request's check keeps its name. The full suite is the parallel
+    # lanes and the serial desktop lane, each split four ways, one job a
+    # share, so a failure names its own part of the suite; the desktop lane
+    # still runs alone on its machine (tests/e2e/lanes.ts).
+    name: ${{ inputs.suite == 'full' && format('journeys ({0} {1}/4)', matrix.lane, matrix.shard) || 'source-desktop' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ fromJSON(inputs.suite == 'full' && '["parallel", "desktop"]' || '["starter"]') }}
+        shard: ${{ fromJSON(inputs.suite == 'full' && '[1, 2, 3, 4]' || '[1]') }}
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          path: Application Support/firstmate
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - name: Install virtual display and desktop libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
+      - run: pnpm install --frozen-lockfile
+      # An unpacked Electron download has no installer to configure its
+      # sandbox helper. Do that only in this disposable hosted Linux job.
+      - name: Configure Electron's sandbox helper
+        if: runner.os == 'Linux' && runner.environment == 'github-hosted'
+        run: |
+          sandbox="$(node -p 'require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox")')"
+          test -f "$sandbox"
+          # Chromium parses the helper as a command prefix and splits a
+          # helper path containing spaces. The app/checkout stay under
+          # Application Support; only this pinned helper gets a plain path.
+          helper="$RUNNER_TEMP/firstmate-chrome-sandbox"
+          case "$helper" in *' '*) echo 'Sandbox helper path must have no spaces'; exit 1;; esac
+          sudo install -o root -g root -m 4755 "$sandbox" "$helper"
+          # An adjacent helper wins over CHROME_DEVEL_SANDBOX even when
+          # unconfigured. Use Chromium's development fallback instead.
+          rm "$sandbox"
+          test ! -e "$sandbox"
+          echo "CHROME_DEVEL_SANDBOX=$helper" >> "$GITHUB_ENV"
+      - name: Choose every resize caller on Mac when its helper changes
+        if: runner.os != 'Linux'
+        run: |
+          : > "$RUNNER_TEMP/resize-callers.txt"
+          if [ -n "$PR_BASE" ] && ! git diff --quiet "$PR_BASE" HEAD -- tests/e2e/layout.ts; then
+            node scripts/journey-callers.ts tests/e2e/layout.ts resizeWindow,minimumWindowSize > "$RUNNER_TEMP/resize-callers.txt"
+            cat "$RUNNER_TEMP/resize-callers.txt"
+          fi
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+      - run: pnpm exec playwright install ffmpeg
+      - run: pnpm build
+      # Every Linux starter includes devices.spec.ts: device regressions must
+      # surface before merge, even without a changed hook or copied sentence.
+      # Linux also runs the keyboard journeys, pressing Ctrl where a Mac
+      # presses Command (docs/keyboard.md, "Keys on each system"), the task
+      # browser's journeys, and the voice journeys with the stand-in model,
+      # holding right Ctrl (docs/architecture.md section 8, "Where speech runs").
+      # The full suite is every journey: a parallel job runs its share of the
+      # styles, renderer and application lanes, a desktop job its share of
+      # the serial desktop lane, each with --no-deps so neither lane waits
+      # as the other's teardown. The virtual screen holds the largest window
+      # a journey asks for. With no window manager the window under the
+      # pointer takes the keyboard, so the pointer waits on the screen's last
+      # pixel, where no window reaches, and no window gains or loses focus
+      # as a journey resizes it. Xvfb runs with -noreset: otherwise it
+      # resets as its last client leaves - xdotool, before any app opens -
+      # and puts the pointer back at the screen's centre. Every app window
+      # opens centred, so a pointer there sits in each one, and parallel
+      # journeys' windows opening over one another hand it to the window
+      # under test, off what its journey rests on. The step stops unless
+      # the pointer is on the last pixel.
+      - name: Run the journeys with the sandbox on, and affected resize callers on Mac
+        run: |
+          on_screen() {
+            xvfb-run -a -s "-screen 0 $SCREEN -noreset" sh -c '
+              width=${SCREEN%%x*}; height=${SCREEN#*x}; height=${height%%x*}
+              x=$((width - 1)); y=$((height - 1))
+              xdotool mousemove "$x" "$y"
+              at=$(xdotool getmouselocation)
+              case "$at" in
+                "x:$x y:$y "*) exec "$@" ;;
+                *) echo "The pointer is not on the last pixel at $x,$y: $at" >&2; exit 1 ;;
+              esac' on-screen "$@"
+          }
+          if [ "$RUNNER_OS" = Linux ] && [ "$LANE" = parallel ]; then
+            on_screen pnpm exec playwright test --no-deps --project=styles --project=renderer --project=application --shard="$SHARD/4"
+          elif [ "$RUNNER_OS" = Linux ] && [ "$LANE" = desktop ]; then
+            on_screen pnpm exec playwright test --no-deps --project=desktop --shard="$SHARD/4"
+          elif [ "$RUNNER_OS" = Linux ]; then
+            on_screen pnpm exec playwright test --no-deps tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts tests/e2e/keyboard-routing.spec.ts tests/e2e/keyboard-regions.spec.ts tests/e2e/task-browser.spec.ts tests/e2e/task-browser-actions.spec.ts tests/e2e/task-browser-diagnostics.spec.ts tests/e2e/task-browser-booking.spec.ts tests/e2e/phase6-voice.spec.ts tests/e2e/voice-prompt-focus.spec.ts tests/e2e/repro-voice-press.spec.ts tests/e2e/devices.spec.ts
+          else
+            callers="$(cat "$RUNNER_TEMP/resize-callers.txt")"
+            pnpm exec playwright test --no-deps tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts $callers
+          fi
+        env:
+          INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
+          LANE: ${{ matrix.lane }}
+          SHARD: ${{ matrix.shard }}
+          SCREEN: 2560x1600x24
+      - name: Keep the Linux window and the journeys' results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-desktop-${{ runner.os }}${{ inputs.suite == 'full' && format('-{0}-{1}', matrix.lane, matrix.shard) || '' }}
+          path: |
+            ${{ runner.temp }}/source-desktop-evidence/
+            Application Support/firstmate/playwright-report/source-results.json
+            Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

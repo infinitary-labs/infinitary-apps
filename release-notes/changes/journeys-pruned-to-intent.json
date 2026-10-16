@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-pruned-to-intent",
+      "reason": "Deletes 31 end-to-end journey cases that repeat another test or assert how the app looks rather than a result a person came for, removes 124 single look, wording and inventory assertions from 86 kept cases, has 35 cases read typed values from their owners, and rewords the comments and docs that named the deleted checks. No shipped behavior changed."
+    }
+  ]
+}

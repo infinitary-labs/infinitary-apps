@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "automatic-uses-other-computers",
+      "kind": "fix",
+      "title": "Automatic can start a task on your other computer",
+      "body": "Automatic found no model on another computer signed in to Claude, Codex or Grok, so every new task started on this computer. It now chooses among the models that computer serves, and starts the task there when that computer fits best.",
+      "area": "projects",
+      "noPicture": "No screen changes: new tasks now start on the other computer, and Task Details already say where each one runs.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

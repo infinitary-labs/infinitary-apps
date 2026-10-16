@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "custom-provider-extra-headers",
+      "kind": "feature",
+      "title": "Add your own request headers to a custom provider",
+      "body": "A custom API provider can send the extra headers your organization's server needs on every request, such as a team ID or a gateway token. A header marked Secret is masked and never shown again. A server that checks its own header instead of a key can now go without one.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-provider-extra-headers-dark.webp",
+        "light": "custom-provider-extra-headers-light.webp",
+        "alt": "The Extra request headers section of a custom API provider, with a visible X-Org-Id header and a masked secret X-Gateway-Token header"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "named-run-watch",
+    "kind": "improvement",
+    "area": "crewmates",
+    "title": "Crewmates hear sooner when a check fails",
+    "body": "A crewmate now hears as soon as the first check fails, so it can look into it while the rest still run. It hears again when they all finish. This covers a pull request's checks and other check runs on GitHub or GitLab that a crewmate starts or follows. The app reads them every minute or two, and the task reads Waiting for checks meanwhile.",
+    "noPicture": "The change is how soon a crewmate hears about running checks, using the existing Waiting for checks task status without changing its layout.",
+    "provenance": { "origin": "change" }
+  }]
+}

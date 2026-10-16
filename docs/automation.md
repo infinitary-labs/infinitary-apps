@@ -1,0 +1,128 @@
+# Automation
+
+Automation is the schedules the first mate runs, as rules a person can read and change: a name, a state, a schedule, a saved prompt and, when it is about one, a project.
+The first mate has made schedules since R3 (`schedule_prompt`, `cancel_schedule`); Automation is the same schedules with controls, not a second scheduler.
+
+## One owner
+
+`Scheduler` (`src/core/orchestrator/scheduler.ts`) over `ScheduleStore` (`src/core/storage/scheduleStore.ts`) is the only writer.
+The first mate's tools, Settings → Automation (`src/renderer/src/settings/AutomationTab.tsx`) and the host's once-a-minute ticker all go through it.
+The `inf:automation:*` channels (`src/shared/ipc.ts`, reach `views`) are Settings' door, here and on a computer that controls this one; the reads `automation.list`, `automation.history` and `automation.preview` feed it, and `automation.list` feeds the Automation panel too.
+`automation.list` answers `ready` with every rule, or `unavailable` with the app's words when the rules cannot be read, never an empty list in its place.
+
+## A rule
+
+- `state` is `draft`, `enabled`, `paused` or `completed`.
+  Only an enabled rule fires.
+  A draft is saved but never runs until the captain turns it on ("Drafts").
+  A one-time rule becomes `completed` after it fires and stays listed, as Done, while its delivery waits.
+  Once that delivery settles - handled by the first mate's turn, or taken back - the rule is deleted with its history, and the feed says so (`Scheduler.retire`, on each tick and after each handled turn).
+  The tasks, cards and conversation it led to stay.
+- `revision` counts saved edits to the schedule, the prompt or the project.
+  Each run records the revision it was planned under.
+- `captainRequested` is the saved authority, stamped by code.
+  Saving a rule in Settings is the captain's own direction and stamps it; an existing rule keeps whatever authority it had until the captain edits it.
+  Nothing upgrades a legacy rule by migration.
+- `projectId` names the project the prompt is about, if any.
+  The first mate's prompt names that project's key and name while it is live; an archived or removed project is left out.
+- Schedules are every N minutes (15 at least), every day at a time, on chosen weekdays at a time, or once.
+
+## Drafts
+
+- A rule made in Settings is saved as a draft with Save draft, or turned on with Enable.
+- Enable opens a review in the sheet before anything runs: the schedule, the time zone, the project, the prompt exactly as the first mate gets it the first time, the next dates, what it sends (the prompt and its schedule details reach the AI subscription and stay in the first mate's conversation, and nothing else gets new access) and what happens to a missed time.
+  Turn on saves the sheet and runs the rule (`automationSaveSchema`'s `enable`); Back returns to the sheet with nothing changed.
+  A draft turned on runs from that moment, so an interval's anchor is when it was turned on.
+- `schedule_prompt` saves a draft when the first mate passes `draft`, which it does when the captain's ask leaves something open; a complete ask runs at once.
+- A recurring rule the first mate makes outside a captain's own turn is saved as a draft whatever it passes: new ongoing rules need the captain (`Scheduler.create`).
+  A one-time reminder it sets for itself still runs, and rules made before drafts keep running as they did.
+- Resume and Pause all leave a draft alone; a draft is turned on only by its review.
+
+## Calendars
+
+- A daily or weekly rule keeps an IANA time zone (`timeZone`, such as `America/Los_Angeles`).
+  A new rule takes this computer's zone, shown in Settings, and `schedule_prompt` takes `time_zone` or defaults to it.
+  The rule keeps its zone when the computer travels.
+- A daily rule made before time zones has none and follows this computer's clock, as it always did.
+  Settings shows it as "This computer's clock" until the captain picks a zone; nothing converts it silently.
+- Weekly rules keep their weekdays (0 for Sunday) and always have a zone.
+- Daylight saving (`src/core/orchestrator/calendar.ts`): a local time that happens twice runs once, at its earlier instant; a local time that does not exist runs at the first valid minute after it.
+- The preview and the rule's next run show dates in the rule's zone, with the zone's short name when it is not this computer's.
+
+## Schedule details
+
+A saved prompt may hold placeholders, filled in when it runs (`SCHEDULE_DETAILS`, `fillScheduleDetails` in `src/shared/automation.ts`): `{{scheduled time}}`, `{{time zone}}` and `{{missed runs}}`.
+Each is a plain value, never an expression.
+Settings' Insert schedule detail puts one at the caret, and Preview shows the prompt filled in for the next run.
+History keeps the prompt as it was sent.
+
+## Running
+
+- A due, enabled rule is recorded in `schedule_runs` and advanced (or completed) in one SQLite transaction with its delivery to the durable inbox.
+  A run is unique by rule, revision and planned time, so a restart or a backward clock cannot deliver the same occurrence twice.
+- The prompt the first mate receives names the rule's id and name and its project: `[fm-op] scheduled by automation <id> "<name>" for project <KEY> (<name>): <prompt>`.
+- After downtime an overdue rule runs once and advances to its next future occurrence.
+  The occurrences folded into it are counted (`missed`) and named in the prompt the first mate receives.
+- Pause stops new runs.
+  Resume picks the next future occurrence without replaying the paused time; an interval stays on its anchor.
+  A passed one-time rule cannot resume; saving it with a new future date re-enables it.
+- An edit to the schedule picks the next occurrence of the new one; an edit to only the name, the prompt or the project keeps the next run where it was.
+- Pause all pauses enabled rules only.
+- Preview lists the next three dates.
+  It sends nothing and changes no due time.
+- Delivery stays at least once through the inbox ("Deliveries").
+
+## Deliveries
+
+Each run is one delivery of the prompt to the first mate, followed through its inbox row (`schedule_runs.inbox_id`, migration 80).
+
+- **Waiting** from the fire until a first mate turn handles it.
+  The scheduled wake carries the run's id (`run`), so two deliveries of the same prompt are never one.
+- **Retrying** while it waits and its row is being tried again: the first mate's provider failed it, a turn on it threw, or a quit cut the turn reading it ("The honest retry" and "A turn a quit or crash cut", `docs/inbox.md`).
+  This is read off the row, never stored.
+- **Handled** once a turn that served it ended clean.
+  `Scheduler.noteDecision` reads that turn's decision record (`docs/provenance-capture.md`): each served segment's inbox row names its run, and the run keeps the tasks and cards the turn touched, less the tasks its other messages were about.
+  Handled means the first mate's turn handled the prompt, not that the work it led to finished.
+- **Cancelled** when it was taken back before a turn read it, with why: the automation was paused (`paused`), changed into a new revision (`edited`), or the first mate's conversation was cleared (`cleared`), which the minute tick finds by a waiting run whose row is gone.
+- A run recorded before migration 80 has no delivery and reads as **sent**.
+
+At most one delivery per rule waits unsent.
+A rule that comes due while one does folds the occurrence into it (`ScheduleStore.foldFire`): the waiting run keeps its planned time, counts the occurrence and those it missed in `missed`, and its message is rewritten in place (`InboxStore.revise`), saying it was missed while Infinitary was closed or busy.
+One a turn already holds is never rewritten: the next occurrence waits behind it as a new delivery.
+
+Pause, Pause all, an edit that makes a new revision and Delete take back the rule's deliveries no turn was handed yet (`InboxStore.withdraw`), in one transaction with marking them cancelled; a delivery a turn holds goes on, and keeps the revision it was planned under.
+The feed line says how many were taken back.
+
+## History and retention
+
+`schedule_runs` keeps each rule's settled runs - handled, cancelled or sent - for 30 days and at most 1,000 per rule; a delivery still waiting stays until it settles.
+The rule's own next-fire time is stored on the rule, so trimming history never lets an old occurrence run again.
+Deleting a rule, or a one-time rule leaving once it ran, deletes its runs, not the tasks, cards or conversation its deliveries led to.
+
+Settings' History lists a rule's runs newest first: where each delivery stands, its planned and sent times, what it caught up, its version, why a cancelled one was taken back, and what a handled one led to.
+A task it led to shows by its key, linked as anywhere the window draws one; a card by its title, opened forward while it is up and as it closed otherwise.
+The history reads again when a first mate turn ends, since nothing else says a delivery was handled.
+
+## The Automation panel
+
+`src/panels/automation/` is an ordinary app panel folder on the right rail, below Tasks and Knowledge (docs/ui-plugins.md, "A folder that waits on a gate").
+It waits on the `automation` gate, open while a saved rule exists in any state: the window follows `automation.list` and registers the panel on the first saved rule, and takes it away, with its place on the rail, when the last one is deleted.
+An unreadable answer leaves it as it was.
+It starts collapsed; the rail keeps the collapse choice by the panel's id, so it holds when the panel goes and comes back.
+Collapsed, its header counts the running rules as active and, when there are any, the paused ones: "1 active · 2 paused", or "1 active"; a draft or a finished rule is in neither count.
+Each row shows a rule's state, name and next run; a draft reads Draft where a running rule shows its next run.
+A click or Enter opens that rule's sheet in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in the sheet; nothing runs, pauses or changes.
+Hiding or collapsing the panel changes nothing about delivery.
+A rail already holding three panels refuses it, which is logged, so the captain's own panels keep their places.
+
+## Where it shows
+
+Settings → Automation, the Automation panel, and command search's Open Automation (`settings.automation`) and Pause all automations (`automation.pause-all`), neither with a default key.
+
+## On a computer that controls another
+
+A computer that controls the first mate on another (`docs/view.md`) shows the same Automation tab, panel and commands, over the rules of the computer the first mate lives on: every `inf:automation:*` channel reaches views (`docs/connection.md`).
+The rules run only there, so nothing runs twice and nothing moves when the computer that controls it closes.
+The sheet names that computer where the clock matters: a rule that keeps no zone follows "the clock on MacBook Pro", and the review says a missed time is about the first mate on MacBook Pro.
+A new rule still takes the zone of the computer it is made on, shown in the sheet.
+While that computer is out of reach or too far apart, its rules stay as last read and a change is refused as any change is (`docs/view.md`, "Out of reach in the window").

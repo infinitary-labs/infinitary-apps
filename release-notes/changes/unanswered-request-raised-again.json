@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "unanswered-request-raised-again",
+      "kind": "fix",
+      "title": "Firstmate is reminded of a decision it has not acted on",
+      "body": "When a crewmate passes on a decision only Firstmate can carry out, such as a plan you approved by replying under its card, and Firstmate does nothing about it, Firstmate is now reminded automatically half an hour later, and again half an hour after that, even while that card is still up. Before, the decision could sit until you asked again.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes: Firstmate is reminded and acts on the decision.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

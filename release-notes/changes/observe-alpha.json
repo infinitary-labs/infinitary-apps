@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "observe-alpha",
+      "kind": "feature",
+      "title": "Alpha only: watch every conversation in Settings",
+      "body": "In alpha builds, Settings has an Observe tab. It lists Firstmate and every crewmate, and shows each one's conversation as it happens, with the tools it ran and the usage it recorded. What it shows stays on this Mac. Stable releases do not have it.",
+      "area": "settings",
+      "picture": {
+        "dark": "observe-alpha-dark.webp",
+        "light": "observe-alpha-light.webp",
+        "alt": "Settings open on the Observe tab, listing Firstmate and a crewmate, with the crewmate's conversation and recorded usage beside the list"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

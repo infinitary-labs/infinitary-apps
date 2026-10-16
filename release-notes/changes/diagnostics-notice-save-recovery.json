@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "diagnostics-notice-save-recovery",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Diagnostics keeps a refused choice in view",
+      "body": "If Turn off or OK cannot be saved on the first-launch notice, the notice stays open with the reason and Diagnostics’ last saved state. You can try again there.",
+      "picture": {
+        "dark": "diagnostics-notice-save-recovery-dark.webp",
+        "light": "diagnostics-notice-save-recovery-light.webp",
+        "alt": "The Diagnostics notice keeps Turn off and OK available with the reason the choice could not be saved and Diagnostics’ last saved state."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,130 @@
+# Quota: the sensor and its math
+
+How quota is read, renewed, reported and derived.
+The account broker and credential health are `docs/architecture.md` §16.
+
+## Notes
+
+Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+
+- Quota reliability (captain escalation 2026-09-04, investigation report `fm3000-quota-visibility-diag-s1`).
+  The sensor's job is to be honest about what it established, and to recover from routine expiry without a sign-in.
+  Four rules that must not regress:
+  - **The vendor's verdict drives reactive renewal; the tick renews first.**
+    A 401 - and only a 401, never a 403, which is also how a WAF refuses - makes `fetchOneAccount` (`src/core/quota/fetchQuota.ts`) ask `AccountBackend.renew` (`vendor_rejected`), then retry once.
+    The same method is what the supervisor tick calls proactively at `expiresAt - lead`.
+    Claude's delegated ladder (`renewClaudeQuotaAuth`) walks supported non-interactive commands and stops at the first that actually CHANGES the stored credential (`docs/claude-renew-probe.md`).
+    Pi accounts declare resolve-is-renewal: `getAuth` already refreshed.
+  - **One owner per credential store, with an ASYMMETRIC priority.**
+    `src/core/claude/claudeStoreLease.ts` is the single answer to "who may spawn the client right now": a crewmate session holds a shared lease for its lifetime and one-shot runs take an exclusive one, with claim and check in the same tick so there is no check-then-spawn window.
+    The priority is the load-bearing part, and it is not symmetric: a **renewal WAITS OUT** an ordinary one-shot run (`runRenewalStoreTask`, bounded) because it is the recovery path, and stands down only for a live SESSION, whose single-use refresh token it must not race; the **status probe gives way** to everything, because its answer already falls back to the account's own store.
+    Making the renewal merely refuse when busy was a real hole - the probe's own polling could stand the app's own recovery down tick after tick, found on a live MacBook tick as `renewal_deferred` and reproduced against the real interfaces in `renewalScheduling.test.ts`.
+    Infinitary owns its sessions, so this is a registry - never a process scan, never a broker.
+  - **Not knowing is its own state, and so is recovering.**
+    `quotaProviderViewSchema` carries `ok | auth_required | rate_limited | unavailable | not_measured` plus a sanitized `reason` code and `measuredAt`.
+    `renewal_succeeded` on an `ok` row is the ONE positive trace a renewal leaves - without it an `ok` after a failure is indistinguishable from plain network recovery, so a snapshot could only ever prove recovery had NOT worked; never record it on an ordinary reading that needed no renewal.
+    Only `auth_required` may say "sign in again" or raise the needs_reauth card (CD-3=A: singleton card + Subscriptions CTA + one-step restore via `accounts.signIn`); it is reachable from exactly two proofs - a lapsed refresh token (`refresh_token_lapsed`, `claudeQuota.ts`) or a vendor rejection that SURVIVED a real renewal (`rejected_after_renewal`, `fetchQuota.ts`).
+    A lapsed file is that proof only when the saved-password item is absent too, and a client that says it is signed in is not a sign-out.
+    A transient miss, a no-interactive-session block, and an unreadable store stay `unavailable` and retryable.
+    `mergeStaleProviders` keeps last-known-good with its age through everything else, dropping windows whose own reset has passed.
+    A no-window fallback is never a success and unknown is never zero.
+  - **The credential-and-request layer has real coverage.**
+    `tests/e2e/quota-live-sensor.spec.ts` is the one e2e that does NOT use the fixture seam: it runs the real `createQuotaFetcher` against a local stub of the vendor endpoint (`INFINITARY_CLAUDE_USAGE_URL`, `INFINITARY_GROK_USAGE_URL`, dev/e2e-gated exactly like `INFINITARY_QUOTA_FIXTURE_DIR`).
+    Two provider defects reached the captain twice because that layer had none.
+    Grok is METERED since the 2026-09-05 dogfood fix: `providers/grok.ts` reads the consumer credits meter (`grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig`, an UNDOCUMENTED gRPC-web endpoint that can change without notice) with the account's own Pi OAuth token, mirroring the proven quota-axi read - not its browser headers: the meter answers with the bearer, the gRPC-web content type and marker alone, so Infinitary sends nothing that claims to be a browser or another client.
+    `src/core/quota/grpcWeb.ts` is the schema-less reader (framing, trailers, a bounded protobuf field scanner); the field map in grok.ts is reverse-engineered and confirmed against a live capture (`providers/grok.test.ts` carries the bytes).
+    A body the reader does not recognize is `schema_unrecognized`, never a window.
+    A meter refusal (401/403, gRPC 16/7) is NOT a sign-in verdict on its own - whether a Pi-minted xAI token reaches the consumer meter was never established on the captain's account - so the sign-in is probed once (`/v1/models`): alive means the honest disclosed line with `meter_*` as the reason, and only the vendor's own 401 is `auth_required`.
+    `INFINITARY_GROK_USAGE_URL` is the dev/e2e endpoint override, gated like `INFINITARY_CLAUDE_USAGE_URL`.
+- Quota parity (dogfood fix 2026-09-01): `src/shared/quotaSignals.ts` is the ONE home of derived quota math - pace/reserve/burnMultiple, runway projection, spendPriority, per-provider scope bounding - reimplemented clean-room to quota-axi's README semantics (never add quota-axi as a dependency or copy its source; `quotaSignals.test.ts` pins real published readings to 4 decimals).
+  Signals are recomputed from a snapshot's cycle evidence (`resetsAtMs`/`windowSeconds` on windows) at read time, never persisted.
+  Provider rules that must not regress: model/product windows bound only their own scope (never the account-wide min); a signed-in account with no readable window renders a disclosed detail line, never a silent blank (`GROK_NO_WINDOW_DETAIL` is the Grok case when the meter answers with nothing readable or refuses a live sign-in - it states what happened on that read, never that the credential cannot expose usage).
+  Claude is SENSED: `src/core/claude/claudeQuota.ts` reads the machine's default login (`.credentials.json` in `~/.claude`, else the bare Keychain item `Claude Code-credentials` - presence-probe first).
+  Only a host `absent` outcome (`errSecItemNotFound`, OSStatus -25300) is absence; a thrown presence-probe or an unparseable value is a named `keychain_*` read failure (`locked` / `unavailable` with `detail` and Retry), never an empty store and never `credential_unavailable` with the reason erased.
+  `keychain_no_interactive_session` stays out of `keychainLocks` so every tick retries (a relaunch fixes it); a decline still holds until Retry, unless the store changed under it (another login's account config, or a rewritten Keychain item): then one fresh background read is made, never a prompt, and a decline there holds the new store until Retry.
+  A `demand` refresh chains after an in-flight tick so Retry is not swallowed; a post-rung resolve that cannot read the store is `unreadable`, not `unchanged`.
+  The Keychain VALUE read rides `HostCapabilities.keychain` (CD-5=B: in-process Security.framework first, with the guarded Apple-tool fallback below) and is requested at account connect/sign-in (`requestKeychainValueAccess` from `ClaudeAuthBackend.login`), the moment a permission prompt is expected.
+  A LOCKED store is `keychain_locked`, never held: macOS fixes a process's unlock-dialog policy at its first touch of the store (the silent startup tick), so a tick skips the VALUE read and a user-initiated read first unlocks through the utility-process helper `src/main/host/keychainUnlockHelper.ts`, then reads in-app (`docs/architecture.md` §16.6; the host sets the interaction flag before EVERY Security call).
+  `providers/claude.ts` calls the vendor's OAuth usage endpoint; renewal is delegated to the client, never reimplemented.
+  A computer that runs work reads its own Claude login the same way, but never lets macOS ask, holds no refusal and offers no Retry (`docs/helper.md`, "Claude's allowance, never asking").
+  Pace vocabulary follows quota-axi: "ahead" = burning faster than the reset clock = the WARN state ("behind" is calm) - the pre-parity UI had this inverted; don't bring that back.
+
+## Keeping the Claude reading current
+
+- The account health check reads the file store only (`fileOnly`) and never touches the Keychain, so the sign-in the meter remembered survives it.
+  A fresh Keychain value read happens only after the item's modification time or the account config changes.
+- A read through Apple's tool that fails or runs out of time is `keychain_read_incomplete`: retryable on the next refresh, never held until Retry, and its words never mention Always Allow.
+  The single-item read keeps 5 seconds.
+  Checking that one item's access rules has no separate limit, because it does not walk the keychain.
+- Claude's usage service is asked at most once per account every five minutes (`CLAUDE_ASK_INTERVAL_MS`), and ten minutes after a 429 whatever its retry-after says.
+  Refreshes between asks (focus, resume) serve the last answer; a person's Retry always asks.
+
+## Typed cut-offs
+
+On an unlocked Claude item's `-25293` refusal, the host reads that one item's access rules in process (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).
+It does not list the other saved passwords, and it does not check each trusted app's signature.
+It reads through `/usr/bin/security` only when that item trusts the tool for decrypt without a password and its partition is `apple-tool:` or absent.
+The partition description from `SecACLCopyContents` is a hex-encoded XML plist; the host decodes that known shape and accepts exactly one `apple-tool:` entry, refusing malformed data and any additional team.
+Unknown layouts, other items, locked stores, cancelled dialogs and missing grants fail closed.
+The value stays in memory, never disk or logs; no ACL or grant changes.
+External rotation is observed on the next uncached read.
+The value read is still `find-generic-password -w` of that one item (`src/main/host/claudeKeychainTool.ts`).
+
+The regular macOS integration test (`src/main/host/claudeKeychainAccess.integration.test.ts`) creates its store under a scratch home’s `Library/Keychains/`, so macOS gives the item real partition entries.
+It covers a Claude Code-style item, direct-read refusal, successful credential resolution through the trusted tool, and refusal of `apple-tool:` plus another team without invoking the tool.
+The unit fixture uses the hex-encoded plist returned by macOS and rejects malformed layouts and other partitions.
+
+W1 S3, the Claude-seat plan's section 4.2.
+A cut-off - a provider that stops serving an account - is expected input, never an error path, and it is classified in ONE place from typed fields only: `classifyClaudeSignal` in `src/shared/authFailure.ts`, beside `isAuthFailureMessage`, which stays the classifier for Pi and for rows recorded as prose.
+Three product-neutral classes ride `turn_failed.cutOff` (`src/shared/events.ts`), so no provider's vocabulary crosses the event seam:
+
+- `signed_out`: the assistant's `authentication_failed`, or a result with `api_error_status: 401`.
+- `refused`: `oauth_org_not_allowed` or `billing_error`, or `api_error_status: 403`.
+- `no_headroom`: a pushed rate-limit `status: "rejected"` in the same failed turn, with `rate_limit` or no typed error at all; it carries that reading's `resetsAt` (epoch ms).
+  `rate_limit` alone is not enough: the client also types a transient capacity 429 and a model it has switched off that way, so without the vendor's rejected reading it is an ordinary failed turn, and a typed error that is not a cut-off beats a reading.
+  So does a loop that stopped on its own bound (`error_max_turns`, `error_max_budget_usd`, `error_max_structured_output_retries`): its requests were answered, so a reading it saw on the way is not why it stopped.
+  Only an API stop (`success` with `is_error`, or `error_during_execution`) can be read as a spent allowance; the real client against a stub API returning the vendor's `rejected` headers pushes the reading before it reports the error (`claudeFirstmateSession.integration.test.ts`).
+
+Whether a turn failed is the result's to say (`is_error`, or a subtype other than `success`); only the turn's own assistant messages count, never a subagent's (`parent_tool_use_id` set), whose error the main agent may have recovered from.
+Every other failure (`overloaded`, `server_error`, `unknown`, `max_output_tokens`, `invalid_request`, `model_not_found`, and the `error_*` results) is an ordinary failed turn with the honest retry.
+A turn that answered is `ok` whatever its pushed reading said, and so is a turn the client cut short for a steer or an interrupt (`terminal_reason` `aborted_*`) with no API error behind it.
+When one turn carries several signals the sign-in wins, then a refusal, then a spent allowance.
+A backend declares which kind of failure it reports (`ControlProfile.failureSignals`: `typed` for Claude, `text` for Pi); a typed backend's failure without a class is never read as a sign-in.
+The record keeps the class: `TaskService.recordTurnFailure` stores `failureSignals: "typed"` and the `cutOff` beside the words (a typed backend's fatal close, `SettleService.closeRecord`, stores `failureSignals: "typed"` too, with no class: a session that exits is a session failure), and the feed line and the stall card read it back through `typedFailureOf`, so `plainProblem` picks the line by class (`signed_out` the sign-in line, `no_headroom` the allowance line, `refused` the plain fallback until it has its own) and never runs its sign-in, allowance or slow-down word rules over a typed failure.
+A typed `signed_out` takes the crewmate's sign-in path (`CrewSupervisor.turnComplete`); `no_headroom` and `refused` take the provider-failure path, and the account's fact then holds the lane (`docs/inbox.md`, "A lane on a withheld account").
+The pushed reading's `status` is kept on its window (`pushed_quota.status`, migration 51); a reading from before the column has none, which is unknown, never `allowed`, and its `resets_at` was stored in epoch seconds, so a reset is trusted only on a `rejected` reading.
+The rules above still hold: only a 401 renews, and "sign in again" comes only from proof.
+
+### The cut-off on the account
+
+W1 S7.
+Whoever observes a typed cut-off - a crewmate's turn (`CrewSupervisor.turnComplete`), the seat's (`FirstmateAgent.onSessionEvent`) or the kind classifier's (`AdaptedDecisionModel`, W1 S10) - records it on the account with `AccountVault.noteCutOff`.
+A crewmate's turn on another computer met it on that computer's own sign-in, so that computer records it in its own store and this Mac records nothing; that computer's account rows carry it to this Mac, which holds the task on it as it holds one on its own (`docs/helper.md`, "Its own sign-ins").
+The fact lives on the account's registry row (`cutOff`, additive: a row an older build wrote has none, which is no cut-off), so it survives a restart, and it goes with the account when the account is removed.
+
+- **One predicate.**
+  `servesModels` (`src/core/accounts/credentialHealth.ts`) is false for a connected account whose health reason withholds it: `client_missing`, `client_outdated`, and the cut-off reasons `refused` and `signed_out`.
+  The vault's `health()` lays a standing `refused` or `signed_out` over the backend's reading as `degraded` with that reason, so the account stays connected - only proof shows "sign in again" - but serves nothing.
+  A proven sign-out still reads as one, and a missing client keeps its own sentence.
+  The routing pool (`availableModelsByAccount`), the flagship's eligibility (`Flagship.isEligible` through `servesSync`) and account selection (`selectAccount`, whose `account` row says `skipped <label>: withheld (<reason>)`, and names a withheld account of another provider too, since routing never reached it) read the same predicate.
+  Crew delivery holds a lane while a typed cut-off stands on its account - the fact itself, a spent allowance included - and leaves every other not-serving reason to fail its turn as before (`docs/inbox.md`, "A lane on a withheld account").
+- **A spent allowance withholds nothing.**
+  Its predicate is headroom: a pushed `rejected` reading is a zero window until its reset, even for the sensed Claude row (`withRejectedReadings`, laid over each sensed row by `createQuotaFetcher`'s `overlay`; a reading that flips to or from `rejected` refreshes the snapshot at once).
+  The row the sensor measured keeps its other windows; a row it could not measure carries only the refusal; `auth_required` is left standing.
+  Only a `rejected` reading's reset is trusted (rows from before migration 51 held seconds).
+  The vault still records `no_headroom` with its reset for the lane and seat phases, and holds none with no reset named, since nothing could clear it.
+- **Clearing, only when a fact changes** (owner Q1 a: never an automatic attempt).
+  Each fact carries the stamp it was seen under (`CredentialStamp`): which login the store holds (a digest of the account and organisation the client's config names), when the credential was last written (the plain-file store's modification time, else the Keychain item's), and the client's version - attributes only, never a token value (`readClaudeCredentialStamp`).
+  A part the note could not see is adopted from the next read that does, never counted as a change.
+  One fact stands at a time, and a cut-off with a looser way back never replaces a stricter one that stands (refused, then signed_out, then no_headroom): a turn already in flight that settles after a refusal cannot hand it to a clock or a routine rewrite.
+  Before the first read after a restart, `servesSync` and `withheldReason` answer from the standing fact.
+  - `no_headroom` clears at its reset, or when the store names another login: the spent allowance belonged to the old login, so a swapped-in login is not held by it (and held crew lanes resume within the idle ladder's next tick).
+  - `signed_out` clears when the store is written again, names another login, or the provider accepts that same login again.
+    A dead login cannot renew itself, so a rewrite is a new sign-in (or a renewal that worked).
+    A still-live login never rewrites itself, so a good allowance reading or a turn that succeeded on it clears the mark too (`AccountVault.noteAccepted`), and so does the row's Sign in, which can reuse the same login without a rewrite.
+    A refusal is not cleared by any of those.
+  - `refused` clears only on the captain's "Try Claude again" (`AccountVault.tryAgain`, which the seat's refused card calls through its `try-again` host op), another login, or another client version.
+    A live credential renews itself routinely, so a rewrite alone is not a changed login here - which also means signing in again to the same account and organisation does not clear a refusal; "Try Claude again" is the way back after a fix that keeps the same login.
+- **A refusal never renews.**
+  `AccountVault.renew` answers `withheld` without asking the backend while a refusal stands; the health tick already skips a degraded account, and the sensor's 401 path reads `withheld` as `renewal_withheld` (not knowing), never a sign-out.
+  A lost sign-in may still renew: only a 401 renews, and that is the path to proof.

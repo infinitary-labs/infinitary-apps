@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-panel-title-collapsed",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The collapsed Knowledge panel shows its title again",
+      "body": "When the Knowledge panel is collapsed, its header reads Knowledge again, with how many directions you have beside it, or how many concepts while you have no directions.",
+      "provenance": { "origin": "change" },
+      "picture": {
+        "dark": "knowledge-panel-title-collapsed-dark.webp",
+        "light": "knowledge-panel-title-collapsed-light.webp",
+        "alt": "The collapsed Knowledge panel, under the collapsed Tasks panel, reads Knowledge with 8 directions beside it."
+      }
+    }
+  ],
+  "exclusions": []
+}

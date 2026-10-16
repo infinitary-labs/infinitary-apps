@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "required-captain-actions",
+      "kind": "feature",
+      "title": "Required actions stay with you after merging",
+      "body": "When a change needs you to rebuild, update or check something afterward, its merge card says what you need to do. After merging, a separate card keeps the instructions and what counts as done. Not now leaves the action in Tasks, where Show the card brings it back. Your confirmation runs nothing. When the step is updating one of your computers, Firstmate marks it done once that computer connects with the new version and can take work.",
+      "area": "tasks",
+      "picture": {
+        "dark": "required-captain-actions-dark.webp",
+        "light": "required-captain-actions-light.webp",
+        "alt": "A merge card with an After merging, you need to notice above Merge, naming a required Mac mini rebuild"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

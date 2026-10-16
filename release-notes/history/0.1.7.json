@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "id": "bf-498901782",
+      "kind": "feature",
+      "title": "Work new asks through captain-owned sequences",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4989017826bf245c2886ccf4267c5e5b1be2b6f8"
+        ]
+      }
+    },
+    {
+      "id": "bf-9e470eab3",
+      "kind": "feature",
+      "title": "Planned steps carry a basis, containers complete with their children",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9e470eab3c4b03311acf0f621370ea1c455e06d1"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-7-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.7: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "ca063a2407b4f539589d78039ee5c579c1677111",
+        "b30ca79537d9a1bdd671a6c6f4c030668536577d"
+      ]
+    }
+  ]
+}

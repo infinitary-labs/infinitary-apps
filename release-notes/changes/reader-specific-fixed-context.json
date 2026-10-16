@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "reader-specific-fixed-context",
+      "reason": "Shortens fixed agent instructions by removing reader-inapplicable and repeated text without changing the product interface or intended behavior."
+    }
+  ]
+}

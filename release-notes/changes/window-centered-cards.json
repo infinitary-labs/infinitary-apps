@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "window-centered-cards",
+      "kind": "fix",
+      "title": "Cards stay centered with side panels",
+      "body": "Cards and their reply threads now stay centered in your window, even with a panel on only one side. Collapsed panels no longer narrow cards.",
+      "area": "cards",
+      "picture": {
+        "dark": "window-centered-cards-dark.webp",
+        "light": "window-centered-cards-light.webp",
+        "alt": "The welcome card centered above the message box, with Activity collapsed on the left."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,572 @@
+import { rm } from "node:fs/promises";
+import { homedir, hostname, userInfo } from "node:os";
+import { basename, join } from "node:path";
+import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
+import { startConnection } from "@core/connection/connection";
+import { ownComputerName } from "@core/devices/computerName";
+import { JoinedHome } from "@core/devices/joinedHome";
+import { dueMove } from "@core/folderMove/due";
+import { startInBackground } from "@core/helper/background";
+import { hostPath } from "@core/hostEnv";
+import { startCore } from "@core/index";
+import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
+import { UnsupportedSavedDataError } from "@core/storage/savedDataCompatibility";
+import { createInstalledUpdateChecker } from "@core/update/updateChecker";
+import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
+import { settingFrom } from "@shared/envSettings";
+import { platformArgument } from "@shared/platform";
+import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
+import type { ReleaseNotesView } from "@shared/releaseTracking";
+import { spellingOfUserDataFolder } from "@shared/userDataFolders";
+import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
+import { hostDesktop, hostPlatform } from "../core/platform";
+import { installAppMenu, resetAllKeysAfterAsking } from "./appMenu";
+import { disableChromiumFeatures } from "./chromiumFeatures";
+import { frameFontFiles } from "./frames/fontFiles";
+import { frameLibPins } from "./frames/frameLibFiles";
+import { FrameMountRegistry } from "./frames/frameMounts";
+import { handleFrameProtocol } from "./frames/frameProtocol";
+import { handOverProfileDir, runHandOver } from "./handOver";
+import { createElectronHost, forgetAutostart, startAtLoginFor } from "./host/electronHost";
+import { broadcast, registerIpc } from "./ipc";
+import { followWindowCommands, shellCommands } from "./keyboard";
+import { deferCoreDisposal } from "./lifecycle";
+import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
+import { handlePluginProtocol } from "./plugins/pluginProtocol";
+import { followRendererRecovery } from "./rendererRecovery";
+import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
+import { registerPrivilegedSchemes } from "./schemes";
+import { assertSecurityBaseline, installCsp, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
+import { lockdownNavigation } from "./security/navigation";
+import { configurePermissions } from "./security/permissions";
+import {
+  defaultRendererSourceOptions,
+  type RendererSourceOptions,
+} from "./security/rendererSource";
+import { Shell } from "./shell";
+import { showTrayIcon } from "./trayIcon";
+import {
+  chooseUserDataDir,
+  folderSpellingFor,
+  packagedFlavor,
+  readPackageJsonAt,
+} from "./userDataDir";
+import { createVoiceHelper, speechPlace } from "./voice/voiceHelper";
+import { VoiceModelService } from "./voice/voiceModelService";
+import { handleVoiceModelProtocol } from "./voice/voiceProtocol";
+import { followWindowState } from "./windowControls";
+import { mainWindowMaterial, windowMaterialOptions } from "./windowMaterial";
+import { followWindowSize } from "./windowSize";
+import { appWindows } from "./windows";
+import { workContext } from "./workContext";
+
+/**
+ * The Electron host (daemon study D1): the window, the security lockdown,
+ * the voice plumbing, and the IPC adapter. Everything the app DOES lives in
+ * src/core/, which this process starts as its first client - or, when this
+ * app controls Firstmate on another Mac, does not start at all, and asks
+ * that Mac instead (./shell.ts, docs/view.md). The main entry (./index.ts)
+ * loads this module only when the app starts as itself, never when it runs
+ * work for another Mac (./work.ts, docs/helper.md).
+ */
+
+const isDev = !app.isPackaged;
+const isRelease = !isDev && packagedFlavor(readPackageJsonAt(app.getAppPath())) === "release";
+
+/** The app a data folder belongs to, by the name a person knows it (`@shared/codeNames`). */
+function appNameOfFolder(dir: string): string {
+  return APP_IDENTITIES[spellingOfUserDataFolder(basename(dir)) ?? "fm"].app.release;
+}
+
+// This desktop's conventions (design skill readme, "Linux desktop
+// conventions"): a Mac keeps its inset window buttons, menu and Dock.
+const desktop = hostDesktop();
+
+function createMainWindow(
+  mainDir: string,
+  rendererSource: RendererSourceOptions,
+  frameMounts: FrameMountRegistry,
+  shell: Pick<Shell, "preferences" | "keymap" | "size">,
+  hideWindow: boolean,
+): BrowserWindow {
+  const windowMaterial = mainWindowMaterial({
+    platform: hostPlatform(),
+    hidden: hideWindow,
+  });
+  const { additionalArguments, ...material } = windowMaterialOptions(windowMaterial);
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 960,
+    minHeight: 640,
+    // A shown macOS window is the system material under the renderer's tint
+    // (docs/translucent-window.md); every other window is the opaque void.
+    ...material,
+    show: false,
+    // A Mac's window buttons sit inset in the top bar's left; on any other
+    // desktop the window has no system frame or menu bar, and the top bar
+    // draws its own buttons at its right (./windowControls.ts).
+    ...(desktop.windowControls === "system"
+      ? { titleBarStyle: "hiddenInset" as const }
+      : { frame: false }),
+    webPreferences: {
+      preload: join(mainDir, "../preload/index.cjs"),
+      // The page learns the material and the desktop from its preload's
+      // argv, before its first paint (src/shared/windowMaterial.ts,
+      // src/shared/platform.ts).
+      additionalArguments: [...additionalArguments, platformArgument(hostPlatform())],
+      ...REQUIRED_WEB_PREFERENCES,
+      devTools: !isRelease,
+    },
+  });
+
+  followRendererRecovery(win.webContents);
+  followWindowSize(win, shell.preferences);
+  if (desktop.windowControls === "app") followWindowState(win);
+  const { panel: panelCommand, ...pageCommands } = shellCommands(win);
+  followWindowCommands(win, { ...shell.size, ...pageCommands }, shell.keymap, panelCommand, {
+    system: desktop.keys,
+    run: (action) => (action === "quit" ? app.quit() : win.close()),
+  });
+
+  win.once("ready-to-show", () => {
+    // E2E runs (isolated userData) stay hidden: the tests only need the
+    // page, DOM, and IPC, and a flashing window disrupts the desktop.
+    if (!hideWindow) {
+      win.show();
+    }
+  });
+
+  win.webContents.once("did-finish-load", () => {
+    void assertSecurityBaseline(win, isDev);
+  });
+
+  lockdownNavigation(win, rendererSource);
+
+  // A renderer that navigates (a dev reload) abandons every frame it
+  // mounted; the shell forgets those documents rather than serving them
+  // to nobody.
+  win.webContents.on("did-start-navigation", (details) => {
+    if (details.isMainFrame) frameMounts.clear();
+  });
+
+  if (isDev && rendererSource.devServerUrl) {
+    void win.loadURL(rendererSource.devServerUrl);
+  } else {
+    void win.loadFile(join(mainDir, "../renderer/index.html"));
+  }
+
+  return win;
+}
+
+/**
+ * The app itself, with its window and its core. `mainDir` is where the main
+ * build lives (out/main): the entry says it, since this module is a chunk
+ * of its own beneath it.
+ */
+export function startApp(mainDir: string): void {
+  const rendererSource = defaultRendererSourceOptions(mainDir);
+
+  // Privileged schemes must be registered before the app is ready, all in
+  // one call: the voice model's and the plugin frames' (./schemes.ts).
+  registerPrivilegedSchemes();
+
+  // A card's or a panel's frame takes focus only from the captain's own
+  // click or key (FRAME_ALLOW, docs/ui-plugins.md "Focus and the frames"):
+  // Chromium honours that policy only with this feature on, and every
+  // renderer, each frame's own included, reads it from the switches it
+  // starts with, so it is set before the app is ready.
+  app.commandLine.appendSwitch("enable-blink-features", FRAME_FOCUS_BLINK_FEATURE);
+
+  // Chromium features the app never uses, off before Chromium reads its
+  // feature list, so a quit never waits on one of them (./chromiumFeatures.ts).
+  disableChromiumFeatures(app.commandLine);
+
+  // userData is decided before anything reads it - above all before the
+  // single-instance lock, which lives inside it (./userDataDir.ts). The
+  // release opens <appData>/infinitary; every other run - pnpm dev, the
+  // local dev bundle - opens <appData>/infinitary-dev. In dev, an isolated
+  // dir can be requested via INFINITARY_USER_DATA_DIR so e2e runs get fresh state
+  // without touching real data (hi-bit's pattern); packaged builds ignore it.
+  const folderSpelling = folderSpellingFor({ packaged: app.isPackaged, env: process.env });
+  const userDataChoice = chooseUserDataDir({
+    packaged: app.isPackaged,
+    env: process.env,
+    hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
+    appData: app.getPath("appData"),
+    readAppPackageJson: readPackageJsonAt(app.getAppPath()),
+    spelling: folderSpelling,
+  });
+  // The one-time move (src/core/folderMove/move.ts): an app with a new
+  // identity that finds an older app's folder of its flavor brings that work
+  // into its own before anything opens either: this build is Infinitary, so
+  // it moves Firstmate 3000's folder of its flavor. An isolated or switched
+  // folder never moves. While a move is due, Chromium runs on a
+  // throwaway profile beside the folders (./handOver.ts).
+  const move =
+    userDataChoice.kind === "flavor"
+      ? dueMove({
+          appData: app.getPath("appData"),
+          spelling: folderSpelling,
+          flavor: userDataChoice.flavor,
+        })
+      : null;
+  if (move) {
+    app.setPath("userData", handOverProfileDir(move.to));
+  } else if (userDataChoice.kind !== "switch") {
+    app.setPath("userData", userDataChoice.dir);
+  }
+  const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
+  // The e2e that launches the dev flavor without an isolated dir still keeps
+  // its window hidden (captain directive: e2e runs are windowless).
+  const hideWindow =
+    Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
+
+  // A Mac keeps Firstmate in its Dock with the window closed; another
+  // desktop keeps it working with its icon in the top bar (./trayIcon.ts).
+  const keepsWorkingClosed = hostPlatform() === "darwin" || desktop.closeToIcon;
+  // Opens the window again where closing it left Firstmate working with none.
+  let reopen: () => void = () => {};
+
+  // Single instance: a second launch focuses the existing window instead,
+  // or, where closing kept Firstmate working with no window, opens it again.
+  if (!app.requestSingleInstanceLock()) {
+    app.quit();
+  } else {
+    app.on("second-instance", () => {
+      const win = appWindows()[0];
+      if (win) {
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      } else if (desktop.closeToIcon) {
+        reopen();
+      }
+    });
+
+    // No window may ever attach a <webview> or open a child window
+    // (docs/architecture.md section 4).
+    app.on("web-contents-created", (_event, contents) => {
+      contents.on("will-attach-webview", (event) => event.preventDefault());
+      contents.setWindowOpenHandler(() => ({ action: "deny" }));
+    });
+
+    void app.whenReady().then(async () => {
+      // An installed Linux app with no git, or with its sandbox off (an
+      // AppImage promises neither), asks before it opens (./linuxStartup.ts).
+      const opens = await answerStartupAsks(
+        startupAsks({
+          platform: hostPlatform(),
+          packaged: app.isPackaged,
+          searchPath: hostPath(),
+          sandboxOff: app.commandLine.hasSwitch("no-sandbox"),
+        }),
+        async (question) => {
+          const { response } = await dialog.showMessageBox({
+            type: "warning",
+            title: "Infinitary",
+            message: question.message,
+            detail: question.detail,
+            buttons: [STARTUP_ASK_BUTTONS.quit, STARTUP_ASK_BUTTONS.open],
+            defaultId: 0,
+            cancelId: 0,
+          });
+          return response === 1 ? "open" : "quit";
+        },
+      );
+      if (!opens) {
+        app.quit();
+        return;
+      }
+      if (move) {
+        await runHandOver(move, {
+          names: { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) },
+          hidden: hideWindow,
+          deps: {
+            platform: hostPlatform(),
+            claudeConfigDir: defaultClaudeConfigDir(),
+            hostname: hostname(),
+          },
+          startAtLogin: () => {
+            // A development run's rehearsal leaves this computer's login items alone.
+            if (isDev) return;
+            startAtLoginFor(basename(move.to)).set(true);
+            // The older app's own entry would start the same program again.
+            forgetAutostart(basename(move.from));
+          },
+          relaunch: () => {
+            app.relaunch();
+            app.quit();
+          },
+          quit: () => app.quit(),
+        });
+        return;
+      }
+      // A hand-over that finished left its throwaway profile behind.
+      if (userDataChoice.kind === "flavor")
+        void rm(handOverProfileDir(userDataChoice.dir), {
+          recursive: true,
+          force: true,
+        });
+      // A desktop with no menu bar has no app menu either: the window takes
+      // the menu's keys itself (./keyboard.ts) and Settings is the top bar's
+      // gear, so no window carries Electron's default menu or its keys.
+      if (desktop.windowControls === "app") Menu.setApplicationMenu(null);
+      installCsp(session.defaultSession, rendererSource);
+      const host = createElectronHost({
+        isolatedUserDataDir,
+        ...(userDataChoice.kind === "flavor"
+          ? { autostartName: basename(userDataChoice.dir) }
+          : {}),
+        keychainUnlockHelperPath: join(mainDir, "keychainUnlockHelper.js"),
+        sqlProcessPath: join(mainDir, "sqlProcess.js"),
+        axiProcessPath: join(mainDir, "axiProcess.js"),
+        ...(desktop.closeToIcon ? { openWindow: () => reopen() } : {}),
+      });
+      const voiceModel = new VoiceModelService(join(host.app.userDataDir, "models"));
+      // The voice helper (docs/architecture.md section 8): Whisper in a
+      // process of its own, started on the first recording. A development
+      // run may name another entry that speaks its messages, as the
+      // end-to-end suite does in place of the 1.6 GB model.
+      const voiceHelperOptions = {
+        entryPath:
+          (isDev && settingFrom(process.env, "VOICE_HELPER_ENTRY")) ||
+          join(mainDir, "voiceHelper.js"),
+        modelsDir: join(host.app.userDataDir, "models"),
+      };
+      const voiceHelper = createVoiceHelper(voiceHelperOptions);
+      app.once("will-quit", () => voiceHelper.release());
+      // Where this computer transcribes, asked now so the answer is ready
+      // when the window first asks (docs/architecture.md section 8, "Where
+      // speech runs").
+      const voicePlace = speechPlace(voiceHelperOptions);
+      void voicePlace();
+      const voiceHost = {
+        ...host,
+        voice: {
+          modelReady: () => voiceModel.modelReady(),
+          ensureModel: (progress: Parameters<VoiceModelService["ensureModel"]>[0]) =>
+            voiceModel.ensureModel(progress),
+        },
+      };
+      // This Mac's own name, which a device says it joined from and a paired
+      // view says it controls (docs/devices.md). A development run may stand
+      // in another, so two apps on one Mac read as two Macs.
+      const ownName = ownComputerName({ packaged: !isDev, env: process.env });
+      let nameNow: string | undefined;
+      void ownName.then((name) => {
+        nameNow = name;
+      });
+      // Whether a release note was shown, for the Help menu's What's New;
+      // followed once the menu is installed below.
+      let notesShown = false;
+      let followReleaseNotes: (view: ReleaseNotesView) => void = () => {};
+      // A development run may stand in another contract version for the Mac
+      // where Firstmate lives, so a view on this build reads the two as too
+      // far apart (docs/view.md); a packaged app ignores it.
+      const standInContract = isDev
+        ? settingFrom(process.env, "CONTRACT_VERSION")?.trim() || undefined
+        : undefined;
+      // ...and Infinitary's spelling of channel names, so two development
+      // runs rehearse a home and a device on two sides of the rename
+      // (docs/connection.md, "Two spellings"); a packaged app ignores it.
+      const standInSpelling = isDev
+        ? readSpellings([settingFrom(process.env, "WIRE_SPELLING")?.trim() ?? ""])?.[0]
+        : undefined;
+      // This user's work: a computer that joins here runs its home's work
+      // there, and a computer a command or its address added controls its
+      // home with the grant its work keeps (docs/view.md, "A Mac that runs work").
+      const work = workContext(isolatedUserDataDir);
+      const { serviceManager } = work;
+      const shell = new Shell({
+        keySystem: desktop.keys,
+        joined: new JoinedHome(join(host.app.userDataDir, "joined")),
+        work: {
+          dataDir: work.place.dataDir,
+          ...(serviceManager
+            ? {
+                background: ({ launcher, app: kept }) =>
+                  startInBackground(
+                    {
+                      flavor: work.place.flavor,
+                      dataDir: work.place.dataDir,
+                      spelling: work.place.folderSpelling,
+                      homeDir: homedir(),
+                      uid: process.getuid?.() ?? userInfo().uid,
+                      ...serviceManager,
+                    },
+                    { launcher: launcher ?? work.launcher, env: work.backgroundEnv, app: kept },
+                  ),
+              }
+            : {}),
+        },
+        startCore: () => startCore(voiceHost),
+        // The same core for paired devices (docs/connection.md). It listens
+        // only while a device is paired or a link to pair one is open
+        // (docs/devices.md).
+        startConnection: (core) =>
+          startConnection({
+            dispatch: core.dispatch,
+            events: core.events,
+            devices: core.services.devices,
+            // Where devices find this computer: every address a link may carry.
+            address: () => core.services.devices.listenHosts(),
+            port: core.services.devices.port,
+            name: () => nameNow,
+            // What a command on another Mac gets from this one, and what a
+            // computer that names its system gets (docs/devices.md).
+            app: () => core.services.appBundle(),
+            build: (system, chip) => core.services.farBuild(system, chip),
+            ...(standInContract ? { protocolVersion: standInContract } : {}),
+            ...(standInSpelling ? { speaks: standInSpelling } : {}),
+          }),
+        broadcast: (channel, payload) => {
+          broadcast(channel, payload as never);
+          if (channel === "inf:release-notes") followReleaseNotes(payload as ReleaseNotesView);
+        },
+        notifications: host.notifications,
+        deviceName: () => ownName,
+        restartWindows: () => {
+          for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
+        },
+        relaunch: () => {
+          // An isolated run is started from outside, which starts it again;
+          // only a person's app starts itself again.
+          if (!isolatedUserDataDir) app.relaunch();
+          app.quit();
+        },
+        // A view runs no core, and still tells this Mac when its own app has an update.
+        updates: createInstalledUpdateChecker({
+          app: host.app,
+          openExternal: (url) => host.openExternal(url),
+          ...(host.relaunch ? { relaunch: host.relaunch } : {}),
+        }),
+      });
+      configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
+      // A folder that moved to Infinitary, or one a move holds, is never opened
+      // here: nothing is started on it (./savedDataRefusal.ts).
+      const refusal = dataFolderRefusal(app.getPath("userData"));
+      if (refusal) {
+        await showDataRefusal(hideWindow, refusal);
+        return;
+      }
+      try {
+        await shell.start();
+      } catch (error) {
+        if (!(error instanceof UnsupportedSavedDataError)) throw error;
+        await showSavedDataRefusal(hideWindow);
+        return;
+      }
+      // The host serves model files; download policy and the trail run through core dispatch.
+      // A panel drawn in the frame realm reads the lib this build made
+      // (out/frame-lib, beside out/main) and, for one the captain added, the
+      // compiled graph the core serves at exactly the version asked for.
+      const frameMounts = new FrameMountRegistry({
+        panels: {
+          libPins: frameLibPins,
+          installedPanelDir: (id, version) => shell.installedPanelDir(id, version),
+        },
+      });
+      registerIpc({
+        rendererSource,
+        shell,
+        host,
+        frameMounts,
+        voice: { place: voicePlace, helper: voiceHelper },
+      });
+      handleVoiceModelProtocol(voiceModel);
+      handleFrameProtocol({
+        mounts: frameMounts,
+        fonts: frameFontFiles,
+        pictures: () => shell.pictures(),
+        lib: { dir: join(mainDir, "../frame-lib"), pins: frameLibPins },
+      });
+      handlePluginProtocol(() => shell.personalCacheDir());
+      const ownCore = shell.core();
+      if (ownCore) host.presence.setShowInDock(ownCore.services.settings.getShowInDock());
+      // The window material follows the window's appearance, so the captain's
+      // theme is also the window's: a dark material under dark tokens, light
+      // under light. Seeded before the window exists, then kept in step.
+      nativeTheme.themeSource = shell.preferences.get().appearance.theme;
+      shell.preferences.subscribe((value) => {
+        nativeTheme.themeSource = value.appearance.theme;
+      });
+      const win = createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow);
+      // Every reader of the window's keys follows each install (docs/keyboard.md):
+      // the page through its push, and the app menu, built again.
+      shell.keymap.subscribe((snapshot) => broadcast("inf:keyboard:keymap", snapshot));
+      const focusedWindow = () => BrowserWindow.getFocusedWindow() ?? appWindows()[0];
+      const rebuildMenu =
+        desktop.windowControls === "system"
+          ? installAppMenu(
+              shell.keymap,
+              {
+                size: shell.size,
+                shell: (command) => {
+                  const target = focusedWindow();
+                  if (target) shellCommands(target)[command]();
+                },
+                resetAllKeys: () => resetAllKeysAfterAsking(shell.keymap, focusedWindow()),
+                whatsNew: () => notesShown,
+              },
+              isRelease,
+            )
+          : () => {};
+      // The Help menu's What's New is greyed out until a release note was
+      // shown (docs/release-notes.md "Reading a note again"): read now, then
+      // followed through the push that says a new one was shown.
+      followReleaseNotes = (view) => {
+        if (notesShown === view.notes.length > 0) return;
+        notesShown = view.notes.length > 0;
+        rebuildMenu();
+      };
+      void shell
+        .dispatch("inf:release-notes:list", [])
+        .then(followReleaseNotes)
+        .catch(() => {});
+      win.on("focus", () => shell.windowFocused());
+      // A 5-minute setInterval fires once late after a sleep and then drifts,
+      // which is exactly when a reading is most likely to be both wrong and
+      // fixable. The shell owns this trigger because only the shell can see the
+      // machine wake; the core just gets told. (Coming back online is the
+      // renderer's own `online` event, which already has a refresh channel.)
+      powerMonitor.on("resume", () => shell.resumed());
+      powerMonitor.on("suspend", () => shell.suspended());
+      app.on("activate", () => {
+        if (appWindows().length === 0) {
+          createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow);
+        }
+      });
+      // The window again, from the top bar's icon or a second launch, where
+      // closing it kept Firstmate working (design skill readme, "Linux
+      // desktop conventions"). A development run quits instead, as on a Mac.
+      reopen = () => {
+        const shown = appWindows()[0];
+        if (shown) {
+          if (shown.isMinimized()) shown.restore();
+          shown.show();
+          shown.focus();
+          return;
+        }
+        const opened = createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow);
+        opened.on("focus", () => shell.windowFocused());
+      };
+      if (desktop.closeToIcon && !isDev) showTrayIcon(reopen);
+
+      deferCoreDisposal(app, () => shell.dispose());
+    });
+
+    app.on("window-all-closed", () => {
+      if (isDev || !keepsWorkingClosed) {
+        app.quit();
+      }
+    });
+    // A task browser's hidden page is a window too, so the last of the
+    // app's own closing is told apart from "all closed" (./windows.ts).
+    app.on("browser-window-created", (_event, created) => {
+      created.once("closed", () => {
+        if (appWindows().length > 0 || BrowserWindow.getAllWindows().length === 0) return;
+        if (isDev || !keepsWorkingClosed) app.quit();
+      });
+    });
+  }
+}

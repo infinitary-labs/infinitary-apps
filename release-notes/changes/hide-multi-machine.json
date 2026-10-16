@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "hide-multi-machine",
+      "reason": "Internal: restore the captain-held development-only gate before multi-machine support ships in any alpha; installed builds offer no devices, joining, remote view or windowless work."
+    }
+  ]
+}

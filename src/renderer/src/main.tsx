@@ -1,0 +1,43 @@
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./app/App";
+import { hydratePreferences } from "./app/preferences";
+import { registerDesignFixtures } from "./design/fixtures";
+import { installHostModules } from "./personal/hostModules";
+import { startPersonalPlugins } from "./personal/personalPlugins";
+import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
+import { pluginHost } from "./plugins/host";
+import { startPanelCommands } from "./plugins/panelCommands";
+import "./design/styles.css";
+
+const container = document.getElementById("root");
+if (!container) throw new Error("Renderer root element missing");
+
+// The app's own UI is the first plugin (docs/ui-plugins.md); it registers
+// before the first render so every registry is populated when read.
+registerBuiltinPlugin(pluginHost);
+// Personal extensions import the app's own React and design library from
+// one global (talk-to-personalize Step 2); publish it before any panel can
+// load, then let the core's snapshot mount them through the same host.
+installHostModules();
+// The app's own panels that wait on a gate - Knowledge, in an alpha or
+// development build with knowledge to show (docs/knowledge.md) - take a
+// rail's place after the captain's own panels have theirs.
+startPersonalPlugins(pluginHost, undefined, () => startGatedPanels(pluginHost));
+// Every panel's commands join the window's keys and command search
+// (docs/keyboard.md, "A panel's commands"), as the panels come and go.
+startPanelCommands(pluginHost);
+// Off unless this window's own localStorage asks for it (design/fixtures):
+// the library gallery for the coherence check. No product path writes that key.
+registerDesignFixtures(pluginHost);
+
+// The persisted theme and layout are read before the first paint, so the
+// window opens the way the captain left it rather than correcting itself a
+// frame later. A failed read has already fallen back to the defaults.
+void hydratePreferences().then(() => {
+  createRoot(container).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+});

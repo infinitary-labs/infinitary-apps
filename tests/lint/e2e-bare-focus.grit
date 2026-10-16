@@ -1,0 +1,20 @@
+// An end-to-end spec puts focus on a locator through `focusOn(target)` and
+// presses a key on it through `pressKey(target, key)` in
+// tests/e2e/windowKeys.ts (docs/e2e-contracts.md, "Input waits for focus").
+// A bare `await target.focus()` returns before focus has moved - into a
+// card's or a panel's frame it lands a moment later - and the key pressed
+// on the next line goes to whatever held focus, the loss behind the
+// keyboard journeys that failed on a loaded Mac. Both helpers wait until
+// the target holds the window's focus and take their turn behind any other
+// input to the page. A `focus()` inside a script run in the page
+// (`evaluate`) is the page's own and is never awaited, so it stays. The
+// helper files (everything in tests/e2e that is not a *.spec.ts) are
+// exempt. Runs inside `pnpm check` through biome.json's plugins, as an
+// error since every spec moved.
+
+language js
+
+`await $target.focus($...)` where {
+  $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
+  register_diagnostic(span=$target, message="A bare focus() returns before focus has landed, and the key pressed next goes where focus still is. Use focusOn(target), or pressKey(target, key) to press on it, from tests/e2e/windowKeys.ts: they wait until the target holds the window's focus (docs/e2e-contracts.md, Input waits for focus).", severity="error")
+}

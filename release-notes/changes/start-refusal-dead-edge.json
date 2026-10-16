@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "start-refusal-dead-edge",
+      "reason": "Corrects what Firstmate is told when it cannot start a task that waits on other work: remove the dependency, never drop the work it waits on. The captain's Start stays unavailable while a dependency stands, so nothing a person sees changes."
+    }
+  ]
+}

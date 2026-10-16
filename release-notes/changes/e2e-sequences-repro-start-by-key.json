@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-sequences-repro-start-by-key",
+      "reason": "Test-only change: the captain-owned reproduction journey reads the fix's start by its task key instead of a copied start sentence; no product behavior changes."
+    }
+  ]
+}

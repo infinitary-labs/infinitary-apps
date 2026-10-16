@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automatic-starts-on-the-default-model",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Automatic starts tasks the app picks no model for",
+      "body": "When the app cannot pick one of your models for a new task, for example when your only model is a custom provider, a task in a project set to Automatic now starts on this computer's default model when it has room, as it does in a project kept on This computer. When no computer has a model that can take the task, it says so instead of waiting for room.",
+      "picture": {
+        "dark": "automatic-starts-on-the-default-model-dark.webp",
+        "light": "automatic-starts-on-the-default-model-light.webp",
+        "alt": "Task Activity for a new task in a project set to Automatic: Automatic chose This computer because it had room, and the crewmate started on this computer's default model."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

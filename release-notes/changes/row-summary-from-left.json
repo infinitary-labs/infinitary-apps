@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "row-summary-from-left",
+      "kind": "fix",
+      "title": "A Tasks row shows its summary however the pointer arrives",
+      "body": "Sliding the pointer into a Tasks row from the stage highlighted the row but never opened its summary. It now opens, as it does from any other side.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

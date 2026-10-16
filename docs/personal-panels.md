@@ -1,0 +1,294 @@
+# Writing panels: the library, the skills, the lint, the build loop, the switch, and panels for others
+
+Steps 3, 4 and 5 of the talk-to-personalize plan (captain-approved 2026-09-18; the plan is `infinitary-ui-plugin-system-reconcile-state-9e/ report.md`, sections 5.3, 5.5, 6 and 7).
+Step 3's subject is **coherence by construction**: a panel the captain asks for is built from the app's own components, guided by the app's own design skill, and checked by a lint that names the token it should have used.
+Step 4 is the build loop that produces one; Step 5 is the switch that takes them all back.
+
+The RUNTIME is Step 2's and is documented in `docs/ui-plugins.md` ("Personal extensions"): the workspace, the compiler and its import allowlist, `app-plugin://`, the host modules, the store, server actions, background tasks, presence and mounting.
+This document is the authoring half - and, since the one plugin vehicle (the captain's locked plan of 2026-09-24, Phase A), the guide for anyone writing a panel for someone ELSE to add: "Panels for others", at the end, is what differs, and everything before it applies unchanged.
+
+## The library is the panel library
+
+`@infinitary/ui` is `src/renderer/src/design/index.ts`, published as a namespace on the host global by `src/renderer/src/personal/hostModules.ts`.
+Firstmate 3000's names for the two modules, `@firstmate/ui` and `@firstmate/contracts`, are the same modules to the compiler (`ownHostModule`, `src/shared/codeNames.ts`), and `infinitary-env.d.ts` declares the contracts under both, so a panel written before the rename compiles and type-checks here.
+The workspace's types file was `firstmate-env.d.ts` before the rename; the next seed removes it (`RETIRED_MANAGED_FILES`), since the two side by side would declare every type twice.
+There is no second list to keep: **a component is available to a personal panel when it is exported from that barrel**, and nothing else moves.
+
+Step 3 added the five looks that existed only inside the built-in frames, so a panel can build a list that reads exactly like the app's own (`src/renderer/src/design/panel/`):
+
+| Component | What it is |
+|---|---|
+| `Row` | A status dot, a title, one trailing datum in mono; `word`, `depth`, `selected`, an optional click |
+| `FeedLine` | An event line: the text, and the kind over its relative age in a 48px mono column |
+| `MicroLabel` | The uppercase tracked label that names a region, with an optional mono count |
+| `Empty` | One quiet line where a list would be |
+| `Disclosure` | A region that shows only its count until it is clicked |
+
+Their spec is the design skill's `components/panel/Panel.prompt.md`, beside the `NowPanel` and `ActivityFeed` specs they were extracted from; the skill is the rule, the components are the implementation.
+
+FI3-1014 piece 6 added what a panel that draws tasks draws them with, so its rows read as the app's own Tasks panel and task board:
+
+| Export | What it is |
+|---|---|
+| `TaskStatusMark` | The task's status mark, one shape at every size, from a reading |
+| `taskStatusOf`, `taskStatusLabel` | A task's reading (`mark`, `word`, `reason`) and its words, from the task's fields |
+| `NOW_GROUPS`, `NOW_GROUP_LABELS`, `nowGroupOf`, `nowGroupsOf` | The shared grouping the Tasks panel and the board name their lanes by: a task's own group, or the panel's, which keeps a working parent's tree together |
+| `focusWithRing` | Focus an element with the keyboard's ring, as the app's lists do |
+| `useInPlaceReveal` | The drift a group's rows open with |
+| `foldForSearch` | A task's key or title folded the way the app's own search folds it |
+| `feedRelativeAge` | A feed line's age in the Activity panel's words |
+| `DROP_TASK_LABEL`, `dropConfirmLead`, `dropPartsRefusal`, `dropReviewKeys`, `dropUnderwayLine`, `dropWaitingLine` | Drop task's question, in the task record's own sentences |
+| `PanelExpandChevron` | The chevron a group or a strip opens with |
+
+The app's own Tasks and Activity panels are folders built on exactly this library and API (`src/panels/now/`, `src/panels/activity/`; `docs/ui-plugins.md`, "The app's own panels are ordinary folders"), so either is a working example of a panel that lists tasks or lines.
+
+A panel may bring a stylesheet of its own: `import styles from "./board.css"` reads the file as text (the compiler's `board.css.mjs`), which the panel puts in a `<style>`; the lint reads it like any panel file, so a raw color in it is named with its token.
+The workspace's `infinitary-env.d.ts` types such an import as a string.
+
+## The skills
+
+`resources/personal-workspace/skills/` holds the authoring skills.
+`src/core/personal/workspaceSkills.ts` seeds them into the workspace's `.claude/skills/` together with **the app's own design skill**, copied whole from the self-source tree - the crewmate personalizing the app follows the same rules as the crewmate building it.
+It is called from Step 2's `seedPersonalWorkspace`, so a heal rides the same commit as the managed files.
+
+| Skill | What it teaches |
+|---|---|
+| `personal-panel` | The one copy of a panel's shape, imports, store, actions, cards and presence, plus what a panel is (its title is host chrome), the library, tokens only and why, one accent per panel, sentence case, mono for data, no emoji, the shapes that stay calm, where a panel's data comes from, the two checks, what is refused, fixing forward |
+| `github-prs` | the app's own `forge.changes` read (the captain's open proposed changes, read with his in-app sign-in), the checks as one status dot, the honest empty and not-signed-in states |
+| `quota` | `QuotaMicroMeter` and the honesty rules (unknown is never zero, stale says its age, only a proven sign-out says "sign in again", a no-window read renders what happened) |
+| `tasks-and-feed` | The row tones and the feed line, and not rebuilding the panels the app already ships |
+| `usage` | The crew's tokens through the read-only `sql` view `v_usage_v1`, and the honesty rules a number must keep; its fixture is `token-watch` |
+| `lessons` | Teaching one subject across days: the learner and progress files, the tested card parts, the six teaching ideas and the lesson voice (`docs/lessons.md`) |
+| `clock-timer-scratchpad` | The three small panels: derived state, the store (a deadline, never a countdown), calm motion |
+
+The seed is **exact**: every boot makes the managed skill directories match their source, restoring what was deleted and removing what was added, so the rules cannot be quietly rewritten from inside.
+`captain/` (standing instructions) and the extensions themselves are never touched.
+
+**One home, twice enforced.**
+`src/core/personal/skillText.test.ts` pins that no persona prompt and no card contract repeats a sentence of an authoring skill, AND that the skills and the workspace's own `AGENTS.md` do not repeat each other: the personal-panel skill owns a panel's mechanics and its look, and `AGENTS.md` keeps the common workspace rules and points there.
+A rule written in both would drift in one.
+
+### The app's own data: the reads a panel declares
+
+The plan has a personal panel read the app's own data (the task board, the feed, quota) through the read catalog (captain decision Q3).
+Step 4 serves it: `manifest.json` `reads` names any of `quota.snapshot`, `tasks.board`, `feed.recent` and - since git integration PR 1.2 - `forge.changes`, the captain's open proposed changes read with his in-app sign-in (`PANEL_READ_NAMES`, `src/shared/personal/manifest.ts`), the core carries the declaration on the snapshot, and `PersonalPanelBody` hands the panel a `reads` prop (`bindReads`) whose `subscribe` rides the same read executor the built-in frames use - coalesced, pushed on change - for exactly the declared names: an undeclared name, or a catalog entry the panel contract does not list, throws, so the declaration is the grant and nothing else in the catalog (Observe, repos, cards) reaches a panel.
+In every build `reads` may name `knowledge.collections`, `knowledge.graph`, `knowledge.concepts`, `knowledge.findings`, `knowledge.entry`, `knowledge.directions` and `knowledge.direction` (`docs/knowledge.md`, "The browser"), which take arguments as `tasks.detail` does.
+The value types a panel sees are the structural `PanelQuotaSnapshot`, `PanelTaskBoard` and `PanelFeedLine` in `src/shared/personal/contracts.ts` (so `infinitary-env.d.ts` stays self-contained), and `contracts.test.ts` pins that the wire schemas are assignable to them.
+The `quota` and `tasks-and-feed` skills teach the read beside the instrument and the honesty rules; their fixtures (`quota-glance`, `crew-reports`) are written on it, and the e2e feeds the quota one through the fixture seam (`INFINITARY_QUOTA_FIXTURE_DIR`).
+
+Task panels use `PanelTaskRow.waitingCardId`, not `flags.needsYou`, for "waiting on you".
+It names a reachable shown ready decision on a live task, or null (including hidden, Working and closed rows).
+`PanelProject.counts.waitingOnYou` counts those tasks; `counts.needsYou` remains broader durable attention.
+The generated workspace declarations carry both; update them only with `pnpm generate:personal-env`.
+These are read-time projections, not stored readiness or permission to start held work.
+
+`computers.resources` reads current CPU and memory observations for the home and each paired work computer, including receiver-owned age or an explicit unavailable reason (`PanelComputerResources`, `docs/helper.md`, "Shared live readings").
+A panel declares it in `reads` and calls `reads.subscribe("computers.resources", listener)`; no server module or polling background task is needed.
+All subscribing screens and panels use the same core source and cache, not one sampler per panel.
+Render unknown as unavailable, never zero usage or spare capacity, and never add Mac purgeable or file-backed bytes to free RAM.
+The values are physical-system facts rather than process limits or scheduling capacity, and must not be written into the panel store as live history.
+
+`tasks.detail` (FI3-1014 piece 4) reads one task in full by the id the board gave it, `reads.subscribe("tasks.detail", { id }, listener)`: its row, brief, latest report, and while Drop task applies the `dropEffects` a drop sends back as its review.
+`tasks.search` (piece 7) is the app's own search over every task, closed ones included, `reads.subscribe("tasks.search", { query }, listener)`: the rows it found, so a panel's Find reaches done and dropped work the board no longer lists, and the panel may open and point at what it found.
+A live work row also says which of the six moves it allows now and why not (`PanelTaskRow.moves`), and whether its waiting card merges (`waitingCardMerges`); a panel that asked for `moves` makes one with `tasks.run` on the captain's click or key, and a panel that reads the board points at tasks with `point` and sees what he has open in `view` (`docs/ui-plugins.md`, "A panel's cards").
+A row another computer runs says where (`PanelTaskRow.place`): that computer by name, where after its project ("on Mac mini"), and `outOfReach` while open or underway work's computer is out of reach (`docs/helper.md`, "Runs on").
+
+## The lint
+
+`src/core/plugins/pluginLint.ts`.
+It **rewrites nothing**: it returns findings the author reads and fixes, which is the training signal.
+
+| Rule | Severity | Says |
+|---|---|---|
+| `emoji` | refuse | Emoji never appear, in code or in a manifest title; a `StatusDot` says what a green check would |
+| `external-url` | refuse | A panel loads nothing from the network; fetch in `server.ts`, render the store (a URL in `server.ts` is the point, and is allowed) |
+| `host-bridge` | refuse | Extension code never reaches for `window.infinitary`, or Infinitary's `window.infinitary`; it is handed props |
+| `raw-color` | warn | Names the nearest color token for a hex or rgb literal (a three-digit hex counts only where the line is about color: `#186` is a PR) |
+| `raw-font-size` | warn | Names the nearest step on the type scale |
+| `off-scale-radius` | warn | Names the nearest radius (3 / 6 / 10 / 16 / pill) |
+| `off-scale-shadow` | warn | Names the nearest of the three shadow steps |
+| `two-accents` | warn | One accent per panel; names both families it found |
+| `list-without-empty` | note | A list that renders nothing when empty reads as broken (`.tsx` only: a `.ts` helper renders nothing) |
+
+Naming the nearest token needs the scale as data, which a stylesheet cannot give Node: `src/shared/designTokens.ts` mirrors it, and its test parses `src/renderer/src/design/tokens/*.css` and fails the moment the two drift.
+There is one fixture directory per rule (`tests/fixtures/personal-lint/`) plus `clean/`, which must produce nothing, and a test that the fixtures cover every rule the lint can raise.
+
+## The evidence
+
+- **Every library component a panel may use is in the gallery.**
+  `src/renderer/src/design/fixtures/UiKitGallery.test.tsx` renders every library export a panel may use, so a new one joins the gallery or fails there.
+  Whether a component looks the same inside a panel and outside one is judged by eye and by the pictures a crewmate attaches, as every look is (`docs/testing.md`, "The e2e assertion contract").
+  The gallery panel is registered through the same `registerPlugin` door and the same `SidePanelChrome` body region a personal panel is mounted in.
+- **Each data skill has a fixture extension the e2e mounts.**
+  `tests/fixtures/personal-skills/` holds one per skill, written the way that skill teaches.
+  The same spec seeds them into a personal workspace and lets the REAL host compile and mount them, so a skill that taught an import the compiler refuses fails here; `src/core/plugins/personalFixtures.test.ts` runs the real lint over them and requires no findings at all.
+
+The gallery rides the design-fixture seam, `src/renderer/src/design/fixtures/`, which is off unless the window's own `localStorage` carries `infinitary.designFixtures`.
+No product path writes that key, so nothing there reaches a captain's app.
+
+## The build loop (Step 4)
+
+Step 4 of the plan (landed 2026-09-18, report section 5.3) is the integration: an ask becomes a panel, live, with no card and no settle.
+
+**The door.**
+Once a task of the captain's has finished and no panel of their own exists, the create-your-own-panel slot at the top of the left rail starts the ask: a click puts "Make me a panel that shows " in the message box for them to finish (`docs/first-launch.md`).
+A panel whose manifest names no placement lands at the top of the left rail (`DEFAULT_PERSONAL_PLACEMENT`, `src/shared/personal/manifest.ts`), where the slot was, once its build reports ("Built apart" below), and the slot leaves while a panel of theirs exists.
+
+**The `personal` workspace kind.**
+The personal workspace is a workspace KIND, not a delivery posture (`repoKindSchema` in `src/shared/repos.ts`, `repos.kind`, migration 37; the crew-posture rationalization's Task A, 2026-09-20 - it shipped as a third `live` delivery from Step 4 until then, which made `delivery` answer two questions at once).
+`delivery` now says only where a change lands, and this workspace lands none: a crewmate builds in place.
+There is exactly one `personal` row, and `RepoRegistry.configure` refuses its whole policy patch with one message - delivery, autonomy and rigor are not questions it answers - while unregistering it is refused as before.
+The workspace becomes a managed repo on first need (`RepoRegistry.ensurePersonal`: name `personal`, the seeder's directory, `kind: personal`, autonomy on; its `delivery` column is written `local-only` and never read), which also births its project, so a task there has a key like any other.
+
+**Dispatch.**
+`spawn_crewmate` carries `personal_ui: true` when the ask is about the user's own panels (the intent's `kind: "personal-ui"`, `SpawnIntent`); the supervisor binds it to the personal repo itself, whatever `repo_id` came with it, and `renderIntentBrief` writes NO `Delivery:` line for it and appends the workspace's facts to the fixed template: that you build in place and the host commits, the workspace path, which skills to start from (`personal-panel`, and `captain` when it is listed - every crewmate's session already carries the workspace's `AGENTS.md` and lists its skills, `src/core/session/projectResources.ts`, so the brief never lists them again), the two checks, and the surfaces that already exist so a change resolves to its directory.
+A teach task's brief names the lessons skill and the learner records instead, and tells the teacher not to open the panel skill, the type file, or the design overview.
+No rigor section is written either: rigor exists only where a change lands through a gate, so a personal task has no tier at all rather than a quick one.
+`startTask` creates NO worktree for a personal task: the crewmate's cwd is the workspace, the record's `worktreeDir` and `branch` stay empty (`workspaceState: "none"`, so no close ever tries to remove one), and `resumeTask` falls back to the repo dir the same way.
+
+**Build, live.**
+`PersonalExtensions.beginLiveTask` opens a stamp window: every reconcile the watcher triggers stamps the task onto the `manifest.json` `origin.taskId` of each extension with uncommitted changes (`liveWorkspace.ts`), which is what lights the running dot on the panel's rail the moment the crewmate's first save lands - the Step 2 rule (`origin.taskId` names an active task) is unchanged.
+That read of what changed runs while the host commits the turn, so it never takes git's index lock (`--no-optional-locks` in `changedPaths`), which the turn's `git add` and `git commit` need.
+Only a live crewmate holds `lint_panel` and `capture_panel` (`src/core/pi/panelTools.ts`, entries of the crewmate tool spec both runtimes generate from; `CrewmateSpec.onLintPanel` / `onCapturePanel`, absent on every other workspace): the lint runs the real `pluginLint` over the extension's files and adds the compiler's verdict on the files as they are now; the capture asks the host (`HostCapabilities.capture`, Electron's `capturePage` of a hidden copy of the panel with that copy's token theme set, `stayHidden` so the copy never appears) for both themes - the version being built while there is one, else the docked panel - writes the PNGs under `crewmates/<taskId>/captures/`, and returns them as image content beside the paths.
+
+**Built apart.**
+The build runs apart from the captain's rails, and his panel takes the new version only when the build is ready (the captain, 2026-10-07: "it should work in isolation and flip it into my live panel only when it's ready").
+Ready is the report: its commit is the build's unit, so a turn's report swaps the new version in whether or not the task then closes.
+While a crewmate is building an extension, the snapshot's `extensions` carry it as its last commit holds it - compiled from a copy of that commit under `userData/cache/personal/.committed/<id>/<tree>/` (`committedTrees`, `writeCommittedTree`), which compiles to the same version as the same files in place, so the rail's panel, its server module and its store do not move as files are saved.
+While any crewmate's session on the workspace is live, the rails take every panel from the last commit, so a save landing mid-scan can never reach them; a new extension is on no rail until its first commit.
+The working files ride the snapshot's `drafts`, each compiled and run apart: its own store slice (a copy of the panel's, taken as the build starts, so what the build writes never reaches the rails) and its own `server.ts` on that slice.
+The window draws each draft out of sight at rail width in a rail's chrome (`PanelDrafts`, `[data-panel-draft]`), under `personalDraftPanelId` (`<id>.draft`), inert and hidden from assistive technology; its props reach its own store and server through the `draft` flag of `inf:plugins:db` and `inf:plugins:invoke`, its cards and header asks reach nothing, and pointing and moves never count, because no click or key of the captain's is ever on it.
+`capture_panel` photographs that copy, and `lint_panel` names its compile verdict, so a draft that does not compile is the crewmate's to see and never the captain's.
+The report's commit ends the build: the working files are the last commit again, the rails take the new version in one push, and the draft, its server and its store go.
+A build whose session is gone - the app restarted mid-build, or the task was dropped before its report - stays apart: an uncommitted manifest naming a task that has not finished keeps the rails on the last commit, with no draft running, until a later report commits the files.
+An edit made by hand, with no task behind it, reaches the rails as it is saved, as in Step 2.
+The supervisor's brief tells the crewmate so (`renderIntentBrief`), and the `personal-panel` skill says what the capture shows.
+`personalExtensions.test.ts` ("builds apart from the rails") pins the held version, the separate server and store, the swap at the commit and the stopped build; `tests/e2e/personal-panels.spec.ts` records the rail and the draft in order through both builds.
+
+**Report, commit, close.**
+A live crewmate's report (`turnComplete`) is the turn's commit: `commitTurn` stamps, lints the touched extensions (findings go on the task's timeline, never the feed), and commits the workspace under the app's identity with the report as the message - the first sentence the subject, the rest the body - and only when the tree changed.
+With no captain-turn witness (`IdleLadder.witnesses().decisionCardOpen`), the report is also the completion: the task closes `done`/`finished` by the host, the feed line is `built in place - <title>` (`taskFeed.ts`, keyed on `delivery.mode === "in-place"` - the task delivery's own mode, `taskDeliveryModeSchema`), and NO wake goes to the whose-turn sort or the first mate - the report is already the feed line and nothing is owed.
+A commit that fails closes nothing (`CrewSupervisor.commitFailed`): what the crewmate changed stays in the workspace uncommitted, git's words go on the task's timeline, and the task stays open, its build apart from the rails.
+The first mate hears git's words in a `commit-failed` wake, on any personal task, whatever card is up, and steers the crewmate or tells the captain; the crewmate's next report commits again, and closes the task when that commit lands.
+A report with a captain-turn witness routes as any other: an open decision card or a declared wait on the captain keeps the task open quietly.
+A note alone never holds the turn, and stays on the captain's screen after the task closes done.
+Every settle mode is refused on a personal task with the reason, and a crewmate card carrying a settle effect is refused at `addCrewmateCard` - there is nothing to merge, land, or discard.
+
+**Fix forward, remove.**
+The first mate's context block lists "your surfaces" (id, title, rail, shown or not, being built, the reads); a follow-up resolves to the surface's id, rides a second `personal_ui` spawn naming it, and produces a second commit on the same directory.
+"Remove it" is Tier A: Step 1's `personalize` tool (`src/core/pi/personalizeTool.ts`, action `remove`) has the host delete the directory and commit the removal (`PersonalExtensions.remove`), one feed line and no card; Step 4 makes it refuse while a task is building the extension.
+
+The whole flow is `tests/e2e/personal-panels.spec.ts`'s second half, through the mock provider: the ask, the files the mock crewmate writes with Pi's own `write` tool, the draft drawn out of sight while the rail has nothing of it, the lint and the capture landing in the tool results, the report as a feed line, the commit that puts the panel on the rail, persistence across a relaunch, the second ask built apart while the rail keeps the panel as it was with the running dot, its capture of the version being built, its second commit, the removal, and screenshots in both themes.
+
+## Hardening (Step 5)
+
+Step 5 of the plan (landed 2026-09-18, report section 5.5 and the section 7 Step 5 row) is the last one.
+A personal panel runs as a React module in the renderer and, when it ships a `server.ts`, as a module in the core with the core's privilege - the trust the app already extends to the crewmate that wrote it.
+Everything here exists so that trust has a way back.
+
+**The switch is host-owned and it is one row.**
+`panels` joins `appearance` and `layout` on `ShellPreferences` (`src/shared/preferences.ts`: `{ enabled, offReason }`, defaulted so a value written before Step 5 still parses), written only by `ShellPreferencesService.setPersonalPanels` - the window's control over `inf:settings:panels:set`, and the safe-mode boot.
+**The first mate never writes it**: `personalize` has no action for it, and its context says where the switch is instead (below), because the switch's whole point is to be reachable when a panel is what went wrong.
+
+**Off is the core's, not the rails'.**
+`PersonalExtensions.setEnabled(false)` disposes every `server.ts` host, forgets every compiled panel, stops the watcher and pushes ONE empty snapshot - which is what unmounts the panels, through the same reconciler a removal goes through.
+An in-flight rescan cannot push over that empty snapshot, and a rescan that did not change anything is silent, so a dropped or delayed filesystem event cannot emit a stale copy of the panels on the way to off.
+So a background task stops ticking and a server action is unreachable, not merely hidden; the switch takes back the privilege, not the pixels.
+Started off, the service seeds nothing, scans nothing and compiles nothing, and `lint_panel` / `capture_panel` say so rather than answering blankly.
+On again seeds and scans, which is the only way back.
+`ShellPreferencesService.subscribe` is the wire between the two (`createServices`), so the preference and the empty snapshot land in the same tick.
+
+**Safe mode is a marker, because a crash writes no report.**
+`src/core/personal/safeMode.ts`: every launch writes `pending` into the `launch` settings row before anything a panel could reach, and clears it once the app has been up `EARLY_LAUNCH_MS` (10 s) or on a clean quit (`LaunchWatch.dispose`, called from `startCore`'s dispose).
+A launch that finds the marker still set knows the previous one ended before it settled - a crash, a force quit of a wedged window, a kill: the same fact.
+Two in a row (`SAFE_MODE_AFTER_CRASHES`) and the third writes the switch off with reason `safe-mode`, which is a feed line, the Settings row's own words, and a line in the first mate's context.
+A safe-mode boot starts the count over.
+`INFINITARY_EARLY_LAUNCH_MS` widens the window in dev/e2e only, so the crash-loop fixture kills on a signal rather than racing a slow boot.
+
+**The reason is the point.**
+An off switch with no reason reads as a setting the captain forgot.
+So `offReason` travels: Settings says "Turned off after the app closed twice just after starting", the feed says it once at boot, `panelsOffLine` (`src/core/pi/personalizeTool.ts`) puts it in the context block with "Only the switch in Settings turns them on - you have no tool for it, so say where it is", and `personalize`'s surface refusals add it, so an id naming a personal panel is refused with the reason rather than as a typo.
+
+**Observe's fourth kind.**
+A mount is not a session - it has no transcript and no turns - so it is a group of its own in Observe's list ("Panels"), rows rather than selectable sessions, each carrying its state, its compiled version, what its `server.ts` exported, and the refusal that kept it off a rail.
+With the switch off the group says so instead of showing nothing, which would read the same as having no panels at all.
+It rides one new read (`personal.mounts` over the existing `inf:plugins:personal:list`, its value the snapshot the core already pushes) plus `shell.preferences`; no new IPC channel.
+Development and alpha builds only, like the rest of Observe.
+
+Frozen surfaces: one new core channel (`inf:settings:panels:set`, `PROTOCOL_VERSION` 1.7.0), one new read-catalog entry, no new top-level `window.infinitary` key (`settings` gained `setPanels`), no new tool.
+The words "extension" and "plugin" still reach no user surface: the control is "Your panels".
+
+**The evidence.**
+`tests/e2e/personal-panels-hardening.spec.ts` is the acceptance: the switch unmounts every fixture in exactly one pushed snapshot while the app's own panels stay, and the server action is gone with it (what the first mate's context then says is `personalizeTool.test.ts`'s); then the app is SIGKILLed twice before it settles - what a force quit of a wedged window leaves behind - and the third launch comes up with the panels off, says why in the feed and in Settings, and is one click from back on.
+`safeMode.test.ts` drives the marker directly, `personalExtensions.test.ts` pins the one-tick unmount and the stopped background task, and `observe.frame.test.ts` pins the Panels group.
+
+## Panels for others (the plugin author's guide)
+
+One plugin vehicle, Phase A (the captain's A1a-A4a; the runtime is `docs/ui-plugins.md`, "The one plugin vehicle").
+A panel someone else adds is written EXACTLY like one a crewmate writes in the personal workspace: a directory with a `panel.tsx` whose default export takes `PanelProps`, built from `@infinitary/ui` and React alone, and a `manifest.json`.
+The library, the skills, the tidy-up and the look above all apply.
+What differs is where it runs and what it is served, and that is the host's call, never the author's.
+
+**The manifest** is the same file with two more things a panel for others must carry: `name` (the maker, shown as the panel's attribution) and `version` (semver; an update is a new version).
+Its card views (`cards/<view>.tsx`) are checked and pinned with its panel when it is added, and a card, button or command its manifest names that the folder does not have refuses the whole folder.
+The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on his click or key, in a line of its own on the card).
+`net` and `secrets` are refused by this version of the app for every panel.
+There is no `server.ts`: a tree holding one is refused.
+
+**Where it runs.**
+In the frame realm: a sandboxed frame at a host of its own, loading the app's own React and `@infinitary/ui` from the shell's pinned lib (so it looks like the app), with `PanelProps` built over the bridge:
+
+| `PanelProps` | In the captain's workspace | Added from elsewhere |
+|---|---|---|
+| `reads.subscribe(name, cb)` | the reads its manifest lists | the reads the captain agreed to |
+| `reads.subscribe("sql", query, cb)` | its manifest's views | the views he agreed to |
+| `store` | its slice | its slice, bound by the host - a panel names keys, never whose slice |
+| `invoke` | its `server.ts` actions | rejects: no server code runs |
+| `theme` | the shell's theme | the same, pushed over the bridge |
+| `cards` | its cards on the stack (`docs/ui-plugins.md`, "A panel's cards"), at the front while the window holds the captain's click or key | the same, through the card actions, at the front only while its frame holds his focus |
+| `asks` | its header buttons' presses, with how each came (`click` or `key`), and F6 into it (`onFocus`) | the same, counted in its view state |
+| `card` (a card view) | the card it draws, its data as last put up, how many times it was put up (`revision`), and the place it kept (`kept`, `keep`) | the same, its data, revision and kept place pushed as view state |
+| `point`, `view` | pointing at tasks and the stack's open tasks, with `tasks.board`; `point.draft`, starting his next message, whatever it reads | the same, through the actions declared for it, at work only while its frame holds his focus |
+| `tasks` | its moves, when its manifest asks | the moves he agreed to, the same way |
+| `rail` (the panel itself) | whether it is collapsed, what it says it holds, and with `presence` `{ "code": true }` whether it shows and, off its rail, why | the same, its page running while collapsed or off its rail |
+
+Nothing else is reachable, and the frame proves it rather than asks for it: no network (fetch, beacons, sockets, images or frames from a host), no `window.infinitary`, no parent page, no storage, no top-level navigation or popups, no `eval` or `new Function`, no module that is not its own or the lib's (`docs/live-prototype-security.md`, "The frame realm").
+A panel that wedges its event loop is torn down to a quiet line with a Retry; one that throws shows "This panel stopped drawing."
+
+**Shipping it.**
+The captain adds it by talking ("add the panel from ...") from an npm package (packed with its scripts never run), a git repository (hooks off, pinned to the commit) or a folder on his Mac; links are refused.
+The app checks it exactly as it checks its own - the manifest, the import allowlist, the tidy-up's refusals, a compile - and then asks him once, on its own card, in the words of what the panel can read.
+Nothing is added before his click.
+An update asks again only when what it can read or do changes - moves included; he takes it back with "remove my panel ...", and the one switch in Settings takes every panel back at once.
+
+**Writing and trying one.**
+Write it in the personal workspace first - the build loop, `lint_panel` and `capture_panel` all work there, in the app's window - then add the folder from elsewhere to see it contained: the same files, the same pixels, served only what the captain agrees to.
+The one thing that works in the workspace and not contained is `invoke`: a panel for others brings no server code, so it reads its data through the reads and views it declares and keeps its own state in its store slice.
+
+## Notes moved from AGENTS.md
+
+Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+
+- The build loop (talk-to-personalize Step 4, `docs/personal-panels.md` "The build loop"): the personal workspace is a workspace KIND (`repos.kind: personal`, `repoKindSchema`, migration 37 - the crew-posture rationalization's Task A, 2026-09-20, lifted it out of `delivery`, where it had been a third `live` posture) - `RepoRegistry.ensurePersonal` registers the workspace as repo `personal` on first need (`kind: personal`, autonomy on, its own project; its `delivery` column is written `local-only` and never read) and refuses its WHOLE policy patch with one message, and refuses to unregister it.
+  A `spawn_crewmate` with `personal_ui: true` (intent `kind: "personal-ui"`) is bound to it by the host whatever repo_id came along; `renderIntentBrief` writes no `Delivery:` line for it and appends the in-place sentence, the workspace path, what to read first, the two checks and the existing surfaces, and `deriveRigor` stamps no tier (rigor exists only where a change lands through a gate).
+  A personal task has NO worktree (`worktreeDir`/`branch` empty, cwd = the workspace; `resumeTask` falls back the same way), holds `lint_panel`/`capture_panel` (`src/core/pi/panelTools.ts`, entries of the crewmate tool spec both runtimes generate from, `docs/claude-client.md`; `CrewmateSpec.onLintPanel`/`onCapturePanel`, absent elsewhere), and every settle mode and any settle-effect card is refused on it.
+  `PersonalExtensions.beginLiveTask` stamps the task onto `manifest.json` `origin.taskId` of every extension with uncommitted changes on each reconcile (the running dot follows the first save; `src/core/personal/liveWorkspace.ts` is the git plumbing), and the rails keep the last commit while the working files run apart as a draft ("Built apart"); a report on a personal task is the commit (`commitTurn`: stamp, lint to the timeline, commit under the app identity with the report as subject+body, only when the tree changed) AND, with no captain-turn witness, the close (`done`/`finished` by the host, feed line `built in place - <title>` (`TaskDelivery.mode: "in-place"`), NO wake - the report is already the feed line); a commit that fails closes nothing and wakes the first mate (`commit-failed`); a report with an open decision card or a declared wait on the captain routes as usual; a note alone does not hold the turn and stays after the done close.
+  The capture is `HostCapabilities.capture` (Electron `capturePage` of a hidden themed copy of the docked panel, `stayHidden`; the live window's theme is never written), PNGs under `crewmates/<taskId>/captures/`.
+  App data reaches a panel only through declared reads: `manifest.reads` ⊆ `PANEL_READ_NAMES` (`quota.snapshot`, `tasks.board`, `feed.recent`), served by `bindReads` over the read executor as `PanelProps.reads`; undeclared throws.
+  Step 1's `personalize remove` deletes and commits and refuses while a personal task is building the extension; the words extension/plugin still reach no user surface.
+  `tests/e2e/personal-panels.spec.ts`'s second half is the binding flow through the mock provider.
+- Personal panels, the authoring half (talk-to-personalize Step 3, `docs/personal-panels.md`): the app's design library IS the panel library, so Step 3 adds a component by exporting it from `src/renderer/src/design/index.ts` and nothing else moves (Step 2's `hostModules.ts` publishes that namespace as `@infinitary/ui`).
+  It gained the five frame-era looks as components - `design/panel/`: Row, FeedLine, MicroLabel, Empty, Disclosure - spec'd in the design skill's `components/panel/Panel.prompt.md`.
+  The authoring skills are `resources/personal-workspace/skills/` (`personal-panel`, plus one per data source) and are seeded into the workspace's `.claude/skills/` together with the app's OWN design skill, copied whole and self-healed EXACTLY (`src/core/personal/workspaceSkills.ts`, called from the workspace seeder): an app-owned skill a crewmate edits is restored, and `captain/` and the extensions are never touched.
+  The skills are the one home of the authoring rules - `skillText.test.ts` pins that no persona prompt and not the workspace's own `AGENTS.md` repeats a sentence of them, the same structural pin the card contract has.
+  `pluginLint` (`src/core/plugins/pluginLint.ts`) refuses emoji (in code and in a manifest title), an external URL in panel code and a direct `window.infinitary`; warns naming the NEAREST token on a raw color, type size, radius or shadow and on a second accent family (the scale is `src/shared/designTokens.ts`, kept in sync with the token CSS by its own test); notes a list with no empty state; and rewrites nothing.
+  Evidence: `tests/fixtures/personal-skills/` is one real extension per data skill, compiled and mounted by the real host in `tests/e2e/ui-kit-panel.spec.ts` and lint-clean in `personalFixtures.test.ts`.
+  The gallery seam (`design/fixtures/`) is off unless the window's own localStorage carries `infinitary.designFixtures`.
+- Hardening the personal panels (talk-to-personalize Step 5, the last; `docs/personal-panels.md` "Hardening"): the host-owned switch is one preference row, `panels` on `ShellPreferences` (`{ enabled, offReason }`), written ONLY by `ShellPreferencesService.setPersonalPanels` - the Settings control over `inf:settings:panels:set`, and the safe-mode boot.
+  The first mate never writes it (`personalize` has no action for it) and its context says where it is instead, because the switch exists for when a panel is what went wrong.
+  Off is the CORE's, never the rails': `PersonalExtensions.setEnabled(false)` disposes every `server.ts` host, forgets every compiled panel, stops the watcher, and pushes ONE empty snapshot - so a background task stops ticking and a server action is unreachable, not merely hidden - and started off the service seeds, scans and compiles nothing; `ShellPreferencesService.subscribe` is the wire, so the preference and the unmount land in the same tick.
+  Safe mode is a marker, because a crash writes no report (`src/core/personal/safeMode.ts`): every launch writes `pending` into the `launch` settings row before anything a panel could reach and clears it after `EARLY_LAUNCH_MS` (10s) or on a clean quit (`LaunchWatch.dispose`, from `startCore`'s dispose); two launches that never settled and the third writes the switch off with reason `safe-mode`, which is a feed line, the Settings row's words, and a context line - then starts the count over.
+  `INFINITARY_EARLY_LAUNCH_MS` widens the window in dev/e2e only.
+  The reason always travels (`panelsOffLine`): an off switch with no reason reads as a setting the captain forgot.
+  Observe gained the fourth kind for it.
+  `tests/e2e/personal-panels-hardening.spec.ts` is the acceptance, and its crash fixture is a real SIGKILL before the settle, not a stubbed counter.

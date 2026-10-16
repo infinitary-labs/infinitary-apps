@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "update-older-computer-card",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "A card tells you when another computer needs an update",
+      "body": "When a computer that runs work for you is on an older Firstmate than this one, a card now asks you to update it, with the two versions and what the gap means for its work. Update it opens Settings → Devices and updates it at once. Not now keeps the card away until a version changes, and it goes by itself once that computer is up to date.",
+      "area": "devices",
+      "picture": {
+        "dark": "update-older-computer-card-dark.webp",
+        "light": "update-older-computer-card-light.webp",
+        "alt": "An Attention card titled Update Firstmate on Running as Builder, naming both versions, with Not now and Update it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

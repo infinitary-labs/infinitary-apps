@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-claude-login-adopted",
+      "reason": "Internal, behind the development-only multi-machine gate: a computer that runs work uses the Claude login its macOS user already keeps in the Keychain instead of starting a new sign-in over it, and an installed app shows none of it."
+    }
+  ]
+}

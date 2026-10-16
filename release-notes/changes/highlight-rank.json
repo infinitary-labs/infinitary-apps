@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "highlight-rank",
+      "reason": "Ranks three existing notes as the startup highlights. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+name: linux-packages
+
+# The Linux packages, built and checked (docs/linux-packages.md): an Ubuntu
+# package, a Fedora package and an AppImage for x64, the Arch recipe for
+# Arch and Omarchy, and the Nix package for NixOS. Each is installed on a
+# clean copy of its system, opened with Chromium's sandbox on, and runs a
+# crew turn with the system's git (scripts/check-linux-package.sh). The
+# packages stay on the run; nothing here uploads them anywhere else.
+#
+# It runs on demand and on a pull request that changes how the packages are
+# made, for the captain to try, and inside every release (release.yml), at
+# the release's version from its one source commit: there the signing job
+# publishes exactly the files this run checked.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to package (default - the selected ref)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: The release's source commit
+        required: true
+        type: string
+      version:
+        description: The release's logical version, X.Y.Z or X.Y.Z-alpha.N, which the packages carry and report
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - electron-builder.yml
+      - electron-builder.linux.yml
+      - packaging/linux/**
+      - scripts/check-linux-package.sh
+      - scripts/linux-recipes.ts
+      - src/main/linuxStartup.ts
+      - tests/installed/**
+      - playwright.installed.config.ts
+      - .github/workflows/linux-packages.yml
+
+# Inside a release the packages belong to that run and are never cancelled
+# from outside it; otherwise a newer run of the same ref replaces an older.
+concurrency:
+  group: linux-packages-${{ github.workflow == 'release' && github.run_id || inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.workflow != 'release' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      # electron-builder makes the Fedora package with the system's rpmbuild.
+      - run: sudo apt-get update && sudo apt-get install -y rpm
+      - run: pnpm install --frozen-lockfile
+      # A release's build carries the same diagnostics settings as its Mac
+      # build (docs/sharing.md); a package made to try carries none.
+      - run: pnpm build
+        env:
+          INFINITARY_UMAMI_HOST: ${{ inputs.version && (vars.INFINITARY_UMAMI_HOST || vars.FM3000_UMAMI_HOST) || '' }}
+          INFINITARY_UMAMI_WEBSITE_ID: ${{ inputs.version && (vars.INFINITARY_UMAMI_WEBSITE_ID || vars.FM3000_UMAMI_WEBSITE_ID) || '' }}
+      # A release packages the notes job's verified catalog and its hero
+      # pictures, as its Mac build does, never the development placeholder
+      # `pnpm build` leaves (docs/release-notes.md).
+      - name: Fetch the verified release notes catalog
+        if: ${{ inputs.version }}
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes-catalog
+          path: ${{ runner.temp }}/release-notes
+      - name: Place the release notes catalog
+        if: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/release-notes/release-notes.json" packaging/generated/release-notes.json
+          rm -rf packaging/generated/release-notes
+          mkdir -p packaging/generated/release-notes/pictures
+          # An artifact keeps no empty folder: a release with no pictured highlight has none.
+          if [[ -d "$RUNNER_TEMP/release-notes/release-notes/pictures" ]]; then
+            cp -R "$RUNNER_TEMP/release-notes/release-notes/pictures/." packaging/generated/release-notes/pictures/
+          fi
+      - id: version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
+      # The logical version rides in the packaged package.json, which the
+      # running app reports, as the Mac release's does.
+      - name: Build the Ubuntu package, the Fedora package and the AppImage
+        run: |
+          pnpm exec electron-builder --linux --config electron-builder.linux.yml --publish never \
+            -c.extraMetadata.version="${{ steps.version.outputs.version }}"
+      - name: Verify the packaged release notes
+        if: ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_COMMIT: ${{ inputs.ref }}
+        run: node scripts/release-notes.ts verify-package --catalog dist/linux-unpacked/resources/release-notes.json --version "$VERSION" --source "$SOURCE_COMMIT"
+      - name: Render the Arch recipe and the Nix package from the Ubuntu package
+        run: |
+          mkdir -p linux-packages
+          cp dist/*.deb dist/*.rpm dist/*.AppImage linux-packages/
+          node scripts/linux-recipes.ts render --version "${{ steps.version.outputs.version }}" \
+            --deb "$(ls linux-packages/*.deb)" --out linux-packages
+          (cd linux-packages && sha256sum *.deb *.rpm *.AppImage > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: linux-packages/
+          if-no-files-found: error
+          retention-days: 30
+
+  check:
+    name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { system: ubuntu-host, runner: ubuntu-24.04 }
+          - { system: ubuntu-host, runner: ubuntu-26.04 }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:26.04" }
+          - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest" }
+          - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest" }
+          - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest" }
+          - { system: nix, runner: ubuntu-24.04 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: ${{ runner.temp }}/linux-packages
+      - name: Install the virtual screen
+        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool imagemagick
+      - if: matrix.system == 'nix'
+        uses: cachix/install-nix-action@v31
+      - name: Install, open and run a crew turn
+        run: |
+          Xvfb :99 -screen 0 1920x1200x24 -ac &
+          export DISPLAY=:99
+          for _ in $(seq 1 20); do xdotool getmouselocation >/dev/null 2>&1 && break; sleep 0.5; done
+          scripts/check-linux-package.sh "${{ matrix.system }}" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
+        env:
+          IMAGE: ${{ matrix.image }}
+          NIXPKGS: https://channels.nixos.org/nixos-26.05/nixexprs.tar.xz
+          VERSION: ${{ needs.build.outputs.version }}
+      - name: Keep the pictures and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package-check-${{ matrix.system }}-${{ strategy.job-index }}
+          path: |
+            ${{ runner.temp }}/evidence/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

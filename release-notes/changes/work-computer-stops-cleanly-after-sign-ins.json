@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-stops-cleanly-after-sign-ins",
+      "reason": "A computer that runs work stops cleanly with exit code 0 on Ctrl-C, a stop from its background service or its Terminal closing, even after it loaded its own sign-ins, instead of ending by the signal itself; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

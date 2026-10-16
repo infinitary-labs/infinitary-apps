@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "tasks-focus-ring-inside",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Tasks rows show their whole focus outline",
+      "body": "When you move through Tasks with the keyboard, the row or group heading you reach now shows its outline and glow on every side. Before, the panel's edge cut off the left and right.",
+      "picture": {
+        "dark": "tasks-focus-ring-inside-dark.webp",
+        "light": "tasks-focus-ring-inside-light.webp",
+        "alt": "A Tasks row reached with the keyboard, outlined and softly lit on all four sides."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

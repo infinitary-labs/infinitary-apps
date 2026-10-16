@@ -1,0 +1,12 @@
+diff --git a/lib/coreBundle.js b/lib/coreBundle.js
+index d9041dd0f009072511a7d808dec83121ff29e127..0c07a41c43ad59c25d6e61f6d1cb91ec0f7d8734 100644
+--- a/lib/coreBundle.js
++++ b/lib/coreBundle.js
+@@ -34797,6 +34797,7 @@ var init_crConnection = __esm({
+             callback.resolve(object.result);
+           }
+         } else if (object.id && object.error?.code === -32001) {
++        } else if (object.id && this._crashed) {
+         } else {
+           assert(!object.id, object?.error?.message || void 0);
+           Promise.resolve().then(() => {

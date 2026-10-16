@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-packages",
+      "reason": "Internal Linux piece: Ubuntu, Fedora and AppImage packages, an Arch recipe and a Nix package are built and checked on clean copies of each system, and kept on the run unpublished. No released app changes; Linux packages reach people with the Linux release."
+    }
+  ]
+}

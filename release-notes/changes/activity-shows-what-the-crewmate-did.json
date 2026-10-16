@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "activity-shows-what-the-crewmate-did",
+      "kind": "improvement",
+      "title": "A task's Activity shows what its crewmate did",
+      "body": "A task's Activity now lists each thing its crewmate did, such as reading a file or running the tests, in the crewmate's own words where it gave them. Each folds under the line it led to, so a line opens to show the work behind it.",
+      "highlight": 1,
+      "area": "tasks",
+      "picture": {
+        "dark": "activity-shows-what-the-crewmate-did-dark.webp",
+        "light": "activity-shows-what-the-crewmate-did-light.webp",
+        "alt": "A task's Activity with two lines opened to what the crewmate did before each, such as reading its log and running the journey three times"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

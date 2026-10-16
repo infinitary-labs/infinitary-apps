@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "find-a-task-from-a-card-moves-the-caret",
+      "kind": "fix",
+      "title": "Find a task moves the caret to the Tasks search from a card",
+      "body": "After you used the Tasks panel and then went straight to a field in a card, pressing ⇧⌘F (Ctrl+Shift+F on Linux) could open the Tasks search but leave the caret in the card, so your next keys landed there. The caret now moves to the Tasks search.",
+      "area": "tasks",
+      "noPicture": "Nothing new is drawn: this fixes where the caret lands after a key, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

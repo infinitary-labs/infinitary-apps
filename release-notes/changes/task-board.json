@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-board",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "See all your tasks on a board",
+      "body": "Open task board, in the Tasks header or with ⌘B, shows every task on one board: what waits on you in a row above Backlog, Queued, Working and Done. Rest on a task to see its summary, and click it or press Enter to open it. The arrows move between tasks, Find and the project buttons narrow the board, and Dropped shows the work dropped this week.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-dark.webp",
+        "light": "task-board-light.webp",
+        "alt": "The task board beside the Tasks panel, with Waiting on you above the Backlog, Queued, Working and Done columns"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

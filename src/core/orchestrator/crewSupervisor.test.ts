@@ -1,0 +1,19842 @@
+import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { AttachmentRef } from "@shared/attachments";
+import type { CutOff } from "@shared/authFailure";
+import {
+  type Card,
+  type CardEffect,
+  type CardThread,
+  cardPresentation,
+  onStage,
+  opensSettings,
+} from "@shared/cards";
+import type { CheckChangeInput } from "@shared/checkRepair";
+import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
+import type { FmEvent } from "@shared/events";
+import { CREWMATE_TAB_VIA } from "@shared/provenance";
+import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
+import type { RiskDeclaration } from "@shared/risk";
+import type { WorkShape } from "@shared/routingPolicy";
+import type { TaskBrowserFact } from "@shared/taskBrowser";
+import { queueStartedRefusal } from "@shared/taskQueue";
+import { threadWait } from "@shared/threadWait";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { completionCardBody } from "../../../tests/helpers/completionCard";
+import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
+import {
+  type FakeSession,
+  type FakeSessionOptions,
+  fakeBinding,
+  fakeSession,
+} from "../../../tests/helpers/fakeSession";
+import { jpegImage, pngImage } from "../../../tests/helpers/images";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { attachmentPath, keepImages } from "../attachments";
+import { CLAUDE_CONTROL_PROFILE } from "../claude/session";
+import {
+  type Forge,
+  type ForgeChange,
+  type ForgeCheckState,
+  ForgeError,
+  type ForgePull,
+  type ForgeReadiness,
+  overallOfChecks,
+} from "../forge";
+import { hostEnv } from "../hostEnv";
+import { renderReferenceImport } from "../knowledge/context";
+import { KnowledgeService } from "../knowledge/knowledgeService";
+import { initOverflowDir } from "../overflow";
+import { type AppPaths, appPathsFor } from "../paths";
+import { packagedPlanStepLines } from "../personal/sequencesSkill";
+import { EMIT_CARD_TOOL } from "../pi/cardTool";
+import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
+import { piSessionEvents } from "../pi/piEvents";
+import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
+import type { KindInput } from "../routing/kindClassifier";
+import { tierFor } from "../routing/policy";
+import type { ModelSession, SessionSpec } from "../session/session";
+import { bindTool } from "../session/tools";
+import { CardStore } from "../storage/cardStore";
+import {
+  FIRSTMATE_RECIPIENT,
+  INBOX_ATTEMPT_MAX,
+  INBOX_DEDUPE_WINDOW_MS,
+  InboxStore,
+} from "../storage/inboxStore";
+import type { TaskEvent } from "../storage/taskEventStore";
+import type { TaskRecord } from "../storage/taskStore";
+import { UsageStore } from "../storage/usageStore";
+import { legacyStateOf, seedTask } from "../tasks/seedTask";
+import { taskFeedLine } from "../tasks/taskFeed";
+import { TaskProtocol } from "../tasks/taskProtocol";
+import { TaskService } from "../tasks/taskService";
+import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
+import { git } from "../workspace/git";
+import { RepoRegistry } from "../workspace/repoRegistry";
+import {
+  WorkspaceService as RealWorkspaceService,
+  type WorkspaceService,
+} from "../workspace/workspaceService";
+import { CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
+import { ciFactOf } from "./ciFact";
+import {
+  type CrewmateSpec,
+  crewmateRenewedNote,
+  crewmateRestartText,
+  crewmateSessionSpec,
+} from "./crewSession";
+import {
+  type AccountAttachment,
+  CrewSupervisor,
+  type CrewSupervisorOptions,
+  type FirstmateHooks,
+  QUIET_CARD_MS,
+  QUIT_SETTLE_MS,
+} from "./crewSupervisor";
+import { crewHoldWays } from "./holds";
+import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
+import { REVIEW_FIX_RULES, renderRigorSection, type SpawnIntent } from "./intentBrief";
+import type { LineageFacts } from "./mergeAuthorization";
+import { PrCiService, type PrOutcome } from "./prCi";
+import { Ticker } from "./ticker";
+import {
+  ciCapWake,
+  GUIDANCE_MARK_WORDS,
+  IDLE_NUDGE_TEXT,
+  IDLE_THREAD_NUDGE_TEXT,
+  idleNoteNudgeText,
+  RESTART_REPLAY_NOTE,
+  REVIEW_NEW_HEAD_NEXT,
+  REVIEW_PASSED_NEXT,
+  REVIEWER_IDLE_NEXT,
+  renderWake,
+  reviewFindingsNext,
+  THREAD_STEER_PREAMBLE,
+  type WakeBody,
+  type WakeFacts,
+} from "./wakes";
+
+// This file chains real git and is not about the utility-QoS clamp, so what
+// the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
+vi.mock("../utilityQos", async (importOriginal) =>
+  (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
+
+/**
+ * The shared fake session (`tests/helpers/fakeSession.ts`) as this file
+ * drives a crewmate: the texts it was prompted with, its steer and dispose
+ * spied, and each prompt ended by the case - an abort only asks, as a
+ * backend's does, and the case ends the turn the way that backend would.
+ */
+type FakeCrewmate = FakeSession & {
+  promptCalls: string[];
+  promptImageCalls: (Parameters<ModelSession["prompt"]>[1] | undefined)[];
+  finishPrompt: () => void;
+  failPrompt: (message: string) => void;
+  steer: Mock<ModelSession["steer"]>;
+  dispose: Mock<ModelSession["dispose"]>;
+};
+
+/**
+ * A crewmate on a backend that cannot take guidance mid-turn: its
+ * profile says `followup-queue`, and its steer() rejects, so a supervisor
+ * that called it would fail this test rather than quietly lose the message.
+ */
+function fakeQueuedSteerCrewmate(): FakeCrewmate {
+  const crewmate = fakeCrewmate();
+  return {
+    ...crewmate,
+    controlProfile: {
+      steer: "followup-queue",
+      interruptGranularity: "process",
+      quotaEvents: false,
+      backgroundWork: "host",
+      failureSignals: "text",
+    },
+    steer: vi.fn(async () => {
+      throw new Error("this crewmate cannot be steered mid-turn");
+    }),
+  };
+}
+
+function fakeCrewmate(options: FakeSessionOptions = {}): FakeCrewmate {
+  const session = fakeSession({
+    sessionId: "s1",
+    controlProfile: PI_CONTROL_PROFILE,
+    resume: { backend: "pi", sessionFile: "/tmp/s1.jsonl" },
+    model: { provider: "fm-mock", id: "mock-1" },
+    modelLabel: "Claude Fable 5",
+    ...options,
+  });
+  const promptCalls: string[] = [];
+  const promptImageCalls: (Parameters<ModelSession["prompt"]>[1] | undefined)[] = [];
+  const { prompt, steer, dispose } = session;
+  return Object.assign(session, {
+    promptCalls,
+    promptImageCalls,
+    prompt: (text: string, images?: Parameters<ModelSession["prompt"]>[1]) => {
+      promptCalls.push(text);
+      promptImageCalls.push(images);
+      return prompt(text, images);
+    },
+    abort: async (failure?: string) => {
+      session.aborts.push(failure);
+    },
+    finishPrompt: () => session.settle(),
+    failPrompt: (message: string) => session.rejectPrompt(message),
+    steer: vi.fn(steer),
+    dispose: vi.fn(dispose),
+  });
+}
+
+/**
+ * A supervisor's session options over fakes: one Pi factory whose `open`
+ * the case supplies, bindings that carry the account, and the crewmate
+ * preset, keeping every crewmate the host started (its callbacks are what a
+ * case plays the crewmate's tool calls into).
+ */
+function crewSessions(
+  paths: AppPaths,
+  open: (spec: SessionSpec) => Promise<ModelSession>,
+  specs: CrewmateSpec[] = [],
+): Pick<CrewSupervisorOptions, "sessions" | "bind" | "sessionSpec"> {
+  return {
+    sessions: { pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open } },
+    bind: async (accountId) => fakeBinding(accountId),
+    sessionSpec: (crewmate, binding) => {
+      specs.push(crewmate);
+      return crewmateSessionSpec(paths, crewmate, binding);
+    },
+  };
+}
+
+type RecordUsageInput = {
+  taskId: string;
+  accountId?: string;
+  model?: { provider: string; id: string };
+  usage: {
+    input?: number;
+    output?: number;
+    cacheRead?: number;
+    cacheWrite?: number;
+    cost?: number;
+  };
+};
+
+type SetupExtras = {
+  reasoningChoice?: import("../routing/router").Router["reasoningChoice"];
+  accounts?: AccountAttachment;
+  routedModel?: { provider: string; id: string };
+  routeResult?: import("../routing/router").RouteResult;
+  /** Spies on every router.decide() call, to check what commission() passed it. */
+  onRouteDecide?: (args: {
+    taskId: string;
+    prompt: string;
+    shape: WorkShape;
+    avoidProvider?: string;
+  }) => void;
+  recordUsage?: (input: RecordUsageInput) => void;
+  noteCutOff?: (accountId: string, cutOff: import("@shared/authFailure").CutOff) => void;
+  serveability?: AccountServeability;
+  quotaGateCleared?: (ref: string) => boolean;
+  quotaGateRefValid?: (ref: string) => boolean;
+  hasRunningJobs?: (taskId: string) => boolean;
+  oldestRunningJob?: (
+    taskId: string,
+  ) => { jobId: string; command: string; startedAt: number } | undefined;
+  killJobs?: (taskId: string) => void;
+  mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
+  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  openChange?: (taskId: string, input: { title: string; body: string }) => Promise<string>;
+  checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
+  readWorkflow?: CrewSupervisorOptions["readWorkflow"];
+  downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
+  closePullRequest?: (taskId: string) => Promise<{ ok: boolean; text: string }>;
+  checkCi?: (taskId: string) => Promise<import("./prCi").PrCiOverall>;
+  readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
+  /** The home's knowledge, over this setup's projects. */
+  knowledge?: (repos: RepoRegistry) => KnowledgeService;
+  /** The kind classifier (S3); absent keeps S2's every-shape-unclear behaviour. */
+  classifier?: import("../routing/kindClassifier").KindClassifier;
+  /**
+   * Further crewmates, one per later spawn in order (delivery rigor phase
+   * 2: a builder and its reviewer are two sessions). The first spawn still
+   * gets `crewmate`; once these run out every spawn gets `crewmate` again.
+   */
+  crewmates?: FakeCrewmate[];
+  /** A real workspace service over real git, in place of the mocked one. */
+  realWorkspace?: boolean;
+  /** Each task's own browser (docs/task-browser.md). */
+  browsers?: CrewSupervisorOptions["browsers"];
+  /** The task channel; a stand-in that grants a key path when the app has browsers. */
+  taskCommands?: CrewSupervisorOptions["taskCommands"];
+  /** The host's one clock (the ticker's), for the task record, the inbox and the supervisor. */
+  now?: () => number;
+  /** An account's binding; absent, every account binds to a Pi runtime. */
+  bind?: CrewSupervisorOptions["bind"];
+  /** Open cards a previous build saved, there before the supervisor starts. */
+  savedCards?: Card[];
+};
+
+function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
+  const paths = appPathsFor(scratchDir("infinitary-crew-"));
+  const events: FmEvent[] = [];
+  const ops: string[] = [];
+  const sorts: { taskId: string; verdict: "routine" | "captain"; rule: string }[] = [];
+  /** The text each ledger row records, in order (what the replay scorer matches). */
+  const ledger: string[] = [];
+  /** The typed facts each ledger row carries beside that text (P6); undefined for a line. */
+  const ledgerFacts: (WakeFacts | undefined)[] = [];
+  let cards: Card[] = [];
+  const threads: CardThread[] = [];
+  const workspace = {
+    createTaskWorktree: vi.fn(async (taskId: string) => ({
+      taskId,
+      cwd: join(paths.worktreesDir, taskId),
+      branch: `fm/task-${taskId}`,
+      repoDir: paths.defaultWorkspaceDir,
+    })),
+    removeTaskWorktree: vi.fn(async () => {}),
+    // The real save-then-remove: nothing to save by default, then the
+    // removal the assertions below watch.
+    retireTaskWorktree: vi.fn(async (ws: import("../workspace/workspaceService").TaskWorkspace) => {
+      await workspace.removeTaskWorktree(ws);
+      return { outcome: "removed" as const, kept: null };
+    }),
+    listWorktreeDirs: vi.fn(() => [] as string[]),
+    workspaceAt: vi.fn(async () => null),
+    removeEmptyWorktreeDir: vi.fn(async () => false),
+    landTaskWork: vi.fn(async () => ({ mode: "fast-forward" as const })),
+    taskWorkStatus: vi.fn(async () => ({ dirty: false, unlandedCommits: 0 })),
+    ensureDefaultRepo: vi.fn(async () => paths.defaultWorkspaceDir),
+    installDependencies: vi.fn(async () => ({ outcome: "skipped" as const })),
+    listTaskBranches: vi.fn(async () => [] as { branch: string; taskId: string }[]),
+    branchHead: vi.fn(async () => null as string | null),
+    reviewChangedFiles: vi.fn(async () => ["src/meter.ts", "tests/meter.test.ts"]),
+  } as unknown as WorkspaceService;
+  const realWorkspace = extras.realWorkspace ? new RealWorkspaceService(paths) : undefined;
+  const specs: CrewmateSpec[] = [];
+  /** Every session spec the supervisor opened, in order. */
+  const sessionSpecs: SessionSpec[] = [];
+  const open = vi.fn(async (spec: SessionSpec): Promise<ModelSession> => {
+    sessionSpecs.push(spec);
+    if (sessionSpecs.length > 1 && extras.crewmates) {
+      return extras.crewmates[sessionSpecs.length - 2] ?? crewmate;
+    }
+    return crewmate;
+  });
+  const db = openInMemoryDatabase();
+  const clock = extras.now ? { now: extras.now } : {};
+  const repos = new RepoRegistry(db, paths.fleetDir);
+  const tasks = new TaskService({ db, repos, strict: true, ...clock });
+  const cardStore = new CardStore(db);
+  for (const card of extras.savedCards ?? []) cardStore.upsert(card);
+  const inbox = new InboxStore(db, clock);
+  const supervisor = new CrewSupervisor({
+    ...clock,
+    ...crewSessions(paths, open, specs),
+    ...(extras.bind ? { bind: extras.bind } : {}),
+    workspace: realWorkspace ?? workspace,
+    repos,
+    tasks,
+    cardStore,
+    inbox,
+    paths,
+    ...(extras.knowledge ? { knowledge: extras.knowledge(repos) } : {}),
+    ...(extras.routedModel || extras.routeResult
+      ? {
+          router: {
+            reasoningChoice: extras.reasoningChoice ?? (() => undefined),
+            decide: (
+              taskId: string,
+              prompt: string,
+              shape: WorkShape,
+              options?: { avoidProvider?: string },
+            ) => {
+              extras.onRouteDecide?.({ taskId, prompt, shape, ...options });
+              return (
+                extras.routeResult ?? {
+                  choice: extras.routedModel,
+                  bucket: "high" as const,
+                  rule: "R8" as const,
+                }
+              );
+            },
+            // The builder's served provider (R9): the routed model's, as the
+            // real router reads it off routing_decisions.
+            servedProvider: () => extras.routedModel?.provider,
+            // The settle card's crewmate fact: the real router falls back
+            // to the raw id when the catalog holds no label.
+            modelLabel: (ref: { provider: string; id: string }) => ref.id,
+          } as unknown as import("../routing/router").Router,
+        }
+      : {}),
+    ...(extras.accounts ? { accounts: extras.accounts } : {}),
+    ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
+    ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
+    ...(extras.serveability ? { serveability: extras.serveability } : {}),
+    ...(extras.quotaGateCleared ? { quotaGateCleared: extras.quotaGateCleared } : {}),
+    ...(extras.quotaGateRefValid ? { quotaGateRefValid: extras.quotaGateRefValid } : {}),
+    ...(extras.hasRunningJobs ? { hasRunningJobs: extras.hasRunningJobs } : {}),
+    ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
+    ...(extras.killJobs ? { killJobs: extras.killJobs } : {}),
+    ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
+    ...(extras.closePullRequest ? { closePullRequest: extras.closePullRequest } : {}),
+    ...(extras.readPull ? { readPull: extras.readPull } : {}),
+    ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
+    ...(extras.openChange ? { openChange: extras.openChange } : {}),
+    ...(extras.checkChange ? { checkChange: extras.checkChange } : {}),
+    ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),
+    ...(extras.downloadArtifact ? { downloadArtifact: extras.downloadArtifact } : {}),
+    ...(extras.readCheckWatch ? { readCheckWatch: extras.readCheckWatch } : {}),
+    ...(extras.classifier ? { classifier: extras.classifier } : {}),
+    ...(extras.browsers ? { browsers: extras.browsers } : {}),
+    ...(extras.browsers
+      ? {
+          taskCommands: extras.taskCommands ?? {
+            grant: (taskId: string) => ({
+              env: { INFINITARY_AXI_KEY: `/channel/${taskId}.key` },
+              path: ["/app/axi-bin"],
+            }),
+          },
+        }
+      : {}),
+    // The whose-turn sort's record (S7c), wired exactly as services.ts
+    // does: the row, then the wake inside the same call.
+    recordSort: (input) => {
+      sorts.push({ taskId: input.taskId, verdict: input.verdict, rule: input.rule });
+      ledger.push(input.wake);
+      ledgerFacts.push(input.facts);
+      input.effect?.();
+    },
+    broadcastEvent: (event: FmEvent) => events.push(event),
+    broadcastCards: (snapshot: Card[]) => {
+      cards = snapshot;
+    },
+    broadcastThread: (thread) => threads.push(thread),
+  });
+  const hooks: FirstmateHooks = {
+    notifyOp: (wake) => ops.push(served(wake)),
+    notifyCaptainChoice: (wake) => ops.push(served(wake)),
+    retryConverse: vi.fn(),
+  };
+  supervisor.setFirstmateHooks(hooks);
+  return {
+    supervisor,
+    events,
+    ops,
+    sorts,
+    ledger,
+    ledgerFacts,
+    cards: () => cards,
+    threads,
+    sessions: { open },
+    workspace,
+    realWorkspace,
+    tasks,
+    cardStore,
+    inbox,
+    db,
+    specs,
+    sessionSpecs,
+    paths,
+    repos,
+  };
+}
+
+let servedLane: InboxStore | undefined;
+
+/**
+ * What the Firstmate's drain serves for a wake: the envelope the inbox
+ * stores, read back and rendered where it is served (docs/inbox.md, "The
+ * wake envelope"). The hooks below collect this, so every assertion on a
+ * wake's text is an assertion on the served text.
+ */
+function served(wake: WakeBody): string {
+  servedLane ??= new InboxStore(openInMemoryDatabase());
+  const id = servedLane.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, "agent");
+  const row = servedLane.allFor(FIRSTMATE_RECIPIENT).find((entry) => entry.id === id);
+  servedLane.ack([id]);
+  if (!row) throw new Error("the wake was not recorded");
+  return renderWake(row);
+}
+
+// Run the same deadline assertions without wall-clock sleeps. Date and
+// timeouts are controlled; real I/O, microtasks and intervals are untouched.
+// The first journey below retains an actual scheduling integration.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+});
+afterEach(() => {
+  if (vi.isFakeTimers()) vi.clearAllTimers();
+  vi.useRealTimers();
+});
+const tick = () =>
+  vi.isFakeTimers()
+    ? vi.advanceTimersByTimeAsync(80)
+    : new Promise((resolve) => setTimeout(resolve, 80));
+
+/** A crewmate's whole risk declaration: every dimension rated. */
+const METER_RISK: RiskDeclaration = {
+  blast: { level: "low", why: "Two files in the meter" },
+  behavior: { level: "low", why: "Corrects the unit" },
+  undo: { level: "low", why: "A revert restores the old meter" },
+  evidence: { level: "medium", why: "The meter test" },
+  sensitivity: { level: "low", why: "No sign-in, data or release code" },
+  novelty: { level: "low", why: "Edits the existing reading" },
+  deps: { level: "low", why: "Nothing added" },
+};
+
+/** The settle effects a card action carries (cards/tasks/agents P1): the host resolves merge by posture. */
+const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
+const SETTLE_DISCARD = { kind: "settle", mode: "discard" } as const;
+
+/** The lifecycle fixtures need a valid completion outline, not a content recipe. */
+const completionBody = (after: string) =>
+  completionCardBody(
+    "<p>The captain asked for this code change.</p>",
+    "<p>The requested change is complete.</p>",
+    "<p>The requested behavior was missing.</p>",
+    after,
+  );
+
+/** The [fm-op] lines a host-run settle sends back to the Firstmate. */
+const settleWakes = (ops: string[]) => ops.filter((line) => line.includes("the host settled it"));
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
+}
+
+/**
+ * spawn v2 carries a structured intent instead of an authored brief; tests
+ * that only need "some work text" put it in both goal and user words - the
+ * host-rendered template then contains it, so content assertions hold.
+ */
+function intentOf(text: string): SpawnIntent {
+  return { goal: text, userWords: text };
+}
+
+/** The card file a brief names for a source task (FI3-700), read back the way the crewmate opens it. */
+function handedCard(brief: string): { file: string; body: string } {
+  const file = /open it to read the card:\n- (.+)/.exec(brief)?.[1];
+  if (!file) throw new Error(`the brief names no card file:\n${brief}`);
+  return { file, body: readFileSync(file, "utf8") };
+}
+
+/**
+ * onCard's return can be a promise now that a merge decision on a
+ * direct-pr task may clear a live CI gate first (`pendingCiGate`), but
+ * none of these fixtures wire `checkCi`, so every call here stays the
+ * synchronous string it always was. Fails loudly instead of silently
+ * comparing a Promise if that assumption ever stops holding.
+ */
+function syncCardId(id: string | Promise<string | undefined> | undefined): string | undefined {
+  if (id instanceof Promise) {
+    throw new Error("expected a synchronous card id in this fixture; got a pending CI gate");
+  }
+  return id;
+}
+
+describe("CrewSupervisor", () => {
+  it("streams a commissioned turn without a task card and leaves the task idle and steerable", async () => {
+    vi.useRealTimers();
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, cards, ops, tasks } = setup(crewmate);
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Refactor auth",
+      intent: intentOf("refactor the auth middleware; acceptance: tests green"),
+    });
+    expect(name).toBe("crewmate 1");
+    await tick();
+
+    expect(events.some((e) => e.type === "task_started")).toBe(true);
+    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(cards()).toEqual([]);
+
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Refactor " });
+    crewmate.emit({ type: "assistant_delta", taskId, text: "finished." });
+    await tick();
+    expect(cards().find((card) => card.taskId === taskId)).toBeUndefined();
+
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+    const report = events.find((e) => e.type === "task_report");
+    expect(report).toMatchObject({
+      type: "task_report",
+      title: "Refactor auth",
+      summary: "Refactor finished.",
+    });
+    expect(ops.at(-1)).toContain("reported on task");
+    expect(ops.at(-1)).toContain("Refactor finished.");
+
+    await supervisor.steerCrewmate(taskId, "also make it blue");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("also make it blue");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    crewmate.finishPrompt();
+    await tick();
+
+    // A finished crewmate stays idle until the captain settles it; landing
+    // closes it done and tears the worktree down (WI-11 - no `finish`).
+    const settled = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    expect(settled).toContain("into main.");
+    expect(crewmate.dispose).toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+    expect(events.filter((e) => e.type === "task_landed").at(-1)).toMatchObject({
+      type: "task_landed",
+      title: "Refactor auth",
+    });
+    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+  });
+
+  it("pauses dispatch on typed GitHub askpass auth and resumes after Projects sign-in", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, cards, events } = setup(crewmate);
+    vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
+      new ForgeAuthRequiredError("could not read Username for GitHub"),
+    );
+
+    const { taskId, crewmate: state } = await supervisor.commission({
+      title: "Update the GitHub project",
+      intent: intentOf("update the project"),
+    });
+    expect(state).toBe("queued");
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      gate: { kind: "captain", ref: "forge-sign-in:github.com" },
+    });
+    await vi.waitFor(() =>
+      expect(cards().find((card) => card.id === "card-forge-github.com")?.actions[0]).toMatchObject(
+        {
+          effect: { kind: "open", target: "projects", signIn: "github.com" },
+        },
+      ),
+    );
+    expect(events.some((event) => event.type === "task_started")).toBe(false);
+
+    await supervisor.resumeForgeSignInTasks("github.com");
+    await vi.waitFor(() => expect(tasks.get(taskId)?.status).toBe("active"));
+    expect(workspace.createTaskWorktree).toHaveBeenCalledTimes(2);
+    expect(events.some((event) => event.type === "task_started")).toBe(true);
+  });
+
+  it("persists and routes a provider-initiated report exactly once without a captain nudge", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, events, ops, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Finish background checks",
+      intent: intentOf("finish the background checks"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+
+    crewmate.emit({ type: "continuation_started" });
+    expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+    await supervisor.steerCrewmate(taskId, "include the latest branch head");
+    // The steer names the lane row it delivers.
+    expect(crewmate.steer).toHaveBeenCalledWith(
+      "include the latest branch head",
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+    expect(specs[0]?.onReport?.("Background checks passed on the latest branch head.")).toContain(
+      "Reported",
+    );
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "continuation_ended" });
+    // A duplicated provider completion cannot persist or route the result twice.
+    crewmate.emit({ type: "continuation_ended" });
+    await tick();
+
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(tasks.get(taskId)?.outcome).toBe("Background checks passed on the latest branch head.");
+    expect(tasks.timeline(taskId).filter((event) => event.kind === "report")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "task_report")).toHaveLength(1);
+    expect(ops.filter((line) => line.includes("reported on task"))).toHaveLength(1);
+
+    // A later autonomous failure uses the same boundary and keeps the task
+    // idle and steerable rather than silently disappearing.
+    crewmate.emit({ type: "continuation_started" });
+    crewmate.emit({ type: "turn_failed", taskId, error: "Background command failed." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "continuation_ended", error: "Background command failed." });
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(ops.at(-1)).toContain("Background command failed");
+  });
+
+  it("rejects an unknown repo id loudly instead of defaulting", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    await expect(
+      supervisor.commission({ title: "x", intent: intentOf("do x"), repoId: "nope" }),
+    ).rejects.toThrow(/Unknown repo_id/);
+  });
+
+  it("raises a decision card and notifies the agent when a task fails auth-shaped", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops } = setup(crewmate);
+    await supervisor.commission({ title: "t", intent: intentOf("do something") });
+    // The turn must be in flight before it can fail: a fixed tick lost the
+    // race under a loaded suite and `failPrompt` failed nothing.
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    // Pi's real pre-flight text when a provider's credentials are gone.
+    crewmate.failPrompt("Authentication failed for \"openai-codex\". Run '/login' again.");
+    // The card rides a debounced broadcast, so wait for the card itself.
+    await vi.waitFor(() =>
+      expect(cards().find((card) => card.actions.length > 0)?.title).toBe(
+        "A provider needs sign in",
+      ),
+    );
+    const decision = cards().find((card) => card.actions.length > 0);
+    // The agent-down set keeps its host card, with exactly its one way out.
+    expect(decision?.author).toBe("host");
+    expect(decision?.actions.map((a) => a.id)).toEqual(["open-settings"]);
+    expect(ops.at(-1)).toContain("failed");
+    const result = supervisor.act(decision?.id ?? "", "open-settings");
+    // Sign-in is on the Intelligence tab: the way out lands there, not on General.
+    expect(result.effect).toEqual({ kind: "open", target: "subscriptions" });
+    await tick();
+    expect(cards().find((card) => card.actions.length > 0)).toBeUndefined();
+  });
+
+  it("never mints the sign-in card for a failure that only sounds auth-shaped", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops } = setup(crewmate);
+    await supervisor.commission({ title: "t", intent: intentOf("do something") });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    crewmate.failPrompt("Error Code null: Internal error during token generation");
+    await vi.waitFor(() => expect(ops.at(-1)).toContain("failed"));
+    // Any card the failure raised was broadcast on a shorter timer than this.
+    await tick();
+    expect(cards().find((card) => card.title === "A provider needs sign in")).toBeUndefined();
+  });
+
+  it("reports a provider-failed turn instead of '(no report)' and keeps the crewmate steerable", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, cards, ops, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Refactor auth",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+
+    // Pi resolves a provider-failed turn: turn_failed + turn_end, then the
+    // prompt promise resolves normally (the report's REPRO A).
+    crewmate.emit({
+      type: "turn_failed",
+      taskId,
+      error: "Error Code null: Internal error during token generation",
+    });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    // The failure reached every surface: the enriched feed event, the
+    // agent's inbox - and never a fake "reported" line.
+    const failedEvent = events.find((e) => e.type === "turn_failed");
+    expect(failedEvent).toMatchObject({
+      taskId,
+      crewmate: "crewmate 1",
+      title: "Refactor auth",
+      error: "Error Code null: Internal error during token generation",
+    });
+    expect(events.find((e) => e.type === "task_report")).toBeUndefined();
+    expect(ops.at(-1)).toContain("turn on task");
+    expect(ops.at(-1)).toContain("failed at the provider: Error Code null");
+    // The honest retry owns the brief it carried (docs/inbox.md).
+    expect(ops.at(-1)).toContain("retries it on its own");
+    expect(ops.at(-1)).toContain("You can still steer or interrupt it.");
+    // Transient fault, not auth: no sign-in card.
+    expect(cards().find((card) => card.title === "A provider needs sign in")).toBeUndefined();
+
+    // The session survives: still steerable, and the next clean turn
+    // reports normally again.
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    await supervisor.steerCrewmate(taskId, "try again");
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "All done." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(events.find((e) => e.type === "task_report")).toMatchObject({
+      title: "Refactor auth",
+      summary: "All done.",
+    });
+    // The provider answered, so the brief the failed turn carried is due at
+    // once instead of waiting out its backoff: the next turn delivers it,
+    // and the report meanwhile sorts as still moving.
+    expect(crewmate.promptCalls.at(-1)).toBe(crewmate.promptCalls[0]);
+    expect(ops.at(-1)).not.toContain("reported on task");
+  });
+
+  it("raises the sign-in decision and refs its wake when a turn has a real auth failure", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards } = setup(crewmate);
+    const wakes: Array<{ text: string; origin: string; ref?: string }> = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) =>
+        wakes.push({ text: served(wake), origin, ...(ref ? { ref } : {}) }),
+      retryConverse: vi.fn(),
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    crewmate.emit({
+      type: "turn_failed",
+      taskId,
+      error: '401: {"message":"Incorrect API key provided","code":"invalid_api_key"}',
+    });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const decision = cards().find((card) => card.title === "A provider needs sign in");
+    expect(decision).toBeDefined();
+    // Product words, never the provider's own reply.
+    expect(decision?.body).toBe(
+      "The crewmate could not reach its subscription, which needs you to sign in again.",
+    );
+    // An auth failure is a host operation, not a crewmate report.
+    expect(wakes).toContainEqual(expect.objectContaining({ ref: taskId, origin: "agent" }));
+  });
+
+  it("names a custom connection on the sign-in card and says how to check it, never quoting Pi", async () => {
+    const custom = { provider: "fm-custom-0123456789abcdef", id: "operator-large-model" };
+    let model = custom;
+    const crewmate = { ...fakeCrewmate(), modelRef: () => model } satisfies FakeCrewmate;
+    const { supervisor, cards } = setup(crewmate, {
+      accounts: {
+        selectForSpawn: () => "acct_custom",
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => "Operator gateway",
+      },
+      routedModel: custom,
+    });
+    await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    // A connection whose model lost its check has no runtime: Pi's session no
+    // longer knows the provider, and its preflight throws its own sign-in help.
+    model = { provider: "unknown", id: custom.id };
+    crewmate.failPrompt(
+      [
+        "No API key found for the selected model.",
+        "",
+        "Use /login to log into a provider via OAuth or API key. See:",
+        "  /Applications/Firstmate 3000.app/Contents/Resources/app/node_modules/@earendil-works/pi-coding-agent/docs/providers.md",
+        "  /Applications/Firstmate 3000.app/Contents/Resources/app/node_modules/@earendil-works/pi-coding-agent/docs/models.md",
+      ].join("\n"),
+    );
+    await vi.waitFor(() =>
+      expect(cards().find((card) => card.title === "A provider needs sign in")).toBeDefined(),
+    );
+    expect(cards().find((card) => card.title === "A provider needs sign in")?.body).toBe(
+      "The crewmate could not reach Operator gateway, your custom connection. In Settings → Intelligence, press Edit on it, then Save to check it again.",
+    );
+  });
+
+  it("raises the sign-in card once for a typed sign-out on a Claude crewmate, never reading its words", async () => {
+    const crewmate = {
+      ...fakeCrewmate(),
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
+      modelRef: () => ({ provider: "anthropic-claude", id: "claude-opus" }),
+    } satisfies FakeCrewmate;
+    const { supervisor, cards, tasks } = setup(crewmate);
+    const wakes: Array<{ origin: string; ref?: string }> = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: (_wake, origin, ref) => wakes.push({ origin, ...(ref ? { ref } : {}) }),
+      retryConverse: vi.fn(),
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    const signedOut = () => {
+      // Words no prose classifier would read as a sign-in: the class decides.
+      crewmate.emit({
+        type: "turn_failed",
+        taskId,
+        error: "Failed to reach Claude.",
+        cutOff: { class: "signed_out" },
+      });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+    };
+    signedOut();
+    await tick();
+    await supervisor.steerCrewmate(taskId, "try again");
+    await tick();
+    signedOut();
+    await tick();
+    const signIn = cards().filter((card) => card.id === `card-auth-${taskId}`);
+    expect(signIn).toHaveLength(1);
+    expect(signIn[0]?.title).toBe("A provider needs sign in");
+    // Product words, never the client's own (they name a terminal command).
+    expect(signIn[0]?.body).toBe(
+      "The crewmate could not reach Claude, which needs you to sign in again.",
+    );
+    expect(wakes).toContainEqual({ ref: taskId, origin: "agent" });
+    // The record keeps the class, and the feed line reads it, not the words.
+    const failed = tasks
+      .timeline(taskId)
+      .filter((event) => event.kind === "failed")
+      .at(-1);
+    expect(failed?.data).toMatchObject({
+      error: "Failed to reach Claude.",
+      failureSignals: "typed",
+      cutOff: { class: "signed_out" },
+    });
+    expect(taskFeedLine(tasks.get(taskId) as TaskRecord, failed as TaskEvent)?.text).toBe(
+      "Problem: the provider did not accept your sign-in - sign in again",
+    );
+  });
+
+  it("never reads a sign-in from a typed backend's words, and keeps other cut-offs on the provider-failure path", async () => {
+    const crewmate = {
+      ...fakeCrewmate(),
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
+    } satisfies FakeCrewmate;
+    const { supervisor, cards, ops, tasks } = setup(crewmate);
+    const lastFeedLine = () => {
+      const failed = tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "failed")
+        .at(-1);
+      return taskFeedLine(tasks.get(taskId) as TaskRecord, failed as TaskEvent)?.text;
+    };
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    // Words that say 401, with no typed class: an ordinary failed turn.
+    crewmate.emit({ type: "turn_failed", taskId, error: "401: invalid_api_key" });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeUndefined();
+    // The honest retry keeps its guidance, as for any provider failure.
+    expect(ops.at(-1)).toContain("failed at the provider: 401: invalid_api_key");
+    // Nor does the feed line read a sign-in out of those words.
+    expect(lastFeedLine()).toBe("Problem: something went wrong - try again");
+    // A spent allowance or a refusal keeps today's provider-failure path,
+    // and its feed line is its class's.
+    for (const [cutOff, line] of [
+      [
+        { class: "no_headroom", resetsAt: 1_800_000_000_000 },
+        "Problem: your plan's allowance ran out - it comes back when it resets",
+      ],
+      [{ class: "refused" }, "Problem: something went wrong - try again"],
+    ] as const) {
+      await supervisor.steerCrewmate(taskId, "again");
+      await tick();
+      crewmate.emit({ type: "turn_failed", taskId, error: "Not now.", cutOff });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeUndefined();
+      expect(lastFeedLine()).toBe(line);
+    }
+  });
+
+  it("records a typed backend's session failure as typed, so its words never read as a sign-in", async () => {
+    const crewmate = {
+      ...fakeCrewmate(),
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
+    } satisfies FakeCrewmate;
+    const { supervisor, cards, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    // The client exited, in words a prose classifier would read as a sign-in.
+    crewmate.failPrompt("Claude Code process exited with code 1: 401 Unauthorized");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "failed" });
+    expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeUndefined();
+    const closed = tasks.timeline(taskId).find((event) => event.data?.reason === "failed");
+    expect(closed?.data).toMatchObject({
+      reason: "failed",
+      error: "Claude Code process exited with code 1: 401 Unauthorized",
+      failureSignals: "typed",
+    });
+    expect(taskFeedLine(tasks.get(taskId) as TaskRecord, closed as TaskEvent)?.text).toBe(
+      "Failed: something went wrong - try again",
+    );
+  });
+
+  it.each(["cancelled", "failed"] as const)(
+    "retires every open card on a %s task without presenting deferred work",
+    async (reason) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, cards, specs, tasks, cardStore, repos, workspace } = setup(crewmate);
+      const { taskId } = await supervisor.commission({
+        title: "Retire the choices",
+        intent: intentOf("do the work"),
+      });
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+      const decision = {
+        title: "Choose a course",
+        body: "<p>Inspect the port hatch first.</p><p>It is closest; starboard takes longer.</p>",
+        actions: [
+          { id: "port", label: "Port", default: true },
+          { id: "starboard", label: "Starboard" },
+        ],
+      };
+      const emit = (id: string, extra = {}) => specs[0]?.onCard?.({ ...decision, id, ...extra });
+      await emit("ready");
+      await emit("answer");
+      await emit("note", { actions: [] });
+      specs[0]?.onReport?.("The choices are ready; the inspection continues.");
+      await tick();
+      const ids = ["ready", "answer", "note"].map((id) => `card-${taskId}-${id}`);
+      await supervisor.replyToCard(ids[1] as string, "Check the hinge first.");
+      // An unreleased revision keeps the previous offer on the stage.
+      await emit("ready", {
+        body: "<p>Inspect the port hatch first.</p><p>Its hinge needs checking.</p>",
+      });
+      await emit("hidden");
+      ids.push(`card-${taskId}-hidden`);
+      ids.push(supervisor.addFirstmateCard({ ...decision, taskId }));
+      supervisor.addAuthDecisionCard("task-sign-in", "crewmate 1", "Sign in again.", { taskId });
+      ids.push("task-sign-in");
+      const other = supervisor.addFirstmateCard({ ...decision, title: "Another task's choice" });
+      await tick();
+      expect(supervisor.cardsSnapshot().find((card) => card.id === ids[1])?.awaiting).toBe(
+        "answer",
+      );
+      expect(supervisor.cardsSnapshot().find((card) => card.id === ids[3])?.awaiting).toBe(
+        "close-out",
+      );
+      expect(cardStore.history(ids[0] as string)).toHaveLength(1);
+      const raisedBefore = tasks.timeline(taskId).filter((event) => event.kind === "card_raised");
+      const protocol = new TaskProtocol({
+        tasks,
+        repos,
+        cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cardsSnapshot() },
+        broadcastEvent: () => {},
+        emit: () => {},
+      });
+      try {
+        expect(protocol.detail(taskId).waitingCardId).not.toBeNull();
+        if (reason === "cancelled") await supervisor.interruptCrewmate(taskId, "cancel");
+        crewmate.failPrompt(reason === "cancelled" ? "aborted" : "The client exited.");
+        await tick();
+        expect(tasks.get(taskId)).toMatchObject({
+          status: "dropped",
+          closedReason: reason,
+          gate: null,
+        });
+        expect(protocol.detail(taskId)).toMatchObject({
+          waitingCardId: null,
+          flags: { needsYou: false },
+        });
+        expect(cards().map((card) => card.id)).toEqual([other]);
+        expect(cardStore.listOpen().map((card) => card.id)).toEqual([other]);
+        for (const id of ids) {
+          expect(cardStore.get(id)).toBeDefined();
+          expect(cardStore.chosenAction(id)).toBe(reason);
+          expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toMatchObject(
+            [{ actor: "host", payload: { reason: "task-retired", note: reason } }],
+          );
+          expect(supervisor.act(id, "port")).toEqual({});
+        }
+        expect(cardStore.history(ids[0] as string)).toHaveLength(1);
+        expect(cardStore.messages(ids[1] as string).at(-1)?.text).toBe("Check the hinge first.");
+        expect(tasks.timeline(taskId).filter((event) => event.kind === "card_raised")).toEqual(
+          raisedBefore,
+        );
+        expect(workspace.removeTaskWorktree).toHaveBeenCalled();
+      } finally {
+        protocol.dispose();
+      }
+    },
+  );
+
+  it.each(["provider failure", "interruption"] as const)(
+    "keeps cards on a resumable %s rather than treating it as terminal",
+    async (boundary) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, specs, tasks, cardStore } = setup(crewmate);
+      const { taskId } = await supervisor.commission({
+        title: "Inspect",
+        intent: intentOf("inspect"),
+      });
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+      await specs[0]?.onCard?.({
+        id: "inspection",
+        title: "Inspect port first",
+        body: "<p>Inspect port first.</p><p>It is closest; starboard can wait.</p>",
+        actions: [
+          { id: "port", label: "Port", default: true },
+          { id: "starboard", label: "Starboard" },
+        ],
+      });
+      if (boundary === "interruption") {
+        await supervisor.interruptCrewmate(taskId, "interrupt");
+        crewmate.failPrompt("aborted");
+      } else {
+        crewmate.emit({ type: "turn_failed", taskId, error: "Provider unavailable." });
+        crewmate.finishPrompt();
+      }
+      await tick();
+      expect(tasks.get(taskId)?.status).toBe("active");
+      const id = `card-${taskId}-inspection`;
+      expect(supervisor.cardsSnapshot().map((card) => card.id)).toContain(id);
+      expect(supervisor.cardsSnapshot().find((card) => card.id === id)?.awaiting).toBeUndefined();
+      expect(cardStore.chosenAction(id)).toBeUndefined();
+      // Retire this test's now-idle runtime and pending retry through the real lifecycle.
+      await supervisor.interruptCrewmate(taskId, "cancel");
+      await tick();
+    },
+  );
+
+  it("cancels through the lifecycle plane", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
+      type: "task_finished",
+      status: "cancelled",
+      title: "long",
+    });
+    expect(cards()).toEqual([]);
+  });
+
+  it("cancels an idle reported task that stayed active until settled", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("open the pr"),
+    });
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "PR opened." });
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
+    expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
+      type: "task_finished",
+      status: "cancelled",
+      title: "Ship it",
+    });
+  });
+
+  it("does not relabel an already-closed task as cancelled", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate);
+    seedTask(tasks, {
+      id: "t-done",
+      title: "Already shipped",
+      prompt: "done",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-done",
+      sessionFile: null,
+      accountId: null,
+      status: "idle",
+      createdAt: Date.now(),
+    });
+    // Landing closes it done; a later cancel must not relabel a closed row.
+    await supervisor.settleTask("t-done", "land", undefined, "captain");
+    await tick();
+    expect(tasks.get("t-done")?.status).toBe("done");
+    const finishedBefore = events.filter((e) => e.type === "task_finished").length;
+    await supervisor.interruptCrewmate("t-done", "cancel");
+    expect(tasks.get("t-done")).toMatchObject({ status: "done", closedReason: "landed" });
+    expect(events.filter((e) => e.type === "task_finished").length).toBe(finishedBefore);
+  });
+
+  it("cancels a persist-only idle task that stayed active until settled", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks, cards, cardStore } = setup(crewmate);
+    seedTask(tasks, {
+      id: "t-idle",
+      title: "Left idle",
+      prompt: "work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-idle",
+      sessionFile: null,
+      accountId: null,
+      status: "idle",
+      createdAt: Date.now(),
+    });
+    const cardId = supervisor.addFirstmateCard({
+      taskId: "t-idle",
+      title: "Choose the next inspection",
+      body: "<p>Inspect port first.</p><p>It is closest; starboard can wait.</p>",
+      actions: [
+        { id: "port", label: "Port", default: true },
+        { id: "starboard", label: "Starboard" },
+      ],
+    });
+    await tick();
+    expect(cards().map((card) => card.id)).toEqual([cardId]);
+    await supervisor.interruptCrewmate("t-idle", "cancel");
+    await tick();
+    expect(cards()).toEqual([]);
+    expect(cardStore.chosenAction(cardId)).toBe("cancelled");
+    expect(legacyStateOf(tasks.get("t-idle"))).toBe("cancelled");
+    expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
+      type: "task_finished",
+      status: "cancelled",
+      title: "Left idle",
+    });
+  });
+
+  it("cancels a persist-only interrupted task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate);
+    seedTask(tasks, {
+      id: "t-int",
+      title: "Cut mid-turn",
+      prompt: "work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-int",
+      sessionFile: null,
+      accountId: null,
+      status: "interrupted",
+      createdAt: Date.now(),
+    });
+    await supervisor.interruptCrewmate("t-int", "cancel");
+    expect(legacyStateOf(tasks.get("t-int"))).toBe("cancelled");
+    expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
+      type: "task_finished",
+      status: "cancelled",
+      title: "Cut mid-turn",
+    });
+  });
+
+  it("keeps the task steerable after an interrupt", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    // The interrupt is the Firstmate's own tool; its receipt is never a wake.
+    expect(ops.some((line) => line.includes("interrupted"))).toBe(false);
+    await supervisor.steerCrewmate(taskId, "carry on");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("carry on");
+  });
+
+  it("records an abort request and only claims success after the transport confirms it", async () => {
+    const crewmate = fakeCrewmate();
+    crewmate.abort = vi.fn(async () => {});
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+
+    expect(
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "interrupted")
+        .map((event) => event.data),
+    ).toEqual([
+      expect.objectContaining({ effect: "requested", error: null }),
+      expect.objectContaining({ effect: "aborted-turn", error: null }),
+    ]);
+  });
+
+  it("records a redacted abort failure without claiming the turn was aborted", async () => {
+    const crewmate = fakeCrewmate();
+    crewmate.abort = vi.fn(async () => {
+      throw new Error("password=hunter2");
+    });
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+
+    await expect(supervisor.interruptCrewmate(taskId, "interrupt")).rejects.toThrow("hunter2");
+
+    const events = tasks.timeline(taskId).filter((event) => event.kind === "interrupted");
+    expect(events.map((event) => event.data?.effect)).toEqual(["requested", "abort-failed"]);
+    expect(events.at(-1)?.data?.error).not.toContain("hunter2");
+    expect(supervisor.crewStatus(taskId)[0]?.status).toBe("running");
+  });
+
+  it("gives an interrupt the Firstmate asked for a feed-line receipt, never a wake", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    const opsBefore = ops.length;
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(ops.slice(opsBefore).filter((op) => op.includes("interrupted"))).toEqual([]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "firstmate_note",
+        text: "Task long interrupted: it can still be told what to do",
+      }),
+    );
+  });
+
+  it("reads a turn its session settles quietly after an interrupt as the interrupt it asked for", async () => {
+    // Pi and Claude alike settle the turn an interrupt cut short; neither throws.
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Halfway through the rivet count." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    const receipts = () =>
+      events.filter(
+        (event) =>
+          event.type === "firstmate_note" &&
+          event.text === "Task long interrupted: it can still be told what to do",
+      );
+    expect(receipts()).toHaveLength(1);
+
+    // The interrupt is spent: the next turn ends as an ordinary one.
+    await supervisor.steerCrewmate(taskId, "carry on");
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Counted all forty rivets." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(receipts()).toHaveLength(1);
+    expect(tasks.get(taskId)?.outcome).toBe("Counted all forty rivets.");
+  });
+
+  it("reads a continuation that ends after an interrupt as the interrupt it asked for", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    // The backend resumed on its own; the Firstmate interrupts that work.
+    crewmate.emit({ type: "continuation_started" });
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "continuation_ended" });
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Task long interrupted: it can still be told what to do",
+    });
+  });
+
+  it("reports fresh crew status from the store, not memory", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Status check",
+      intent: intentOf("do stuff"),
+    });
+    await tick();
+    const running = supervisor.crewStatus();
+    expect(running).toHaveLength(1);
+    expect(running[0]).toMatchObject({ taskId, title: "Status check", status: "running" });
+    crewmate.finishPrompt();
+    await tick();
+    expect(supervisor.crewStatus()[0]?.status).toBe("idle");
+    expect(supervisor.crewStatus("missing")).toEqual([]);
+  });
+
+  it("counts a live idle runtime as one idle crewmate on both surfaces", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Live idle",
+      intent: intentOf("do stuff"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    const live = supervisor.crewStatus().filter((entry) => entry.status === "idle");
+    expect(live).toHaveLength(1);
+    expect(live[0]).toMatchObject({ taskId, status: "idle" });
+    expect(live[0]?.crewmate).toBeDefined();
+  });
+
+  it("carries the app's recorded CI reading in crew_status once one exists, and none before", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("do stuff"),
+    });
+    await tick();
+    expect(supervisor.crewStatus(taskId)[0]?.ci).toBeUndefined();
+    const at = Date.now() - 4 * 60_000;
+    tasks.recordDelivery(
+      taskId,
+      { ci: "red", ciAt: at, headSha: "feedbeef00" },
+      { kind: "ci", text: "CI red", feed: false },
+    );
+    expect(supervisor.crewStatus(taskId)[0]?.ci).toEqual({
+      overall: "red",
+      readAt: new Date(at).toISOString(),
+      ageMinutes: 4,
+      head: "feedbeef00",
+    });
+  });
+
+  it("keeps strip idle aligned with crew_status when a runtime sits beside a store orphan", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Still here",
+      intent: intentOf("do stuff"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    seedTask(tasks, {
+      id: "edccc9a2",
+      title: "Half torn down",
+      prompt: "gone",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-edccc9a2",
+      sessionFile: null,
+      accountId: null,
+      status: "idle",
+      createdAt: Date.now(),
+    });
+    // Strip idle and crew_status idle agree: the live runtime plus the
+    // resumable record a previous process left.
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 2 });
+    const idle = supervisor.crewStatus().filter((entry) => entry.status === "idle");
+    expect(idle.map((entry) => entry.taskId).sort()).toEqual([taskId, "edccc9a2"].sort());
+  });
+
+  it("discarding closes the record, retires its cards, and drops only the worktree (D2)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, workspace, tasks, cardStore } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "c",
+      intent: intentOf("clean up later"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+
+    expect(await supervisor.settleTask(taskId, "discard")).toBe('Discarded "c".');
+    await tick();
+    // The row survives, closed; its timeline says why; the card row stays
+    // resolved rather than deleted.
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "dropped",
+      closedReason: "discarded",
+      workspaceState: "removed",
+    });
+    expect(tasks.get(taskId)?.closedAt).toBeGreaterThan(0);
+    expect(tasks.timeline(taskId).map((event) => event.kind)).toEqual([
+      "created",
+      "dispatched",
+      "briefed",
+      "status",
+      "note",
+    ]);
+    expect(cards().filter((card) => card.taskId === taskId)).toEqual([]);
+    expect(cardStore.listOpen().filter((card) => card.taskId === taskId)).toEqual([]);
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId, branch: `fm/task-${taskId}` }),
+    );
+    // Settled means settled: a second discard has nothing to do.
+    expect(await supervisor.settleTask(taskId, "discard")).toContain("already discarded");
+  });
+
+  it("announces an intelligence downgrade in the feed, never silently (P7)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "high",
+        servedBucket: "medium",
+        rule: "R8",
+      },
+    });
+    await supervisor.commission({
+      title: "Big refactor",
+      intent: intentOf("redesign the auth layer"),
+    });
+    await tick();
+    const note = events.find((event) => event.type === "firstmate_note");
+    expect(note && "text" in note ? note.text : "").toBe(
+      'Using a medium model for "Big refactor" - high models have used up their allowance right now.',
+    );
+  });
+
+  it("names a withheld account in the downgrade line, not a spent allowance (FI3-1375)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "high",
+        servedBucket: "medium",
+        withheld: { provider: "anthropic-claude", reason: "signed_out" },
+        rule: "R8",
+      },
+    });
+    await supervisor.commission({
+      title: "Big refactor",
+      intent: intentOf("redesign the auth layer"),
+    });
+    await tick();
+    const note = events.find((event) => event.type === "firstmate_note");
+    expect(note && "text" in note ? note.text : "").toBe(
+      'Using a medium model for "Big refactor" - Claude\'s high models are paused until you sign in again.',
+    );
+  });
+
+  it("uses the actually served level's explicit choice exactly under Quick care", async () => {
+    const choice = vi.fn(() => "high" as const);
+    const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+      reasoningChoice: choice,
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-6.1-sol" },
+        bucket: "high",
+        servedBucket: "medium",
+        rule: "R3",
+      },
+    });
+    await supervisor.commission({
+      title: "Build the approved change",
+      intent: intentOf("build from this plan"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    expect(choice).toHaveBeenCalledWith({ provider: "openai-codex", id: "gpt-6.1-sol" }, "medium");
+    expect(sessionSpecs[0]?.thinking).toEqual({ level: "high" });
+  });
+
+  it("records the reasoning the crewmate's session opened at beside its model", async () => {
+    const crewmate = fakeCrewmate({ reasoning: { level: "high", lower: "quick" } });
+    const { supervisor, tasks } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5" },
+        bucket: "high",
+        servedBucket: "high",
+        rule: "R3",
+      },
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Add a shortcut",
+      intent: intentOf("add a shortcut that opens the Tasks panel"),
+    });
+    await tick();
+    const dispatched = tasks.timeline(taskId).find((event) => event.kind === "dispatched");
+    expect(dispatched?.data).toMatchObject({
+      model: "fm-mock/mock-1",
+      reasoning: { level: "high", lower: "quick" },
+    });
+  });
+
+  it("stays quiet when the fallback went up a bucket, not down", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5" },
+        bucket: "low",
+        servedBucket: "medium",
+        rule: "R7",
+      },
+    });
+    await supervisor.commission({ title: "Tiny fix", intent: intentOf("fix a typo") });
+    await tick();
+    expect(events.find((event) => event.type === "firstmate_note")).toBeUndefined();
+  });
+
+  it("closes the task's open PR on GitHub when a direct-pr task is discarded", async () => {
+    const crewmate = fakeCrewmate();
+    const closePullRequest = vi.fn(async () => ({
+      ok: true,
+      text: "Closed PR #9 on GitHub. https://github.com/x/y/pull/9",
+    }));
+    const { supervisor, workspace, tasks } = setup(crewmate, { closePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Shipped elsewhere",
+      intent: intentOf("open a PR"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    const result = await supervisor.settleTask(taskId, "discard");
+    expect(closePullRequest).toHaveBeenCalledWith(taskId);
+    expect(result).toBe(
+      'Discarded "Shipped elsewhere". Closed PR #9 on GitHub. https://github.com/x/y/pull/9',
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    expect(workspace.removeTaskWorktree).toHaveBeenCalled();
+  });
+
+  it.each(["rework", "cancel-idle", "cancel-running", "failed"] as const)(
+    "closes an abandoned direct-pr attempt's PR on %s and records the outcome",
+    async (path) => {
+      const crewmate = fakeCrewmate();
+      const change: ForgeChange = { number: 9, branch: "", headSha: "abc", url: null };
+      const forge = {
+        kind: "github",
+        host: "github.com",
+        place: "GitHub",
+        hasChecks: true,
+        changeFor: vi.fn(async (branch: string) => ({ ...change, branch })),
+        close: vi.fn(async () => {}),
+        label: () => "#9",
+        url: () => null,
+      } as unknown as Forge;
+      let prCi: PrCiService;
+      const closePullRequest = vi.fn((id: string) => prCi.close(id));
+      const { supervisor, tasks, workspace, repos } = setup(crewmate, { closePullRequest });
+      prCi = new PrCiService({ tasks, repos, forgeFor: () => forge });
+      const { repo } = await repos.setup({ kind: "init", name: "abandoned" });
+      repos.configure(repo.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Abandoned attempt",
+        intent: intentOf("fix the meter"),
+        repoId: repo.id,
+      });
+      tasks.recordDelivery(taskId, { prNumber: 9 });
+      await tick();
+      if (path === "rework" || path === "cancel-idle") {
+        crewmate.finishPrompt();
+        await tick();
+      }
+      if (path === "rework") {
+        await supervisor.commission({
+          title: "Fresh attempt",
+          intent: intentOf("try a stronger model"),
+          shape: { escalate_from: tasks.get(taskId)?.key },
+        });
+      } else if (path === "failed") {
+        crewmate.failPrompt("The client exited.");
+      } else {
+        await supervisor.interruptCrewmate(taskId, "cancel");
+        if (path === "cancel-running") crewmate.failPrompt("aborted");
+      }
+      await tick();
+      expect(closePullRequest).toHaveBeenCalledExactlyOnceWith(taskId);
+      expect(forge.close).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ number: 9, branch: tasks.get(taskId)?.branch }),
+      );
+      expect(tasks.get(taskId)).toMatchObject({
+        status: "dropped",
+        closedReason: path === "rework" ? "superseded" : path === "failed" ? "failed" : "cancelled",
+      });
+      expect(tasks.timeline(taskId)).toContainEqual(
+        expect.objectContaining({ text: "Closed PR #9 on GitHub." }),
+      );
+      expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId }),
+      );
+    },
+  );
+
+  it("does not revisit an already-closed attempt's leftover PR on rework", async () => {
+    const crewmate = fakeCrewmate();
+    const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
+    const { supervisor, tasks } = setup(crewmate, { closePullRequest });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const previous = seedTask(tasks, {
+      id: "closed-attempt",
+      title: "Already cancelled",
+      status: "cancelled",
+      difficulty: "medium",
+      branch: "fm/task-closed-attempt",
+      worktreeDir: "/w/closed-attempt",
+    });
+    tasks.recordDelivery(previous.id, { prNumber: 9 });
+    await supervisor.commission({
+      title: "Fresh attempt",
+      intent: intentOf("try a stronger model"),
+      shape: { escalate_from: previous.key },
+    });
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(tasks.get(previous.id)?.closedReason).toBe("cancelled");
+  });
+
+  it.each(["rework", "cancel", "failed"] as const)(
+    "keeps %s cleanup best effort and records a thrown PR close failure",
+    async (path) => {
+      const crewmate = fakeCrewmate();
+      const closePullRequest = vi.fn(async () => {
+        throw new Error("GitHub unavailable");
+      });
+      const { supervisor, tasks, workspace } = setup(crewmate, { closePullRequest });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      const { taskId } = await supervisor.commission({
+        title: "Abandoned",
+        intent: intentOf("fix it"),
+      });
+      await tick();
+      if (path === "failed") {
+        crewmate.failPrompt("The client exited.");
+      } else {
+        crewmate.finishPrompt();
+        await tick();
+        if (path === "cancel") await supervisor.interruptCrewmate(taskId, "cancel");
+        else
+          await supervisor.commission({
+            title: "Fresh attempt",
+            intent: intentOf("try a stronger model"),
+            shape: { escalate_from: tasks.get(taskId)?.key },
+          });
+      }
+      await tick();
+      expect(tasks.get(taskId)?.status).toBe("dropped");
+      expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId }),
+      );
+      expect(tasks.timeline(taskId)).toContainEqual(
+        expect.objectContaining({
+          text: "Could not close its PR: GitHub unavailable",
+          // News on the record's Activity, as its writer declared.
+          data: { problem: "GitHub unavailable", news: true },
+        }),
+      );
+    },
+  );
+
+  it.each(["cancel", "failed"] as const)("never closes a local-only PR on %s", async (path) => {
+    const crewmate = fakeCrewmate();
+    const closePullRequest = vi.fn(async () => ({ ok: true, text: "" }));
+    const { supervisor } = setup(crewmate, { closePullRequest });
+    const { taskId } = await supervisor.commission({ title: "Local", intent: intentOf("fix it") });
+    await tick();
+    if (path === "failed") crewmate.failPrompt("The client exited.");
+    else {
+      crewmate.finishPrompt();
+      await tick();
+      await supervisor.interruptCrewmate(taskId, "cancel");
+    }
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+  });
+
+  it("never asks GitHub to close a PR for a local-only task's discard", async () => {
+    const crewmate = fakeCrewmate();
+    const closePullRequest = vi.fn(async () => ({ ok: true, text: "" }));
+    const { supervisor, tasks } = setup(crewmate, { closePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Local only",
+      intent: intentOf("no PR here"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+
+    const result = await supervisor.settleTask(taskId, "discard");
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(result).toBe('Discarded "Local only".');
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+  });
+
+  it("refuses a dirty discard without confirm and never mints a card", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, cards } = setup(crewmate);
+    (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: true,
+      unlandedCommits: 2,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Precious",
+      intent: intentOf("real work"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+
+    const refused = await supervisor.settleTask(taskId, "discard");
+    expect(refused).toContain("without confirm");
+    expect(refused).toContain("2 commits and uncommitted edits");
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(cards().find((card) => card.id === `card-discard-${taskId}`)).toBeUndefined();
+
+    const confirmed = await supervisor.settleTask(taskId, "discard", true);
+    expect(confirmed).toContain("Discarded");
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    expect(workspace.removeTaskWorktree).toHaveBeenCalled();
+  });
+
+  it("lands through settle_task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks } = setup(crewmate);
+    (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const { taskId } = await supervisor.commission({ title: "Land it", intent: intentOf("work") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    expect(result).toContain("into main.");
+    expect(workspace.landTaskWork).toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "done",
+      closedReason: "landed",
+      workspaceState: "removed",
+    });
+    // Settled work is history: it leaves crew_status, and a second land refuses.
+    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
+    expect(await supervisor.settleTask(taskId, "land", undefined, "captain")).toContain(
+      "already landed",
+    );
+  });
+
+  it("tells a crewmate how its revision of a seen card compares, and never refuses a rewrite", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "cards",
+      intent: intentOf("revise a card"),
+    });
+    await tick();
+    const onCard = specs[0]?.onCard;
+    const note = (body: string) => ({ id: "plan", title: "The plan", body, actions: [] });
+    const first = await onCard?.(note("<p>One.</p><p>Two.</p><p>Three.</p>"));
+    // Never seen: no counts.
+    expect(first).toBe(`card-${taskId}-plan`);
+    crewmate.finishPrompt();
+    await tick();
+    const stage = cards().find((card) => card.id === first) as Card;
+    supervisor.cardSeen(stage.id, stage.offerId as string);
+
+    const small = await onCard?.(note("<p>One.</p><p>Two.</p><p>Three again.</p>"));
+    expect(small).toContain("1 part new and 1 removed");
+    const rewrite = await onCard?.(note("<p>A.</p><p>B.</p><p>C.</p>"));
+    expect(rewrite).toContain("3 parts new and 3 removed");
+    expect(rewrite).toContain('"Rewritten"');
+  });
+
+  it("turns crewmate-emitted cards into the card stack with uniform chrome", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, specs, cardStore } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "cards",
+      intent: intentOf("show every card kind"),
+    });
+    await tick();
+    const onCard = specs[0]?.onCard;
+    expect(onCard).toBeTypeOf("function");
+
+    onCard?.({
+      title: "Pick a course",
+      body: "<p>Plotting a new course is the faster route.</p><p>Holding course waits out the storm.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    onCard?.({ title: "Quota note", body: "All steady.", actions: [] });
+    // A preview is a decision whose body is interactive: same chrome, and
+    // the choice sits on the card that shows the thing.
+    onCard?.({
+      title: "Preview",
+      body: "<button data-inf-action='hold'>Hold</button><script>wire();</script>",
+      actions: [
+        { id: "turn", label: "Turn back" },
+        { id: "hold", label: "Hold", default: true },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+
+    const snapshot = cards();
+    expect(snapshot.map(cardPresentation)).toEqual(["decision", "decision", "note"]);
+    // A card carries exactly the actions its author declared (P0, WI-1).
+    const preview = snapshot.find((card) => card.title === "Preview") as Card;
+    expect(preview.actions.map((action) => action.id)).toEqual(["turn", "hold"]);
+    const decision = snapshot.find((card) => card.title === "Pick a course") as Card;
+    expect(decision.actions.map((action) => action.id)).toEqual(["hold", "change"]);
+    expect(decision.actions[0]).toMatchObject({ id: "hold", variant: "secondary" });
+    expect(decision.actions.at(-1)).toMatchObject({ id: "change", variant: "primary" });
+    const note = snapshot[2] as Card;
+    expect(note.actions).toEqual([]);
+    // The chrome meta line names the task, and the catalog model rides
+    // beside it as its own field (the chrome's chip) - never the task key,
+    // provider, crewmate index, or branch name.
+    expect(snapshot.every((card) => card.meta === "cards" && card.model === "Claude Fable 5")).toBe(
+      true,
+    );
+
+    // The action round-trip: a declared choice steers the idle session as a
+    // new turn and the resolution is recorded.
+    supervisor.act(decision.id, "change");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      'Card "Pick a course": the user chose "Plot new course" (change).',
+    );
+    expect(cardStore.chosenAction(decision.id)).toBe("change");
+    expect(cards().find((card) => card.id === decision.id)).toBeUndefined();
+    expect(taskId).toBeTruthy();
+  });
+
+  it("reports when a resolved crewmate card choice cannot be delivered", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, specs } = setup(crewmate);
+    await supervisor.commission({
+      title: "cards",
+      intent: intentOf("ask for a choice"),
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "Pick a course",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    await tick();
+    const card = supervisor.cardsSnapshot().find((entry) => entry.title === "Pick a course");
+    vi.spyOn(supervisor, "steerCrewmate").mockRejectedValue(new Error("session unreachable"));
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(card?.id ?? "", "change");
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: expect.stringMatching(
+          /^Could not deliver the card choice for "cards":.*session unreachable/,
+        ),
+        // It names its task, whose record keeps it (docs/task-record.md).
+        taskId: expect.any(String),
+      }),
+    );
+    expect(supervisor.cardsSnapshot()).toEqual([]);
+  });
+
+  it("close_card removes a card from the snapshot and fails loudly on a second close", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, cardStore } = setup(crewmate);
+    const id = supervisor.addFirstmateCard({
+      title: "Stale preview",
+      body: "Superseded.",
+      actions: [],
+    });
+    await tick();
+    expect(cards().find((card) => card.id === id)).toBeDefined();
+
+    const closed = supervisor.closeCard(id, { kind: "firstmate" }, "prototype superseded");
+    await tick();
+    expect(closed).toContain("Closed card");
+    expect(cards().find((card) => card.id === id)).toBeUndefined();
+    expect(cardStore.chosenAction(id)).toBe("prototype superseded");
+
+    expect(() => supervisor.closeCard(id, { kind: "firstmate" })).toThrow(/already closed/);
+    expect(() => supervisor.closeCard("card-fm-missing", { kind: "firstmate" })).toThrow(
+      /Unknown card/,
+    );
+  });
+
+  it("close_card refuses a card the crewmate did not emit", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, specs } = setup(crewmate);
+    const { taskId: ownerId } = await supervisor.commission({
+      title: "Owner",
+      intent: intentOf("emit a note"),
+    });
+    await tick();
+    const { taskId: otherId } = await supervisor.commission({
+      title: "Other",
+      intent: intentOf("do not touch that card"),
+    });
+    await tick();
+
+    specs[0]?.onCard?.({ title: "Owner note", body: "mine", actions: [] });
+    await tick();
+    const owned = cards().find((card) => card.title === "Owner note") as Card;
+    expect(owned.taskId).toBe(ownerId);
+
+    const firstmateId = supervisor.addFirstmateCard({
+      title: "Firstmate note",
+      body: "not yours",
+      actions: [],
+    });
+    await tick();
+
+    expect(() => supervisor.closeCard(owned.id, { kind: "crewmate", taskId: otherId })).toThrow(
+      /not emitted by this task/,
+    );
+    expect(() => supervisor.closeCard(firstmateId, { kind: "crewmate", taskId: ownerId })).toThrow(
+      /not emitted by this task/,
+    );
+    expect(cards().find((card) => card.id === owned.id)).toBeDefined();
+    expect(cards().find((card) => card.id === firstmateId)).toBeDefined();
+
+    supervisor.closeCard(owned.id, { kind: "crewmate", taskId: ownerId });
+    await tick();
+    expect(cards().find((card) => card.id === owned.id)).toBeUndefined();
+    expect(supervisor.crewStatus(ownerId)[0]?.status).not.toBe("completed");
+  });
+
+  /**
+   * Retired with the close rule (cards-as-threads phase 1, the captain's Q3
+   * A): the Firstmate used to dismiss any card on the captain's behalf, and
+   * the record then said the captain had closed something he never touched.
+   * Words about a crewmate's card now reach that crewmate as a thread reply
+   * or a steer, so only the card's author withdraws it.
+   */
+  it("close_card refuses Firstmate a crewmate's card and names the door", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, cardStore, specs } = setup(crewmate);
+    const { taskId: ownerId } = await supervisor.commission({
+      title: "Owner",
+      intent: intentOf("emit a note"),
+    });
+    await tick();
+
+    specs[0]?.onCard?.({ title: "Owner note", body: "mine", actions: [] });
+    await tick();
+    const owned = cards().find((card) => card.title === "Owner note") as Card;
+
+    expect(() =>
+      supervisor.closeCard(owned.id, { kind: "firstmate" }, "answered by the captain"),
+    ).toThrow(/not yours to close/);
+    await tick();
+    // The card is untouched: still on the stack, still unresolved.
+    expect(cards().find((card) => card.id === owned.id)).toBeDefined();
+    expect(cardStore.chosenAction(owned.id)).toBeUndefined();
+    expect(supervisor.crewStatus(ownerId)[0]?.status).not.toBe("completed");
+  });
+
+  it.each(["land", "merge-pr", "discard"] as const)(
+    "%s: the settle effect receipts the card before work, excludes duplicate settles through cleanup, and reports completion",
+    async (action) => {
+      const operation = deferred<void>();
+      const cleanup = deferred<void>();
+      const mergePullRequest = vi.fn(() =>
+        operation.promise.then(() => ({ ok: true, text: "Change #9 is in on GitHub." })),
+      );
+      const { supervisor, tasks, workspace, cardStore, events, cards } = setup(fakeCrewmate(), {
+        mergePullRequest,
+      });
+      seedTask(tasks, { id: "receipt", title: "Ship it", status: "idle", worktreeDir: "/work" });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+        action === "merge-pr" ? "direct-pr" : "local-only",
+      );
+      vi.mocked(workspace.landTaskWork).mockImplementation(() =>
+        operation.promise.then(() => ({ mode: "fast-forward" })),
+      );
+      vi.mocked(workspace.taskWorkStatus).mockImplementation(() =>
+        operation.promise.then(() => ({ dirty: false, unlandedCommits: 0 })),
+      );
+      vi.mocked(workspace.removeTaskWorktree).mockReturnValue(cleanup.promise);
+      const offer = () =>
+        supervisor.addFirstmateCard({
+          requiredActions: [],
+          taskId: "receipt",
+          title: "Ready to settle",
+          body: "Choose what happens to this work.",
+          // The action id is a name; what the click does is its effect. A
+          // merge on the local-only task lands, on the direct-pr task merges.
+          actions: [
+            {
+              id: action,
+              label: action,
+              effect: action === "discard" ? SETTLE_DISCARD : SETTLE_MERGE,
+            },
+          ],
+        });
+      const first = offer();
+      const second = offer();
+      supervisor.act(first, action);
+      const actionText =
+        action === "merge-pr"
+          ? "Putting the change in"
+          : action === "land"
+            ? "Putting the work in"
+            : "Discarding";
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: `${actionText} for "Ship it" - the result will appear here.`,
+      });
+      expect(supervisor.cardsSnapshot().map((card) => card.id)).not.toContain(first);
+      expect(cardStore.chosenAction(first)).toBe(action);
+      expect(cardStore.listOpen().map((card) => card.id)).not.toContain(first);
+      expect(tasks.get("receipt")?.status).toBe("active");
+      expect(tasks.timeline("receipt").at(-1)).toMatchObject({
+        kind: "card_resolved",
+        actor: "captain",
+      });
+      supervisor.act(first, action); // Same-card double click is a no-op.
+      supervisor.act(second, action); // Another card cannot race this task.
+      expect(await supervisor.settleTask("receipt", "merge-pr")).toContain("already in progress");
+      await tick();
+      expect(cards()).toEqual([]); // Coalesced push is independent of the operation.
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: expect.stringContaining("already in progress"),
+      });
+      expect(mergePullRequest).toHaveBeenCalledTimes(action === "merge-pr" ? 1 : 0);
+      expect(workspace.landTaskWork).toHaveBeenCalledTimes(action === "land" ? 1 : 0);
+      expect(workspace.taskWorkStatus).toHaveBeenCalledTimes(action === "discard" ? 1 : 0);
+      operation.resolve();
+      await vi.waitFor(() => expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(1));
+      expect(await supervisor.settleTask("receipt", "discard")).toContain("already in progress");
+      cleanup.resolve();
+      await vi.waitFor(() =>
+        expect(events).toContainEqual({
+          type: "firstmate_note",
+          text: expect.stringMatching(/^(Merged ".*"|Change #\d+ is in on GitHub|Discarded)/),
+        }),
+      );
+      expect(cardStore.chosenAction(first)).toBe(action); // Receipt is never rewritten as success.
+      expect(await supervisor.settleTask("receipt", "discard")).not.toContain("in progress");
+    },
+  );
+
+  it("keeps only the crewmate's declared risk on the completion card and the task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cardStore } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix the meter"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    tasks.recordDelivery(taskId, { mode: "local-only", ci: "green", ciAt: Date.now() });
+    const pictures = [{ id: "p1", alt: "The meter after", width: 640, height: 320, group: 0 }];
+    const answer = await specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The meter reads true",
+      body: completionBody("<p>It reads true.</p>"),
+      actions: [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }],
+      pictures,
+      riskDeclaration: METER_RISK,
+    });
+    expect(answer).toMatch(/^card-/);
+    const record = tasks.get(taskId);
+    const risk = {
+      declared: METER_RISK,
+    };
+    expect(cardStore.newestForTask(taskId)?.risk).toEqual(risk);
+    expect(record?.delivery?.risk).toEqual(risk);
+  });
+
+  it("durably queues a mid-turn merge click and runs it at the idle boundary without another click", async () => {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #42 is in on GitHub." }));
+    const { supervisor, tasks, specs, cards, events } = setup(crewmate, { mergePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Ship while reporting",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ready before the turn ends",
+      body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head commit.</p>"),
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    await tick();
+    const settle = cards().find((card) => card.title === "Ready before the turn ends") as Card;
+
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(settle.id, "merge");
+    await tick();
+
+    expect(mergePullRequest).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)?.pendingSettle).toMatchObject({
+      mode: "merge-pr",
+      actor: "captain",
+    });
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Putting the change in for "Ship while reporting" is queued and will run when the crewmate finishes what it is doing.',
+    });
+
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(tasks.get(taskId)).toMatchObject({
+        status: "done",
+        closedReason: "merged",
+        pendingSettle: null,
+      }),
+    );
+  });
+
+  it("recovers a committed policy edit after a quit without resuming waiting work, and later serves it with the next turn", async () => {
+    const original = fakeCrewmate();
+    const { db, paths, workspace, tasks, supervisor } = setup(original);
+    const { taskId } = await supervisor.commission({
+      title: "Waiting work",
+      intent: intentOf("Keep working"),
+    });
+    await tick();
+    original.finishPrompt();
+    await tick();
+    const task = tasks.get(taskId);
+    if (!task) throw new Error("The commissioned task is missing");
+    tasks.updateFields(task.id, { policies: { rigor: "quick" } }, "firstmate");
+    // Quit before the edit's notice was queued.
+    supervisor.disposeAll();
+    const resumed = fakeCrewmate();
+    const openSession = vi.fn(async () => resumed);
+    const inbox = new InboxStore(db);
+    const restartedTasks = new TaskService({ db, strict: true });
+    const restarted = new CrewSupervisor({
+      ...crewSessions(paths, openSession),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: restartedTasks,
+      cardStore: new CardStore(db),
+      inbox,
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+    await tick();
+    await restarted.sweepInbox(Date.now());
+    expect(openSession).not.toHaveBeenCalled();
+    expect(restartedTasks.get(task.id)).toMatchObject({ status: "active", activity: "idle" });
+    expect(inbox.allFor(task.id).map((row) => row.facts)).toEqual([
+      expect.objectContaining({
+        kind: "task-policies-changed",
+        policies: expect.objectContaining({ revision: 1 }),
+      }),
+    ]);
+    await restarted.steerCrewmate(task.id, "Continue the requested fix");
+    await tick();
+    expect(openSession).toHaveBeenCalledTimes(1);
+    expect(resumed.promptCalls.join("\n")).toContain('"revision":1');
+    resumed.finishPrompt();
+    await tick();
+    restarted.disposeAll();
+  });
+
+  it("resumes a durable queued merge after a supervisor restart", async () => {
+    const { db, paths, workspace, tasks } = setup(fakeCrewmate());
+    await Promise.resolve(); // Let the original supervisor's boot scan finish before seeding.
+    seedTask(tasks, {
+      id: "restart-merge",
+      title: "Merge after restart",
+      status: "idle",
+      worktreeDir: "/work/restart-merge",
+    });
+    tasks.setPendingSettle("restart-merge", {
+      mode: "merge-pr",
+      actor: "captain",
+      requestedAt: Date.now(),
+      proceedWithOpen: false,
+    });
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #43 is in on GitHub." }));
+    const restartedTasks = new TaskService({ db, strict: true });
+    const restarted = new CrewSupervisor({
+      ...crewSessions(
+        paths,
+        vi.fn(async () => fakeCrewmate()),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: restartedTasks,
+      cardStore: new CardStore(db),
+      inbox: new InboxStore(db),
+      paths,
+      mergePullRequest,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    vi.spyOn(restarted, "taskDelivery").mockReturnValue("direct-pr");
+    restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+
+    await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(restartedTasks.get("restart-merge")).toMatchObject({
+        status: "done",
+        closedReason: "merged",
+        pendingSettle: null,
+      }),
+    );
+  });
+
+  it("checks a revised action's effect at frame dispatch time", async () => {
+    const { supervisor, tasks, workspace } = setup(fakeCrewmate());
+    seedTask(tasks, {
+      id: "revision",
+      title: "Revised settle",
+      status: "idle",
+      worktreeDir: "/work",
+    });
+    const cardId = supervisor.addFirstmateCard({
+      id: "revision-gate",
+      taskId: "revision",
+      title: "Ready",
+      body: "<p>Choose.</p>",
+      actions: [{ id: "land", label: "Ask the author", default: true }],
+    });
+    supervisor.addFirstmateCard({
+      requiredActions: [],
+      id: "revision-gate",
+      taskId: "revision",
+      title: "Ready",
+      body: "<p>Choose.</p>",
+      actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
+    });
+
+    expect(() => supervisor.act(cardId, "land", "frame", { tiltDeg: 42 })).toThrow(
+      "available only from the card controls",
+    );
+    expect(supervisor.cardsSnapshot().some((card) => card.id === cardId)).toBe(true);
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(tasks.get("revision")?.status).toBe("active");
+
+    supervisor.act(cardId, "land", "chrome");
+    await vi.waitFor(() => expect(workspace.landTaskWork).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(tasks.get("revision")?.status).toBe("done"));
+  });
+
+  it("keeps what a choice was made on beside it: the offer shown and the task before it moved (docs/card-evidence.md)", async () => {
+    const { supervisor, tasks, workspace, cardStore } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "ship", title: "Ship it", status: "idle", worktreeDir: "/work" });
+    const cardId = supervisor.addFirstmateCard({
+      requiredActions: [],
+      id: "ship-gate",
+      taskId: "ship",
+      title: "Ready",
+      body: "<p>Choose.</p>",
+      actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
+    });
+    const shown = supervisor.cardsSnapshot().find((card) => card.id === cardId) as Card;
+
+    supervisor.act(cardId, "land", "chrome", undefined, {
+      id: "gesture-0100",
+      lifecycleId: shown.lifecycleId,
+      offerId: shown.offerId,
+    });
+    await vi.waitFor(() => expect(workspace.landTaskWork).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(tasks.get("ship")?.status).toBe("done"));
+
+    const action = cardStore.observations(cardId).find((entry) => entry.kind === "action");
+    expect(action).toMatchObject({
+      actor: "captain",
+      offerId: shown.offerId,
+      interactionId: "gesture-0100",
+      payload: {
+        actionId: "land",
+        recognized: true,
+        effect: SETTLE_MERGE,
+        display: { fidelity: "matched" },
+        // The task as it stood when the choice was admitted, not as it ended.
+        context: { taskId: "ship", status: "active", activity: "idle", blockers: [] },
+      },
+    });
+  });
+
+  it("records a body script's declared action and refuses an undeclared id", () => {
+    const { supervisor, tasks, cardStore } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "look", title: "Tune it", status: "idle" });
+    const scripted = supervisor.addFirstmateCard({
+      id: "scripted",
+      taskId: "look",
+      title: "Tune",
+      body: "<p>Tune it.</p>",
+      actions: [{ id: "use", label: "Use this", default: true }],
+    });
+    supervisor.act(scripted, "use", "frame", { tiltDeg: 42 });
+    const stray = supervisor.addFirstmateCard({
+      id: "stray",
+      taskId: "look",
+      title: "Pick",
+      body: "<p>Pick.</p>",
+      actions: [{ id: "go", label: "Go", default: true }],
+    });
+    const before = tasks.timeline("look");
+    expect(() => supervisor.act(stray, "not-offered", "chrome")).toThrow(
+      "This choice is not offered on this card",
+    );
+    expect(supervisor.cardsSnapshot().some((card) => card.id === stray)).toBe(true);
+    expect(cardStore.chosenAction(stray)).toBeUndefined();
+    expect(tasks.timeline("look")).toEqual(before);
+
+    const actionOf = (id: string) =>
+      cardStore.observations(id).find((entry) => entry.kind === "action");
+    expect(actionOf(scripted)).toMatchObject({
+      actor: "frame",
+      source: "frame",
+      payload: { actionId: "use", frameValue: '{"tiltDeg":42}', recognized: true },
+    });
+    expect(actionOf(stray)).toBeUndefined();
+  });
+
+  it("closes only explicitly verified external release work and keeps the evidence on its record", async () => {
+    const { supervisor, tasks, workspace } = setup(fakeCrewmate());
+    seedTask(tasks, {
+      id: "release",
+      title: "Publish version",
+      status: "idle",
+      outcome: "Published through release-please",
+      worktreeDir: "/work",
+    });
+    expect((await supervisor.closeExternallyReleased("release", "")).text).toContain(
+      "name the release",
+    );
+    expect(tasks.get("release")?.status).toBe("active");
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: true, unlandedCommits: 0 });
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("uncommitted edits");
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: false, unlandedCommits: 2 });
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("commits not in");
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    const settled = await supervisor.closeExternallyReleased("release", "v1.2.3 published");
+    expect(settled.text).toContain("v1.2.3 published");
+    expect(tasks.get("release")).toMatchObject({ status: "done", closedReason: "released" });
+    expect(
+      tasks.timeline("release").find((entry) => entry.text.includes("v1.2.3 published"))?.data,
+    ).toMatchObject({ releaseEvidence: "v1.2.3 published" });
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledOnce();
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("wait for its crewmate");
+  });
+
+  it("refuses an external release for unreported work, task-owned proposed changes and failed inspection", async () => {
+    const { supervisor, tasks, workspace } = setup(fakeCrewmate());
+    seedTask(tasks, {
+      id: "release",
+      title: "Publish version",
+      status: "idle",
+      worktreeDir: "/work",
+    });
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("has not reported");
+    tasks.recordReport("release", { text: "Published externally" });
+    tasks.recordDelivery("release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("own pull request");
+    seedTask(tasks, {
+      id: "other",
+      title: "Second release",
+      status: "idle",
+      outcome: "Published",
+      worktreeDir: "/other",
+    });
+    vi.mocked(workspace.taskWorkStatus).mockRejectedValueOnce(new Error("cannot inspect"));
+    expect((await supervisor.closeExternallyReleased("other", "v1.2.3 published")).text).toContain(
+      "cannot inspect",
+    );
+    expect(tasks.get("other")?.status).toBe("active");
+  });
+
+  it("reports a dirty-discard refusal verbatim after dismissal and releases the guard for a later confirmation", async () => {
+    const { supervisor, tasks, workspace, events } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 2 });
+    const id = supervisor.addFirstmateCard({
+      taskId: "dirty",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
+    });
+    supervisor.act(id, "discard");
+    expect(supervisor.cardsSnapshot()).toEqual([]);
+    await vi.waitFor(() =>
+      expect(
+        events.some(
+          (event) => event.type === "firstmate_note" && event.text.includes("never merged"),
+        ),
+      ).toBe(true),
+    );
+    const refusal = await supervisor.settleTask("dirty", "discard");
+    expect(refusal).toContain("2 commits and uncommitted edits that were never merged");
+    expect(events).toContainEqual({ type: "firstmate_note", text: refusal });
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(tasks.get("dirty")?.status).toBe("active");
+    expect(await supervisor.settleTask("dirty", "discard", true)).toBe('Discarded "Unlanded".');
+  });
+
+  it("wakes the Firstmate with a confirm-gated discard refusal, so the dead end is orchestratable", async () => {
+    const { supervisor, tasks, workspace, events, ops } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 2 });
+    const id = supervisor.addFirstmateCard({
+      taskId: "dirty",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
+    });
+    supervisor.act(id, "discard");
+
+    await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
+    // The refusal is a structured outcome (WI-12): its prose leads the wake,
+    // and its ways ride a fenced JSON block so the Firstmate can turn them
+    // into effect buttons instead of re-parsing prose.
+    expect(settleWakes(ops)[0]).toContain('the captain chose discard for task dirty "Unlanded"');
+    expect(settleWakes(ops)[0]).toContain("2 commits and uncommitted edits that were never merged");
+    expect(settleWakes(ops)[0]).toContain(
+      "Discard with confirm to abandon them, or merge the branch instead",
+    );
+    expect(settleWakes(ops)[0]).toContain('"refused": "unlanded-work"');
+    expect(settleWakes(ops)[0]).toContain('"tool": "settle_task"');
+    // The feed keeps its receipt either way: the captain sees the outcome
+    // whether or not the Firstmate has anything to say about it.
+    expect(
+      events.some(
+        (event) => event.type === "firstmate_note" && event.text.includes("never merged"),
+      ),
+    ).toBe(true);
+  });
+
+  it("stays quiet on contention, which settles nothing and has no outcome to report", async () => {
+    const operation = deferred<{ dirty: boolean; unlandedCommits: number }>();
+    const { supervisor, tasks, workspace, ops } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "busy", title: "Contended", status: "idle", worktreeDir: "/work" });
+    vi.mocked(workspace.taskWorkStatus).mockReturnValue(operation.promise);
+    const offer = () =>
+      supervisor.addFirstmateCard({
+        taskId: "busy",
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
+      });
+    const first = offer();
+    const second = offer();
+
+    supervisor.act(first, "discard");
+    supervisor.act(second, "discard"); // Refused: the first settle owns the task.
+    operation.resolve({ dirty: false, unlandedCommits: 0 });
+
+    // One wake for the settle that ran, none for the one that was turned
+    // away - announcing a settle that never happened is not an outcome.
+    await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
+    expect(settleWakes(ops)[0]).toContain('the outcome was: Discarded "Contended".');
+    expect(settleWakes(ops).join("\n")).not.toContain("already in progress");
+  });
+
+  it("wakes on every settle response, success included, with no host-side sorting", async () => {
+    const mergePullRequest = vi.fn(async () => ({
+      ok: false,
+      text: "PR merge blocked: CI is red.",
+    }));
+    const { supervisor, tasks, workspace, ops } = setup(fakeCrewmate(), { mergePullRequest });
+    for (const id of ["clean", "land", "merge"]) {
+      seedTask(tasks, { id, title: `Task ${id}`, status: "idle", worktreeDir: `/${id}` });
+    }
+    vi.mocked(workspace.landTaskWork).mockRejectedValue(new Error("The main worktree is dirty."));
+    vi.spyOn(supervisor, "taskDelivery").mockImplementation((taskId) =>
+      taskId === "merge" ? "direct-pr" : "local-only",
+    );
+    const offer = (taskId: string, action: string) =>
+      supervisor.addFirstmateCard({
+        requiredActions: [],
+        taskId,
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [
+          {
+            id: action,
+            label: action,
+            default: true,
+            effect: action === "discard" ? SETTLE_DISCARD : SETTLE_MERGE,
+          },
+        ],
+      });
+
+    supervisor.act(offer("clean", "discard"), "discard");
+    supervisor.act(offer("land", "land"), "land");
+    supervisor.act(offer("merge", "merge-pr"), "merge-pr");
+
+    await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(3));
+    const wake = (taskId: string) =>
+      settleWakes(ops).find((line) => line.includes(`for task ${taskId} `)) ?? "";
+    // A success is an outcome too: the agent is told what its crew's work
+    // became, and decides for itself whether that is worth a word.
+    expect(wake("clean")).toContain('the outcome was: Discarded "Task clean".');
+    expect(wake("land")).toContain("Cannot merge: The main worktree is dirty.");
+    expect(wake("merge")).toContain("PR merge blocked: CI is red.");
+  });
+
+  it("refs a shell settle wake after the close purge so it survives and anchors the turn", async () => {
+    const { supervisor, tasks, inbox } = setup(fakeCrewmate());
+    supervisor.setFirstmateHooks({
+      notifyOp: (text, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, text, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    seedTask(tasks, { id: "shell", title: "Leftover", status: "idle", worktreeDir: "/work" });
+    inbox.enqueue(FIRSTMATE_RECIPIENT, "stale wake", "shell");
+
+    await supervisor.requestDiscard("shell");
+
+    const rows = inbox.allFor(FIRSTMATE_RECIPIENT);
+    expect(rows.map((row) => row.ref)).toEqual(["shell"]);
+    expect(rows.map(renderWake)[0]).toContain(
+      'the captain chose discard for task shell "Leftover"',
+    );
+  });
+
+  it("never wakes for the Firstmate's own settle_task refusal", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, workspace, ops } = setup(crewmate);
+    seedTask(tasks, { id: "done", title: "Half-done", status: "idle", worktreeDir: "/work" });
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 1 });
+
+    // The agent's own tool call already receives this text as its result.
+    expect(await supervisor.settleTask("done", "discard")).toContain("uncommitted edits");
+    expect(settleWakes(ops)).toEqual([]);
+  });
+
+  it("catches a rejected merge, releases its guard, and permits an independent task while it waits", async () => {
+    const operation = deferred<{ ok: boolean; text: string }>();
+    const mergePullRequest = vi.fn(() => operation.promise);
+    const { supervisor, tasks, events } = setup(fakeCrewmate(), { mergePullRequest });
+    seedTask(tasks, { id: "merge", title: "PR", status: "idle", worktreeDir: "/pr" });
+    seedTask(tasks, { id: "other", title: "Other", status: "idle", worktreeDir: "/other" });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const id = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "merge",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    supervisor.act(id, "merge-pr");
+    expect(await supervisor.landTask("merge", "captain")).toContain("already in progress");
+    expect(await supervisor.mergePrTask("merge", "captain")).toContain("already in progress");
+    expect(await supervisor.settleTask("other", "discard")).toBe('Discarded "Other".');
+    operation.reject(new Error("GitHub is unreachable"));
+    // The feed says what it means; the raw failure is kept on the record.
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: 'Cannot merge "PR": something went wrong - try again',
+      }),
+    );
+    expect(tasks.timeline("merge").at(-1)).toMatchObject({
+      kind: "note",
+      feed: false,
+      text: "Could not complete merge-pr for task merge: GitHub is unreachable",
+    });
+    mergePullRequest.mockResolvedValue({ ok: false, text: "PR merge blocked: CI is red." });
+    expect(await supervisor.mergePrTask("merge", "captain")).toBe("PR merge blocked: CI is red.");
+    expect(mergePullRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports landing refusals and shell discard failures instead of dropping them", async () => {
+    const { supervisor, tasks, workspace, events } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "land", title: "Branch", status: "idle", worktreeDir: "/work" });
+    vi.mocked(workspace.landTaskWork).mockRejectedValue(new Error("The main worktree is dirty."));
+    const id = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "land",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
+    });
+    supervisor.act(id, "land");
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: 'Cannot merge "Branch": something went wrong - try again',
+      }),
+    );
+    expect(tasks.timeline("land").at(-1)).toMatchObject({
+      kind: "note",
+      text: "Cannot merge: The main worktree is dirty.",
+      data: { problem: "The main worktree is dirty." },
+    });
+    vi.mocked(workspace.removeTaskWorktree).mockRejectedValue(new Error("Cleanup failed."));
+    await supervisor.requestDiscard("land");
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Could not discard "Branch": something went wrong - try again',
+    });
+    // The row closed but its worktree is still there, so a second discard
+    // retries the cleanup instead of claiming there is nothing left (WI-7).
+    expect(tasks.get("land")).toMatchObject({ status: "dropped", workspaceState: "present" });
+    vi.mocked(workspace.removeTaskWorktree).mockResolvedValue(undefined);
+    expect(await supervisor.settleTask("land", "discard")).toBe('Discarded "Branch".');
+    expect(tasks.get("land")).toMatchObject({
+      status: "dropped",
+      closedReason: "discarded",
+      workspaceState: "removed",
+    });
+  });
+
+  describe("the captain's kept merge approval (FI3-304)", () => {
+    const conflict =
+      "GitHub answered 405 to PUT /repos/o/r/pulls/7/merge: Pull Request has merge conflicts";
+    const APPROVED = "approved0001";
+    const REPAIRED = "repaired0002";
+    const NEW_BASE = "mainmoved003";
+    const cleanFacts: LineageFacts = {
+      known: true,
+      toHeadHere: true,
+      baseInTo: true,
+      baseInFrom: false,
+      approvedPaths: ["src/meter.ts"],
+      repairedPaths: ["src/meter.ts"],
+    };
+    const repair = (
+      impact: "conflict-only" | "changed-work" | "unknown",
+      fromHead = APPROVED,
+      changedPaths: string[] = [],
+    ): CheckChangeInput => ({
+      conflictRepair: {
+        fromHead,
+        toHead: REPAIRED,
+        newBase: NEW_BASE,
+        impact,
+        changedPaths,
+        evidence: "git range-diff shows the approved commit unchanged on the newer base",
+        validation: "pnpm test src/meter.test.ts at the repaired head",
+      },
+    });
+
+    /**
+     * GitHub - or GitLab, with its merge request - as the approval meets it:
+     * one pull request, its checks and readiness, and each merge it accepted.
+     */
+    class KeptForge implements Forge {
+      readonly host: string;
+      readonly place: string;
+      readonly hasChecks = true;
+      constructor(readonly kind: "github" | "gitlab" = "github") {
+        this.host = kind === "github" ? "github.com" : "gitlab.com";
+        this.place = kind === "github" ? "GitHub" : "GitLab";
+      }
+      headSha = APPROVED;
+      states: ForgeCheckState[] = ["success"];
+      readiness: ForgeReadiness = "clean";
+      /** The merge request's answer when it refuses; undefined merges. */
+      refuse: ForgeError | undefined;
+      merged = false;
+      /** The heads GitHub merged, in order. */
+      merges: string[] = [];
+      async listProjects() {
+        return [];
+      }
+      async defaultBranch() {
+        return "main";
+      }
+      async openChange(input: { branch: string }): Promise<ForgeChange> {
+        return this.change(input.branch);
+      }
+      async changeFor(branch: string) {
+        return this.merged ? null : this.change(branch);
+      }
+      /** Runs inside each checks read: what else happens while the gates are read. */
+      duringChecks: () => void = () => {};
+      async checks() {
+        this.duringChecks();
+        const items = this.states.map((state) => ({ name: "linux-checks", state }));
+        return { overall: overallOfChecks(items), items };
+      }
+      async putIn(_change: ForgeChange, headSha: string) {
+        if (this.refuse) throw this.refuse;
+        this.merges.push(headSha);
+        this.merged = true;
+        return { sha: `squash-${headSha}` };
+      }
+      async pull(number: number): Promise<ForgePull> {
+        return {
+          number,
+          state: this.merged ? "closed" : "open",
+          merged: this.merged,
+          ...(this.merged ? { mergedSha: `squash-${this.headSha}` } : {}),
+          headSha: this.headSha,
+          base: "main",
+          readiness: this.readiness,
+        };
+      }
+      async close() {}
+      label(change: ForgeChange) {
+        return this.kind === "gitlab" ? `!${change.number}` : `#${change.number}`;
+      }
+      url(change: ForgeChange) {
+        return change.url;
+      }
+      private change(branch: string): ForgeChange {
+        return {
+          number: 7,
+          url:
+            this.kind === "gitlab"
+              ? "https://gitlab.com/group/sub/r/-/merge_requests/7"
+              : "https://github.com/o/r/pull/7",
+          branch,
+          headSha: this.headSha,
+          title: "fix: ship the meter",
+          body: "",
+        };
+      }
+    }
+
+    /**
+     * A direct-pr task on a project that lives on GitHub whose crewmate put
+     * its completion card up through the real checks gate and went idle:
+     * the real check service, the real click, a GitHub stand-in.
+     */
+    async function approved(where: { kind?: "github" | "gitlab" } = {}) {
+      const forge = new KeptForge(where.kind);
+      let facts = cleanFacts;
+      const crewmate = fakeCrewmate();
+      let prCi: PrCiService | undefined;
+      const service = () => {
+        if (!prCi) throw new Error("check service not ready");
+        return prCi;
+      };
+      const harness = setup(crewmate, {
+        checkCi: (id) => service().checkOverall(id),
+        mergePullRequest: (id, guard, beforeDispatch) => service().merge(id, guard, beforeDispatch),
+        readPull: (id, prNumber) => service().pullState(id, prNumber),
+        openChange: (id, input) => service().open(id, input),
+        checkChange: (id, input) => service().checkForCrew(id, input),
+      });
+      prCi = new PrCiService({
+        tasks: harness.tasks,
+        repos: harness.repos,
+        forgeFor: () => forge,
+        validateRange: async () => {},
+        lineageFacts: async () => facts,
+      });
+      const dir = scratchDir("infinitary-kept-merge-");
+      execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+      execFileSync("git", [
+        "-C",
+        dir,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@localhost",
+        "commit",
+        "--allow-empty",
+        "-m",
+        "init",
+      ]);
+      execFileSync("git", [
+        "-C",
+        dir,
+        "remote",
+        "add",
+        "origin",
+        forge.kind === "gitlab"
+          ? "https://gitlab.com/group/sub/r.git"
+          : "https://github.com/o/r.git",
+      ]);
+      const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meter" });
+      harness.repos.configure(repo.id, { delivery: "direct-pr", rigor: "quick" });
+      const { taskId } = await harness.supervisor.commission({
+        title: "Ship the meter",
+        intent: intentOf("Ship the meter fix"),
+        repoId: repo.id,
+      });
+      await tick();
+      const emit = (title: string) =>
+        harness.specs[0]?.onCard?.({
+          requiredActions: [],
+          title,
+          body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
+          actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+        });
+      await emit("Ready to merge");
+      crewmate.finishPrompt();
+      await tick();
+      const card = harness.cards().find((entry) => entry.title === "Ready to merge") as Card;
+      const authorization = () => harness.tasks.get(taskId)?.delivery?.mergeAuthorization;
+      const declare = (input: CheckChangeInput) => harness.specs[0]?.onCheckChange?.(input);
+      return {
+        ...harness,
+        crewmate,
+        forge,
+        taskId,
+        card,
+        emit,
+        declare,
+        authorization,
+        setFacts: (next: LineageFacts) => {
+          facts = next;
+        },
+      };
+    }
+
+    /** That card clicked once, and the host refusing the merge for a conflict. */
+    async function kept(where: { kind?: "github" | "gitlab" } = {}) {
+      const harness = await approved(where);
+      harness.forge.refuse = new ForgeError(
+        "refused",
+        where.kind === "gitlab"
+          ? "GitLab answered 422 to PUT /projects/group%2Fsub%2Fr/merge_requests/7/merge: Branch cannot be merged"
+          : conflict,
+      );
+      harness.supervisor.act(harness.card.id, "merge");
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "conflict" }),
+      );
+      harness.forge.refuse = undefined;
+      return harness;
+    }
+
+    /** The crewmate's repair turn: it is steered, plays its moves, and ends. */
+    async function repairTurn(
+      harness: Awaited<ReturnType<typeof approved>>,
+      moves: () => Promise<void>,
+    ) {
+      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      await moves();
+      harness.crewmate.finishPrompt();
+      await tick();
+    }
+
+    const editPolicies = (
+      h: Awaited<ReturnType<typeof approved>>,
+      policies: import("@shared/taskPolicies").TaskPolicyEdits,
+    ) => {
+      h.tasks.updateFields(h.taskId, { policies }, "firstmate");
+      return h.supervisor.policiesChanged(h.taskId, policies);
+    };
+
+    it("an already-autonomous task can merge through its routine completion offer", async () => {
+      const h = await approved();
+      const repoId = h.tasks.get(h.taskId)?.repoId;
+      if (!repoId) throw new Error("Missing project");
+      h.repos.configure(repoId, { autonomy: true });
+      expect(h.tasks.get(h.taskId)?.gate?.kind).toBe("captain");
+      await h.supervisor.settleTask(h.taskId, "merge-pr");
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(h.forge.merges).toHaveLength(1);
+    });
+
+    it("an explicit live self-merging request releases only the routine completion wait and permits ready work", async () => {
+      const h = await approved();
+      h.tasks.recordDelivery(h.taskId, {
+        captainWait: { at: Date.now(), cardId: h.card.id, reason: "Read the result" },
+      });
+      editPolicies(h, { autonomy: true });
+      await tick();
+      expect(h.cards().find((card) => card.id === h.card.id)).toBeUndefined();
+      expect(h.tasks.get(h.taskId)?.delivery?.captainWait).toBeUndefined();
+      expect(h.ops.some((text) => text.includes("Current policies"))).toBe(true);
+      expect(
+        h.inbox.allFor(h.taskId).some((row) => row.facts?.kind === "task-policies-changed"),
+      ).toBe(true);
+      expect(h.crewmate.promptCalls).toHaveLength(1);
+      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(result.text).toContain("Merged");
+      expect(h.forge.merges).toEqual([APPROVED]);
+      expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    });
+
+    it("self-merging still waits for failed checks and merges only after a fresh accepted reading", async () => {
+      const h = await approved();
+      h.forge.states = ["failure"];
+      editPolicies(h, { autonomy: true });
+      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        "not all passed",
+      );
+      expect(h.forge.merges).toEqual([]);
+      expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("red");
+      h.forge.states = ["success"];
+      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(h.forge.merges).toEqual([APPROVED]);
+    });
+
+    it.each(["autonomy", "care", "destination"] as const)(
+      "rereads a newer %s policy after asynchronous checks and sends no old merge",
+      async (policy) => {
+        const h = await approved();
+        editPolicies(h, { autonomy: true });
+        h.forge.duringChecks = () => {
+          h.forge.duringChecks = () => {};
+          editPolicies(
+            h,
+            policy === "autonomy"
+              ? { autonomy: false }
+              : policy === "care"
+                ? { rigor: "reviewed" }
+                : { delivery: "local-only" },
+          );
+        };
+        const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        expect(result.text).toContain("policies changed");
+        expect(h.forge.merges).toEqual([]);
+        expect(h.tasks.get(h.taskId)?.delivery?.prNumber).toBe(7);
+        expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      },
+    );
+
+    it("a repeated ask-first request cancels a retained approval being checked, and later explicit self-merging remains possible", async () => {
+      const h = await kept();
+      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      h.forge.duringChecks = () => {
+        h.forge.duringChecks = () => {};
+        editPolicies(h, { autonomy: false });
+      };
+      await repairTurn(h, async () => {});
+      expect(h.forge.merges).toEqual([]);
+      expect(h.authorization()?.status).toBe("invalidated");
+      editPolicies(h, { autonomy: true });
+      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(h.forge.merges).toEqual([APPROVED]);
+    });
+
+    it("higher care on an existing pull request requires an exact-version review, while lower care preserves the record", async () => {
+      const h = await approved();
+      editPolicies(h, { autonomy: true, rigor: "reviewed" });
+      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        "independent review",
+      );
+      h.tasks.recordDelivery(h.taskId, {
+        reviewVerdict: "pass",
+        reviewSha: "older",
+        reviewRounds: 2,
+      });
+      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        "independent review",
+      );
+      editPolicies(h, { rigor: "quick" });
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({
+        reviewVerdict: "pass",
+        reviewSha: "older",
+        reviewRounds: 2,
+        prNumber: 7,
+      });
+      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(h.forge.merges).toEqual([APPROVED]);
+    });
+
+    it("self-merging preserves explicit withdrawal and unrelated decisions", async () => {
+      const h = await kept();
+      h.supervisor.withdrawMergeApproval(h.taskId);
+      await repairTurn(h, async () => {
+        await h.emit("Approval after withdrawal");
+      });
+      expect(h.cards().some((card) => card.title === "Approval after withdrawal")).toBe(true);
+      editPolicies(h, { autonomy: true });
+      expect(h.cards().some((card) => card.title === "Approval after withdrawal")).toBe(true);
+      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).refusal?.refused).toBe(
+        "autonomy-off",
+      );
+      expect(h.forge.merges).toEqual([]);
+      const other = await approved();
+      editPolicies(other, { autonomy: true });
+      other.tasks.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
+      expect((await other.supervisor.settleTaskDetailed(other.taskId, "merge-pr")).text).toContain(
+        "another decision",
+      );
+      expect(other.forge.merges).toEqual([]);
+    });
+
+    it("explains a sent merge while accepting the next policy, without pretending the request can be stopped", async () => {
+      const h = await approved();
+      editPolicies(h, { autonomy: true });
+      const sent = deferred<void>();
+      const answer = deferred<void>();
+      h.forge.putIn = async (_change, head) => {
+        sent.resolve();
+        await answer.promise;
+        h.forge.merges.push(head);
+        return { sha: `squash-${head}` };
+      };
+      const merging = h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      await sent.promise;
+      expect(editPolicies(h, { autonomy: false })).toContain("merge already sent");
+      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      answer.resolve();
+      await merging;
+      expect(h.forge.merges).toEqual([APPROVED]);
+      expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    });
+
+    it("closes a task whose pull request was merged on GitHub by hand as merged, on the Firstmate's own settle (FI3-213)", async () => {
+      const harness = await approved();
+      const { supervisor, tasks, taskId, forge } = harness;
+      // The project asks before merging: while #7 is open, the merge is the captain's.
+      expect(supervisor.taskAutonomy(taskId)).toBe(false);
+      expect((await supervisor.settleTaskDetailed(taskId, "merge-pr")).refusal?.refused).toBe(
+        "autonomy-off",
+      );
+      // The captain merges #7 on GitHub himself; the branch has no open pull request now.
+      forge.merged = true;
+      expect(await harness.declare({})).toContain("overall: merged");
+      expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "merged", prNumber: 7 });
+      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(result.text).toBe("#7 is already merged on GitHub.");
+      expect(result.refusal).toBeUndefined();
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(forge.merges).toEqual([]);
+    });
+
+    it("closes it as merged on the captain's click too, sending nothing to GitHub (FI3-213)", async () => {
+      const harness = await approved();
+      harness.forge.merged = true;
+      harness.supervisor.act(harness.card.id, "merge");
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.taskId)).toMatchObject({
+          status: "done",
+          closedReason: "merged",
+        }),
+      );
+      expect(harness.forge.merges).toEqual([]);
+    });
+
+    it("mints an approval of the offer the captain saw at the head its checks read, and keeps it through a 405 conflict", async () => {
+      const { authorization, card, events, ops, forge } = await kept();
+      expect(authorization()).toMatchObject({
+        version: 1,
+        status: "standing",
+        issuer: "captain",
+        approvedHead: APPROVED,
+        lineage: [],
+        card: { id: card.id, offerId: card.offerId, actionId: "merge" },
+        target: { prNumber: 7, owner: "o", name: "r", host: "github.com", delivery: "direct-pr" },
+        waiting: { on: "conflict", head: APPROVED },
+      });
+      expect(authorization()?.attempt).toBeUndefined();
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: 'Cannot merge "Ship the meter" yet: it conflicts with newer work in the project. Your merge is kept and runs once its crewmate has brought it up to date and the checks pass.',
+      });
+      await vi.waitFor(() =>
+        expect(ops.join("\n")).toContain("do not ask the captain to merge again"),
+      );
+      expect(ops.join("\n")).toContain(`check_change conflictRepair from ${APPROVED}`);
+      expect(forge.merges).toEqual([]);
+    });
+
+    it("merges a repair declared conflict-only once, when the crewmate's turn ends, with no second click or card", async () => {
+      const harness = await kept();
+      let said: string | undefined;
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        said = await harness.declare(repair("conflict-only"));
+      });
+      expect(said).toContain(
+        `Repair accepted: the captain's kept merge approval now covers ${REPAIRED}`,
+      );
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.taskId)).toMatchObject({
+          status: "done",
+          closedReason: "merged",
+        }),
+      );
+      expect(harness.forge.merges).toEqual([REPAIRED]);
+      expect(harness.authorization()).toMatchObject({
+        status: "consumed",
+        receipt: { head: REPAIRED, sha: `squash-${REPAIRED}` },
+        lineage: [{ fromHead: APPROVED, toHead: REPAIRED, impact: "conflict-only" }],
+      });
+      expect(harness.cards()).toEqual([]);
+    });
+
+    it("never merges a head no accepted repair covers", async () => {
+      const harness = await kept();
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "repair", head: APPROVED }),
+      );
+      expect(harness.forge.merges).toEqual([]);
+      expect(harness.tasks.get(harness.taskId)?.status).toBe("active");
+    });
+
+    it("refuses a repair off the lineage, one that took in no newer work, and one whose paths it cannot account for", async () => {
+      const harness = await kept();
+      harness.forge.headSha = REPAIRED;
+      expect(await harness.declare(repair("conflict-only", "elsewhere0009"))).toContain(
+        `a repair starts from ${APPROVED}`,
+      );
+      harness.setFacts({ ...cleanFacts, baseInFrom: true });
+      expect(await harness.declare(repair("conflict-only"))).toContain("took in no newer work");
+      harness.setFacts({ ...cleanFacts, repairedPaths: ["src/meter.ts", "src/billing.ts"] });
+      expect(await harness.declare(repair("conflict-only"))).toContain(
+        "these paths differ from the approved change and the declaration does not name them: src/billing.ts",
+      );
+      // Naming the path it needed for the newer work accounts for it.
+      expect(
+        await harness.declare(repair("conflict-only", APPROVED, ["src/billing.ts"])),
+      ).toContain("Repair accepted");
+      expect(harness.authorization()?.lineage).toHaveLength(1);
+    });
+
+    it("holds an unknown impact until the crewmate decides it, and ends on changed-work with a hold autonomy cannot pass", async () => {
+      const harness = await kept();
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        await harness.declare(repair("unknown"));
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "evidence" }),
+      );
+      expect(harness.forge.merges).toEqual([]);
+      const said = await harness.declare(repair("changed-work"));
+      expect(said).toContain("put up a new completion card");
+      expect(harness.authorization()).toMatchObject({ status: "invalidated", holds: true });
+      vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
+      expect(await harness.supervisor.settleTask(harness.taskId, "merge-pr")).toContain(
+        "the captain's merge approval ended because its crewmate declared that bringing it up to date changed the approved work",
+      );
+      expect(harness.forge.merges).toEqual([]);
+    });
+
+    it("waits on GitHub's rules without bypassing them, and the tick merges once they clear", async () => {
+      const harness = await kept();
+      const ticker = new Ticker({
+        now: () => Date.now(),
+        timers: { repeat: () => 0, cancel: () => {} },
+      });
+      harness.supervisor.startWatchdog(ticker);
+      harness.forge.readiness = "blocked";
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        await harness.declare(repair("conflict-only"));
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "protected", head: REPAIRED }),
+      );
+      const retryAt = harness.authorization()?.retryAt ?? 0;
+      expect(retryAt).toBeGreaterThan(Date.now());
+      expect(harness.forge.merges).toEqual([]);
+      await vi.waitFor(() => expect(harness.ops.join("\n")).toContain("never bypasses them"));
+      harness.forge.readiness = "clean";
+      vi.setSystemTime(retryAt + 1);
+      ticker.tick();
+      await vi.waitFor(() => expect(harness.forge.merges).toEqual([REPAIRED]));
+      harness.supervisor.disposeAll();
+    });
+
+    it("keeps the captain's merge of a GitLab merge request the same way, in GitLab's words", async () => {
+      const harness = await kept({ kind: "gitlab" });
+      expect(harness.authorization()).toMatchObject({
+        status: "standing",
+        approvedHead: APPROVED,
+        target: { prNumber: 7, owner: "group/sub", name: "r", host: "gitlab.com" },
+        waiting: { on: "conflict", head: APPROVED },
+      });
+      expect(harness.forge.merges).toEqual([]);
+      const ticker = new Ticker({
+        now: () => Date.now(),
+        timers: { repeat: () => 0, cancel: () => {} },
+      });
+      harness.supervisor.startWatchdog(ticker);
+      harness.forge.readiness = "blocked";
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        await harness.declare(repair("conflict-only"));
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.waiting).toMatchObject({ on: "protected", head: REPAIRED }),
+      );
+      await vi.waitFor(() =>
+        expect(harness.ops.join("\n")).toContain(
+          "GitLab's rules on the main branch hold the merge",
+        ),
+      );
+      expect(harness.forge.merges).toEqual([]);
+      harness.forge.readiness = "clean";
+      vi.setSystemTime((harness.authorization()?.retryAt ?? 0) + 1);
+      ticker.tick();
+      await vi.waitFor(() => expect(harness.forge.merges).toEqual([REPAIRED]));
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.taskId)).toMatchObject({
+          status: "done",
+          closedReason: "merged",
+        }),
+      );
+      expect(harness.tasks.timeline(harness.taskId).map((event) => event.text)).toContain(
+        "Merged !7 on GitLab. https://gitlab.com/group/sub/r/-/merge_requests/7",
+      );
+      harness.supervisor.disposeAll();
+    });
+
+    it("an approval withdrawn while its gates are read sends nothing, and a round cap holds it", async () => {
+      const harness = await kept();
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        await harness.declare(repair("conflict-only"));
+        // The captain takes it back while the host-run attempt reads the checks.
+        harness.forge.duringChecks = () => {
+          harness.forge.duringChecks = () => {};
+          harness.supervisor.withdrawMergeApproval(harness.taskId);
+        };
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true }),
+      );
+      await tick();
+      expect(harness.forge.merges).toEqual([]);
+      expect(harness.authorization()?.attempt).toBeUndefined();
+
+      const capped = await kept();
+      capped.tasks.recordDelivery(capped.taskId, { ciCapAt: Date.now(), ciRounds: 3 });
+      await repairTurn(capped, async () => {
+        capped.forge.headSha = REPAIRED;
+        await capped.declare(repair("conflict-only"));
+      });
+      await vi.waitFor(() =>
+        expect(capped.authorization()?.waiting).toMatchObject({ on: "cap", head: REPAIRED }),
+      );
+      expect(capped.forge.merges).toEqual([]);
+    });
+
+    it("a new completion card supersedes it, and an interruption revokes it with a hold", async () => {
+      const harness = await kept();
+      await repairTurn(harness, async () => {
+        await harness.emit("Ready to merge again");
+      });
+      expect(harness.authorization()).toMatchObject({ status: "superseded" });
+      const again = await kept();
+      await again.supervisor.steerCrewmate(again.taskId, "bring it up to date");
+      await again.supervisor.interruptCrewmate(again.taskId, "interrupt");
+      expect(again.authorization()).toMatchObject({ status: "revoked", holds: true });
+      expect(again.forge.merges).toEqual([]);
+    });
+
+    it("the captain's withdrawal takes it back with a hold, and only his new click merges", async () => {
+      const harness = await kept();
+      expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: true });
+      expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true });
+      expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: false });
+      vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
+      expect(await harness.supervisor.settleTask(harness.taskId, "merge-pr")).toContain(
+        "is not yours to do: the captain's merge approval ended because the captain withdrew it",
+      );
+      // His own idle boundary runs nothing for a withdrawn approval.
+      await repairTurn(harness, async () => {});
+      expect(harness.forge.merges).toEqual([]);
+    });
+
+    it("a steer the Firstmate sends in the captain's turn holds it until the crewmate declares that guidance, then merges once (FI3-662)", async () => {
+      const h = await kept();
+      // While his approval stands, the captain asks through the Firstmate.
+      // The crewmate brings the change up to date in that turn but says
+      // nothing about his words.
+      await h.supervisor.steerCrewmate(h.taskId, "Should the meter be renamed?", "firstmate", {
+        captainWords: true,
+      });
+      expect(h.crewmate.promptCalls.at(-1)).toContain(`${GUIDANCE_MARK_WORDS} 1 `);
+      h.forge.headSha = REPAIRED;
+      await h.declare(repair("conflict-only"));
+      h.crewmate.finishPrompt();
+      await tick();
+      await vi.waitFor(() =>
+        expect(h.authorization()?.waiting).toMatchObject({ on: "guidance", head: REPAIRED }),
+      );
+      expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
+      expect(h.forge.merges).toEqual([]);
+      expect(h.events).toContainEqual({
+        type: "firstmate_note",
+        taskId: h.taskId,
+        text: 'Your merge of "Ship the meter" is kept and waits until its crewmate says whether your newer words change the work you approved.',
+      });
+      // The Firstmate's own steer outside his turn is not his guidance, and
+      // a mark no message of his named cannot be declared.
+      let said: string | undefined;
+      await repairTurn(h, async () => {
+        expect(
+          await h.declare({ captainGuidance: { mark: 2, impact: "none", evidence: "Kept." } }),
+        ).toContain("mark 2 is not one the captain's messages named; the newest is 1");
+        said = await h.declare({
+          captainGuidance: { mark: 1, impact: "none", evidence: "He kept the name." },
+        });
+      });
+      expect(said).toContain("so it no longer holds the merge");
+      await vi.waitFor(() =>
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
+      );
+      expect(h.forge.merges).toEqual([REPAIRED]);
+      expect(h.authorization()).toMatchObject({
+        status: "consumed",
+        guidance: { latest: 1, declared: 1 },
+      });
+    });
+
+    it("his reply under a crewmate's card holds it too, and changed-work ends it with a hold autonomy cannot pass (FI3-662)", async () => {
+      const h = await kept();
+      // The repaired head's checks are still running, so its turn's end merges nothing yet.
+      h.forge.states = ["pending"];
+      await repairTurn(h, async () => {
+        h.forge.headSha = REPAIRED;
+        await h.declare(repair("conflict-only"));
+        await h.specs[0]?.onCard?.({
+          title: "Rename the meter?",
+          body: "<p>Should the meter get a new name?</p><p>I kept the name you approved.</p>",
+          actions: [
+            { id: "keep", label: "Keep the name", default: true },
+            { id: "rename", label: "Rename it" },
+          ],
+        });
+      });
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+      const question = h.cards().find((card) => card.title === "Rename the meter?") as Card;
+      h.supervisor.replyToCard(question.id, "Rename it to gauge.");
+      await vi.waitFor(() =>
+        expect(h.crewmate.promptCalls.at(-1)).toContain("Rename it to gauge."),
+      );
+      expect(h.crewmate.promptCalls.at(-1)).toContain(`${GUIDANCE_MARK_WORDS} 1 `);
+      expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
+      h.forge.states = ["success"];
+      expect(
+        await h.declare({
+          captainGuidance: {
+            mark: 1,
+            impact: "changed-work",
+            evidence: "He asked for a new name.",
+          },
+        }),
+      ).toContain("put up a new completion card");
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(h.authorization()).toMatchObject({ status: "invalidated", holds: true });
+      expect(h.forge.merges).toEqual([]);
+      vi.spyOn(h.supervisor, "taskAutonomy").mockReturnValue(true);
+      expect(await h.supervisor.settleTask(h.taskId, "merge-pr")).toContain(
+        "its crewmate declared that the captain's newer guidance changes the approved work",
+      );
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("a line he types in the task's Crewmate tab holds it too, and his words stay his on the record (FI3-662)", async () => {
+      const h = await kept();
+      expect(await h.supervisor.steerFromCrewmateTab(h.taskId, "Rename it to gauge.")).toEqual({
+        ok: true,
+      });
+      expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
+      expect(h.crewmate.promptCalls.at(-1)).toContain(`${GUIDANCE_MARK_WORDS} 1 `);
+      const steered = h.tasks.timeline(h.taskId).filter((event) => event.kind === "steered");
+      const span = steered.at(-1)?.data?.words as { from: number; to: number } | undefined;
+      expect(span && steered.at(-1)?.text.slice(span.from, span.to)).toBe("Rename it to gauge.");
+      h.crewmate.finishPrompt();
+      await tick();
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "guidance" }));
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("guidance that comes while his own click waits for the crewmate's turn keeps the click instead of merging (FI3-662)", async () => {
+      const h = await approved();
+      await h.supervisor.steerCrewmate(h.taskId, "polish the docs");
+      // He clicks while the crewmate works, then gives it new guidance.
+      h.supervisor.act(h.card.id, "merge");
+      await tick();
+      expect(h.authorization()?.status).toBe("standing");
+      await h.supervisor.steerCrewmate(h.taskId, "Hold on, rename it first.", "firstmate", {
+        captainWords: true,
+      });
+      expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
+      h.crewmate.finishPrompt();
+      await tick();
+      await vi.waitFor(() =>
+        expect(h.events).toContainEqual({
+          type: "firstmate_note",
+          text: 'Cannot merge "Ship the meter" yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.',
+        }),
+      );
+      expect(h.authorization()).toMatchObject({
+        status: "standing",
+        waiting: { on: "guidance", head: APPROVED },
+      });
+      expect(h.authorization()?.attempt).toBeUndefined();
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("an attempt that outlived its answer reads the pull request back: merged there closes the task once", async () => {
+      const harness = await kept();
+      // The record as a quit right after the merge request leaves it.
+      const standing = harness.authorization();
+      if (!standing) throw new Error("no approval");
+      harness.tasks.recordDelivery(harness.taskId, {
+        mergeAuthorization: {
+          ...standing,
+          attempt: { token: "t1", head: APPROVED, at: Date.now() },
+        },
+      });
+      harness.forge.merged = true;
+      await repairTurn(harness, async () => {});
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.taskId)).toMatchObject({ closedReason: "merged" }),
+      );
+      expect(harness.forge.merges).toEqual([]);
+      expect(harness.authorization()).toMatchObject({
+        status: "consumed",
+        receipt: { head: APPROVED, sha: `squash-${APPROVED}` },
+      });
+    });
+
+    it("a click on an offer the host never published at a known head approves nothing", async () => {
+      const { supervisor, tasks, events } = setup(fakeCrewmate(), {
+        mergePullRequest: vi.fn(
+          async (): Promise<PrOutcome> => ({ ok: false, text: conflict, problem: conflict }),
+        ),
+      });
+      seedTask(tasks, { id: "merge", title: "Ship it", status: "idle", worktreeDir: "/pr" });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      const id = supervisor.addFirstmateCard({
+        requiredActions: [],
+        taskId: "merge",
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
+      });
+      supervisor.act(id, "merge-pr");
+      await vi.waitFor(() =>
+        expect(events).toContainEqual({
+          type: "firstmate_note",
+          text: 'Cannot merge "Ship it": it conflicts with newer work in the project - its crewmate needs to bring it up to date',
+        }),
+      );
+      expect(tasks.get("merge")?.delivery?.mergeAuthorization).toBeUndefined();
+    });
+
+    it("retires a kept click from before this version at boot, and says so", async () => {
+      const { tasks, ops } = setup(fakeCrewmate());
+      // Seeded before the boot's resume runs, as an earlier process left it.
+      seedTask(tasks, { id: "legacy", title: "Kept before", status: "idle", worktreeDir: "/pr" });
+      tasks.recordDelivery("legacy", { mergeOrder: { at: 1, proceedWithOpen: false } });
+      await tick();
+      expect(tasks.get("legacy")?.delivery?.mergeOrder).toBeUndefined();
+      expect(ops.join("\n")).toContain("could not be carried forward");
+    });
+  });
+
+  it("says a git or GitHub failure plainly in the feed and hands the Firstmate the raw words", async () => {
+    const signedOut =
+      "fatal: could not read Username for 'https://github.com': terminal prompts disabled";
+    const mergePullRequest = vi.fn(
+      async (): Promise<PrOutcome> => ({
+        ok: false,
+        text: `PR merge blocked: ${signedOut}`,
+        problem: signedOut,
+      }),
+    );
+    const closePullRequest = vi.fn(async () => ({
+      ok: false,
+      text: "Could not close PR: Could not resolve host: github.com",
+      problem: "Could not resolve host: github.com",
+    }));
+    const { supervisor, tasks, events, ops } = setup(fakeCrewmate(), {
+      mergePullRequest,
+      closePullRequest,
+    });
+    seedTask(tasks, { id: "merge", title: "Ship the fix", status: "idle", worktreeDir: "/pr" });
+    seedTask(tasks, { id: "gone", title: "Old idea", status: "idle", worktreeDir: "/old" });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const id = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "merge",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
+    });
+    supervisor.act(id, "merge-pr");
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: 'Cannot merge "Ship the fix": the project\'s host did not accept the sign-in on this computer',
+      }),
+    );
+    await supervisor.requestDiscard("gone");
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Discarded "Old idea". Its pull request is still open where the project lives: could not reach the project\'s host - try again',
+    });
+    const feed = events
+      .filter((event) => event.type === "firstmate_note")
+      .map((event) => (event as { text: string }).text)
+      .join("\n");
+    expect(feed).not.toMatch(/fatal:|Could not resolve host|PR merge blocked/);
+    // The Firstmate still reads exactly what git said, and so does the record.
+    await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(2));
+    expect(settleWakes(ops).join("\n")).toContain(signedOut);
+    expect(settleWakes(ops).join("\n")).toContain("Could not resolve host: github.com");
+    expect(tasks.timeline("merge").at(-1)).toMatchObject({
+      kind: "note",
+      text: `PR merge blocked: ${signedOut}`,
+    });
+
+    // A refusal on the checks themselves names no check in the feed.
+    mergePullRequest.mockResolvedValueOnce({
+      ok: false,
+      text: "Cannot merge yet - the checks have not all passed. overall: red\n- linux-checks: completed / failure",
+      plain: "the checks failed",
+    });
+    const again = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "merge",
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
+    });
+    supervisor.act(again, "merge-pr");
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "firstmate_note",
+        text: 'Cannot merge "Ship the fix": the checks failed',
+      }),
+    );
+    await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(3));
+    expect(settleWakes(ops).at(-1)).toContain("linux-checks: completed / failure");
+  });
+
+  it("lands from a crewmate settle card without steering", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
+    (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "firstmate-3000 fm/task-ready is done",
+      body: completionBody(
+        "<p>The work is ready to land.</p><p>Keep leaves the worktree; discard drops it.</p>",
+      ),
+      actions: [
+        { id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title.includes("is done")) as Card;
+    expect(settle.taskId).toBe(taskId);
+
+    supervisor.act(settle.id, "merge");
+    await tick();
+
+    expect(workspace.landTaskWork).toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(crewmate.promptCalls.some((text) => text.includes("the user chose"))).toBe(false);
+    expect(ops.some((line) => line.includes("the user chose"))).toBe(false);
+  });
+
+  it("merges a direct-PR card on GitHub without locally landing or steering", async () => {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({
+      ok: true,
+      text: "Merged #23 on GitHub.",
+    }));
+    const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate, {
+      mergePullRequest,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Ship the PR",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The PR is ready",
+      body: completionBody(
+        "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
+      ),
+      actions: [
+        { id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard worktree", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The PR is ready") as Card;
+
+    supervisor.act(settle.id, "merge");
+    await tick();
+
+    expect(mergePullRequest).toHaveBeenCalledWith(
+      taskId,
+      undefined,
+      expect.objectContaining({ beforeDispatch: expect.any(Function) }),
+    );
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "done",
+      closedReason: "merged",
+      delivery: { landedMode: "pr" },
+    });
+    expect(tasks.timeline(taskId).find((event) => event.kind === "merged")).toMatchObject({
+      actor: "captain",
+      text: "Merged #23 on GitHub.",
+    });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(ops.some((line) => line.includes("the user chose"))).toBe(false);
+  });
+
+  it("refuses a settle card whose action id only looks like merge-pr", async () => {
+    // The live regression: cards offered "merge-pr55", which act() cannot
+    // dispatch, so the click degraded to a steer and the PR stayed open.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate);
+    await supervisor.commission({ title: "Ship the PR", intent: intentOf("done work") });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    expect(() =>
+      specs[0]?.onCard?.({
+        title: "The PR is ready",
+        body: "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
+        actions: [
+          { id: "merge-pr55", label: "Merge PR 55", default: true },
+          { id: "leave-pr55", label: "Leave it open" },
+        ],
+      }),
+    ).toThrow(/reads like a merge but carries no settle effect/);
+  });
+
+  it("refuses a merge offer that names no task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+
+    expect(() =>
+      supervisor.addFirstmateCard({
+        requiredActions: [],
+        title: "The PR is ready",
+        body: "Merge the GitHub PR. https://github.com/x/y/pull/55",
+        actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+      }),
+    ).toThrow(/must pass task_id/);
+  });
+
+  it("reports a blocked PR merge to the feed instead of failing silently", async () => {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({
+      ok: false,
+      text: "PR merge blocked: CI is not fully green.",
+    }));
+    const { supervisor, tasks, specs, cards, events } = setup(crewmate, {
+      mergePullRequest,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Ship the PR",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The PR is ready",
+      body: completionBody(
+        "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
+      ),
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The PR is ready") as Card;
+
+    supervisor.act(settle.id, "merge");
+    expect(supervisor.cardsSnapshot().some((card) => card.id === settle.id)).toBe(false);
+    await tick();
+
+    expect(mergePullRequest).toHaveBeenCalledWith(
+      taskId,
+      undefined,
+      expect.objectContaining({ beforeDispatch: expect.any(Function) }),
+    );
+    // The task survives a refused merge, and the captain is told why.
+    expect(tasks.get(taskId)).toBeDefined();
+    expect(
+      events.some((event) => event.type === "firstmate_note" && /not fully green/.test(event.text)),
+    ).toBe(true);
+  });
+
+  it("wakes with the refusal on a refused PR merge and raises no retry card; the Firstmate re-settles", async () => {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, text: "PR merge blocked: CI is not fully green." })
+      .mockResolvedValueOnce({ ok: true, text: "Merged #23 on GitHub." });
+    const { supervisor, tasks, specs, cards, ops } = setup(crewmate, { mergePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Ship the PR",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The PR is ready",
+      body: completionBody(
+        "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
+      ),
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The PR is ready") as Card;
+
+    supervisor.act(settle.id, "merge");
+    await tick();
+
+    // The host raises nothing (cards/tasks/agents P0, WI-3): the refusal is
+    // one feed line and one wake carrying it, and the task stays live.
+    expect(cards()).toEqual([]);
+    expect(settleWakes(ops)).toHaveLength(1);
+    expect(settleWakes(ops)[0]).toContain("not fully green");
+    expect(tasks.get(taskId)?.status).toBe("active");
+
+    // A retry is the Firstmate settling again.
+    expect(await supervisor.settleTask(taskId, "merge-pr", undefined, "captain")).toContain(
+      "Merged #23",
+    );
+    expect(mergePullRequest).toHaveBeenCalledTimes(2);
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(tasks.timeline(taskId).some((event) => /Merged #23/.test(event.text))).toBe(true);
+  });
+
+  it("a contention refusal (another settle already in flight) wakes nobody; the real attempt does", async () => {
+    const operation = deferred<{ ok: boolean; text: string }>();
+    const mergePullRequest = vi.fn(() => operation.promise);
+    const { supervisor, tasks, cards, ops } = setup(fakeCrewmate(), { mergePullRequest });
+    seedTask(tasks, { id: "merge", title: "PR", status: "idle", worktreeDir: "/pr" });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const first = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "merge",
+      title: "Settle",
+      body: "Choose.",
+      actions: [{ id: "merge-pr", label: "Merge PR", effect: SETTLE_MERGE }],
+    });
+    const second = supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "merge",
+      title: "Settle again",
+      body: "Choose.",
+      actions: [{ id: "merge-pr", label: "Merge PR", effect: SETTLE_MERGE }],
+    });
+    supervisor.act(first, "merge-pr");
+    supervisor.act(second, "merge-pr"); // races the first; refused as contention.
+    await tick();
+
+    expect(settleWakes(ops)).toEqual([]);
+    operation.resolve({ ok: false, text: "PR merge blocked: CI is not fully green." });
+    await tick();
+    // Only the real (first) attempt's refusal reaches the Firstmate, and no card does.
+    expect(settleWakes(ops)).toHaveLength(1);
+    expect(settleWakes(ops)[0]).toContain("not fully green");
+    expect(cards()).toEqual([]);
+  });
+
+  it("discards from a crewmate settle card without steering", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Drop it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "firstmate-3000 fm/task-ready is done",
+      body: completionBody(
+        "<p>The work is ready to land.</p><p>Keep leaves the worktree; discard drops it.</p>",
+      ),
+      actions: [
+        { id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title.includes("is done")) as Card;
+
+    supervisor.act(settle.id, "discard");
+    await tick();
+
+    expect(workspace.removeTaskWorktree).toHaveBeenCalled();
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(crewmate.promptCalls.some((text) => text.includes("the user chose"))).toBe(false);
+    expect(ops.some((line) => line.includes("the user chose"))).toBe(false);
+  });
+
+  it("closing a settle card reaches its crewmate, lands nothing, and wakes no Firstmate", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Stay",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "firstmate-3000 fm/task-ready is done",
+      body: completionBody(
+        "<p>The work is ready to land.</p><p>Keep leaves the worktree; discard drops it.</p>",
+      ),
+      actions: [
+        { id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title.includes("is done")) as Card;
+
+    // There is no keep button (cards/tasks/agents P1): the close control is
+    // the keep, and it changes nothing about the task.
+    // The host attaches the completion pair itself (contract v3.6): the
+    // merge labeled for the posture and the discard beside it, under its
+    // own ids. There is still no keep button (cards/tasks/agents P1): the
+    // close control is the keep, and it changes nothing about the task.
+    expect(settle.actions.map((action) => action.id)).toEqual(["discard", "merge"]);
+    expect(settle.actions.find((action) => action.id === "merge")?.label).toBe("Merge the branch");
+    supervisor.close(settle.id);
+    await tick();
+
+    expect(cards().find((card) => card.id === settle.id)).toBeUndefined();
+    // The close is not a choice: it reaches the crewmate as its next turn
+    // (FI3-435), which judges it; nothing is merged or discarded.
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      `The captain closed your card "${settle.title}" (${settle.id}) without choosing.`,
+    );
+    crewmate.finishPrompt();
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+    expect(crewmate.promptCalls.some((text) => text.includes("the user chose"))).toBe(false);
+    expect(ops.some((line) => line.includes("the user chose"))).toBe(false);
+  });
+
+  it("attaches the completion buttons itself from the posture (contract v3.6, captain lock 3)", async () => {
+    // The audit's 4.4b row 2: every completion card in the window carried
+    // the same pair, the host already resolved the merge by posture, and a
+    // crewmate was transcribing labels it could not see - the Claude ones,
+    // which never received the text at all, got the label right 4 times in
+    // 8. So the crewmate declares the merge and the host writes the pair.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    await specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The meter test is steady",
+      body: completionBody(
+        "<p>The meter test passes ten runs in a row.</p><p>It awaits the flush now.</p>",
+      ),
+      actions: [
+        { id: "ship", label: "Ship it to main", default: true, effect: SETTLE_MERGE },
+        { id: "ask", label: "Ask me something" },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The meter test is steady") as Card;
+
+    // The invented label is gone; the pair is the host's, labeled for the
+    // task's posture (the default workspace is local-only).
+    expect(settle.actions.map((action) => ({ id: action.id, label: action.label }))).toEqual([
+      { id: "ask", label: "Ask me something" },
+      { id: "discard", label: "Discard" },
+      { id: "merge", label: "Merge the branch" },
+    ]);
+    expect(settle.actions.find((action) => action.id === "merge")?.default).toBe(true);
+    expect(settle.actions.find((action) => action.id === "discard")?.danger).toBe(true);
+    // `confirm` is never host-set: it is a claim about the body, and
+    // auto-confirming would destroy unlanded work without the captain.
+    expect(settle.actions.find((action) => action.id === "discard")?.effect).toEqual(
+      SETTLE_DISCARD,
+    );
+    // And the window on a Firstmate merge card closed with that card.
+    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(false);
+  });
+
+  it("words a merge its crewmate declared without a label, as the crewmate is told (FI3-249)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards } = setup(crewmate);
+    await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    await specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The meter reads true",
+      body: completionBody("<p>The meter reads true now.</p><p>It awaits the merge.</p>"),
+      actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The meter reads true") as Card;
+
+    expect(settle.actions.map((action) => ({ id: action.id, label: action.label }))).toEqual([
+      { id: "discard", label: "Discard" },
+      { id: "merge", label: "Merge the branch" },
+    ]);
+    expect(settle.actions.find((action) => action.id === "merge")?.effect).toEqual(SETTLE_MERGE);
+  });
+
+  it("refuses a card with an action of the crewmate's own that has no words (FI3-249)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards } = setup(crewmate);
+    await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    const body = completionBody("<p>The meter reads true now.</p><p>It awaits the merge.</p>");
+    // Beside the merge the host words, an action the crewmate keeps for itself.
+    expect(() =>
+      specs[0]?.onCard?.({
+        requiredActions: [],
+        title: "The meter reads true",
+        body,
+        actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }, { id: "ask" }],
+      }),
+    ).toThrow(/Card refused: action "ask" has no label/);
+    // A decision with no merge: every action is the crewmate's own to word.
+    expect(() =>
+      specs[0]?.onCard?.({
+        title: "Which meter?",
+        body: "<p>Two meters read the line.</p><p>Pick the one to keep.</p>",
+        actions: [
+          { id: "left", label: "  ", default: true },
+          { id: "right", label: "Right" },
+        ],
+      }),
+    ).toThrow(/Card refused: action "left" has no label/);
+    expect(() =>
+      specs[0]?.onCard?.({
+        title: "Drop the meter",
+        body: "<p>The meter is not needed.</p><p>Drop the work.</p>",
+        actions: [{ id: "discard", default: true, effect: SETTLE_DISCARD }],
+      }),
+    ).toThrow(/Card refused: action "discard" has no label/);
+    crewmate.finishPrompt();
+    await tick();
+    expect(cards()).toEqual([]);
+  });
+
+  it("holds a crewmate decision to 2 or 3 actions, counting the host's completion pair (FI3-411)", async () => {
+    // FI3-409's live check: a radio question under a lone "Save this answer"
+    // went up because nothing counted. The lint reads the card the captain
+    // gets, so a completion decision that declares only its merge gives two.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards } = setup(crewmate);
+    await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    expect(() =>
+      specs[0]?.onCard?.({
+        title: "Reduced motion needs an answer",
+        body: '<p>Pick how the reveal behaves when motion is reduced.</p><fieldset><legend>When motion is reduced</legend><label><input type="radio" name="motion" value="instant" required data-inf-recommended> Instant reveal</label><label><input type="radio" name="motion" value="fade" required> Short fade</label></fieldset>',
+        actions: [{ id: "save-answer", label: "Save this answer", default: true }],
+      }),
+    ).toThrow(
+      /^Card refused: a decision gives 2 or 3 actions, and this one gives 1 \(save-answer\)/,
+    );
+    const body = completionBody(
+      "<p>The meter test passes ten runs in a row.</p><p>It awaits the flush now.</p>",
+    );
+    // Two of the crewmate's own beside the host's pair make four.
+    expect(() =>
+      specs[0]?.onCard?.({
+        requiredActions: [],
+        title: "The meter test is steady",
+        body,
+        actions: [
+          { id: "ask", label: "Ask me something" },
+          { id: "later", label: "Ask me tomorrow" },
+          { id: "ship", label: "Ship it", default: true, effect: SETTLE_MERGE },
+        ],
+      }),
+    ).toThrow(/this one gives 4 \(ask, later, merge, discard\)/);
+    expect(cards()).toEqual([]);
+
+    // The merge alone, unlabeled, as the crewmate is told to declare it.
+    await specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The meter test is steady",
+      body,
+      actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title === "The meter test is steady") as Card;
+    expect(settle.actions.map((action) => action.id)).toEqual(["discard", "merge"]);
+  });
+
+  it("holds the merge decision for the crewmate until it has emitted one (4.4b row 9)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    // While the crewmate is live and has carded nothing, the merge decision
+    // is still its own to make: on 2026-09-19 the Firstmate emitted one
+    // beside it four times and closed three of its own as duplicates.
+    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(true);
+    expect(supervisor.crewmateOwesCompletion("no-such-task")).toBe(false);
+    // A note of its own does not close the window - only a completion card.
+    await specs[0]?.onCard?.({
+      title: "One thing I noticed",
+      body: "<p>The flush is racy.</p>",
+      actions: [],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(true);
+  });
+
+  it("a deferral a crewmate declares itself is an ordinary reply, never a park (P0, WI-1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cards } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Wait",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "firstmate-3000 fm/task-ready is done",
+      body: completionBody(
+        "<p>The work is ready to land.</p><p>Keep leaves the worktree; discard drops it.</p>",
+      ),
+      actions: [
+        { id: "later", label: "Ask me tomorrow" },
+        { id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const settle = cards().find((card) => card.title.includes("is done")) as Card;
+    // The author's own non-settle action survives the host's attachment:
+    // a card carries exactly the actions its author declares beside the
+    // completion pair (cards/tasks/agents P0).
+    expect(settle.actions.map((action) => action.id)).toEqual(["later", "discard", "merge"]);
+
+    supervisor.act(settle.id, "later");
+    await tick();
+
+    // The click returns to its author like any declared choice; nothing
+    // parks, nothing comes back on its own.
+    expect(cards()).toEqual([]);
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      'Card "firstmate-3000 fm/task-ready is done": the user chose "Ask me tomorrow" (later).',
+    );
+    expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toEqual([]);
+    expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("lands an idle task through the workspace and cleans up (Q5)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, events, cards } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Land me",
+      intent: intentOf("do and land"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    expect(cards()).toEqual([]);
+
+    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    expect(result).toContain("into main.");
+    expect(workspace.landTaskWork).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId, branch: `fm/task-${taskId}` }),
+      expect.any(Function),
+    );
+    expect(events).toContainEqual({
+      type: "task_landed",
+      taskId,
+      title: "Land me",
+      mode: "fast-forward",
+    });
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+    expect(cards().filter((card) => card.taskId === taskId)).toEqual([]);
+  });
+
+  it("queues a streaming task's land intent instead of refusing it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, cards } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Busy",
+      intent: intentOf("still going"),
+    });
+    await tick();
+    const settling = supervisor.settleTask(taskId, "land", undefined, "captain");
+    await tick();
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)?.pendingSettle?.mode).toBe("land");
+
+    crewmate.finishPrompt();
+    expect(await settling).toContain("into main.");
+    expect(workspace.landTaskWork).toHaveBeenCalledTimes(1);
+    expect(cards().find((card) => card.title === "Cannot merge")).toBeUndefined();
+  });
+
+  it("keeps the task and returns the reason when landing is refused", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, cards } = setup(crewmate);
+    (workspace.landTaskWork as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("The repository has uncommitted changes; commit or stash them first."),
+    );
+    const { taskId } = await supervisor.commission({
+      title: "Refused",
+      intent: intentOf("land later"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    expect(result).toContain("uncommitted changes");
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(cards().find((card) => card.title === "Cannot merge")).toBeUndefined();
+  });
+
+  it("routes firstmate card answers back through the hooks", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops } = setup(crewmate);
+    supervisor.addFirstmateCard({
+      title: "Which project?",
+      body: "Two match.",
+      actions: [
+        { id: "quota-axi", label: "quota-axi" },
+        { id: "gh-axi", label: "gh-axi" },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.meta === "firstmate") as Card;
+    expect(cardPresentation(card)).toBe("decision");
+    supervisor.act(card.id, "quota-axi");
+    await tick();
+    expect(ops.at(-1)).toContain('[user]\nquota-axi\nChoice on card "Which project?"');
+  });
+
+  it("closes a note without a Done action as one feed line, never a wake", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops, cardStore, specs, events } = setup(crewmate);
+    supervisor.addFirstmateCard({
+      title: "Quota note",
+      body: "All steady.",
+      actions: [],
+    });
+    await tick();
+    const note = cards().find((entry) => entry.title === "Quota note") as Card;
+    expect(note.actions).toEqual([]);
+
+    const opsBefore = ops.length;
+    supervisor.close(note.id);
+    await tick();
+    expect(cards().find((entry) => entry.id === note.id)).toBeUndefined();
+    expect(cardStore.chosenAction(note.id)).toBe("close");
+    expect(ops).toHaveLength(opsBefore);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Captain dismissed the card "Quota note".',
+    });
+    expect(supervisor.captainResolutionsSince(0, 8)).toEqual([
+      expect.objectContaining({ action: "close", card: expect.objectContaining({ id: note.id }) }),
+    ]);
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(specs).toEqual([]);
+  });
+
+  it("tells the crewmate, and parks no decision, when the captain closes its card", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops, cardStore, specs, tasks, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "cards",
+      intent: intentOf("show a decision"),
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "Pick a course",
+      body: "<p>Plotting a new course is the faster route.</p><p>Holding course waits out the storm.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    await tick();
+    const decision = cards().find((entry) => entry.actions.length > 0) as Card;
+    expect(decision.actions.map((action) => action.id)).toEqual(["hold", "change"]);
+
+    const opsBefore = ops.length;
+    supervisor.close(decision.id);
+    await tick();
+    expect(cards().find((entry) => entry.id === decision.id)).toBeUndefined();
+    expect(cardStore.chosenAction(decision.id)).toBe("close");
+    expect(ops.slice(opsBefore).filter((op) => op.includes("dismissed"))).toEqual([]);
+    // One line, saying where the card stays: the task's record.
+    const key = tasks.get(taskId)?.key;
+    expect(key).toBeTruthy();
+    expect(
+      events.filter(
+        (event) => event.type === "firstmate_note" && /closed|dismissed/.test(event.text),
+      ),
+    ).toEqual([
+      {
+        type: "firstmate_note",
+        text: `You closed "Pick a course". It stays on ${key}'s record.`,
+      },
+    ]);
+    // Mid-turn, the close reaches the crewmate's running turn (FI3-435).
+    expect(crewmate.steer.mock.calls.at(-1)?.[0]).toBe(
+      `The captain closed your card "Pick a course" (${decision.id}) without choosing.`,
+    );
+    expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
+    expect(taskId).toBeTruthy();
+  });
+
+  it("binds the selected account at spawn and records usage under it (broker phase 4)", async () => {
+    const crewmate = fakeCrewmate();
+    const selectForSpawn = vi.fn(() => "acct_work2");
+    const recordUsage = vi.fn();
+    const accounts: AccountAttachment = {
+      selectForSpawn,
+      reselectForResume: () => ({ changed: false }),
+      labelOf: () => "Work #2",
+    };
+    const { supervisor, sessionSpecs, tasks } = setup(crewmate, {
+      accounts,
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      recordUsage,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "acct",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+    expect(selectForSpawn).toHaveBeenCalledWith(taskId, "openai-codex");
+    // The account is the session's binding: its own store, direct injection.
+    expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_work2" });
+    expect(tasks.get(taskId)?.accountId).toBe("acct_work2");
+
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 5, cost: 0.02 } });
+    await tick();
+    expect(recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId, accountId: "acct_work2" }),
+    );
+  });
+
+  it("records a typed cut-off on the crewmate's account, once per failed turn and never from words", async () => {
+    const crewmate = {
+      ...fakeCrewmate(),
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
+    } satisfies FakeCrewmate;
+    const noteCutOff = vi.fn();
+    const { supervisor } = setup(crewmate, {
+      accounts: {
+        selectForSpawn: () => "acct_claude",
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => "Claude",
+      },
+      routedModel: { provider: "anthropic-claude", id: "claude-opus" },
+      noteCutOff,
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    const fail = (event: FmEvent) => {
+      crewmate.emit(event);
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+    };
+    // A failure with no class is not a cut-off, whatever it says.
+    fail({ type: "turn_failed", taskId, error: "403: permission_error" });
+    await tick();
+    expect(noteCutOff).not.toHaveBeenCalled();
+
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    fail({ type: "turn_failed", taskId, error: "Claude said no.", cutOff: { class: "refused" } });
+    await tick();
+    expect(noteCutOff).toHaveBeenCalledTimes(1);
+    expect(noteCutOff).toHaveBeenCalledWith("acct_claude", { class: "refused" });
+  });
+
+  it("threads spawn_crewmate's model override into the routing decision", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    await supervisor.commission({
+      title: "Redesign the dock",
+      intent: intentOf("use gpt-6-astra for this"),
+      shape: { override_model_id: "gpt-6-astra" },
+    });
+    await tick();
+    expect(decideCalls.at(-1)?.shape.override_model_id).toBe("gpt-6-astra");
+  });
+
+  it("hands spawn_crewmate the model that took new work the captain named one for (FI3-444)", async () => {
+    const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
+    const spawn = async (crewmate: FakeCrewmate, named?: string) => {
+      const { supervisor, tasks } = setup(crewmate, { routedModel: fable });
+      const handle = await supervisor.commission({
+        title: "Teach the colors",
+        intent: intentOf("start it with a fable crewmate"),
+        ...(named ? { shape: { override_model_id: named } } : {}),
+      });
+      await tick();
+      return { handle, model: tasks.get(handle.taskId)?.model };
+    };
+
+    // The named model took it: the handle carries it beside the record's.
+    const served = await spawn(fakeCrewmate({ model: fable }), "claude-fable-5-1");
+    expect(served.handle.model).toEqual({
+      named: "claude-fable-5-1",
+      took: "anthropic-claude/claude-fable-5-1",
+    });
+    expect(served.model).toBe("anthropic-claude/claude-fable-5-1");
+    // The session runs on another model than the one named: that one is what took it.
+    const fellBack = await spawn(fakeCrewmate(), "claude-fable-5-1");
+    expect(fellBack.handle.model).toEqual({ named: "claude-fable-5-1", took: "fm-mock/mock-1" });
+    expect(fellBack.model).toBe("fm-mock/mock-1");
+    // Nothing named: the handle stays as it was.
+    const plain = await spawn(fakeCrewmate({ model: fable }));
+    expect(plain.handle).toEqual({ taskId: plain.handle.taskId, crewmate: "crewmate 1" });
+  });
+
+  it("hands spawn_crewmate no model when none is recorded, never the named one (FI3-444)", async () => {
+    const crewmate = fakeCrewmate({ model: undefined });
+    const { supervisor, tasks } = setup(crewmate);
+    const handle = await supervisor.commission({
+      title: "Teach the colors",
+      intent: intentOf("start it with a fable crewmate"),
+      shape: { override_model_id: "claude-fable-5-1" },
+    });
+    expect(tasks.get(handle.taskId)?.model).toBeNull();
+    expect(handle.model).toEqual({ named: "claude-fable-5-1", took: null });
+  });
+
+  it("re-checks the account at a resume attachment point and moves to a sibling", async () => {
+    const crewmate = fakeCrewmate();
+    const accounts: AccountAttachment = {
+      selectForSpawn: () => undefined,
+      reselectForResume: vi.fn(() => ({ accountId: "acct_new", changed: true })),
+      labelOf: () => "Work #2",
+    };
+    const reasoningChoice = vi.fn(() => "low" as const);
+    const { supervisor, specs, sessionSpecs, tasks, events } = setup(crewmate, {
+      accounts,
+      reasoningChoice,
+      routedModel: { provider: "openai-codex", id: "gpt-6.1-sol" },
+    });
+    // A task left idle by a previous process, bound to a removed account.
+    seedTask(tasks, {
+      id: "t-resume",
+      title: "Old task",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-resume",
+      sessionFile: "/tmp/old-session.jsonl",
+      accountId: "acct_dead",
+      status: "idle",
+      createdAt: Date.now(),
+    });
+
+    await supervisor.steerCrewmate("t-resume", "carry on");
+    await tick();
+    expect(accounts.reselectForResume).toHaveBeenCalledWith("t-resume", "acct_dead");
+    expect(specs[0]).toMatchObject({ resumeToken: "/tmp/old-session.jsonl" });
+    expect(reasoningChoice).not.toHaveBeenCalled();
+    expect(specs[0]?.thinkingLevel).toBeUndefined();
+    expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_new" });
+    expect(tasks.get("t-resume")?.accountId).toBe("acct_new");
+    // The move is announced as a feed line, never silent.
+    const note = events.find((event) => event.type === "firstmate_note");
+    expect(note && "text" in note ? note.text : "").toContain('Task "Old task" moved to Work #2');
+  });
+
+  it("reopens a recorded conversation only in its own backend's shape, and says when it starts fresh", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, sessionSpecs, tasks } = setup(crewmate);
+    // A record whose token is not a Pi session file (another backend's id):
+    // Pi cannot reopen it, so the crewmate starts over rather than failing.
+    seedTask(tasks, {
+      id: "t-foreign",
+      title: "Old task",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-foreign",
+      sessionFile: "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
+      status: "idle",
+      createdAt: Date.now(),
+    });
+
+    await supervisor.steerCrewmate("t-foreign", "carry on");
+    await tick();
+    expect(specs[0]?.resumeToken).toBe("0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b");
+    expect(sessionSpecs[0]?.shape).toMatchObject({ turns: "rolling" });
+    expect(sessionSpecs[0]?.shape.turns === "rolling" && sessionSpecs[0].shape.record.resume).toBe(
+      undefined,
+    );
+    const notes = tasks.timeline("t-foreign").filter((event) => event.kind === "note");
+    expect(notes.map((event) => event.text)).toContain(
+      "its earlier conversation could not be reopened, so it starts a fresh one",
+    );
+    expect(crewmate.promptCalls.at(-1)).toContain("carry on");
+  });
+
+  it("carries a crewmate whose conversation renewed under changed instructions into its new one", async () => {
+    // The earlier conversation's saved transcript, which the crewmate is pointed at.
+    const earlier = join(scratchDir("infinitary-renewed-"), "earlier.jsonl");
+    writeFileSync(earlier, "");
+    const renewal = { from: earlier, changed: ["prompt"] as const };
+    const crewmate = fakeCrewmate({
+      sessionId: "s-new",
+      resume: { backend: "pi", sessionFile: "/tmp/s-new.jsonl" },
+      renewal,
+    });
+    const { supervisor, tasks } = setup(crewmate);
+    seedTask(tasks, {
+      id: "t-renew",
+      title: "Old task",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-renew",
+      sessionFile: earlier,
+      status: "idle",
+      createdAt: Date.now(),
+    });
+    tasks.recordBrief("t-renew", ["Goal: count the rivets."]);
+
+    await supervisor.steerCrewmate("t-renew", "carry on");
+    await tick();
+    // The record says so, and names the new conversation before its turn ends.
+    const note = tasks
+      .timeline("t-renew")
+      .find((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal));
+    expect(note?.data).toMatchObject({ conversation: { from: earlier, changed: ["prompt"] } });
+    expect(tasks.get("t-renew")?.sessionFile).toBe("/tmp/s-new.jsonl");
+    // Its first prompt says why, where its record and earlier conversation
+    // are, and its brief, then the message that woke it.
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(crewmate.promptCalls[0]).toBe(
+      `${crewmateRestartText({
+        restart: renewal,
+        taskKey: tasks.get("t-renew")?.key ?? "",
+        brief: "Goal: count the rivets.",
+        earlier,
+      })}\n\ncarry on`,
+    );
+    // Once a turn took it in, the next prompt is the message alone.
+    crewmate.finishPrompt();
+    await tick();
+    await supervisor.steerCrewmate("t-renew", "and then this");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("and then this");
+  });
+
+  it("refuses to start a crewmate on a backend nothing serves, rather than guessing", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, sessions } = setup(crewmate, {
+      accounts: {
+        selectForSpawn: () => "acct_claude",
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => "Claude",
+      },
+      routedModel: { provider: "anthropic-claude", id: "claude-opus-5-5" },
+      // The account binds to Claude, and this supervisor has only Pi's factory.
+      bind: async (accountId) => ({ backend: "claude", accountId: accountId ?? "" }),
+    });
+    await expect(
+      supervisor.commission({ title: "Job", intent: intentOf("Start") }),
+    ).rejects.toThrow('No backend is registered to serve account "acct_claude".');
+    expect(sessions.open).not.toHaveBeenCalled();
+  });
+
+  it("keeps a session's own bookkeeping off the feed, and its turns on it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    crewmate.emit({ type: "request_started" });
+    crewmate.emit({ type: "assistant_delta", taskId, text: "On it." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "turn_closed", text: "On it." });
+    await tick();
+    const types = events.map((event) => event.type);
+    expect(types).toContain("assistant_delta");
+    expect(types).toContain("turn_end");
+    expect(types).not.toContain("turn_closed");
+    expect(types).not.toContain("request_started");
+  });
+
+  it("never resumes a task that ran on a subscription this build no longer offers", async () => {
+    // An idle task a Cursor crewmate left behind: its resume token is
+    // Cursor's own chat id, which no remaining transport can reopen.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, tasks, inbox } = setup(crewmate, {
+      routedModel: { provider: "cursor", id: "composer-2.5" },
+    });
+    seedTask(tasks, {
+      id: "t-cursor",
+      title: "Tidy the README",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-cursor",
+      sessionFile: "chat-0f3a",
+      accountId: "acct_cursor",
+      status: "idle",
+      createdAt: Date.now(),
+    });
+
+    // A steer is refused as text, with the way out.
+    await expect(supervisor.steerCrewmate("t-cursor", "carry on")).rejects.toThrow(
+      /no longer offers.*Spawn a follow-up/,
+    );
+    // Guidance a previous process left on its lane is kept on the record,
+    // never retried into a transport that cannot hold it.
+    inbox.enqueue("t-cursor", "also fix the links");
+    await supervisor.sweepInbox(Date.now());
+    await tick();
+    expect(specs).toEqual([]);
+    expect(inbox.allFor("t-cursor")).toEqual([]);
+    const note = tasks.timeline("t-cursor").find((event) => event.kind === "note");
+    expect(note).toMatchObject({ feed: true, data: { undelivered: 1 } });
+    expect(note?.text).toContain("also fix the links");
+    expect(tasks.get("t-cursor")).toMatchObject({ status: "active", activity: "idle" });
+  });
+
+  it("restores unresolved cards across restarts", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, db, paths } = setup(crewmate);
+    await supervisor.commission({ title: "persist", intent: intentOf("show every card kind") });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "Persisted note",
+      body: "Still here.",
+      actions: [],
+    });
+    await tick();
+    // A fresh supervisor over the same database (a restart).
+    const fresh = new CrewSupervisor({
+      ...crewSessions(
+        paths,
+        vi.fn(async () => crewmate),
+      ),
+      workspace: { removeTaskWorktree: vi.fn(async () => {}) } as unknown as WorkspaceService,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: new TaskService({ db, strict: true }),
+      cardStore: new CardStore(db),
+      inbox: new InboxStore(db),
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    const titles = fresh.cardsSnapshot().map((card) => card.title);
+    expect(titles).toContain("Persisted note");
+  });
+});
+
+describe("a crewmate's own completion card clears the standing CI gate first", () => {
+  it.each(["cancelled", "failed"] as const)(
+    "does not publish a late checked card after the task is %s",
+    async (reason) => {
+      const check = deferred<"green">();
+      const crewmate = fakeCrewmate();
+      const { supervisor, specs, cards, cardStore } = setup(crewmate, {
+        checkCi: () => check.promise,
+      });
+      const { taskId } = await supervisor.commission({
+        title: "Ship the fix",
+        intent: intentOf("finish the PR"),
+        shape: { rigor_ask: "quick" },
+      });
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      const result = specs[0]?.onCard?.({
+        requiredActions: [],
+        title: "Ready to merge",
+        body: completionBody("<p>The change is ready.</p>"),
+        actions: [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }],
+      });
+      if (reason === "cancelled") await supervisor.interruptCrewmate(taskId, "cancel");
+      crewmate.failPrompt(reason === "cancelled" ? "aborted" : "The client exited.");
+      await tick();
+      check.resolve("green");
+      await expect(result).rejects.toThrow("this task has closed");
+      await tick();
+      expect(cards()).toEqual([]);
+      expect(cardStore.listOpen()).toEqual([]);
+    },
+  );
+
+  it("refuses a direct-pr merge decision - and shows no card - while CI reads pending", async () => {
+    const crewmate = fakeCrewmate();
+    const checkCi = vi.fn(async () => "pending" as const);
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi });
+    await supervisor.commission({
+      title: "Ship the fix",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    const result = specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ready to merge",
+      body: completionBody(
+        "<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>",
+      ),
+      actions: [
+        { id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+
+    await expect(result).rejects.toThrow(/Card refused: the checks read running, not passed/);
+    // The refusal names no tool the crewmate may not have.
+    await expect(result).rejects.not.toThrow(/gh /);
+    expect(checkCi).toHaveBeenCalledTimes(1);
+    await tick();
+    expect(cards()).toHaveLength(0);
+  });
+
+  it("asks for the thread answer now when the checks hold a card back while the captain's reply waits", async () => {
+    const crewmate = fakeCrewmate();
+    let overall: "green" | "pending" = "green";
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi: async () => overall });
+    await supervisor.commission({
+      title: "Ship the fix",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const completion = (body: string) => ({
+      requiredActions: [],
+      id: "ready",
+      title: "Ready to merge",
+      body: completionBody(body),
+      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+    });
+    await specs[0]?.onCard?.(completion("<p>The PR is open.</p><p>The checks passed.</p>"));
+    await tick();
+    const card = cards().find((entry) => entry.title === "Ready to merge") as Card;
+    // The captain asks for a change, which restarts the checks.
+    supervisor.replyToCard(card.id, "rename the flag first");
+    overall = "pending";
+    const refused = specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>"));
+    await expect(refused).rejects.toThrow(/Card refused: the checks read running, not passed/);
+    await expect(refused).rejects.toThrow(
+      "The captain's reply in your card's thread is still unanswered: answer it now with reply",
+    );
+    // Once the thread has its answer, the refusal is the checks' alone.
+    specs[0]?.onReply?.({ cardId: card.id, text: "Renamed; the checks are running again." });
+    await expect(
+      specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>")),
+    ).rejects.not.toThrow(/still unanswered/);
+  });
+
+  it("refuses a direct-pr merge decision while CI reads red, naming the state", async () => {
+    const crewmate = fakeCrewmate();
+    const checkCi = vi.fn(async () => "red" as const);
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi });
+    await supervisor.commission({
+      title: "Ship the fix",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    const result = specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ready to merge",
+      body: completionBody(
+        "<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>",
+      ),
+      actions: [
+        { id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+
+    await expect(result).rejects.toThrow(/Card refused: the checks read failed, not passed/);
+    await tick();
+    expect(cards()).toHaveLength(0);
+  });
+
+  it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {
+    const crewmate = fakeCrewmate();
+    const checkCi = vi.fn(async () => "green" as const);
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi });
+    await supervisor.commission({
+      title: "Ship the fix",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    const result = specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ready to merge",
+      body: completionBody(
+        "<p>The PR is open.</p><p>All changes are pushed and the worktree is clean.</p>",
+      ),
+      actions: [
+        { id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    const id = await result;
+    await tick();
+
+    expect(checkCi).toHaveBeenCalledTimes(1);
+    const card = cards().find((entry) => entry.id === id);
+    expect(card?.title).toBe("Ready to merge");
+    expect(card?.actions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "merge", default: true })]),
+    );
+  });
+
+  it("never calls checkCi for a card without a merge decision", async () => {
+    const crewmate = fakeCrewmate();
+    const checkCi = vi.fn(async () => "pending" as const);
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi });
+    await supervisor.commission({ title: "Investigate", intent: intentOf("look into it") });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+
+    const result = specs[0]?.onCard?.({
+      title: "Here is what I found",
+      body: "<p>Just a note.</p>",
+      actions: [],
+    });
+
+    expect(result).not.toBeInstanceOf(Promise);
+    expect(checkCi).not.toHaveBeenCalled();
+    await tick();
+    expect(cards().map((card) => card.title)).toContain("Here is what I found");
+  });
+
+  it("never calls checkCi for a local-only task's Land decision", async () => {
+    const crewmate = fakeCrewmate();
+    const checkCi = vi.fn(async () => "pending" as const);
+    const { supervisor, specs, cards } = setup(crewmate, { checkCi });
+    await supervisor.commission({
+      title: "Fix locally",
+      intent: intentOf("fix it"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("local-only");
+
+    const result = specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ready to land",
+      body: completionBody(
+        "<p>Local work is done.</p><p>The branch is committed and the tests pass.</p>",
+      ),
+      actions: [
+        { id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+
+    expect(result).not.toBeInstanceOf(Promise);
+    expect(checkCi).not.toHaveBeenCalled();
+    await tick();
+    expect(cards().map((card) => card.title)).toContain("Ready to land");
+  });
+});
+
+/**
+ * FI3-401: PR #549's crewmate had its completion card refused by the CI
+ * gate a second after asking, then reported "Completion card emitted", and
+ * the Firstmate relayed that card to the captain. The refusal is a fact the
+ * host holds; the report wake and crew_status carry it beside the report.
+ * Every emit below goes through the crewmate's real emit_card tool.
+ */
+describe("a refused completion card is a fact the Firstmate reads (FI3-401)", () => {
+  const merge = [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }];
+
+  /** One crewmate turn that ends with `text` as its report. */
+  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
+    crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  async function shipping(checks: { overall: import("./prCi").PrCiOverall }) {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate, { checkCi: async () => checks.overall });
+    const { taskId } = await harness.supervisor.commission({
+      title: "Ship the fix",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(harness.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const emitCard = bindTool(EMIT_CARD_TOOL, harness.specs[0] as CrewmateSpec);
+    return { ...harness, crewmate, taskId, emitCard };
+  }
+
+  it("records the CI gate's refusal, names it beside a report that says the card went up, and clears it once the card goes up", async () => {
+    const checks: { overall: import("./prCi").PrCiOverall } = { overall: "pending" };
+    const { supervisor, tasks, ops, ledger, ledgerFacts, cards, crewmate, taskId, emitCard } =
+      await shipping(checks);
+
+    await expect(
+      emitCard.run({
+        required_actions: [],
+        title: "Ready to merge",
+        body: completionBody("<p>The PR is open.</p>"),
+        actions: merge,
+        risk: METER_RISK,
+      }),
+    ).rejects.toThrow(/Card refused: the checks read running, not passed/);
+    await tick();
+    expect(cards()).toEqual([]);
+
+    // The record: refused, when, and why, on the task's delivery facts and
+    // its timeline.
+    const refusal = tasks.get(taskId)?.delivery?.cardRefusal;
+    expect(refusal).toEqual({
+      at: expect.any(Number),
+      title: "Ready to merge",
+      reason: "checks",
+      why: "its checks read running, not passed",
+    });
+    const at = new Date(refusal?.at ?? 0).toISOString();
+    expect(
+      tasks.timeline(taskId).find((event) => event.data?.cardRefusal !== undefined),
+    ).toMatchObject({
+      kind: "note",
+      actor: "host",
+      text: 'completion card "Ready to merge" refused: its checks read running, not passed',
+    });
+
+    // The crewmate's report claims the card went up; the wake says it did not.
+    await reportTurn(crewmate, taskId, "Completion card emitted.");
+    expect(ops).toEqual([
+      `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its completion card "Ready to merge" at ${at}: its checks read running, not passed. That card did not reach the captain, and no card of its is on the captain's screen.`,
+    ]);
+    expect(ledgerFacts.at(-1)).toMatchObject({
+      kind: "report",
+      cards: [],
+      refused: { title: "Ready to merge", reason: "checks", at: refusal?.at },
+    });
+    expect(supervisor.crewStatus(taskId)[0]?.cardRefused).toEqual({
+      title: "Ready to merge",
+      at,
+      reason: "checks",
+      why: "its checks read running, not passed",
+    });
+
+    // The checks pass and the card goes up: the refusal no longer stands.
+    checks.overall = "green";
+    await supervisor.steerCrewmate(taskId, "the checks passed; emit the completion card");
+    await tick();
+    const shown = await emitCard.run({
+      required_actions: [],
+      title: "Ready to merge",
+      body: completionBody("<p>The PR is open and its checks passed.</p>"),
+      actions: merge,
+      risk: METER_RISK,
+    });
+    expect(shown.text).toMatch(/^Card shown: Ready to merge/);
+    expect(tasks.get(taskId)?.delivery?.cardRefusal).toBeUndefined();
+    expect(supervisor.crewStatus(taskId)[0]?.cardRefused).toBeUndefined();
+    await reportTurn(crewmate, taskId, "Completion card emitted.");
+    expect(ledger.at(-1)).not.toContain("refused");
+    expect(ledger.at(-1)).toContain("Its card on the captain's screen:");
+  });
+
+  it("records a refusal the card tool made before the host saw the card, and the CI cap's", async () => {
+    const { tasks, taskId, emitCard, specs } = await shipping({ overall: "green" });
+    // The working copy the picture is looked for in, without the picture.
+    mkdirSync(specs[0]?.cwd ?? "", { recursive: true });
+    await expect(
+      emitCard.run({
+        required_actions: [],
+        title: "Ready to merge",
+        body: completionBody('<p><img src="missing.png" alt="the meter after"></p>'),
+        actions: merge,
+        risk: METER_RISK,
+      }),
+    ).rejects.toThrow(/Card picture refused/);
+    expect(tasks.get(taskId)?.delivery?.cardRefusal).toMatchObject({
+      reason: "other",
+      why: expect.stringMatching(/^Card picture refused: /),
+    });
+
+    tasks.recordDelivery(taskId, { ciRounds: 3, ciCapAt: Date.now() });
+    await expect(
+      emitCard.run({
+        required_actions: [],
+        title: "Ready to merge",
+        body: completionBody("<p>The PR is open.</p>"),
+        actions: merge,
+        risk: METER_RISK,
+      }),
+    ).rejects.toThrow(/Card refused: this task hit its CI cap/);
+    expect(tasks.get(taskId)?.delivery?.cardRefusal).toMatchObject({
+      reason: "ci-cap",
+      why: "it hit its CI cap (3 own repairs failed), so the card is held until the captain answers",
+    });
+  });
+
+  it("records nothing for a refused card that is no completion card, or on a task that has none", async () => {
+    const { supervisor, tasks, taskId, emitCard } = await shipping({ overall: "pending" });
+    await expect(
+      emitCard.run({ id: "Not Kebab", title: "A note", body: "<p>Found it.</p>", actions: [] }),
+    ).rejects.toThrow(/Card id must be kebab-case/);
+    expect(tasks.get(taskId)?.delivery?.cardRefusal).toBeUndefined();
+    expect(supervisor.crewStatus(taskId)[0]).not.toHaveProperty("cardRefused");
+
+    // An answer task has no completion card, and its refusal says so.
+    const reader = fakeCrewmate();
+    const answer = setup(reader);
+    const { taskId: answerId } = await answer.supervisor.commission({
+      title: "Read the router",
+      intent: {
+        goal: "explain the ladder",
+        userWords: "how does routing pick a model?",
+        constraints: [{ kind: "read-only" }],
+      },
+    });
+    await tick();
+    await expect(
+      bindTool(EMIT_CARD_TOOL, answer.specs[0] as CrewmateSpec).run({
+        required_actions: [],
+        title: "Ready to merge",
+        body: completionBody("<p>Nothing to merge.</p>"),
+        actions: merge,
+        risk: METER_RISK,
+      }),
+    ).rejects.toThrow(/deliverable is an answer/);
+    expect(answer.tasks.get(answerId)?.delivery?.cardRefusal).toBeUndefined();
+  });
+});
+
+describe("the task record (task-system P0)", () => {
+  it("keeps the last report on the record so crew_status answers after a restart", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, db, paths, workspace } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Stabilize the flaky test",
+      intent: intentOf("make the flaky test green"),
+    });
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Green now. " });
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Two files changed." });
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+    crewmate.finishPrompt();
+    await tick();
+    expect(supervisor.crewStatus()[0]).toMatchObject({
+      taskId,
+      key: "SCR-1",
+      status: "idle",
+      lastReport: "Green now. Two files changed.",
+    });
+    supervisor.disposeAll();
+
+    // A fresh process over the same database: no runtime remembers the
+    // report, the record does. The crewmate is listed idle, steerable by
+    // resume, with the same report and key.
+    const rebooted = new TaskService({ db, strict: true });
+    const fresh = new CrewSupervisor({
+      ...crewSessions(
+        paths,
+        vi.fn(async () => crewmate),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: rebooted,
+      cardStore: new CardStore(db),
+      inbox: new InboxStore(db),
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    expect(fresh.crewStatus()).toEqual([
+      expect.objectContaining({
+        taskId,
+        key: "SCR-1",
+        status: "idle",
+        title: "Stabilize the flaky test",
+        lastReport: "Green now. Two files changed.",
+      }),
+    ]);
+    expect(fresh.crewStatus()[0]?.crewmate).toBeUndefined();
+    expect(fresh.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(rebooted.get(taskId)).toMatchObject({
+      status: "active",
+      activity: "idle",
+      outcome: "Green now. Two files changed.",
+      outcomeSummary: "Green now.",
+      assignee: "crewmate 1",
+      model: "fm-mock/mock-1",
+    });
+    expect(rebooted.timeline(taskId).map((event) => event.kind)).toEqual([
+      "created",
+      "dispatched",
+      "briefed",
+      "report",
+    ]);
+  });
+
+  it("a confirmed discard of a streaming crewmate closes the record once, as discarded", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, workspace } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Mid-flight", intent: intentOf("go") });
+    await tick();
+    const result = await supervisor.settleTask(taskId, "discard", true);
+    expect(result).toBe('Discarded "Mid-flight".');
+    // The abort resolves the turn; its finish path sees a closed record and
+    // leaves the discard reason alone.
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    const closes = tasks.timeline(taskId).filter((event) => event.kind === "status");
+    expect(closes).toHaveLength(1);
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(1);
+  });
+
+  it("records the structured intent, the account, and a failed turn on the record", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      accounts: {
+        selectForSpawn: () => "acct_1",
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => "Work",
+      },
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+    });
+    const intent = intentOf("carefully");
+    const { taskId } = await supervisor.commission({ title: "Careful work", intent });
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({
+      kind: "work",
+      intent,
+      goal: intent.goal,
+      accountId: "acct_1",
+      // The transport's own model, not the routing choice it came from.
+      model: "fm-mock/mock-1",
+      activity: "running",
+      startedAt: expect.any(Number),
+    });
+    crewmate.emit({ type: "turn_failed", taskId, error: "provider melted" });
+    crewmate.finishPrompt();
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "active", activity: "idle", outcome: null });
+    expect(tasks.timeline(taskId).at(-1)).toMatchObject({
+      kind: "failed",
+      text: "hit a problem: provider melted",
+      data: { error: "provider melted", fatal: false },
+    });
+  });
+
+  it("a queued row waits on a blocks edge and starts when the blocker delivers", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate);
+    const first = await supervisor.commission({ title: "First", intent: intentOf("one") });
+    await tick();
+    const second = await supervisor.commission({
+      title: "Second",
+      intent: intentOf("two"),
+      startAfter: { afterTask: first.taskId },
+    });
+    expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
+    expect(tasks.blockers(second.taskId).map((record) => record.id)).toEqual([first.taskId]);
+    expect(supervisor.crewStatus().find((entry) => entry.taskId === second.taskId)?.gate).toBe(
+      `starts when ${tasks.get(first.taskId)?.key} finishes`,
+    );
+    expect(events.at(-2)).toMatchObject({
+      type: "firstmate_note",
+      text: `Queued "Second" - starts when ${tasks.get(first.taskId)?.key} finishes.`,
+    });
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(second.taskId)?.status).toBe("open");
+
+    crewmate.finishPrompt();
+    await tick();
+    await supervisor.settleTask(first.taskId, "land", undefined, "captain");
+    await tick();
+    expect(tasks.get(second.taskId)).toMatchObject({ status: "active" });
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: `Starting "Second" - task ${first.taskId} finished.`,
+    });
+  });
+});
+
+describe("the task graph (R1)", () => {
+  it("queues work behind an at-time gate and dispatches it when the sweep clears it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks, sessions, cards } = setup(crewmate);
+    const at = Date.now() + 60 * 60 * 1000;
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Nightly sweep",
+      intent: intentOf("run the sweep"),
+      startAfter: { at },
+    });
+    expect(name).toBe("queued");
+    // No worktree, no session, no card - a row and a feed line.
+    expect(sessions.open).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      key: "SCR-1",
+      gate: { kind: "at-time", until: at },
+    });
+    const note = events.find((event) => event.type === "firstmate_note");
+    expect(note && "text" in note ? note.text : "").toContain('Queued "Nightly sweep"');
+    expect(events.find((e) => e.type === "crew_counts")).toMatchObject({ queued: 1 });
+    // The strip and status see it.
+    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toMatchObject({
+      status: "queued",
+    });
+
+    // Before its time: nothing.
+    await supervisor.sweepGates(at - 1000);
+    expect(sessions.open).not.toHaveBeenCalled();
+
+    // Its time arrives: the sweep dispatches through the normal start path.
+    await supervisor.sweepGates(at + 1000);
+    await tick();
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(crewmate.promptCalls[0]).toContain("run the sweep");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(cards()).toEqual([]);
+    expect(events.some((e) => e.type === "firstmate_note" && e.text.includes("Starting"))).toBe(
+      true,
+    );
+  });
+
+  it("overlapping dispatches of a queued task start it only once", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions, workspace, paths } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Queued",
+      intent: intentOf("do the thing"),
+      startAfter: { at: Date.now() - 1 },
+    });
+    const held = deferred<void>();
+    vi.mocked(workspace.createTaskWorktree).mockImplementation(async (id: string) => {
+      await held.promise;
+      return {
+        taskId: id,
+        cwd: join(paths.worktreesDir, id),
+        branch: `fm/task-${id}`,
+        repoDir: paths.defaultWorkspaceDir,
+      };
+    });
+    const first = supervisor.dispatchQueuedTask(taskId);
+    const second = supervisor.dispatchQueuedTask(taskId);
+    held.resolve();
+    await Promise.all([first, second]);
+    await tick();
+    expect(workspace.createTaskWorktree).toHaveBeenCalledTimes(1);
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("a failed queued start requeues without leaving a runtime, and a retry can start", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions, workspace } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Queued",
+      intent: intentOf("do the thing"),
+      startAfter: { at: Date.now() - 1 },
+    });
+    vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
+      new Error("a branch named 'fm/task-x' already exists"),
+    );
+    await supervisor.dispatchQueuedTask(taskId);
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      gate: { kind: "captain", ref: "dispatch-failed" },
+    });
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+    expect(sessions.open).not.toHaveBeenCalled();
+
+    await supervisor.dispatchQueuedTask(taskId);
+    await tick();
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("refuses a start_after gate on a task that does not exist", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    await expect(
+      supervisor.commission({
+        title: "x",
+        intent: intentOf("y"),
+        startAfter: { afterTask: "nope" },
+      }),
+    ).rejects.toThrow(/Unknown task/);
+  });
+
+  it("turns a dead gate into one deduped wake, no card and no hold (P0, WI-3)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, sessions, inbox } = setup(crewmate);
+    // The real agent's notifyOp is the inbox's deduped wake path.
+    supervisor.setFirstmateHooks({
+      notifyOp: (text, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, text, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const wakes = () =>
+      inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => renderWake(row).includes("can never end"));
+    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    await tick();
+    const second = await supervisor.commission({
+      title: "Dependent",
+      intent: intentOf("needs doomed"),
+      startAfter: { afterTask: first.taskId },
+    });
+    crewmate.failPrompt("crashed hard");
+    await tick();
+
+    expect(cards()).toEqual([]);
+    expect(wakes()).toHaveLength(1);
+    const row = wakes()[0];
+    const wake = row ? renderWake(row) : "";
+    expect(wake).toContain(`[fm-op] queued task ${second.taskId}`);
+    expect(wake).toContain('"Doomed"');
+    // The wake carries the fact - the dead edge - not the tool recipe (v2.0).
+    expect(wake).toContain("the dead edge is blocks");
+    expect(wake).not.toContain("update_task");
+    expect(wakes()[0]?.ref).toBe(second.taskId);
+    // No hold: the row stays plain queued work, and the tick does not nag.
+    expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
+    await supervisor.sweepGates(Date.now());
+    await supervisor.sweepGates(Date.now());
+    expect(wakes()).toHaveLength(1);
+    expect(legacyStateOf(tasks.get(second.taskId))).toBe("queued");
+
+    // start_now refuses while the dead edge stands: the wait is the edge,
+    // and the refusal names the same edge the wake did.
+    const dependent = tasks.get(second.taskId);
+    const doomed = tasks.get(first.taskId)?.key;
+    const refusal = await supervisor.startQueuedNow(second.taskId);
+    expect(refusal).toContain(
+      `Cannot start ${dependent?.key} "Dependent" now: it waits on ${doomed} "Doomed"`,
+    );
+    expect(refusal).toContain(`remove the dead edge blocks ${doomed} -> ${dependent?.key}`);
+    // Removing the edge is the way out the wake named; the sweep starts it.
+    expect(supervisor.unlinkTasks(first.taskId, second.taskId, "blocks")).toMatch(/^Removed/);
+    await tick();
+    expect(legacyStateOf(tasks.get(second.taskId))).toBe("running");
+    expect((sessions.open as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+  });
+
+  it("standalone goal edits update saved intent and the actual served dispatch", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks } = setup(crew);
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    tasks.updateFields(
+      planned.id,
+      { goal: "Replacement-only shell-height interpolation" },
+      "firstmate",
+    );
+    await supervisor.startQueuedNow(planned.key);
+    await tick();
+    expect(crew.promptCalls[0]).toContain("Goal: Replacement-only shell-height interpolation");
+    expect(crew.promptCalls[0]).toContain("Original scope"); // verbatim user words remain unchanged
+    expect(tasks.get(planned.id)?.intent?.goal).toBe("Replacement-only shell-height interpolation");
+    expect(tasks.get(planned.id)?.prompt).toContain(
+      "Goal: Replacement-only shell-height interpolation",
+    );
+  });
+
+  it("serves a goal amendment made while queued classification is in flight", async () => {
+    const crew = fakeCrewmate();
+    let release:
+      | ((value: { kind: "implement"; source: string; version: string }) => void)
+      | undefined;
+    const classified = new Promise<{ kind: "implement"; source: string; version: string }>(
+      (resolve) => {
+        release = resolve;
+      },
+    );
+    const { supervisor, tasks } = setup(crew, { classifier: { classify: async () => classified } });
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const starting = supervisor.startQueuedNow(planned.key);
+    tasks.updateFields(planned.id, { goal: "Responsive width and reduced motion" }, "firstmate");
+    release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
+    await starting;
+    await tick();
+    expect(crew.promptCalls[0]).toContain("Goal: Responsive width and reduced motion");
+  });
+
+  it("delivers historical full reports and uncut card amendments, then pins the served content", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks, specs, repos, cardStore } = setup(crew);
+    const source = tasks.create({
+      id: "full-spec",
+      title: "Accepted transitions",
+      prompt: "p",
+      repoId: null,
+    });
+    const specification = `Full specification: stable external pager and intrinsic iframe isolation. ${"Each scoped clause stays word for word. ".repeat(30)}`;
+    tasks.recordReport(source.id, { text: specification });
+    tasks.recordReport(source.id, { text: "Complete; no investigation remains." });
+    // The source is verified by its report, not by an invented approval.
+    await supervisor.commission({
+      title: "Build transitions",
+      intent: intentOf("build it"),
+      shape: { basis: source.key },
+    });
+    await tick();
+    expect(crew.promptCalls[0]).toContain("stable external pager and intrinsic iframe isolation");
+    expect(crew.promptCalls[0]).toContain(
+      "Its report - the final answer it recorded:\nComplete; no investigation remains.",
+    );
+    expect(crew.promptCalls[0]?.split("Complete; no investigation remains.").length).toBe(2);
+    expect(crew.promptCalls[0]).toContain(specification);
+    const pinned = tasks
+      .timeline(tasks.list().find((row) => row.title === "Build transitions")?.id ?? "")
+      .find((event) => event.kind === "briefed") as TaskEvent;
+    // The receipt keeps the long report by reference, the short one as a
+    // copy, and reads back as exactly what was served.
+    expect(pinned.text).not.toContain("Each scoped clause stays word for word.");
+    expect(pinned.text).toContain("Complete; no investigation remains.");
+    expect(pinned.text.length).toBeLessThan(crew.promptCalls[0]?.length ?? 0);
+    expect(tasks.servedBrief(pinned)).toBe(crew.promptCalls[0]);
+    // Both readers of the receipt read the brief as served: the tasks query
+    // and the record's timeline.
+    const builder = tasks.get(pinned.taskId);
+    const read = await specs[0]?.onQueryTasks?.({ key: builder?.key });
+    expect(read?.rows[0]?.brief).toBe(crew.promptCalls[0]);
+    const protocol = new TaskProtocol({
+      tasks,
+      repos,
+      cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cardsSnapshot() },
+      broadcastEvent: () => {},
+      emit: () => {},
+    });
+    try {
+      const shown = protocol.detail(pinned.taskId).events.find((event) => event.id === pinned.id);
+      expect(shown?.text).toBe(crew.promptCalls[0]);
+    } finally {
+      protocol.dispose();
+    }
+  });
+
+  it("delivers an external filing origin as provenance without claiming it is an accepted basis", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks } = setup(crew);
+    const origin = tasks.create({
+      id: "origin",
+      title: "Investigate the meter",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.recordReport(origin.id, { text: "Recorded finding: claim query omits queued rows." });
+    const filing = tasks.fileFollowup({
+      id: "filing",
+      originId: origin.id,
+      title: "Fix claim",
+      goal: "Include queued rows",
+      why: "Queued rows missing",
+      prompt: "Goal: Include queued rows",
+    }).record;
+    await supervisor.startQueuedNow(filing.key);
+    await tick();
+    expect(crew.promptCalls[0]).toContain(origin.key);
+    expect(crew.promptCalls[0]).toContain("Recorded finding: claim query omits queued rows.");
+    expect(crew.promptCalls[0]).not.toContain("whose answer is the spec for it");
+    expect(tasks.get(filing.id)?.shape?.basis).toBeUndefined();
+  });
+
+  it("update_task start_now starts a gated row now and refuses what is not queued work", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Tonight",
+      intent: intentOf("later"),
+      startAfter: { at: Date.now() + 60 * 60 * 1000 },
+    });
+    expect(legacyStateOf(tasks.get(taskId))).toBe("queued");
+    const key = tasks.get(taskId)?.key;
+
+    expect(await supervisor.startQueuedNow(key ?? "")).toBe(`Started ${key} "Tonight".`);
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "active", gate: null });
+    expect(tasks.timeline(taskId).some((event) => event.text.includes("started on request"))).toBe(
+      true,
+    );
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+
+    // Not queued work any more: a plain refusal, nothing thrown.
+    expect(await supervisor.startQueuedNow(taskId)).toContain("not queued work");
+    // A live blocker is a real wait; the refusal names it.
+    const a = supervisor.plan({ title: "A", intent: intentOf("a"), startPolicy: "when-ready" });
+    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    expect(await supervisor.startQueuedNow(b.key)).toContain(`it waits on ${a.key} "A"`);
+    expect(tasks.get(b.id)?.status).toBe("open");
+  });
+
+  it("a start refusal names the edge to remove, never dropping the blocker (FI3-244)", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
+    const c = supervisor.plan({ title: "C", intent: intentOf("c") });
+    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id, c.id] });
+
+    // Live blockers: the wait ends when their work is done, or with the edge gone.
+    const live = await supervisor.startQueuedNow(b.key);
+    expect(live).toContain(`${a.key} "A"`);
+    expect(live).toContain(`${c.key} "C"`);
+    expect(live).toContain("remove the blocks edges with link_tasks remove");
+    expect(live).toContain("Dropping a blocker never clears its wait.");
+
+    // Dropping a blocker leaves its edge dead, still in the way: the refusal
+    // names that edge, and the live one still waits for its work.
+    expect(supervisor.dropTask(a.key, { reason: "not wanted" })).toMatch(/^Dropped/);
+    const dead = await supervisor.startQueuedNow(b.key);
+    expect(dead).toContain(`${a.key} "A" (dropped)`);
+    expect(dead).toContain(
+      `remove the dead edge blocks ${a.key} -> ${b.key} with link_tasks remove; it can start once the rest is done.`,
+    );
+    expect(dead).not.toContain(`blocks ${c.key}`);
+    expect(dead).not.toMatch(/drop the blocker/i);
+    expect(tasks.get(b.id)?.status).toBe("open");
+    // The captain's refusal says what is in the way, without the tool's way out.
+    const captain = await supervisor.startQueuedNow(b.key, "captain");
+    expect(captain).toMatch(new RegExp(`^Cannot start ${b.key} "B" now: it waits on .*\\.$`));
+    expect(captain).toContain(`${a.key} "A" (dropped)`);
+    expect(captain).not.toContain("link_tasks");
+    expect(dead.startsWith(captain)).toBe(true);
+
+    // With only dead edges left, removing them is the whole way out.
+    expect(supervisor.dropTask(c.key, { reason: "not wanted either" })).toMatch(/^Dropped/);
+    const deadOnly = await supervisor.startQueuedNow(b.key);
+    expect(deadOnly).toContain("Dropped work never clears a wait: remove the dead edges");
+    expect(deadOnly).toContain(`blocks ${a.key} -> ${b.key}`);
+    expect(deadOnly).toContain(`blocks ${c.key} -> ${b.key}`);
+    expect(deadOnly).toMatch(/with link_tasks remove\.$/);
+
+    // The way out it names works: with the edges gone, the start goes through.
+    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
+    expect(supervisor.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
+    expect(await supervisor.startQueuedNow(b.key)).toBe(`Started ${b.key} "B".`);
+    await tick();
+    expect(tasks.get(b.id)?.status).toBe("active");
+  });
+
+  it("starts a filed task on the model the captain named, keeping its key, parent and links (FI3-436)", async () => {
+    const crewmate = fakeCrewmate({ model: { provider: "openai-codex", id: "gpt-6-astra" } });
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    const parent = supervisor.plan({ title: "Gauge work", intent: intentOf("gauge work") });
+    const spec = supervisor.plan({ title: "Gauge spec", intent: intentOf("spec it") });
+    const filed = supervisor.plan({
+      title: "Calibrate the gauge",
+      intent: intentOf("calibrate the gauge"),
+      parent: parent.key,
+      shape: { basis: spec.key },
+    });
+    supervisor.linkTasks(spec.key, filed.key, "related");
+    const before = tasks.list().length;
+
+    // The model the captain named is an edit to the filed row, then the start.
+    expect(tasks.updateFields(filed.id, { model: "gpt-6-astra" }, "firstmate")).toEqual([
+      "model gpt-6-astra",
+    ]);
+    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+      `Started ${filed.key} "Calibrate the gauge" on openai-codex/gpt-6-astra.`,
+    );
+    await tick();
+
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      override_model_id: "gpt-6-astra",
+      basis: spec.key,
+    });
+    const started = tasks.get(filed.id);
+    expect(started).toMatchObject({
+      key: filed.key,
+      status: "active",
+      parentId: parent.id,
+      model: "openai-codex/gpt-6-astra",
+    });
+    expect(tasks.linksTo(filed.id)).toEqual([
+      expect.objectContaining({ fromId: spec.id, type: "related" }),
+    ]);
+    // No replacement: the same row started, and nothing was dropped.
+    expect(tasks.list()).toHaveLength(before);
+    expect(tasks.list().filter((row) => row.status === "dropped")).toEqual([]);
+
+    // Once a crewmate holds it, its model is no longer the record's to change.
+    expect(() => tasks.updateFields(filed.id, { model: "gpt-6-luna" }, "firstmate")).toThrow(
+      "only be named on open work",
+    );
+  });
+
+  it("says which model took a filed task when the one the captain named could not", async () => {
+    // Routing fell back to the model it could serve.
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "fm-mock", id: "mock-1" },
+    });
+    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    tasks.updateFields(filed.id, { model: "anthropic-claude/claude-fable-5-1" }, "firstmate");
+
+    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+      `Started ${filed.key} "Trim the log" on fm-mock/mock-1: anthropic-claude/claude-fable-5-1 was not available.`,
+    );
+    // The captain's own Start in the record keeps its plain words.
+    const other = supervisor.plan({ title: "Trim the cache", intent: intentOf("trim it") });
+    tasks.updateFields(other.id, { model: "claude-fable-5-1" }, "firstmate");
+    expect(await supervisor.startQueuedNow(other.key, "captain")).toBe(
+      `Started ${other.key} "Trim the cache".`,
+    );
+  });
+
+  it("never confirms the named model on a start with no model recorded (FI3-444)", async () => {
+    const crewmate = fakeCrewmate({ model: undefined });
+    const { supervisor, tasks } = setup(crewmate);
+    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    tasks.updateFields(filed.id, { model: "claude-fable-5-1" }, "firstmate");
+    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+      `Started ${filed.key} "Trim the log" with no model recorded, so claude-fable-5-1 is not confirmed.`,
+    );
+  });
+
+  it("starts dropped, never-reported work again with its saved work, copied asks and moved waits, never escalation", async () => {
+    const crewmate = fakeCrewmate();
+    const routes: { shape: WorkShape }[] = [];
+    const { supervisor, tasks, sessions, ops } = setup(crewmate, {
+      routedModel: { provider: "fm-mock", id: "mock-1" },
+      onRouteDecide: (args) => routes.push(args),
+    });
+    const parent = seedTask(tasks, { id: "live-chart", title: "Chart", status: "idle" });
+    const basis = supervisor.plan({ title: "Spec", intent: intentOf("describe it") });
+    tasks.close(basis.id, { status: "done", reason: "answered", actor: "host" });
+    const intent = {
+      ...intentOf("finish the chart"),
+      constraints: [{ kind: "free" as const, text: "implement the approved chart" }],
+    };
+    const old = seedTask(tasks, {
+      id: "dropped-chart",
+      title: "Finish the chart",
+      status: "cancelled",
+      intent,
+      parentId: parent.id,
+      shape: {
+        kind: "fix",
+        basis: basis.key,
+        override_model_id: "fm-mock/mock-1",
+        delivery_ask: "local-only",
+        autonomy_ask: false,
+        rigor_ask: "reviewed",
+        policies: { autonomy: true, rigor: "standard", revision: 3 },
+        escalation: { from: "SCR-100", attempt: 1, floor: "high" },
+        escalate_from: "SCR-100",
+        rigor: "quick",
+        autonomy: false,
+      },
+    });
+    tasks.markWorkspaceRemoved(old.id);
+    tasks.note(old.id, "working copy removed; its work is saved", {
+      news: false,
+      data: { saved: { ref: "refs/infinitary/kept/dropped-chart" } },
+    });
+    const waiter = tasks.create({
+      id: "waiter-chart",
+      title: "Share",
+      prompt: "share it",
+      repoId: null,
+      startPolicy: "on-request",
+      blockedBy: [old.id],
+    });
+    const closed = tasks.create({
+      id: "closed-chart",
+      title: "Older",
+      prompt: "old",
+      repoId: null,
+    });
+    tasks.link(old.id, closed.id, "blocks", "host");
+    tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "host" });
+    const result = supervisor.startAgain(old.key, "captain");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.text);
+    expect(await result.started).toContain(result.task.key);
+    await tick();
+    const fresh = tasks.get(result.task.id);
+    expect(fresh).toMatchObject({
+      status: "active",
+      title: old.title,
+      intent,
+      goal: old.goal,
+      repoId: old.repoId,
+      projectId: old.projectId,
+      priority: old.priority,
+      parentId: parent.id,
+      shape: {
+        basis: basis.key,
+        override_model_id: "fm-mock/mock-1",
+        delivery_ask: "local-only",
+        autonomy_ask: false,
+        rigor_ask: "reviewed",
+        policies: { autonomy: true, rigor: "standard", revision: 0 },
+      },
+    });
+    expect(routes.at(-1)?.shape).not.toHaveProperty("escalation");
+    expect(routes.at(-1)?.shape).not.toHaveProperty("escalate_from");
+    expect(tasks.get(old.id)).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+      outcome: null,
+    });
+    expect(tasks.linksTo(fresh?.id ?? "")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ fromId: old.id, type: "replaced-by" })]),
+    );
+    expect(tasks.blockers(waiter.id).map((row) => row.id)).toEqual([fresh?.id]);
+    expect(tasks.blockers(closed.id).map((row) => row.id)).toEqual([old.id]);
+    expect(crewmate.promptCalls[0]).toContain(`starts dropped work ${old.key}`);
+    expect(crewmate.promptCalls[0]).toContain("refs/infinitary/kept/dropped-chart");
+    expect(crewmate.promptCalls[0]).toContain("start from it");
+    expect(crewmate.promptCalls[0]).toContain("not preloaded");
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    expect(ops).toEqual([]);
+    expect(tasks.taskCardClicksSince(0)).toEqual([
+      expect.objectContaining({ taskId: old.id, op: "start-again" }),
+    ]);
+    const seq = tasks.boardSeq();
+    expect(supervisor.startAgain(old.key)).toEqual({
+      ok: false,
+      text: `${fresh?.key} already replaces ${old.key}. Open that task instead.`,
+    });
+    expect(tasks.boardSeq()).toBe(seq);
+  });
+
+  it("start again refuses closed successes, live work, replacements, stronger retries and parents without writes", () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const open = supervisor.plan({ title: "Open", intent: intentOf("do it") });
+    const done = seedTask(tasks, { id: "done-again", title: "Done", status: "idle" });
+    tasks.close(done.id, { status: "done", reason: "merged", actor: "host" });
+    const parent = seedTask(tasks, { id: "parent-again", title: "Parent", status: "cancelled" });
+    seedTask(tasks, { id: "part-again", parentId: parent.id, title: "Part", status: "cancelled" });
+    const retry = seedTask(tasks, { id: "retry-again", title: "Retry", status: "cancelled" });
+    tasks.recordEscalation({
+      from: { id: retry.id, key: retry.key },
+      to: { id: open.id, key: open.key },
+      attempt: 1,
+      tier: "high",
+    });
+    const seq = tasks.boardSeq();
+    for (const id of [open.id, done.id, parent.id, retry.id]) {
+      expect(supervisor.startAgain(id).ok).toBe(false);
+      expect(supervisor.runTaskOp(id, "start-again")).toBeTruthy();
+      expect(tasks.boardSeq()).toBe(seq);
+    }
+  });
+
+  it("start again carries reports without reopening a closed parent, and start/steer point at it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const parent = seedTask(tasks, { id: "closed-parent", title: "Parent", status: "cancelled" });
+    const old = seedTask(tasks, {
+      id: "reported-drop",
+      parentId: parent.id,
+      title: "Reported",
+      status: "cancelled",
+      outcome: "The draft is written; tests remain.",
+    });
+    tasks.markWorkspaceRemoved(old.id);
+    expect(await supervisor.startQueuedNow(old.key)).toContain("start_again");
+    await expect(supervisor.steerCrewmate(old.id, "continue")).rejects.toThrow("start_again");
+    const result = supervisor.startAgain(old.id);
+    if (!result.ok) throw new Error(result.text);
+    await result.started;
+    await tick();
+    expect(tasks.get(result.task.id)?.parentId).toBeNull();
+    expect(crewmate.promptCalls[0]).toContain("The draft is written; tests remain.");
+  });
+
+  describe("a Start goes through the Firstmate first", () => {
+    const hooked = (cannot?: string) => {
+      const ctx = setup(fakeCrewmate());
+      ctx.supervisor.setFirstmateHooks({
+        notifyOp: (wake, origin, ref) =>
+          ctx.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
+        firstmateCannotAnswer: () => cannot,
+        retryConverse: vi.fn(),
+      });
+      const task = ctx.supervisor.plan({ title: "Fix the test", intent: intentOf("fix it") });
+      const notes = () => ctx.tasks.timeline(task.id).map((event) => event.text);
+      return { ...ctx, task, notes };
+    };
+
+    it("holds Starting and sends one wake, then lets the Firstmate's start_now finish it", async () => {
+      const { supervisor, tasks, inbox, task } = hooked();
+      expect(supervisor.runTaskOp(task.id, "start-task")).toBeUndefined();
+      await tick();
+      expect(tasks.startAttemptOf(task.id)?.phase).toBe("preparing");
+      expect(tasks.get(task.id)?.status).toBe("open");
+      const rows = inbox.allFor(FIRSTMATE_RECIPIENT);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.facts).toMatchObject({ kind: "captain-start", move: "start" });
+      // The sweep leaves a held Start alone; a second press is refused.
+      await supervisor.sweepGates(Date.now());
+      expect(tasks.get(task.id)?.status).toBe("open");
+      expect(supervisor.runTaskOp(task.id, "start-task")).toContain("already starting");
+      await supervisor.startQueuedNow(task.id);
+      expect(tasks.get(task.id)?.status).toBe("active");
+      expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["start-task"]);
+    });
+
+    it("starts at once, and says why, when the Firstmate's seat cannot answer", async () => {
+      const { supervisor, tasks, task, notes, inbox } = hooked("your first mate is paused");
+      expect(supervisor.runTaskOp(task.id, "start-task")).toBeUndefined();
+      await tick();
+      expect(tasks.get(task.id)?.status).toBe("active");
+      expect(notes()).toContain(
+        "started without applying your standing directions: your first mate is paused",
+      );
+      expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(0);
+    });
+
+    it("starts as it is when the turn that read the Start failed, and when its wake is gone", async () => {
+      const { supervisor, tasks, inbox, task, notes } = hooked();
+      supervisor.runTaskOp(task.id, "start-task");
+      const [row] = inbox.allFor(FIRSTMATE_RECIPIENT);
+      expect(supervisor.firstmateTurnEnded([row?.id ?? 0], "failed")).toEqual([row?.id]);
+      await tick();
+      expect(tasks.get(task.id)?.status).toBe("active");
+      expect(notes()).toContain(
+        "started without applying your standing directions: your first mate's turn failed",
+      );
+
+      const lost = supervisor.plan({ title: "Fix another test", intent: intentOf("fix it") });
+      supervisor.runTaskOp(lost.id, "start-task");
+      const pending = inbox.allFor(FIRSTMATE_RECIPIENT).find((entry) => entry.ref === lost.id);
+      inbox.ack([pending?.id ?? 0]);
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(tasks.get(lost.id)?.status).toBe("active");
+    });
+
+    it("shows a Start saved in the inbox as Starting again after a quit", async () => {
+      const { supervisor, tasks, inbox, task } = hooked();
+      const id = inbox.enqueueWake(
+        FIRSTMATE_RECIPIENT,
+        {
+          facts: {
+            kind: "captain-start",
+            task: { id: task.id, key: task.key, title: task.title },
+            move: "start",
+            at: 1,
+            from: "task-card",
+          },
+        },
+        "agent",
+        task.id,
+      );
+      supervisor.reconcileCutOffs();
+      expect(tasks.startAttemptOf(task.id)?.phase).toBe("preparing");
+      expect(tasks.get(task.id)?.status).toBe("open");
+      supervisor.firstmateTurnEnded([id ?? 0], "clean");
+      await tick();
+      expect(tasks.get(task.id)?.status).toBe("active");
+      expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["start-task"]);
+    });
+  });
+
+  it("a Start the host refuses at once comes back as text as well as the feed line", () => {
+    const { supervisor, tasks, events } = setup(fakeCrewmate());
+    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
+    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    const refusal = `Cannot start ${b.key} "B" now: it waits on ${a.key} "A".`;
+    expect(supervisor.runTaskOp(b.id, "start-task")).toBe(refusal);
+    expect(events.findLast((event) => event.type === "firstmate_note")).toMatchObject({
+      text: refusal,
+    });
+    expect(tasks.get(b.id)?.status).toBe("open");
+  });
+
+  it("the task board's queue starts never-started work that nothing holds, and unqueue puts it back", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions, ops } = setup(crewmate);
+    const later = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    expect(later).toMatchObject({ status: "open", startPolicy: "on-request" });
+    const blocker = supervisor.plan({ title: "A", intent: intentOf("a") });
+    const waits = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [blocker.id] });
+
+    // A blocked task queues at once and keeps waiting on its blocker.
+    expect(supervisor.runTaskOp(waits.id, "queue-task")).toBeUndefined();
+    await tick();
+    expect(tasks.get(waits.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
+    expect(tasks.blockers(waits.id).map((row) => row.id)).toEqual([blocker.id]);
+    // Back to the backlog at once. Only the queue told the Firstmate, so his
+    // standing directions apply to it before its wait ends.
+    expect(supervisor.runTaskOp(waits.id, "unqueue-task")).toBeUndefined();
+    expect(tasks.get(waits.id)?.startPolicy).toBe("on-request");
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toContain(`the captain queued task ${waits.id}`);
+
+    // Work nothing holds starts on the sweep the queue runs.
+    expect(supervisor.runTaskOp(later.id, "queue-task")).toBeUndefined();
+    await tick();
+    expect(tasks.get(later.id)?.status).toBe("active");
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    // Once started, neither move is accepted, and nothing is written.
+    expect(supervisor.runTaskOp(later.id, "unqueue-task")).toBe(queueStartedRefusal(later.key));
+    expect(tasks.get(later.id)?.startPolicy).toBe("when-ready");
+    // The clicks are the captain's on the history. Queueing work nothing
+    // holds is a Start, so it records one and needs no ready-sweep note.
+    expect(tasks.taskCardClicksSince(0).map(({ taskId, op }) => ({ taskId, op }))).toEqual([
+      { taskId: later.id, op: "start-task" },
+      { taskId: later.id, op: "queue-task" },
+      { taskId: waits.id, op: "unqueue-task" },
+      { taskId: waits.id, op: "queue-task" },
+    ]);
+    expect(ops).toHaveLength(1);
+  });
+
+  it("the record's started-work Drop task and Continue run the stall card's host ops on the task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    supervisor.runTaskOp(planned.id, "start-task");
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId: planned.id });
+    crewmate.finishPrompt();
+    await tick();
+    expect(tasks.get(planned.id)).toMatchObject({ status: "active", activity: "idle" });
+    // Continue is the ladder's nudge with the captain's authority.
+    supervisor.runTaskOp(planned.id, "continue-task");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    expect(
+      tasks
+        .timeline(planned.id)
+        .filter((event) => event.kind === "steered")
+        .at(-1),
+    ).toMatchObject({ actor: "captain" });
+
+    // Drop task on started work, mid-turn: the turn is aborted and the task ends, cancelled.
+    supervisor.runTaskOp(planned.id, "stop-task");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(tasks.get(planned.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+  });
+
+  it("writes every task card click on the history as the captain's, once each, and wakes nobody (FI3-695)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    supervisor.runTaskOp(planned.id, "start-task");
+    await tick();
+    // Start: the history says the captain started it, from the task card.
+    expect(tasks.timeline(planned.id).find((event) => event.text === "starting")).toMatchObject({
+      actor: "captain",
+      data: { via: "task-card" },
+    });
+    crewmate.emit({ type: "turn_end", taskId: planned.id });
+    crewmate.finishPrompt();
+    await tick();
+    // Continue names the task card, not the stall card it shares a nudge with.
+    supervisor.runTaskOp(planned.id, "continue-task");
+    await tick();
+    expect(
+      tasks
+        .timeline(planned.id)
+        .filter((event) => event.kind === "steered")
+        .at(-1),
+    ).toMatchObject({ actor: "captain", data: { via: "task-card", cardId: null } });
+    // Drop task mid-turn writes the request and its outcome: one click.
+    supervisor.runTaskOp(planned.id, "stop-task");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(
+      tasks
+        .timeline(planned.id)
+        .filter((event) => event.kind === "interrupted")
+        .map((event) => event.data?.effect),
+    ).toEqual(["requested", "aborted-turn"]);
+    const unstarted = supervisor.plan({ title: "Never mind", intent: intentOf("nope") });
+    expect(
+      supervisor.runTaskOp(unstarted.id, "drop-task", { parts: [], waiting: [], underway: [] }),
+    ).toBeUndefined();
+    expect(tasks.get(unstarted.id)?.status).toBe("dropped");
+
+    expect(tasks.taskCardClicksSince(0).map(({ taskId, op }) => ({ taskId, op }))).toEqual([
+      { taskId: unstarted.id, op: "drop-task" },
+      { taskId: planned.id, op: "stop-task" },
+      { taskId: planned.id, op: "continue-task" },
+      { taskId: planned.id, op: "start-task" },
+    ]);
+    // None of them woke the Firstmate.
+    expect(ops).toEqual([]);
+  });
+
+  it("verifies a named basis and records the shape it routed from (S2)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    // A task that really reported: the basis holds.
+    seedTask(tasks, {
+      id: "spec1",
+      title: "Design the dock",
+      status: "completed",
+      worktreeDir: "/w",
+      outcome: "The dock layout is settled: three rails, the stage between them.",
+    });
+    const spec = tasks.get("spec1");
+    const { taskId } = await supervisor.commission({
+      title: "Build the dock",
+      intent: intentOf("build what the design says"),
+      shape: { basis: spec?.key ?? "spec1" },
+    });
+    await tick();
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      kind: "unclear",
+      basis: spec?.key,
+      basis_verified: true,
+    });
+    // The shape is on the record, so the corpus and a later dispatch read
+    // the same facts the turn routed from. The basis is stored as named;
+    // its verdict is derived at every read and never stored.
+    const record = tasks.get(taskId);
+    expect(record?.shape).toMatchObject({ basis: spec?.key });
+    expect(record?.shape).not.toHaveProperty("basis_verified");
+    expect(record && tasks.basisOf(record)).toEqual({ ref: spec?.key, verified: true });
+  });
+
+  it("treats an unknown or still-running basis as unverified, never as a cheaper tier (S2)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    seedTask(tasks, { id: "wip1", title: "Still going", status: "running", worktreeDir: "/w" });
+    await supervisor.commission({
+      title: "Build on nothing",
+      intent: intentOf("build it"),
+      shape: { basis: "wip1" },
+    });
+    await tick();
+    // Named, recorded, and not believed: a claimed spec never buys a
+    // cheaper tier by itself.
+    expect(decideCalls.at(-1)?.shape).toMatchObject({ basis: "wip1", basis_verified: false });
+
+    await supervisor.commission({
+      title: "Build on a ghost",
+      intent: intentOf("build it"),
+      shape: { basis: "FM3K-404" },
+    });
+    await tick();
+    expect(decideCalls.at(-1)?.shape).toMatchObject({ basis: "FM3K-404", basis_verified: false });
+  });
+
+  it("dispatches a queued row from the shape it was commissioned with (S2)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Later, on Astra",
+      intent: intentOf("use gpt-6-astra when the gate clears"),
+      shape: { override_model_id: "gpt-6-astra" },
+      startAfter: { at: Date.now() - 1000 },
+    });
+    // Queued: nothing routed yet, but the row remembers what to route from.
+    expect(decideCalls).toHaveLength(0);
+    expect(tasks.get(taskId)?.shape).toMatchObject({ override_model_id: "gpt-6-astra" });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(decideCalls.at(-1)?.shape.override_model_id).toBe("gpt-6-astra");
+  });
+
+  it("escalates a rejected attempt one tier up as a fresh crewmate (S4)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks, workspace } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: (args) => decideCalls.push(args),
+    });
+    // The failed attempt holds unlanded work: its worktree goes like every
+    // closed task's, the work saved first on the kept ref the brief names.
+    vi.mocked(workspace.retireTaskWorktree).mockResolvedValue({
+      outcome: "removed",
+      kept: { ref: "refs/infinitary/kept/attempt1", sha: "abc", dirty: true, unlandedCommits: 2 },
+    });
+    const previous = seedTask(tasks, {
+      id: "attempt1",
+      title: "Fix the flaky meter test",
+      status: "completed",
+      difficulty: "medium",
+      worktreeDir: "/w/attempt1",
+      branch: "fm/task-attempt1",
+      shape: { kind: "fix", kind_source: "classifier:test", basis_verified: false },
+      outcome: "I disabled the assertion; the test passes now.",
+    });
+
+    const { taskId } = await supervisor.commission({
+      title: "Fix the flaky meter test",
+      intent: intentOf("that is not a fix, try again with something smarter"),
+      shape: { escalate_from: previous.key },
+    });
+    await tick();
+
+    // R1b: the next rung above the rejected attempt's own tier, with the
+    // kind inherited rather than reclassified.
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      kind: "fix",
+      escalate_from: previous.key,
+      escalation: { from: previous.key, attempt: 1, floor: "high" },
+    });
+    const fresh = tasks.get(taskId);
+    expect(fresh?.shape?.escalation).toMatchObject({ attempt: 1, floor: "high" });
+
+    // Q4 B: a fresh crewmate briefed with the failed attempt's report and
+    // its kept branch - never a resume of that session.
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain("attempt 1 at the high tier");
+    expect(brief).toContain(previous.key);
+    expect(brief).toContain("I disabled the assertion");
+    expect(brief).toContain("its work is saved in the repository at refs/infinitary/kept/attempt1");
+    expect(brief).toContain("that is not a fix, try again with something smarter");
+
+    // O1: closed superseded; the worktree goes, its work ALWAYS saved first
+    // (whatever ancestry says) so the ref the brief names exists.
+    const closed = tasks.get(previous.id);
+    expect(closed).toMatchObject({ status: "dropped", closedReason: "superseded" });
+    expect(closed?.workspaceState).toBe("removed");
+    expect(workspace.retireTaskWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: previous.id, branch: "fm/task-attempt1" }),
+      { keepAlways: true },
+    );
+
+    // The lineage edge and the one feed line.
+    expect(tasks.discoveredOrigins(taskId).map((row) => row.id)).toContain(previous.id);
+    const timeline = tasks.timeline(previous.id);
+    const escalated = timeline.find((event) => event.kind === "escalated");
+    expect(escalated).toMatchObject({ feed: true, data: { escalated_to: fresh?.key } });
+    // Exactly one feed line for the whole move: the supersede's own close
+    // event is suppressed, so the `escalated` row is the only line the feed
+    // gets.
+    const superseded = timeline.find(
+      (event) => event.kind === "status" && event.data?.reason === "superseded",
+    );
+    expect(superseded?.feed).toBe(false);
+    expect(timeline.filter((event) => event.kind === "escalated")).toHaveLength(1);
+    expect(taskFeedLine(closed as TaskRecord, escalated as TaskEvent)?.text).toBe(
+      `Moved to a stronger model: high; continues as ${fresh?.key}`,
+    );
+    // The fresh row's own escalated event stays off the feed.
+    expect(tasks.timeline(taskId).find((event) => event.kind === "escalated")).toMatchObject({
+      feed: false,
+      data: { escalated_from: previous.key },
+    });
+  });
+
+  it.each(["low", "medium"] as const)(
+    "stamps a premium click from a %s attempt as premium in its brief, record and feed",
+    async (difficulty) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = setup(crewmate);
+      const previous = seedTask(tasks, {
+        id: `attempt-${difficulty}`,
+        title: "Fix the meter",
+        status: "completed",
+        difficulty,
+        shape: { kind: "fix" },
+        outcome: "The meter still fails.",
+      });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("Try a premium model"),
+        shape: { escalate_from: previous.key, premium_ask: true },
+      });
+      await tick();
+      const fresh = tasks.get(taskId);
+      expect(fresh?.shape?.escalation).toMatchObject({ attempt: 1, floor: "premium" });
+      expect(crewmate.promptCalls[0]).toContain("attempt 1 at the premium tier");
+      const escalated = tasks.timeline(previous.id).find((event) => event.kind === "escalated");
+      expect(taskFeedLine(tasks.get(previous.id) as TaskRecord, escalated as TaskEvent)?.text).toBe(
+        `Moved to a stronger model: premium; continues as ${fresh?.key}`,
+      );
+    },
+  );
+
+  it("bounds a lineage at two escalations and refuses a rung above premium (S4)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+    });
+    const spent = seedTask(tasks, {
+      id: "attempt3",
+      title: "Third go",
+      status: "completed",
+      difficulty: "high",
+      worktreeDir: "/w/attempt3",
+      shape: {
+        kind: "fix",
+        escalate_from: "FM3K-1",
+        escalation: { from: "FM3K-1", attempt: 2, floor: "high" },
+      },
+      outcome: "still wrong",
+    });
+    await expect(
+      supervisor.commission({
+        title: "Fourth go",
+        intent: intentOf("still not right"),
+        shape: { escalate_from: spent.key },
+      }),
+    ).rejects.toThrow(/already used its 2 escalations/);
+
+    const top = seedTask(tasks, {
+      id: "attemptP",
+      title: "Already premium",
+      status: "completed",
+      difficulty: "premium",
+      worktreeDir: "/w/attemptP",
+      outcome: "not good enough",
+    });
+    await expect(
+      supervisor.commission({
+        title: "Above premium",
+        intent: intentOf("do better"),
+        shape: { escalate_from: top.key },
+      }),
+    ).rejects.toThrow(/nothing routes above premium/);
+    // Nothing was created and nothing was closed by a refused escalation.
+    expect(tasks.get(spent.id)?.status).toBe("active");
+    expect(tasks.get(top.id)?.status).toBe("active");
+  });
+
+  it("never escalates a task that has not run (Q1: never on first dispatch)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+    });
+    const planned = seedTask(tasks, { id: "planned1", title: "Not started", status: "queued" });
+    await expect(
+      supervisor.commission({
+        title: "Escalate a plan",
+        intent: intentOf("make it better"),
+        shape: { escalate_from: planned.key },
+      }),
+    ).rejects.toThrow(/has never run/);
+    expect(tasks.get(planned.id)?.status).toBe("open");
+  });
+
+  it("queues an escalation rather than serving it from the tier that failed (S4)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops, sessions } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "high",
+        servedBucket: "medium",
+        rule: "R1b",
+      },
+    });
+    const previous = seedTask(tasks, {
+      id: "attempt9",
+      title: "Nine",
+      status: "completed",
+      difficulty: "medium",
+      worktreeDir: "/w/attempt9",
+      outcome: "wrong answer",
+    });
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Nine again",
+      intent: intentOf("no, smarter please"),
+      shape: { escalate_from: previous.key },
+    });
+    await tick();
+    expect(name).toBe("queued");
+    expect(sessions.open).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "quota-reset", ref: "bucket:high" });
+    expect(ops.some((line) => line.includes("needs a high model"))).toBe(true);
+    // The rejected attempt still stops: the captain rejected it whether or
+    // not the stronger model can start right now.
+    expect(tasks.get(previous.id)).toMatchObject({
+      status: "dropped",
+      closedReason: "superseded",
+    });
+  });
+
+  it("classifies an immediate spawn and routes from what the classifier said (S3)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const asked: KindInput[] = [];
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      onRouteDecide: (args) => decideCalls.push(args),
+      classifier: {
+        classify: async (input) => {
+          asked.push(input);
+          return { kind: "chore", source: "classifier:xai/grok-cheap", version: "kc1-abc" };
+        },
+      },
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Bump the linter",
+      intent: intentOf("bump the linter please"),
+    });
+    await tick();
+    // The classifier saw the work's own facts, and the router saw its verdict.
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatchObject({ taskId, title: "Bump the linter" });
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      kind: "chore",
+      kind_source: "classifier:xai/grok-cheap",
+    });
+    // The stamp is on the record, so the corpus can score the classification.
+    expect(tasks.get(taskId)?.shape).toMatchObject({
+      kind: "chore",
+      kind_source: "classifier:xai/grok-cheap",
+    });
+  });
+
+  it.each([false, true])(
+    "retrieval is an answer without a read-only constraint (queued: %s)",
+    async (queued) => {
+      const crew = fakeCrewmate();
+      const classify = vi.fn(async () => ({
+        kind: "retrieval" as const,
+        source: "classifier:test/lookup",
+        version: "kc2-test",
+      }));
+      const routes: { shape: WorkShape }[] = [];
+      const { supervisor, tasks } = setup(crew, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        classifier: { classify },
+        onRouteDecide: (args) => routes.push(args),
+      });
+      const { taskId } = await supervisor.commission({
+        title: "Read the retry limit",
+        intent: intentOf("Quote the retry limit from the config"),
+        ...(queued ? { startAfter: { at: Date.now() - 1000 } } : {}),
+      });
+      if (queued) {
+        expect(classify).not.toHaveBeenCalled();
+        await supervisor.sweepGates(Date.now());
+      }
+      await tick();
+      expect(classify).toHaveBeenCalledTimes(1);
+      expect(routes.at(-1)?.shape).toMatchObject({
+        kind: "retrieval",
+        kind_source: "classifier:test/lookup",
+      });
+      expect(tasks.get(taskId)?.shape).toMatchObject({
+        kind: "retrieval",
+        kind_source: "classifier:test/lookup",
+        deliverable: "answer",
+      });
+      expect(crew.promptCalls[0]).toContain(
+        "commit nothing, push nothing, and open no pull request",
+      );
+      await supervisor.dispatchQueuedTask(taskId);
+      expect(classify).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("never asks when the table decides above the kind, and says why (S3)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    let calls = 0;
+    const { supervisor } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: (args) => decideCalls.push(args),
+      classifier: {
+        classify: async () => {
+          calls += 1;
+          return { kind: "chore", source: "classifier:xai/grok-cheap", version: "kc1-abc" };
+        },
+      },
+    });
+    await supervisor.commission({
+      title: "On Astra",
+      intent: intentOf("use gpt-6-astra"),
+      shape: { override_model_id: "gpt-6-astra" },
+    });
+    await tick();
+    expect(calls).toBe(0);
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      kind: "unclear",
+      kind_source: "skipped:override",
+    });
+  });
+
+  it("keeps a packaged plan step as plan when a named model skips classification", async () => {
+    const crewmate = fakeCrewmate();
+    let calls = 0;
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      classifier: {
+        classify: async () => {
+          calls += 1;
+          return { kind: "research", source: "classifier:xai/grok-cheap", version: "kc1-abc" };
+        },
+      },
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Plan safe recovery",
+      intent: {
+        goal: "Plan a safe recovery.",
+        userWords: "Plan safe recovery",
+        constraints: [
+          { kind: "read-only" },
+          { kind: "free", text: packagedPlanStepLines()[0] ?? "plan: missing" },
+        ],
+      },
+      shape: { override_model_id: "gpt-6-astra" },
+    });
+    await tick();
+    expect(calls).toBe(0);
+    expect(tasks.get(taskId)?.shape).toMatchObject({
+      kind: "plan",
+      kind_source: "skipped:override",
+      deliverable: "answer",
+    });
+  });
+
+  it("fails soft: a broken classifier costs quota, never a dispatch (S3)", async () => {
+    const crewmate = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    const { supervisor, tasks, sessions } = setup(crewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      onRouteDecide: (args) => decideCalls.push(args),
+      classifier: {
+        classify: async () => ({
+          kind: "unclear" as const,
+          source: "classifier-failed:timeout",
+          version: "kc1-abc",
+        }),
+      },
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Something",
+      intent: intentOf("do the thing"),
+    });
+    await tick();
+    expect(decideCalls.at(-1)?.shape).toMatchObject({
+      kind: "unclear",
+      kind_source: "classifier-failed:timeout",
+    });
+    // The work still started, on the R8 tier S2 already routed everything to.
+    expect(sessions.open).toHaveBeenCalled();
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("asks first when the user's premium ask cannot be served (P7 + R1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, sessions, ops } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "premium",
+        servedBucket: "high",
+        rule: "R1a",
+      },
+    });
+    // Premium is the one class Firstmate may only relay, never judge, so a
+    // downgrade of it is the captain's to answer.
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Deep design",
+      intent: intentOf("design it properly"),
+      shape: { premium_ask: true },
+    });
+    expect(name).toBe("queued");
+    expect(sessions.open).not.toHaveBeenCalled();
+    // The safe default is already on the record: it waits for the premium
+    // reset. The Firstmate hears once, with the two other ways out, and no
+    // card is raised (cards/tasks/agents P0, WI-3).
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      difficulty: "premium",
+      gate: { kind: "quota-reset", ref: "bucket:premium" },
+    });
+    await tick();
+    expect(cards()).toEqual([]);
+    const wake = ops.find((line) => line.includes("needs a premium model"));
+    expect(wake).toContain(`[fm-op] task ${taskId} "Deep design"`);
+    expect(wake).toContain("waits on the premium quota reset");
+    // Facts only (v2.0): what could serve it now, not which tool to call.
+    expect(wake).toContain("a high model could serve it now");
+    expect(wake).not.toContain("update_task");
+  });
+
+  it("starts a computed high on a lesser model with a feed line, never a card (P7)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, sessions, events } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "high",
+        servedBucket: "medium",
+        rule: "R8",
+      },
+    });
+    // High is what the table computed, not something the captain asked
+    // for: its downgrade is a feed line, as it was under the heuristic.
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Ambiguous design",
+      intent: intentOf("work out how the dock should behave"),
+    });
+    await tick();
+    expect(name).not.toBe("queued");
+    expect(sessions.open).toHaveBeenCalled();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(cards().find((card) => card.id === `card-highwait-${taskId}`)).toBeUndefined();
+    expect(events.map((event) => ("text" in event ? event.text : "")).join(" ")).toContain(
+      "Using a medium model",
+    );
+  });
+
+  it("counts interrupted tasks as active on their repo, so removal refuses", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    seedTask(tasks, {
+      id: "int1",
+      title: "cut mid-turn",
+      prompt: "p",
+      repoId: "repo-1",
+      repoDir: "/r",
+      worktreeDir: "/w",
+      branch: "fm/task-int1",
+      sessionFile: null,
+      accountId: null,
+      status: "interrupted",
+      createdAt: Date.now(),
+    });
+    seedTask(tasks, {
+      id: "done1",
+      title: "finished",
+      prompt: "p",
+      repoId: "repo-1",
+      repoDir: "/r",
+      worktreeDir: "/w2",
+      branch: "fm/task-done1",
+      sessionFile: null,
+      accountId: null,
+      status: "completed",
+      createdAt: Date.now(),
+    });
+    // Interrupted tasks resume after a restart; their repo is still in use.
+    // A finished crewmate is idle and resumable too (WI-11 - no `delivered`),
+    // so its repo is in use as well; both count.
+    expect(supervisor.activeTasksOnRepo("repo-1")).toEqual([
+      { key: expect.any(String), title: "cut mid-turn", status: "working" },
+      { key: expect.any(String), title: "finished", status: "working" },
+    ]);
+  });
+
+  it("asks first when a premium ask finds nothing serveable at all, and start_now starts it (P7)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, sessions, ops } = setup(crewmate, {
+      routeResult: { bucket: "premium", unserveable: true, rule: "R1a" },
+    });
+    const { taskId, crewmate: name } = await supervisor.commission({
+      title: "Deep design",
+      intent: intentOf("design it properly"),
+      shape: { premium_ask: true },
+    });
+    expect(name).toBe("queued");
+    expect(sessions.open).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      gate: { kind: "quota-reset", ref: "bucket:premium" },
+    });
+    await tick();
+    expect(cards()).toEqual([]);
+    const wake = ops.find((line) => line.includes("needs a premium model"));
+    expect(wake).toContain("the default model could serve it now");
+
+    // The explicit go-ahead starts it despite the shortage.
+    expect(await supervisor.startQueuedNow(taskId)).toMatch(/^Started /);
+    await tick();
+    expect(sessions.open).toHaveBeenCalled();
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("re-asks instead of silently downgrading when a queued premium ask dispatches (P7 + R1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, sessions, ops } = setup(crewmate, {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "premium",
+        servedBucket: "high",
+        rule: "R1a",
+      },
+      // Reproduce a stale quota reading that keeps declaring the replacement
+      // gate clear on each watchdog sweep.
+      quotaGateCleared: () => true,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Later big one",
+      intent: intentOf("the big refactor"),
+      shape: { premium_ask: true },
+      startAfter: { at: Date.now() - 1000 },
+    });
+    await supervisor.sweepGates(Date.now());
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    // The gate cleared but the ask still cannot be served: the row waits on
+    // the premium reset instead, the Firstmate hears, nothing started. A
+    // repeated sweep updates nothing rather than stacking the same status.
+    expect(sessions.open).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "open",
+      gate: { kind: "quota-reset", ref: "bucket:premium" },
+    });
+    expect(
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.text === "held: no premium model has allowance"),
+    ).toHaveLength(1);
+    expect(cards()).toEqual([]);
+    expect(ops.filter((line) => line.includes("needs a premium model"))).toHaveLength(1);
+
+    expect(await supervisor.startQueuedNow(taskId)).toMatch(/^Started /);
+    await tick();
+    expect(sessions.open).toHaveBeenCalled();
+  });
+
+  it("refuses a quota-reset gate on a scope that can never clear (R1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      quotaGateRefValid: (ref) => ref === "codex" || ref === "bucket:high",
+    });
+    await expect(
+      supervisor.commission({
+        title: "x",
+        intent: intentOf("y"),
+        startAfter: { whenQuotaResets: "bucket:huge" },
+      }),
+    ).rejects.toThrow(/Unknown quota scope/);
+    await expect(
+      supervisor.commission({
+        title: "x",
+        intent: intentOf("y"),
+        startAfter: { whenQuotaResets: "grok-quota" },
+      }),
+    ).rejects.toThrow(/Unknown quota scope/);
+    const { taskId } = await supervisor.commission({
+      title: "x",
+      intent: intentOf("y"),
+      startAfter: { whenQuotaResets: "bucket:high" },
+    });
+    expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "quota-reset", ref: "bucket:high" });
+  });
+
+  it("clears a quota-reset gate through the injected evaluator", async () => {
+    const crewmate = fakeCrewmate();
+    let headroom = false;
+    const { supervisor, tasks } = setup(crewmate, {
+      quotaGateCleared: () => headroom,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Big one",
+      intent: intentOf("the big refactor"),
+      startAfter: { whenQuotaResets: "codex" },
+    });
+    await supervisor.sweepGates(Date.now());
+    expect(legacyStateOf(tasks.get(taskId))).toBe("queued");
+    headroom = true;
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+  });
+
+  it("a Firstmate decision carries exactly its declared actions and nothing parks (P0, WI-1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, ops, events } = setup(crewmate);
+    supervisor.addFirstmateCard({
+      title: "Which course?",
+      body: "<p>Plotting a new course is the faster route.</p><p>Holding course waits out the storm.</p>",
+      actions: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.meta === "firstmate") as Card;
+    expect(card.actions.map((action) => action.id)).toEqual(["a", "b"]);
+
+    // Every click returns to its author: the card leaves the stack, no row
+    // parks, no wake says "deferred", and the strip counts no one waiting.
+    supervisor.act(card.id, "a");
+    await tick();
+    expect(cards().find((entry) => entry.id === card.id)).toBeUndefined();
+    expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
+    expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toEqual([]);
+    expect(ops.some((line) => line.includes("deferred your card"))).toBe(false);
+    expect(supervisor.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
+    expect(events.filter((e) => e.type === "crew_counts").every((e) => !("waiting" in e))).toBe(
+      true,
+    );
+  });
+
+  it("sends a blocked task's premium choice to Firstmate as the captain's words without escalating on the report", async () => {
+    const { supervisor, tasks, cards, ops, specs } = setup(fakeCrewmate());
+    const { taskId } = await supervisor.commission({
+      title: "Finish the build",
+      intent: intentOf("finish the build"),
+    });
+    await tick();
+    specs[0]?.onReport?.("Could not finish the build; the test run failed.");
+    await tick();
+    const id = supervisor.addFirstmateCard({
+      taskId,
+      title: "The build is blocked",
+      body: "<p>The first attempt could not finish.</p>",
+      actions: [
+        { id: "retry", label: "Try again", default: true },
+        { id: "premium", label: "Try a premium model" },
+      ],
+    });
+    await tick();
+    expect(cards().find((card) => card.id === id)?.actions).toMatchObject([
+      { label: "Try a premium model" },
+      { label: "Try again", default: true },
+    ]);
+    expect(
+      cards()
+        .find((card) => card.id === id)
+        ?.actions.filter((a) => a.default),
+    ).toHaveLength(1);
+    expect(
+      cards()
+        .find((card) => card.id === id)
+        ?.actions.find((a) => a.id === "premium")?.default,
+    ).toBeFalsy();
+    expect(tasks.list().filter((task) => task.shape?.escalate_from)).toEqual([]);
+    const clicks: { origin: string; ref?: string }[] = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        ops.push(served(wake));
+        clicks.push({ origin, ...(ref ? { ref } : {}) });
+      },
+      notifyCaptainChoice: (wake, ref) => {
+        ops.push(served(wake));
+        clicks.push({ origin: "captain", ...(ref ? { ref } : {}) });
+      },
+      retryConverse: vi.fn(),
+    });
+    const before = ops.length;
+    expect(supervisor.act(id, "premium")).toEqual({});
+    await tick();
+    expect(cards().find((card) => card.id === id)).toBeUndefined();
+    expect(ops.slice(before)).toEqual([
+      expect.stringContaining(
+        `[user]\nTry a premium model\nChoice on card "The build is blocked" (${id}) on task ${taskId}.`,
+      ),
+    ]);
+    expect(clicks).toContainEqual({ origin: "captain", ref: taskId });
+    expect(tasks.list().filter((task) => task.shape?.escalate_from)).toEqual([]);
+    const scripted = supervisor.addFirstmateCard({
+      title: "The build is still blocked",
+      body: "<p>Retry?</p>",
+      taskId,
+      actions: [{ id: "premium", label: "Try a premium model", default: true }],
+    });
+    supervisor.act(scripted, "premium", "frame");
+    await tick();
+    expect(clicks.at(-1)).toEqual({ origin: "agent", ref: taskId });
+    expect(ops.at(-1)).toContain('[fm-op] a script chose "Try a premium model"');
+  });
+
+  it("the sweep closes a decision row whose card is off the stack, and brings nothing back", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, cardStore, ops } = setup(crewmate);
+    // A row a park from before P0 left behind: open, gated on a card id
+    // that is no longer on the stack.
+    tasks.create({
+      id: "park-card-fm-old",
+      kind: "decision",
+      title: "Which course?",
+      prompt: "",
+      repoId: null,
+      difficulty: null,
+      gate: { kind: "captain", ref: "card-fm-old" },
+      status: "open",
+      actor: "host",
+    });
+    await supervisor.sweepGates(Date.now() + 25 * 60 * 60 * 1000);
+    await tick();
+
+    expect(tasks.get("park-card-fm-old")).toMatchObject({
+      status: "dropped",
+      closedReason: "superseded",
+    });
+    expect(cards()).toEqual([]);
+    expect(cardStore.listOpen()).toEqual([]);
+    expect(ops).toEqual([]);
+  });
+
+  it("opens Settings on exactly the clicks `opensSettings` names, so a Mac controlling this one can tell before it asks (docs/view.md)", async () => {
+    const { supervisor, cards } = setup(fakeCrewmate());
+    // The host's own cards, as it builds them.
+    supervisor.addAuthDecisionCard(
+      "auth-restore",
+      "Codex",
+      "Codex (Work) needs you to sign in again.",
+      {
+        restoreAccountId: "acct_codex",
+      },
+    );
+    supervisor.addAuthDecisionCard("auth-any", "Codex", "A provider needs sign in.");
+    supervisor.addFirstmateMoveBackCard({
+      providerId: "openai-codex",
+      providerName: "Codex",
+      body: "Codex serves again.",
+    });
+    // A Firstmate decision per effect it may declare, and a plain choice.
+    const effects: (CardEffect | undefined)[] = [
+      { kind: "open", target: "settings" },
+      { kind: "open", target: "projects", signIn: "github.com" },
+      { kind: "open", target: "devices", make: "link" },
+      undefined,
+    ];
+    for (const effect of effects) {
+      supervisor.addFirstmateCard({
+        title: "Choose",
+        body: "<p>Choose one.</p>",
+        actions: [
+          { id: "go", label: "Go", default: true, ...(effect ? { effect } : {}) },
+          { id: "no", label: "Not now" },
+        ],
+      });
+    }
+    await tick();
+    const decisions = cards().filter((card) => card.actions.length > 0);
+    expect(decisions).toHaveLength(7);
+    const clicks = decisions.map((card) => {
+      const action = card.actions.find((candidate) => candidate.id === "go") ?? card.actions[0];
+      if (!action) throw new Error(`${card.id} has no action`);
+      const effect = supervisor.act(card.id, action.id).effect;
+      return {
+        named: opensSettings(action),
+        opened: effect?.kind === "open" && effect.target !== "browser",
+      };
+    });
+    expect(clicks.filter((click) => click.named)).toHaveLength(5);
+    for (const click of clicks) expect(click.opened).toBe(click.named);
+  });
+
+  it("the agent-down singletons keep their host card, with only their own way out", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards } = setup(crewmate);
+    supervisor.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "No headroom anywhere.",
+      providerName: "Codex",
+    });
+    await tick();
+    const benched = cards().find((entry) => entry.id === "card-fm-no-headroom") as Card;
+    expect(benched.actions.map((action) => action.id)).toEqual(["open-settings"]);
+
+    expect(supervisor.act("card-fm-no-headroom", "open-settings").effect).toEqual({
+      kind: "open",
+      target: "settings",
+    });
+    await tick();
+    expect(cards().find((entry) => entry.id === "card-fm-no-headroom")).toBeUndefined();
+    expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
+  });
+});
+
+describe("background job results (R2)", () => {
+  it("counts evidenced work across idle turns without changing the turn activity or job bound", async () => {
+    let running = true;
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, inbox } = setup(crewmate, {
+      hasRunningJobs: () => running,
+      oldestRunningJob: () => ({ jobId: "j", command: "build", startedAt: 0 }),
+      now: () => JOB_BOUND_MS + 1,
+    });
+    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("build") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const record = tasks.get(taskId);
+    if (!record) throw new Error("missing task");
+    expect(record.activity).toBe("idle");
+    expect(supervisor.workPosture(record)).toEqual({ state: "active", reason: "job" });
+    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    running = false;
+    tasks.setGate(taskId, { kind: "captain" });
+    expect(supervisor.workPosture(tasks.get(taskId) ?? record)).toEqual({
+      state: "idle",
+      reason: "captain",
+    });
+    const row = inbox.enqueue(taskId, "Reply already captured");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    inbox.ack([row]);
+    tasks.setGate(taskId, null);
+    crewmate.emit({ type: "background_work_changed", count: 1 });
+    expect(supervisor.workPosture(tasks.get(taskId) ?? record)).toEqual({
+      state: "active",
+      reason: "job",
+    });
+    crewmate.emit({ type: "background_work_changed", count: 0 });
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(tasks.get(taskId)?.activity).toBe("idle");
+  });
+
+  it("delivers a job result as the idle crewmate's next turn", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Build",
+      intent: intentOf("start the build"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+
+    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain("exited 0");
+  });
+
+  it("queues a job result behind a streaming turn instead of interrupting it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Busy",
+      intent: intentOf("long turn"),
+    });
+    await tick();
+
+    supervisor.deliverJobResult(taskId, "[job] finished early");
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(crewmate.promptCalls[0]).toContain("long turn");
+    crewmate.finishPrompt();
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("[job] finished early");
+  });
+
+  it("turns a job that outlived its task into one feed line, never a wake (WI-2)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, events, inbox } = setup(crewmate);
+    supervisor.deliverJobResult("gone-task", "[job] result of a ghost");
+    expect(ops).toHaveLength(0);
+    expect(inbox.recipientsWithRows()).toEqual([]);
+    expect(events.at(-1)).toEqual({
+      type: "firstmate_note",
+      text: "A background job finished after task gone-task ended; its output was set aside.",
+      taskId: "gone-task",
+    });
+  });
+
+  it("counts a running job as watchdog liveness", async () => {
+    const crewmate = fakeCrewmate();
+    let jobRunning = true;
+    const { supervisor, cards, events, ops } = setup(crewmate, {
+      hasRunningJobs: () => jobRunning,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Building",
+      intent: intentOf("long build"),
+    });
+    await tick();
+    // Twenty-one quiet minutes, but its build is running: no escalation.
+    supervisor.checkQuietTasks(Date.now() + 21 * 60_000);
+    await tick();
+    expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
+    // The job ended and the turn stays quiet: now it escalates, as a wake.
+    jobRunning = false;
+    supervisor.checkQuietTasks(Date.now() + 22 * 60_000);
+    await tick();
+    expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
+    expect(ops.at(-1)).toContain(`on task ${taskId} "Building"`);
+    expect(cards()).toEqual([]);
+  });
+
+  it("kills a task's jobs when the task is cancelled or deleted", async () => {
+    const crewmate = fakeCrewmate();
+    const killed: string[] = [];
+    const { supervisor } = setup(crewmate, { killJobs: (taskId) => killed.push(taskId) });
+    const { taskId } = await supervisor.commission({ title: "Doomed", intent: intentOf("work") });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(killed).toContain(taskId);
+  });
+});
+
+describe("the quiet-crewmate watchdog (P4)", () => {
+  const MIN = 60_000;
+
+  it("escalates a quiet streaming turn: feed line at 10 minutes, one wake at 20, never a card", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, cards, ops, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Slow build",
+      intent: intentOf("build it"),
+    });
+    await tick();
+    const start = Date.now();
+
+    // Nine quiet minutes: nothing.
+    supervisor.checkQuietTasks(start + 9 * MIN);
+    expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
+
+    // Eleven: one feed line, once - the next tick does not repeat it.
+    supervisor.checkQuietTasks(start + 11 * MIN);
+    supervisor.checkQuietTasks(start + 12 * MIN);
+    const notes = events.filter((e) => e.type === "firstmate_note");
+    expect(notes).toHaveLength(1);
+    expect(notes[0] && "text" in notes[0] ? notes[0].text : "").toContain(
+      "quiet: 11 minutes without an update",
+    );
+
+    // Twenty-one: one [fm-op] naming the tools, a timeline note, no card
+    // (cards/tasks/agents P0, WI-3) - and the next tick does not repeat it.
+    supervisor.checkQuietTasks(start + 21 * MIN);
+    supervisor.checkQuietTasks(start + 22 * MIN);
+    await tick();
+    expect(cards()).toEqual([]);
+    const stuck = ops.filter((line) => line.includes("may be stuck"));
+    expect(stuck).toHaveLength(1);
+    expect(stuck[0]).toContain(`[fm-op] crewmate 1 on task ${taskId} "Slow build"`);
+    expect(stuck[0]).toContain("You can steer or interrupt it.");
+    expect(tasks.timeline(taskId).at(-1)?.text).toContain("may be stuck");
+  });
+
+  it("treats any session event as activity, so a fresh silence wakes again", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Chatty", intent: intentOf("work") });
+    await tick();
+    const start = Date.now();
+    supervisor.checkQuietTasks(start + 21 * MIN);
+    await tick();
+    expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
+    expect(cards()).toEqual([]);
+
+    // Output arrives: the question answered itself; the clock restarts from
+    // that event, so fifteen minutes later is a feed line at most, and a
+    // fresh twenty quiet minutes is a fresh wake.
+    crewmate.emit({ type: "assistant_delta", taskId, text: "still here" });
+    await tick();
+    supervisor.checkQuietTasks(start + 15 * MIN);
+    expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
+    supervisor.checkQuietTasks(start + 45 * MIN);
+    expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(2);
+    expect(cards()).toEqual([]);
+  });
+
+  it("never escalates an idle task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, cards, ops } = setup(crewmate);
+    await supervisor.commission({ title: "Done", intent: intentOf("quick") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.checkQuietTasks(Date.now() + 60 * MIN);
+    expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
+    expect(cards()).toEqual([]);
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
+  });
+
+  it("escalates the wall-clock bound once, as a wake, after the quiet wake", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Marathon",
+      intent: intentOf("long work"),
+    });
+    await tick();
+    const start = Date.now();
+    supervisor.checkQuietTasks(start + 21 * MIN);
+    await tick();
+    // Two hours in, the turn is still running: one more escalation.
+    supervisor.checkQuietTasks(start + 121 * MIN);
+    supervisor.checkQuietTasks(start + 122 * MIN);
+    await tick();
+    expect(cards()).toEqual([]);
+    const hours = ops.filter((line) => line.includes("hours"));
+    expect(hours).toHaveLength(1);
+    expect(hours[0]).toContain(
+      `[fm-op] crewmate 1 on task ${taskId} "Marathon" has been on one turn for`,
+    );
+  });
+});
+
+describe("steering a crewmate whose backend cannot take it mid-turn", () => {
+  it("queues the guidance for the next turn, says so, and delivers it", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Job",
+      intent: intentOf("Do the thing"),
+    });
+    await tick();
+
+    // Mid-turn: the running turn cannot hear this.
+    const delivery = await supervisor.steerCrewmate(taskId, "use the other library");
+    // The caller is told it was queued rather than applied - the captain's
+    // phase-8 decision, and the whole difference between honest and not.
+    expect(delivery).toBe("queued-next-turn");
+    // Nothing was pushed at the running turn: this backend would have thrown.
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(crewmate.promptCalls[0]).toContain("Do the thing");
+
+    crewmate.finishPrompt();
+    await tick();
+
+    // The turn ended, so the parked guidance became the next turn.
+    expect(crewmate.promptCalls).toHaveLength(2);
+    expect(crewmate.promptCalls[1]).toBe("use the other library");
+    // Said in the feed, never as a Firstmate wake (WI-5).
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Task Job guidance queued: it will be delivered when the task is free",
+    });
+    expect(ops).toEqual([]);
+  });
+
+  it("delivers everything that queued during one turn, in order", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    expect(await supervisor.steerCrewmate(taskId, "first")).toBe("queued-next-turn");
+    expect(await supervisor.steerCrewmate(taskId, "second")).toBe("queued-next-turn");
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(crewmate.promptCalls[1]).toBe("first\n\nsecond");
+  });
+
+  it("delivers the queued guidance after an interrupt, not instead of it", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    await supervisor.steerCrewmate(taskId, "stop and do this instead");
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    crewmate.failPrompt("The turn was interrupted.");
+    await tick();
+
+    // An interrupted turn is still a turn that ended, and the task stays
+    // steerable - so the queued guidance is what comes next.
+    expect(crewmate.promptCalls).toHaveLength(2);
+    expect(crewmate.promptCalls[0]).toContain("Start");
+    expect(crewmate.promptCalls[1]).toBe("stop and do this instead");
+  });
+
+  it("says so when a task ends before its queued guidance could be delivered", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, ops, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    await supervisor.steerCrewmate(taskId, "one more thing");
+    crewmate.failPrompt("the crewmate crashed");
+    await tick();
+
+    // Never silently dropped: the task's own timeline keeps the guidance and
+    // says it was never delivered, as a feed line - not a Firstmate wake (WI-5).
+    const note = tasks.timeline(taskId).find((event) => event.text.includes("never delivered"));
+    expect(note).toMatchObject({ kind: "note", feed: true });
+    expect(note?.text).toContain("one more thing");
+    expect(ops.some((line) => line.includes("never delivered"))).toBe(false);
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(crewmate.promptCalls[0]).toContain("Start");
+  });
+
+  it("still steers a native backend into the running turn", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    // The fallback is for backends that need it, and for nobody else.
+    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    expect(crewmate.steer).toHaveBeenCalledWith(
+      "also make it blue",
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+  });
+});
+
+describe("a steer that lands after the run's last look at its queue", () => {
+  it("goes back on the lane, its attempt unspent, and is the crewmate's next turn", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    // The run has made its last check of the queue: the session accepts the
+    // steer, and the turn ends without reading it.
+    crewmate.holdSteers();
+    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    // Taken back from the session, never acknowledged as handled: it is
+    // the next turn, announced as queued guidance.
+    expect(crewmate.promptCalls).toHaveLength(2);
+    expect(crewmate.promptCalls[1]).toBe("also make it blue");
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Task Job guidance queued: it will be delivered when the task is free",
+    });
+    // Its row rides that turn on its first attempt: the one no turn read was given back.
+    expect(inbox.inFlight(taskId).map((row) => row.attempts)).toEqual([1]);
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(inbox.inFlight(taskId)).toEqual([]);
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(crewmate.promptCalls).toHaveLength(2);
+  });
+
+  it("takes back only the steers the turn never read, the newest", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    // The first steer reaches the running turn; the second lands in its tail.
+    await supervisor.steerCrewmate(taskId, "first");
+    crewmate.holdSteers();
+    await supervisor.steerCrewmate(taskId, "second");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(crewmate.promptCalls.slice(1)).toEqual(["second"]);
+    // The first was handled by the turn that read it; only the second rides on.
+    expect(inbox.inFlight(taskId).map((row) => row.attempts)).toEqual([1]);
+  });
+
+  it("says a steer no turn read was never delivered when the task ends first", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    crewmate.holdSteers();
+    await supervisor.steerCrewmate(taskId, "one more thing");
+    crewmate.failPrompt("the crewmate crashed");
+    await tick();
+
+    const note = tasks.timeline(taskId).find((event) => event.text.includes("never delivered"));
+    expect(note).toMatchObject({ kind: "note", feed: true });
+    expect(note?.text).toContain("one more thing");
+    expect(ops.some((line) => line.includes("never delivered"))).toBe(false);
+  });
+});
+
+describe("a backend that mints its resume token only when the first turn starts", () => {
+  it("becomes resumable at the first turn end, not never", async () => {
+    // A backend may mint its conversation id on the first turn rather than at
+    // creation. Persisting only at creation would leave such a task
+    // unresumable after a restart.
+    const crewmate = fakeCrewmate();
+    let token: string | undefined;
+    const late: FakeCrewmate = {
+      ...crewmate,
+      resume: () => (token ? { backend: "claude", sessionId: token } : undefined),
+      prompt: (text: string) => {
+        token = "conversation-1";
+        return crewmate.prompt(text);
+      },
+    };
+    const { supervisor, tasks } = setup(late);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    expect(tasks.get(taskId)?.sessionFile).toBeNull();
+
+    late.finishPrompt();
+    await tick();
+    expect(tasks.get(taskId)?.sessionFile).toBe("conversation-1");
+  });
+});
+
+describe("emit_card stable id revision", () => {
+  it("revises an open Firstmate card in place and still adds a new topic", async () => {
+    const { supervisor, cards } = setup(fakeCrewmate());
+    supervisor.addFirstmateCard({
+      id: "fm-feed-scroll",
+      title: "Feed scroll v1",
+      body: "<p>v1</p>",
+      actions: [],
+    });
+    await tick();
+    const first = cards();
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({
+      id: "card-fm-feed-scroll",
+      title: "Feed scroll v1",
+      body: "<p>v1</p>",
+    });
+    const createdAt = first[0]?.createdAt;
+
+    supervisor.addFirstmateCard({
+      id: "fm-feed-scroll",
+      title: "Feed scroll v2",
+      body: "<p>v2</p>",
+      actions: [{ id: "go", label: "Go", default: true }],
+    });
+    await tick();
+    const revised = cards();
+    expect(revised).toHaveLength(1);
+    expect(revised[0]).toMatchObject({
+      id: "card-fm-feed-scroll",
+      title: "Feed scroll v2",
+      body: "<p>v2</p>",
+      createdAt,
+    });
+    expect(revised[0]?.actions.map((action) => action.id)).toEqual(["go"]);
+
+    supervisor.addFirstmateCard({
+      id: "fm-other-topic",
+      title: "Other",
+      body: "A different fact.",
+      actions: [],
+    });
+    await tick();
+    expect(cards()).toHaveLength(2);
+    expect(
+      cards()
+        .map((card) => card.id)
+        .sort(),
+    ).toEqual(["card-fm-feed-scroll", "card-fm-other-topic"]);
+  });
+
+  it("does not overwrite an app-raised singleton unless the id matches", async () => {
+    const { supervisor, cards } = setup(fakeCrewmate());
+    supervisor.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "Move the flagship.",
+      providerName: "Grok",
+      move: { providerId: "openai-codex", providerName: "Codex" },
+    });
+    await tick();
+    supervisor.addFirstmateCard({
+      id: "fm-feed-scroll",
+      title: "Unrelated",
+      body: "Not the ladder.",
+      actions: [],
+    });
+    await tick();
+    expect(cards()).toHaveLength(2);
+    expect(cards().find((card) => card.id === "card-fm-flagship-move")?.body).toBe(
+      "Move the flagship.",
+    );
+
+    supervisor.addFirstmateCard({
+      id: "fm-flagship-move",
+      title: "Firstmate has used up its allowance",
+      body: "Revised ladder copy.",
+      actions: [
+        {
+          id: "open-settings",
+          label: "Open settings",
+          default: true,
+          effect: { kind: "open", target: "settings" },
+        },
+      ],
+    });
+    await tick();
+    const flagship = cards().find((card) => card.id === "card-fm-flagship-move");
+    expect(flagship?.body).toBe("Revised ladder copy.");
+    expect(cards().filter((card) => card.id === "card-fm-flagship-move")).toHaveLength(1);
+  });
+
+  it("revises an open crewmate card in place without stacking", async () => {
+    const { supervisor, cards, specs } = setup(fakeCrewmate());
+    const { taskId } = await supervisor.commission({
+      title: "proto",
+      intent: intentOf("show a preview"),
+    });
+    await tick();
+    const onCard = specs[0]?.onCard;
+    onCard?.({
+      id: "feed-scroll",
+      title: "Scroll v1",
+      body: "<p>v1</p>",
+      actions: [],
+    });
+    onCard?.({
+      id: "feed-scroll",
+      title: "Scroll v2",
+      body: "<p>v2</p>",
+      actions: [],
+    });
+    onCard?.({
+      id: "other-topic",
+      title: "Aside",
+      body: "Another fact.",
+      actions: [],
+    });
+    await tick();
+    const snapshot = cards();
+    expect(snapshot).toHaveLength(2);
+    expect(snapshot.find((card) => card.id === `card-${taskId}-feed-scroll`)).toMatchObject({
+      title: "Scroll v2",
+      body: "<p>v2</p>",
+    });
+    expect(snapshot.find((card) => card.id === `card-${taskId}-other-topic`)?.title).toBe("Aside");
+  });
+
+  it("does not let a crewmate clobber an app-raised singleton", async () => {
+    const { supervisor, cards, specs } = setup(fakeCrewmate());
+    supervisor.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
+    await supervisor.commission({ title: "proto", intent: intentOf("work") });
+    await tick();
+    specs[0]?.onCard?.({
+      id: "card-fm-auth",
+      title: "Not auth",
+      body: "Crewmate copy.",
+      actions: [],
+    });
+    await tick();
+    expect(cards().find((card) => card.id === "card-fm-auth")?.body).toBe("Sign in needed.");
+    expect(cards().some((card) => card.body === "Crewmate copy.")).toBe(true);
+    expect(cards()).toHaveLength(2);
+  });
+});
+
+describe("needs_reauth card (CD-3=A)", () => {
+  it("a proof-gated needs_reauth card is a singleton with a one-step Sign in restore", () => {
+    const { supervisor } = setup(fakeCrewmate());
+    supervisor.addAuthDecisionCard(
+      "card-auth-account-acct_cl1",
+      "Claude",
+      "Claude (Personal) needs you to sign in again.",
+      { restoreAccountId: "acct_cl1" },
+    );
+    const card = supervisor
+      .cardsSnapshot()
+      .find((entry) => entry.id === "card-auth-account-acct_cl1");
+    expect(card?.title).toBe("Claude (Personal) needs you to sign in again.");
+    expect(card?.body).toBe(NEEDS_REAUTH_CONSEQUENCE);
+    expect(card?.actions.map((action) => action.id)).toEqual(["sign-in"]);
+    expect(supervisor.act(card?.id ?? "", "sign-in").effect).toEqual({
+      kind: "open",
+      target: "subscriptions",
+      restoreAccountId: "acct_cl1",
+    });
+    expect(
+      supervisor.cardsSnapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
+    ).toBeUndefined();
+  });
+
+  it("clears a recovered needs_reauth card without leaving it on the stack", () => {
+    const { supervisor } = setup(fakeCrewmate());
+    supervisor.addAuthDecisionCard(
+      "card-auth-account-acct_cl1",
+      "Claude",
+      "Claude (Personal) needs you to sign in again.",
+      { restoreAccountId: "acct_cl1" },
+    );
+    supervisor.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    expect(
+      supervisor.cardsSnapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
+    ).toBeUndefined();
+  });
+});
+
+/**
+ * The owner's call 3 on the primitives review ("every card with actions
+ * places the captain gate on its task; host cards file an operation task"):
+ * a card is on the record the way every captain decision is, so "waiting on
+ * you" is one query over the gate.
+ */
+describe("a card places the captain gate (cards as tasks)", () => {
+  const hostRows = (tasks: TaskService, cardId: string) =>
+    tasks.list().filter((record) => record.kind === "operation" && record.gate?.ref === cardId);
+
+  it("a host card with actions and no task files an open operation row that its answer closes", () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    supervisor.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "<p>Move Firstmate?</p>",
+      providerName: "Grok",
+      move: { providerId: "openai-codex", providerName: "Codex" },
+    });
+    const [row] = hostRows(tasks, "card-fm-flagship-move");
+    expect(row).toMatchObject({
+      kind: "operation",
+      status: "open",
+      title: "Your first mate has used up its allowance",
+      gate: { kind: "captain", ref: "card-fm-flagship-move" },
+    });
+    // A revision or a second raise files nothing more.
+    supervisor.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "<p>Move Firstmate?</p>",
+      providerName: "Grok",
+      move: { providerId: "openai-codex", providerName: "Codex" },
+    });
+    expect(hostRows(tasks, "card-fm-flagship-move")).toHaveLength(1);
+    // The row is its card, not crew work.
+    expect(supervisor.crewStatus()).toEqual([]);
+
+    supervisor.act("card-fm-flagship-move", "move-flagship");
+    expect(tasks.get(row?.id ?? "")).toMatchObject({ status: "done", closedReason: "answered" });
+    // The host's bookkeeping is not news: no feed line for its close.
+    expect(tasks.timeline(row?.id ?? "").at(-1)).toMatchObject({ feed: false });
+  });
+
+  it("a host card taken down unanswered drops its row; the captain's close cancels it", () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    supervisor.addAuthDecisionCard(
+      "card-auth-account-acct_cl1",
+      "Claude",
+      "Claude (Personal) needs you to sign in again.",
+      { restoreAccountId: "acct_cl1" },
+    );
+    const [recovered] = hostRows(tasks, "card-auth-account-acct_cl1");
+    supervisor.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    expect(tasks.get(recovered?.id ?? "")).toMatchObject({
+      status: "dropped",
+      closedReason: "superseded",
+    });
+
+    supervisor.addFirstmateFailureCard("<p>The turn failed.</p>");
+    const [failure] = hostRows(tasks, "card-fm-turn-failure");
+    expect(failure?.status).toBe("open");
+    supervisor.close("card-fm-turn-failure");
+    expect(tasks.get(failure?.id ?? "")).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+    });
+    // A note asks nothing, so it files nothing.
+    supervisor.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
+    expect(hostRows(tasks, "card-note")).toEqual([]);
+  });
+
+  it("the sweep heals both sides: a host card with no row files one, a row whose card is gone closes", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    // A card from a version that filed no row, or a crash between the two
+    // writes: the card is up and nothing gates it.
+    supervisor.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "<p>Nothing has headroom.</p>",
+      providerName: "Codex",
+    });
+    const [filed] = hostRows(tasks, "card-fm-no-headroom");
+    tasks.close(filed?.id ?? "", { status: "dropped", reason: "superseded", actor: "host" });
+    await supervisor.sweepGates(Date.now());
+    const open = hostRows(tasks, "card-fm-no-headroom").filter((row) => row.status === "open");
+    expect(open).toHaveLength(1);
+    // And the other way: a row whose card never made it to the stack.
+    const orphan = tasks.fileHostCardTask({ id: "orphan-1", title: "Gone", cardId: "card-gone" });
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(orphan.id)).toMatchObject({ status: "dropped", closedReason: "superseded" });
+    expect(tasks.timeline(orphan.id).at(-1)).toMatchObject({
+      text: "its card is gone",
+      feed: false,
+    });
+  });
+
+  it("the crewmate's sign-in card gates its task, and its departure releases it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    crewmate.emit({ type: "turn_failed", taskId, error: "401 unauthorized: sign in again" });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const card = supervisor.cardsSnapshot().find((entry) => entry.id === `card-auth-${taskId}`);
+    expect(card?.taskId).toBe(taskId);
+    expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: `card-auth-${taskId}` });
+    expect(tasks.list().filter((record) => record.kind === "operation")).toEqual([]);
+    supervisor.clearAuthDecisionCard(`card-auth-${taskId}`);
+    expect(tasks.get(taskId)?.gate).toBeNull();
+  });
+
+  it("with two cards up the gate keeps the one it names, and moves to the other when it goes", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "Pick a course",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    await tick();
+    const first = tasks.get(taskId)?.gate?.ref as string;
+    const second = supervisor.addFirstmateCard({
+      taskId,
+      title: "Also pick a port",
+      body: "<p>Pick the port.</p><ul><li>North or south.</li></ul>",
+      actions: [{ id: "north", label: "North", default: true }],
+    });
+    expect(tasks.get(taskId)?.gate?.ref).toBe(first);
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(first, "change");
+    await tick();
+    expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: second });
+    supervisor.act(second, "north");
+    expect(tasks.get(taskId)?.gate).toBeNull();
+  });
+});
+
+/**
+ * The app's own sign-in where projects live (git integration PR 1.2): the
+ * one host card when the host refused it, the typed refusal a put-in gets
+ * without one, and the crewmate's pair of tools where a change ships.
+ */
+describe("the sign-in where a project lives", () => {
+  it("raises one host card on the host's refusal whose action starts the sign-in in Projects", () => {
+    const { supervisor } = setup(fakeCrewmate());
+    supervisor.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
+    supervisor.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
+    const raised = supervisor.cardsSnapshot().filter((card) => card.id === "card-forge-github.com");
+    expect(raised).toHaveLength(1);
+    const card = raised[0] as Card;
+    expect(card.author).toBe("host");
+    expect(card.title).toBe("Sign in to GitHub again");
+    expect(card.body).toContain("2 pull requests are waiting on it.");
+    expect(card.body).toContain("Projects kept on this computer are not affected.");
+    expect(supervisor.act(card.id, "sign-in").effect).toEqual({
+      kind: "open",
+      target: "projects",
+      signIn: "github.com",
+    });
+  });
+
+  it("refuses a put-in without the sign-in with its two ways, never a raw 401", async () => {
+    const mergePullRequest = vi.fn(async () => ({
+      ok: false,
+      text: "Cannot merge yet - the checks could not be read.",
+      problem: "Not signed in to GitHub (github.com)",
+      signIn: { host: "github.com", name: "GitHub", repoId: "repo-1" },
+    }));
+    const { supervisor, tasks } = setup(fakeCrewmate(), { mergePullRequest });
+    seedTask(tasks, {
+      id: "signin-merge",
+      title: "Ship the fix",
+      status: "idle",
+      worktreeDir: "/work/signin-merge",
+    });
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const result = await supervisor.settleTaskDetailed(
+      "signin-merge",
+      "merge-pr",
+      undefined,
+      undefined,
+      "captain",
+    );
+    expect(result.text).toBe(
+      'Cannot merge: Not signed in to GitHub (github.com): merging "Ship the fix" needs the captain\'s GitHub sign-in, or the project kept on this computer.',
+    );
+    expect(result.refusal).toMatchObject({
+      refused: "not-signed-in",
+      task: { id: "signin-merge", title: "Ship the fix" },
+      ways: [
+        {
+          label: "Sign in to GitHub",
+          effect: { kind: "open", target: "projects", signIn: "github.com" },
+        },
+        {
+          label: "Keep it on this computer",
+          tool: "app_change",
+          args: {
+            action: "project-settings",
+            value: { repoId: "repo-1", changes: { delivery: "local-only" } },
+            evidence: "Keep it on this computer",
+          },
+        },
+      ],
+    });
+    expect(tasks.get("signin-merge")?.status).not.toBe("done");
+  });
+
+  it("hands the crewmate open_change and check_change where its task ships a change", async () => {
+    const crewmate = fakeCrewmate();
+    const openChange = vi.fn(async () => "opened");
+    const checkChange = vi.fn(async () => "overall: green");
+    const readWorkflow = vi.fn(async () => "workflow log");
+    const downloadArtifact = vi.fn(async () => "downloaded ZIP");
+    const { supervisor, specs } = setup(crewmate, {
+      openChange,
+      checkChange,
+      readWorkflow,
+      downloadArtifact,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Fix it",
+      intent: intentOf("fix the thing"),
+    });
+    await tick();
+    const spec = specs[0];
+    expect(await spec?.onOpenChange?.({ title: "t", body: "b" })).toBe("opened");
+    expect(await spec?.onCheckChange?.()).toBe("overall: green");
+    expect(openChange).toHaveBeenCalledWith(taskId, { title: "t", body: "b" });
+    expect(checkChange).toHaveBeenCalledWith(taskId, undefined);
+    expect(await spec?.onReadWorkflow?.({ runId: 10, jobId: 20 })).toBe("workflow log");
+    expect(readWorkflow).toHaveBeenCalledWith(taskId, { runId: 10, jobId: 20 });
+    expect(await spec?.onDownloadArtifact?.({ runId: 10, artifactId: 30 })).toBe("downloaded ZIP");
+    expect(downloadArtifact).toHaveBeenCalledWith(taskId, { runId: 10, artifactId: 30 });
+  });
+
+  it("gives an answer task evidence tools but neither delivery tool: it ships nothing", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate, {
+      openChange: vi.fn(async () => "opened"),
+      checkChange: vi.fn(async () => "green"),
+      readWorkflow: vi.fn(async () => "workflow log"),
+      downloadArtifact: vi.fn(async () => "downloaded ZIP"),
+    });
+    await supervisor.commission({
+      title: "Read the router",
+      intent: {
+        goal: "explain the ladder",
+        userWords: "how does routing pick a model?",
+        constraints: [{ kind: "read-only" }],
+      },
+    });
+    await tick();
+    expect(specs[0]?.onOpenChange).toBeUndefined();
+    expect(specs[0]?.onCheckChange).toBeUndefined();
+    expect(specs[0]?.onReadWorkflow).toBeDefined();
+    expect(specs[0]?.onDownloadArtifact).toBeDefined();
+  });
+});
+
+describe("crew report answer ownership", () => {
+  /** Drive one crewmate turn to completion so the report wake is emitted. */
+  async function reportOnce(crewmate: FakeCrewmate, taskId: string, text: string): Promise<void> {
+    crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  it("tells Firstmate in the report wake that the crewmate already carded the answer", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Check if PR 58 merged",
+      intent: intentOf("check if pr 58 merged"),
+    });
+    await tick();
+    specs[0]?.onCard?.({
+      title: "PR 58 is merged",
+      body: "<p>merged</p>",
+      actions: [],
+    });
+    await tick();
+    await reportOnce(crewmate, taskId, "PR 58 is merged.");
+    const report = ops.find((text) => text.includes(`reported on task ${taskId}`));
+    // WI-12: the wake names the crewmate's card by id - the fact; the
+    // steer-not-answer rule stays in the Firstmate's prompt (v2.0).
+    expect(report).toMatch(
+      /Its card on the captain's screen: card-[\w-]+ \(note\) "PR 58 is merged"\.$/,
+    );
+    expect(report).not.toContain("steer the crewmate");
+  });
+
+  it("refs the report wake to its task so the consuming turn can place it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const refs: Array<{ text: string; origin: string; ref?: string }> = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        refs.push({ text: served(wake), origin, ...(ref ? { ref } : {}) });
+      },
+      retryConverse: vi.fn(),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Check if PR 58 merged",
+      intent: intentOf("check if pr 58 merged"),
+    });
+    await tick();
+    await reportOnce(crewmate, taskId, "PR 58 is merged.");
+    // The report is stamped a crewmate report on its task: that stamp, not the
+    // wording, is what the consuming turn is classified by.
+    expect(refs).toContainEqual(
+      expect.objectContaining({ ref: taskId, origin: "crewmate-report" }),
+    );
+  });
+
+  it("refs distinct Firstmate card wakes to their natural task without deduping either", () => {
+    const { supervisor, tasks, inbox } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "work", title: "Work", status: "idle" });
+    supervisor.setFirstmateHooks({
+      notifyOp: (text, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, text, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const choice = supervisor.addFirstmateCard({
+      taskId: "work",
+      title: "Choose",
+      body: "<p>Choose the course.</p><p>This keeps the work moving.</p>",
+      actions: [{ id: "choose", label: "Choose it", default: true }],
+    });
+    const review = supervisor.addFirstmateCard({
+      taskId: "work",
+      title: "Review",
+      body: "<p>Review the detail.</p><p>This settles the review.</p>",
+      actions: [{ id: "review", label: "Review it", default: true }],
+    });
+
+    supervisor.act(choice, "choose");
+    supervisor.act(review, "review");
+
+    expect(inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.ref)).toEqual(["work", "work"]);
+  });
+
+  it("refs a standalone Firstmate card wake to its open decision task", () => {
+    const { supervisor, tasks, inbox } = setup(fakeCrewmate());
+    supervisor.setFirstmateHooks({
+      notifyOp: (text, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, text, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const cardId = supervisor.addFirstmateCard({
+      title: "Choose",
+      body: "<p>Choose the course.</p><p>This keeps the work moving.</p>",
+      actions: [{ id: "choose", label: "Choose it", default: true }],
+    });
+    tasks.fileDecision({ id: "decision-task", title: "Choose", cardId });
+
+    supervisor.act(cardId, "choose");
+
+    expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([
+      expect.objectContaining({ ref: "decision-task" }),
+    ]);
+  });
+});
+
+describe("the durable inbox (design A)", () => {
+  // These run on the host's one clock (P5, `ticker.ts`): the test moves
+  // `hostNow` itself, so nothing here fakes a timer or `Date`.
+  let hostNow = 0;
+  const hostClock = () => hostNow;
+  beforeEach(() => {
+    vi.useRealTimers();
+    hostNow = Date.now();
+  });
+  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  /** The harness on the host's clock, its card stack read as the broadcast carries it. */
+  const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
+    const harness = setup(crewmate, { now: hostClock, ...extras });
+    return { ...harness, cards: () => harness.supervisor.cardsSnapshot() };
+  };
+
+  /** Two minutes pass: every attempted row is past the retry grace. */
+  const passGrace = () => {
+    hostNow += 120_000;
+  };
+
+  it("re-delivers guidance a quit stranded once the next boot sweeps", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    // Mid-turn guidance on a followup-queue backend: durably recorded.
+    expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe(
+      "queued-next-turn",
+    );
+
+    // The app quits here: nothing acked, the turn never ends. A fresh
+    // supervisor over the same database is the next boot.
+    supervisor.disposeAll();
+    const bootCrewmate = fakeCrewmate();
+    const fresh = new CrewSupervisor({
+      now: hostClock,
+      ...crewSessions(
+        paths,
+        vi.fn(async () => bootCrewmate),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: new TaskService({ db, strict: true, now: hostClock }), // marks running -> interrupted, as boot does
+      cardStore,
+      inbox: new InboxStore(db, { now: hostClock }),
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    new InboxStore(db, { now: hostClock }).resetInFlight();
+    await fresh.sweepInbox(hostNow);
+    await tick();
+
+    // The stranded guidance became the resumed crewmate's next turn.
+    expect(bootCrewmate.promptCalls).toEqual(["use the other library"]);
+  });
+
+  it("replays a turn the app closed under at every launch, saying so, and never sets it aside", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Publish",
+      intent: intentOf("Dispatch the release workflow"),
+    });
+    await tick();
+    // The brief's turn runs and never ends: the app closes under it.
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain("Dispatch the release workflow");
+    expect(brief).not.toContain(RESTART_REPLAY_NOTE);
+
+    let running = supervisor;
+    let turnCrewmate = crewmate;
+    const setAside: WakeFacts[] = [];
+    // One more launch than the message has tries: each quit lands mid-turn.
+    for (let launch = 2; launch <= INBOX_ATTEMPT_MAX + 1; launch += 1) {
+      running.disposeAll();
+      const bootCrewmate = fakeCrewmate();
+      const notes: string[] = [];
+      const fresh = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(
+          paths,
+          vi.fn(async () => bootCrewmate),
+        ),
+        workspace,
+        repos: new RepoRegistry(db, paths.fleetDir),
+        tasks: new TaskService({ db, strict: true, now: hostClock }),
+        cardStore,
+        inbox: new InboxStore(db, { now: hostClock }),
+        paths,
+        broadcastEvent: (event) => {
+          if (event.type === "firstmate_note") notes.push(event.text);
+        },
+        broadcastCards: () => {},
+      });
+      fresh.setFirstmateHooks({
+        notifyOp: (wake) => {
+          if (wake.facts.kind === "guidance-set-aside") setAside.push(wake.facts);
+        },
+        retryConverse: vi.fn(),
+      });
+      // The boot: the quit left the brief in flight.
+      expect(new InboxStore(db, { now: hostClock }).resetInFlight()).toBe(1);
+      passGrace();
+      await fresh.sweepInbox(hostNow);
+      await tick();
+
+      // The same message again, opened by the note that it is a replay.
+      expect(bootCrewmate.promptCalls).toEqual([`${RESTART_REPLAY_NOTE}\n\n${brief}`]);
+      expect(new InboxStore(db).inFlight(taskId)).toEqual([
+        expect.objectContaining({ attempts: 1, cuts: launch - 1, escalatedAt: null }),
+      ]);
+      expect(notes.some((text) => text.includes("could not be delivered"))).toBe(false);
+      running = fresh;
+      turnCrewmate = bootCrewmate;
+    }
+    expect(setAside).toEqual([]);
+
+    // The last replay's turn ends clean: the message is handled and leaves the lane.
+    turnCrewmate.emit({ type: "turn_end", taskId });
+    turnCrewmate.finishPrompt();
+    await tick();
+    expect(new InboxStore(db).allFor(taskId)).toEqual([]);
+    expect(new InboxStore(db).inFlight(taskId)).toEqual([]);
+    running.disposeAll();
+  });
+
+  it("records a failed native steer, retries it, and delivers on recovery", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("busy"));
+    expect(await supervisor.steerCrewmate(taskId, "make it blue")).toBe("recorded-retrying");
+    expect(inbox.pending(taskId, hostNow + 120000)).toHaveLength(1);
+
+    // The tick sweep retries once the grace passes; the steer now lands.
+    passGrace();
+    await supervisor.sweepInbox(hostNow);
+    expect(crewmate.steer).toHaveBeenCalledTimes(2);
+    expect(crewmate.steer).toHaveBeenLastCalledWith(
+      "make it blue",
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+
+    // Ack after handling: the row clears when the turn it landed in ends.
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(inbox.allFor(taskId)).toHaveLength(0);
+  });
+
+  it("escalates guidance loudly after the attempt budget and stops retrying", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, ops, events, cards } = clockedSetup(crewmate);
+    const refs: Array<string | undefined> = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, _origin, ref) => {
+        ops.push(served(wake));
+        refs.push(ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+
+    (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("always busy"));
+    expect(await supervisor.steerCrewmate(taskId, "urgent fix")).toBe("recorded-retrying");
+    for (let round = 0; round < 3; round += 1) {
+      passGrace();
+      await supervisor.sweepInbox(hostNow);
+    }
+
+    const escalated = inbox.allFor(taskId);
+    expect(escalated).toHaveLength(1);
+    expect(escalated[0]?.escalatedAt).not.toBeNull();
+    expect(ops.some((line) => line.includes("could not be delivered after 3 attempts"))).toBe(true);
+    expect(refs).toContain(taskId);
+    expect(
+      events.some(
+        (event) => event.type === "firstmate_note" && event.text.includes("could not be delivered"),
+      ),
+    ).toBe(true);
+    await tick();
+    // The wake and the feed line are the escalation; no host card (P0, WI-3).
+    expect(cards()).toEqual([]);
+
+    // The budget is spent: no further delivery attempts.
+    const attempts = (crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length;
+    passGrace();
+    await supervisor.sweepInbox(hostNow);
+    expect((crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(attempts);
+  });
+
+  it("retries the brief when the first turn fails at the provider", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Job",
+      intent: intentOf("Start the work"),
+    });
+    await tick();
+
+    // Pi resolves a provider-failed turn; the task stays steerable and the
+    // brief - the task's first inbox row - is released for retry.
+    crewmate.emit({ type: "turn_failed", taskId, error: "upstream 529" });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    passGrace();
+    await supervisor.sweepInbox(hostNow);
+    await tick();
+    expect(crewmate.promptCalls).toHaveLength(2);
+    expect(crewmate.promptCalls[0]).toContain("Start the work");
+    expect(crewmate.promptCalls[1]).toBe(crewmate.promptCalls[0]);
+  });
+
+  it("turns a lane whose task is gone into one honest notice", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, ops, events } = clockedSetup(crewmate);
+    inbox.enqueue("ghost-task", "hello out there");
+    await supervisor.sweepInbox(hostNow);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Guidance for a task that no longer exists was never delivered - the task is gone: hello out there",
+    });
+    expect(ops).toEqual([]);
+    expect(inbox.allFor("ghost-task")).toHaveLength(0);
+  });
+});
+
+describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
+  async function reportedTask(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
+    const harness = setup(crewmate, extras);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Job",
+      intent: intentOf("Start"),
+    });
+    await tick();
+    return { ...harness, taskId };
+  }
+
+  async function report(crewmate: FakeCrewmate, taskId: string, text = "Done, tests green.") {
+    crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  const reportWakes = (ops: string[]) => ops.filter((line) => line.includes("reported on task"));
+
+  it("wakes on a stopped Pi crewmate, and records the rule that said so", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, sorts, taskId } = await reportedTask(crewmate);
+    await report(crewmate, taskId);
+    expect(reportWakes(ops)).toHaveLength(1);
+    expect(reportWakes(ops)[0]).toContain("Done, tests green.");
+    expect(sorts).toEqual([{ taskId, verdict: "captain", rule: "stopped" }]);
+    expect(supervisor.cardsSnapshot()).toEqual([]);
+  });
+
+  it("records the report's typed facts beside the text it was served as (P6)", async () => {
+    const crewmate = fakeCrewmate();
+    const { ops, ledger, ledgerFacts, taskId } = await reportedTask(crewmate);
+    await report(crewmate, taskId);
+    const facts = ledgerFacts.at(-1);
+    expect(facts).toMatchObject({
+      kind: "report",
+      task: { id: taskId, title: "Job" },
+      excerpt: "Done, tests green.",
+    });
+    // One wake, two copies: the ledger's text is the served text, and both
+    // are the facts' one rendering.
+    expect(ledger.at(-1)).toBe(renderWake({ facts: facts as WakeFacts }));
+    expect(reportWakes(ops)).toEqual([ledger.at(-1)]);
+  });
+
+  it("holds the turn for the captain while a DECISION card is open, and not for a note", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, sorts, specs, taskId } = await reportedTask(crewmate);
+    specs[0]?.onCard?.({
+      title: "Pick a course",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    await tick();
+    await report(crewmate, taskId, "Waiting on your pick.");
+    expect(reportWakes(ops)).toHaveLength(0);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+
+    // The captain answers it; the card leaves the stack and the next report
+    // falls through the rule as if none had ever been up.
+    const card = supervisor.cardsSnapshot().find((entry) => entry.title === "Pick a course");
+    supervisor.act(card?.id ?? "", "change");
+    await tick();
+    await report(crewmate, taskId, "Course plotted.");
+    expect(sorts.at(-1)?.rule).toBe("stopped");
+  });
+
+  it("a note-only card never holds the turn (R4.8 question 1)", async () => {
+    const crewmate = fakeCrewmate();
+    const { ops, sorts, specs, taskId } = await reportedTask(crewmate);
+    specs[0]?.onCard?.({
+      title: "Why the pin dropped",
+      body: "<p>The pin dropped because the lock file moved.</p>",
+      actions: [],
+    });
+    await tick();
+    await report(crewmate, taskId, "Noted; nothing else to do.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "stopped" });
+    expect(reportWakes(ops)).toHaveLength(1);
+  });
+
+  it("stays quiet while the crewmate is provably still moving", async () => {
+    const crewmate = fakeCrewmate();
+    const { ops, sorts, taskId } = await reportedTask(crewmate, {
+      hasRunningJobs: () => true,
+    });
+    await report(crewmate, taskId, "Build running; watching it.");
+    expect(reportWakes(ops)).toHaveLength(0);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+  });
+
+  it("wakes for the follow-ups a report filed, whatever else is true", async () => {
+    const crewmate = fakeCrewmate();
+    const { ops, sorts, specs, taskId } = await reportedTask(crewmate, {
+      hasRunningJobs: () => true,
+    });
+    specs[0]?.onFollowup?.({ title: "Fix the flake", goal: "unflake it", why: "it is red" });
+    await report(crewmate, taskId, "Filed one thing; still building.");
+    expect(reportWakes(ops)).toHaveLength(1);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "filed-followups" });
+  });
+
+  it("cannot tell on a client-side backend, so it arms the stall check instead", async () => {
+    const crewmate = fakeCrewmate();
+    const clientSide: FakeCrewmate = {
+      ...crewmate,
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+    };
+    const { ops, sorts, taskId } = await reportedTask(clientSide);
+    await report(clientSide, taskId, "Kicked off a background task; I'll report back.");
+    expect(reportWakes(ops)).toHaveLength(0);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "cannot-tell" });
+  });
+
+  // FI3-671: a wait on work nobody has started is the Firstmate's turn on
+  // any backend - only it or the captain can start that work.
+  it("wakes on a Claude-profile crewmate whose declared baseline wait names unstarted work", async () => {
+    const crewmate = fakeCrewmate();
+    const clientSide: FakeCrewmate = {
+      ...crewmate,
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+    };
+    const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
+    const owner = seedTask(tasks, {
+      id: "baseline-owner",
+      title: "Fix the flaky test",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    // The real producers: a failed reading, then the crewmate's declaration.
+    const failed = [{ name: "linux-checks", state: "failure" as const }];
+    tasks.recordDelivery(taskId, {
+      headSha: "head-1",
+      ci: "red",
+      ...observeCheckRepair(undefined, "head-1", failed, 1),
+    });
+    const diagnosis = {
+      headSha: "head-1",
+      check: "linux-checks",
+      classification: "baseline-blocked" as const,
+      evidence: "The same assertion fails on untouched main",
+      dependencyTask: owner.id,
+    };
+    expect(declareCheckAction(tasks, taskId, { diagnosis }, Date.now()).text).toContain(
+      `Nobody has started ${owner.key}`,
+    );
+    await report(clientSide, taskId, "Blocked by a baseline failure.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
+    expect(reportWakes(ops)).toEqual([
+      `[fm-op] crewmate 1 reported on task ${taskId} "Job": Blocked by a baseline failure. It waits on ${owner.key} "Fix the flaky test" (not started); nothing starts that work by itself.`,
+    ]);
+
+    // Once the work is underway nothing is the Firstmate's to start: the
+    // crewmate moves again when that work closes (FI3-250).
+    tasks.dispatch(owner.id, {
+      workspace: { repoDir: "", worktreeDir: "", branch: "" },
+      accountId: null,
+      assignee: "crewmate",
+    });
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    await report(clientSide, taskId, "Still waiting on the flaky test fix.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+    expect(reportWakes(ops)).toHaveLength(1);
+  });
+
+  it("ends a baseline wait by itself at a new head, and says when its work was dropped", async () => {
+    const crewmate = fakeCrewmate();
+    const clientSide: FakeCrewmate = {
+      ...crewmate,
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+    };
+    const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
+    const owner = seedTask(tasks, {
+      id: "baseline-owner",
+      title: "Fix main",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const failed = [{ name: "linux-checks", state: "failure" as const }];
+    tasks.recordDelivery(taskId, {
+      headSha: "head-1",
+      ci: "red",
+      ...observeCheckRepair(undefined, "head-1", failed, 1),
+    });
+    declareCheckAction(
+      tasks,
+      taskId,
+      {
+        diagnosis: {
+          headSha: "head-1",
+          check: "linux-checks",
+          classification: "baseline-blocked",
+          evidence: "The same assertion fails on untouched main",
+          dependencyTask: owner.id,
+        },
+      },
+      Date.now(),
+    );
+    tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "host" });
+    await report(clientSide, taskId, "Waiting on the main-line fix.");
+    expect(sorts.at(-1)?.rule).toBe("waits-unstarted");
+    expect(reportWakes(ops).at(-1)).toContain(`It waits on ${owner.key} "Fix main" (dropped)`);
+
+    // The crewmate pushed again: the diagnosis was about another version.
+    tasks.recordDelivery(taskId, { headSha: "head-2", ci: "pending" });
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    await report(clientSide, taskId, "Pushed a new version; its checks are running.");
+    expect(sorts.at(-1)?.rule).toBe("cannot-tell");
+    expect(reportWakes(ops)).toHaveLength(1);
+  });
+
+  it("wakes on every report while a blocking filing stays planned, and not once it starts", async () => {
+    const crewmate = fakeCrewmate();
+    const clientSide: FakeCrewmate = {
+      ...crewmate,
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+    };
+    const { supervisor, ops, sorts, specs, tasks, taskId } = await reportedTask(clientSide);
+    specs[0]?.onFollowup?.({ title: "Unblock", goal: "g", why: "w", blocksMe: true });
+    await report(clientSide, taskId, "Filed what blocks me.");
+    expect(sorts.at(-1)?.rule).toBe("filed-followups");
+    // The Firstmate left it planned: the next report still names it.
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    await report(clientSide, taskId, "Still blocked.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
+    const blocker = tasks.blockersHoldingClose(taskId)[0];
+    expect(reportWakes(ops).at(-1)).toContain(
+      `It waits on ${blocker?.key} "Unblock" (not started)`,
+    );
+    tasks.dispatch(blocker?.id ?? "", {
+      workspace: { repoDir: "", worktreeDir: "", branch: "" },
+      accountId: null,
+      assignee: "crewmate",
+    });
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    await report(clientSide, taskId, "Waiting for it to merge.");
+    expect(sorts.at(-1)?.rule).toBe("still-moving");
+    expect(reportWakes(ops)).toHaveLength(2);
+  });
+
+  it("leaves the reviewed lane alone: it wakes the Firstmate and records nothing", async () => {
+    const crewmate = fakeCrewmate();
+    const reviewer = fakeCrewmate();
+    const { supervisor, repos, ops, sorts } = setup(crewmate, { crewmates: [reviewer] });
+    const { repo } = await repos.setup({ kind: "init", name: "reviewed" });
+    repos.configure(repo.id, { rigor: "reviewed", delivery: "direct-pr" });
+    const { taskId } = await supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("Start"),
+      repoId: repo.id,
+    });
+    await tick();
+    await report(crewmate, taskId, "Branch pushed.");
+    expect(reportWakes(ops)).toHaveLength(1);
+    expect(sorts).toEqual([]);
+  });
+
+  // FI3-710 (grounded on FI3-703): a captain decision only the Firstmate can
+  // carry out reached it only when the sort happened to wake it. FI3-696's
+  // approval by reply sorted `cannot-tell` on a Claude crewmate and sat.
+  describe("a report that asks the Firstmate to act (FI3-710)", () => {
+    const APPROVAL = "for decision 5, raise the threshold from 8 to 32. now approve to build";
+    const ASK = "start the builder on the approved plan, threshold 32";
+    const RELAY = `The captain approved the plan by reply: "${APPROVAL}". The final plan keeps every decision, with the threshold at 32.`;
+
+    /** A planner whose plan card is up and its first report sorted. */
+    async function plannerWithCard(backgroundWork: "host" | "client") {
+      const base = fakeCrewmate();
+      const crewmate: FakeCrewmate = {
+        ...base,
+        controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork },
+      };
+      const harness = await reportedTask(crewmate);
+      harness.specs[0]?.onCard?.({
+        title: "Plan the threshold change",
+        body: "<p>Raise the threshold.</p><p>Decision 5 sets it to 8.</p>",
+        actions: [
+          { id: "build", label: "Approve and build", default: true },
+          { id: "later", label: "Not now" },
+        ],
+      });
+      await tick();
+      await report(crewmate, harness.taskId, "The plan is on its card.");
+      expect(harness.sorts.at(-1)?.rule).toBe("captain-card");
+      const card = harness.cards().find((entry) => entry.title === "Plan the threshold change");
+      if (!card) throw new Error("the plan card is not up");
+      return { ...harness, crewmate, card };
+    }
+
+    /** The turn the captain's reply started ends; the explicit report wins over its text. */
+    async function endTurn(crewmate: FakeCrewmate, taskId: string) {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+    }
+
+    for (const backgroundWork of ["host", "client"] as const) {
+      it(`wakes the Firstmate for an approval relayed by reply with the plan card up and unchanged (${backgroundWork} background work)`, async () => {
+        const { supervisor, crewmate, card, cards, ops, sorts, specs, tasks, taskId } =
+          await plannerWithCard(backgroundWork);
+
+        // Ordinary feedback stays quiet: the card still holds the turn.
+        supervisor.replyToCard(card.id, "say which decision moves");
+        await tick();
+        specs[0]?.onReply?.({ cardId: card.id, text: "Decision 5 moves; the rest stand." });
+        specs[0]?.onReport?.("Answered the captain's question under the plan card.");
+        await endTurn(crewmate, taskId);
+        expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+        expect(reportWakes(ops)).toHaveLength(0);
+
+        // The approval by reply: one thread line, the card unchanged, the
+        // relay declared.
+        supervisor.replyToCard(card.id, APPROVAL);
+        await tick();
+        specs[0]?.onReply?.({ cardId: card.id, text: "Firstmate starts the builder next." });
+        expect(specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK })).toBe(
+          "Reported. The first mate is woken for it when this turn ends.",
+        );
+        await endTurn(crewmate, taskId);
+
+        expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+        expect(reportWakes(ops)).toHaveLength(1);
+        const wake = reportWakes(ops)[0] ?? "";
+        expect(wake).toContain(APPROVAL);
+        expect(wake).toContain(
+          `It asks the first mate to act: ${ASK}. The ask authorizes nothing by itself; the captain's own words do.`,
+        );
+        // The card is still up with its buttons; nothing was chosen for him.
+        expect(cards().find((entry) => entry.id === card.id)?.actions).toEqual(card.actions);
+        // The record keeps the request beside the report it rode.
+        expect(
+          tasks
+            .timeline(taskId)
+            .filter((event) => event.kind === "report")
+            .at(-1),
+        ).toMatchObject({
+          text: RELAY,
+          data: expect.objectContaining({ needsFirstmate: ASK }),
+        });
+        expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+      });
+    }
+
+    it("wakes the Firstmate for the same relay after the planner withdrew its card, which alone woke nobody", async () => {
+      const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
+        await plannerWithCard("client");
+      supervisor.replyToCard(card.id, APPROVAL);
+      await tick();
+      // FI3-696's turn: the card withdrawn and the approval reported, with
+      // nothing that says the Firstmate must act.
+      specs[0]?.onCloseCard?.({ cardId: card.id, reason: "the captain approved it by reply" });
+      expect(specs[0]?.onReport?.(RELAY)).toBe(
+        "Reported. It goes on your task's record when this turn ends; whether the first mate is woken for it depends on your task's state. If the first mate must act on it, report again with needs_firstmate.",
+      );
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "cannot-tell" });
+      expect(reportWakes(ops)).toHaveLength(0);
+
+      await supervisor.steerCrewmate(taskId, "go on");
+      await tick();
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+      expect(reportWakes(ops)).toHaveLength(1);
+    });
+
+    it("answers the captain's reply first: a request beside an unanswered reply says so and wakes nobody", async () => {
+      const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
+        await plannerWithCard("client");
+      supervisor.replyToCard(card.id, APPROVAL);
+      await tick();
+      expect(specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK })).toContain(
+        "only if the captain's reply under your card has your answer by then",
+      );
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "thread-unanswered" });
+      expect(reportWakes(ops)).toHaveLength(0);
+    });
+
+    it("rides the durable report wake: one report per turn, and a repeated relay queues once", async () => {
+      const { supervisor, crewmate, card, inbox, specs, sorts, taskId } =
+        await plannerWithCard("client");
+      const queued: (number | null)[] = [];
+      supervisor.setFirstmateHooks({
+        notifyOp: (wake, origin, ref) =>
+          queued.push(inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref)),
+        retryConverse: vi.fn(),
+      });
+      supervisor.replyToCard(card.id, APPROVAL);
+      await tick();
+      specs[0]?.onReply?.({ cardId: card.id, text: "Firstmate starts the builder next." });
+      // The same call twice in one turn is one report and one sort.
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      await endTurn(crewmate, taskId);
+      // The same relay on a later turn says nothing new: the inbox keeps one.
+      await supervisor.steerCrewmate(taskId, "go on");
+      await tick();
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      await endTurn(crewmate, taskId);
+      expect(sorts.slice(-2).map((sort) => sort.rule)).toEqual([
+        "needs-firstmate",
+        "needs-firstmate",
+      ]);
+      expect(queued).toHaveLength(2);
+      expect(queued[1]).toBeNull();
+      expect(
+        inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => renderWake(row).includes(ASK)),
+      ).toHaveLength(1);
+    });
+
+    it("refuses a request with no reason, and keeps nothing of it", async () => {
+      const { specs, tasks, taskId } = await plannerWithCard("client");
+      expect(() => specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: "  " })).toThrow(
+        /needs_firstmate needs a reason/,
+      );
+      expect(tasks.timeline(taskId).at(-1)?.data).not.toMatchObject({ needsFirstmate: "  " });
+    });
+  });
+});
+
+describe('the captain takes a task\'s browser over (docs/task-browser.md, "Taking control")', () => {
+  // On the host's one clock: the case moves `hostNow`; nothing fakes a timer.
+  let hostNow = 0;
+  const hostClock = () => hostNow;
+  beforeEach(() => {
+    vi.useRealTimers();
+    hostNow = Date.now();
+  });
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const minutes = (n: number) => n * 60_000;
+
+  const OPEN: TaskBrowserFact = {
+    state: "open",
+    site: "aurora.example",
+    url: "http://aurora.example/signin",
+    title: "Sign in",
+    session: "run-1",
+    generation: 2,
+  };
+  const HANDOFF = {
+    site: "aurora.example",
+    reason: "Aurora needs your account to hold the fare",
+    after: "fill in the passenger details",
+  };
+  const REQUEST = {
+    title: "Sign in to aurora.example to continue the booking",
+    body: "<p>Aurora needs your account to hold the fare, so I paused the browser on its sign-in page.</p><p>While you have control I cannot see the page, and your typing is not recorded.</p>",
+    browser_handoff: HANDOFF,
+    actions: [
+      { id: "leave", label: "Leave waiting" },
+      {
+        id: "sign-in",
+        label: "Open browser and sign in",
+        default: true,
+        effect: { kind: "open" as const, target: "browser" as const },
+      },
+    ],
+  };
+
+  /** A crewmate on this Mac whose browser the stand-in holds, in its first turn. */
+  async function crewmateWithBrowser(
+    answers: {
+      requestHelp?: () => Promise<
+        { ok: true; handle: { session: string; generation: number } } | { ok: false; text: string }
+      >;
+      /** The sign-in this Mac has saved for the browser's site, if any. */
+      saved?: { site: string; savedAt: number };
+      grant?: () => Promise<{ ok: true } | { ok: false; text: string }>;
+    } = {},
+  ) {
+    const crewmate = fakeCrewmate();
+    const held = { current: false };
+    /** The task's browser fact as the stand-in holds it now; a case moves it. */
+    const shown: { fact: TaskBrowserFact | undefined } = { fact: OPEN };
+    const calls: string[] = [];
+    const browsers = {
+      forTask: () => ({
+        navigate: vi.fn(async () => ({ text: "opened" })),
+        inspect: vi.fn(async () => ({ text: "read" })),
+        act: vi.fn(async () => ({ text: "used" })),
+        capture: vi.fn(async () => ({ text: "photographed" })),
+        close: vi.fn(async () => ({ text: "stopped" })),
+        pages: vi.fn(async () => ({ text: "one page" })),
+      }),
+      fact: () => shown.fact,
+      withCaptain: () => held.current,
+      requestHelp: vi.fn(async (taskId: string) => {
+        calls.push(`pause ${taskId}`);
+        held.current = true;
+        return answers.requestHelp
+          ? answers.requestHelp()
+          : { ok: true as const, handle: { session: "run-1", generation: 2 } };
+      }),
+      takeControl: vi.fn(
+        async (): Promise<{ ok: true } | { ok: false; text: string }> => ({ ok: true }),
+      ),
+      savedSignInFor: vi.fn((_taskId: string, site: string) =>
+        answers.saved && answers.saved.site === site ? answers.saved : undefined,
+      ),
+      grantSavedSignIn: vi.fn(
+        async (): Promise<{ ok: true } | { ok: false; text: string }> =>
+          answers.grant ? answers.grant() : { ok: true },
+      ),
+    };
+    const h = setup(crewmate, { now: hostClock, browsers });
+    const { taskId } = await h.supervisor.commission({
+      title: "Help me book a flight to Lisbon",
+      intent: intentOf("help me book a flight to Lisbon"),
+    });
+    await tick();
+    /** The turn ends: a card it emitted goes on the stage. */
+    const endTurn = async () => {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+    };
+    const emitCard = bindTool(EMIT_CARD_TOOL, h.specs.at(-1) as CrewmateSpec);
+    const saved = () => h.cardStore.listOpen().find((card) => card.taskId === taskId);
+    return { ...h, crewmate, taskId, emitCard, saved, browsers, held, shown, calls, endTurn };
+  }
+
+  it("pauses the browser before the request card goes up, and the captain's click hands it over in silence", async () => {
+    const h = await crewmateWithBrowser();
+    h.browsers.requestHelp.mockImplementationOnce(async (taskId: string) => {
+      // The card is not up yet while the browser pauses.
+      h.calls.push(`pause ${taskId} with ${h.saved() ? "a card" : "no card"}`);
+      h.held.current = true;
+      return { ok: true, handle: { session: "run-1", generation: 2 } };
+    });
+    const answer = await h.emitCard.run(REQUEST);
+    expect(h.calls).toEqual([`pause ${h.taskId} with no card`]);
+    expect(h.browsers.requestHelp).toHaveBeenCalledWith(h.taskId, HANDOFF);
+    expect(answer.text).toContain("Your browser is paused for the captain");
+    const card = h.saved();
+    // The site the strip names is the host's; the crewmate named no door, so it reads Open browser.
+    expect(card?.attachment).toEqual({
+      kind: "browser",
+      label: "Open browser",
+      taskId: h.taskId,
+      session: "run-1",
+      generation: 2,
+      handoff: true,
+    });
+    expect(card?.actions.find((action) => action.id === "sign-in")?.effect).toEqual({
+      kind: "open",
+      target: "browser",
+    });
+    await h.endTurn();
+    const prompts = h.crewmate.promptCalls.length;
+    // A script in the body can never press it.
+    expect(() => h.supervisor.act(card?.id ?? "", "sign-in", "frame")).toThrow(
+      "This action is available only from the card controls.",
+    );
+    expect(h.browsers.takeControl).not.toHaveBeenCalled();
+
+    // The captain's click takes the card's own browser and opens its view.
+    expect(h.supervisor.act(card?.id ?? "", "sign-in")).toEqual({
+      effect: {
+        kind: "open",
+        target: "browser",
+        browser: { taskId: h.taskId, session: "run-1", generation: 2, cardId: card?.id },
+      },
+    });
+    expect(h.browsers.takeControl).toHaveBeenCalledWith(h.taskId, {
+      session: "run-1",
+      generation: 2,
+    });
+    await tick();
+    expect(h.saved()).toBeUndefined();
+    // The crewmate hears nothing of it; with its browser in his hands it is
+    // his turn, so the idle ladder never nudges it.
+    expect(h.crewmate.steer).not.toHaveBeenCalled();
+    expect(h.supervisor.workPosture(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
+      state: "idle",
+      reason: "captain",
+    });
+    hostNow += minutes(45);
+    h.supervisor.reconcileIdle(hostNow);
+    await tick();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts);
+  });
+
+  it("tells the crewmate the captain's choice when the card's browser ended with the app's quit", async () => {
+    const h = await crewmateWithBrowser();
+    await h.emitCard.run(REQUEST);
+    const card = h.saved();
+    await h.endTurn();
+    const prompts = h.crewmate.promptCalls.length;
+    // The app quit and started again: this run has no browser for the task yet.
+    h.shown.fact = undefined;
+    h.held.current = false;
+    h.browsers.takeControl.mockResolvedValueOnce({
+      ok: false,
+      text: "This browser is no longer running, so there is nothing to take.",
+    });
+    // The click still answers the card and opens the view, which says the card's browser stopped.
+    expect(h.supervisor.act(card?.id ?? "", "sign-in")).toEqual({
+      effect: {
+        kind: "open",
+        target: "browser",
+        browser: { taskId: h.taskId, session: "run-1", generation: 2, cardId: card?.id },
+      },
+    });
+    await tick();
+    await tick();
+    expect(h.saved()).toBeUndefined();
+    // Its crewmate hears the choice and that its browser was gone, once, on its lane.
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(h.crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: {
+          kind: "card-choice",
+          to: "crewmate",
+          source: "chrome",
+          card: { title: REQUEST.title },
+          choice: { id: "sign-in", label: "Open browser and sign in" },
+          browserGone: "quit",
+        },
+      }),
+    );
+    expect(
+      h.tasks
+        .timeline(h.taskId)
+        .filter((event) => event.kind === "steered")
+        .map((event) => event.actor),
+    ).toEqual(["captain"]);
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: `The card's browser for "Help me book a flight to Lisbon" had stopped when Infinitary quit, so its crewmate is told to open the site again and ask you anew.`,
+      taskId: expect.any(String),
+    });
+  });
+
+  it("tells the crewmate when the card's browser stopped and a newer one followed it", async () => {
+    const h = await crewmateWithBrowser();
+    await h.emitCard.run(REQUEST);
+    const card = h.saved();
+    await h.endTurn();
+    // Stopped and opened again in this run: the task's browser is a newer one.
+    h.shown.fact = { ...OPEN, generation: 3 };
+    h.held.current = false;
+    h.browsers.takeControl.mockResolvedValueOnce({
+      ok: false,
+      text: "This browser is no longer running, so there is nothing to take.",
+    });
+    h.supervisor.act(card?.id ?? "", "sign-in");
+    await tick();
+    await tick();
+    expect(h.crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: {
+          kind: "card-choice",
+          to: "crewmate",
+          source: "chrome",
+          card: { title: REQUEST.title },
+          choice: { id: "sign-in", label: "Open browser and sign in" },
+          browserGone: "stopped",
+        },
+      }),
+    );
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: `The card's browser for "Help me book a flight to Lisbon" had stopped, so its crewmate is told to open the site again and ask you anew.`,
+      taskId: expect.any(String),
+    });
+  });
+
+  it("tells the crewmate, never naming the saved sign-in, when a grant finds the card's browser stopped", async () => {
+    const h = await crewmateWithBrowser({
+      saved: { site: "aurora.example", savedAt: Date.parse("2026-10-02T09:00:00Z") },
+      grant: async () => ({
+        ok: false,
+        text: "This browser is no longer running, so it cannot use your saved sign-in.",
+      }),
+    });
+    await h.emitCard.run(REQUEST);
+    const card = h.saved();
+    await h.endTurn();
+    const prompts = h.crewmate.promptCalls.length;
+    // The captain stopped it from the view, and nothing opened it again.
+    h.shown.fact = {
+      state: "stopped",
+      site: "aurora.example",
+      url: OPEN.url,
+      stopped: "captain",
+      at: hostNow,
+      session: "run-1",
+      generation: 2,
+    };
+    h.held.current = false;
+    h.supervisor.act(card?.id ?? "", "use-saved-sign-in");
+    await tick();
+    await tick();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    const told = h.crewmate.promptCalls.at(-1) ?? "";
+    expect(told).toBe(
+      renderWake({
+        facts: {
+          kind: "card-choice",
+          to: "crewmate",
+          source: "chrome",
+          card: { title: REQUEST.title },
+          choice: { id: "use-saved-sign-in", label: "Use my saved aurora.example sign-in" },
+          browserGone: "stopped",
+        },
+      }),
+    );
+    // The crewmate never learns which sites this Mac keeps a sign-in for.
+    expect(told).not.toContain("saved");
+    // The feed no longer says the browser is still paused for him.
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: `The card's browser for "Help me book a flight to Lisbon" had stopped, so its crewmate is told to open the site again and ask you anew.`,
+      taskId: expect.any(String),
+    });
+    expect(
+      h.events.some(
+        (event) => event.type === "firstmate_note" && event.text.includes("still paused for you"),
+      ),
+    ).toBe(false);
+  });
+
+  it("refuses a request it cannot pause for, and an open-browser action with no request, in words", async () => {
+    const h = await crewmateWithBrowser({
+      requestHelp: async () => ({
+        ok: false,
+        text: "browser_handoff names aurora.example, but this task's browser is on skyfare.example. Name the site it is on.",
+      }),
+    });
+    await expect(h.emitCard.run(REQUEST)).rejects.toThrow(
+      "Card refused: browser_handoff names aurora.example, but this task's browser is on skyfare.example. Name the site it is on.",
+    );
+    const { browser_handoff: _request, ...noRequest } = REQUEST;
+    await expect(h.emitCard.run(noRequest)).rejects.toThrow(
+      /an action that opens this task's browser for the captain needs browser_handoff/,
+    );
+    await expect(
+      h.emitCard.run({ ...REQUEST, browser_handoff: { ...HANDOFF, after: "  " } }),
+    ).rejects.toThrow(/browser_handoff needs site, reason and after/);
+    await expect(
+      h.emitCard.run({
+        ...REQUEST,
+        actions: [{ id: "leave", label: "Leave waiting", default: true }],
+      }),
+    ).rejects.toThrow(/exactly one action whose effect is/);
+    expect(h.saved()).toBeUndefined();
+    expect(h.browsers.requestHelp).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers this Mac's saved sign-in for the site as the request card's default, beside Sign in myself", async () => {
+    const h = await crewmateWithBrowser({
+      saved: { site: "aurora.example", savedAt: Date.parse("2026-10-02T09:00:00Z") },
+    });
+    await h.emitCard.run(REQUEST);
+    expect(h.browsers.savedSignInFor).toHaveBeenCalledWith(h.taskId, "aurora.example");
+    const card = h.saved();
+    expect(
+      card?.actions.map(({ id, label, default: chosen, effect }) => ({
+        id,
+        label,
+        ...(chosen ? { default: true } : {}),
+        ...(effect ? { effect } : {}),
+      })),
+    ).toEqual([
+      { id: "leave", label: "Leave waiting" },
+      {
+        id: "sign-in",
+        label: "Sign in myself",
+        effect: { kind: "open", target: "browser" },
+      },
+      {
+        id: "use-saved-sign-in",
+        label: "Use my saved aurora.example sign-in",
+        default: true,
+        effect: { kind: "open", target: "browser", savedSignIn: true },
+      },
+    ]);
+    await h.endTurn();
+    // A script in the body can never press it.
+    expect(() => h.supervisor.act(card?.id ?? "", "use-saved-sign-in", "frame")).toThrow(
+      "This action is available only from the card controls.",
+    );
+    // The captain's click gives the card's own browser the saved sign-in and opens its view;
+    // the captain never takes control.
+    expect(h.supervisor.act(card?.id ?? "", "use-saved-sign-in")).toEqual({
+      effect: {
+        kind: "open",
+        target: "browser",
+        browser: { taskId: h.taskId, session: "run-1", generation: 2, cardId: card?.id },
+      },
+    });
+    expect(h.browsers.grantSavedSignIn).toHaveBeenCalledWith(h.taskId, {
+      session: "run-1",
+      generation: 2,
+    });
+    expect(h.browsers.takeControl).not.toHaveBeenCalled();
+    await tick();
+    expect(h.saved()).toBeUndefined();
+  });
+
+  it("never counts the saved sign-in against the crewmate's own 2 or 3 actions (FI3-411)", async () => {
+    const h = await crewmateWithBrowser({
+      saved: { site: "aurora.example", savedAt: Date.parse("2026-10-02T09:00:00Z") },
+    });
+    // The crewmate never learns a site is saved, so the three it gave stand
+    // and the host's offer goes beside them.
+    await h.emitCard.run({
+      ...REQUEST,
+      actions: [{ id: "skip", label: "Book another airline" }, ...REQUEST.actions],
+    });
+    expect(h.saved()?.actions.map((action) => action.id)).toEqual([
+      "skip",
+      "leave",
+      "sign-in",
+      "use-saved-sign-in",
+    ]);
+  });
+
+  it("leaves a request card as declared when no sign-in is saved for its site", async () => {
+    const h = await crewmateWithBrowser({
+      saved: { site: "skyfare.example", savedAt: Date.parse("2026-10-02T09:00:00Z") },
+    });
+    await h.emitCard.run(REQUEST);
+    expect(h.saved()?.actions.map((action) => [action.id, action.label, action.default])).toEqual([
+      ["leave", "Leave waiting", undefined],
+      ["sign-in", "Open browser and sign in", true],
+    ]);
+  });
+
+  it("never carries a saved sign-in a crewmate declares, and says in the feed when one cannot be used", async () => {
+    const h = await crewmateWithBrowser({
+      saved: { site: "aurora.example", savedAt: Date.parse("2026-10-02T09:00:00Z") },
+      grant: async () => ({
+        ok: false,
+        text: "No sign-in for aurora.example is saved on this computer.",
+      }),
+    });
+    // The tool carries no saved sign-in field: the crewmate's action is only a second open-browser one.
+    await expect(
+      h.emitCard.run({
+        ...REQUEST,
+        actions: [
+          ...REQUEST.actions,
+          {
+            id: "mine",
+            label: "Use my saved sign-in",
+            effect: {
+              kind: "open" as const,
+              target: "browser" as const,
+              savedSignIn: true as const,
+            },
+          },
+        ],
+      }),
+    ).rejects.toThrow(/exactly one action whose effect is/);
+    expect(h.browsers.requestHelp).not.toHaveBeenCalled();
+    await h.emitCard.run(REQUEST);
+    const card = h.saved();
+    await h.endTurn();
+    h.supervisor.act(card?.id ?? "", "use-saved-sign-in");
+    await tick();
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Your saved sign-in was not used for "Help me book a flight to Lisbon": No sign-in for aurora.example is saved on this computer. Its browser is still paused for you.',
+      taskId: expect.any(String),
+    });
+    expect(h.crewmate.steer).not.toHaveBeenCalled();
+  });
+
+  it("wakes the crewmate once when the captain lets it use a saved sign-in, in words of their own", async () => {
+    const h = await crewmateWithBrowser();
+    await h.endTurn();
+    const prompts = h.crewmate.promptCalls.length;
+    h.supervisor.browserReturned(h.taskId, {
+      site: "aurora.example",
+      after: "fill in the passenger details",
+      saved: true,
+      once: "browser-saved-sign-in:run-1:2:aurora.example",
+    });
+    await tick();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    // Its words are the wake's own (wakes.test.ts holds them).
+    expect(h.crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: {
+          kind: "browser-returned",
+          site: "aurora.example",
+          after: "fill in the passenger details",
+          saved: true,
+        },
+      }),
+    );
+  });
+
+  it("wakes the crewmate once when the captain returns control, through its lane", async () => {
+    const h = await crewmateWithBrowser();
+    await h.endTurn();
+    const prompts = h.crewmate.promptCalls.length;
+    const returned = {
+      site: "aurora.example",
+      after: "fill in the passenger details",
+      once: "browser-returned:run-1:2:1",
+    };
+    h.supervisor.browserReturned(h.taskId, returned);
+    await tick();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    // Its words are the wake's own (wakes.test.ts holds them).
+    expect(h.crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: {
+          kind: "browser-returned",
+          site: "aurora.example",
+          after: "fill in the passenger details",
+        },
+      }),
+    );
+    expect(
+      h.tasks
+        .timeline(h.taskId)
+        .filter((event) => event.kind === "steered")
+        .map((event) => event.actor),
+    ).toEqual(["supervisor"]);
+    // The same return again is not new: the inbox queued it once.
+    await h.endTurn();
+    h.supervisor.browserReturned(h.taskId, returned);
+    await tick();
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+  });
+});
+
+describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
+  // These run on the host's one clock (P5, `ticker.ts`): the test moves
+  // `hostNow` itself, so nothing here fakes a timer or `Date`.
+  let hostNow = 0;
+  const hostClock = () => hostNow;
+  beforeEach(() => {
+    vi.useRealTimers();
+    hostNow = Date.now();
+  });
+  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  /** The harness on the host's clock, its card stack read as the broadcast carries it. */
+  const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
+    const harness = setup(crewmate, { now: hostClock, ...extras });
+    return { ...harness, cards: () => harness.supervisor.cardsSnapshot() };
+  };
+
+  const minutes = (n: number) => n * 60_000;
+  const idleWakes = (ops: string[]) => ops.filter((line) => line.includes("has been idle for"));
+  const failureWakes = (ops: string[]) =>
+    ops.filter((line) => line.includes("failed at the provider"));
+
+  async function endTurn(crewmate: FakeCrewmate, taskId: string, text?: string) {
+    if (text) crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
+    crewmate.emit({ type: "turn_failed", taskId, error });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  /**
+   * The real agent's notifyOp: the inbox's wake path, which holds a wake
+   * that names a `once` to once. `ops` keeps every call, served, whether
+   * or not the inbox queued it - so a doubled wake is still seen. A live
+   * Firstmate takes each wake it is sent in its next turn (the drain hands
+   * it over and the clean turn acks it); a paused seat takes none, so its
+   * wakes wait on the lane.
+   */
+  function wakesThroughInbox<
+    H extends Pick<ReturnType<typeof setup>, "supervisor" | "inbox" | "ops">,
+  >(harness: H, firstmate: "live" | "paused" = "live"): H {
+    harness.supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        const id = harness.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
+        harness.ops.push(served(wake));
+        if (id !== null && firstmate === "live") {
+          harness.inbox.markDelivered([id]);
+          harness.inbox.ack([id]);
+        }
+      },
+      retryConverse: vi.fn(),
+    });
+    return harness;
+  }
+
+  /** A Pi crewmate that reported and stopped: nobody's turn, clock running. */
+  async function stopped(extras: SetupExtras = {}, crewmate = fakeCrewmate()) {
+    const harness = wakesThroughInbox(clockedSetup(crewmate, extras));
+    const { taskId } = await harness.supervisor.commission({
+      title: "Job",
+      intent: intentOf("Start"),
+    });
+    await tick();
+    await endTurn(crewmate, taskId, "Done with step one.");
+    const idleSince = harness.tasks.get(taskId)?.idleSince ?? 0;
+    /** The tick at `ms` idle minutes past the clock's start. */
+    const at = async (ms: number) => {
+      hostNow = idleSince + ms;
+      harness.supervisor.reconcileIdle(hostNow);
+      await tick();
+    };
+    return { ...harness, crewmate, taskId, idleSince, at };
+  }
+
+  /** Move the clock to when the lane's first row is due, and sweep it. */
+  async function sweepWhenDue(harness: ReturnType<typeof setup>, taskId: string) {
+    const due = Math.max(
+      hostNow,
+      ...harness.inbox.allFor(taskId).map((row) => row.nextAttemptAt ?? 0),
+    );
+    hostNow = due;
+    harness.supervisor.reconcileIdle(hostNow);
+    await harness.supervisor.sweepInbox(hostNow);
+    await tick();
+  }
+
+  it("requires a whole plan after the first list through provider failure recovery", async () => {
+    const crewmate = fakeCrewmate();
+    const h = clockedSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Progress recovery",
+      intent: intentOf("Check fixture libraries, prepare image, test"),
+    });
+    await tick();
+    const protocol = new TaskProtocol({
+      tasks: h.tasks,
+      repos: h.repos,
+      cards: { listOpen: () => [], snapshot: () => [] },
+      broadcastEvent: () => {},
+      emit: () => {},
+      now: hostClock,
+    });
+    const plan = [
+      { label: "Check fixture libraries", short: "Check", state: "current" },
+      { label: "Prepare test image", short: "Image", state: "next" },
+      { label: "Run the tests", short: "Test", state: "next" },
+    ];
+    const progress = h.specs[0]?.onProgress;
+    if (!progress) throw new Error("Missing production progress callback");
+    expect(progress("Briefing before a list exists.")).toBe("Noted on your task's timeline.");
+    expect(protocol.detail(taskId).plan).toBeNull();
+    progress("Starting the library check.", plan);
+    hostNow += 11_000;
+    const before = h.tasks.timeline(taskId);
+    const activity = h.tasks.get(taskId)?.updatedAt;
+    const refusal = progress("The library check completed; preparing the test image.");
+    expect(refusal).toContain("whole plan");
+    expect(h.tasks.timeline(taskId)).toEqual(before);
+    expect(h.tasks.get(taskId)?.updatedAt).toBe(activity);
+    progress("The library check completed; preparing the test image.", [
+      { ...plan[0], state: "done" },
+      { ...plan[1], state: "current" },
+      plan[2],
+    ]);
+    const checkpoint = protocol.detail(taskId).plan;
+    expect(checkpoint?.items.map((item) => item.state)).toEqual(["done", "current", "next"]);
+    for (let count = 1; count <= 3; count += 1) {
+      await failTurn(crewmate, taskId);
+      expect(h.inbox.allFor(taskId)).toMatchObject([
+        { failures: count, attempts: 0, escalatedAt: null },
+      ]);
+      await sweepWhenDue(h, taskId);
+      expect(crewmate.promptCalls).toHaveLength(count + 1);
+      expect(protocol.detail(taskId).plan).toEqual(checkpoint);
+    }
+    await endTurn(crewmate, taskId);
+    expect(h.inbox.allFor(taskId)).toEqual([]);
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+    expect(h.tasks.timeline(taskId).filter((event) => event.kind === "steered")).toEqual([]);
+    expect(protocol.detail(taskId).plan).toEqual(checkpoint);
+    const evidence = process.env.INFINITARY_PROGRESS_EVIDENCE;
+    if (evidence)
+      writeFileSync(
+        evidence,
+        JSON.stringify(
+          {
+            refusal,
+            before: before.at(-1),
+            checkpoint,
+            recovered: protocol.detail(taskId),
+            providerAttempts: crewmate.promptCalls.length,
+            pendingInbox: h.inbox.allFor(taskId),
+          },
+          null,
+          2,
+        ),
+      );
+    protocol.dispose();
+    await h.supervisor.interruptCrewmate(taskId, "cancel");
+  });
+
+  it("climbs nudge, wake, repeat and the host's card at 10, 20, 50 and 80 idle minutes, then holds", async () => {
+    const { supervisor, crewmate, ops, sorts, ledgerFacts, taskId, at, cards } = await stopped();
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "stopped" });
+    const promptsBefore = crewmate.promptCalls.length;
+
+    await at(minutes(10) - 1);
+    expect(crewmate.promptCalls).toHaveLength(promptsBefore);
+    await at(minutes(10));
+    // Rung 1: one typed steer to the crewmate, recorded as the supervisor's.
+    expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "idle-nudge" });
+    expect(ledgerFacts.at(-1)).toEqual({ kind: "idle-nudge", thread: false });
+    // The nudge's own turn ends silently: the episode goes on, uncounted.
+    await endTurn(crewmate, taskId);
+    expect(idleWakes(ops)).toHaveLength(0);
+
+    await at(minutes(20) - 1);
+    expect(idleWakes(ops)).toHaveLength(0);
+    await at(minutes(20));
+    // Rung 2: the Firstmate hears it, with the ways out as a hold carries them.
+    expect(idleWakes(ops)).toHaveLength(1);
+    expect(idleWakes(ops)[0]).toContain(
+      "with nothing running, nothing queued and no card up; the host's nudge did not move it",
+    );
+    expect(idleWakes(ops)[0]).toContain('"held": "idle-stall"');
+    expect(idleWakes(ops)[0]).toContain('"tool": "interrupt_crewmate"');
+    expect(idleWakes(ops)[0]).toContain("Its last report: Done with step one.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
+    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 20m · 1 wake");
+
+    await at(minutes(50) - 1);
+    expect(idleWakes(ops)).toHaveLength(1);
+    await at(minutes(50));
+    expect(idleWakes(ops)).toHaveLength(2);
+    expect(idleWakes(ops)[1]).toContain("This is the second time");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-repeat" });
+
+    await at(minutes(80) - 1);
+    expect(cards()).toEqual([]);
+    const opsBefore = ops.length;
+    await at(minutes(80));
+    // Rung 3: the host's own card, in place of any further wake.
+    const card = cards().find((entry) => entry.id === `card-stall-${taskId}`);
+    expect(card).toMatchObject({ taskId, author: "host", title: "Job has been stuck for 1h 20m" });
+    expect(card && cardPresentation(card)).toBe("attention");
+    expect(card?.actions.map((action) => action.label)).toEqual([
+      "Continue",
+      "Drop task",
+      "Discard",
+    ]);
+    expect(card?.body).toBe(
+      "<p>It stopped with nothing running and no question for you. It was nudged once, and your first mate was told twice, and nothing has moved since.</p>" +
+        "<p>What it last said: Done with step one.</p>" +
+        "<p>Continue tells it to finish or say what is in its way. Drop task ends the task and keeps a copy of its unfinished work. Discard throws its work away.</p>",
+    );
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-card" });
+    // The card's row records what went up, a line with no wake to type.
+    expect(ledgerFacts.at(-1)).toBeUndefined();
+    expect(ops).toHaveLength(opsBefore);
+
+    // While it is up the turn is the captain's: nothing repeats, ever.
+    const sortsBefore = sorts.length;
+    await at(minutes(600));
+    expect(ops).toHaveLength(opsBefore);
+    expect(sorts).toHaveLength(sortsBefore);
+    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 2 wakes");
+  });
+
+  it("a wake the paused Firstmate never took is not ignored: no stall card while the seat waits, and the clock runs from delivery (W1 S9)", async () => {
+    const harness = await stopped();
+    // The Firstmate's seat is paused: nothing takes the wakes it is sent.
+    wakesThroughInbox(harness, "paused");
+    const { supervisor, crewmate, inbox, ops, taskId, at, cards } = harness;
+    await at(minutes(10));
+    await endTurn(crewmate, taskId);
+    await at(minutes(20));
+    expect(idleWakes(ops)).toHaveLength(1);
+
+    // However long the pause, the wake waits unread: no repeat, no stall card.
+    for (const idle of [50, 80, 200, 600]) await at(minutes(idle));
+    expect(idleWakes(ops)).toHaveLength(1);
+    expect(cards()).toEqual([]);
+    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 1 wake");
+
+    // The seat serves again at the 600-minute tick and its drain takes the wake.
+    const waiting = inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id);
+    expect(waiting).toHaveLength(1);
+    inbox.markDelivered(waiting);
+    inbox.ack(waiting);
+    wakesThroughInbox(harness);
+    // Thirty minutes from delivery, not from the wake: the repeat, then the card.
+    await at(minutes(630) - 1);
+    expect(idleWakes(ops)).toHaveLength(1);
+    await at(minutes(630));
+    expect(idleWakes(ops)).toHaveLength(2);
+    expect(idleWakes(ops)[1]).toContain("This is the second time");
+    await at(minutes(660));
+    expect(cards().find((entry) => entry.id === `card-stall-${taskId}`)).toBeDefined();
+  });
+
+  it("a Firstmate action on the task defers the next rung by thirty minutes", async () => {
+    const { supervisor, crewmate, ops, taskId, at } = await stopped();
+    await at(minutes(10));
+    await endTurn(crewmate, taskId);
+    await at(minutes(20));
+    expect(idleWakes(ops)).toHaveLength(1);
+    // The Firstmate asks for an interrupt at 40 minutes: an action on the
+    // task, read from its timeline, so the first wake was not ignored.
+    hostNow = hostNow + minutes(20);
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await at(minutes(50));
+    expect(idleWakes(ops)).toHaveLength(1);
+    await at(minutes(71));
+    expect(idleWakes(ops)).toHaveLength(2);
+  });
+
+  it("the task moving on its own ends the episode and takes the host's card down", async () => {
+    const { supervisor, crewmate, taskId, at, cards, tasks, idleSince } = await stopped();
+    await at(minutes(10));
+    await endTurn(crewmate, taskId);
+    for (const step of [20, 50, 80]) await at(minutes(step));
+    expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(true);
+
+    await supervisor.steerCrewmate(taskId, "carry on with step two");
+    await tick();
+    expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(false);
+    expect(tasks.get(taskId)).toMatchObject({ idleSince: null, recoveryRung: 0, recoveryCount: 0 });
+    // Step two takes five minutes.
+    hostNow = idleSince + minutes(85);
+    await endTurn(crewmate, taskId, "Step two done.");
+    // A fresh clock, from this idle boundary.
+    expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(85));
+    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+  });
+
+  it("the card's Continue nudges with the captain's authority, and Drop task ends the task", async () => {
+    const first = await stopped();
+    await first.at(minutes(10));
+    await endTurn(first.crewmate, first.taskId);
+    for (const step of [20, 50, 80]) await first.at(minutes(step));
+    first.supervisor.act(`card-stall-${first.taskId}`, "continue");
+    await tick();
+    expect(first.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    const steered = first.tasks
+      .timeline(first.taskId)
+      .filter((event) => event.kind === "steered")
+      .at(-1);
+    expect(steered).toMatchObject({ actor: "captain", data: { via: "card" } });
+    expect(first.tasks.get(first.taskId)?.recoveryRung).toBe(0);
+    // The stall card's click is a card choice, never also a task card click.
+    expect(first.tasks.taskCardClicksSince(0)).toEqual([]);
+
+    const second = await stopped();
+    await second.at(minutes(10));
+    await endTurn(second.crewmate, second.taskId);
+    for (const step of [20, 50, 80]) await second.at(minutes(step));
+    second.supervisor.act(`card-stall-${second.taskId}`, "stop");
+    await tick();
+    expect(second.tasks.get(second.taskId)).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+    });
+    expect(second.cards()).toEqual([]);
+  });
+
+  it("the card's Discard runs the host's discard, and the captain's close keeps the task quietly", async () => {
+    const first = await stopped();
+    await first.at(minutes(10));
+    await endTurn(first.crewmate, first.taskId);
+    for (const step of [20, 50, 80]) await first.at(minutes(step));
+    first.supervisor.act(`card-stall-${first.taskId}`, "discard");
+    await tick();
+    expect(first.tasks.get(first.taskId)).toMatchObject({ closedReason: "discarded" });
+
+    const second = await stopped();
+    await second.at(minutes(10));
+    await endTurn(second.crewmate, second.taskId);
+    for (const step of [20, 50, 80]) await second.at(minutes(step));
+    second.supervisor.close(`card-stall-${second.taskId}`);
+    await tick();
+    const opsBefore = second.ops.length;
+    await second.at(minutes(400));
+    // The keep: no more wakes or cards this episode, the context line stays.
+    expect(second.ops).toHaveLength(opsBefore);
+    expect(second.cards()).toEqual([]);
+    expect(second.supervisor.crewStatus(second.taskId)[0]?.stalled).toBe(
+      "stalled 6h 40m · 2 wakes",
+    );
+  });
+
+  it("reads the same witnesses in the whose-turn order: each one holds the ladder back", async () => {
+    type Harness = Awaited<ReturnType<typeof stopped>>;
+    const witnesses: Array<{
+      name: string;
+      extras?: SetupExtras;
+      arrange?: (harness: Harness) => void | Promise<void>;
+    }> = [
+      {
+        name: "a crewmate's decision card",
+        arrange: ({ specs }) => {
+          specs[0]?.onCard?.({
+            title: "Pick a course",
+            body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+            actions: [
+              { id: "hold", label: "Hold course" },
+              { id: "change", label: "Plot new course", default: true },
+            ],
+          });
+        },
+      },
+      {
+        name: "a host card with actions",
+        arrange: ({ supervisor, taskId }) =>
+          supervisor.raiseHostCard({
+            id: "card-host-consent",
+            taskId,
+            title: "Add a panel",
+            meta: "panels",
+            body: "<p>Add it?</p>",
+            actions: [
+              { id: "add", label: "Add", effect: { kind: "host", op: "add-plugin", arg: "p" } },
+            ],
+          }),
+      },
+      {
+        name: "the crewmate's sign-in card",
+        arrange: ({ supervisor, taskId }) =>
+          supervisor.addAuthDecisionCard(`card-auth-${taskId}`, "crewmate 1", "Sign in.", {
+            taskId,
+          }),
+      },
+      {
+        name: "a young background job",
+        extras: {
+          hasRunningJobs: () => true,
+          oldestRunningJob: () => ({ jobId: "j1", command: "pnpm test", startedAt: hostNow }),
+        },
+      },
+      {
+        name: "guidance waiting out its backoff",
+        arrange: async ({ supervisor, crewmate, taskId }) => {
+          await supervisor.steerCrewmate(taskId, "try the other route");
+          await tick();
+          await failTurn(crewmate, taskId);
+        },
+      },
+      {
+        name: "a captured settle",
+        arrange: ({ tasks, taskId }) =>
+          tasks.setPendingSettle(taskId, {
+            mode: "land",
+            actor: "captain",
+            requestedAt: hostNow,
+            proceedWithOpen: false,
+          }),
+      },
+    ];
+    for (const witness of witnesses) {
+      const harness = await stopped(witness.extras);
+      await witness.arrange?.(harness);
+      await tick();
+      const prompts = harness.crewmate.promptCalls.length;
+      await harness.at(minutes(200));
+      expect(harness.crewmate.promptCalls, witness.name).toHaveLength(prompts);
+      expect(idleWakes(harness.ops), witness.name).toEqual([]);
+    }
+
+    // A note holds nothing: the crewmate may post an FYI and stop. The
+    // nudge names it rather than claim nothing is up (FI3-438).
+    const noted = await stopped();
+    noted.specs[0]?.onCard?.({ title: "FYI", body: "<p>The pin moved.</p>", actions: [] });
+    await noted.at(minutes(10));
+    const fyi = noted.cards().find((card) => card.title === "FYI") as Card;
+    expect(noted.crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText({ id: fyi.id, title: "FYI" }));
+
+    // Cards are read by task, never by id: a card that only LOOKS like the
+    // task's sign-in card, carrying no task, holds nothing.
+    const named = await stopped();
+    named.supervisor.addAuthDecisionCard(`card-auth-${named.taskId}`, "crewmate 1", "Sign in.");
+    await named.at(minutes(10));
+    expect(named.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+  });
+
+  // FI3-438, from FI3-434: a finished release's crewmate stopped with its
+  // outcome note up and declared no wait. The note holds nothing, so the
+  // ladder climbs - but each rung names the note, so the crewmate is not
+  // asked to post it again and the Firstmate is never told no card is up.
+  it("names the note up on the task at every rung, never claiming no card is up (FI3-438)", async () => {
+    const { supervisor, crewmate, specs, ops, ledgerFacts, taskId, at, cards } = await stopped();
+    specs[0]?.onCard?.({ title: "Released 0.1.30", body: "<p>0.1.30 is out.</p>", actions: [] });
+    await tick();
+    const outcome = cards().find((card) => card.title === "Released 0.1.30") as Card;
+    const note = { id: outcome.id, title: outcome.title };
+
+    await at(minutes(10));
+    expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
+    expect(ledgerFacts.at(-1)).toEqual({ kind: "idle-nudge", thread: false, note });
+    // Its nudge's turn ends with no wait declared, and it stays idle.
+    await endTurn(crewmate, taskId);
+    await at(minutes(20));
+    expect(idleWakes(ops).map((wake) => wake.split("\n")[0])).toEqual([
+      `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 20m with nothing running, nothing queued and only the note "Released 0.1.30" (${note.id}) up, which asks the captain nothing; the host's nudge did not move it. If that note is its outcome, steer it to report waiting on the captain naming the note, never to post it again. Its last report: Done with step one.`,
+    ]);
+    expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-stall", note });
+
+    // The stall card's Continue is the same nudge, naming the same note.
+    for (const step of [50, 80]) await at(minutes(step));
+    supervisor.act(`card-stall-${taskId}`, "continue");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
+  });
+
+  // FI3-250: a wait on work another crewmate is doing is not idleness. The
+  // ladder reads it as moving, and the sweep resumes the waiting crewmate
+  // when that work closes - the timed wait's pattern, with the work's close
+  // in place of the time.
+  describe("a wait on work underway (FI3-250)", () => {
+    const resumes = (tasks: TaskService, taskId: string) =>
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "steered" && event.actor === "supervisor");
+
+    /** A crewmate that stopped while its task waits on work another crewmate holds. */
+    async function waitingOn(wait: "blocks" | "baseline") {
+      const harness = await stopped();
+      const { tasks, taskId } = harness;
+      const owner = seedTask(tasks, {
+        id: "dep-owner",
+        title: "Fix the shared fixture",
+        status: "running",
+      });
+      if (wait === "blocks") {
+        tasks.link(owner.id, taskId, "blocks", "firstmate");
+      } else {
+        // The real producers: a failed reading, then the crewmate's declaration.
+        const failed = [{ name: "linux-checks", state: "failure" as const }];
+        tasks.recordDelivery(taskId, {
+          headSha: "head-1",
+          ci: "red",
+          ...observeCheckRepair(undefined, "head-1", failed, hostNow),
+        });
+        const declared = declareCheckAction(
+          tasks,
+          taskId,
+          {
+            diagnosis: {
+              headSha: "head-1",
+              check: "linux-checks",
+              classification: "baseline-blocked",
+              evidence: "The same assertion fails on untouched main",
+              dependencyTask: owner.id,
+            },
+          },
+          hostNow,
+        );
+        expect(declared.text).toContain(`${owner.key} "Fix the shared fixture" is underway`);
+        expect(declared.text).toContain("you are resumed when it closes");
+      }
+      return { ...harness, owner };
+    }
+
+    it.each(["blocks", "baseline"] as const)(
+      "a %s wait is moving: no nudge, wake or card past every rung, and the task reads as waiting",
+      async (wait) => {
+        const { supervisor, crewmate, ops, sorts, cards, tasks, taskId, at } =
+          await waitingOn(wait);
+        const prompts = crewmate.promptCalls.length;
+        for (const at_ of [10, 20, 50, 80, 600]) await at(minutes(at_));
+        expect(crewmate.promptCalls).toHaveLength(prompts);
+        expect(idleWakes(ops)).toEqual([]);
+        expect(cards().filter((card) => card.taskId === taskId)).toEqual([]);
+        expect(sorts.filter((row) => row.taskId === taskId).map((row) => row.rule)).toEqual([
+          "stopped",
+        ]);
+        expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+        const record = tasks.get(taskId);
+        expect(record && supervisor.workPosture(record)).toEqual({
+          state: "idle",
+          reason: "dependency",
+        });
+      },
+    );
+
+    it("a report on a Pi crewmate waiting on work underway wakes nobody", async () => {
+      const { crewmate, ops, sorts, supervisor, taskId } = await waitingOn("baseline");
+      await supervisor.steerCrewmate(taskId, "how is it going?");
+      await tick();
+      await endTurn(crewmate, taskId, "Still waiting on the shared fixture fix.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+      expect(ops.filter((line) => line.includes("Still waiting on the shared fixture"))).toEqual(
+        [],
+      );
+    });
+
+    it.each([
+      [
+        "blocks",
+        "done",
+        'SCR-2 "Fix the shared fixture", which your task could not merge before, is done. Carry on from where you stopped.',
+      ],
+      [
+        "blocks",
+        "dropped",
+        'SCR-2 "Fix the shared fixture", which your task could not merge before, was dropped and no longer holds it. Carry on from where you stopped.',
+      ],
+      [
+        "baseline",
+        "done",
+        'SCR-2 "Fix the shared fixture", the separately owned work your failing checks waited on, is done. Bring your change up to date and read the checks again.',
+      ],
+      [
+        "baseline",
+        "dropped",
+        'SCR-2 "Fix the shared fixture", the separately owned work your failing checks waited on, was dropped, so nobody is fixing that failure. Lead your report with its key and that it was dropped: that report wakes the first mate, which decides the next move.',
+      ],
+    ] as const)(
+      "a %s wait whose work closed %s is one steer on the task's own lane, once",
+      async (wait, closed, words) => {
+        const { supervisor, crewmate, sorts, tasks, taskId, owner, at } = await waitingOn(wait);
+        await at(minutes(30));
+        tasks.close(
+          owner.id,
+          closed === "done"
+            ? { status: "done", reason: "merged", actor: "captain" }
+            : { status: "dropped", reason: "cancelled", actor: "captain" },
+        );
+        await supervisor.sweepGates(hostNow);
+        await tick();
+        expect(crewmate.promptCalls.at(-1)).toBe(words);
+        expect(resumes(tasks, taskId)).toHaveLength(1);
+        // The wait's end opened a new episode: the turn it starts is the
+        // task's own, and its report is sorted like any other.
+        await endTurn(crewmate, taskId, "Carried on from the wait.");
+        expect(sorts.at(-1)?.rule).toBe(
+          wait === "baseline" && closed === "dropped" ? "waits-unstarted" : "stopped",
+        );
+        await supervisor.sweepGates(hostNow);
+        await tick();
+        expect(resumes(tasks, taskId)).toHaveLength(1);
+      },
+    );
+
+    it("goes out once across a restart: the inbox remembers the resume, not the process", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, db, paths, workspace } = clockedSetup(crewmate);
+      const waiting = seedTask(tasks, {
+        id: "waiting",
+        title: "Ship the gauge",
+        status: "completed",
+        // A working copy: boot reads it as started work, not an unstarted claim.
+        worktreeDir: "/work/waiting",
+        sessionFile: "/tmp/waiting.jsonl",
+      });
+      const owner = seedTask(tasks, {
+        id: "dep-owner",
+        title: "Fix the shared fixture",
+        status: "running",
+      });
+      tasks.link(owner.id, waiting.id, "blocks", "firstmate");
+      supervisor.reconcileIdle(hostNow);
+      hostNow += minutes(30);
+      tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.at(-1)).toContain('"Fix the shared fixture", which your task');
+      // Queued or in flight: every row the lane holds for the task.
+      const resumeRows = (inbox: InboxStore) =>
+        [...inbox.allFor(waiting.id), ...inbox.inFlight(waiting.id)].filter(
+          (row) => row.facts?.kind === "dependency-closed",
+        );
+      // The app stops mid-turn; a fresh process reads the same database.
+      const again = fakeCrewmate();
+      const inbox = new InboxStore(db, { now: hostClock });
+      const restarted = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(
+          paths,
+          vi.fn(async () => again),
+        ),
+        workspace,
+        repos: new RepoRegistry(db, paths.fleetDir),
+        tasks: new TaskService({ db, strict: true, now: hostClock }),
+        cardStore: new CardStore(db),
+        inbox,
+        paths,
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+      expect(resumeRows(inbox)).toHaveLength(1);
+      await restarted.sweepGates(hostNow);
+      await tick();
+      expect(resumeRows(inbox)).toHaveLength(1);
+    });
+
+    it("after the resume the ladder reads the task on its own clock again", async () => {
+      const { supervisor, crewmate, tasks, taskId, owner, at } = await waitingOn("blocks");
+      tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      await endTurn(crewmate, taskId, "Nothing left but the merge.");
+      const resumedIdle = tasks.get(taskId)?.idleSince ?? 0;
+      hostNow = resumedIdle + minutes(10);
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+      // The sweep never resumes it twice, however long it then sits.
+      await at(minutes(600));
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(
+        resumes(tasks, taskId).filter((event) => event.text.includes("Fix the shared fixture")),
+      ).toHaveLength(1);
+    });
+
+    it("is no resume for a continuation its origin's close started, or a wait declared on work already done", async () => {
+      const crewmate = fakeCrewmate();
+      const harness = wakesThroughInbox(clockedSetup(crewmate));
+      const { supervisor, tasks } = harness;
+      const origin = seedTask(tasks, { id: "origin", title: "Land the API", status: "running" });
+      // A Continue filing: blocked by its origin, started by the ready query.
+      const { taskId } = await supervisor.commission({
+        title: "Continue: show it in Settings",
+        intent: intentOf("Show it"),
+        blockedBy: [origin.id],
+      });
+      expect(tasks.get(taskId)?.status).toBe("open");
+      hostNow += minutes(5);
+      tasks.close(origin.id, { status: "done", reason: "merged", actor: "captain" });
+      hostNow += 1;
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(tasks.get(taskId)?.status).toBe("active");
+      await endTurn(crewmate, taskId, "Shown in Settings.");
+      const prompts = crewmate.promptCalls.length;
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(resumes(tasks, taskId)).toEqual([]);
+
+      // A baseline wait named work that was already done: the declaration's
+      // own answer says to bring the change up to date, and nothing repeats it.
+      const failed = [{ name: "linux-checks", state: "failure" as const }];
+      tasks.recordDelivery(taskId, {
+        headSha: "head-1",
+        ci: "red",
+        ...observeCheckRepair(undefined, "head-1", failed, hostNow),
+      });
+      hostNow += 1;
+      const declared = declareCheckAction(
+        tasks,
+        taskId,
+        {
+          diagnosis: {
+            headSha: "head-1",
+            check: "linux-checks",
+            classification: "baseline-blocked",
+            evidence: "The same assertion fails on untouched main",
+            dependencyTask: origin.id,
+          },
+        },
+        hostNow,
+      );
+      expect(declared.text).toContain("is already done: bring your change up to date");
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(resumes(tasks, taskId)).toEqual([]);
+    });
+
+    it("a wait on unstarted work beside it climbs as before: that work is the Firstmate's to start", async () => {
+      const { crewmate, tasks, taskId, at } = await waitingOn("blocks");
+      const planned = seedTask(tasks, {
+        id: "dep-planned",
+        title: "Rotate the signing key",
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      tasks.link(planned.id, taskId, "blocks", "firstmate");
+      await at(minutes(10));
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    });
+  });
+
+  // The primitives review's reproduced gap (report section 5): the host's
+  // own waits were invisible to the ladder. Each scenario below failed as
+  // written against #343; the gate is now the witness that holds them.
+  describe("the gate as a witness (the primitives review, P2)", () => {
+    const HEAD = "abc1234def5678";
+    const heldWakes = (ops: string[]) =>
+      ops.filter((line) => line.includes("is held for the captain"));
+
+    it("a capped crewmate is held for the Firstmate's card: no nudge, and no stall wake beside the cap's", async () => {
+      const { supervisor, crewmate, ops, sorts, taskId, tasks, idleSince, at } = await stopped();
+      // The CI service stamps the cap the way prCi does, and the host's one
+      // cap wake goes out; that places the captain gate on the task.
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
+      expect(tasks.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
+      const prompts = crewmate.promptCalls.length;
+
+      await at(minutes(10));
+      // The crewmate cannot act: no nudge, no ledger row.
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(sorts.some((sort) => sort.rule === "idle-nudge")).toBe(false);
+      await at(minutes(20) - 1);
+      expect(heldWakes(ops)).toHaveLength(0);
+      await at(minutes(20));
+      // The Firstmate owes the card: the wake is the cap's own hold, with the
+      // cap's ways - never an idle-stall naming a different three.
+      expect(heldWakes(ops)).toHaveLength(1);
+      expect(heldWakes(ops)[0]).toContain("is held for the captain by the CI cap");
+      expect(heldWakes(ops)[0]).toContain('"held": "ci-cap"');
+      expect(heldWakes(ops)[0]).toContain('"label": "Try a premium model"');
+      expect(ops.some((line) => line.includes('"held": "idle-stall"'))).toBe(false);
+      expect(idleWakes(ops)).toEqual([]);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
+
+      // The Firstmate raises the decision card on the task: the gate names
+      // it, and the turn is the captain's - nothing fires however long.
+      const cardId = supervisor.addFirstmateCard({
+        taskId,
+        title: "Retry the fix?",
+        body: "<p>CI went red three times.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
+        actions: [{ id: "retry", label: "Retry", default: true }],
+      });
+      await tick();
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        ref: cardId,
+        reason: "the CI cap",
+      });
+      const opsBefore = ops.length;
+      await at(minutes(600));
+      expect(ops).toHaveLength(opsBefore);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+
+      // The captain's answer releases the gate; the Firstmate's steer relays
+      // it and reopens the rounds.
+      supervisor.act(cardId, "retry");
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      await supervisor.steerCrewmate(taskId, "The captain says retry.");
+      await tick();
+      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeUndefined();
+      expect(tasks.get(taskId)?.gate).toBeNull();
+    });
+
+    it("the captain closing the cap's card leaves the cap's own hold, and its clock starts at the close", async () => {
+      const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      const cardId = supervisor.addFirstmateCard({
+        taskId,
+        title: "Retry the fix?",
+        body: "<p>CI went red three times.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
+        actions: [{ id: "retry", label: "Retry", default: true }],
+      });
+      await at(minutes(40));
+      const opsBefore = ops.length;
+      hostNow = idleSince + minutes(40);
+      supervisor.close(cardId);
+      // A close is not an answer: the cap stands, and its gate is back on the head.
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
+      expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(40));
+      await at(minutes(59));
+      expect(heldWakes(ops)).toHaveLength(0);
+      expect(ops.slice(opsBefore).filter((line) => line.startsWith("[fm-op]"))).toEqual([]);
+      await at(minutes(60));
+      expect(heldWakes(ops)).toHaveLength(1);
+    });
+
+    it("a captain gate on the active record is read while it stands, and the sweep heals one nothing holds", async () => {
+      const { supervisor, crewmate, ops, taskId, tasks, at } = await stopped();
+      tasks.setGate(taskId, { kind: "captain", ref: HEAD, reason: "the CI cap" });
+      const prompts = crewmate.promptCalls.length;
+      await at(minutes(10));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      await at(minutes(20));
+      expect(idleWakes(ops)).toEqual([]);
+      expect(heldWakes(ops)).toHaveLength(1);
+      expect(heldWakes(ops)[0]).toContain('"held": "captain-gate"');
+      // No card and no cap holds it, so the tick's sweep clears it, and the
+      // clear restarts the clock: the nudge is ten minutes out, not now.
+      const healedAt = hostNow;
+      await supervisor.sweepGates(healedAt);
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      expect(tasks.get(taskId)?.idleSince).toBe(healedAt);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+    });
+
+    it("the stall card's Continue on a capped task is not the cap's answer: the cap and its gate stand", async () => {
+      const { supervisor, crewmate, ops, taskId, tasks, cards, idleSince, at } = await stopped();
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      for (const step of [20, 50, 80]) await at(minutes(step));
+      expect(heldWakes(ops)).toHaveLength(2);
+      const stall = `card-stall-${taskId}`;
+      const card = cards().find((entry) => entry.id === stall);
+      // The cap's question is still the captain's: the card says so, and
+      // says Continue is not an answer to it.
+      expect(card?.body).toContain(
+        "<p>It has reached its limit of tries at getting the checks to pass, so it needs your call: try again, try a premium model, or discard it. Your first mate was told twice and has not asked you yet.</p>",
+      );
+      expect(card?.body).toContain(
+        "<p>Continue tells it to say what is in its way; it does not give it more tries. To try again or try a premium model, tell your first mate. Drop task ends the task and keeps a copy of its unfinished work. Discard throws its work away.</p>",
+      );
+      expect(card?.body).not.toContain("no question for you");
+      expect(card?.actions.map((action) => action.label)).toEqual([
+        "Continue",
+        "Drop task",
+        "Discard",
+      ]);
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        ref: stall,
+        reason: "the CI cap",
+      });
+
+      supervisor.act(stall, "continue");
+      await tick();
+      // The crewmate is told to carry on, with the captain's authority...
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+      // ...but that card never asked the cap's question, so nothing reopened.
+      expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3, ciCapAt: idleSince });
+      expect(tasks.timeline(taskId).some((event) => event.kind === "cap_reset")).toBe(false);
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
+      // The task card's Continue is the same nudge, and no more the cap's answer.
+      supervisor.runTaskOp(taskId, "continue-task");
+      await tick();
+      expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3, ciCapAt: idleSince });
+      expect(tasks.timeline(taskId).some((event) => event.kind === "cap_reset")).toBe(false);
+    });
+
+    it("the stall card on a review-capped task names the second look as the limit reached", async () => {
+      const { supervisor, taskId, tasks, cards, idleSince, at } = await stopped();
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, {
+        reviewRounds: 3,
+        reviewRoundSha: HEAD,
+        reviewCapAt: idleSince,
+      });
+      await supervisor.sweepGates(idleSince);
+      expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "captain", reason: "the review cap" });
+      for (const step of [20, 50, 80]) await at(minutes(step));
+      const card = cards().find((entry) => entry.id === `card-stall-${taskId}`);
+      expect(card?.body).toContain(
+        "<p>It has reached its limit of tries at getting through a review, so it needs your call: try again, try a premium model, or discard it. Your first mate was told twice and has not asked you yet.</p>",
+      );
+      expect(card?.body).not.toContain("no question for you");
+    });
+
+    it("a capped stall names the stronger fallback only when premium cannot serve", async () => {
+      const { supervisor, ops, taskId, tasks, cards, idleSince, at } = await stopped();
+      supervisor.setFirstmateHooks({
+        notifyOp: (wake) => ops.push(served(wake)),
+        retryConverse: vi.fn(),
+        premiumCanServe: () => false,
+      });
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      const capWake = ops.find((line) => line.includes('"held": "ci-cap"'));
+      expect(capWake).toContain('"label": "Try a stronger model"');
+      expect(capWake).not.toContain('"label": "Try a premium model"');
+      for (const step of [20, 50, 80]) await at(minutes(step));
+      const body = cards().find((entry) => entry.id === `card-stall-${taskId}`)?.body;
+      expect(body).toContain("try again, try a stronger model, or discard it");
+      expect(body).toContain("To try again or try a stronger model, tell your first mate.");
+      expect(body).not.toContain("try a premium model");
+    });
+
+    it("a timed wait on the active record holds the ladder, and the sweep ends it with one steer", async () => {
+      const { supervisor, crewmate, ops, taskId, tasks, idleSince, at } = await stopped();
+      const until = idleSince + minutes(30);
+      tasks.setGate(taskId, { kind: "at-time", until, reason: "checks settle" });
+      expect(tasks.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
+      const prompts = crewmate.promptCalls.length;
+      await at(minutes(29));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      await supervisor.sweepGates(hostNow);
+      expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "at-time", until });
+
+      hostNow = until + minutes(1);
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      const steeredAt = hostNow;
+      // One steer on the task's own lane, the supervisor's, never a dispatch.
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(crewmate.promptCalls.at(-1)).toBe(
+        "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
+      );
+      expect(tasks.get(taskId)).toMatchObject({ status: "active", gate: null });
+      const steered = tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "steered")
+        .at(-1);
+      expect(steered).toMatchObject({ actor: "supervisor" });
+      expect(tasks.timeline(taskId).filter((event) => event.kind === "dispatched")).toHaveLength(1);
+      // Its turn is the task's own: a fresh episode, not a ladder turn.
+      await endTurn(crewmate, taskId, "Checks are green.");
+      expect(tasks.get(taskId)?.idleSince).toBeGreaterThanOrEqual(steeredAt);
+      expect(idleWakes(ops)).toEqual([]);
+    });
+
+    it("a card the captain closes without choosing reaches its crewmate as its next turn (FI3-435)", async () => {
+      const { supervisor, crewmate, ops, specs, taskId, tasks, cards, idleSince, at } =
+        await stopped();
+      specs[0]?.onCard?.({
+        title: "Pick a course",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [
+          { id: "hold", label: "Hold course" },
+          { id: "change", label: "Plot new course", default: true },
+        ],
+      });
+      await tick();
+      const card = cards().find((entry) => entry.title === "Pick a course") as Card;
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: card.id });
+      const prompts = crewmate.promptCalls.length;
+      await at(minutes(30));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+
+      const opsBefore = ops.length;
+      hostNow = idleSince + minutes(30);
+      supervisor.close(card.id);
+      await tick();
+      expect(
+        tasks
+          .timeline(taskId)
+          .some((event) => event.kind === "card_resolved" && event.data?.action === "dismissed"),
+      ).toBe(true);
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      // The close travels the click's path: a steer from the captain, on
+      // the card, that the crewmate takes as its next turn. The Firstmate
+      // is not woken by it.
+      expect(crewmate.promptCalls.at(-1)).toBe(
+        `The captain closed your card "Pick a course" (${card.id}) without choosing.`,
+      );
+      expect(tasks.timeline(taskId).find((event) => event.kind === "steered")).toMatchObject({
+        actor: "captain",
+        data: expect.objectContaining({ via: "card", cardId: card.id }),
+      });
+      expect(ops.slice(opsBefore)).toEqual([]);
+      // A turn that says nothing new leaves nobody's turn: the clock runs
+      // from its end, and the ladder's first rung acts ten minutes later.
+      await endTurn(crewmate, taskId);
+      expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(30));
+      await at(minutes(40) - 1);
+      expect(crewmate.promptCalls.at(-1)).not.toBe(IDLE_NUDGE_TEXT);
+      await at(minutes(40));
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    });
+
+    /** A crewmate mid-turn on a fresh task, its outcome note up and not yet reported. */
+    async function withOutcomeNote() {
+      const crewmate = fakeCrewmate();
+      const harness = wakesThroughInbox(clockedSetup(crewmate));
+      const { taskId } = await harness.supervisor.commission({
+        title: "Release",
+        intent: intentOf("cut the release"),
+      });
+      await tick();
+      harness.specs[0]?.onCard?.({
+        title: "Version 1.2 is out",
+        body: "<p>Version 1.2 is published.</p><p>The release page lists it.</p>",
+        actions: [],
+      });
+      await tick();
+      const note = harness.cards().find((entry) => entry.taskId === taskId) as Card;
+      return { ...harness, crewmate, taskId, note };
+    }
+
+    /** Tick the ladder at each idle minute past the task's clock. */
+    async function idleFor(
+      harness: { supervisor: CrewSupervisor; tasks: TaskService },
+      taskId: string,
+      at: number[],
+    ) {
+      const since = harness.tasks.get(taskId)?.idleSince ?? hostNow;
+      for (const ms of at) {
+        hostNow = since + ms;
+        harness.supervisor.reconcileIdle(hostNow);
+        await tick();
+      }
+    }
+
+    it("a wait on the captain the report declares holds the turn until his close; a finished report wakes the Firstmate (FI3-435)", async () => {
+      const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note } =
+        await withOutcomeNote();
+      expect(
+        specs[0]?.onReport?.("Version 1.2 is released and the note says so.", undefined, {
+          wait: { reason: "read the release note", cardId: note.id },
+        }),
+      ).toContain("waits on the captain");
+      await endTurn(crewmate, taskId);
+      // A note alone never holds the turn; the declared wait does, through
+      // the task's captain gate, naming the note.
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        ref: note.id,
+        reason: "read the release note",
+      });
+      const prompts = crewmate.promptCalls.length;
+      const opsBefore = ops.length;
+      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20), minutes(90)]);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(ops.slice(opsBefore)).toEqual([]);
+
+      // His close reaches the crewmate; its turn releases the wait.
+      supervisor.close(note.id);
+      await tick();
+      expect(crewmate.promptCalls.at(-1)).toBe(
+        `The captain closed your card "Version 1.2 is out" (${note.id}) without choosing.`,
+      );
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+      specs[0]?.onReport?.("The captain read the release note and nothing is left.", undefined, {
+        finished: true,
+      });
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
+      expect(ops.at(-1)).toContain(
+        "It declared its work finished: the captain has read its outcome and nothing is left for it.",
+      );
+      expect(tasks.get(taskId)?.delivery?.finishedAt).toBe(hostNow);
+      expect(tasks.timeline(taskId).at(-1)).toMatchObject({
+        kind: "report",
+        data: expect.objectContaining({ finished: true }),
+      });
+    });
+
+    it("a declared wait with no card up is still the captain's turn, never one the Firstmate owes, and a steer releases it (FI3-435)", async () => {
+      const { supervisor, crewmate, ops, specs, tasks, taskId, note } = await withOutcomeNote();
+      supervisor.close(note.id);
+      await tick();
+      specs[0]?.onReport?.(
+        "The release is out; the captain may still want the old build.",
+        undefined,
+        {
+          wait: { reason: "decide whether to keep the old build" },
+        },
+      );
+      await endTurn(crewmate, taskId);
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        reason: "decide whether to keep the old build",
+      });
+      const prompts = crewmate.promptCalls.length;
+      const opsBefore = ops.length;
+      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20), minutes(90)]);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(ops.slice(opsBefore)).toEqual([]);
+
+      await supervisor.steerCrewmate(taskId, "The captain keeps the old build.");
+      await tick();
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+    });
+
+    it("refuses a report that declares both a wait and finished, or names a card that is not its own (FI3-435)", async () => {
+      const { specs, tasks, taskId, note } = await withOutcomeNote();
+      expect(() =>
+        specs[0]?.onReport?.("The release is out and the note is up.", undefined, {
+          wait: { reason: "read the note" },
+          finished: true,
+        }),
+      ).toThrow(/not both/);
+      expect(() =>
+        specs[0]?.onReport?.("The release is out and the note is up.", undefined, {
+          wait: { reason: "read the note", cardId: "card-fm-elsewhere" },
+        }),
+      ).toThrow(/not an open card of yours/);
+      expect(() =>
+        specs[0]?.onReport?.("The release is out and the note is up.", undefined, {
+          wait: { reason: "  ", cardId: note.id },
+        }),
+      ).toThrow(/needs a reason/);
+      expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+    });
+  });
+
+  it("the FI3-83 strand: a provider outage keeps the captain's reply and delivers it on recovery", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, specs, taskId, inbox, ops, cards } = harness;
+    specs[0]?.onCard?.({
+      title: "Pick a course",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [
+        { id: "hold", label: "Hold course" },
+        { id: "change", label: "Plot new course", default: true },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.title === "Pick a course") as Card;
+    supervisor.replyToCard(card.id, "take the northern route");
+    await tick();
+    const reply = crewmate.promptCalls.at(-1) ?? "";
+    expect(reply).toContain("take the northern route");
+
+    // The provider fails the reply's turn nine times, far past the three
+    // attempts that used to set it aside for good.
+    const start = hostNow;
+    await failTurn(crewmate, taskId);
+    for (let failure = 2; failure <= 9; failure += 1) {
+      await sweepWhenDue(harness, taskId);
+      expect(crewmate.promptCalls.at(-1)).toBe(reply);
+      await failTurn(crewmate, taskId);
+    }
+    const [row] = inbox.allFor(taskId);
+    expect(row).toMatchObject({ escalatedAt: null, attempts: 0, failures: 9 });
+    expect(ops.some((line) => line.includes("could not be delivered"))).toBe(false);
+    // One wake when it began, one when it was still down at 15 minutes.
+    expect(failureWakes(ops)).toHaveLength(1);
+    const stillDown = ops.filter((line) => line.includes("is still failing at the provider"));
+    expect(stillDown).toHaveLength(1);
+    expect(hostNow - start).toBeGreaterThan(STILL_DOWN_MS);
+    // Meanwhile the reply is deliverable, so nothing climbs the ladder.
+    expect(idleWakes(ops)).toEqual([]);
+
+    // The provider answers: the reply goes through on the first attempt.
+    await sweepWhenDue(harness, taskId);
+    expect(crewmate.promptCalls.at(-1)).toBe(reply);
+    await endTurn(crewmate, taskId);
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(ops.at(-1)).toContain("is answering again after 9 failed tries");
+  });
+
+  it("a brief the provider keeps failing is never set aside, and the outage is watched", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = wakesThroughInbox(clockedSetup(crewmate));
+    const { supervisor, ops, inbox, tasks } = harness;
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    const brief = crewmate.promptCalls[0];
+    await failTurn(crewmate, taskId);
+    for (let failure = 2; failure <= 6; failure += 1) {
+      await sweepWhenDue(harness, taskId);
+      await failTurn(crewmate, taskId);
+    }
+    // Six tries, all of them the brief, and it is still on its lane.
+    expect(crewmate.promptCalls).toEqual(Array.from({ length: 6 }, () => brief));
+    expect(inbox.allFor(taskId)).toMatchObject([{ escalatedAt: null, failures: 6 }]);
+    expect(tasks.get(taskId)?.outcome).toBeNull();
+    expect(failureWakes(ops)).toHaveLength(1);
+    expect(ops.filter((line) => line.includes("is still failing at the provider"))).toHaveLength(1);
+  });
+
+  it("the Claude crewmate's failed turns take the same honest retry", async () => {
+    const claude: FakeCrewmate = {
+      ...fakeCrewmate(),
+      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+    };
+    const harness = await stopped({}, claude);
+    const { supervisor, taskId, inbox } = harness;
+    await supervisor.steerCrewmate(taskId, "use the other library");
+    await tick();
+    for (let failure = 1; failure <= 4; failure += 1) {
+      await failTurn(claude, taskId, "API Error: 529 Overloaded");
+      await sweepWhenDue(harness, taskId);
+    }
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(claude.promptCalls.at(-1)).toBe("use the other library");
+    await endTurn(claude, taskId);
+    expect(inbox.allFor(taskId)).toEqual([]);
+  });
+
+  it("a failed turn with nothing to retry is still watched, skipping the nudge", async () => {
+    const { crewmate, ops, sorts, at, cards } = await stopped();
+    // A turn the provider began on its own, and failed: no guidance rode it.
+    crewmate.emit({ type: "continuation_started" });
+    crewmate.emit({ type: "continuation_ended", error: "upstream 500" });
+    await tick();
+    expect(failureWakes(ops)).toHaveLength(0);
+    expect(ops.at(-1)).toContain("failed: upstream 500");
+    // That turn started a fresh clock, one that opens past the nudge.
+    const prompts = crewmate.promptCalls.length;
+    await at(minutes(11));
+    expect(crewmate.promptCalls).toHaveLength(prompts);
+    await at(minutes(21));
+    expect(idleWakes(ops)).toHaveLength(1);
+    expect(idleWakes(ops)[0]).not.toContain("nudge");
+    expect(idleWakes(ops)[0]).toContain("Its last turn hit a problem: upstream 500");
+    expect(sorts.at(-1)?.rule).toBe("idle-wake");
+    // Nothing further claims a nudge that never went out.
+    await at(minutes(51));
+    expect(idleWakes(ops)[1]).not.toContain("nudge");
+    await at(minutes(81));
+    const card = cards().find((entry) => entry.id.startsWith("card-stall-"));
+    expect(card?.body).toContain("Your first mate was told twice");
+    expect(card?.body).not.toContain("nudged");
+  });
+
+  it("a job past its bound earns one wake naming it, and stops counting as moving", async () => {
+    let started = hostNow;
+    const { crewmate, ops, sorts, taskId, at, idleSince } = await stopped({
+      hasRunningJobs: () => true,
+      oldestRunningJob: () => ({ jobId: "poll-1", command: "gh run watch", startedAt: started }),
+    });
+    // The job began as the turn that started it went idle.
+    started = idleSince;
+    await at(JOB_BOUND_MS - 1);
+    expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(0);
+    await at(JOB_BOUND_MS);
+    const bound = ops.filter((line) => line.includes("background job running"));
+    expect(bound).toHaveLength(1);
+    expect(bound[0]).toContain('"gh run watch"');
+    // The job no longer witnesses: in the same tick the ladder climbs from
+    // its first rung.
+    expect(sorts.slice(-2)).toEqual([
+      { taskId, verdict: "captain", rule: "job-bound" },
+      { taskId, verdict: "routine", rule: "idle-nudge" },
+    ]);
+    expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    await endTurn(crewmate, taskId);
+    await at(JOB_BOUND_MS + minutes(5));
+    expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(1);
+    await at(JOB_BOUND_MS + minutes(10));
+    expect(idleWakes(ops)).toHaveLength(1);
+  });
+
+  it("a Claude background command the client reports holds the nudge for the job bound, then stops counting", async () => {
+    const crewmate = fakeCrewmate();
+    const { crewmate: client, ops, sorts, at, idleSince } = await stopped({}, crewmate);
+    // The client began the command as the turn went idle.
+    hostNow = idleSince;
+    client.emit({ type: "background_work_changed", count: 1 });
+    await at(STALL_WAKE_MS + minutes(5));
+    expect(client.promptCalls).not.toContain(IDLE_NUDGE_TEXT);
+    expect(sorts.filter((sort) => sort.rule.startsWith("idle"))).toEqual([]);
+    await at(JOB_BOUND_MS);
+    const bound = ops.filter((line) => line.includes("background job running"));
+    expect(bound).toHaveLength(1);
+    expect(client.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+  });
+
+  it("a Claude background command that ended leaves the idle clock to nudge at ten minutes", async () => {
+    const crewmate = fakeCrewmate();
+    const { crewmate: client, at } = await stopped({}, crewmate);
+    client.emit({ type: "background_work_changed", count: 1 });
+    client.emit({ type: "background_work_changed", count: 0 });
+    await at(STALL_WAKE_MS);
+    expect(client.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+  });
+
+  it("climbs on the host's one ticker: the ladder's reconcile, then the sweeps, each tick, until disposed", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, idleSince } = harness;
+    const ticker = new Ticker({ now: hostClock, timers: { repeat: () => 0, cancel: () => {} } });
+    const reconcile = vi.spyOn(supervisor, "reconcileIdle");
+    const gates = vi.spyOn(supervisor, "sweepGates");
+    const lanes = vi.spyOn(supervisor, "sweepInbox");
+    const riders: number[] = [];
+    supervisor.setFirstmateHooks({
+      notifyOp: () => {},
+      retryConverse: vi.fn(),
+      checkQuiet: (now) => riders.push(now),
+    });
+    supervisor.startWatchdog(ticker);
+    supervisor.startWatchdog(ticker);
+
+    hostNow = idleSince + minutes(10);
+    ticker.tick();
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+    // One reading of the clock, and the order phase 1 relies on: the
+    // reconcile runs before the gate sweep, which runs before the lanes.
+    expect(reconcile.mock.calls).toEqual([[hostNow]]);
+    expect(gates.mock.calls).toEqual([[hostNow]]);
+    expect(lanes.mock.calls).toEqual([[hostNow]]);
+    expect(riders).toEqual([hostNow]);
+    const [reconciled] = reconcile.mock.invocationCallOrder;
+    const [swept] = gates.mock.invocationCallOrder;
+    const [drained] = lanes.mock.invocationCallOrder;
+    expect(reconciled).toBeLessThan(swept ?? 0);
+    expect(swept).toBeLessThan(drained ?? 0);
+
+    // Disposed, the supervisor leaves the ticker.
+    supervisor.disposeAll();
+    ticker.tick();
+    expect(reconcile).toHaveBeenCalledTimes(1);
+  });
+
+  it("a closed task and the reviewed lane are never read", async () => {
+    const closed = await stopped();
+    await closed.supervisor.settleTask(closed.taskId, "discard", true);
+    await closed.at(minutes(200));
+    expect(idleWakes(closed.ops)).toEqual([]);
+    expect(closed.sorts.filter((sort) => sort.rule.startsWith("idle"))).toEqual([]);
+  });
+
+  it("after a restart it reads an idle record that never reported, and nudges it on its saved clock", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops, sorts } = clockedSetup(crewmate);
+    const quiet = seedTask(tasks, {
+      id: "never-reported",
+      title: "Never reported",
+      status: "completed",
+      sessionFile: "/tmp/never.jsonl",
+    });
+    const reported = seedTask(tasks, {
+      id: "reported",
+      title: "Reported",
+      status: "completed",
+      sessionFile: "/tmp/reported.jsonl",
+      outcome: "Waiting for the deploy to finish.",
+    });
+    expect(quiet.outcome).toBeNull();
+    const boot = hostNow;
+    // The first reconcile after boot starts the clock of records older than it.
+    supervisor.reconcileIdle(boot);
+    expect(tasks.get(quiet.id)?.idleSince).toBe(boot);
+    hostNow = boot + STALL_WAKE_MS;
+    supervisor.reconcileIdle(hostNow);
+    await tick();
+    // Both are nudged by resuming their conversations - outcome or none.
+    expect(crewmate.promptCalls).toEqual([IDLE_NUDGE_TEXT, IDLE_NUDGE_TEXT]);
+    expect(sorts.map((sort) => [sort.taskId, sort.rule])).toEqual([
+      [quiet.id, "idle-nudge"],
+      [reported.id, "idle-nudge"],
+    ]);
+    expect(ops).toEqual([]);
+  });
+
+  describe("the cut-off on crew lanes (W1 S8, docs/inbox.md)", () => {
+    const CLAUDE_ACCOUNT = "acct_claude";
+    type Standing = { class: CutOff["class"]; since: number; resetsAt?: number };
+
+    /**
+     * The one Claude login as the vault answers for it (`cutOff`,
+     * `noteCutOff`; AccountVault's own tests pin those): a cut-off stands
+     * until a fact changes, a spent allowance until its reset, and a looser
+     * cut-off never replaces one that stands.
+     */
+    function claudeLogin() {
+      let standing: Standing | undefined;
+      const current = () =>
+        standing?.class === "no_headroom" && (standing.resetsAt ?? 0) <= hostNow
+          ? undefined
+          : standing;
+      const serveability: AccountServeability = {
+        cutOff: (accountId) => (accountId === CLAUDE_ACCOUNT ? current() : undefined),
+        providerName: () => "Claude",
+      };
+      const noteCutOff = (accountId: string, cutOff: CutOff) => {
+        if (accountId !== CLAUDE_ACCOUNT || current()) return;
+        if (cutOff.class === "no_headroom") {
+          if (cutOff.resetsAt === undefined || cutOff.resetsAt <= hostNow) return;
+          standing = { class: cutOff.class, since: hostNow, resetsAt: cutOff.resetsAt };
+          return;
+        }
+        standing = { class: cutOff.class, since: hostNow };
+      };
+      const accounts: AccountAttachment = {
+        selectForSpawn: () => CLAUDE_ACCOUNT,
+        // A resume keeps a withheld account: it is still connected.
+        reselectForResume: (_taskId, accountId) => ({
+          ...(accountId ? { accountId } : {}),
+          changed: false,
+        }),
+        labelOf: () => "Personal",
+      };
+      return {
+        extras: {
+          accounts,
+          routedModel: { provider: "anthropic-claude", id: "claude-opus" },
+          serveability,
+          noteCutOff,
+        } satisfies SetupExtras,
+        clear: () => {
+          standing = undefined;
+        },
+      };
+    }
+
+    function claudeCrewmate(): FakeCrewmate {
+      return {
+        ...fakeCrewmate(),
+        controlProfile: {
+          ...PI_CONTROL_PROFILE,
+          backgroundWork: "client",
+          failureSignals: "typed",
+        },
+      };
+    }
+
+    async function cutOffTurn(crewmate: FakeCrewmate, taskId: string, cutOff: CutOff) {
+      crewmate.emit({ type: "turn_failed", taskId, error: "Claude said no.", cutOff });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+    }
+
+    const cutOffWakes = (ops: string[]) => ops.filter((line) => line.includes("are paused:"));
+    const backWakes = (ops: string[]) => ops.filter((line) => line.includes("is answering again"));
+    const turnWakes = (ops: string[]) =>
+      ops.filter((line) => line.includes("'s turn on task") || line.includes("failed at"));
+
+    /** Ten ticks, each far past any backoff and every rung's clock. */
+    async function tenTicks(supervisor: CrewSupervisor) {
+      for (let pass = 1; pass <= 10; pass += 1) {
+        hostNow += minutes(20);
+        supervisor.reconcileIdle(hostNow);
+        await supervisor.sweepInbox(hostNow);
+        await tick();
+      }
+    }
+
+    /**
+     * A fresh supervisor over the same database, on the same login (an app
+     * restart): no runtime survives, the rows and the durable once-names do.
+     */
+    function restart(
+      harness: Awaited<ReturnType<typeof stopped>>,
+      login: ReturnType<typeof claudeLogin>,
+    ) {
+      harness.supervisor.disposeAll();
+      const ops: string[] = [];
+      const createCrewmate = vi.fn(async () => harness.crewmate);
+      const fresh = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(harness.paths, createCrewmate),
+        workspace: harness.workspace,
+        repos: new RepoRegistry(harness.db, harness.paths.fleetDir),
+        tasks: new TaskService({ db: harness.db, strict: true, now: hostClock }),
+        cardStore: new CardStore(harness.db),
+        inbox: new InboxStore(harness.db, { now: hostClock }),
+        paths: harness.paths,
+        accounts: login.extras.accounts,
+        serveability: login.extras.serveability,
+        noteCutOff: login.extras.noteCutOff,
+        recordSort: (input) => input.effect?.(),
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      return {
+        ...wakesThroughInbox({ supervisor: fresh, inbox: harness.inbox, ops }),
+        createCrewmate,
+      };
+    }
+
+    it("a refused crewmate attempts nothing across ten ticks, the Firstmate hears it once, and it goes on when cleared", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, inbox, ops, sorts, ledgerFacts, cards } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await cutOffTurn(crewmate, taskId, { class: "refused" });
+      const prompts = crewmate.promptCalls.length;
+      // One typed fact about the account, instead of the failed turn's own.
+      expect(cutOffWakes(ops)).toEqual([
+        `[fm-op] Claude is refusing this sign-in, so the crewmates on it are paused: task ${taskId} "Job". Their guidance is kept, and nothing is sent to Claude until a different Claude account is signed in, its app is updated, or the captain asks to try again; you will hear when it answers again. Nothing moves a crewmate to another model on its own: to go on sooner, spawn a follow-up on another model.`,
+      ]);
+      expect(turnWakes(ops)).toEqual([]);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "provider-cut-off" });
+      expect(ledgerFacts.at(-1)).toMatchObject({
+        kind: "provider-cut-off",
+        provider: "Claude",
+        class: "refused",
+        tasks: [{ id: taskId, title: "Job" }],
+      });
+
+      await tenTicks(supervisor);
+      // Not one attempt: none spent, no backoff advanced, the row as it was.
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(inbox.allFor(taskId)).toEqual([
+        expect.objectContaining({ attempts: 0, failures: 1, escalatedAt: null }),
+      ]);
+      // The account's wake speaks for the lane: no repeat, no still-down,
+      // and the ladder reads the held guidance as the task moving.
+      expect(cutOffWakes(ops)).toHaveLength(1);
+      expect(ops.filter((line) => line.includes("still failing"))).toEqual([]);
+      expect(idleWakes(ops)).toEqual([]);
+      expect(cards().filter((card) => card.id.startsWith("card-stall-"))).toEqual([]);
+      // Guidance given while it waits is kept, and says so.
+      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+
+      // The refusal clears: the Firstmate hears it end, and the kept guidance
+      // goes at once, in one turn, without waiting for any backoff.
+      login.clear();
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(backWakes(ops)).toEqual([
+        `[fm-op] Claude is answering again, so the crewmates paused on it go on: task ${taskId} "Job". Their kept guidance goes out now.`,
+      ]);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "provider-back" });
+      expect(crewmate.promptCalls.slice(prompts)).toEqual([
+        "use the other library\n\nand the tests",
+      ]);
+      await endTurn(crewmate, taskId);
+      expect(inbox.allFor(taskId)).toEqual([]);
+      await tenTicks(supervisor);
+      expect(cutOffWakes(ops)).toHaveLength(1);
+      expect(backWakes(ops)).toHaveLength(1);
+    });
+
+    it("a captain reply kept behind the hold reads as the held account on its thread, then as work once it goes out, then as the author's to answer", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, specs, taskId, inbox, tasks, cards } = harness;
+      specs[0]?.onCard?.({
+        title: "Pick a course",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [
+          { id: "hold", label: "Hold course" },
+          { id: "change", label: "Plot new course", default: true },
+        ],
+      });
+      await tick();
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      const resetsAt = hostNow + minutes(70);
+      await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
+      const prompts = crewmate.promptCalls.length;
+      const card = cards().find((entry) => entry.title === "Pick a course") as Card;
+      /** The thread's wait as the shell reads it: the shown card and the task's posture. */
+      const wait = () => {
+        const record = tasks.get(taskId);
+        const shown = supervisor.cardsSnapshot().find((entry) => entry.id === card.id);
+        return record && shown ? threadWait(shown, supervisor.workPosture(record)) : undefined;
+      };
+      expect(wait()).toBeUndefined();
+
+      hostNow += minutes(1);
+      supervisor.replyToCard(card.id, "what about the northern route?");
+      await tick();
+      // Saved, with no attempt spent: the wait names the hold's class,
+      // provider and reset, and no turn claims to be working on it.
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(inbox.allFor(taskId).at(-1)).toMatchObject({ attempts: 0, failures: 0 });
+      expect(wait()).toEqual({
+        on: "account",
+        hold: { class: "no_headroom", provider: "Claude", resetsAt },
+      });
+
+      // The reset: the kept reply goes out, and a running turn is work, not a wait.
+      hostNow = resetsAt;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.slice(prompts).join("\n")).toContain(
+        "what about the northern route?",
+      );
+      expect(wait()).toBeUndefined();
+      // Its turn ends without an answer: the reply is the author's to give.
+      await endTurn(crewmate, taskId);
+      expect(wait()).toEqual({ on: "author" });
+      // Its answer ends the wait.
+      specs[0]?.onReply?.({ cardId: card.id, text: "The northern route adds a day." });
+      await tick();
+      expect(wait()).toBeUndefined();
+    });
+
+    it("after a restart it neither repeats the cut-off nor resumes the crewmate, and still hears it end", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, ops } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await cutOffTurn(crewmate, taskId, { class: "refused" });
+      expect(cutOffWakes(ops)).toHaveLength(1);
+      const prompts = crewmate.promptCalls.length;
+
+      const fresh = restart(harness, login);
+      await tenTicks(fresh.supervisor);
+      // The resumed task keeps its withheld account, so its lane holds: no
+      // session reopened, no turn, and nothing said again.
+      expect(fresh.createCrewmate).not.toHaveBeenCalled();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(fresh.ops).toEqual([]);
+
+      login.clear();
+      fresh.supervisor.reconcileCutOffs();
+      await tick();
+      await tick();
+      expect(backWakes(fresh.ops)).toHaveLength(1);
+      expect(fresh.createCrewmate).toHaveBeenCalledTimes(1);
+      expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
+    });
+
+    it("a spent allowance holds every lane on the account until its reset, then each goes on the first attempt", async () => {
+      const login = claudeLogin();
+      const other = claudeCrewmate();
+      const harness = await stopped({ ...login.extras, crewmates: [other] }, claudeCrewmate());
+      const { supervisor, crewmate, taskId, inbox, ops } = harness;
+      // A second crewmate on the same login, idle before the allowance runs out.
+      const { taskId: otherId } = await supervisor.commission({
+        title: "Other",
+        intent: intentOf("Start"),
+      });
+      await tick();
+      await endTurn(other, otherId, "Started on the other job.");
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      const resetsAt = hostNow + minutes(120);
+      await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
+      const prompts = crewmate.promptCalls.length;
+      const otherPrompts = other.promptCalls.length;
+      // New guidance is kept, not sent into the spent window - on this lane
+      // and on every other lane of the account.
+      hostNow += minutes(1);
+      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      expect(await supervisor.steerCrewmate(otherId, "and the docs")).toBe("recorded-held");
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(other.promptCalls).toHaveLength(otherPrompts);
+      expect(inbox.allFor(taskId)).toEqual([
+        expect.objectContaining({ attempts: 0, failures: 1, nextAttemptAt: resetsAt }),
+        expect.objectContaining({ attempts: 0, failures: 0 }),
+      ]);
+      expect(cutOffWakes(ops)).toEqual([
+        expect.stringContaining(
+          `Claude has used up this plan's allowance, so the crewmates on it are paused: task ${taskId} "Job", task ${otherId} "Other". Their guidance is kept, and nothing is sent to Claude before it resets at ${new Date(resetsAt).toISOString()};`,
+        ),
+      ]);
+      expect(turnWakes(ops)).toEqual([]);
+
+      hostNow = resetsAt - 1;
+      supervisor.reconcileIdle(hostNow);
+      await supervisor.sweepInbox(hostNow);
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(other.promptCalls).toHaveLength(otherPrompts);
+      expect(ops.filter((line) => line.includes("still failing"))).toEqual([]);
+
+      hostNow = resetsAt;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(backWakes(ops)).toHaveLength(1);
+      expect(crewmate.promptCalls.slice(prompts)).toEqual([
+        "use the other library\n\nand the tests",
+      ]);
+      expect(other.promptCalls.slice(otherPrompts)).toEqual(["and the docs"]);
+    });
+
+    it("a spent allowance the vault clears on a swapped login frees the held lanes before its reset, with their kept guidance", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, ops } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      const resetsAt = hostNow + minutes(120);
+      await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
+      const prompts = crewmate.promptCalls.length;
+      hostNow += minutes(1);
+      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+
+      // The machine's login is swapped: the vault clears the hold long before
+      // the old login's reset, and the next watch delivers what was kept.
+      login.clear();
+      expect(hostNow).toBeLessThan(resetsAt);
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(backWakes(ops)).toHaveLength(1);
+      expect(crewmate.promptCalls.slice(prompts)).toHaveLength(1);
+      expect(crewmate.promptCalls.at(-1)).toContain("and the tests");
+    });
+
+    it("an account that serves nothing with no cut-off standing keeps the old path, and someone hears it", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, ops } = harness;
+      const prompts = crewmate.promptCalls.length;
+      // No client, or a read that says not connected: no typed cut-off
+      // stands, so the guidance is attempted and fails as it always has.
+      expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe("mid-turn");
+      await tick();
+      expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
+      crewmate.emit({ type: "turn_failed", taskId, error: "Claude Code is not installed." });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      expect(turnWakes(ops)).toEqual([expect.stringContaining("failed at the provider")]);
+      expect(cutOffWakes(ops)).toEqual([]);
+    });
+
+    it("a card the Firstmate owes is still owed while a cut-off holds the crewmate", async () => {
+      const login = claudeLogin();
+      const { supervisor, taskId, tasks, ops, idleSince, at } = await stopped(
+        login.extras,
+        claudeCrewmate(),
+      );
+      const HEAD = "abc1234def5678";
+      login.extras.noteCutOff(CLAUDE_ACCOUNT, { class: "refused" });
+      supervisor.reconcileCutOffs();
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      await at(minutes(20));
+      await at(minutes(50));
+      // The cut-off paused only the crewmate: the reminders about the card
+      // the Firstmate owes still come, as without it.
+      const owed = ops.filter((line) => line.includes("is held for the captain"));
+      expect(owed).toHaveLength(2);
+      expect(owed[1]).toContain("This is the second time");
+    });
+
+    it("a cut-off's end is heard the moment it ends, and a failure after it speaks for itself", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, ops } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await cutOffTurn(crewmate, taskId, { class: "refused" });
+      const prompts = crewmate.promptCalls.length;
+      // The refusal clears on a changed fact, while the account still
+      // serves nothing (say a client update that reads as outdated).
+      login.clear();
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(backWakes(ops)).toHaveLength(1);
+      expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
+      crewmate.emit({ type: "turn_failed", taskId, error: "Claude Code needs an update." });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      expect(turnWakes(ops)).toEqual([expect.stringContaining("Claude Code needs an update.")]);
+      expect(backWakes(ops)).toHaveLength(1);
+    });
+
+    it("an idle crewmate on a cut-off account is not nudged, and nothing stale waits for it", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, inbox, sorts, at } = harness;
+      const prompts = crewmate.promptCalls.length;
+      // Another task met the refusal; this crewmate is idle with nothing queued.
+      login.extras.noteCutOff(CLAUDE_ACCOUNT, { class: "refused" });
+      supervisor.reconcileCutOffs();
+      await at(minutes(11));
+      await at(minutes(25));
+      await at(minutes(60));
+      await at(minutes(120));
+      expect(sorts.map((sort) => sort.rule)).not.toContain("idle-nudge");
+      expect(inbox.allFor(taskId)).toEqual([]);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      login.clear();
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+    });
+
+    it("a lost sign-in keeps its sign-in card until it is signed in again, and the account's wake is the one the Firstmate hears", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, inbox, ops, cards } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await cutOffTurn(crewmate, taskId, { class: "signed_out" });
+      const prompts = crewmate.promptCalls.length;
+      expect(cards().filter((card) => card.id === `card-auth-${taskId}`)).toHaveLength(1);
+      expect(cutOffWakes(ops)).toEqual([
+        expect.stringContaining(
+          `Claude needs the captain to sign in again, so the crewmates on it are paused: task ${taskId} "Job".`,
+        ),
+      ]);
+      expect(turnWakes(ops)).toEqual([]);
+      // A sign-in failure spent its attempt as it always has; the hold spends no more.
+      await tenTicks(supervisor);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(inbox.allFor(taskId)).toEqual([expect.objectContaining({ attempts: 1 })]);
+
+      // Signed in again: nothing is left to sign in to, so the card comes
+      // down and the kept guidance goes on by itself.
+      login.clear();
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(cards().filter((card) => card.id === `card-auth-${taskId}`)).toEqual([]);
+      expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
+    });
+
+    it("a cut-off with nothing held behind it is still one failed turn, as before", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, ops } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      // A spent allowance with no reset to wait for stands nowhere.
+      await cutOffTurn(crewmate, taskId, { class: "no_headroom" });
+      expect(cutOffWakes(ops)).toEqual([]);
+      expect(turnWakes(ops)).toEqual([expect.stringContaining("failed at the provider")]);
+    });
+  });
+
+  // The typed wake envelope (the primitives review's P3): the ladder's wakes
+  // are typed facts rendered where they are served. Every literal below is
+  // the text the prose templates served before the move, byte for byte.
+  describe("the served text of every idle wake (the typed envelope, P3)", () => {
+    const HEAD = "abc1234def5678";
+    const stallBlock = (id: string) => `
+\`\`\`json
+{
+  "held": "idle-stall",
+  "task": {
+    "id": "${id}",
+    "title": "Job"
+  },
+  "ways": [
+    {
+      "label": "Tell it what to do next",
+      "tool": "steer_crewmate",
+      "args": {
+        "task_id": "${id}"
+      }
+    },
+    {
+      "label": "Drop task",
+      "tool": "interrupt_crewmate",
+      "args": {
+        "task_id": "${id}",
+        "mode": "cancel"
+      }
+    },
+    {
+      "label": "Discard the work",
+      "tool": "settle_task",
+      "args": {
+        "task_id": "${id}",
+        "mode": "discard"
+      }
+    }
+  ]
+}
+\`\`\``;
+    const heldBlock = (id: string, held: string) => `
+\`\`\`json
+{
+  "held": "${held}",
+  "task": {
+    "id": "${id}",
+    "title": "Job"
+  },
+  "ways": [
+    {
+      "label": "Retry with the captain's guidance",
+      "tool": "steer_crewmate",
+      "args": {
+        "task_id": "${id}"
+      }
+    },
+    {
+      "label": "Try a premium model",
+      "tool": "spawn_crewmate",
+      "args": {
+        "shape": {
+          "escalate_from": "${id}",
+          "premium_ask": true
+        }
+      }
+    },
+    {
+      "label": "Discard the work",
+      "tool": "settle_task",
+      "args": {
+        "task_id": "${id}",
+        "mode": "discard"
+      }
+    }
+  ]
+}
+\`\`\``;
+    const SECOND =
+      " This is the second time: if nothing is done about it in 30 minutes, the host puts it to the captain on a card of its own.";
+
+    it("the stall wake and its repeat, after a nudge that went out", async () => {
+      const { crewmate, ops, taskId, at } = await stopped();
+      await at(minutes(10));
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+      await endTurn(crewmate, taskId);
+      await at(minutes(20));
+      await at(minutes(50));
+      expect(idleWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 20m with nothing running, nothing queued and no card up; the host's nudge did not move it. Its last report: Done with step one.${stallBlock(taskId)}`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 50m with nothing running, nothing queued and no card up; the host's nudge did not move it.${SECOND} Its last report: Done with step one.${stallBlock(taskId)}`,
+      ]);
+    });
+
+    it("the stall wake while the captain's words in a thread go unanswered", async () => {
+      const { supervisor, crewmate, specs, taskId, at, cards, ops } = await stopped();
+      specs[0]?.onCard?.({
+        title: "Pick a course",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [
+          { id: "hold", label: "Hold course" },
+          { id: "change", label: "Plot new course", default: true },
+        ],
+      });
+      await tick();
+      const card = cards().find((entry) => entry.title === "Pick a course") as Card;
+      supervisor.replyToCard(card.id, "what about the northern route?");
+      await tick();
+      await endTurn(crewmate, taskId);
+      await at(minutes(11));
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_THREAD_NUDGE_TEXT);
+      await endTurn(crewmate, taskId);
+      await at(minutes(21));
+      await at(minutes(51));
+      const state =
+        "since the captain wrote under its card, without answering him, and nothing queued will; the host's nudge did not move it.";
+      expect(idleWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 21m ${state} Its last report: Done with step one.${stallBlock(taskId)}`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 51m ${state}${SECOND} Its last report: Done with step one.${stallBlock(taskId)}`,
+      ]);
+    });
+
+    it("the stall wake after a failed turn, with no nudge to claim", async () => {
+      const { crewmate, ops, at, taskId } = await stopped();
+      crewmate.emit({ type: "continuation_started" });
+      crewmate.emit({ type: "continuation_ended", error: "upstream 500" });
+      await tick();
+      await at(minutes(21));
+      await at(minutes(51));
+      expect(idleWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 21m with nothing running, nothing queued and no card up. Its last turn hit a problem: upstream 500${stallBlock(taskId)}`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 51m with nothing running, nothing queued and no card up.${SECOND} Its last turn hit a problem: upstream 500${stallBlock(taskId)}`,
+      ]);
+    });
+
+    it("the wake a capped task owes, and its repeat", async () => {
+      const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
+      hostNow = idleSince;
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      await at(minutes(20));
+      await at(minutes(50));
+      expect(ops.filter((line) => line.includes("is held for the captain"))).toEqual([
+        `[fm-op] task ${taskId} "Job" is held for the captain by the CI cap and has had no card up for 20m: its crewmate cannot move until the captain answers one.${heldBlock(taskId, "ci-cap")}`,
+        `[fm-op] task ${taskId} "Job" is held for the captain by the CI cap and has had no card up for 50m: its crewmate cannot move until the captain answers one.${SECOND}${heldBlock(taskId, "ci-cap")}`,
+      ]);
+    });
+
+    it("the wake a captain gate with no reason owes", async () => {
+      const { ops, taskId, tasks, at } = await stopped();
+      tasks.setGate(taskId, { kind: "captain", ref: HEAD });
+      await at(minutes(20));
+      expect(ops.filter((line) => line.includes("is held for the captain"))).toEqual([
+        `[fm-op] task ${taskId} "Job" is held for the captain and has had no card up for 20m: its crewmate cannot move until the captain answers one.${heldBlock(taskId, "captain-gate")}`,
+      ]);
+    });
+
+    it("the nudge rides its lane as typed facts, and each ledger row records the served text", async () => {
+      const { crewmate, ops, ledger, taskId, at, db } = await stopped();
+      const rows = ledger.length;
+      await at(minutes(10));
+      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+      // In flight on the task's lane: the stored envelope (migration 48's
+      // payload) names the nudge's facts, not its sentence.
+      const stored = db.prepare("SELECT payload FROM inbox WHERE recipient = ?").all(taskId) as {
+        payload: string;
+      }[];
+      expect(stored.map((row) => JSON.parse(row.payload))).toEqual([
+        { v: 1, facts: { kind: "idle-nudge", thread: false } },
+      ]);
+      await endTurn(crewmate, taskId);
+      await at(minutes(20));
+      expect(ledger.slice(rows)).toEqual([IDLE_NUDGE_TEXT, idleWakes(ops)[0]]);
+    });
+  });
+
+  // The outage wakes and the job bound on the typed envelope (the
+  // primitives review's P3, third family). Every literal below is the text
+  // the prose templates served before the move, byte for byte.
+  describe("the served text of the outage wakes and the job bound (the typed envelope, P3)", () => {
+    const outageWakes = (ops: string[]) => ops.filter((line) => line.includes("at the provider"));
+    const boundWakes = (ops: string[]) =>
+      ops.filter((line) => line.includes("background job running"));
+
+    /** A stopped crewmate whose guidance the provider has failed `failures` times. */
+    async function failing(failures: number) {
+      const harness = await stopped();
+      const { supervisor, crewmate, taskId } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await failTurn(crewmate, taskId);
+      for (let failure = 2; failure <= failures; failure += 1) {
+        await sweepWhenDue(harness, taskId);
+        await failTurn(crewmate, taskId);
+      }
+      return harness;
+    }
+
+    /**
+     * A fresh supervisor over the same database (an app restart): no runtime
+     * and no in-memory state survive, the rows do.
+     */
+    function restart(harness: Awaited<ReturnType<typeof stopped>>, extras: SetupExtras = {}) {
+      harness.supervisor.disposeAll();
+      const ops: string[] = [];
+      const sorts: { rule: string }[] = [];
+      const fresh = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(
+          harness.paths,
+          vi.fn(async () => harness.crewmate),
+        ),
+        workspace: harness.workspace,
+        repos: new RepoRegistry(harness.db, harness.paths.fleetDir),
+        tasks: new TaskService({ db: harness.db, strict: true, now: hostClock }),
+        cardStore: new CardStore(harness.db),
+        inbox: new InboxStore(harness.db, { now: hostClock }),
+        paths: harness.paths,
+        ...(extras.hasRunningJobs ? { hasRunningJobs: extras.hasRunningJobs } : {}),
+        ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
+        recordSort: (input) => {
+          sorts.push({ rule: input.rule });
+          input.effect?.();
+        },
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      return { ...wakesThroughInbox({ supervisor: fresh, inbox: harness.inbox, ops }), sorts };
+    }
+
+    it("one outage: its first failure, still down, and recovered", async () => {
+      const harness = await failing(6);
+      const { crewmate, ops, taskId } = harness;
+      await sweepWhenDue(harness, taskId);
+      await endTurn(crewmate, taskId);
+      expect(outageWakes(ops)).toEqual([
+        `[fm-op] crewmate 1's turn on task ${taskId} "Job" failed at the provider: upstream 529. Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" is still failing at the provider after 20 minutes and 4 tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" is answering again after 6 failed tries at the provider; its guidance went through.`,
+      ]);
+    });
+
+    it("still down after a restart, named by the task's key", async () => {
+      const harness = await failing(2);
+      const fresh = restart(harness);
+      hostNow = hostNow + STILL_DOWN_MS;
+      fresh.supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(fresh.ops).toEqual([
+        `[fm-op] the crewmate on SCR-1 on task ${harness.taskId} "Job" is still failing at the provider after 17 minutes and 2 tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
+      ]);
+    });
+
+    it("the job bound", async () => {
+      let started = hostNow;
+      const { ops, ledger, taskId, at, idleSince } = await stopped({
+        hasRunningJobs: () => true,
+        oldestRunningJob: () => ({ jobId: "poll-1", command: "gh run watch", startedAt: started }),
+      });
+      started = idleSince;
+      await at(JOB_BOUND_MS + minutes(30));
+      expect(boundWakes(ops)).toEqual([
+        `[fm-op] task ${taskId} "Job" has had a background job running for 2.5 hours: "gh run watch". It no longer counts as the task moving, so the idle ladder now watches the task; the job itself keeps running.`,
+      ]);
+      // The ledger row records the text the Firstmate is served.
+      expect(ledger).toContain(boundWakes(ops)[0]);
+    });
+
+    const stillDownWakes = (ops: string[]) =>
+      ops.filter((line) => line.includes("is still failing at the provider"));
+
+    /**
+     * What stands between a once-wake and the next look at its task - the
+     * three things the inbox's content dedupe cannot see past.
+     */
+    const DISTURBANCES = [
+      "an app restart",
+      "an intervening wake on the task",
+      "its ack and more than five minutes",
+    ] as const;
+
+    function disturb(
+      harness: Awaited<ReturnType<typeof stopped>>,
+      how: (typeof DISTURBANCES)[number],
+      extras: SetupExtras = {},
+    ): {
+      supervisor: CrewSupervisor;
+      ops: string[];
+      before: number;
+      sorts: { rule: string }[];
+      sortsBefore: number;
+    } {
+      if (how === "an app restart") {
+        return { ...restart(harness, extras), before: 0, sortsBefore: 0 };
+      }
+      if (how === "an intervening wake on the task") {
+        harness.inbox.enqueueWake(
+          FIRSTMATE_RECIPIENT,
+          `[fm-op] task ${harness.taskId} has news.`,
+          "agent",
+          harness.taskId,
+        );
+      } else {
+        // The Firstmate's turn over the lane ended clean.
+        harness.inbox.ack(harness.inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id));
+        hostNow = hostNow + INBOX_DEDUPE_WINDOW_MS + minutes(1);
+      }
+      return {
+        supervisor: harness.supervisor,
+        ops: harness.ops,
+        before: harness.ops.length,
+        sorts: harness.sorts,
+        sortsBefore: harness.sorts.length,
+      };
+    }
+
+    /** A few more ticks, a minute apart, on whichever supervisor is live. */
+    async function ticks(supervisor: CrewSupervisor, count = 3) {
+      for (let n = 0; n < count; n += 1) {
+        hostNow = hostNow + minutes(1);
+        supervisor.reconcileIdle(hostNow);
+        await tick();
+      }
+    }
+
+    /** A new outage on the lane, at the store: its rows fail at the provider again from now. */
+    function newOutage(inbox: InboxStore, taskId: string) {
+      inbox.endOutage(taskId);
+      const ids = inbox.allFor(taskId).map((row) => row.id);
+      inbox.markDelivered(ids);
+      inbox.releaseAfterProviderFailure(ids);
+    }
+
+    it.each(DISTURBANCES)("still down goes out once per outage, past %s", async (how) => {
+      const harness = await failing(2);
+      const { supervisor, inbox, ops, taskId } = harness;
+      const since = inbox.outage(taskId).since ?? 0;
+      hostNow = since + STILL_DOWN_MS;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(stillDownWakes(ops)).toHaveLength(1);
+
+      const after = disturb(harness, how);
+      hostNow = hostNow + minutes(1);
+      after.supervisor.reconcileIdle(hostNow);
+      await tick();
+      await ticks(after.supervisor);
+      expect(inbox.outage(taskId).since).toBe(since);
+      expect(stillDownWakes(after.ops.slice(after.before))).toEqual([]);
+
+      // A new outage on the same task is its own, and is woken for.
+      newOutage(inbox, taskId);
+      hostNow = hostNow + STILL_DOWN_MS;
+      after.supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(stillDownWakes(after.ops.slice(after.before))).toHaveLength(1);
+    });
+
+    it.each(DISTURBANCES)("the job bound goes out once per job, past %s", async (how) => {
+      let job = { jobId: "poll-1", command: "gh run watch", startedAt: hostNow };
+      const jobs: SetupExtras = { hasRunningJobs: () => true, oldestRunningJob: () => job };
+      const harness = await stopped(jobs);
+      const { crewmate, taskId, at, idleSince } = harness;
+      job = { ...job, startedAt: idleSince };
+      const boundRows = (sorts: { rule: string }[]) =>
+        sorts.filter((sort) => sort.rule === "job-bound");
+      await at(JOB_BOUND_MS);
+      expect(boundWakes(harness.ops)).toHaveLength(1);
+      expect(boundRows(harness.sorts)).toHaveLength(1);
+      // The ladder climbs from its first rung once the job stops counting.
+      await endTurn(crewmate, taskId);
+
+      const after = disturb(harness, how, jobs);
+      await ticks(after.supervisor);
+      expect(boundWakes(after.ops.slice(after.before))).toEqual([]);
+      // Nor does a repeat spend a ledger row.
+      expect(boundRows(after.sorts.slice(after.sortsBefore))).toEqual([]);
+
+      // A new job past its bound is its own, and is woken for.
+      job = { jobId: "poll-2", command: "gh run watch", startedAt: hostNow - JOB_BOUND_MS };
+      await ticks(after.supervisor);
+      expect(boundWakes(after.ops.slice(after.before))).toHaveLength(1);
+      expect(boundRows(after.sorts.slice(after.sortsBefore))).toHaveLength(1);
+    });
+
+    it("a new outage after the provider answered is woken for from its first failure", async () => {
+      const harness = await failing(5);
+      const { crewmate, ops, taskId } = harness;
+      await sweepWhenDue(harness, taskId);
+      await endTurn(crewmate, taskId);
+      expect(stillDownWakes(ops)).toHaveLength(1);
+      await harness.supervisor.steerCrewmate(taskId, "now the tests");
+      await tick();
+      await failTurn(crewmate, taskId);
+      for (let failure = 2; failure <= 5; failure += 1) {
+        await sweepWhenDue(harness, taskId);
+        await failTurn(crewmate, taskId);
+      }
+      expect(outageWakes(ops).map((line) => line.split(" on task ")[0])).toEqual([
+        "[fm-op] crewmate 1's turn",
+        "[fm-op] crewmate 1",
+        "[fm-op] crewmate 1",
+        "[fm-op] crewmate 1's turn",
+        "[fm-op] crewmate 1",
+      ]);
+      expect(stillDownWakes(ops)).toHaveLength(2);
+    });
+
+    it("the outage wakes and the job bound ride the Firstmate's lane as typed facts", async () => {
+      let job = { jobId: "poll-1", command: "gh run watch", startedAt: hostNow };
+      const harness = await stopped({
+        hasRunningJobs: () => true,
+        oldestRunningJob: () => job,
+      });
+      // The stored rows are the claim: a Firstmate that takes none leaves them there.
+      wakesThroughInbox(harness, "paused");
+      const { supervisor, crewmate, inbox, db, taskId, idleSince } = harness;
+      job = { ...job, startedAt: idleSince };
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await failTurn(crewmate, taskId);
+      const since = inbox.outage(taskId).since ?? 0;
+      await sweepWhenDue(harness, taskId);
+      await failTurn(crewmate, taskId);
+      hostNow = since + STILL_DOWN_MS;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      await sweepWhenDue(harness, taskId);
+      await endTurn(crewmate, taskId);
+      hostNow = idleSince + JOB_BOUND_MS;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+
+      const KINDS = ["outage-failed", "outage-still-down", "outage-recovered", "job-bound"];
+      const stored = (
+        db
+          .prepare("SELECT payload FROM inbox WHERE recipient = ? ORDER BY id")
+          .all(FIRSTMATE_RECIPIENT) as { payload: string }[]
+      )
+        .map((row) => JSON.parse(row.payload) as { facts?: { kind: string } })
+        .filter((row) => KINDS.includes(row.facts?.kind ?? ""));
+      const task = { id: taskId, title: "Job" };
+      expect(stored).toEqual([
+        {
+          v: 1,
+          facts: { kind: "outage-failed", task, crewmate: "crewmate 1", error: "upstream 529" },
+        },
+        {
+          v: 1,
+          facts: {
+            kind: "outage-still-down",
+            task,
+            crewmate: "crewmate 1",
+            key: "SCR-1",
+            since,
+            downMs: STILL_DOWN_MS,
+            failures: 2,
+          },
+        },
+        { v: 1, facts: { kind: "outage-recovered", task, crewmate: "crewmate 1", failures: 2 } },
+        {
+          v: 1,
+          facts: {
+            kind: "job-bound",
+            task,
+            jobId: "poll-1",
+            command: "gh run watch",
+            runMs: JOB_BOUND_MS,
+          },
+        },
+      ]);
+      const served = inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .filter((row) => KINDS.includes(row.facts?.kind ?? ""))
+        .map(renderWake);
+      expect(served).toEqual([
+        `[fm-op] crewmate 1's turn on task ${taskId} "Job" failed at the provider: upstream 529. Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" is still failing at the provider after 15 minutes and 2 tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
+        `[fm-op] crewmate 1 on task ${taskId} "Job" is answering again after 2 failed tries at the provider; its guidance went through.`,
+        `[fm-op] task ${taskId} "Job" has had a background job running for 2 hours: "gh run watch". It no longer counts as the task moving, so the idle ladder now watches the task; the job itself keeps running.`,
+      ]);
+    });
+  });
+});
+
+describe("CrewSupervisor direction context", () => {
+  it("serves active project directions with their authority once on the first turn", async () => {
+    const dir = scratchDir("infinitary-brief-notes-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    try {
+      const crewmate = fakeCrewmate();
+      let knowledge: KnowledgeService | undefined;
+      const { supervisor, repos } = setup(crewmate, {
+        knowledge: (registry) => {
+          knowledge = new KnowledgeService({
+            projects: { get: (id) => registry.get(id), list: () => registry.list() },
+            gitFacts: async () => ({ commit: null, dirty: false }),
+          });
+          return knowledge;
+        },
+      });
+      const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
+      await knowledge?.record(
+        { kind: "firstmate", origin: "captain-turn", canCreate: true },
+        {
+          action: "publish",
+          requestId: "direction",
+          id: "smoke-check",
+          kind: "direction",
+          scope: repo.id,
+          statement: "Check package smoke before publishing.",
+          reason: "captain said so",
+        },
+      );
+      await supervisor.commission({
+        title: "Fix smoke",
+        intent: intentOf("Fix the flaky package-smoke."),
+        repoId: repo.id,
+      });
+      await tick();
+      const minted = crewmate.promptCalls[0] ?? "";
+      expect(minted).toContain("Fix the flaky package-smoke.");
+      expect(minted).toContain("Standing directions");
+      expect(minted).toContain('"authority":"instruction"');
+      expect(minted).toContain("Check package smoke before publishing.");
+      expect(minted).toContain("d:smoke-check");
+      expect(minted.split("Standing directions.")).toHaveLength(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("leads a local crewmate's brief with its project's knowledge and hands it the knowledge pair", async () => {
+    const dir = scratchDir("infinitary-brief-knowledge-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    let knowledge: KnowledgeService | undefined;
+    const crewmate = fakeCrewmate();
+    const { supervisor, repos, specs } = setup(crewmate, {
+      knowledge: (registry) => {
+        knowledge = new KnowledgeService({
+          projects: { get: (id) => registry.get(id), list: () => registry.list() },
+          gitFacts: async () => ({ commit: null, dirty: true }),
+        });
+        return knowledge;
+      },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
+    await knowledge?.record(
+      { kind: "firstmate", origin: "captain-turn", canCreate: true },
+      {
+        action: "publish",
+        requestId: "direction",
+        kind: "direction",
+        scope: repo.id,
+        statement: "Always squash-merge smoke fixes.",
+        reason: "told",
+      },
+    );
+    const recorded = await knowledge?.record(
+      { kind: "firstmate", origin: "captain-turn", canCreate: true },
+      {
+        action: "publish",
+        requestId: "smoke",
+        kind: "concept",
+        title: "Package smoke",
+        aliases: ["packaging check"],
+        explanation: "The packaged app's first-launch check.",
+        appliesTo: [repo.id],
+      },
+    );
+    const conceptId = recorded?.ids[0] as string;
+    await supervisor.commission({
+      title: "Fix the packaging check",
+      intent: intentOf("Make the packaging check pass on first launch."),
+      repoId: repo.id,
+    });
+    await tick();
+    const minted = crewmate.promptCalls[0] ?? "";
+    expect(minted).toContain("knowledge for firstmate-3000 (candidates");
+    expect(minted).toContain(`${conceptId} concept "Package smoke"`);
+    expect(minted).toContain("Always squash-merge smoke fixes.");
+    expect(minted).not.toContain("package-smoke flakes on first run");
+    // All crewmates can read and write factual knowledge on request.
+    const bound = specs[0]?.knowledge;
+    expect(bound).toBeDefined();
+    expect(await bound?.read({ action: "search", query: "packaging" })).toContain(conceptId);
+    const written = await bound?.record({
+      action: "publish",
+      requestId: "r1",
+      kind: "concept",
+      title: "Requested idea",
+      explanation: "An idea the captain asked to keep.",
+    });
+    expect(written).toContain("Recorded");
+  });
+
+  it("serves common saving guidance as its own paragraph after knowledge candidates", async () => {
+    const dir = scratchDir("infinitary-brief-references-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    const crewmate = fakeCrewmate();
+    const { supervisor, repos } = setup(crewmate, {
+      knowledge: (registry) =>
+        new KnowledgeService({
+          projects: { get: (id) => registry.get(id), list: () => registry.list() },
+          gitFacts: async () => ({ commit: null, dirty: true }),
+        }),
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
+    await supervisor.commission({
+      title: "Save the retries article",
+      intent: intentOf("Save the article about inbox retries as a reference."),
+      repoId: repo.id,
+    });
+    await tick();
+    const paragraphs = (crewmate.promptCalls[0] ?? "").split("\n\n");
+    const knowledge = paragraphs.findIndex((text) =>
+      text.startsWith("knowledge for firstmate-3000"),
+    );
+    expect(knowledge).toBeGreaterThanOrEqual(0);
+    expect(paragraphs[knowledge]).not.toContain(renderReferenceImport());
+    expect(paragraphs[knowledge + 1]).toBe(renderReferenceImport());
+  });
+
+  it("gives a task with no project the same knowledge pair and common guidance", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate, {
+      knowledge: (registry) =>
+        new KnowledgeService({
+          projects: { get: (id) => registry.get(id), list: () => registry.list() },
+          gitFacts: async () => ({ commit: null, dirty: true }),
+        }),
+    });
+    await supervisor.commission({ title: "Scratch work", intent: intentOf("Explain an article.") });
+    await tick();
+    expect(crewmate.promptCalls[0]).toContain("knowledge for this task");
+    expect(crewmate.promptCalls[0]).toContain(renderReferenceImport());
+    const bound = specs[0]?.knowledge;
+    expect(bound).toBeDefined();
+    // Reading an article can proceed without a knowledge call. A later reply
+    // asks this same author to keep it; no new task or access grant is needed.
+    await specs[0]?.onCard?.({
+      title: "Article explained",
+      body: "<p>The article describes bounded caches.</p>",
+      actions: [],
+    });
+    await tick();
+    const card = supervisor
+      .cardsSnapshot()
+      .find((entry) => entry.title === "Article explained") as Card;
+    supervisor.replyToCard(card.id, "Save its concepts and findings with the source.");
+    await tick();
+    expect(crewmate.steer.mock.calls.at(-1)?.[0]).toContain(
+      "Save its concepts and findings with the source.",
+    );
+    const article = {
+      kind: "article" as const,
+      url: "https://example.com/cache",
+      title: "Bounded caches",
+      excerpt: "Clients keep a bounded cache.",
+    };
+    const saved = await bound?.record({
+      action: "publish",
+      requestId: "later-source",
+      kind: "concept",
+      title: article.title,
+      explanation: "A reusable cache idea.",
+      sources: [article],
+    });
+    const concept = /c-[a-z0-9]{6}/.exec(saved ?? "")?.[0] as string;
+    expect(concept).toBeDefined();
+    const written = await bound?.record({
+      action: "publish",
+      requestId: "later-finding",
+      kind: "finding",
+      statement: "Clients keep a bounded cache.",
+      basis: "observation",
+      about: [concept],
+      conditions: "The saved article",
+      sources: [article],
+    });
+    const finding = /f-[a-z0-9]{6}/.exec(written ?? "")?.[0] as string;
+    expect(finding).toBeDefined();
+    const read = await bound?.read({ action: "get", ids: [finding] });
+    expect(read).toContain(article.url);
+    expect(read).toContain(article.excerpt);
+  });
+});
+
+describe("the task graph (task-system P2)", () => {
+  it("plans work without starting it; when-ready dispatches on the sweep, on-request never does", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events, sessions } = setup(crewmate);
+    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    expect(planned).toMatchObject({ status: "open", startPolicy: "on-request", key: "SCR-1" });
+    expect(events.at(-2)).toMatchObject({
+      type: "firstmate_note",
+      text: 'Planned "Write the ADR" (SCR-1) - starts on request.',
+    });
+    expect(supervisor.crewStatus().find((entry) => entry.taskId === planned.id)).toMatchObject({
+      status: "queued",
+      gate: "starts on request",
+    });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(sessions.open).not.toHaveBeenCalled();
+
+    // Behind a blocker (by key) and when-ready: waits, then starts when it lands.
+    const step = supervisor.plan({
+      title: "Implement the ADR",
+      intent: intentOf("implement it"),
+      blockedBy: ["scr-1"],
+      startPolicy: "when-ready",
+      priority: 1,
+    });
+    expect(tasks.blockers(step.id).map((r) => r.id)).toEqual([planned.id]);
+    await supervisor.sweepGates(Date.now());
+    expect(sessions.open).not.toHaveBeenCalled();
+    tasks.close(planned.id, { status: "done", reason: "landed", actor: "host" });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    expect(legacyStateOf(tasks.get(step.id))).toBe("running");
+  });
+
+  it("spawns under a parent and behind blockers, resolving keys", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions } = setup(crewmate);
+    const parent = supervisor.plan({ title: "Epic", intent: intentOf("the whole thing") });
+    const first = await supervisor.commission({
+      title: "Step one",
+      intent: intentOf("one"),
+      parent: parent.key,
+    });
+    await tick();
+    expect(tasks.get(first.taskId)).toMatchObject({ parentId: parent.id, status: "active" });
+    const second = await supervisor.commission({
+      title: "Step two",
+      intent: intentOf("two"),
+      parent: parent.id,
+      blockedBy: [first.taskId],
+      priority: 0,
+    });
+    expect(second.crewmate).toBe("queued");
+    expect(tasks.get(second.taskId)).toMatchObject({
+      parentId: parent.id,
+      status: "open",
+      priority: 0,
+      startPolicy: "when-ready",
+    });
+    expect(sessions.open).toHaveBeenCalledTimes(1);
+    await expect(
+      supervisor.commission({ title: "x", intent: intentOf("y"), parent: "NOPE-9" }),
+    ).rejects.toThrow(/Unknown task "NOPE-9" in parent/);
+  });
+
+  it("refuses a cycle as tool text and lifts a dead wait when its edge is removed", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, ops } = setup(crewmate);
+    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
+    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    expect(supervisor.linkTasks(b.key, a.key, "blocks")).toMatch(/would close a cycle/);
+    expect(tasks.blockers(a.id)).toEqual([]);
+    expect(supervisor.linkTasks(a.key, b.key, "blocks")).toBe(
+      "SCR-1 blocks SCR-2 (SCR-2 waits until SCR-1 closes) was already recorded.",
+    );
+    expect(supervisor.linkTasks(a.key, b.key, "related")).toBe(
+      "Recorded: SCR-1 is related to SCR-2.",
+    );
+
+    // A drops: B's wait is dead, so one wake, no card and no hold.
+    tasks.close(a.id, { status: "dropped", reason: "cancelled", actor: "host" });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(cards()).toEqual([]);
+    expect(ops.filter((line) => line.includes("can never end"))).toHaveLength(1);
+    expect(tasks.get(b.id)?.gate).toBeNull();
+    // Removing the dead edge is the way out the wake named.
+    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toBe(
+      "Removed: SCR-1 blocks SCR-2 (SCR-2 waits until SCR-1 closes).",
+    );
+    await tick();
+    expect(tasks.get(b.id)?.gate).toBeNull();
+    expect(tasks.blockers(b.id)).toEqual([]);
+    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^No such link/);
+  });
+
+  it("drops a parent only with confirm, cascading its open children as superseded", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate);
+    const parent = supervisor.plan({ title: "Epic", intent: intentOf("all") });
+    const child = supervisor.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
+    expect(supervisor.dropTask(parent.key, { reason: "changed course" })).toBe(
+      'Cannot close SCR-1 while its child is still open: SCR-2 "Part". Start it so it can close, drop it as superseded, or settle SCR-1 keeping it planned.',
+    );
+    expect(tasks.get(parent.id)?.status).toBe("open");
+    expect(supervisor.dropTask(parent.key, { reason: "changed course", confirm: true })).toBe(
+      'Dropped SCR-1 "Epic" and SCR-2 as superseded.',
+    );
+    expect(tasks.get(child.id)).toMatchObject({ status: "dropped", closedReason: "superseded" });
+    expect(tasks.get(parent.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(events.at(-2)).toMatchObject({
+      type: "firstmate_note",
+      text: 'Dropped "Epic" (SCR-1) and 1 child under it - changed course.',
+    });
+    // Started work is settle_task's business.
+    const running = await supervisor.commission({ title: "Live", intent: intentOf("live") });
+    await tick();
+    expect(supervisor.dropTask(running.taskId, { reason: "nah" })).toMatch(
+      /a crewmate holds it. Use settle_task/,
+    );
+    const container = supervisor.plan({ title: "Holder", intent: intentOf("hold") });
+    tasks.setParent(running.taskId, container.id, "firstmate");
+    expect(supervisor.dropTask(container.id, { reason: "nah", confirm: true })).toMatch(
+      /its child has started .*Settle them first/,
+    );
+  });
+
+  it("drops never-started charted work for the captain, and refuses a start or open parts", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, cards, cardStore, ops } = setup(crewmate);
+    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const waiter = supervisor.plan({ title: "Follow on", intent: intentOf("after") });
+    supervisor.linkTasks(planned.key, waiter.key, "blocks");
+    const cardId = supervisor.addFirstmateCard({
+      title: "Still open",
+      body: "<p>Which way?</p>",
+      taskId: planned.id,
+      actions: [{ id: "go", label: "Go" }],
+    });
+    await tick();
+    const review = dropReviewKeys(tasks.dropEffects(planned.id));
+    expect(review.waiting).toEqual([waiter.key]);
+
+    expect(supervisor.runTaskOp(planned.id, "drop-task", { ...review, waiting: [] })).toBe(
+      DROP_REVIEW_STALE,
+    );
+    expect(tasks.get(planned.id)?.status).toBe("open");
+    expect(cards().some((card) => card.id === cardId)).toBe(true);
+
+    expect(supervisor.runTaskOp(planned.id, "drop-task", review)).toBeUndefined();
+    await tick();
+    expect(tasks.get(planned.id)).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+    });
+    expect(tasks.timeline(planned.id).at(-1)).toMatchObject({
+      actor: "captain",
+      text: `dropped - ${NO_LONGER_WANTED}`,
+    });
+    expect(tasks.get(waiter.id)?.status).toBe("open");
+    expect(tasks.blockers(waiter.id).map((row) => row.id)).toEqual([planned.id]);
+    expect(cards().some((card) => card.id === cardId)).toBe(false);
+    expect(cardStore.chosenAction(cardId)).toBe("obsolete");
+    expect(tasks.timeline(planned.id).some((event) => event.kind === "card_resolved")).toBe(false);
+    expect(supervisor.runTaskOp(planned.id, "drop-task", review)).toMatch(/not unstarted work/);
+
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(ops.some((line) => line.includes("can never end"))).toBe(true);
+
+    const parent = supervisor.plan({ title: "Epic", intent: intentOf("all") });
+    const part = supervisor.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
+    const refused = supervisor.runTaskOp(
+      parent.id,
+      "drop-task",
+      dropReviewKeys(tasks.dropEffects(parent.id)),
+    );
+    expect(refused).toContain(part.key);
+    expect(tasks.get(parent.id)?.status).toBe("open");
+    expect(tasks.get(part.id)?.status).toBe("open");
+
+    const racing = supervisor.plan({ title: "Race", intent: intentOf("race") });
+    supervisor.runTaskOp(racing.id, "start-task");
+    expect(
+      supervisor.runTaskOp(racing.id, "drop-task", dropReviewKeys(tasks.dropEffects(racing.id))),
+    ).toMatch(/just started/);
+    expect(tasks.get(racing.id)?.status).toBe("open");
+  });
+
+  it("a parent cannot be settled while a child is open", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const parent = await supervisor.commission({ title: "Parent", intent: intentOf("p") });
+    await tick();
+    supervisor.plan({ title: "Child", intent: intentOf("c"), parent: parent.taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.settleTask(parent.taskId, "discard")).toMatch(
+      /^Cannot close SCR-1 while its child is still open: SCR-2 "Child"/,
+    );
+    expect(await supervisor.landTask(parent.taskId)).toMatch(/^Cannot merge: Cannot close/);
+    expect(tasks.get(parent.taskId)?.status).toBe("active");
+  });
+
+  it("lands the work the captain asked for even with follow-ups filed under way", async () => {
+    // The regression (captain, 2026-09-14): "i asked for the keychain thing
+    // to be fixed, and all these sub task blockers were auto filed - i don't
+    // even know they existed. and they automatically blocked what i asked
+    // from landing." Filing is not choosing; only blocks_me holds a merge.
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    for (const title of ["Flaky meter test", "Stale keychain docs", "Untyped helper"]) {
+      spec.onFollowup?.({ title, goal: "g", why: "w" });
+    }
+    crewmate.finishPrompt();
+    await tick();
+    expect(tasks.discoveredFrom(taskId)).toHaveLength(3);
+    expect(await supervisor.landTask(taskId, "captain")).toBe(
+      'Merged "Fix the keychain prompt" into main.',
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+    // The follow-ups outlive their origin as planned work of their own,
+    // still traceable to where they were found.
+    expect(tasks.byKey("SCR-2")).toMatchObject({ status: "open", parentId: null });
+    expect(tasks.discoveredOrigins(tasks.byKey("SCR-2")?.id ?? "").map((r) => r.id)).toEqual([
+      taskId,
+    ]);
+  });
+
+  it("a blocks_me follow-up does hold the merge, and says which task and how to clear it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    spec.onFollowup?.({ title: "Rotate the signing key", goal: "g", why: "w", blocksMe: true });
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.landTask(taskId, "captain")).toBe(
+      'Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove.',
+    );
+    expect(tasks.get(taskId)?.status).toBe("active");
+    // Dropping the blocker is one of the ways out the refusal names: work
+    // that is not happening cannot hold a merge hostage. The crewmate that
+    // waited on it hears so (FI3-250), and its turn ends before the merge.
+    expect(supervisor.dropTask("SCR-2", { reason: "handled upstream" })).toMatch(/^Dropped/);
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      'SCR-2 "Rotate the signing key", which your task could not merge before, was dropped and no longer holds it. Carry on from where you stopped.',
+    );
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.landTask(taskId, "captain")).toContain("into main.");
+  });
+
+  it("a wait never forbids a discard - only containment does", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    (specs[0] as CrewmateSpec).onFollowup?.({
+      title: "Rotate the signing key",
+      goal: "g",
+      why: "w",
+      blocksMe: true,
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.settleTask(taskId, "discard")).toBe(
+      'Discarded "Fix the keychain prompt".',
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+  });
+
+  it("a settle card names the follow-ups filed under its task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    spec.onFollowup?.({ title: "Flaky meter test", goal: "g", why: "w" });
+    spec.onFollowup?.({ title: "Rotate the signing key", goal: "g", why: "w", blocksMe: true });
+    spec.onFollowup?.({ title: "Continue: show it in Settings", goal: "g", why: "w" });
+    spec.onFollowup?.({ title: "Retry the upload later", goal: "g", why: "w" });
+    const filed = (prefix: string) =>
+      tasks.discoveredFrom(taskId).find((t) => t.title.startsWith(prefix))?.id ?? "";
+    tasks.link(taskId, filed("Continue"), "blocks", "host");
+    // Queued by its start policy, held so nothing starts it during the test.
+    tasks.setGate(filed("Retry"), { kind: "at-time", until: Date.now() + 60_000 });
+    tasks.updateFields(filed("Retry"), { startPolicy: "when-ready" }, "host");
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId,
+      title: "Settle",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE }],
+    });
+    await tick();
+    const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
+    expect(body).toContain("Filed while working on this");
+    const rows = [...(body ?? "").matchAll(/data-followup="(\w+)"[^>]*><span[^>]*>([^<]*)</g)];
+    // Must merge first leads, whatever the filing order.
+    // Then the Tasks panel's own words: queued before backlog.
+    expect(rows.map((row) => [row[1], row[2]])).toEqual([
+      ["hold", "SCR-3"],
+      ["after", "SCR-4"],
+      ["queued", "SCR-5"],
+      ["backlog", "SCR-2"],
+    ]);
+    expect(body).toContain("Flaky meter test");
+    expect(body).toContain("must merge first");
+    // A card with no settle action says nothing: this is a landing decision.
+    supervisor.addFirstmateCard({
+      taskId,
+      title: "Something else",
+      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+      actions: [{ id: "keep-going", label: "Keep going", default: true }],
+    });
+    await tick();
+    expect(cards().find((card) => card.title === "Something else")?.body).not.toContain(
+      "Filed while working on this",
+    );
+  });
+
+  it("appends the settle facts to any card carrying a settle effect (v2.0, ruling D4)", async () => {
+    // The Sep 15 completion cards led with the repo, PR and CI state and
+    // were refused for it; those facts are the host's to render now, from
+    // the task record, so the body cannot contradict them.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards } = setup(crewmate);
+    await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    (specs[0] as CrewmateSpec).onCard?.({
+      requiredActions: [],
+      title: "The keychain prompt is fixed",
+      body: completionBody(
+        "<p>The prompt no longer fires on every rebuild.</p><ul><li>Verified on a packaged build.</li></ul>",
+      ),
+      actions: [
+        { id: "merge", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    await tick();
+    const completion = cards().find((card) => card.title === "The keychain prompt is fixed");
+    expect(completion?.body).toBe(
+      completionBody(
+        "<p>The prompt no longer fires on every rebuild.</p><ul><li>Verified on a packaged build.</li></ul>",
+      ) +
+        '<div class="inf-facts" data-facts>' +
+        '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">Default workspace</span></span>' +
+        '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>' +
+        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>' +
+        "</div>",
+    );
+    // A card with no settle effect carries no facts line.
+    (specs[0] as CrewmateSpec).onCard?.({
+      title: "Two ways to silence it",
+      body: "<p>Pick the course to take.</p><ul><li>Both work.</li></ul>",
+      actions: [
+        { id: "cache", label: "Cache the grant", default: true },
+        { id: "sign", label: "Sign with a stable identity" },
+      ],
+    });
+    await tick();
+    expect(cards().find((card) => card.title === "Two ways to silence it")?.body).not.toContain(
+      "inf-facts",
+    );
+  });
+
+  it("names the project, PR number and CI state on a direct-pr task's settle card", async () => {
+    const dir = scratchDir("infinitary-settle-facts-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    // It lives on GitHub: the proposed change gets a link in the strip.
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/r.git"]);
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, specs, cards, tasks, repos } = setup(crewmate);
+      const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
+      repos.configure(repo.id, { delivery: "direct-pr", rigor: "quick" });
+      // The captain asked for standard care on a quick-care project: the
+      // completion strip must read the tier stamped on the task, not the
+      // project's standing setting.
+      const { taskId } = await supervisor.commission({
+        title: "Fix smoke",
+        intent: intentOf("Fix the flaky package-smoke."),
+        repoId: repo.id,
+        shape: { rigor_ask: "standard" },
+      });
+      await tick();
+      const emit = () =>
+        (specs[0] as CrewmateSpec).onCard?.({
+          requiredActions: [],
+          id: "done",
+          title: "The smoke test is fixed",
+          // The facts line under test follows the card body.
+          body: completionBody(
+            [
+              "<h3>Intent</h3><p>The smoke test passes ten runs in a row.</p>",
+              "<h3>What changed</h3><p>The smoke test waits for the app.</p>",
+              "<h3>Verified</h3><p>Reran the suite.</p>",
+              "<h3>Risk</h3><p>Low.</p>",
+              "<h3>Not done</h3><p>Nothing.</p>",
+            ].join(""),
+          ),
+          actions: [
+            { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+            { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+          ],
+        });
+      emit();
+      await tick();
+      const body = () => cards().find((card) => card.title === "The smoke test is fixed")?.body;
+      // Before any CI read the strip says so, instead of inventing a state.
+      expect(body()).toContain(
+        '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">firstmate-3000</span></span>',
+      );
+      expect(body()).toContain(
+        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Default</span></span>',
+      );
+      expect(body()).not.toContain(">Goes in<");
+      expect(body()).not.toContain(">On its own<");
+      expect(body()).toContain("not read yet");
+      // The branch dropped off the facts at v2.7 (captain, 2026-09-19).
+      expect(body()).not.toContain(`fm/task-${taskId}`);
+      tasks.recordDelivery(taskId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        ci: "green",
+        ciAt: Date.now() - 3 * 60_000,
+      });
+      // A revision under the same id re-renders the facts from the record:
+      // the PR is its number, never the raw URL, and the CI reading's age
+      // rides the cell's title.
+      emit();
+      await tick();
+      expect(body()).toContain('<a href="https://github.com/o/r/pull/55">#55</a>');
+      expect(body()).toContain("</svg>passed</span>");
+      expect(body()).toContain('title="read 3 min ago"');
+      expect(body()).not.toContain("not read yet");
+      expect(cards().filter((card) => card.title === "The smoke test is fixed")).toHaveLength(1);
+      // The holds the host placed ride the same strip (contract v3.6,
+      // captain lock 3): the round counts against their caps, with the head
+      // CI last went red on in the cell's title. The prompts used to ask an
+      // agent to type out a count it cannot see.
+      tasks.recordDelivery(taskId, {
+        ciRounds: 2,
+        ciRedHead: "9f3c1ab0000000000000000000000000000000ee",
+        reviewRounds: 1,
+      });
+      emit();
+      await tick();
+      expect(body()).toContain(
+        '<span class="inf-fact" data-fact="check-rounds" title="unsuccessful tries at getting the checks to pass at 9f3c1ab"><span class="inf-fact-k">Check rounds</span><span class="inf-fact-v">2/3</span></span>',
+      );
+      expect(body()).toContain(
+        '<span class="inf-fact" data-fact="look-rounds" title="rounds of findings this change has spent"><span class="inf-fact-k">Look rounds</span><span class="inf-fact-v">1/2</span></span>',
+      );
+      // A standing cap says so with a failed dot rather than a second line.
+      // It cannot ride the CREWMATE's card - `pendingCiGate` holds that one
+      // while the cap stands - so the surface that carries it is a Firstmate
+      // settle card on the same task, which is exactly what the captain is
+      // answering when the cap asks for a decision.
+      tasks.recordDelivery(taskId, { ciCapAt: Date.now() });
+      const held = supervisor.addFirstmateCard({
+        title: "The smoke test hit its CI cap",
+        body: "<p>CI went red on three heads.</p><p>Choose how to proceed.</p>",
+        taskId,
+        actions: [{ id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD }],
+      });
+      await tick();
+      const heldBody = cards().find((card) => card.id === held)?.body ?? "";
+      expect(heldBody).toContain('title="held at the cap; the checks last failed at 9f3c1ab"');
+      expect(heldBody).toMatch(
+        /<span class="inf-fact-k">Check rounds<\/span><span class="inf-fact-v"><svg/,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("crew_status names where each change goes in the person's word for the host, and nothing for work kept here (git integration PR 1.3)", async () => {
+    const hosted = (name: string, origin?: string) => {
+      const dir = scratchDir(`infinitary-goes-in-${name}-`);
+      execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+      if (origin) execFileSync("git", ["-C", dir, "remote", "add", "origin", origin]);
+      return dir;
+    };
+    const crewmate = fakeCrewmate();
+    const { supervisor, repos, tasks } = setup(crewmate);
+    const onGitHub = await repos.setup({
+      kind: "adopt",
+      path: hosted("gh", "https://github.com/o/meter.git"),
+      name: "meter",
+    });
+    const onPlainHost = await repos.setup({
+      kind: "adopt",
+      path: hosted("plain", "https://git.example.com/o/ledger.git"),
+      name: "ledger",
+    });
+    const keptHere = await repos.setup({
+      kind: "adopt",
+      path: hosted("kept", "https://github.com/o/notes.git"),
+      name: "notes",
+    });
+    repos.configure(keptHere.repo.id, { delivery: "local-only" });
+    const local = await repos.setup({ kind: "init", name: "sketch" });
+    const commission = (repoId: string, title: string) =>
+      supervisor.commission({
+        title,
+        intent: intentOf(title),
+        repoId,
+        shape: { rigor_ask: "quick" },
+      });
+    const ids = {
+      github: (await commission(onGitHub.repo.id, "Fix the meter")).taskId,
+      plain: (await commission(onPlainHost.repo.id, "Fix the ledger")).taskId,
+      kept: (await commission(keptHere.repo.id, "Tidy the notes")).taskId,
+      local: (await commission(local.repo.id, "Draw the sketch")).taskId,
+    };
+    await tick();
+    const entry = (taskId: string) => supervisor.crewStatus(taskId)[0];
+    expect(entry(ids.github)).toMatchObject({ delivery: "direct-pr", goesIn: "GitHub" });
+    expect(entry(ids.plain)).toMatchObject({ delivery: "direct-pr", goesIn: "git.example.com" });
+    // A project on GitHub the captain keeps on this Mac never names it.
+    expect(entry(ids.kept)?.delivery).toBe("local-only");
+    expect(entry(ids.kept)).not.toHaveProperty("goesIn");
+    expect(entry(ids.local)).not.toHaveProperty("goesIn");
+
+    // With nothing to put a change in through, the refusal names where the
+    // project lives rather than assuming GitHub.
+    seedTask(tasks, {
+      id: "ledgeridle",
+      title: "Ledger totals",
+      status: "idle",
+      repoId: onPlainHost.repo.id,
+      worktreeDir: "/work",
+    });
+    const refusal = await supervisor.mergePrTask("ledgeridle", "captain");
+    expect(refusal).toContain("git.example.com is not reachable from here");
+    expect(refusal).not.toContain("GitHub");
+  });
+
+  it("names a plain Git host's change by the label the forge gave it, with no link to parse (git integration PR 1.1)", async () => {
+    const dir = scratchDir("infinitary-settle-facts-plain-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "remote",
+      "add",
+      "origin",
+      "ssh://git@git.example.com/me/meter.git",
+    ]);
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, specs, cards, tasks, repos } = setup(crewmate);
+      const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "meter" });
+      expect(repo.delivery).toBe("direct-pr");
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("Fix the meter."),
+        repoId: repo.id,
+        shape: { rigor_ask: "quick" },
+      });
+      await tick();
+      // What check_pr_ci records for a working copy sent up to a plain host.
+      tasks.recordDelivery(taskId, {
+        changeLabel: `fm/task-${taskId}`,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      const intermediate = (specs[0] as CrewmateSpec).onCard?.({
+        id: "question",
+        title: "Which meter?",
+        body: "<p>Which meter needs attention?</p><p>The readings differ.</p>",
+        actions: [
+          { id: "first", label: "The first meter", default: true },
+          { id: "second", label: "The second meter" },
+        ],
+      });
+      expect(intermediate).toContain(`No button on this card can merge fm/task-${taskId}`);
+      const completion = (specs[0] as CrewmateSpec).onCard?.({
+        requiredActions: [],
+        id: "done",
+        title: "The meter is fixed",
+        body: completionBody("<p>The meter reads on time.</p><ul><li>Checked by hand.</li></ul>"),
+        actions: [
+          { id: "merge", label: "Put it in", default: true, effect: SETTLE_MERGE },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      });
+      expect(completion).not.toContain("No button on this card");
+      await tick();
+      const body = cards().find((card) => card.title === "The meter is fixed")?.body ?? "";
+      expect(body).toContain(
+        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>',
+      );
+      expect(body).toContain(
+        `<span class="inf-fact" data-fact="change"><span class="inf-fact-k">Branch</span><span class="inf-fact-v">fm/task-${taskId}</span></span>`,
+      );
+      expect(body).not.toContain("GitHub");
+      expect(body).not.toContain("<a ");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("names the DISPATCHED model right after the project, never the routing choice (review F1)", async () => {
+    const crewmate = fakeCrewmate();
+    // The router chose one model, but the transport actually served
+    // another (fm-mock/mock-1, fakeCrewmate's modelRef): the strip names
+    // what served, off the task record's dispatched model.
+    const { supervisor, specs, cards } = setup(crewmate, {
+      routedModel: { provider: "anthropic", id: "claude-fable-5" },
+    });
+    // The captain's word on care keeps this at the quick tier, so the
+    // completion card publishes bare and the strip is what is under test.
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    (specs[0] as CrewmateSpec).onCard?.({
+      requiredActions: [],
+      title: "The keychain prompt is fixed",
+      body: completionBody(
+        "<p>The prompt no longer fires.</p><ul><li>Verified on a packaged build.</li></ul>",
+      ),
+      actions: [
+        { id: "merge", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    await tick();
+    const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
+    expect(body).toContain(
+      '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>',
+    );
+    expect(body).not.toContain("claude-fable-5");
+    const project = body?.indexOf(">Project<") ?? -1;
+    const crewmateAt = body?.indexOf(">Model<") ?? -1;
+    const care = body?.indexOf(">Care<") ?? -1;
+    expect(project).toBeGreaterThanOrEqual(0);
+    expect(crewmateAt).toBeGreaterThan(project);
+    expect(care).toBeGreaterThan(crewmateAt);
+  });
+
+  it("keeps the task record on the model that answers, says what moved it, and names it on the strip (FI3-967)", async () => {
+    const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+    const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
+    const crewmate = fakeCrewmate({ model: opus55, modelLabel: "Claude Opus 5.5" });
+    const { supervisor, specs, cards, tasks, events } = setup(crewmate, { routedModel: opus55 });
+    const { taskId } = await supervisor.commission({
+      title: "Read the Mac mini's network logs",
+      intent: intentOf("find why adding the computer by address fails"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    const moves = () =>
+      tasks.timeline(taskId).filter((event) => event.kind === "note" && event.data?.servedModel);
+    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
+
+    // The client's first word on its model is the routed one: nothing moved.
+    crewmate.emit({ type: "model_served", model: opus55 });
+    expect(moves()).toEqual([]);
+
+    // Claude Code moved the session after Opus 5.5's safeguards stopped a reply.
+    crewmate.emit({
+      type: "model_served",
+      model: opus48,
+      fallback: { from: opus55, category: "cyber" },
+    });
+    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-4-8");
+    const [moved] = moves();
+    expect(moved?.data).toEqual({
+      servedModel: "anthropic-claude/claude-opus-4-8",
+      from: "anthropic-claude/claude-opus-5-5",
+      fallback: { from: "anthropic-claude/claude-opus-5-5", category: "cyber" },
+      news: true,
+    });
+    const record = tasks.get(taskId);
+    if (!record || !moved) throw new Error("the move was not recorded");
+    expect(taskFeedLine(record, moved)).toMatchObject({
+      kind: "warn",
+      text: "Moved from claude-opus-5-5 to claude-opus-4-8 after claude-opus-5-5's safeguards stopped a reply",
+      event: "note",
+    });
+    // Owner-only: the session's word never reaches the feed as its own event.
+    expect(events.some((event) => (event as { type: string }).type === "model_served")).toBe(false);
+
+    // The completion card's strip names the model doing the work now.
+    (specs[0] as CrewmateSpec).onCard?.({
+      requiredActions: [],
+      title: "Adding a computer by its address works",
+      body: completionBody(
+        "<p>The relay now answers.</p><ul><li>Verified on the Mac mini.</li></ul>",
+      ),
+      actions: [
+        { id: "merge", label: "Land locally", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    await tick();
+    const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
+    expect(body).toContain(
+      '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">claude-opus-4-8</span></span>',
+    );
+
+    // A reattach asked for the routed model again, and the client honored it.
+    crewmate.emit({ type: "model_served", model: opus55 });
+    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
+    const back = moves().at(-1);
+    expect(back?.data).toEqual({
+      servedModel: "anthropic-claude/claude-opus-5-5",
+      from: "anthropic-claude/claude-opus-4-8",
+      news: true,
+    });
+    const now = tasks.get(taskId);
+    if (!now || !back) throw new Error("the move back was not recorded");
+    expect(taskFeedLine(now, back)).toMatchObject({
+      kind: "info",
+      text: "Moved from claude-opus-4-8 to claude-opus-5-5",
+    });
+  });
+
+  it("turns a merge card back while a wait would refuse the click, and takes it once the wait is gone", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cards } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix it"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    spec.onFollowup?.({ title: "Live checks", goal: "g", why: "w", blocksMe: true });
+    const blocker = tasks.blockers(taskId)[0];
+    const card = () => ({
+      requiredActions: [],
+      title: "The meter is fixed",
+      body: completionBody("<p>Fixed.</p><ul><li>Verified.</li></ul>"),
+      actions: [
+        { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+        { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+      ],
+    });
+    expect(() => spec.onCard?.(card())).toThrow(
+      /Card refused: this task still waits on open work.*Live checks/,
+    );
+    expect(cards().some((c) => c.taskId === taskId && c.actions.length > 0)).toBe(false);
+
+    tasks.unlink(blocker?.id ?? "", taskId, "blocks", "firstmate");
+    spec.onCard?.(card());
+    await tick();
+    expect(cards().some((c) => c.taskId === taskId && c.actions.length > 0)).toBe(true);
+  });
+
+  it("a crewmate's follow-up is its own task, not a child, and notes progress on its timeline", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix it"),
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    const text = spec.onFollowup?.({
+      title: "Flaky meter test",
+      goal: "The meter test passes ten runs in a row",
+      why: "it failed twice in the suite while I was working",
+    });
+    expect(text).toBe(
+      'Filed follow-up SCR-2 "Flaky meter test", discovered from your task and not holding it up. The first mate hears about it with your report and decides when it runs; keep going on your own task.',
+    );
+    const followup = tasks.byKey("SCR-2");
+    expect(followup).toMatchObject({
+      parentId: null,
+      projectId: tasks.get(taskId)?.projectId,
+      status: "open",
+      startPolicy: "on-request",
+      goal: "The meter test passes ten runs in a row",
+    });
+    expect(followup?.prompt).toContain(
+      'Filed as a follow-up by crewmate 1 while working on "Fix the meter" (SCR-1)',
+    );
+    expect(tasks.discoveredFrom(taskId).map((r) => r.id)).toEqual([followup?.id]);
+    expect(tasks.blockers(taskId)).toEqual([]);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Task Fix the meter follow-up filed: SCR-2 Flaky meter test",
+    });
+    // Filing is cheap (cards/tasks/agents P0, WI-4): a row, a link and a
+    // feed line, never a wake of its own.
+    expect(ops).toEqual([]);
+    // Filing must never gate the work the captain actually asked for.
+    expect(tasks.openChildren(taskId)).toEqual([]);
+    expect(tasks.closeRefusal(taskId)).toBeUndefined();
+    expect(tasks.blockerRefusal(taskId)).toBeUndefined();
+
+    // blocks_me records that the origin waits on it - the one thing that does.
+    expect(spec.onFollowup?.({ title: "Unblock", goal: "g", why: "w", blocksMe: true })).toContain(
+      "and blocking it: your task cannot land until this one closes",
+    );
+    expect(tasks.blockers(taskId).map((r) => r.key)).toEqual(["SCR-3"]);
+    expect(ops).toEqual([]);
+    expect(tasks.blockerRefusal(taskId)?.text).toMatch(/while it waits on: SCR-3 "Unblock"/);
+
+    // The Firstmate hears about both with the report, in one wake.
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Meter fixed; two follow-ups filed." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toContain(`[fm-op] crewmate 1 reported on task ${taskId} "Fix the meter"`);
+    expect(ops[0]).toContain(
+      'Filed this turn: SCR-2 "Flaky meter test" (not blocking), SCR-3 "Unblock" (blocks this task).',
+    );
+    // Facts only (v2.0): the wake says what waits and on what, not which tool starts it.
+    expect(ops[0]).toContain("Each waits on request, discovered from this task.");
+    expect(ops[0]).not.toContain("update_task");
+    // The next turn's report names nothing filed: the list is per turn.
+    await supervisor.steerCrewmate(taskId, "carry on");
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Nothing more to file today." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(ops).toHaveLength(2);
+    expect(ops[1]).toContain("Nothing more to file today.");
+    expect(ops[1]).not.toContain("Filed this turn");
+
+    // A plan rides the note as declared (FI3-734); one that does not fit is refused in words, writing nothing.
+    const plan = [{ label: "Fix the meter", short: "Fix", state: "current" }];
+    expect(spec.onProgress?.("briefed", plan)).toBe(
+      "Noted on your task's timeline, with your plan.",
+    );
+    expect(tasks.timeline(taskId).at(-1)).toMatchObject({ kind: "progress", data: { plan } });
+    const before = tasks.timeline(taskId).length;
+    expect(spec.onProgress?.("odd", [{ label: "x", short: "x", state: "soon" }])).toMatch(
+      /^plan was refused at plan\[0\]\[state\]/,
+    );
+    expect(tasks.timeline(taskId)).toHaveLength(before);
+    expect(spec.onProgress?.("tests pass; opening the PR")).toContain("whole plan");
+    expect(tasks.timeline(taskId)).toHaveLength(before);
+    expect(spec.onProgress?.("tests pass; opening the PR", plan)).toBe(
+      "Noted on your task's timeline, with your plan.",
+    );
+    expect(tasks.timeline(taskId).at(-1)).toMatchObject({
+      kind: "progress",
+      actor: "crewmate",
+      text: "tests pass; opening the PR",
+      feed: false,
+    });
+    expect(() => spec.onFollowup?.({ title: "", goal: "g", why: "w" })).toThrow(/title/);
+    expect(() => spec.onProgress?.("   ")).toThrow(/text is required/);
+  });
+});
+
+describe("the truthful report channel (interaction P0, WI-1)", () => {
+  /** Every wake this task earned the Firstmate, in order (S7c: there is one lane). */
+  function withSupervision(crewmate: FakeCrewmate) {
+    const harness = setup(crewmate);
+    return {
+      ...harness,
+      wakes: (taskId: string) =>
+        harness.ops.filter((line) => line.includes(taskId)).map((payload) => ({ payload })),
+    };
+  }
+
+  async function endTurn(crewmate: FakeCrewmate, taskId: string, text?: string): Promise<void> {
+    if (text) crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  it("an empty-text turn end emits no wake and never re-sends the previous report", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks, wakes } = withSupervision(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Find it", intent: intentOf("find") });
+    await tick();
+    await endTurn(crewmate, taskId, "Found the cause: a stale cache key.");
+    expect(wakes(taskId)).toHaveLength(1);
+
+    // A background job result becomes a turn the crewmate ends silently.
+    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
+    await tick();
+    await endTurn(crewmate, taskId);
+
+    expect(wakes(taskId)).toHaveLength(1);
+    expect(events.filter((event) => event.type === "task_report")).toHaveLength(1);
+    expect(tasks.get(taskId)?.outcome).toBe("Found the cause: a stale cache key.");
+    expect(supervisor.crewStatus(taskId)[0]?.lastReport).toBe(
+      "Found the cause: a stale cache key.",
+    );
+  });
+
+  it("text streamed ahead of the turn's tool calls is not its report", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, wakes } = withSupervision(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Plan", intent: intentOf("plan") });
+    await tick();
+    // Pi ends one turn per assistant message: a self-brief with a tool call,
+    // then an empty final message.
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Self-brief: goal, acceptance." });
+    crewmate.emit({ type: "turn_end", taskId });
+    await endTurn(crewmate, taskId);
+
+    expect(wakes(taskId)).toHaveLength(0);
+    expect(events.some((event) => event.type === "task_report")).toBe(false);
+    expect(supervisor.crewStatus(taskId)[0]?.lastReport).toBeUndefined();
+  });
+
+  it("an explicit report wakes exactly once and wins over the turn's final text", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, tasks, wakes, events } = withSupervision(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Ship", intent: intentOf("ship") });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    // The receipt promises only what the sort will do (FI3-710): here the
+    // Pi crewmate stops, so the report wakes; elsewhere it may not.
+    expect(spec.onReport?.("Opened PR 97; every check is green.")).toBe(
+      "Reported. It goes on your task's record when this turn ends; whether the first mate is woken for it depends on your task's state. If the first mate must act on it, report again with needs_firstmate.",
+    );
+    expect(wakes(taskId)).toHaveLength(0);
+    await endTurn(crewmate, taskId, "Watching nothing else.");
+
+    const [wake] = wakes(taskId);
+    expect(wakes(taskId)).toHaveLength(1);
+    expect(wake?.payload).toContain("Opened PR 97; every check is green.");
+    expect(wake?.payload).not.toContain("Watching nothing else.");
+    expect(tasks.get(taskId)?.outcome).toBe("Opened PR 97; every check is green.");
+
+    // The headline is the report's own summary when it gave one, on the
+    // record and on the feed's report line alike; a final text standing in
+    // for a report never borrows one.
+    expect(tasks.get(taskId)?.outcomeSummary).toBe("Opened PR 97; every check is green.");
+    crewmate.emit({ type: "continuation_started" });
+    spec.onReport?.(
+      "Intent: ship the search.\nWhat changed: the search reads keys.",
+      "  The search reads keys now.  ",
+    );
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "continuation_ended" });
+    await tick();
+    expect(tasks.get(taskId)?.outcomeSummary).toBe("The search reads keys now.");
+    expect(events.filter((event) => event.type === "task_report").at(-1)).toMatchObject({
+      summary: "The search reads keys now.",
+    });
+
+    // A report that is not plausible prose is refused with the fix.
+    expect(() => spec.onReport?.("Done.")).toThrow(/Report refused: it has fewer than 2 words/);
+    expect(() => spec.onReport?.("  ")).toThrow(/text is required/);
+  });
+
+  it("an implausible report is a failed turn, never an outcome, and the crewmate stays steerable", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks, inbox, wakes } = withSupervision(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Meter", intent: intentOf("fix") });
+    await tick();
+    await endTurn(crewmate, taskId, "RGCTXDataിക്ഷassistant to=functions.bash 新天天彩票?");
+
+    expect(events.some((event) => event.type === "task_report")).toBe(false);
+    expect(tasks.get(taskId)?.outcome ?? null).toBeNull();
+    expect(
+      tasks
+        .timeline(taskId)
+        .some((event) => event.kind === "failed" && event.text.includes("report was set aside")),
+    ).toBe(true);
+    const [wake] = wakes(taskId);
+    expect(wake?.payload).toContain("failed: its report was set aside because");
+    expect(wake?.payload).toContain("still steerable");
+    expect(wake?.payload).not.toContain("to=functions");
+    // The brief it consumed reached the transcript: acked, not retried.
+    expect(inbox.allFor(taskId)).toHaveLength(0);
+
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    await supervisor.steerCrewmate(taskId, "say that again in plain words");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("say that again in plain words");
+  });
+
+  it("the quiet watchdog still fires for a crewmate that never reports", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, wakes } = withSupervision(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Quiet", intent: intentOf("go") });
+    await tick();
+    await endTurn(crewmate, taskId);
+    expect(wakes(taskId)).toHaveLength(0);
+
+    await supervisor.steerCrewmate(taskId, "keep going");
+    await tick();
+    supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(wakes(taskId).map((row) => row.payload)).toEqual([
+      expect.stringContaining("has produced no events"),
+    ]);
+  });
+});
+
+describe("the cancel purge (interaction P0, WI-2)", () => {
+  it("cancelling a task with three pending rows leaves zero, and spares everyone else's", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const killJobs = vi.fn();
+    const { supervisor, inbox, tasks } = setup(crewmate, { killJobs });
+    const { taskId } = await supervisor.commission({ title: "Doomed", intent: intentOf("go") });
+    await tick();
+
+    expect(await supervisor.steerCrewmate(taskId, "one more thing")).toBe("queued-next-turn");
+    inbox.enqueue("supervision", `[fm-op] crewmate 1 reported on task ${taskId}: stale`, taskId);
+    inbox.enqueue("firstmate", `[fm-op] fleet event escalated to you (task ${taskId})`, taskId);
+    inbox.enqueue("supervision", "[fm-op] another task's report", "other-task");
+    inbox.enqueue("firstmate", "[fm-op] a notice about no task");
+    const aboutTask = () => [
+      ...inbox.allFor(taskId),
+      ...inbox.allFor("supervision").filter((row) => row.ref === taskId),
+      ...inbox.allFor("firstmate").filter((row) => row.ref === taskId),
+    ];
+    expect(aboutTask()).toHaveLength(3);
+
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    crewmate.failPrompt("aborted");
+    await tick();
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(aboutTask()).toHaveLength(0);
+    expect(killJobs).toHaveBeenCalledWith(taskId);
+    expect(inbox.allFor("supervision").map((row) => row.ref)).toEqual(["other-task"]);
+    expect(inbox.allFor("firstmate").map(renderWake)).toEqual(["[fm-op] a notice about no task"]);
+  });
+
+  it("an idle cancel purges a wake still queued about the task", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Idle", intent: intentOf("go") });
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Found it; the PR is open." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    inbox.enqueue("firstmate", `[fm-op] a wake about task ${taskId}`, taskId);
+    expect(inbox.allFor("firstmate").filter((row) => row.ref === taskId)).toHaveLength(1);
+
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    expect(inbox.allFor("firstmate").filter((row) => row.ref === taskId)).toHaveLength(0);
+  });
+
+  it("purges in the close's own transaction: a close that fails keeps every row", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Keep", intent: intentOf("go") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    inbox.enqueue("supervision", "[fm-op] a queued wake", taskId);
+
+    vi.spyOn(tasks, "close").mockImplementationOnce(() => {
+      throw new Error("disk full");
+    });
+    await expect(supervisor.settleTask(taskId, "discard")).rejects.toThrow("disk full");
+    expect(inbox.allFor("supervision").filter((row) => row.ref === taskId)).toHaveLength(1);
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+});
+
+describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
+  const fmOps = (ops: string[]) => ops.filter((line) => line.startsWith("[fm-op]"));
+
+  it("queued guidance going out as the next turn is a feed line, not a Firstmate wake", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Tidy the meter test",
+      intent: intentOf("Start"),
+    });
+    await tick();
+
+    expect(await supervisor.steerCrewmate(taskId, "also cover the reset")).toBe("queued-next-turn");
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(crewmate.promptCalls.at(-1)).toBe("also cover the reset");
+    expect(fmOps(ops)).toEqual([]);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "Task Tidy the meter test guidance queued: it will be delivered when the task is free",
+    });
+  });
+
+  it("guidance a cancel leaves undelivered stays on the task's timeline and wakes nobody", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, ops, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Tidy the meter test",
+      intent: intentOf("Start"),
+    });
+    await tick();
+
+    await supervisor.steerCrewmate(taskId, "stop after the first file");
+    // Cancel mid-turn: the lane still holds the steer when the turn ends.
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    crewmate.failPrompt("aborted");
+    await tick();
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(fmOps(ops)).toEqual([]);
+    const note = tasks.timeline(taskId).find((event) => event.kind === "note");
+    expect(note).toMatchObject({ feed: true, data: { undelivered: 1 } });
+    expect(note?.text).toContain("stop after the first file");
+  });
+
+  it("a background job that outlives its task is a feed line, not a Firstmate wake", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Tidy the meter test",
+      intent: intentOf("Start"),
+    });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    crewmate.failPrompt("aborted");
+    await tick();
+
+    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "pnpm test" exited 0');
+    expect(fmOps(ops)).toEqual([]);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'A background job finished after "Tidy the meter test" ended; its output was set aside.',
+      taskId: expect.any(String),
+    });
+  });
+});
+
+describe("fleet hygiene (interaction P0, WI-7)", () => {
+  async function idleCommissioned(prepare?: (harness: ReturnType<typeof setup>) => void) {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    prepare?.(harness);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Tidy the meter test",
+      intent: intentOf("go"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    return { ...harness, crewmate, taskId };
+  }
+
+  it("installs dependencies in the new worktree before the first turn, and records it", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, paths } = setup(crewmate);
+    const install = deferred<{ outcome: "offline"; ms: number }>();
+    vi.mocked(workspace.installDependencies).mockReturnValue(install.promise);
+    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    await tick();
+
+    expect(workspace.installDependencies).toHaveBeenCalledWith(join(paths.worktreesDir, taskId));
+    expect(crewmate.promptCalls).toEqual([]);
+    install.resolve({ outcome: "offline", ms: 2_300 });
+    await tick();
+
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(tasks.timeline(taskId).find((event) => event.kind === "note")).toMatchObject({
+      text: "the project's dependencies are installed (2s)",
+      data: { install: "offline", ms: 2_300 },
+      feed: false,
+    });
+  });
+
+  it("a failed install is a timeline fact and the crewmate still starts", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks } = setup(crewmate);
+    vi.mocked(workspace.installDependencies).mockResolvedValue({
+      outcome: "failed",
+      ms: 900,
+      error: "ERR_PNPM_FETCH_404 not found",
+    });
+    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    await tick();
+    expect(crewmate.promptCalls).toHaveLength(1);
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(tasks.timeline(taskId).map((event) => event.text)).toContain(
+      "could not install the project's dependencies - ERR_PNPM_FETCH_404 not found; the crewmate can do it itself",
+    );
+  });
+
+  it("a task cancelled while its install runs closes as dropped and never starts a turn", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks } = setup(crewmate);
+    const install = deferred<{ outcome: "skipped" }>();
+    vi.mocked(workspace.installDependencies).mockReturnValue(install.promise);
+    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    await tick();
+
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    install.resolve({ outcome: "skipped" });
+    await tick();
+
+    expect(crewmate.promptCalls).toEqual([]);
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+      workspaceState: "removed",
+    });
+  });
+
+  it("a task cancelled while idle closes as dropped with no worktree", async () => {
+    const { supervisor, tasks, workspace, taskId, paths } = await idleCommissioned();
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+
+    const record = tasks.get(taskId);
+    expect(record).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+      workspaceState: "removed",
+    });
+    expect(record?.closedAt).toBeGreaterThan(0);
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: join(paths.worktreesDir, taskId) }),
+    );
+  });
+
+  it("a cancel removes a worktree holding unlanded work after saving it, quietly", async () => {
+    const { supervisor, tasks, workspace, taskId } = await idleCommissioned(({ workspace }) => {
+      vi.mocked(workspace.retireTaskWorktree).mockImplementation(async (ws) => {
+        await workspace.removeTaskWorktree(ws);
+        return {
+          outcome: "removed",
+          kept: {
+            ref: `refs/infinitary/kept/${ws.taskId}`,
+            sha: "abc",
+            dirty: true,
+            unlandedCommits: 2,
+          },
+        };
+      });
+    });
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", workspaceState: "removed" });
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(1);
+    const saved = tasks.timeline(taskId).find((event) => event.data?.saved);
+    // The line names no ref: the kept ref is never shown on a surface.
+    expect(saved).toMatchObject({
+      feed: false,
+      text: "working copy removed - its 2 commits not in yet and uncommitted edits saved first",
+      data: { saved: { ref: `refs/infinitary/kept/${taskId}` } },
+    });
+  });
+
+  it("a cancel keeps a worktree whose work could not be saved, says so in the feed, and a confirmed discard clears it", async () => {
+    const { supervisor, tasks, workspace, taskId } = await idleCommissioned(({ workspace }) => {
+      vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: false, unlandedCommits: 2 });
+      vi.mocked(workspace.retireTaskWorktree).mockResolvedValue({
+        outcome: "kept",
+        reason: "fatal: unable to write new index file",
+      });
+    });
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", workspaceState: "present" });
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(tasks.timeline(taskId).find((event) => event.data?.kept)).toMatchObject({
+      feed: true,
+      text: "working copy kept - its work could not be saved first; discard to remove it",
+      data: { reason: "fatal: unable to write new index file" },
+    });
+
+    expect(await supervisor.settleTask(taskId, "discard")).toContain("2 commits");
+    expect(await supervisor.settleTask(taskId, "discard", true)).toBe(
+      'Discarded "Tidy the meter test".',
+    );
+    // The close stands as cancelled; only the worktree it kept is gone.
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "dropped",
+      closedReason: "cancelled",
+      workspaceState: "removed",
+    });
+  });
+
+  it("an idle crewmate with unlanded work stays active and resumable until settled (WI-11)", async () => {
+    const { supervisor, tasks, workspace, taskId } = await idleCommissioned(({ workspace }) => {
+      vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: false, unlandedCommits: 3 });
+    });
+    // There is no `finish`: a finished crewmate is not a close. The row stays
+    // active and idle, its worktree intact, until the captain settles it.
+    expect(tasks.get(taskId)).toMatchObject({ status: "active", activity: "idle" });
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    // It is settled by landing, merging, or discarding - here, landing.
+    await supervisor.settleTask(taskId, "land", undefined, "captain");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+  });
+
+  it("boot reconciliation reports leftover task branches in one feed line and deletes nothing", async () => {
+    const { supervisor, tasks, workspace, events, paths } = setup(fakeCrewmate());
+    mkdirSync(join(paths.defaultWorkspaceDir, ".git"), { recursive: true });
+    seedTask(tasks, { id: "gone", title: "Gone", status: "cancelled" });
+    seedTask(tasks, { id: "live", title: "Live", status: "idle", worktreeDir: "/work/live" });
+    vi.mocked(workspace.listTaskBranches).mockResolvedValue([
+      { branch: "fm/task-gone", taskId: "gone" },
+      { branch: "fm/task-live", taskId: "live" },
+      { branch: "fm/task-ghost", taskId: "ghost" },
+    ]);
+
+    await supervisor.reconcileFleetHygiene();
+
+    const notes = events.filter((event) => event.type === "firstmate_note");
+    expect(notes).toHaveLength(1);
+    const text = notes[0]?.type === "firstmate_note" ? notes[0].text : "";
+    expect(text).toMatch(/^2 leftover working copies kept, not deleted: /);
+    expect(text).toContain('fm/task-gone in default workspace ("Gone"');
+    expect(text).toContain("fm/task-ghost in default workspace (no task record)");
+    expect(text).not.toContain("fm/task-live");
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+  });
+
+  it("boot reconciliation retires every closed row's worktree, keeping only one whose work could not be saved", async () => {
+    const { supervisor, tasks, workspace, events } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "old", title: "Old", status: "cancelled", worktreeDir: "/work/old" });
+    seedTask(tasks, {
+      id: "unlanded",
+      title: "Unlanded",
+      status: "cancelled",
+      worktreeDir: "/work/u",
+    });
+    seedTask(tasks, { id: "kept", title: "Kept", status: "cancelled", worktreeDir: "/work/kept" });
+    vi.mocked(workspace.retireTaskWorktree).mockImplementation(async (ws) => {
+      if (ws.taskId === "kept") return { outcome: "kept", reason: "fatal: bad object HEAD" };
+      await workspace.removeTaskWorktree(ws);
+      return { outcome: "removed", kept: null };
+    });
+
+    await supervisor.reconcileFleetHygiene();
+
+    expect(tasks.get("old")?.workspaceState).toBe("removed");
+    expect(tasks.get("unlanded")?.workspaceState).toBe("removed");
+    expect(tasks.get("kept")?.workspaceState).toBe("present");
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(2);
+    // The boot line is the surfacing; no per-task feed line on top of it.
+    expect(tasks.timeline("kept").some((event) => event.data?.kept)).toBe(false);
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: '1 closed task keeps its working copy because its work could not be saved first: "Kept".',
+    });
+  });
+
+  it("boot reconciliation retires a worktree directory no record explains, and never one a live row owns", async () => {
+    const { supervisor, tasks, workspace, events, paths } = setup(fakeCrewmate());
+    seedTask(tasks, {
+      id: "live",
+      title: "Live",
+      status: "idle",
+      worktreeDir: join(paths.worktreesDir, "live"),
+    });
+    seedTask(tasks, { id: "queued", title: "Queued", status: "queued" });
+    vi.mocked(workspace.listWorktreeDirs).mockReturnValue(["live", "queued", "ghost", "junk"]);
+    vi.mocked(workspace.workspaceAt).mockImplementation(async (name) =>
+      name === "ghost"
+        ? {
+            taskId: name,
+            cwd: join(paths.worktreesDir, name),
+            branch: `fm/task-${name}`,
+            repoDir: paths.defaultWorkspaceDir,
+          }
+        : null,
+    );
+
+    await supervisor.reconcileFleetHygiene();
+
+    expect(workspace.workspaceAt).toHaveBeenCalledTimes(2);
+    expect(workspace.retireTaskWorktree).toHaveBeenCalledTimes(1);
+    expect(workspace.retireTaskWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: "ghost" }),
+    );
+    // A non-empty directory that is not a checkout of its own cannot be
+    // saved, so it stays - and says so.
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: "1 working copy with no task is kept because its work could not be saved first: junk.",
+    });
+  });
+});
+
+/**
+ * Always clean (captain, 2026-09-22: "when a task closes, its worktree gets
+ * cleaned up period. no exceptions"), end to end over REAL git: the real
+ * supervisor's close and boot paths, the real workspace service, real
+ * repositories. A closed task's worktree and branch always go; whatever
+ * never merged is saved first as one commit on refs/infinitary/kept/<id>,
+ * outside every branch listing. The MacBook evidence this reproduces: 27 of
+ * 32 kept trees were squash-merged pull requests that git ancestry reads
+ * as unlanded forever, and 5 held real uncommitted edits.
+ */
+describe("closed task worktrees always go, work saved first (real git)", {
+  timeout: 60_000,
+}, () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  // Real git under a loaded machine (the whole suite runs in parallel):
+  // generous bounds, polled, so a slow host never reads as a failure.
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+
+  const kept = (taskId: string) => `refs/infinitary/kept/${taskId}`;
+
+  async function refExists(repoDir: string, ref: string): Promise<boolean> {
+    try {
+      await git(repoDir, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** A commissioned crewmate, idle, on a real worktree of the default repo. */
+  async function commissionReal() {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate, { realWorkspace: true });
+    const { taskId } = await harness.supervisor.commission({
+      title: "Tidy the meter test",
+      intent: intentOf("go"),
+    });
+    const record = await vi.waitFor(() => {
+      const current = harness.tasks.get(taskId);
+      if (!current?.worktreeDir || !existsSync(current.worktreeDir)) throw new Error("not yet");
+      return current;
+    }, REAL_GIT_WAIT);
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(harness.tasks.get(taskId)?.activity).toBe("idle"), REAL_GIT_WAIT);
+    return {
+      ...harness,
+      crewmate,
+      taskId,
+      cwd: record.worktreeDir,
+      branch: record.branch,
+      repoDir: record.repoDir,
+    };
+  }
+
+  async function cancelAndSettle(harness: Awaited<ReturnType<typeof commissionReal>>) {
+    await harness.supervisor.interruptCrewmate(harness.taskId, "cancel");
+    await vi.waitFor(
+      () => expect(harness.tasks.get(harness.taskId)?.workspaceState).not.toBe("present"),
+      REAL_GIT_WAIT,
+    );
+    await harness.realWorkspace?.deletionsSettled();
+  }
+
+  it("a squash-merged task: tree and branch gone, its content recoverable from the kept ref", async () => {
+    const harness = await commissionReal();
+    const { cwd, branch, repoDir, taskId, tasks } = harness;
+    writeFileSync(join(cwd, "meter.txt"), "fixed meter\n");
+    await git(cwd, ["add", "-A"]);
+    await git(cwd, ["commit", "-m", "fix the meter"]);
+    // The pull request merged by squash: main carries the content, but not
+    // the branch's commit - ancestry calls it unlanded forever.
+    await git(repoDir, ["merge", "--squash", branch]);
+    await git(repoDir, ["commit", "-m", "fix the meter (#8)"]);
+
+    await cancelAndSettle(harness);
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", workspaceState: "removed" });
+    expect(existsSync(cwd)).toBe(false);
+    expect(await git(repoDir, ["branch", "--list", branch])).toBe("");
+    // Ancestry cannot see a squash merge, so a save IS made - harmless,
+    // since the content is also on main.
+    expect(await git(repoDir, ["show", `${kept(taskId)}:meter.txt`])).toBe("fixed meter");
+  });
+
+  it("a dirty dropped task: tracked and untracked edits recoverable from the kept ref, ignored files not", async () => {
+    const harness = await commissionReal();
+    const { cwd, branch, repoDir, taskId, tasks, events } = harness;
+    writeFileSync(join(cwd, ".gitignore"), "node_modules/\n");
+    await git(cwd, ["add", "-A"]);
+    await git(cwd, ["commit", "-m", "ignore deps"]);
+    writeFileSync(join(cwd, "README.md"), "edited, never committed\n");
+    mkdirSync(join(cwd, "src"));
+    writeFileSync(join(cwd, "src", "new.ts"), "export const brandNew = true;\n");
+    mkdirSync(join(cwd, "node_modules"));
+    writeFileSync(join(cwd, "node_modules", "huge.js"), "dependency\n");
+    // The crewmate's own index is left as it was: staged here, unstaged there.
+    await git(cwd, ["add", "README.md"]);
+
+    await cancelAndSettle(harness);
+
+    expect(tasks.get(taskId)?.workspaceState).toBe("removed");
+    expect(existsSync(cwd)).toBe(false);
+    expect(await git(repoDir, ["branch", "--list", branch])).toBe("");
+    const ref = kept(taskId);
+    expect(await git(repoDir, ["show", `${ref}:README.md`])).toBe("edited, never committed");
+    expect(await git(repoDir, ["show", `${ref}:src/new.ts`])).toBe("export const brandNew = true;");
+    expect(await git(repoDir, ["show", `${ref}:.gitignore`])).toBe("node_modules/");
+    expect(await git(repoDir, ["ls-tree", "-r", "--name-only", ref])).not.toContain("node_modules");
+    // ONE commit whose parent is the branch's own head: the history rides along.
+    expect(await git(repoDir, ["log", "--format=%s", ref])).toContain("ignore deps");
+    // Quiet: a timeline line naming no ref, and no feed line about it.
+    const saved = tasks.timeline(taskId).find((event) => event.data?.saved);
+    expect(saved).toMatchObject({ feed: false });
+    expect(saved?.text).not.toContain("refs/");
+    expect(JSON.stringify(events)).not.toContain("refs/infinitary");
+  });
+
+  it("Start again recovers never-reported saved edits in a fresh working copy, not preloaded", async () => {
+    const harness = await commissionReal();
+    const { supervisor, tasks, crewmate, cwd, repoDir, taskId } = harness;
+    writeFileSync(join(cwd, "draft.txt"), "The harbour chart is half drawn.\n");
+    expect(tasks.get(taskId)?.outcome).toBeNull();
+    // Click immediately after cancellation: restart must join retirement,
+    // not race its save and deliver a branch that is about to disappear.
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    const result = supervisor.startAgain(taskId, "captain");
+    if (!result.ok) throw new Error(result.text);
+    await result.started;
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
+    const fresh = tasks.get(result.task.id);
+    if (!fresh) throw new Error("replacement missing");
+    expect(fresh.worktreeDir).not.toBe(cwd);
+    expect(existsSync(join(fresh.worktreeDir, "draft.txt"))).toBe(false);
+    const brief = crewmate.promptCalls[1] ?? "";
+    expect(brief).toContain(kept(taskId));
+    expect(brief).toContain("start from it");
+    const saved = await git(repoDir, ["show", `${kept(taskId)}:draft.txt`]);
+    expect(saved).toBe("The harbour chart is half drawn.");
+    // The crewmate applies the named work itself, through git in its copy.
+    await git(fresh.worktreeDir, ["restore", `--source=${kept(taskId)}`, "--", "draft.txt"]);
+    expect(readFileSync(join(fresh.worktreeDir, "draft.txt"), "utf8")).toBe(`${saved}\n`);
+    console.info(
+      "Start again recovery",
+      JSON.stringify({
+        old: {
+          key: tasks.get(taskId)?.key,
+          status: tasks.get(taskId)?.status,
+          outcome: tasks.get(taskId)?.outcome,
+        },
+        replacement: { key: fresh.key, status: fresh.status },
+        savedRef: kept(taskId),
+        saved,
+        preloaded: false,
+        applied: readFileSync(join(fresh.worktreeDir, "draft.txt"), "utf8"),
+        brief,
+      }),
+    );
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(tasks.get(fresh.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
+    await supervisor.interruptCrewmate(fresh.id, "cancel");
+    await vi.waitFor(
+      () => expect(tasks.get(fresh.id)?.workspaceState).toBe("removed"),
+      REAL_GIT_WAIT,
+    );
+    await harness.realWorkspace?.deletionsSettled();
+  });
+
+  it("the kept ref never shows as a branch, a task branch, or a leftover", async () => {
+    const harness = await commissionReal();
+    const { cwd, repoDir, taskId, events, supervisor, realWorkspace } = harness;
+    writeFileSync(join(cwd, "draft.txt"), "draft\n");
+    await cancelAndSettle(harness);
+
+    expect(await refExists(repoDir, kept(taskId))).toBe(true);
+    expect(await git(repoDir, ["branch", "--all", "--format=%(refname)"])).not.toContain(
+      "refs/infinitary",
+    );
+    expect(await git(repoDir, ["tag", "--list"])).toBe("");
+    expect(await realWorkspace?.listTaskBranches(repoDir)).toEqual([]);
+    await supervisor.reconcileFleetHygiene();
+    expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
+  });
+
+  it("boot: a closed task with its tree present and a tree with no record are both saved and removed", async () => {
+    const { supervisor, tasks, realWorkspace, paths, events } = setup(fakeCrewmate(), {
+      realWorkspace: true,
+    });
+    const workspace = realWorkspace as RealWorkspaceService;
+    // A task closed before this rule existed, its tree left behind dirty.
+    const closed = await workspace.createTaskWorktree("closed1");
+    writeFileSync(join(closed.cwd, "README.md"), "left dirty\n");
+    seedTask(tasks, {
+      id: "closed1",
+      title: "Closed long ago",
+      status: "cancelled",
+      worktreeDir: closed.cwd,
+      branch: closed.branch,
+      repoDir: closed.repoDir,
+    });
+    // A tree whose record is gone, with a commit that never merged.
+    const orphan = await workspace.createTaskWorktree("ghost1");
+    writeFileSync(join(orphan.cwd, "ghost.txt"), "orphaned work\n");
+    await git(orphan.cwd, ["add", "-A"]);
+    await git(orphan.cwd, ["commit", "-m", "orphaned work"]);
+    // A live task's tree is never touched.
+    const live = await workspace.createTaskWorktree("live1");
+    seedTask(tasks, {
+      id: "live1",
+      title: "Live",
+      status: "idle",
+      worktreeDir: live.cwd,
+      branch: live.branch,
+      repoDir: live.repoDir,
+    });
+
+    await supervisor.reconcileFleetHygiene();
+    await workspace.deletionsSettled();
+
+    const repoDir = paths.defaultWorkspaceDir;
+    expect(existsSync(closed.cwd)).toBe(false);
+    expect(tasks.get("closed1")?.workspaceState).toBe("removed");
+    expect(await git(repoDir, ["show", `${kept("closed1")}:README.md`])).toBe("left dirty");
+    expect(existsSync(orphan.cwd)).toBe(false);
+    expect(await git(repoDir, ["show", `${kept("ghost1")}:ghost.txt`])).toBe("orphaned work");
+    expect(await git(repoDir, ["branch", "--list", "fm/task-closed1", "fm/task-ghost1"])).toBe("");
+    expect(existsSync(live.cwd)).toBe(true);
+    expect(await git(repoDir, ["branch", "--list", "--format=%(refname:short)"])).toContain(
+      "fm/task-live1",
+    );
+    expect(await workspace.listWorktreeDirs()).toEqual(["live1"]);
+    expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
+  });
+
+  it("a save that fails keeps the tree and branch, and says so in the feed", async () => {
+    const harness = await commissionReal();
+    const { cwd, branch, repoDir, taskId, tasks } = harness;
+    writeFileSync(join(cwd, "precious.txt"), "unsaved work\n");
+    // Git can no longer write objects: the save cannot happen.
+    const objects = join(repoDir, ".git", "objects");
+    execFileSync("chmod", ["-R", "a-w", objects]);
+    try {
+      await harness.supervisor.interruptCrewmate(taskId, "cancel");
+      await vi.waitFor(
+        () => expect(tasks.timeline(taskId).find((event) => event.data?.kept)).toBeTruthy(),
+        REAL_GIT_WAIT,
+      );
+    } finally {
+      execFileSync("chmod", ["-R", "u+w", objects]);
+    }
+    expect(tasks.get(taskId)?.workspaceState).toBe("present");
+    expect(readFileSync(join(cwd, "precious.txt"), "utf8")).toBe("unsaved work\n");
+    expect(await git(repoDir, ["branch", "--list", "--format=%(refname:short)", branch])).toBe(
+      branch,
+    );
+    expect(tasks.timeline(taskId).find((event) => event.data?.kept)).toMatchObject({
+      feed: true,
+      text: "working copy kept - its work could not be saved first; discard to remove it",
+    });
+  });
+});
+
+/**
+ * Crewmate session replays (interaction P0, WI-1 + WI-2). Each fixture is a
+ * Pi session JSONL reconstructed from the Sep 14 evidence timeline: every
+ * user message starts a turn (the brief, a background job's result, a card
+ * choice), every assistant message ends one Pi turn, and a `replay_control`
+ * line cancels the task. The replay drives the real supervisor through the
+ * same entry points production uses and counts what reached supervision.
+ */
+describe("crewmate session replays (Sep 14)", () => {
+  type ReplayLine =
+    | { type: "session" }
+    | { type: "replay_control"; action: "cancel"; timestamp: string }
+    | {
+        type: "message";
+        timestamp: string;
+        message:
+          | { role: "user"; content: string }
+          | { role: "toolResult" }
+          | {
+              role: "assistant";
+              content: Array<
+                | { type: "text"; text: string }
+                | { type: "toolCall"; name: string; arguments: Record<string, unknown> }
+              >;
+            };
+      };
+
+  function readFixture(name: string): ReplayLine[] {
+    const url = new URL(`../../../tests/fixtures/replay/${name}`, import.meta.url);
+    return readFileSync(url, "utf8")
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line) as ReplayLine);
+  }
+
+  async function replay(name: string) {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { supervisor, ops, specs } = harness;
+    const lines = readFixture(name);
+    let taskId = "";
+    const cardIds: string[] = [];
+    let cancelledAt: number | undefined;
+    let wakesAtCancel = 0;
+    // Every wake the turn ends earned the Firstmate: one lane since S7c.
+    const wakes = () => ops.filter((line) => taskId && line.includes(taskId));
+    for (const [index, line] of lines.entries()) {
+      if (line.type === "replay_control") {
+        wakesAtCancel = wakes().length;
+        cancelledAt = Date.parse(line.timestamp);
+        await supervisor.interruptCrewmate(taskId, "cancel");
+        await tick();
+        continue;
+      }
+      if (line.type !== "message") continue;
+      const { message } = line;
+      if (message.role === "user") {
+        if (!taskId) {
+          ({ taskId } = await supervisor.commission({
+            title: "Replay",
+            intent: intentOf(message.content),
+          }));
+        } else if (message.content.startsWith("[job]")) {
+          supervisor.deliverJobResult(taskId, message.content);
+        } else {
+          const chosen = /\((\S+)\)\.$/.exec(message.content)?.[1] ?? "";
+          supervisor.act(cardIds.at(-1) ?? "", chosen);
+        }
+        await tick();
+        continue;
+      }
+      if (message.role !== "assistant") continue;
+      for (const part of message.content) {
+        if (part.type === "text") {
+          crewmate.emit({ type: "assistant_delta", taskId, text: part.text });
+        } else if (part.name === "emit_card") {
+          const args = part.arguments as {
+            title: string;
+            body: string;
+            actions: { id: string; label: string }[];
+          };
+          cardIds.push(syncCardId(specs[0]?.onCard?.(args)) ?? "");
+        }
+      }
+      crewmate.emit({ type: "turn_end", taskId });
+      // The prompt resolves after its last assistant message.
+      const next = lines.slice(index + 1).find((entry) => entry.type !== "session");
+      if (next?.type !== "message" || next.message.role === "user") {
+        crewmate.finishPrompt();
+        await tick();
+      }
+    }
+    return {
+      ...harness,
+      taskId,
+      cancelledAt,
+      wakesEmitted: cancelledAt === undefined ? wakes().length : wakesAtCancel,
+      // Wakes EMITTED after the cancel: one lane since S7c, and an emitted
+      // wake cannot be taken back, so the count is what came after it.
+      wakesAfterCancel: cancelledAt === undefined ? 0 : wakes().length - wakesAtCancel,
+    };
+  }
+
+  it("ba13eadd: eleven empty-text turn ends and one garbage turn yield at most one wake, and none after the cancel", async () => {
+    const run = await replay(
+      "sep14/crewmates/ba13eadd/sessions/2026-09-14T02-18-13-396Z_ba13eadd.jsonl",
+    );
+    // Before WI-1/WI-2 (69a350ca): 12 wakes, all 12 still queued at the cancel.
+    expect(run.wakesEmitted).toBeLessThanOrEqual(1);
+    expect(run.wakesAfterCancel).toBe(0);
+    expect(run.tasks.get(run.taskId)?.outcome ?? "").not.toContain("to=functions");
+  });
+
+  it("c9dab1e7: a plan card then a card-approved investigation yields no stale self-brief wakes", async () => {
+    const run = await replay(
+      "sep14/crewmates/c9dab1e7/sessions/2026-09-14T02-34-20-625Z_c9dab1e7.jsonl",
+    );
+    // Before WI-1 (69a350ca): 9 wakes, each re-sending the stale self-brief.
+    expect(run.wakesEmitted).toBeLessThanOrEqual(1);
+    expect(
+      run.inbox.allFor("supervision").some((row) => renderWake(row).includes("Self-brief")),
+    ).toBe(false);
+  });
+
+  it("lock refusals: the 21 Firstmate verbs refused during triage yield 0 refusals and every steer lands once", async () => {
+    type LockLine =
+      | { type: "source" }
+      | { type: "task"; alias: string; title: string }
+      | {
+          type: "call";
+          entry: string | null;
+          task: string;
+          verb: "steer";
+          message: string;
+        }
+      | {
+          type: "call";
+          entry: string | null;
+          task: string;
+          verb: "interrupt";
+          mode: "interrupt" | "cancel";
+        };
+    const url = new URL(
+      "../../../tests/fixtures/replay/lock-refusals-sep14.jsonl",
+      import.meta.url,
+    );
+    const lines = readFileSync(url, "utf8")
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line) as LockLine);
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops } = setup(crewmate);
+    const ids = new Map<string, string>();
+    for (const line of lines) {
+      if (line.type !== "task") continue;
+      const { taskId } = await supervisor.commission({
+        title: line.title,
+        intent: intentOf(line.title),
+      });
+      await tick();
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      ids.set(line.alias, taskId);
+    }
+
+    const refusals: string[] = [];
+    const steers: string[] = [];
+    let calls = 0;
+    for (const line of lines) {
+      if (line.type !== "call") continue;
+      calls += 1;
+      const taskId = ids.get(line.task) ?? "";
+      try {
+        if (line.verb === "steer") {
+          steers.push(line.message);
+          await supervisor.steerCrewmate(taskId, line.message);
+        } else {
+          await supervisor.interruptCrewmate(taskId, line.mode);
+        }
+      } catch (caught) {
+        refusals.push(`${line.entry ?? line.task}: ${String(caught)}`);
+      }
+      await tick();
+    }
+
+    expect(calls).toBe(21);
+    // Before WI-4 (f1f4443): 21 refusals, and every refused steer was lost.
+    // S7c retired the claim that produced them, so there is nothing left to
+    // refuse a steer - the fixture still proves every one is delivered once.
+    expect(refusals).toEqual([]);
+    expect(ops.filter((line) => line.includes("guidance"))).toEqual([]);
+    const delivered = [
+      ...crewmate.promptCalls,
+      ...vi.mocked(crewmate.steer).mock.calls.map(([text]) => String(text)),
+    ].join("\n\n");
+    for (const message of steers) {
+      expect(delivered.split(message).length - 1, message).toBe(1);
+    }
+  });
+
+  it("guidance queued: steers that become next turns wake the Firstmate 0 times (Sep 14: 39)", async () => {
+    // The Sep 14 steers from the lock-refusal fixture, each arriving while
+    // the crewmate's turn runs on a backend that takes guidance only as the
+    // next turn - the path that announced "the guidance queued ... is being
+    // delivered now" to the Firstmate once per delivery before WI-5.
+    const url = new URL(
+      "../../../tests/fixtures/replay/lock-refusals-sep14.jsonl",
+      import.meta.url,
+    );
+    const steers = readFileSync(url, "utf8")
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line) as { type: string; verb?: string; message?: string })
+      .flatMap((line) =>
+        line.type === "call" && line.verb === "steer" && line.message ? [line.message] : [],
+      );
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, ops, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Replay", intent: intentOf("go") });
+    await tick();
+    for (const message of steers) {
+      expect(await supervisor.steerCrewmate(taskId, message)).toBe("queued-next-turn");
+      crewmate.finishPrompt();
+      await tick();
+    }
+
+    expect(steers.length).toBeGreaterThan(10);
+    expect(ops.filter((line) => line.startsWith("[fm-op]"))).toEqual([]);
+    const announced = events.filter(
+      (event) => event.type === "firstmate_note" && event.text.startsWith("Task "),
+    );
+    expect(announced).toHaveLength(steers.length);
+    for (const message of steers) {
+      expect(
+        crewmate.promptCalls.filter((call) => call === message),
+        message,
+      ).toHaveLength(1);
+    }
+  });
+});
+
+describe("decision actions", () => {
+  const BODY =
+    "<p>Awaiting the job queue removes the race.</p><ul><li>Mocking the clock is faster.</li></ul>";
+
+  async function decisionOnScreen(crewmate: FakeCrewmate) {
+    const harness = setup(crewmate);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Fix the flaky test",
+      intent: intentOf("fix the flaky test"),
+    });
+    await tick();
+    const onCard = harness.specs[0]?.onCard;
+    const cardId = syncCardId(
+      onCard?.({
+        title: "Two ways to fix the flaky test",
+        body: BODY,
+        actions: [
+          { id: "await-queue", label: "Await the queue", default: true },
+          { id: "mock-clock", label: "Mock the clock" },
+        ],
+      }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    return { ...harness, taskId, cardId: cardId ?? "", onCard };
+  }
+
+  it("marks the default primary and orders the footer: the choices, then the default", async () => {
+    const crewmate = fakeCrewmate();
+    const { cards, cardId } = await decisionOnScreen(crewmate);
+    const card = cards().find((entry) => entry.id === cardId) as Card;
+    expect(card.actions).toEqual([
+      { id: "mock-clock", label: "Mock the clock", variant: "secondary" },
+      { id: "await-queue", label: "Await the queue", variant: "primary", default: true },
+    ]);
+  });
+
+  it("captures frame settings once in the author turn and durable task history", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cardStore, cardId, tasks, taskId } = await decisionOnScreen(crewmate);
+    const value = { planes: [{ name: "inner", speed: 0.5, tiltDeg: 42 }], paused: false };
+    const json = JSON.stringify(value);
+    supervisor.act(cardId, "mock-clock", "frame", value);
+    // The choice closed the card: a second dispatch finds nothing to choose.
+    expect(supervisor.act(cardId, "mock-clock", "frame", value)).toEqual({});
+    await tick();
+    expect(crewmate.promptCalls.filter((text) => text.includes(json))).toHaveLength(1);
+    expect(
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "steered" && event.text.includes(json)),
+    ).toHaveLength(1);
+    // A script's choice is recorded as the script's, never as the captain's.
+    expect(cardStore.chosenAction(cardId)).toBe("script:mock-clock");
+  });
+
+  it.each([null, false, 0, ""])("preserves a falsy frame value %j", async (value) => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cardId } = await decisionOnScreen(crewmate);
+    supervisor.act(cardId, "mock-clock", "frame", value);
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain(
+      `Card action value (JSON): ${JSON.stringify(value)}`,
+    );
+  });
+
+  it("rejects oversized frame values before changing the card and ignores chrome values", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, cardId } = await decisionOnScreen(crewmate);
+    expect(() => supervisor.act(cardId, "mock-clock", "frame", "界".repeat(1400))).toThrow(
+      "4,096 bytes",
+    );
+    expect(cards().find((card) => card.id === cardId)?.status).toBe("ready");
+    supervisor.act(cardId, "mock-clock", "chrome", { ignored: true });
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain('the user chose "Mock the clock"');
+    expect(crewmate.promptCalls.at(-1)).not.toContain("Card action value");
+  });
+
+  it("carries a footer click's answers to the author in words, and records them on the close (contract 4.22)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cardId, tasks, taskId } = await decisionOnScreen(crewmate);
+    const answers = [
+      { name: "runner", values: ["ci"], labels: ["On the checks only"], changed: true },
+      { name: "notes", values: [], changed: false },
+    ];
+
+    supervisor.act(cardId, "mock-clock", "chrome", { answers });
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain(
+      `Card "Two ways to fix the flaky test": the user chose "Mock the clock" (mock-clock).\nThe user's answers to the card's questions:\n- runner: "On the checks only" (ci), changed\n- notes: no answer, as proposed`,
+    );
+    const resolved = tasks.timeline(taskId).find((event) => event.kind === "card_resolved");
+    expect(resolved?.data).toEqual({ cardId, action: "mock-clock", answers });
+  });
+
+  it("refuses a footer click whose answers do not parse or pass the value bound, leaving the card up", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, cardId } = await decisionOnScreen(crewmate);
+    expect(() =>
+      supervisor.act(cardId, "mock-clock", "chrome", { answers: [{ name: "x" }] }),
+    ).toThrow("could not be read");
+    expect(() =>
+      supervisor.act(cardId, "mock-clock", "chrome", {
+        answers: [{ name: "notes", values: ["界".repeat(1400)], changed: true }],
+      }),
+    ).toThrow("4,096 bytes");
+    expect(cards().find((card) => card.id === cardId)?.status).toBe("ready");
+  });
+
+  it("closes a flagged duplicate with resolution duplicate and one feed line (WI-14)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards, cardStore, events } = setup(crewmate);
+    await supervisor.commission({ title: "Explain", intent: intentOf("explain delivered") });
+    await tick();
+    const first = syncCardId(
+      specs[0]?.onCard?.({
+        title: "Delivered means the crewmate stopped",
+        body: "<p>closeRecord sets it.</p>",
+        actions: [],
+      }),
+    );
+    const second = syncCardId(
+      specs[0]?.onCard?.({
+        title: "What delivered means",
+        body: "<p>closeRecord sets it when the crewmate stops.</p>",
+        actions: [],
+      }),
+    );
+    await tick();
+    const result = supervisor.flagDuplicate({
+      cardId: second ?? "",
+      duplicateOf: first ?? "",
+      note: "same as the card before it",
+    });
+    await tick();
+    expect(result.status).toBe("flagged");
+    expect(cards().some((card) => card.id === second)).toBe(false);
+    expect(cardStore.chosenAction(second ?? "")).toBe("duplicate");
+    expect(events).toContainEqual({
+      type: "firstmate_note",
+      text: 'Closed "What delivered means" as a duplicate of "Delivered means the crewmate stopped".',
+    });
+    // A refusal changes nothing and says nothing.
+    const eventsBefore = events.length;
+    expect(
+      supervisor.flagDuplicate({ cardId: second ?? "", duplicateOf: first ?? "", note: "again" })
+        .status,
+    ).toBe("already-flagged");
+    expect(events).toHaveLength(eventsBefore);
+  });
+});
+
+/**
+ * The personal workspace (talk-to-personalize Step 4): a personal-ui commission
+ * is bound to the personal workspace by the host, runs with no worktree
+ * and the two panel checks, stamps and commits through the personal
+ * delegate, closes done on a report with no captain-turn witness, and refuses every
+ * settle and every settle-effect card.
+ */
+describe("CrewSupervisor personal workspace (Step 4)", () => {
+  function liveSetup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
+    const base = setup(crewmate, extras);
+    const workspaceDir = join(base.paths.fleetDir, "personal");
+    mkdirSync(workspaceDir, { recursive: true });
+    execFileSync("git", ["-C", workspaceDir, "init", "-q", "-b", "main"]);
+    const commits: { taskId: string; message: string }[] = [];
+    const lints: { id?: string }[] = [];
+    const captures: { id: string; taskId: string }[] = [];
+    const live = { begun: [] as string[], ended: [] as string[] };
+    const personal = {
+      workspaceDir,
+      repo: () => base.repos.ensurePersonal(workspaceDir),
+      surfaces: () => [{ id: "open-prs", title: "Open PRs", placement: { x: "right" as const } }],
+      beginLiveTask: (taskId: string) => {
+        live.begun.push(taskId);
+      },
+      endLiveTask: (taskId: string) => {
+        live.ended.push(taskId);
+      },
+      commitTurn: vi.fn(async (taskId: string, message: string) => {
+        commits.push({ taskId, message });
+        return { committed: true, sha: "abcdef0123456789", touched: ["tokyo-clock"], findings: [] };
+      }),
+      lint: vi.fn(async (input: { id?: string }) => {
+        lints.push(input);
+        return "tokyo-clock: No findings.";
+      }),
+      capture: vi.fn(async (input: { id: string; taskId: string }) => {
+        captures.push(input);
+        return { ok: false as const, id: input.id, reason: "no host" };
+      }),
+    };
+    // The delegate is an option of the supervisor; the harness built one
+    // without it, so a second supervisor is built over the same stores.
+    const supervisor = new CrewSupervisor({
+      ...crewSessions(base.paths, base.sessions.open, base.specs),
+      workspace: base.workspace,
+      repos: base.repos,
+      tasks: base.tasks,
+      cardStore: base.cardStore,
+      inbox: base.inbox,
+      paths: base.paths,
+      personal,
+      recordSort: (input) => {
+        base.sorts.push({ taskId: input.taskId, verdict: input.verdict, rule: input.rule });
+        input.effect?.();
+      },
+      broadcastEvent: (event) => base.events.push(event),
+      broadcastCards: () => {},
+    });
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake) => base.ops.push(served(wake)),
+      retryConverse: vi.fn(),
+    });
+    return { ...base, supervisor, personal, workspaceDir, commits, lints, captures, live };
+  }
+
+  it("binds a personal-ui commission to the personal workspace with no worktree, the checks, and a brief that names no delivery", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: {
+        goal: "A Tokyo clock panel",
+        userWords: "make me a tokyo clock",
+        kind: "personal-ui",
+      },
+      // A repo_id the model passed along is ignored: the host binds the workspace.
+      repoId: (await h.repos.setup({ kind: "init", name: "elsewhere" })).repo.id,
+    });
+    await tick();
+    const record = h.tasks.get(taskId);
+    expect(record).toMatchObject({
+      status: "active",
+      repoDir: h.workspaceDir,
+      worktreeDir: "",
+      branch: "",
+      workspaceState: "none",
+    });
+    expect(h.repos.get(record?.repoId ?? "")).toMatchObject({
+      name: "personal",
+      kind: "personal",
+      delivery: "local-only",
+    });
+    expect(h.workspace.createTaskWorktree).not.toHaveBeenCalled();
+    const spec = h.specs.at(-1);
+    expect(spec?.cwd).toBe(h.workspaceDir);
+    expect(typeof spec?.onLintPanel).toBe("function");
+    expect(typeof spec?.onCapturePanel).toBe("function");
+    expect(await spec?.onLintPanel?.({})).toBe("tokyo-clock: No findings.");
+    await spec?.onCapturePanel?.({ id: "tokyo-clock" });
+    expect(h.captures).toEqual([{ id: "tokyo-clock", taskId }]);
+    expect(h.live.begun).toEqual([taskId]);
+    const brief = crewmate.promptCalls[0] ?? "";
+    // A workspace kind, not a posture: the brief writes no Delivery line
+    // and no Rigor line, and leads the workspace facts with the in-place
+    // sentence the posture used to carry.
+    expect(brief).not.toContain("Delivery:");
+    expect(brief).not.toContain("Rigor:");
+    expect(brief).toContain("You build in place: this task carries no delivery posture");
+    expect(brief).toContain(`Workspace: ${h.workspaceDir}`);
+    expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail)');
+    // Nothing stamped a tier on the record either.
+    expect(h.tasks.get(taskId)?.shape?.rigor).toBeUndefined();
+  });
+
+  it("commits the turn with the report and closes done, with no wake and no settle", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    // No settle mode applies to a personal task, with the reason.
+    expect(await h.supervisor.settleTask(taskId, "land")).toContain(
+      "builds in place on the personal workspace",
+    );
+    expect(await h.supervisor.settleTask(taskId, "discard")).toContain(
+      "nothing to merge, land, or discard",
+    );
+    expect(await h.supervisor.settleTask(taskId, "merge-pr")).toContain("personal workspace");
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
+    expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
+    expect(h.tasks.get(taskId)).toMatchObject({
+      status: "done",
+      closedReason: "finished",
+      delivery: { mode: "in-place" },
+      workspaceState: "none",
+    });
+    expect(h.workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    // The report is the feed line; the commit is a timeline note, never a feed line.
+    const kinds = h.tasks.timeline(taskId).map((event) => [event.kind, event.feed]);
+    expect(kinds).toContainEqual(["report", true]);
+    expect(kinds).toContainEqual(["note", false]);
+    // A refused settle above is a note of its own (a refused merge is a row).
+    expect(
+      h.tasks.timeline(taskId).find((event) => event.kind === "note" && !event.data?.refused)?.text,
+    ).toContain("committed abcdef0 in the personal workspace (tokyo-clock)");
+    // No wake went anywhere: the panel is simply there.
+    expect(h.ops).toEqual([]);
+    expect(h.live.ended).toContain(taskId);
+    expect(crewmate.dispose).toHaveBeenCalled();
+  });
+
+  it("keeps the task open and tells the Firstmate when the commit fails, and closes once a later report commits", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    const refusal = "fatal: Unable to create '.git/index.lock': File exists.";
+    h.personal.commitTurn.mockRejectedValueOnce(new Error(refusal));
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.ops).toHaveLength(1));
+    await tick();
+    // Not done and not built in place: the files are saved, uncommitted.
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+    expect(h.tasks.get(taskId)?.delivery?.mode).toBeUndefined();
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+    expect(
+      h.tasks.timeline(taskId).find((event) => event.data?.commitFailed !== undefined)?.data,
+    ).toMatchObject({ commitFailed: refusal });
+    // The Firstmate hears git's words about this task.
+    expect(h.ops[0]).toContain(taskId);
+    expect(h.ops[0]).toContain(refusal);
+
+    // A steer starts the next turn; its report commits again and closes the task.
+    await h.supervisor.steerCrewmate(taskId, "the lock is gone, report again");
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added again." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
+    expect(h.tasks.get(taskId)).toMatchObject({
+      closedReason: "finished",
+      delivery: { mode: "in-place" },
+    });
+    expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added again." }]);
+    expect(h.ops).toHaveLength(1);
+  });
+
+  it("closes on a report beside a note, keeps the note, and sends no wake", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    const spec = h.specs.at(-1);
+    const cardId = syncCardId(
+      await spec?.onCard?.({
+        title: "Clock is ready",
+        body: "<p>The Tokyo clock is ready.</p><p>Your panel shows the current time.</p>",
+        actions: [],
+      }),
+    );
+    expect(cardId).toBeDefined();
+    spec?.onReport?.("Tokyo clock panel added.");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
+    expect(h.tasks.get(taskId)?.closedReason).toBe("finished");
+    expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
+    expect(h.supervisor.cardsSnapshot().find((card) => card.id === cardId)).toMatchObject({
+      taskId,
+      actions: [],
+    });
+    expect(h.ops).toEqual([]);
+    expect(h.sorts).toEqual([]);
+  });
+
+  it.each([false, true])("keeps a declared captain wait open quietly (note: %s)", async (note) => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    const spec = h.specs.at(-1);
+    const cardId = note
+      ? syncCardId(
+          await spec?.onCard?.({
+            title: "Clock is ready",
+            body: "<p>The Tokyo clock is ready.</p><p>Your panel shows the current time.</p>",
+            actions: [],
+          }),
+        )
+      : undefined;
+    spec?.onReport?.("Please check the clock's time zone.", undefined, {
+      wait: { reason: "check the time zone", ...(cardId ? { cardId } : {}) },
+    });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    await tick();
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+    expect(h.tasks.get(taskId)?.delivery?.captainWait).toMatchObject({
+      reason: "check the time zone",
+    });
+    expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+    expect(h.ops).toEqual([]);
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the task open when the report sits beside the crewmate's own decision card, and refuses a settle-effect card", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    const spec = h.specs.at(-1);
+    // The refusal is the tool's error text, thrown at the boundary.
+    expect(() =>
+      spec?.onCard?.({
+        requiredActions: [],
+        title: "Clock is ready",
+        body: completionBody("<p>Done.</p><ul><li>The clock renders in both themes.</li></ul>"),
+        actions: [
+          { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      }),
+    ).toThrow(/builds in place on the personal workspace/);
+    const cardId = syncCardId(
+      await spec?.onCard?.({
+        title: "Which zone?",
+        body: "<p>Tokyo or Osaka?</p><ul><li>Tokyo is the office.</li><li>Osaka is home.</li></ul>",
+        actions: [
+          { id: "tokyo", label: "Tokyo", default: true },
+          { id: "osaka", label: "Osaka" },
+        ],
+      }),
+    );
+    expect(cardId).toBeDefined();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Waiting on the zone." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    // The commit still happened; the decision is the captain's, so the task
+    // stays - and the whose-turn rule says the same thing about the wake:
+    // his card is up, so nothing is owed to the Firstmate (S7c).
+    expect(h.commits).toEqual([{ taskId, message: "Waiting on the zone." }]);
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+    expect(h.ops.filter((line) => line.includes("reported on task"))).toEqual([]);
+    expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+  });
+
+  it("refuses a personal-ui commission when this build has no personal workspace", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    await expect(
+      supervisor.commission({
+        title: "Clock",
+        intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+      }),
+    ).rejects.toThrow(/Personal panels are not available/);
+    expect(tasks.list()).toEqual([]);
+  });
+});
+
+describe("the reviewed tier (delivery rigor phase 2)", () => {
+  /** A direct-pr repository the host can derive a rigor for. */
+  function directPrRepo(name = "meterlab") {
+    const dir = scratchDir("infinitary-reviewed-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
+  /** One crewmate turn that ends with `text` as its report. */
+  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
+    crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  const BUILDER_REPORT =
+    "Intent: the meter test passes ten runs in a row. What changed: the test awaits the queue flush. Verified: pnpm test on the final commit; PR is green. Risk: low. Not done: nothing.";
+  const HEAD = "0123456789abcdef0123456789abcdef01234567";
+
+  it("derives the rigor at dispatch, stamps the shape, and names the tier in the brief - never in the classifier's input", async () => {
+    const repo = directPrRepo();
+    try {
+      const crewmate = fakeCrewmate();
+      const asked: KindInput[] = [];
+      const { supervisor, tasks, repos } = setup(crewmate, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        classifier: {
+          classify: async (input) => {
+            asked.push(input);
+            return { kind: "implement", source: "classifier:test", version: "kc1" };
+          },
+        },
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      // The captain's revised derivation (2026-09-19): standard by
+      // default, whatever the routed bucket says - the tier moves models,
+      // never ceremony.
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("make the meter test stop flaking"),
+        repoId: view.id,
+      });
+      await tick();
+      expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "implement", rigor: "standard" });
+      const brief = crewmate.promptCalls[0] ?? "";
+      expect(brief).toContain("Rigor: standard - the fixed pre-PR procedure");
+      // The rigor is appended at the mint, after the classifier ran on the
+      // work's own facts: none of what it saw names a rigor, and the
+      // record's stored brief is the template without the section.
+      expect(asked).toHaveLength(1);
+      expect(JSON.stringify(asked[0])).not.toContain("Rigor:");
+      expect(tasks.get(taskId)?.prompt).not.toContain("Rigor:");
+      expect(supervisor.crewStatus(taskId)[0]).toMatchObject({ rigor: "standard" });
+      // Reviewed is only ever asked for - the user's words or the repo's
+      // configured rigor - and its brief orders review before the PR.
+      const askedFor = await supervisor.commission({
+        title: "Careful fix",
+        intent: intentOf("review this carefully before it lands"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      expect(tasks.get(askedFor.taskId)?.shape?.rigor).toBe("reviewed");
+      expect(crewmate.promptCalls[1]).toContain(
+        "Rigor: reviewed - the review comes BEFORE the pull request",
+      );
+      expect(supervisor.crewStatus(askedFor.taskId)[0]).toMatchObject({
+        rigor: "reviewed",
+        review: "awaiting review",
+      });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("reads the captain's ask, the repository's standing rigor, then standard, in the captain's order", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const noted = fakeCrewmate();
+      const local = fakeCrewmate();
+      const { supervisor, tasks, repos, sessionSpecs } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [noted, local],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+
+      // The captain's word beats the repository's default.
+      const asked = await supervisor.commission({
+        title: "Quick fix",
+        intent: intentOf("just do it quickly"),
+        repoId: view.id,
+        shape: { rigor_ask: "quick" },
+      });
+      await tick();
+      expect(tasks.get(asked.taskId)?.shape).toMatchObject({ rigor_ask: "quick", rigor: "quick" });
+      expect(builder.promptCalls[0]).toContain("Rigor: quick - ");
+      expect(sessionSpecs[0]?.thinking).toMatchObject({ level: "xhigh", quick: true });
+
+      // The repository's standing rigor - the column set by talking (phase
+      // 3) - beats the default.
+      repos.configure(view.id, { rigor: "reviewed" });
+      const fromRepo = await supervisor.commission({
+        title: "Noted fix",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+      });
+      await tick();
+      expect(tasks.get(fromRepo.taskId)?.shape?.rigor).toBe("reviewed");
+      expect(sessionSpecs[1]?.thinking).toMatchObject({ level: "xhigh" });
+      expect(sessionSpecs[1]?.thinking.quick).toBeUndefined();
+      expect(noted.promptCalls[0]).toContain("Rigor: reviewed - ");
+      // A repo note is no longer a convention: nothing reads it.
+      repos.configure(view.id, { rigor: null });
+
+      // Every repository defaults to standard - the local-only default
+      // workspace too (captain ruling, 2026-09-19).
+      const scratch = await supervisor.commission({ title: "Scratch", intent: intentOf("poke") });
+      await tick();
+      expect(tasks.get(scratch.taskId)?.shape?.rigor).toBe("standard");
+      expect(local.promptCalls[0]).toContain("Rigor: standard - ");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("starts a crewmate's follow-up at the repository's rigor, never a legacy quick", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const followupCrewmate = fakeCrewmate();
+      const { supervisor, tasks, repos, specs } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        classifier: {
+          classify: async () => ({ kind: "fix", source: "classifier:test", version: "kc1" }),
+        },
+        crewmates: [followupCrewmate],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Investigate the keychain prompt",
+        intent: intentOf("find out why the keychain asks"),
+        repoId: view.id,
+      });
+      await tick();
+      // The crewmate files a follow-up; the Firstmate starts it on request
+      // with no word on care (the 2026-09-24 FI3-26 path).
+      (specs[0] as CrewmateSpec).onFollowup?.({
+        title: "Skip keychain settings on install",
+        goal: "A routine install never touches the keychain settings",
+        why: "every install re-asks for the keychain",
+      });
+      const followup = tasks.discoveredFrom(taskId)[0];
+      expect(followup?.status).toBe("open");
+      expect(await supervisor.startQueuedNow(followup?.key ?? "")).toContain("Started");
+      await tick();
+      expect(tasks.get(followup?.id ?? "")?.shape).toMatchObject({
+        kind: "fix",
+        rigor: "standard",
+      });
+      expect(followupCrewmate.promptCalls[0]).toContain("Rigor: standard - ");
+
+      // The repository's standing rigor reaches a follow-up too.
+      repos.configure(view.id, { rigor: "reviewed" });
+      (specs[0] as CrewmateSpec).onFollowup?.({
+        title: "Document the keychain",
+        goal: "The docs say when the keychain is touched",
+        why: "nobody knew",
+      });
+      const second = tasks.discoveredFrom(taskId).find((row) => row.id !== followup?.id);
+      await supervisor.startQueuedNow(second?.key ?? "");
+      await tick();
+      expect(tasks.get(second?.id ?? "")?.shape?.rigor).toBe("reviewed");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("reads a pre-shape row as the quick work it was, and a shapeless follow-up at the repository's rigor", async () => {
+    const legacyCrewmate = fakeCrewmate();
+    const followupCrewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(legacyCrewmate, {
+      routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      crewmates: [followupCrewmate],
+    });
+    // A row the Firstmate commissioned before the shape existed: its intent
+    // and its judged difficulty, no shape.
+    seedTask(tasks, {
+      id: "t-legacy",
+      title: "Queued before the shape",
+      prompt: "Goal: tidy the meter",
+      intent: intentOf("tidy the meter"),
+      difficulty: "low",
+      status: "queued",
+    });
+    // A crewmate's follow-up as it is filed: no intent, no difficulty, no
+    // shape.
+    seedTask(tasks, {
+      id: "t-followup",
+      title: "Filed before the fix",
+      prompt: "Goal: unflake the meter test",
+      status: "queued",
+    });
+    await supervisor.startQueuedNow("t-legacy");
+    await tick();
+    expect(tasks.get("t-legacy")?.shape).toMatchObject({
+      kind_source: "legacy-judgment",
+      rigor: "quick",
+    });
+    expect(legacyCrewmate.promptCalls[0]).toContain("Rigor: quick - ");
+    await supervisor.startQueuedNow("t-followup");
+    await tick();
+    expect(tasks.get("t-followup")?.shape?.rigor).toBe("standard");
+    expect(followupCrewmate.promptCalls[0]).toContain("Rigor: standard - ");
+  });
+
+  it("sends a reviewed task's report straight to the Firstmate, past the whose-turn sort", async () => {
+    const repo = directPrRepo();
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, sorts, ops, repos } = setup(crewmate, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(crewmate, taskId, BUILDER_REPORT);
+      expect(sorts).toEqual([]);
+      expect(ops.filter((line) => line.includes(`reported on task ${taskId}`))).toHaveLength(1);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("refuses review_of as text before anything exists: no report, no commits, a non-reviewed task, a review already open", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const scratch = fakeCrewmate();
+      const { supervisor, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [scratch, reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const quick = await supervisor.commission({
+        title: "Scratch",
+        intent: intentOf("poke"),
+        shape: { rigor_ask: "quick" },
+      });
+      await tick();
+      const review = (of: string) =>
+        supervisor.commission({
+          title: "Review",
+          intent: intentOf("fix it"),
+          shape: { review_of: of },
+        });
+
+      await expect(review(quick.taskId)).rejects.toThrow(/ships at the quick tier, not reviewed/);
+      // Review-before-PR: no PR is asked for, but the builder must have
+      // reported and its branch must have commits to read.
+      await expect(review(taskId)).rejects.toThrow(/has not reported yet/);
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      await expect(review(taskId)).rejects.toThrow(/no commits on its branch to review yet/);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      await expect(review("nope")).rejects.toThrow(/Unknown task "nope" in review_of/);
+
+      const first = await review(taskId);
+      await tick();
+      expect(first.crewmate).not.toBe("queued");
+      await expect(review(taskId)).rejects.toThrow(/already has a review open/);
+      // Only the reviewer was commissioned by the refused calls: three crewmates in all.
+      expect(supervisor.crewStatus()).toHaveLength(3);
+      expect(reviewer.promptCalls).toHaveLength(1);
+      // The brief reads the branch, not a PR: none exists yet.
+      expect(reviewer.promptCalls[0]).toContain(`Review branch fm/task-${taskId} at head ${HEAD}`);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("answers a review given a named model with the model that took it, since a review never routes on one (FI3-444)", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate({ model: { provider: "openai-codex", id: "gpt-5.5" } });
+      const { supervisor, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+
+      const review = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("review it on fable"),
+        shape: { review_of: taskId, override_model_id: "claude-fable-5-1" },
+      });
+      expect(review.model).toEqual({ named: "claude-fable-5-1", took: "openai-codex/gpt-5.5" });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("runs the review: host brief, blocks hold, findings idle, pass closes and releases the merge", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const mergePullRequest = vi.fn(async () => ({
+        ok: true,
+        text: "Change #55 is in on GitHub.",
+      }));
+      const { supervisor, tasks, repos, ops, inbox, specs, cards, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+        mergePullRequest,
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("make the meter test stop flaking"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      // Its first report names no review: none is open, and commissioning
+      // one is the core's rule.
+      expect(ops.find((line) => line.includes(`reported on task ${builderId}`))).not.toContain(
+        "Its open review",
+      );
+      // Review-before-PR: nothing is pushed yet - the reviewer reads the
+      // builder's branch at its committed head.
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+
+      // A completion card before the review is refused at the boundary.
+      // Its body carries the evidence contract (phase 3), so once the review
+      // passes the same card publishes.
+      const premature = () =>
+        (specs[0] as CrewmateSpec).onCard?.({
+          requiredActions: [],
+          title: "The meter test is steady",
+          body: completionBody(
+            [
+              "<h3>Intent</h3><p>The meter test passes ten runs in a row.</p>",
+              "<h3>What changed</h3><p>The test awaits the queue flush.</p>",
+              "<h3>Verified</h3><p>Reran the suite ten times.</p>",
+              "<h3>Risk</h3><p>Low.</p>",
+              "<h3>Not done</h3><p>Nothing.</p>",
+            ].join(""),
+          ),
+          actions: [
+            { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+            { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+          ],
+        });
+      expect(premature).toThrow(
+        /ships at the reviewed tier and its review has not passed yet \(awaiting review\)/,
+      );
+
+      // The reviewer: host-briefed, read-only by brief, kind review by the host.
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "whatever the Firstmate called it",
+        intent: intentOf("make the meter test stop flaking"),
+        repoId: view.id,
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const review = tasks.get(reviewId);
+      expect(review).toMatchObject({
+        title: "Review: Fix the meter test",
+        repoId: view.id,
+        status: "active",
+        difficulty: "high",
+      });
+      // The parent edge is the one stored review-to-builder join (the
+      // review_of fold): the shape carries no builder pointer beyond basis.
+      expect(review?.parentId).toBe(builderId);
+      expect(review?.shape).toEqual({
+        kind: "review",
+        kind_source: "host:review",
+        basis: builderId,
+      });
+      expect(review?.intent?.goal).toBe(
+        'Review the change for "Fix the meter test" and report findings.',
+      );
+      const brief = reviewer.promptCalls[0] ?? "";
+      expect(brief).toContain(
+        "You are reviewing, not building: change nothing, commit nothing, push nothing.",
+      );
+      expect(brief).toContain(`Review branch fm/task-${builderId} at head ${HEAD}`);
+      expect(brief).toContain(
+        `Changed-file checklist at ${HEAD} (committed paths against the default branch):\n- "src/meter.ts"\n- "tests/meter.test.ts"`,
+      );
+      expect(brief).toContain(`The builder's report:\n${BUILDER_REPORT}`);
+      expect(brief).toContain("make the meter test stop flaking");
+      // No rigor section on a review: it ships nothing.
+      expect(brief).not.toContain("Rigor:");
+      expect(review?.shape?.rigor).toBeUndefined();
+      // The hold: the review blocks the builder's close.
+      expect(tasks.blockersHoldingClose(builderId).map((row) => row.id)).toEqual([reviewId]);
+      // No cache of the join on the builder: the parent edge is the one.
+      const opened = tasks.get(builderId);
+      expect(opened?.delivery).not.toHaveProperty("reviewTaskId");
+      expect(opened && tasks.verdictReviewOf(opened)).toBeUndefined();
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
+      expect(supervisor.crewStatus(reviewId)[0]?.review).toBe(
+        `reviews ${tasks.get(builderId)?.key}`,
+      );
+      // One refusal, in review vocabulary: the review is a delivery child
+      // and never counts in the children-open gate, so the blocks rule is
+      // the single door and it has no proceed_with_open.
+      expect(await supervisor.settleTask(builderId, "merge-pr")).toMatch(
+        /Cannot merge: Cannot close .* while its review .*Review: Fix the meter test.* is still open/,
+      );
+      expect(mergePullRequest).not.toHaveBeenCalled();
+
+      // Findings: recorded on the builder, the reviewer idle and steerable,
+      // the wake to the Firstmate direct - supervision never sees it.
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 error src/meter.test.ts:12 the flush is awaited after the read - auto-fix\nF2 warning src/meter.ts:40 the copy says Later - ask-user\nrisk: medium - one production line moves.",
+      );
+      expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
+      expect(tasks.get(builderId)?.delivery).toMatchObject({
+        reviewVerdict: "findings",
+        reviewSha: HEAD,
+        reviewRisk: "medium",
+        reviewRiskNote: "one production line moves.",
+      });
+      const recorded = tasks.get(builderId);
+      expect(recorded && tasks.verdictReviewOf(recorded)?.id).toBe(reviewId);
+      const findingsWake = ops.find((line) => line.includes("with verdict findings"));
+      expect(findingsWake).toContain(`reported on review task ${reviewId}`);
+      expect(findingsWake).toContain(`the review of task ${builderId} "Fix the meter test"`);
+      expect(findingsWake).toContain("F1 error src/meter.test.ts:12");
+      // What comes next rides the wake (FI3-566 cut C): the builder was
+      // briefed reviewed, so its brief holds the fix rules and the auto-fix
+      // finding is relayed verbatim.
+      expect(findingsWake?.endsWith(` ${reviewFindingsNext(true)}`)).toBe(true);
+      expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));
+      expect(inbox.allFor("supervision")).toHaveLength(0);
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
+      expect(await supervisor.settleTask(builderId, "merge-pr")).toContain("Cannot merge");
+
+      // The builder's fix report names its open review, the verdict and
+      // head it last read, and the re-review a new head asks for.
+      await supervisor.steerCrewmate(
+        builderId,
+        "F1 error src/meter.test.ts:12 the flush is awaited after the read - auto-fix",
+      );
+      await tick();
+      const beforeFix = ops.length;
+      await reportTurn(builder, builderId, "Moved the await before the read; committed 89abcde.");
+      expect(ops.slice(beforeFix)).toEqual([
+        `[fm-op] crewmate 1 reported on task ${builderId} "Fix the meter test": Moved the await before the read; committed 89abcde. Its open review ${review?.key} last returned findings at 0123456. ${REVIEW_NEW_HEAD_NEXT}`,
+      ]);
+
+      // A re-review at the new head: the reviewer is steered like any idle
+      // crewmate, and its pass closes the review and releases the hold.
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await tick();
+      expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: pass\nNo findings.\nrisk: low - one test file changed.",
+      );
+      expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
+      expect(tasks.get(builderId)?.delivery).toMatchObject({
+        reviewVerdict: "pass",
+        reviewSha: HEAD,
+        reviewRisk: "low",
+        reviewRiskNote: "one test file changed.",
+      });
+      // The one feed line is the builder's own review event; the review
+      // task's close is silent.
+      const builderRecord = tasks.get(builderId) as TaskRecord;
+      const passed = tasks
+        .timeline(builderId)
+        .find((event) => event.kind === "review" && event.feed);
+      expect(passed?.text).toBe("review passed at 0123456, risk low: one test file changed.");
+      expect(taskFeedLine(builderRecord, passed as TaskEvent)?.text).toBe(
+        "Passed its review, low risk",
+      );
+      const closeEvent = tasks
+        .timeline(reviewId)
+        .find((event) => event.kind === "status" && event.data?.reason === "finished");
+      expect(closeEvent).toMatchObject({ feed: false, text: "review passed - Fix the meter test" });
+      // The wake refs the builder - the next move is on it, and the review's
+      // own lane was purged with its close.
+      const passWake = ops.find((line) => line.includes("passed at 0123456"));
+      expect(passWake).toContain(
+        `the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: one test file changed.)`,
+      );
+      expect(passWake).toContain("the hold is released");
+      expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review passed");
+      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+
+      // After the pass the builder pushes and opens the PR (the new
+      // ordering); the completion card then publishes, with the review
+      // beside CI in the host's facts strip - the verdict and risk on the
+      // line, the risk note on the cell's title - and the merge goes
+      // through.
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      const cardId = premature() as string;
+      await tick();
+      const card = cards().find((entry) => entry.id === cardId);
+      expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
+      expect(card?.body).toContain('title="one test file changed."');
+      expect(await supervisor.settleTask(builderId, "merge-pr", undefined, "captain")).toContain(
+        "Change #55",
+      );
+      expect(mergePullRequest).toHaveBeenCalledTimes(1);
+      expect(tasks.get(builderId)).toMatchObject({ status: "done", closedReason: "merged" });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("retires the review with the builder: a discard cascades, the parent is fixed, no orphaned reviewer", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 error src/meter.ts:12 the flush races the read - auto-fix\nrisk: medium - one line moves.",
+      );
+      expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
+
+      // The join is the parent edge, and the host keeps it: a re-parent
+      // would silently sever the verdict path.
+      expect(() => tasks.setParent(reviewId, null, "firstmate")).toThrow(/its parent is fixed/);
+
+      // The discard raises no children-open refusal for the review - a
+      // delivery child is not the captain's planned work - and the cascade
+      // retires it with the builder: closed superseded, silently, its
+      // worktree removed with its own close.
+      expect(await supervisor.settleTask(builderId, "discard", true)).toContain("Discarded");
+      expect(tasks.get(builderId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+      expect(tasks.get(reviewId)).toMatchObject({
+        status: "dropped",
+        closedReason: "superseded",
+      });
+      const closeEvent = tasks
+        .timeline(reviewId)
+        .find((event) => event.kind === "status" && event.data?.reason === "superseded");
+      expect(closeEvent).toMatchObject({ feed: false });
+      expect(closeEvent?.text).toContain('superseded - "Fix the meter test" closed');
+      expect(
+        vi
+          .mocked(workspace.removeTaskWorktree)
+          .mock.calls.some(([args]) => args.taskId === reviewId),
+      ).toBe(true);
+      // Nothing lingers: the closed review is no longer a crew row.
+      expect(supervisor.crewStatus(reviewId)).toEqual([]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("holds the completion card at the CI cap until the captain's answer and Firstmate's steer reopen the rounds (phase 3)", async () => {
+    const repo = directPrRepo();
+    try {
+      const crewmate = fakeCrewmate();
+      const checkCi = vi.fn(async () => "green" as const);
+      // The host's one clock, an hour off the process's: the captain's
+      // answer is stamped on it, not on `Date.now()`.
+      const hostNow = () => Date.now() + 3_600_000;
+      const { supervisor, tasks, repos, ops, specs, cards } = setup(crewmate, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        checkCi,
+        now: hostNow,
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      // A standard task, so the review hold stays out of the picture.
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "standard" },
+      });
+      await tick();
+      const completion = () =>
+        (specs[0] as CrewmateSpec).onCard?.({
+          requiredActions: [],
+          title: "The meter test is steady",
+          body: completionBody(
+            [
+              "<h3>Intent</h3><p>The meter test passes.</p>",
+              "<h3>What changed</h3><p>One await moved.</p>",
+              "<h3>Verified</h3><p>pnpm test on the final commit.</p>",
+              "<h3>Risk</h3><p>Low.</p>",
+              "<h3>Not done</h3><p>Nothing.</p>",
+            ].join(""),
+          ),
+          actions: [
+            { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+            { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+          ],
+        });
+
+      // The CI service counted the third red head and stamped the cap;
+      // the host's one wake follows.
+      tasks.recordDelivery(taskId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "red",
+        ciAt: Date.now(),
+        ciRounds: 3,
+        ciRedHead: HEAD,
+        ciCapAt: Date.now(),
+      });
+      supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
+      // The cap is a hold on the gate that exists (the primitives review, P2).
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
+      const capWakes = ops.filter((line) => line.includes("hit its CI cap"));
+      expect(capWakes).toHaveLength(1);
+      expect(capWakes[0]).toContain(`task ${taskId} "Fix the meter test" hit its CI cap`);
+      // The wake carries the FACTS and the structured ways out (contract
+      // v3.6, captain lock 3), never the card recipe it used to spell out.
+      expect(capWakes[0]).not.toContain("emit one decision card");
+      expect(capWakes[0]).toContain('"held": "ci-cap"');
+      expect(capWakes[0]).toContain('"label": "Try a premium model"');
+
+      // The card is refused at the cap even though CI reads green now, and
+      // the refusal costs no gh call.
+      await expect(completion()).rejects.toThrow(
+        /Card refused: this task hit its CI cap - 3 own repairs failed \(the cap is 3\)/,
+      );
+      expect(checkCi).not.toHaveBeenCalled();
+
+      // A Firstmate steer before the captain answered reopens nothing.
+      await supervisor.steerCrewmate(taskId, "keep going");
+      await tick();
+      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeDefined();
+      await expect(completion()).rejects.toThrow(/hit its CI cap/);
+
+      // The Firstmate's decision card on the task; the captain's answer is
+      // the fact the reopening steer needs.
+      const cardId = supervisor.addFirstmateCard({
+        taskId,
+        title: "Retry the meter fix?",
+        body: "<p>CI went red three times on this task.</p><ul><li>Retry, a stronger model, or discard.</li></ul>",
+        actions: [
+          { id: "retry", label: "Retry", default: true },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      });
+      await tick();
+      expect(cards().some((card) => card.id === cardId)).toBe(true);
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        ref: cardId,
+        reason: "the CI cap",
+      });
+      supervisor.act(cardId, "retry");
+      expect(tasks.get(taskId)?.delivery?.capAnsweredAt).toBe(hostNow());
+      // The answer releases the gate; the rounds wait for the relaying steer.
+      expect(tasks.get(taskId)?.gate).toBeNull();
+      // Still held: the answer is relayed by a steer, and until then the
+      // record stands.
+      await expect(completion()).rejects.toThrow(/hit its CI cap/);
+
+      // The steer with the answer reopens the rounds: one cap_reset event,
+      // both counters cleared, the card publishes on the live green reading.
+      await supervisor.steerCrewmate(taskId, "The captain says retry: fix the failing check.");
+      await tick();
+      expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "red", prNumber: 55 });
+      expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
+      expect(tasks.get(taskId)?.delivery?.ciCapAt).toBeUndefined();
+      expect(tasks.get(taskId)?.delivery?.capAnsweredAt).toBeUndefined();
+      const reset = tasks.timeline(taskId).filter((event) => event.kind === "cap_reset");
+      expect(reset).toHaveLength(1);
+      expect(reset[0]).toMatchObject({
+        actor: "firstmate",
+        feed: false,
+        text: "rounds reopened by the first mate's steer after the captain's answer - checks cap (3 rounds) reset",
+      });
+      const published = await completion();
+      expect(typeof published).toBe("string");
+      expect(checkCi).toHaveBeenCalledTimes(1);
+      // The wake was one, whatever happened after.
+      expect(ops.filter((line) => line.includes("hit its CI cap"))).toHaveLength(1);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("holds the re-reviews at the review cap: a third findings is one wake, no re-review goes out, and the answered steer reopens (phase 3)", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const findings = (n: number) =>
+        `verdict: findings\nF${n} error src/meter.test.ts:12 still racy - auto-fix\nrisk: medium - one line moves.`;
+      const HEAD_2 = HEAD.replace("0123", "aaaa");
+      const HEAD_3 = HEAD.replace("0123", "bbbb");
+
+      // Round 1 is the review; rounds 2 and 3 are the two re-reviews, each
+      // at a NEW head - a round is one per head (captain ruling,
+      // 2026-09-19), so a repeated verdict at the same head counts nothing.
+      await reportTurn(reviewer, reviewId, findings(1));
+      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(1);
+      // A repeated verdict at the SAME head records the verdict but spends
+      // no round.
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await tick();
+      await reportTurn(reviewer, reviewId, findings(1));
+      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(1);
+      expect(
+        tasks
+          .timeline(builderId)
+          .some((event) => event.kind === "review" && event.text.includes("round not counted")),
+      ).toBe(true);
+      tasks.recordDelivery(builderId, { headSha: HEAD_2 });
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_2}`);
+      await tick();
+      await reportTurn(reviewer, reviewId, findings(2));
+      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(2);
+      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
+      tasks.recordDelivery(builderId, { headSha: HEAD_3 });
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
+      await tick();
+      await reportTurn(reviewer, reviewId, findings(3));
+      expect(tasks.get(builderId)?.delivery).toMatchObject({ reviewRounds: 3 });
+      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeDefined();
+      // The third findings wake is the cap wake - one wake, not two.
+      const capped = ops.filter((line) => line.includes("past the review cap"));
+      expect(capped).toHaveLength(1);
+      expect(capped[0]).toContain("with verdict findings");
+      expect(capped[0]).toContain(
+        `This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers`,
+      );
+      expect(capped[0]).toContain('"held": "review-cap"');
+      expect(capped[0]).not.toContain("emit one decision card");
+      expect(tasks.get(builderId)?.gate).toEqual({
+        kind: "captain",
+        ref: HEAD_3,
+        reason: "the review cap",
+      });
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review: findings (cap reached)");
+
+      // No re-review goes out while the cap holds; the refusal is text
+      // that names the door.
+      await expect(supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`)).rejects.toThrow(
+        new RegExp(
+          `Task ${reviewId} is the review of task ${builderId}, which hit its review cap \\(3 findings rounds; the cap is 2 re-reviews\\)`,
+        ),
+      );
+      expect(reviewer.promptCalls).toHaveLength(4);
+      // The builder's completion card is held by the unpassed review as
+      // before: nothing new to refuse there.
+
+      // The captain answers the Firstmate's card and the Firstmate steers
+      // the builder with it: the rounds reopen, and the re-review goes out.
+      const cardId = supervisor.addFirstmateCard({
+        taskId: builderId,
+        title: "Three findings rounds on the meter fix",
+        body: "<p>The reviewer keeps finding the race.</p><ul><li>Retry with the findings, or discard.</li></ul>",
+        actions: [
+          { id: "retry", label: "Retry with the findings", default: true },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      });
+      await tick();
+      expect(tasks.get(builderId)?.gate?.ref).toBe(cardId);
+      supervisor.act(cardId, "retry");
+      await supervisor.steerCrewmate(builderId, "The captain says retry: fix F3 and push.");
+      await tick();
+      expect(tasks.get(builderId)?.gate).toBeNull();
+      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBeUndefined();
+      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
+      expect(tasks.timeline(builderId).filter((event) => event.kind === "cap_reset")).toHaveLength(
+        1,
+      );
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
+        `review open (${tasks.get(reviewId)?.key})`,
+      );
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
+      await tick();
+      expect(reviewer.promptCalls).toHaveLength(5);
+      await reportTurn(reviewer, reviewId, "verdict: pass\nNo findings.\nrisk: low - one test.");
+      expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  describe("the served text of every cap wake (the typed envelope, P3)", () => {
+    const heldBlock = (id: string, held: string) => `
+\`\`\`json
+{
+  "held": "${held}",
+  "task": {
+    "id": "${id}",
+    "title": "Fix the meter test"
+  },
+  "ways": [
+    {
+      "label": "Retry with the captain's guidance",
+      "tool": "steer_crewmate",
+      "args": {
+        "task_id": "${id}"
+      }
+    },
+    {
+      "label": "Try a premium model",
+      "tool": "spawn_crewmate",
+      "args": {
+        "shape": {
+          "escalate_from": "${id}",
+          "premium_ask": true
+        }
+      }
+    },
+    {
+      "label": "Discard the work",
+      "tool": "settle_task",
+      "args": {
+        "task_id": "${id}",
+        "mode": "discard"
+      }
+    }
+  ]
+}
+\`\`\``;
+
+    const FINDINGS =
+      "verdict: findings\nF3 error src/meter.test.ts:12 still racy - auto-fix\nrisk: medium - one line moves.";
+
+    /** A builder with a PR, and its review task, the builder's review rounds already at `rounds`. */
+    async function underReview(rounds: number) {
+      const repo = directPrRepo();
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const env = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { supervisor, tasks, repos } = env;
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "green",
+        ciAt: Date.now(),
+        reviewRounds: rounds,
+        reviewRoundSha: HEAD.replace("0123", "aaaa"),
+      });
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const findings = () => reportTurn(reviewer, reviewId, FINDINGS);
+      return { ...env, repo, builderId, reviewId, findings };
+    }
+
+    it("the findings wake that reaches the review cap", async () => {
+      const { ops, repo, builderId, reviewId, findings } = await underReview(2);
+      try {
+        await findings();
+        expect(ops.filter((line) => line.includes("with verdict"))).toEqual([
+          `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: ${FINDINGS} This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.${heldBlock(builderId, "review-cap")}`,
+        ]);
+      } finally {
+        repo.dispose();
+      }
+    });
+
+    it("both cap wakes ride the Firstmate's lane as typed facts, and serve the pinned text", async () => {
+      const { supervisor, tasks, inbox, db, repo, builderId, reviewId, findings } =
+        await underReview(2);
+      try {
+        // The real agent's notifyOp: the inbox's deduped wake path.
+        supervisor.setFirstmateHooks({
+          notifyOp: (wake, origin, ref) => {
+            inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
+          },
+          retryConverse: vi.fn(),
+        });
+        await findings();
+        tasks.recordDelivery(builderId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: Date.now() });
+        supervisor.holdForCiCap(builderId, { rounds: 3, headSha: HEAD });
+        const stored = (
+          db
+            .prepare("SELECT payload FROM inbox WHERE recipient = ? ORDER BY id")
+            .all(FIRSTMATE_RECIPIENT) as { payload: string }[]
+        ).map((row) => JSON.parse(row.payload) as { facts?: { kind: string } });
+        const capRows = stored.filter(
+          (row) => row.facts?.kind === "review-cap" || row.facts?.kind === "ci-cap",
+        );
+        const report = `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: ${FINDINGS}`;
+        const ways = crewHoldWays(builderId);
+        expect(capRows).toEqual([
+          {
+            v: 1,
+            facts: {
+              kind: "review-cap",
+              task: { id: builderId, title: "Fix the meter test" },
+              rounds: 3,
+              cap: 2,
+              findings: {
+                kind: "review-verdict",
+                task: { id: reviewId, title: "Review: Fix the meter test" },
+                builder: { id: builderId, title: "Fix the meter test" },
+                crewmate: "crewmate 2",
+                verdict: "findings",
+                excerpt: FINDINGS,
+                cards: [],
+                briefed: true,
+              },
+            },
+            ways,
+          },
+          {
+            v: 1,
+            facts: {
+              kind: "ci-cap",
+              task: { id: builderId, title: "Fix the meter test" },
+              rounds: 3,
+              cap: 3,
+              head: HEAD,
+            },
+            ways,
+          },
+        ]);
+        const served = inbox
+          .allFor(FIRSTMATE_RECIPIENT)
+          .filter((row) => row.facts?.kind === "review-cap" || row.facts?.kind === "ci-cap")
+          .map(renderWake);
+        expect(served).toEqual([
+          `${report} This is findings round 3 on task ${builderId}, past the review cap of 2 re-reviews: no more re-reviews go out until the captain answers and your steer reopens the rounds.${heldBlock(builderId, "review-cap")}`,
+          `[fm-op] task ${builderId} "Fix the meter test" hit its CI cap: 3 own repairs failed (the cap is 3), last at 0123456. Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.${heldBlock(builderId, "ci-cap")}`,
+        ]);
+        // The same cap wake built again is not new information.
+        expect(
+          inbox.enqueueWake(
+            FIRSTMATE_RECIPIENT,
+            ciCapWake(
+              { id: builderId, title: "Fix the meter test" },
+              { rounds: 3, cap: 3, headSha: HEAD },
+            ),
+            "agent",
+            builderId,
+          ),
+        ).toBeNull();
+      } finally {
+        repo.dispose();
+      }
+    });
+  });
+
+  it("the served text of every review verdict wake (the typed envelope, P3)", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const reviewer2 = fakeCrewmate();
+      const env = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer, reviewer2],
+      });
+      const { supervisor, tasks, repos, ops, workspace, specs } = env;
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      // Re-review preparation needs the builder's committed head to remain readable.
+      const before = ops.length;
+      await reportTurn(reviewer, reviewId, "Standing by for the new head, nothing to say yet.");
+      (specs[1] as CrewmateSpec).onCard?.({
+        title: "A finding to look at",
+        body: "<p>One finding.</p>",
+        actions: [],
+      });
+      await tick();
+      await supervisor.steerCrewmate(reviewId, "review again");
+      await tick();
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 error src/meter.test.ts:12 racy - auto-fix\nrisk: medium - one line moves.",
+      );
+      await supervisor.steerCrewmate(reviewId, "review again");
+      await tick();
+      await reportTurn(reviewer, reviewId, "verdict: blocked\nno access to the branch");
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      await supervisor.steerCrewmate(reviewId, "review again");
+      await tick();
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 info src/meter.ts:1 a note - no-op",
+      );
+      const reviewKey = tasks.get(reviewId)?.key;
+      expect(ops.slice(before)).toEqual([
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with no verdict line, so no verdict was recorded: Standing by for the new head, nothing to say yet. ${REVIEWER_IDLE_NEXT}`,
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: verdict: findings\nF1 error src/meter.test.ts:12 racy - auto-fix\nrisk: medium - one line moves. Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: verdict: blocked\nno access to the branch Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated) (info-only findings; derived pass); the hold is released and review task ${reviewKey} is closed. crewmate 2's report: verdict: findings\nF1 info src/meter.ts:1 a note - no-op ${REVIEW_PASSED_NEXT}`,
+      ]);
+      const { taskId: r2 } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const b2 = ops.length;
+      vi.mocked(workspace.branchHead).mockResolvedValue(null);
+      await reportTurn(reviewer2, r2, "verdict: pass\nNo findings.\nrisk: low");
+      expect(ops.slice(b2)).toEqual([
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low); the hold is released and review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: verdict: pass\nNo findings.\nrisk: low ${REVIEW_PASSED_NEXT}`,
+      ]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("places the reviewer away from the builder's provider (R9): the router is asked to avoid it", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const asked: { taskId: string; avoidProvider?: string }[] = [];
+      const { supervisor, tasks, repos } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+        onRouteDecide: (args) =>
+          asked.push({
+            taskId: args.taskId,
+            ...(args.avoidProvider ? { avoidProvider: args.avoidProvider } : {}),
+          }),
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      expect(asked).toEqual([
+        { taskId: builderId },
+        { taskId: reviewId, avoidProvider: "openai-codex" },
+      ]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("records nothing on a report with no verdict line: an acknowledgment is not a verdict and spends no round", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: HEAD,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      // The exact shape of the four phantom rounds the record held before
+      // the fix: a "standing by" acknowledgment ending a turn.
+      await reportTurn(reviewer, reviewId, "Standing by. Send me the new SHA and I'll re-review.");
+      expect(tasks.get(reviewId)?.status).toBe("active");
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBeUndefined();
+      expect(tasks.get(builderId)?.delivery?.reviewRounds).toBeUndefined();
+      const wake = ops.find((line) => line.includes("with no verdict line"));
+      expect(wake).toContain("no verdict was recorded");
+      expect(ops.find((line) => line.includes("with verdict"))).toBeUndefined();
+      // The merge stays held regardless: failing toward the human costs
+      // no round, not the hold.
+      expect(tasks.blockersHoldingClose(builderId).map((row) => row.id)).toEqual([reviewId]);
+      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
+        `review open (${tasks.get(reviewId)?.key})`,
+      );
+
+      // Info-only findings derive a pass: info never blocks (the
+      // no-mistakes rule), so the review closes and the hold releases.
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await tick();
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 info docs/meter.md:3 the doc still names the old flow - no-op\nrisk: low - notes only.",
+      );
+      expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
+      expect(
+        tasks
+          .timeline(builderId)
+          .some(
+            (event) =>
+              event.kind === "review" && event.text.includes("(info-only findings; derived pass)"),
+          ),
+      ).toBe(true);
+      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("names the fix rules on the findings wake when the builder's care rose after its brief", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+      });
+      await tick();
+      // Briefed at standard care: the brief holds no fix rules.
+      expect(builder.promptCalls[0]).toContain(renderRigorSection("standard"));
+      expect(builder.promptCalls[0]).not.toContain(REVIEW_FIX_RULES);
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.updateFields(builderId, { policies: { rigor: "reviewed" } }, "firstmate");
+      supervisor.policiesChanged(builderId, { rigor: "reviewed" });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 error src/meter.test.ts:12 racy - auto-fix\nrisk: medium - one line moves.",
+      );
+      const wake = ops.find((line) => line.includes("with verdict findings"));
+      expect(wake?.endsWith(` ${reviewFindingsNext(false)}`)).toBe(true);
+      expect(reviewFindingsNext(false)).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
+    } finally {
+      repo.dispose();
+    }
+  });
+});
+
+describe("task-level delivery override", () => {
+  function gitRepo(name: string) {
+    const dir = scratchDir("infinitary-delivery-ask-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
+  it("inherits the repository when the captain said nothing about delivery", async () => {
+    const repo = gitRepo("meterlab");
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, repos } = setup(crewmate);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("fix the meter"),
+        repoId: view.id,
+      });
+      await tick();
+      expect(supervisor.taskDelivery(taskId)).toBe("direct-pr");
+      expect(repos.get(view.id)?.delivery).toBe("direct-pr");
+      expect(crewmate.promptCalls[0]).toContain("Delivery: direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("ships one task local-only on a direct-pr repo when the captain asked, and leaves the repo alone", async () => {
+    const repo = gitRepo("meterlab");
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, repos } = setup(crewmate);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("fix it but don't open a PR"),
+        repoId: view.id,
+        shape: { delivery_ask: "local-only" },
+      });
+      await tick();
+      expect(tasks.get(taskId)?.shape).toMatchObject({ delivery_ask: "local-only" });
+      expect(supervisor.taskDelivery(taskId)).toBe("local-only");
+      expect(repos.get(view.id)?.delivery).toBe("direct-pr");
+      expect(crewmate.promptCalls[0]).toContain("Delivery: local-only");
+      expect(crewmate.promptCalls[0]).not.toContain("Delivery: direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("opens a PR for one task on a local-only repo that has a remote", async () => {
+    const repo = gitRepo("meterlab");
+    execFileSync("git", [
+      "-C",
+      repo.dir,
+      "remote",
+      "add",
+      "origin",
+      "https://example.com/owner/meterlab.git",
+    ]);
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, repos } = setup(crewmate);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "local-only" });
+      expect(repos.get(view.id)?.origin).toBeTruthy();
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("open a PR for this one"),
+        repoId: view.id,
+        shape: { delivery_ask: "direct-pr" },
+      });
+      await tick();
+      expect(supervisor.taskDelivery(taskId)).toBe("direct-pr");
+      expect(supervisor.crewStatus(taskId)[0]?.delivery).toBe("direct-pr");
+      expect(repos.get(view.id)?.delivery).toBe("local-only");
+      expect(crewmate.promptCalls[0]).toContain("Delivery: direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("refuses a direct-pr ask with no repo, and on a repo with no remote", async () => {
+    const repo = gitRepo("meterlab");
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, repos } = setup(crewmate);
+      await expect(
+        supervisor.commission({
+          title: "Scratch PR",
+          intent: intentOf("open a PR"),
+          shape: { delivery_ask: "direct-pr" },
+        }),
+      ).rejects.toThrow(/managed repository/);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      expect(repos.get(view.id)?.origin).toBeNull();
+      await expect(
+        supervisor.commission({
+          title: "Local PR",
+          intent: intentOf("open a PR"),
+          repoId: view.id,
+          shape: { delivery_ask: "direct-pr" },
+        }),
+      ).rejects.toThrow(/remote/);
+      expect(crewmate.promptCalls).toEqual([]);
+      // Restating direct-pr needs a truthful approved address, just as its first choice does.
+      const origin = scratchDir("delivery-override-origin-");
+      execFileSync("git", ["-C", origin, "init", "--bare", "--initial-branch=main"], {
+        env: hostEnv(),
+      });
+      execFileSync("git", ["-C", view.path, "remote", "add", "origin", origin], {
+        env: hostEnv(),
+      });
+      repos.configure(view.id, { delivery: "direct-pr", origin });
+      const restated = await supervisor.commission({
+        title: "Same posture",
+        intent: intentOf("open a PR"),
+        repoId: view.id,
+        shape: { delivery_ask: "direct-pr" },
+      });
+      await tick();
+      expect(supervisor.taskDelivery(restated.taskId)).toBe("direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("escalates with the previous task's delivery_ask so the brief matches", async () => {
+    const repo = gitRepo("meterlab");
+    try {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, repos } = setup(crewmate, {
+        routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const previous = seedTask(tasks, {
+        id: "attempt1",
+        title: "Fix the meter",
+        status: "completed",
+        difficulty: "medium",
+        repoId: view.id,
+        worktreeDir: "/w/attempt1",
+        branch: "fm/task-attempt1",
+        shape: {
+          kind: "fix",
+          kind_source: "classifier:test",
+          delivery_ask: "local-only",
+        },
+        outcome: "I disabled the assertion.",
+      });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("that is not a fix, try again"),
+        repoId: view.id,
+        shape: { escalate_from: previous.key },
+      });
+      await tick();
+      expect(tasks.get(taskId)?.shape?.delivery_ask).toBe("local-only");
+      expect(supervisor.taskDelivery(taskId)).toBe("local-only");
+      expect(crewmate.promptCalls[0]).toContain("Delivery: local-only");
+      expect(crewmate.promptCalls[0]).not.toContain("Delivery: direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("treats every delivery_note as a refinement: only delivery_ask overrides the posture", async () => {
+    const repo = gitRepo("meterlab");
+    execFileSync("git", [
+      "-C",
+      repo.dir,
+      "remote",
+      "add",
+      "origin",
+      "https://example.com/owner/meterlab.git",
+    ]);
+    try {
+      const asked = fakeCrewmate();
+      const noted = fakeCrewmate();
+      const { supervisor, tasks, repos } = setup(asked, { crewmates: [noted] });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "local-only" });
+
+      const asked_ = await supervisor.commission({
+        title: "PR this",
+        intent: { goal: "g", userWords: "ship a PR" },
+        repoId: view.id,
+        shape: { delivery_ask: "direct-pr" },
+      });
+      await tick();
+      expect(tasks.get(asked_.taskId)?.shape).toMatchObject({ delivery_ask: "direct-pr" });
+      expect(supervisor.taskDelivery(asked_.taskId)).toBe("direct-pr");
+      expect(asked.promptCalls[0]).toContain("Delivery: direct-pr");
+
+      // A note that happens to read like a posture is still only a note:
+      // the posture-token convention went with `deliveryAskFromNote`.
+      const refined = await supervisor.commission({
+        title: "Stack it",
+        intent: {
+          goal: "g",
+          userWords: "stack on the open PR",
+          deliveryNote: "direct-pr",
+        },
+        repoId: view.id,
+      });
+      await tick();
+      expect(tasks.get(refined.taskId)?.shape?.delivery_ask).toBeUndefined();
+      expect(supervisor.taskDelivery(refined.taskId)).toBe("local-only");
+      expect(noted.promptCalls[0]).toContain("Delivery: local-only");
+      expect(noted.promptCalls[0]).toContain("Delivery note: direct-pr");
+    } finally {
+      repo.dispose();
+    }
+  });
+});
+
+/**
+ * The deliverable axis (crew-posture rationalization Task B, captain
+ * rulings F1-F4 and "make sure the crewmate doesn't attempt to commit
+ * changes or raise PRs"). An answer task is a first-class fact on the
+ * record: derived by the host, told the truth in its brief, refused every
+ * way of shipping, and closed when the captain resolves its card.
+ */
+describe("the deliverable axis (Task B)", () => {
+  const research = {
+    classify: async () =>
+      ({ kind: "research", source: "classifier:xai/grok-cheap", version: "kc1-abc" }) as const,
+  };
+
+  async function investigation(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
+    const harness = setup(crewmate, { classifier: research, ...extras });
+    const { taskId } = await harness.supervisor.commission({
+      title: "Why is the meter idle",
+      intent: intentOf("why is nothing running?"),
+    });
+    await tick();
+    return { ...harness, taskId };
+  }
+
+  it("stamps the deliverable on the record and tells the crewmate it ships nothing", async () => {
+    const crewmate = fakeCrewmate();
+    const { tasks, taskId } = await investigation(crewmate);
+    expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "research", deliverable: "answer" });
+    const brief = crewmate.promptCalls[0] ?? "";
+    // The three facts an answer task is told, and the two lines it is not.
+    expect(brief).toContain("this task's deliverable is an answer, not a change");
+    expect(brief).toContain("commit nothing, push nothing, and open no pull request");
+    expect(brief).toContain("Rigor: none - this task ships nothing");
+    expect(brief).not.toContain("Delivery: ");
+    expect(brief).not.toContain("Rigor: standard");
+    // And no rigor is stamped either: the record says it ships nothing.
+    expect(tasks.get(taskId)?.shape?.rigor).toBeUndefined();
+  });
+
+  it("refuses merge-pr and land on an answer task, and keeps discard", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId } = await investigation(crewmate);
+    for (const mode of ["merge-pr", "land"] as const) {
+      expect(await supervisor.settleTask(taskId, mode, true, "firstmate")).toContain(
+        "delivers an answer, not a change",
+      );
+    }
+    expect(tasks.get(taskId)?.status).toBe("active");
+    await supervisor.settleTask(taskId, "discard", true, "captain");
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+  });
+
+  it("refuses a card carrying a settle effect: an answer task emits no completion card", async () => {
+    const crewmate = fakeCrewmate();
+    const { specs, taskId } = await investigation(crewmate);
+    expect(taskId).toBeTruthy();
+    expect(() =>
+      specs[0]?.onCard?.({
+        requiredActions: [],
+        title: "Ready to merge",
+        body: completionBody("<p>Found it.</p>"),
+        actions: [{ id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+      }),
+    ).toThrow(/deliverable is an answer/);
+  });
+
+  it("closes done/answered when the captain chooses on its crewmate's card", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, inbox, taskId } = await investigation(crewmate);
+    specs[0]?.onCard?.({
+      title: "The meter is idle because the claim query filters on repo_id",
+      body: "<p>The claim query filters on repo_id.</p><p>Seven idle rows share an empty repo_id; the query skips every one.</p>",
+      actions: [
+        { id: "noted", label: "Got it", default: true },
+        { id: "dig", label: "Dig further" },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(card.id, "noted");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+    expect(tasks.timeline(taskId).some((event) => event.text.includes('chose "Got it"'))).toBe(
+      true,
+    );
+    const wake = inbox.pending(FIRSTMATE_RECIPIENT)[0];
+    expect(wake).toMatchObject({ ref: taskId, origin: "agent" });
+    expect(JSON.parse(wake ? renderWake(wake).replace("[fm-op] ", "") : "{}")).toEqual({
+      version: 1,
+      event: "answer_task_closed",
+      task: { id: taskId, key: tasks.get(taskId)?.key, title: "Why is the meter idle" },
+      card: { id: card.id, title: "The meter is idle because the claim query filters on repo_id" },
+      choice: { id: "noted", label: "Got it", effect: null },
+      close: { status: "done", reason: "answered", actor: "captain" },
+    });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+  });
+
+  it("serves the answer's close as the payload it is, byte for byte", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards, inbox, taskId, tasks } = await investigation(crewmate);
+    specs[0]?.onCard?.({
+      title: "The meter is idle",
+      body: "<p>The claim query filters on repo_id.</p><p>Seven idle rows.</p>",
+      actions: [
+        { id: "noted", label: "Got it", default: true },
+        { id: "dig", label: "Dig further" },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(card.id, "noted");
+    await tick();
+    const key = tasks.get(taskId)?.key;
+    expect(inbox.pending(FIRSTMATE_RECIPIENT).map(renderWake)).toEqual([
+      `[fm-op] {"version":1,"event":"answer_task_closed","task":{"id":"${taskId}","key":"${key}","title":"Why is the meter idle"},"card":{"id":"${card.id}","title":"The meter is idle"},"choice":{"id":"noted","label":"Got it","effect":null},"close":{"status":"done","reason":"answered","actor":"captain"}}`,
+    ]);
+  });
+
+  it("hands a direct effect to the shell and reports it to Firstmate without steering twice", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, specs, cards, taskId } = await investigation(crewmate);
+    specs[0]?.onCard?.({
+      title: "Open the setting",
+      body: "<p>Continue in Settings.</p><p>The setting is available there.</p>",
+      actions: [
+        {
+          id: "open",
+          label: "Open settings",
+          default: true,
+          effect: { kind: "open", target: "settings" },
+        },
+        { id: "stay", label: "Stay here" },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The decision is ready.");
+    expect(supervisor.act(card.id, "open")).toEqual({
+      effect: { kind: "open", target: "settings" },
+    });
+    await tick();
+    const pending = inbox.pending(FIRSTMATE_RECIPIENT)[0];
+    const payload = JSON.parse(pending ? renderWake(pending).replace("[fm-op] ", "") : "");
+    expect(payload.choice).toEqual({
+      id: "open",
+      label: "Open settings",
+      effect: { kind: "open", target: "settings" },
+    });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+  });
+
+  it("sends a dismissal to the answer's crewmate like every other card, and closes it answered on its finished report (FI3-435)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, inbox, ops, taskId } = await investigation(crewmate);
+    specs[0]?.onCard?.({ title: "The answer", body: "<p>Found it.</p>", actions: [] });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The answer is on its card for the captain to read.", undefined, {
+      wait: { reason: "read the answer", cardId: card.id },
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(inbox.pending(FIRSTMATE_RECIPIENT)).toEqual([]);
+    const opsBefore = ops.length;
+
+    // His close is not a choice: the task stays open and its crewmate is told.
+    supervisor.close(card.id);
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      `The captain closed your card "The answer" (${card.id}) without choosing.`,
+    );
+    // Until the crewmate says it is finished, the Firstmate cannot close an
+    // answer the captain asked for.
+    expect((await supervisor.closeAnswerUsedAsBasis(taskId)).text).toContain(
+      "once its crewmate reports it finished",
+    );
+    specs[0]?.onReport?.("The captain read the answer and nothing is left.", undefined, {
+      finished: true,
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(ops.slice(opsBefore)).toEqual([
+      expect.stringContaining("It declared its work finished"),
+    ]);
+    expect(await supervisor.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+  });
+
+  /**
+   * FI3-1581: the captain closes the crewmate's answer card, the crewmate
+   * reports finished, and Firstmate then puts its own card on that task.
+   */
+  async function dismissedAndFinished(crewmate: FakeCrewmate) {
+    const harness = await investigation(crewmate);
+    const { supervisor, specs, cards, taskId } = harness;
+    specs[0]?.onCard?.({ title: "Mac CI costs", body: "<p>Found it.</p>", actions: [] });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The answer is on its card.", undefined, {
+      wait: { reason: "read the answer", cardId: card.id },
+    });
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.close(card.id);
+    await tick();
+    specs[0]?.onReport?.("Own vs rent: owning wins for sustained work.", undefined, {
+      finished: true,
+    });
+    crewmate.finishPrompt();
+    await tick();
+    return harness;
+  }
+
+  it("keeps a Firstmate note on the stack when settle_task answered closes the task (FI3-1581)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId } = await dismissedAndFinished(crewmate);
+    const fmCardId = supervisor.addFirstmateCard({
+      taskId,
+      title: "Own vs rent for Mac CI",
+      body: "<p>Buying Macs costs far less for steady use.</p>",
+      actions: [],
+    });
+    const settled = await supervisor.closeAnswerUsedAsBasis(taskId);
+    await tick();
+    expect(settled).toMatchObject({ ok: true });
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+    expect(supervisor.cardsSnapshot().map((entry) => entry.id)).toContain(fmCardId);
+  });
+
+  it("keeps a Firstmate note emitted in an earlier turn when the task closes answered (FI3-1581)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, cards, taskId } = await dismissedAndFinished(crewmate);
+    const fmCardId = supervisor.addFirstmateCard({
+      taskId,
+      title: "Own vs rent for Mac CI",
+      body: "<p>Buying Macs costs far less for steady use.</p>",
+      actions: [],
+    });
+    supervisor.firstmateClosedOut();
+    await tick();
+    expect(cards().map((entry) => entry.id)).toContain(fmCardId);
+    expect(await supervisor.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
+    await tick();
+    expect(cards().map((entry) => entry.id)).toContain(fmCardId);
+  });
+
+  it("refuses settle_task answered while a Firstmate question on the task is still open (FI3-1581)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, taskId } = await dismissedAndFinished(crewmate);
+    const fmCardId = supervisor.addFirstmateCard({
+      taskId,
+      title: "Own vs rent for Mac CI",
+      body: "<p>Buying Macs costs far less for steady use.</p>",
+      actions: [
+        { id: "ok", label: "Got it", default: true },
+        { id: "more", label: "Dig further" },
+      ],
+    });
+    const settled = await supervisor.closeAnswerUsedAsBasis(taskId);
+    expect(settled.ok).toBe(false);
+    expect(settled.text).toContain('its card "Own vs rent for Mac CI" still asks the captain');
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(supervisor.cardsSnapshot().map((entry) => entry.id)).toContain(fmCardId);
+  });
+
+  it("re-renders a queued row's brief when the classifier turns it into an answer", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, { classifier: research });
+    const { taskId } = await supervisor.commission({
+      title: "Look into it later",
+      intent: intentOf("when the gate clears, find out why the meter idles"),
+      startAfter: { at: Date.now() - 1000 },
+    });
+    // Queued before the classifier ran: the deliverable is what the typed
+    // constraints alone say, so the stored brief carries a Delivery line.
+    expect(tasks.get(taskId)?.shape?.deliverable).toBe("change");
+    expect(tasks.get(taskId)?.prompt).toContain("Delivery: ");
+
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    // The gate-open classification made it an answer, and the brief the
+    // crewmate actually ran from says so instead of stating a posture it
+    // does not have.
+    expect(tasks.get(taskId)?.shape?.deliverable).toBe("answer");
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).not.toContain("Delivery: ");
+    expect(brief).toContain("commit nothing, push nothing, and open no pull request");
+  });
+
+  /**
+   * A crewmate on a direct-pr project files a follow-up, and the classifier
+   * sorts it when it starts (FI3-598). The follow-up has no intent: its
+   * brief is the one rendered at filing, before any kind existed.
+   */
+  async function filedFollowup(kind: "research" | "fix") {
+    const origin = fakeCrewmate();
+    const followup = fakeCrewmate();
+    const harness = setup(origin, {
+      crewmates: [followup],
+      openChange: vi.fn(async () => "opened"),
+      checkChange: vi.fn(async () => "green"),
+      readWorkflow: vi.fn(async () => "workflow log"),
+      downloadArtifact: vi.fn(async () => "downloaded ZIP"),
+      classifier: {
+        classify: async (input) =>
+          ({
+            kind: input.title === "Fix the merge check" ? "fix" : kind,
+            source: "classifier:test",
+            version: "kc1",
+          }) as const,
+      },
+    });
+    const { repo } = await harness.repos.setup({ kind: "init", name: "checks" });
+    harness.repos.configure(repo.id, { delivery: "direct-pr" });
+    const { taskId } = await harness.supervisor.commission({
+      title: "Fix the merge check",
+      intent: intentOf("fix the merge check"),
+      repoId: repo.id,
+    });
+    await tick();
+    harness.specs[0]?.onFollowup?.({
+      title: "Investigate cancelled duplicate checks",
+      goal: "Find out why a cancelled check run keeps the version red",
+      why: "A later run passed on the same version",
+    });
+    const filed = harness.tasks.discoveredFrom(taskId)[0] as TaskRecord;
+    expect(filed.intent).toBeNull();
+    expect(filed.prompt).toContain("Delivery: direct-pr");
+    await harness.supervisor.startQueuedNow(filed.key);
+    await tick();
+    return {
+      shape: harness.tasks.get(filed.id)?.shape,
+      brief: followup.promptCalls[0] ?? "",
+      spec: harness.specs[1] as CrewmateSpec,
+    };
+  }
+
+  it("briefs a follow-up the classifier calls an answer as one, matching the tools it gets (FI3-598)", async () => {
+    const { shape, brief, spec } = await filedFollowup("research");
+    expect(shape).toMatchObject({ kind: "research", deliverable: "answer" });
+    // No posture it cannot act on, and the answer's shape in its place.
+    expect(brief).not.toContain("Delivery: ");
+    expect(brief).not.toContain("Rigor: standard");
+    expect(brief).toContain("this task's deliverable is an answer, not a change");
+    expect(brief).toContain("Rigor: none - this task ships nothing");
+    // An answer gets no origin section, so it keeps the line telling it to read the origin.
+    expect(brief).toContain("Read the origin's report and card with the tasks query");
+    expect(brief).not.toContain("Recorded origin ");
+    expect(spec.onOpenChange).toBeUndefined();
+    expect(spec.onCheckChange).toBeUndefined();
+    expect(spec.onReadWorkflow).toBeDefined();
+    expect(spec.onDownloadArtifact).toBeDefined();
+  });
+
+  it("keeps a follow-up the classifier calls a change on its posture, rigor and delivery tools (FI3-598)", async () => {
+    const { shape, brief, spec } = await filedFollowup("fix");
+    expect(shape).toMatchObject({ kind: "fix", deliverable: "change", rigor: "standard" });
+    expect(brief).toContain("Delivery: direct-pr");
+    expect(brief).toContain("Rigor: standard");
+    expect(brief).not.toContain("deliverable is an answer");
+    // A change is handed its origin's findings, so its origin reaches it
+    // once: the section, without the filing's line telling it to go and read them.
+    expect(brief.split("Recorded origin ").length).toBe(2);
+    expect(brief).not.toContain("Read the origin's report and card with the tasks query");
+    expect(await spec.onOpenChange?.({ title: "t", body: "b" })).toBe("opened");
+    expect(await spec.onCheckChange?.()).toBe("green");
+  });
+
+  it("carries a verified basis's report and card into the builder's brief", async () => {
+    const answerCrew = fakeCrewmate();
+    const builderCrew = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, cardStore, paths } = setup(answerCrew, {
+      crewmates: [builderCrew],
+      classifier: {
+        classify: async (input) =>
+          input.title.startsWith("Why")
+            ? ({ kind: "research", source: "classifier:test", version: "kc1" } as const)
+            : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
+      },
+    });
+    const answer = await supervisor.commission({
+      title: "Why is the meter idle",
+      intent: intentOf("why is nothing running?"),
+    });
+    await tick();
+    const fullCard = `<p>The claim query filters on repo_id.</p><h3>Scope</h3><details><summary>Full specification</summary>${"<p>Full scoped clause.</p>".repeat(800)}</details><h3>Amendment</h3><p>Amendment: replacement-only height interpolation; stable external pager.</p>`;
+    specs[0]?.onCard?.({
+      title: "The claim query filters on repo_id",
+      body: fullCard,
+      actions: [],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === answer.taskId) as Card;
+    answerCrew.emit({
+      type: "assistant_delta",
+      taskId: answer.taskId,
+      text: "Found it: the claim query filters on repo_id.",
+    });
+    answerCrew.emit({ type: "turn_end", taskId: answer.taskId });
+    answerCrew.finishPrompt();
+    await tick();
+    const answers = [
+      { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
+    ];
+    supervisor.replyToCard(card.id, "build it as adjusted", undefined, undefined, answers);
+    await tick();
+    supervisor.close(card.id);
+    await tick();
+    const key = tasks.get(answer.taskId)?.key ?? answer.taskId;
+    tasks.recordReport(answer.taskId, { text: "The investigation is complete." });
+    const earlyAmendment = `First-draw at final responsive width. ${"Exact scoped evidence. ".repeat(100)}Reduced motion.`;
+    cardStore.appendMessage({ cardId: card.id, who: "captain", text: earlyAmendment, at: 1 });
+    for (let i = 0; i < 15; i++)
+      cardStore.appendMessage({
+        cardId: card.id,
+        who: "crewmate",
+        text: `Later discussion ${i}`,
+        at: 2 + i,
+      });
+    cardStore.appendMessage({ cardId: card.id, who: "host", text: "   ", at: 20 });
+
+    const built = await supervisor.commission({
+      title: "Fix the claim query",
+      intent: intentOf("fix it then"),
+      shape: { basis: key },
+    });
+    await tick();
+    const brief = builderCrew.promptCalls[0] ?? "";
+    expect(brief).toContain(`grounded in ${key}`);
+    expect(brief).toContain("Found it: the claim query filters on repo_id.");
+    // The card is a file of the builder's own the brief names, whole, past
+    // the old 16 KiB cut; the brief itself carries none of its HTML.
+    const handed = handedCard(brief);
+    expect(handed.body).toBe(fullCard);
+    expect(handed.file).toBe(join(paths.crewmatesDir, built.taskId, "source-cards", `${key}.html`));
+    expect(brief).not.toContain("<p>The claim query filters on repo_id.</p>");
+    expect(brief).not.toContain("Full scoped clause.");
+    // The choice, the settings and the thread stay words in the brief.
+    expect(brief).toContain("build it as adjusted");
+    expect(brief).toContain('"tiltDeg":57');
+    expect(brief).toContain("latest submitted settings/answers");
+    expect(brief).toContain(earlyAmendment);
+    expect(brief).toContain("- crewmate: Later discussion 14");
+    // A blank message says nothing, so the thread quotes none.
+    expect(brief).not.toContain("- host:");
+    tasks.recordReport(answer.taskId, { text: "A later short closure." });
+    tasks.recordReport(built.taskId, { text: "Builder finished." });
+    for (let i = 0; i < 550; i++) tasks.noteProgress(built.taskId, `Later checkpoint ${i}`);
+    const reread = await specs[1]?.onQueryTasks?.({ key: tasks.get(built.taskId)?.key });
+    expect(reread?.rows[0]?.brief).toBe(brief);
+    expect(handedCard(reread?.rows[0]?.brief ?? "").body).toBe(fullCard);
+    expect(reread?.rows[0]?.brief).toContain('"tiltDeg":57');
+    const evidence = process.env.INFINITARY_SPEC_DELIVERY_EVIDENCE;
+    if (evidence)
+      writeFileSync(
+        evidence,
+        JSON.stringify(
+          {
+            served: brief,
+            cardFile: handed,
+            retrievedBuilder: reread?.rows[0],
+            retrievedSource: (await specs[1]?.onQueryTasks?.({ key }))?.rows[0],
+          },
+          null,
+          2,
+        ),
+      );
+  });
+
+  it("hands a builder the prototype its basis was built from, not the cards that came after (FI3-658)", async () => {
+    const mockCrew = fakeCrewmate();
+    const builderCrew = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, cardStore } = setup(mockCrew, {
+      crewmates: [builderCrew],
+      classifier: {
+        classify: async () =>
+          ({ kind: "implement", source: "classifier:test", version: "kc1" }) as const,
+      },
+    });
+    const prototypeBody =
+      "<p>Layout B puts each label in a side column.</p><p>At 360 px every status line fits the top row.</p>";
+    const mock = await supervisor.commission({
+      title: "Mock a roomier hover card",
+      intent: intentOf("i'd like to see some mocks and decide"),
+    });
+    await tick();
+    // The prototype, and the captain's Build it with the settings left on it.
+    specs[0]?.onCard?.({
+      title: "Three mocks to pick from",
+      body: prototypeBody,
+      actions: [
+        { id: "build-it", label: "Build it", default: true },
+        { id: "abandon", label: "Abandon" },
+      ],
+    });
+    mockCrew.emit({ type: "turn_end", taskId: mock.taskId });
+    mockCrew.finishPrompt();
+    await tick();
+    const prototype = cards().find((entry) => entry.taskId === mock.taskId) as Card;
+    const settings = [
+      { name: "settings", values: ['{"layout":"B","maxWidthPx":360}'], changed: true, json: true },
+    ] as const;
+    supervisor.act(prototype.id, "build-it", "chrome", { answers: settings });
+    await tick();
+    // The build goes on, and other cards land on the same task: a Firstmate
+    // note the captain closes, a Firstmate decision the captain answers, and the
+    // crewmate's own completion card, merged.
+    supervisor.close(
+      supervisor.addFirstmateCard({
+        taskId: mock.taskId,
+        title: "The prototype did not have build approval",
+        body: "<p>A Firstmate note about the build.</p>",
+        actions: [],
+      }),
+    );
+    supervisor.act(
+      supervisor.addFirstmateCard({
+        taskId: mock.taskId,
+        title: "Keep the build going?",
+        body: "<p>A Firstmate decision about the build.</p>",
+        actions: [{ id: "keep-going", label: "Keep going", default: true }],
+      }),
+      "keep-going",
+    );
+    await tick();
+    cardStore.upsert({
+      ...prototype,
+      id: `${prototype.id}-built`,
+      createdAt: Date.now() + 1,
+      title: "The hover card is built",
+      body: "<p>Completion card body.</p>",
+      actions: [
+        {
+          id: "merge",
+          label: "Merge the pull request",
+          variant: "primary",
+          effect: { kind: "settle", mode: "merge" },
+        },
+      ],
+    });
+    cardStore.resolve(`${prototype.id}-built`, "merge");
+    tasks.recordReport(mock.taskId, { text: "Built as picked: layout B at 360 px." });
+    tasks.close(mock.taskId, { status: "done", reason: "merged", actor: "captain" });
+    const key = tasks.get(mock.taskId)?.key ?? mock.taskId;
+
+    await supervisor.commission({
+      title: "Show the model and reasoning in the hover card",
+      intent: intentOf("build on the hover card"),
+      shape: { basis: key },
+    });
+    await tick();
+    const brief = builderCrew.promptCalls[0] ?? "";
+    expect(brief).toContain(`grounded in ${key}`);
+    expect(handedCard(brief).body).toBe(prototypeBody);
+    expect(brief).not.toContain(prototypeBody);
+    expect(brief).toContain('The captain closed it by choosing "Build it".');
+    expect(brief).toContain("The captain's latest submitted settings/answers");
+    expect(brief).toContain('"maxWidthPx":360');
+    for (const later of [
+      "Completion card body.",
+      "A Firstmate note about the build.",
+      "A Firstmate decision about the build.",
+      '"Keep going"',
+    ]) {
+      expect(brief).not.toContain(later);
+    }
+  });
+
+  it("hands a builder its basis card as a file, whole with its script, style and pictures (FI3-700)", async () => {
+    const builder = fakeCrewmate();
+    const picture = `proto7-${"ab".repeat(16)}.png`;
+    const prototype = [
+      "<style>.meter{transform:rotate(57deg)}</style>",
+      '<div class="meter" data-tilt="57"></div>',
+      `<img src="app-frame://images/${picture}" alt="The tilted meter">`,
+      "<script>document.querySelector('.meter').dataset.ready = 'yes';</script>",
+    ].join("");
+    const { supervisor, tasks, paths } = setup(builder, {
+      savedCards: [
+        {
+          id: "card-proto7-1",
+          taskId: "proto7",
+          author: "crewmate",
+          priority: 1,
+          title: "Two meters to pick from",
+          meta: "",
+          body: prototype,
+          actions: [
+            { id: "build-it", label: "Build it", default: true },
+            { id: "abandon", label: "Abandon" },
+          ],
+          status: "ready",
+          createdAt: Date.now(),
+        },
+      ],
+    });
+    seedTask(tasks, {
+      id: "proto7",
+      title: "Mock the meter",
+      status: "completed",
+      shape: { kind: "plan", kind_source: "classifier:test", deliverable: "answer" },
+      outcome: "Two meters; the captain picked the tilted one.",
+    });
+    supervisor.addCardMessage("card-proto7-1", "captain", "tilt it a little less");
+    supervisor.act("card-proto7-1", "build-it", "chrome", {
+      answers: [{ name: "tilt", values: ["57"], changed: true }],
+    });
+    await tick();
+    const key = tasks.get("proto7")?.key ?? "proto7";
+
+    const built = await supervisor.commission({
+      title: "Build the tilted meter",
+      intent: intentOf("build it"),
+      shape: { basis: key },
+    });
+    await tick();
+    const brief = builder.promptCalls.at(-1) ?? "";
+    const pictureFile = `${paths.crewmatesDir}/proto7/cards/${picture}`;
+    // The file holds the card exactly as the captain read it, its picture
+    // pointing at the host's copy instead of a link only the app can open.
+    const handed = handedCard(brief);
+    expect(handed.file).toBe(join(paths.crewmatesDir, built.taskId, "source-cards", `${key}.html`));
+    expect(handed.body).toBe(prototype.replace(`app-frame://images/${picture}`, pictureFile));
+    // The brief names the file and the picture, and keeps the rest in words.
+    for (const html of ["<style>", "<script>", "data-tilt", "app-frame://"]) {
+      expect(brief).not.toContain(html);
+    }
+    expect(brief).toContain(`open them to see the design the captain saw:\n- ${pictureFile}`);
+    expect(brief).toContain('The captain closed it by choosing "Build it".');
+    expect(brief).toContain("- tilt:");
+    expect(brief).toContain("- captain: tilt it a little less");
+  });
+
+  it("hands a follow-up its origin's card as a file too", async () => {
+    const finder = fakeCrewmate();
+    const fixer = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, paths } = setup(finder, { crewmates: [fixer] });
+    const found = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    const finding = "<p>The meter test races its timer.</p><script>void 0;</script>";
+    specs[0]?.onCard?.({ title: "A flaky meter test", body: finding, actions: [] });
+    await tick();
+    expect(cards().some((card) => card.taskId === found.taskId)).toBe(true);
+    specs[0]?.onFollowup?.({ title: "Flaky meter test", goal: "unflake it", why: "it races" });
+    finder.finishPrompt();
+    await tick();
+    const filed = tasks.discoveredFrom(found.taskId)[0];
+    if (!filed) throw new Error("no follow-up was filed");
+
+    expect(await supervisor.startQueuedNow(filed.key)).toContain("Started");
+    await tick();
+    const brief = fixer.promptCalls.at(-1) ?? "";
+    const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
+    expect(brief).toContain(`Recorded origin ${originKey}`);
+    const handed = handedCard(brief);
+    expect(handed.body).toBe(finding);
+    expect(handed.file).toBe(
+      join(paths.crewmatesDir, filed.id, "source-cards", `${originKey}.html`),
+    );
+    expect(brief).not.toContain("races its timer");
+  });
+
+  it("hands a follow-up grounded on its own origin that origin once, as its basis", async () => {
+    const finder = fakeCrewmate();
+    const fixer = fakeCrewmate();
+    const { supervisor, tasks, specs } = setup(finder, { crewmates: [fixer] });
+    const found = await supervisor.commission({
+      title: "Find the meter race",
+      intent: intentOf("why does the meter test flake?"),
+    });
+    await tick();
+    specs[0]?.onFollowup?.({ title: "Flaky meter test", goal: "unflake it", why: "it races" });
+    finder.finishPrompt();
+    await tick();
+    tasks.recordReport(found.taskId, { text: "The meter test races its timer." });
+    const filed = tasks.discoveredFrom(found.taskId)[0];
+    if (!filed) throw new Error("no follow-up was filed");
+    const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
+    // Firstmate names the origin as the follow-up's basis.
+    tasks.recordShape(filed.id, { kind: "unclear", kind_source: "none", basis: originKey }, null);
+
+    await supervisor.startQueuedNow(filed.key);
+    await tick();
+    const brief = fixer.promptCalls.at(-1) ?? "";
+    expect(brief).toContain(`grounded in ${originKey}`);
+    expect(brief).toContain("The meter test races its timer.");
+    expect(brief).not.toContain("Recorded origin ");
+    expect(brief).not.toContain("Read the origin's report and card with the tasks query");
+  });
+
+  it("keeps the card whole in the brief when its file cannot be written", async () => {
+    const builder = fakeCrewmate();
+    const { supervisor, tasks, cardStore, paths } = setup(builder);
+    seedTask(tasks, {
+      id: "ans9",
+      title: "Why the meter idles",
+      status: "completed",
+      outcome: "The claim query filters on repo_id.",
+    });
+    const body = `<p>The claim query filters on repo_id.</p>${"<p>Clause.</p>".repeat(2000)}`;
+    cardStore.upsert({
+      id: "card-ans9-1",
+      taskId: "ans9",
+      author: "crewmate",
+      priority: 1,
+      title: "The claim query filters on repo_id",
+      meta: "",
+      body,
+      actions: [],
+      status: "ready",
+      createdAt: Date.now(),
+    });
+    const planned = supervisor.plan({
+      title: "Fix the claim query",
+      intent: intentOf("fix it"),
+      shape: { basis: tasks.get("ans9")?.key ?? "ans9" },
+    });
+    // A file where the folder belongs: the save fails, nothing is lost.
+    mkdirSync(join(paths.crewmatesDir, planned.id), { recursive: true });
+    writeFileSync(join(paths.crewmatesDir, planned.id, "source-cards"), "in the way");
+    expect(await supervisor.startQueuedNow(planned.key)).toContain("Started");
+    await tick();
+    const brief = builder.promptCalls.at(-1) ?? "";
+    expect(brief).toContain(`Its card, as the captain read it:\n${body}`);
+    expect(brief).not.toContain("open it to read the card");
+  });
+});
+
+describe("task-level autonomy and the host's merge hold (contract v3.9)", () => {
+  function gitRepo(name: string) {
+    const dir = scratchDir("infinitary-autonomy-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", [
+      "-C",
+      dir,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@localhost",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init",
+    ]);
+    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
+  /** A direct-pr repository, its autonomy as given, with one task on it. */
+  async function onRepo(
+    autonomy: boolean,
+    shape?: { autonomy_ask?: boolean },
+  ): Promise<{
+    dispose: () => void;
+    taskId: string;
+    supervisor: CrewSupervisor;
+    tasks: TaskService;
+    specs: CrewmateSpec[];
+    cards: () => Card[];
+    mergePullRequest: ReturnType<typeof vi.fn>;
+  }> {
+    const repo = gitRepo("meterlab");
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #7 is in on GitHub." }));
+    const { supervisor, tasks, repos, specs, cards } = setup(crewmate, { mergePullRequest });
+    const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+    repos.configure(view.id, { delivery: "direct-pr", autonomy });
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix the meter"),
+      repoId: view.id,
+      ...(shape ? { shape } : {}),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    return { dispose: repo.dispose, taskId, supervisor, tasks, specs, cards, mergePullRequest };
+  }
+
+  /** The crewmate's completion card, as the host finishes it. */
+  function completionCard(specs: CrewmateSpec[]): void {
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "The meter test is steady",
+      body: completionBody(
+        "<p>The meter test passes ten runs in a row.</p>" +
+          "<ul><li>Reran the suite ten times on the final commit.</li></ul>",
+      ),
+      actions: [{ id: "ship", label: "Ship it", default: true, effect: SETTLE_MERGE }],
+    });
+  }
+
+  /**
+   * The two host holds on the same two settle modes (v3.8's answer task and
+   * v3.9's autonomy) compose in one order: the DELIVERABLE speaks first,
+   * because a task that commits nothing has no merge for autonomy to be
+   * about. So an answer task on an ask-first repository is refused for what
+   * it delivers, never for who may merge it, and carries no autonomy at all.
+   */
+  it("lets the deliverable speak before the autonomy hold, and stamps no autonomy on an answer task", async () => {
+    const repo = gitRepo("meterlab");
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #7 is in on GitHub." }));
+    const { supervisor, tasks, repos } = setup(crewmate, {
+      mergePullRequest,
+      classifier: {
+        classify: async () =>
+          ({ kind: "research", source: "classifier:xai/grok-cheap", version: "kc1" }) as const,
+      },
+    });
+    try {
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      // Ask-first, so the autonomy hold WOULD fire on a change here.
+      repos.configure(view.id, { delivery: "direct-pr", autonomy: false });
+      const { taskId } = await supervisor.commission({
+        title: "Why is the meter idle",
+        intent: intentOf("why is nothing running?"),
+        repoId: view.id,
+      });
+      await tick();
+      crewmate.finishPrompt();
+      await tick();
+      expect(tasks.get(taskId)?.shape).toMatchObject({ deliverable: "answer" });
+      // No autonomy is stamped, and crew_status carries none: there is no
+      // merge, so there is nobody to say who merges it.
+      expect(tasks.get(taskId)?.shape?.autonomy).toBeUndefined();
+      expect(
+        supervisor.crewStatus().find((row) => row.taskId === taskId)?.autonomy,
+      ).toBeUndefined();
+      // The refusal the Firstmate reads is the deliverable's, not autonomy's.
+      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(result.text).toContain("delivers an answer, not a change");
+      expect(result.refusal?.refused).not.toBe("autonomy-off");
+      expect(mergePullRequest).not.toHaveBeenCalled();
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("inherits the repository and stamps what it was commissioned under without showing autonomy on the card", async () => {
+    const h = await onRepo(false);
+    try {
+      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      expect(h.tasks.get(h.taskId)?.shape).toMatchObject({ autonomy: false });
+      expect(h.supervisor.crewStatus(h.taskId)[0]?.autonomy).toBe(false);
+      completionCard(h.specs);
+      await tick();
+      const card = h.cards().find((entry) => entry.taskId === h.taskId);
+      expect(card?.body).not.toContain(">On its own<");
+      expect(card?.body).toContain('>Care</span><span class="inf-fact-v">Default<');
+    } finally {
+      h.dispose();
+    }
+  });
+
+  it("refuses the Firstmate's own merge, merges nothing, and points at the captain's button", async () => {
+    const h = await onRepo(false);
+    try {
+      completionCard(h.specs);
+      await tick();
+      const card = h.cards().find((entry) => entry.taskId === h.taskId);
+      const merge = card?.actions.find(
+        (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+      );
+      // The host attached the pair from the posture; the crewmate's own
+      // invented label never reaches the captain, so the way names the
+      // button he is actually reading.
+      expect([merge?.id, merge?.label]).toEqual(["merge", "Merge the pull request"]);
+      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(result.refusal).toMatchObject({
+        refused: "autonomy-off",
+        task: { id: h.taskId },
+        ways: [{ label: merge?.label, card: { id: card?.id, action: merge?.id } }],
+      });
+      expect(result.text).toContain("is not yours to do: autonomy is off for this task");
+      expect(result.text).toContain("meterlab asks before merging");
+      // Nothing moved: no merge, the task still active, the card still up.
+      expect(h.mergePullRequest).not.toHaveBeenCalled();
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
+      expect(h.cards().some((entry) => entry.id === card?.id)).toBe(true);
+      // A land is held the same way: the hold is on merging, not on GitHub.
+      expect((await h.supervisor.settleTaskDetailed(h.taskId, "land")).refusal?.refused).toBe(
+        "autonomy-off",
+      );
+    } finally {
+      h.dispose();
+    }
+  });
+
+  it("merges on the captain's own click, on the very task it held", async () => {
+    const held = await onRepo(false);
+    try {
+      // The same autonomy-off task the Firstmate was just refused on. The
+      // card's settle effect arrives as actor captain, which this rule does
+      // not read: his click IS the way out the refusal named.
+      expect(
+        (await held.supervisor.settleTaskDetailed(held.taskId, "merge-pr")).refusal?.refused,
+      ).toBe("autonomy-off");
+      expect(held.mergePullRequest).not.toHaveBeenCalled();
+      expect(await held.supervisor.settleTask(held.taskId, "merge-pr", undefined, "captain")).toBe(
+        "Change #7 is in on GitHub.",
+      );
+      expect(held.mergePullRequest).toHaveBeenCalledTimes(1);
+      expect(held.tasks.get(held.taskId)).toMatchObject({ status: "done" });
+    } finally {
+      held.dispose();
+    }
+  });
+
+  it("lets one task merge itself on an ask-first repository, and holds one on an autonomous one", async () => {
+    const asked = await onRepo(false, { autonomy_ask: true });
+    try {
+      expect(asked.supervisor.taskAutonomy(asked.taskId)).toBe(true);
+      expect(asked.tasks.get(asked.taskId)?.shape).toMatchObject({
+        autonomy_ask: true,
+        autonomy: true,
+      });
+      expect(await asked.supervisor.settleTask(asked.taskId, "merge-pr")).toBe(
+        "Change #7 is in on GitHub.",
+      );
+      expect(asked.mergePullRequest).toHaveBeenCalledTimes(1);
+    } finally {
+      asked.dispose();
+    }
+
+    const held = await onRepo(true, { autonomy_ask: false });
+    try {
+      expect(held.supervisor.taskAutonomy(held.taskId)).toBe(false);
+      expect(
+        (await held.supervisor.settleTaskDetailed(held.taskId, "merge-pr")).refusal,
+      ).toMatchObject({ refused: "autonomy-off", ways: [] });
+      expect(held.mergePullRequest).not.toHaveBeenCalled();
+    } finally {
+      held.dispose();
+    }
+  });
+});
+
+/**
+ * Cards as threads, phase 1 (captain-approved 2026-09-20, R4 of
+ * `fm3000-card-close-decision-model-s1`). A card is the head of a
+ * conversation with its author, and what the captain types under a
+ * crewmate's card is a captain steer to that crewmate - never a Firstmate
+ * turn, and never a close.
+ */
+describe("CrewSupervisor: the card thread", () => {
+  /** Commission a task and give it one crewmate card; returns that card. */
+  async function withCard(
+    harness: ReturnType<typeof setup>,
+    input: { title: string; body?: string; actions?: Card["actions"] } = { title: "Owner note" },
+  ) {
+    const { taskId } = await harness.supervisor.commission({
+      title: "Owner",
+      intent: intentOf("emit a card"),
+    });
+    await tick();
+    harness.specs[0]?.onCard?.({
+      title: input.title,
+      body: input.body ?? "<p>The body.</p>",
+      actions: input.actions ?? [],
+    });
+    await tick();
+    const card = harness.cards().find((entry) => entry.title === input.title) as Card;
+    return { taskId, card };
+  }
+
+  it("sends the captain's reply to the crewmate as a steer, verbatim under the host preamble", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness);
+
+    const thread = harness.supervisor.replyToCard(card.id, "  the checks failed on windows  ");
+    await tick();
+
+    // On the record the moment it was typed, trimmed but not reworded.
+    expect(thread).toMatchObject({
+      cardId: card.id,
+      messages: [{ who: "captain", text: "the checks failed on windows" }],
+    });
+    expect(harness.threads.at(-1)).toMatchObject({ cardId: card.id });
+
+    // Delivered to the crewmate's own session, not to Firstmate.
+    const steer = vi.mocked(crewmate.steer).mock.calls.at(-1)?.[0] ?? "";
+    expect(steer).toContain(THREAD_STEER_PREAMBLE);
+    expect(steer).toContain("the checks failed on windows");
+    expect(steer).toContain(card.id);
+    expect(harness.ops).toEqual([]);
+
+    // And recorded as the gesture it was: a captain steer via the thread.
+    const steered = harness.tasks.timeline(taskId).find((event) => event.kind === "steered");
+    expect(steered?.data).toMatchObject({ via: "thread", cardId: card.id });
+  });
+
+  it("carries reply settings as context and records them without resolving or merging", async () => {
+    const crew = fakeCrewmate();
+    const harness = setup(crew);
+    const { taskId, card } = await withCard(harness);
+    const answers = [
+      { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
+    ];
+    const thread = harness.supervisor.replyToCard(
+      card.id,
+      "revise this",
+      undefined,
+      undefined,
+      answers,
+    );
+    await tick();
+    // The thread keeps his words and the settings apart (FI3-617); the
+    // author still reads them together, permission wording included.
+    expect(thread.messages.at(-1)).toMatchObject({ who: "captain", text: "revise this", answers });
+    expect(vi.mocked(crew.steer).mock.calls.at(-1)?.[0]).toContain(
+      'revise this\nCurrent settings (context, not permission):\n- look: {"tiltDeg":57} (JSON), changed',
+    );
+    expect(
+      harness.tasks.timeline(taskId).find((event) => event.kind === "steered")?.data,
+    ).toMatchObject({ via: "thread" });
+    expect(harness.cards().some((entry) => entry.id === card.id)).toBe(true);
+    expect(
+      harness.cardStore.observations(card.id).find((event) => event.kind === "message_ref")
+        ?.payload,
+    ).toMatchObject({ answers });
+    expect(harness.tasks.get(taskId)?.status).toBe("active");
+    expect(harness.workspace.landTaskWork).not.toHaveBeenCalled();
+    expect(() =>
+      harness.supervisor.replyToCard(card.id, "build it", undefined, undefined, [
+        { name: "look", values: ["x".repeat(4096)], changed: true },
+      ]),
+    ).toThrow(/too long/);
+  });
+
+  it("hands a builder each reply under its basis card with the settings it was sent with", async () => {
+    const crew = fakeCrewmate();
+    const harness = setup(crew);
+    const { taskId, card } = await withCard(harness, { title: "Two dials" });
+    const answers = [
+      { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
+    ];
+    harness.supervisor.replyToCard(card.id, "tilt it more", undefined, undefined, answers);
+    await tick();
+    harness.specs[0]?.onReport?.("Two dials, the second tilted.");
+    crew.emit({ type: "turn_end", taskId });
+    crew.finishPrompt();
+    await tick();
+    await harness.supervisor.commission({
+      title: "Build the dial",
+      intent: intentOf("build it"),
+      shape: { basis: harness.tasks.get(taskId)?.key ?? taskId },
+    });
+    await tick();
+    // The thread shows his words alone; the builder reads the reply as its
+    // author did, settings included (FI3-617).
+    expect(crew.promptCalls.at(-1)).toContain(
+      'What was said under its card, newest last:\n- captain: tilt it more\nCurrent settings (context, not permission):\n- look: {"tiltDeg":57} (JSON), changed',
+    );
+  });
+
+  it("resolves nothing: the card and its buttons stay exactly where they were", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness, {
+      title: "Pick one",
+      body: "<p>Await the queue.</p><p>Mocking the clock leaves write order uncertain.</p>",
+      actions: [
+        { id: "go", label: "Go", default: true },
+        { id: "wait", label: "Wait" },
+      ],
+    });
+
+    harness.supervisor.replyToCard(card.id, "what about the other one?");
+    await tick();
+
+    const still = harness.cards().find((entry) => entry.id === card.id);
+    expect(still).toMatchObject({ id: card.id, status: "ready" });
+    expect(still?.actions).toEqual(card.actions);
+    expect(harness.cardStore.chosenAction(card.id)).toBeUndefined();
+  });
+
+  it("refuses a reply to a card with no author to reach, and to a closed one", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness);
+
+    // The host's own agent-down cards answer to nobody.
+    harness.supervisor.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
+    await tick();
+    expect(() => harness.supervisor.replyToCard("card-host-1", "hello")).toThrow(
+      /no author to reply to/,
+    );
+    expect(() => harness.supervisor.replyToCard("ghost", "hello")).toThrow(/Unknown card/);
+    expect(() => harness.supervisor.replyToCard(card.id, "   ")).toThrow(/needs some words/);
+
+    harness.supervisor.close(card.id);
+    await tick();
+    expect(() => harness.supervisor.replyToCard(card.id, "too late")).toThrow(/is closed/);
+  });
+
+  it("puts the revised line and then the author's answer in the thread when it revises with a reply", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness, { title: "Pick one" });
+    harness.supervisor.replyToCard(card.id, "the second option is wrong");
+    await tick();
+
+    const id = card.id.replace(/^card-[^-]+-/, "");
+    const revision = { id, title: "Pick one", body: "the body, corrected", actions: [] };
+
+    // An update alone does not answer him: refused, card and thread unchanged.
+    expect(() => harness.specs[0]?.onCard?.(revision)).toThrow(/waits on your answer/);
+    expect(harness.supervisor.cardThread(card.id).messages.map((m) => m.who)).toEqual(["captain"]);
+
+    harness.specs[0]?.onCard?.({
+      ...revision,
+      reply: "You are right; I corrected the second option.",
+    });
+    await tick();
+
+    const messages = harness.supervisor.cardThread(card.id).messages;
+    expect(messages.map((message) => message.who)).toEqual(["captain", "host", "crewmate"]);
+    expect(messages[1]?.text).toBe("revised: Pick one");
+    expect(messages[2]?.text).toBe("You are right; I corrected the second option.");
+  });
+
+  it("lets the crewmate answer in its own card's thread and refuses another task's", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness);
+
+    const spec = harness.specs[0];
+    expect(spec?.onReply?.({ cardId: card.id, text: "rebased; the checks pass again" })).toContain(
+      "Replied in the thread",
+    );
+    expect(harness.supervisor.cardThread(card.id).messages).toMatchObject([
+      { who: "crewmate", text: "rebased; the checks pass again" },
+    ]);
+    // Refusals are tool text, never throws - a conversational miss is guidance.
+    expect(spec?.onReply?.({ cardId: "ghost", text: "hello" })).toContain("Unknown card");
+    expect(spec?.onReply?.({ cardId: card.id, text: "  " })).toContain("needs some words");
+  });
+
+  it("makes an unanswered captain message the crewmate's turn, so a report wakes nobody", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness, { title: "Owner note" });
+
+    harness.supervisor.replyToCard(card.id, "and the flaky retry - keep it?");
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Unrelated progress landed." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(harness.sorts.at(-1)).toMatchObject({
+      taskId,
+      verdict: "routine",
+      rule: "thread-unanswered",
+    });
+    expect(harness.ops.filter((line) => line.includes("Unrelated progress"))).toEqual([]);
+  });
+
+  it("stops holding the turn once the crewmate has answered in the thread", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness, { title: "Owner note" });
+
+    harness.supervisor.replyToCard(card.id, "and the flaky retry - keep it?");
+    await tick();
+    harness.specs[0]?.onReply?.({ cardId: card.id, text: "kept it; the checks still pass" });
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Kept the retry as asked." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(harness.sorts.at(-1)?.rule).not.toBe("thread-unanswered");
+    expect(harness.ops.at(-1)).toContain("Kept the retry as asked.");
+  });
+
+  it("carries the thread's state onto the crew line and the context section", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness);
+    expect(harness.supervisor.crewStatus(taskId)[0]?.thread).toBeUndefined();
+
+    harness.supervisor.replyToCard(card.id, "what about X?");
+    await tick();
+    expect(harness.supervisor.crewStatus(taskId)[0]?.thread).toBe(
+      "thread: 1 message, last from captain",
+    );
+    expect(harness.supervisor.threadActivitySince(0)).toMatchObject([
+      {
+        card: { id: card.id },
+        count: 1,
+        last: { who: "captain", text: "what about X?" },
+        owed: "author",
+      },
+    ]);
+    // Everything before the window is already behind the Firstmate.
+    expect(harness.supervisor.threadActivitySince(Date.now() + 1000)).toEqual([]);
+  });
+
+  it("keeps a crewmate's note when its task closes done, and sends a reply on it to the Firstmate", async () => {
+    const crewmate = fakeCrewmate();
+    const converseAboutCard = vi.fn();
+    const harness = setup(crewmate);
+    harness.supervisor.setFirstmateHooks({
+      notifyOp: (wake) => harness.ops.push(served(wake)),
+      retryConverse: vi.fn(),
+      converseAboutCard,
+    });
+    const { taskId, card: note } = await withCard(harness, { title: "Release is out" });
+    harness.specs[0]?.onReport?.("The release is published.");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
+
+    const closed = await harness.supervisor.closeExternallyReleased(taskId, "v1.2.3 published");
+    await tick();
+    expect(closed.text).toContain("v1.2.3 published");
+    expect(harness.tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
+
+    // The note outlives the close.
+    expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
+
+    // Its author is gone, so the Firstmate takes the captain's reply.
+    harness.supervisor.replyToCard(note.id, "which build is it?");
+    expect(converseAboutCard).toHaveBeenCalledWith(note.id, "which build is it?", undefined);
+    expect(crewmate.promptCalls.some((call) => call.includes("which build is it?"))).toBe(false);
+  });
+
+  it("routes a captain reply on a Firstmate card as a captain turn, not a crewmate steer", async () => {
+    const crewmate = fakeCrewmate();
+    const converseAboutCard = vi.fn();
+    const harness = setup(crewmate);
+    harness.supervisor.setFirstmateHooks({
+      notifyOp: (wake) => harness.ops.push(served(wake)),
+      retryConverse: vi.fn(),
+      converseAboutCard,
+    });
+    const cardId = harness.supervisor.addFirstmateCard({
+      title: "Pick one",
+      body: "<p>A or B.</p>",
+      actions: [{ id: "a", label: "A", default: true }],
+    });
+    await tick();
+    const thread = harness.supervisor.replyToCard(cardId, "the second option is wrong");
+    expect(thread.messages).toMatchObject([{ who: "captain", text: "the second option is wrong" }]);
+    expect(converseAboutCard).toHaveBeenCalledWith(cardId, "the second option is wrong", undefined);
+    const answers = [
+      { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
+    ];
+    harness.supervisor.replyToCard(cardId, "revise this", undefined, undefined, answers);
+    expect(converseAboutCard).toHaveBeenLastCalledWith(
+      cardId,
+      expect.stringContaining('"tiltDeg":57'),
+      undefined,
+    );
+    expect(
+      harness.cardStore
+        .observations(cardId)
+        .filter((event) => event.kind === "message_ref")
+        .at(-1)?.payload,
+    ).toMatchObject({ answers });
+    expect(crewmate.steer).not.toHaveBeenCalled();
+  });
+
+  it("rides an image on a crewmate thread steer", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness);
+    const image = pngImage;
+    harness.supervisor.replyToCard(card.id, "see this", [image]);
+    await tick();
+    expect(crewmate.steer).toHaveBeenCalledWith(
+      expect.stringContaining("see this"),
+      [image],
+      expect.stringMatching(/^rows:\d+:/),
+    );
+  });
+
+  it("names a dropped text file in the thread and the steer, beside its preview and pointer", async () => {
+    initOverflowDir(scratchDir("infinitary-overflow-"));
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness);
+    const text = "a\r\nb\r\n".repeat(900);
+    const thread = harness.supervisor.replyToCard(card.id, "see", undefined, undefined, undefined, [
+      { text, name: "log.txt" },
+    ]);
+    await tick();
+    const shown = thread.messages.at(-1)?.text ?? "";
+    expect(shown).toContain("see\n\n[attached file: log.txt]\n");
+    const pointer = /full text: (\S+\.txt)\]/.exec(shown)?.[1] ?? "";
+    expect(readFileSync(pointer, "utf8")).toBe(text);
+    expect(crewmate.steer).toHaveBeenCalledWith(
+      expect.stringContaining("[attached file: log.txt]"),
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+    rmSync(pointer);
+  });
+
+  it("keeps a queued reply's picture as a message-owned copy: served from it later, and held when the copy is gone", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness);
+    // This backend takes guidance between turns: the reply waits on the lane.
+    const thread = harness.supervisor.replyToCard(card.id, "see this", [
+      { ...pngImage, name: "shot.png" },
+    ]);
+    await tick();
+    expect(thread.messages.at(-1)?.text).toBe("see this\n[attached 1 picture: shot.png]");
+    const [row] = harness.inbox.allFor(taskId);
+    expect(row?.facts).toMatchObject({ kind: "attachments-kept" });
+    const kept = row?.facts as unknown as { attachments: AttachmentRef[] };
+    const refs = kept.attachments;
+    expect(refs).toHaveLength(1);
+    const file = attachmentPath(refs[0] as AttachmentRef);
+    const bytes = readFileSync(file);
+    rmSync(file);
+    crewmate.finishPrompt();
+    await tick();
+    // Blocked: nothing was sent as words alone, the row stays, the feed says so.
+    expect(crewmate.promptCalls.some((text) => text.includes("see this"))).toBe(false);
+    expect(harness.inbox.allFor(taskId)).toHaveLength(1);
+    expect(
+      harness.events.filter(
+        (event) => event.type === "firstmate_note" && event.text.includes("is not available"),
+      ),
+    ).toHaveLength(1);
+    // The copy back, the same message is delivered with its picture.
+    writeFileSync(file, bytes);
+    await harness.supervisor.sweepInbox(Date.now() + 60_000);
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain("see this\n\n[attached: 1 picture: shot.png]");
+    expect(crewmate.promptImageCalls.at(-1)).toEqual([expect.objectContaining(pngImage)]);
+  });
+});
+
+/**
+ * The captain's pictures stay with the task the captain's message became
+ * (`docs/task-capture.md`, "Pictures stay with the task"): the crewmate that
+ * takes it is briefed with them, the brief names the app's own copies, and
+ * the brief's row keeps them for a retried or re-presented first turn.
+ */
+describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () => {
+  it("briefs a spawned crewmate with its message's pictures, by path, and keeps them on the brief's row", async () => {
+    vi.useRealTimers();
+    const crewmate = fakeCrewmate();
+    const { supervisor, inbox, tasks } = setup(crewmate);
+    const attachments = keepImages(randomUUID(), [{ ...pngImage, name: "dialog.png" }]);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the dialog",
+      intent: intentOf("fix the dialog in this picture"),
+      attachments,
+    });
+    await tick();
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(
+      "Pictures: the captain attached 1 picture to the messages this task came from.",
+    );
+    expect(brief).toContain(`- dialog.png: ${attachmentPath(attachments[0] as AttachmentRef)}`);
+    // The section sits under the captain's words, before the host's own sections.
+    expect(brief.indexOf("Pictures:")).toBeGreaterThan(
+      brief.indexOf("fix the dialog in this picture"),
+    );
+    expect(crewmate.promptImageCalls[0]).toEqual([pngImage]);
+    const [row] = inbox.inFlight(taskId);
+    expect(row?.facts).toMatchObject({ kind: "attachments-kept", attachments });
+    // The pinned brief the record keeps names the copy too.
+    expect(
+      tasks.servedBrief(tasks.timeline(taskId).filter((e) => e.kind === "briefed")[0] as TaskEvent),
+    ).toContain("dialog.png");
+  });
+
+  it("briefs a planned builder with the pictures of its own messages and its plan's, counting a copy that is gone", async () => {
+    vi.useRealTimers();
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const plan = supervisor.plan({ title: "Plan the panel", intent: intentOf("plan it") });
+    const build = supervisor.plan({
+      title: "Build the panel",
+      intent: intentOf("build it"),
+      shape: { basis: plan.key },
+    });
+    const message = (
+      id: string,
+      images: { mimeType: "image/png" | "image/jpeg"; data: string; name: string }[],
+    ) => tasks.openAsk({ id, text: id, attachments: keepImages(randomUUID(), images) });
+    message("on-plan", [{ ...pngImage, name: "before.png" }]);
+    message("on-build", [
+      { ...jpegImage, name: "mock.jpg" },
+      { ...pngImage, name: "before-again.png" },
+    ]);
+    message("gone", [
+      {
+        ...jpegImage,
+        name: "lost.jpg",
+        data: Buffer.from([0xff, 0xd8, 0xff, 1]).toString("base64"),
+      },
+    ]);
+    tasks.attachAsk("on-plan", plan.id, "tool:create_task");
+    tasks.attachAsk("on-build", build.id, "tool:update_task");
+    tasks.attachAsk("gone", build.id, "tool:update_task");
+    rmSync(attachmentPath(tasks.getAsk("gone")?.attachments[0] as AttachmentRef));
+
+    await supervisor.startQueuedNow(build.key);
+    await tick();
+    const brief = crewmate.promptCalls[0] ?? "";
+    // Its own messages first, then its plan's; the same picture sent twice rides once.
+    expect(brief).toContain(
+      "Pictures: the captain attached 3 pictures to the messages this task came from.\n2 pictures ride with this brief.\n1 picture could not be found among the app's copies.",
+    );
+    expect(brief).toMatch(/- mock\.jpg: .+\n- before-again\.png: .+$/m);
+    expect(brief).not.toContain("before.png:");
+    expect(crewmate.promptImageCalls[0]).toEqual([jpegImage, pngImage]);
+  });
+});
+
+/**
+ * A card reaches the stage at its author's close-out (the captain's "ship
+ * it" of 2026-09-27; docs/card-threads.md "When a card reaches the stage").
+ * The regression cases are the recorded exchanges of the design's section
+ * 3.3, replayed tool call by tool call at their recorded offsets through
+ * the real card, thread and report paths: the acknowledgement must not
+ * bring the card back, the report must, a steered correction redraws in
+ * place, and case C comes back once, at +110 s. The stage is what the
+ * window draws: the snapshot's cards that are not awaiting their author. A
+ * card the captain replied under stays on it at the back (`sentBackAt`)
+ * while it waits, showing what it showed.
+ */
+describe("CrewSupervisor: a card reaches the stage at its author's close-out", () => {
+  const S = 1_000;
+
+  /** The card as the window draws it once its author has answered: on the stage, not waiting. */
+  function staged(harness: ReturnType<typeof setup>, cardId: string): Card | undefined {
+    return harness.cards().find((card) => card.id === cardId && onStage(card) && !card.awaiting);
+  }
+
+  /** The recorded clock: `ms` after the captain's reply at `from`. */
+  async function at(from: number, ms: number) {
+    await vi.advanceTimersByTimeAsync(from + ms - Date.now());
+  }
+
+  /**
+   * A crewmate whose first turn emitted a card and reported it: the card is
+   * on the stage, the crewmate idle.
+   */
+  async function onTheStage(
+    harness: ReturnType<typeof setup>,
+    crewmate: FakeCrewmate,
+    card: { title: string; body: string; actions: Card["actions"] },
+  ) {
+    const { taskId } = await harness.supervisor.commission({
+      title: card.title,
+      intent: intentOf("investigate and ask"),
+    });
+    await tick();
+    const cardId = syncCardId(harness.specs[0]?.onCard?.(card)) ?? "";
+    harness.specs[0]?.onReport?.("Intent: the card is up for the captain.");
+    crewmate.finishPrompt();
+    await tick();
+    expect(staged(harness, cardId)?.title).toBe(card.title);
+    return { taskId, cardId, stable: cardId.replace(`card-${taskId}-`, "") };
+  }
+
+  /** The task's `card_raised` rows for a card, as the timeline records its stage moments. */
+  function stageMoments(harness: ReturnType<typeof setup>, taskId: string, cardId: string) {
+    return harness.tasks
+      .timeline(taskId)
+      .filter((event) => event.kind === "card_raised" && event.ref === cardId)
+      .map((event) => ({ at: event.at, data: event.data }));
+  }
+
+  it("A: an acknowledgement in the thread does not bring the card back; the report does (+185 s)", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Idle crew recovery",
+      body: "<p>Three separate fixes for three idle cases.</p><p>Each case idles for a different reason.</p>",
+      actions: [
+        { id: "fix-each", label: "Fix each case", default: true },
+        { id: "heartbeat", label: "Add a heartbeat" },
+        { id: "wait", label: "Wait" },
+      ],
+    });
+
+    const replied = Date.now();
+    harness.supervisor.replyToCard(
+      cardId,
+      "one general catch-all for every idle crewmate - what about a heartbeat?",
+    );
+    await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+    const waiting = harness.cards().find((card) => card.id === cardId);
+    expect(waiting?.awaiting).toBe("answer");
+    // Still on the stage, at the back, showing what it showed at the reply.
+    expect(waiting && onStage(waiting)).toBe(true);
+    expect(waiting?.sentBackAt).toBeDefined();
+    expect(waiting?.title).toBe("Idle crew recovery");
+    expect(harness.cards().at(-1)?.id).toBe(cardId);
+    // One feed line while the author works: nothing on the stage.
+    expect(harness.events).toContainEqual({
+      type: "firstmate_note",
+      text: 'You asked crewmate 1 under "Idle crew recovery"',
+    });
+    const spec = harness.specs[0];
+
+    await at(replied, 6 * S);
+    spec?.onReply?.({
+      cardId,
+      text: "I'll assess a general recovery mechanism rather than assume separate fixes are the answer. Your heartbeat proposal is a useful candidate: I'll compare it.",
+    });
+    await tick();
+    // The acknowledgement paints the thread and nothing else.
+    expect(harness.threads.at(-1)?.messages.at(-1)?.who).toBe("crewmate");
+    expect(staged(harness, cardId)).toBeUndefined();
+
+    await at(replied, 10 * S);
+    spec?.onProgress?.("Captain redirected the investigation toward one general catch-all.");
+    await at(replied, 167 * S);
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        title: "General idle crew recovery · round 2",
+        body: "<p>One reconciler reads every idle crewmate on a durable clock.</p><p>Every idle case in the record is one missing witness.</p>",
+        actions: [
+          { id: "one-reconciler", label: "Build the reconciler", default: true },
+          { id: "heartbeat", label: "Add a heartbeat" },
+          { id: "wait", label: "Wait" },
+        ],
+      }),
+    );
+    await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+
+    await at(replied, 185 * S);
+    spec?.onReport?.("Intent: assess a general catch-all for all idle crewmates.");
+    await tick();
+    expect(staged(harness, cardId)?.title).toBe("General idle crew recovery · round 2");
+    expect(stageMoments(harness, taskId, cardId).at(-1)).toEqual({
+      at: replied + 185 * S,
+      data: expect.objectContaining({ closeOut: "report", returned: true }),
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(staged(harness, cardId)?.title).toBe("General idle crew recovery · round 2");
+  });
+
+  it("a click on a card waiting at the back chooses from the version it showed", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Pick one",
+      body: "<p>Left is the safer way.</p><p>Right costs a day and buys little.</p>",
+      actions: [
+        { id: "left", label: "Left", default: true },
+        { id: "right", label: "Right" },
+      ],
+    });
+    harness.supervisor.replyToCard(cardId, "why not left?");
+    await tick();
+    // The author revised it meanwhile: the stage still shows the old offer.
+    harness.specs[0]?.onCard?.({
+      id: stable,
+      reply: "Middle is safer; I changed the offer.",
+      title: "Pick one, revised",
+      body: "<p>Middle is the safer way.</p><p>Left and right both cost a day.</p>",
+      actions: [
+        { id: "middle", label: "Middle", default: true },
+        { id: "left", label: "Left" },
+      ],
+    });
+    await tick();
+    expect(() => harness.supervisor.act(cardId, "middle")).toThrow();
+    // The chosen offer is the shown one's: "right" resolves the card.
+    expect(() => harness.supervisor.act(cardId, "right")).not.toThrow();
+    await tick();
+    expect(harness.cards().some((card) => card.id === cardId)).toBe(false);
+  });
+
+  it("B: the answer lands at the report", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Choose how crewmates use GitHub",
+      body: "<p>Three questions decide how crewmates reach GitHub.</p><p>The cautious plan answers all three the safe way.</p>",
+      actions: [
+        { id: "lock-cautious-plan", label: "Use the cautious plan", default: true },
+        { id: "answer-in-thread", label: "Answer in the thread" },
+      ],
+    });
+
+    const replied = Date.now();
+    harness.supervisor.replyToCard(
+      cardId,
+      "do you have the ability to give me choices per question i can just click in the card",
+    );
+    await tick();
+    const spec = harness.specs[0];
+    await at(replied, 33 * S);
+    spec?.onReply?.({
+      cardId,
+      text: "Yes. I can put a separate set of clickable choices beside each question in the card. I'll keep your first three answers marked as recorded.",
+    });
+    await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+
+    const oneAtATime = {
+      id: stable,
+      title: "Choose GitHub access one question at a time",
+      body: "<p>Question 4 of 6: may a crewmate open a proposed change on its own?</p><p>Your first three answers are recorded.</p>",
+      actions: [
+        { id: "lock-cautious-plan", label: "Use the cautious plan", default: true },
+        { id: "answer-in-thread", label: "Answer in the thread" },
+      ],
+    };
+    await at(replied, 70 * S);
+    syncCardId(spec?.onCard?.(oneAtATime));
+    await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+
+    await at(replied, 79 * S);
+    spec?.onReport?.(
+      "Captain asked for clickable choices; I answered yes in the thread and revised the card.",
+    );
+    await tick();
+    expect(staged(harness, cardId)?.title).toBe(oneAtATime.title);
+  });
+
+  it("C: two revisions and an answer before the report come back once, settled, at +110 s", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "The saved Claude sign-in blocks this app",
+      body: "<p>The saved sign-in only lets Apple's own tools read it.</p><p>Always Allow did not stick across a restart.</p>",
+      actions: [
+        { id: "edit-access", label: "Change who can read it", default: true },
+        { id: "leave-it", label: "Leave it" },
+      ],
+    });
+
+    const replied = Date.now();
+    harness.supervisor.replyToCard(
+      cardId,
+      "but i don't want you to fix it one-off. i need fm3000 to 'just work' for all users. what's the gap?",
+    );
+    await tick();
+    // Each recorded step, then what the stage shows after it.
+    const shownAfter: number[] = [];
+    const sample = (offset: number) => {
+      if (staged(harness, cardId)) shownAfter.push(offset);
+    };
+    const spec = harness.specs[0];
+
+    await at(replied, 13 * S);
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        reply: "That is the gap; the card now says so.",
+        title: "Claude's saved sign-in needs a product fix",
+        body: "<p>A fix for every install, not an edit to your saved item.</p><p>The saved item's own rule is the gap.</p>",
+        actions: [
+          { id: "continue-product-fix", label: "Continue the product fix", default: true },
+          { id: "pause-investigation", label: "Pause" },
+        ],
+      }),
+    );
+    await tick();
+    sample(13 * S);
+    await at(replied, 24 * S);
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        title: "Why Always Allow did not survive",
+        body: "<p>The saved item's own rule still grants only Apple's tools.</p>",
+        actions: [],
+      }),
+    );
+    await tick();
+    sample(24 * S);
+    await at(replied, 49 * S);
+    spec?.onReply?.({
+      cardId,
+      text: "You are right. The gap is not a missing app signature or a one-time edit: the saved item's own rule still grants only Apple's tools.",
+    });
+    await tick();
+    sample(49 * S);
+    await at(replied, 110 * S);
+    spec?.onReport?.("Intent: find a fix that works for users, not an edit to your saved item.");
+    await tick();
+    sample(110 * S);
+    // Still working: more reports on the same turn, and the crewmate never
+    // writes on the card again.
+    for (const offset of [186, 576, 793, 819]) {
+      await at(replied, offset * S);
+      spec?.onReport?.("Still testing the product-level path against a throwaway sign-in.");
+      await tick();
+      sample(offset * S);
+    }
+
+    // Never the half-drawn decision: the card came back once, as the note
+    // its last write made it, at the report.
+    expect(shownAfter).toEqual([110, 186, 576, 793, 819].map((offset) => offset * S));
+    expect(staged(harness, cardId)).toMatchObject({
+      title: "Why Always Allow did not survive",
+      actions: [],
+    });
+    const returns = stageMoments(harness, taskId, cardId).filter(
+      (moment) => moment.data?.returned === true,
+    );
+    expect(returns).toEqual([
+      { at: replied + 110 * S, data: expect.objectContaining({ closeOut: "report" }) },
+    ]);
+  });
+
+  it("puts a new card up at the close-out, never at the emit, and a revision before it arrives settled", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Flaky test",
+      intent: intentOf("fix the flaky test"),
+    });
+    await tick();
+    const spec = harness.specs[0];
+    const cardId =
+      syncCardId(
+        spec?.onCard?.({
+          id: "choice",
+          title: "Two ways to fix the flaky test",
+          body: "<p>Await the queue, or mock the clock.</p><p>Mocking the clock leaves write order uncertain.</p>",
+          actions: [
+            { id: "await-queue", label: "Await the queue", default: true },
+            { id: "mock-clock", label: "Mock the clock" },
+          ],
+        }),
+      ) ?? "";
+    await tick();
+    expect(harness.cards().find((card) => card.id === cardId)?.awaiting).toBe("close-out");
+    expect(staged(harness, cardId)).toBeUndefined();
+    // Nothing on the timeline says it went up: it has not.
+    expect(stageMoments(harness, taskId, cardId)).toEqual([]);
+
+    syncCardId(
+      spec?.onCard?.({
+        id: "choice",
+        title: "Await the queue, not the clock",
+        body: "<p>Awaiting the queue removes the race.</p><p>Ten runs in a row passed.</p>",
+        actions: [
+          { id: "await-queue", label: "Await the queue", default: true },
+          { id: "mock-clock", label: "Mock the clock" },
+        ],
+      }),
+    );
+    await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+
+    // Its idle is the close-out when it never reports.
+    crewmate.finishPrompt();
+    await tick();
+    expect(staged(harness, cardId)?.title).toBe("Await the queue, not the clock");
+    expect(stageMoments(harness, taskId, cardId)).toEqual([
+      { at: expect.any(Number), data: expect.objectContaining({ closeOut: "idle" }) },
+    ]);
+  });
+});
+
+/**
+ * The generic graph pieces a parent task with child steps runs on
+ * (docs/sequences.md): a planned step names its basis and is judged on it
+ * when it starts, a parent no crewmate holds completes with its children,
+ * and the basis section hands the next step the working copy and what the
+ * captain said under the card. None of it knows what a sequence is.
+ */
+describe("parent tasks with planned children", () => {
+  const byTitle = {
+    classify: async (input: KindInput) =>
+      input.title.startsWith("Plan")
+        ? ({ kind: "plan", source: "classifier:test", version: "kc1" } as const)
+        : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
+  };
+
+  /** A plan step under a container, its card up, and an implement step planned behind it. */
+  async function plannedBehindAPlan() {
+    const planner = fakeCrewmate();
+    const builder = fakeCrewmate();
+    const decideCalls: { shape: WorkShape }[] = [];
+    // Serve the policy's requested slot, rather than hardcoding high for every shape.
+    const routeResult: import("../routing/router").RouteResult = {
+      choice: { provider: "openai-codex", id: "gpt-6-sol" },
+      bucket: "high",
+      servedBucket: "high",
+      rule: "R2",
+    };
+    const harness = setup(planner, {
+      crewmates: [builder],
+      classifier: byTitle,
+      routeResult,
+      onRouteDecide: (args) => {
+        decideCalls.push(args);
+        const tier = tierFor(args.shape);
+        Object.assign(routeResult, tier, { servedBucket: tier.bucket });
+      },
+    });
+    const { supervisor, tasks, specs, cards } = harness;
+    const parent = supervisor.plan({
+      title: "Declutter the settings page",
+      intent: intentOf("the settings page feels cluttered"),
+    });
+    const plan = await supervisor.commission({
+      title: "Plan: ways to declutter settings",
+      intent: {
+        goal: "propose two or three directions as one card",
+        userWords: "the settings page feels cluttered",
+        constraints: [{ kind: "read-only" }],
+      },
+      parent: parent.key,
+    });
+    await tick();
+    const planKey = tasks.get(plan.taskId)?.key ?? plan.taskId;
+    const implement = supervisor.plan({
+      title: "Implement the accepted direction",
+      intent: intentOf("implement the accepted direction"),
+      parent: parent.key,
+      shape: { basis: planKey },
+    });
+    specs[0]?.onCard?.({
+      title: "Two ways to declutter settings",
+      body: "<p>Two directions.</p><ul><li>A: hide rare rows.</li><li>B: group into sections.</li></ul>",
+      asking: true,
+      actions: [
+        { id: "a", label: "Hide rare rows" },
+        { id: "b", label: "Group into sections", default: true },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === plan.taskId) as Card;
+    return { ...harness, planner, builder, decideCalls, parent, plan, planKey, implement, card };
+  }
+
+  it("verifies a planned child's basis when it starts, not when it was planned", async () => {
+    const {
+      supervisor,
+      tasks,
+      planner,
+      builder,
+      decideCalls,
+      sessionSpecs,
+      plan,
+      planKey,
+      implement,
+      card,
+    } = await plannedBehindAPlan();
+    // Planned while the plan was still running: recorded, not believed yet.
+    expect(tasks.get(implement.id)?.shape).toMatchObject({ basis: planKey });
+    expect(tasks.basisOf(implement)).toEqual({ ref: planKey, verified: false });
+
+    supervisor.addCardMessage(card.id, "captain", "B, but keep the gear icon where it is");
+    planner.emit({
+      type: "assistant_delta",
+      taskId: plan.taskId,
+      text: "Two directions; B groups the rows into sections.",
+    });
+    supervisor.addCardMessage(
+      card.id,
+      "crewmate",
+      "B groups the rows into sections and keeps the gear icon in place.",
+    );
+    planner.emit({ type: "turn_end", taskId: plan.taskId });
+    planner.finishPrompt();
+    await tick();
+    supervisor.act(card.id, "b");
+    await tick();
+    expect(tasks.get(plan.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+
+    expect(await supervisor.startQueuedNow(implement.key)).toBe(
+      `Started ${implement.key} "Implement the accepted direction".`,
+    );
+    await tick();
+    const shape = decideCalls.at(-1)?.shape as WorkShape;
+    expect(shape).toMatchObject({ kind: "implement", basis: planKey, basis_verified: true });
+    expect(tierFor(shape)).toMatchObject({ rule: "R4", bucket: "medium" });
+    // The verdict is read, never written back: the record keeps the basis
+    // as named, and the row's tier follows the grounded route.
+    const started = tasks.get(implement.id);
+    expect(started?.shape).not.toHaveProperty("basis_verified");
+    expect(started && tasks.basisOf(started)).toEqual({ ref: planKey, verified: true });
+    expect(started?.difficulty).toBe("medium");
+    expect(sessionSpecs[0]?.thinking.level).toBe("xhigh");
+    expect(sessionSpecs[1]?.thinking.level).toBe("medium");
+    console.log(
+      "Finished-plan dispatch",
+      JSON.stringify({
+        planner: { shape: decideCalls[0]?.shape, thinkingLevel: sessionSpecs[0]?.thinking.level },
+        builder: {
+          shape,
+          difficulty: started?.difficulty,
+          thinkingLevel: sessionSpecs[1]?.thinking.level,
+        },
+      }),
+    );
+    const brief = builder.promptCalls[0] ?? "";
+    expect(brief).toContain(`grounded in ${planKey}`);
+    expect(brief).toContain("Two directions; B groups the rows into sections.");
+    expect(handedCard(brief).body).toContain("<li>B: group into sections.</li>");
+    expect(brief).toContain("- captain: B, but keep the gear icon where it is");
+    // The choice that closed the plan is on the record, and the builder is told it.
+    expect(brief).toContain('The captain closed it by choosing "Group into sections".');
+  });
+
+  it("hands accepted task-card selections to exactly one existing successor, including recovery reads", async () => {
+    const {
+      supervisor,
+      tasks,
+      planner,
+      builder,
+      specs,
+      sessions,
+      cardStore,
+      parent,
+      plan,
+      planKey,
+      implement,
+      card,
+    } = await plannedBehindAPlan();
+    specs[0]?.onCard?.({
+      id: card.id,
+      title: "Task cards",
+      body: "<p>Make task popovers normal cards.</p><p>Proposal default: one record.</p>",
+      actions: [
+        { id: "abandon", label: "Abandon" },
+        { id: "defer", label: "Save and defer" },
+        { id: "agree", label: "Approve and build", default: true },
+      ],
+    });
+    planner.finishPrompt();
+    await tick();
+    tasks.recordReport(plan.taskId, {
+      text: "Task cards: one record proposed; count still unresolved.",
+    });
+    const answers = [
+      { name: "q2_count", values: ["many"], labels: ["One per task"], changed: true },
+    ];
+    supervisor.act(card.id, "agree", "chrome", { answers });
+    await tick();
+    const saved = supervisor.newestCardResolution(plan.taskId);
+    expect(saved).toMatchObject({ action: "agree", answers });
+    expect(saved?.offer?.body).toContain("Proposal default: one record");
+    cardStore.upsert({ ...card, id: `${card.id}-retired`, createdAt: card.createdAt + 1 });
+    await vi.advanceTimersByTimeAsync(1);
+    cardStore.resolve(`${card.id}-retired`, "task-retired");
+    expect(cardStore.resolvedSince(0, 1, () => true, plan.taskId)[0]?.action).toBe("task-retired");
+    expect(supervisor.newestCardResolution(plan.taskId)?.answers).toEqual(answers);
+    // A plan that also shipped ends on a merge card: it never replaces the answered card (FI3-658).
+    cardStore.upsert({
+      ...card,
+      id: `${card.id}-merge`,
+      createdAt: card.createdAt + 2,
+      body: "<p>Completion card body.</p>",
+      actions: [
+        {
+          id: "merge",
+          label: "Merge",
+          variant: "primary",
+          effect: { kind: "settle", mode: "merge" },
+        },
+      ],
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    cardStore.resolve(`${card.id}-merge`, "merge");
+
+    // The Firstmate decides to start on acceptance; the generic host never parses "Agree".
+    expect(await supervisor.startQueuedNow(implement.key)).toContain("Started");
+    await tick();
+    expect(builder.promptCalls[0]).toContain(`grounded in ${planKey}`);
+    expect(builder.promptCalls[0]).toContain('q2_count: "One per task" (many), changed');
+    expect(handedCard(builder.promptCalls[0] ?? "").body).toContain("Proposal default: one record");
+    expect(handedCard(builder.promptCalls[0] ?? "").body).not.toContain("Completion card body.");
+    expect(builder.promptCalls[0]).not.toContain("Completion card body.");
+    expect(builder.promptCalls[0]).toContain("The captain's latest submitted settings/answers");
+    const starts = sessions.open.mock.calls.length;
+    supervisor.act(card.id, "agree", "chrome", { answers });
+    expect(await supervisor.startQueuedNow(implement.key)).toContain("not queued work");
+    await tick();
+    expect(sessions.open.mock.calls).toHaveLength(starts);
+    expect(
+      tasks.children(parent.id).filter((child) => child.shape?.basis === planKey),
+    ).toHaveLength(1);
+    expect(tasks.get(parent.id)).toMatchObject({
+      status: "open",
+      startPolicy: "on-request",
+      assignee: null,
+    });
+  });
+
+  for (const label of [
+    "This chooses a plan, not permission to implement",
+    "Use these settings",
+    "Hold until welcome merges",
+  ]) {
+    it(`records ${label} without the host granting a build`, async () => {
+      const { supervisor, tasks, planner, specs, plan, implement, card } =
+        await plannedBehindAPlan();
+      specs[0]?.onCard?.({
+        id: card.id,
+        title: "Design choice",
+        body: `<p>${label}</p><p>This records the choice without a build.</p>`,
+        ...(label === "Hold until welcome merges" ? { asking: true } : { designOnly: true }),
+        actions: [
+          { id: "select", label, default: true },
+          { id: "keep-looking", label: "Keep looking" },
+        ],
+      });
+      planner.finishPrompt();
+      await tick();
+      supervisor.act(card.id, "select");
+      await tick();
+      expect(tasks.get(plan.taskId)?.status).toBe("done");
+      expect(tasks.get(implement.id)).toMatchObject({ status: "open", startPolicy: "on-request" });
+    });
+  }
+
+  it("starts a planned child ungrounded when its basis never answered", async () => {
+    const { supervisor, tasks, builder, decideCalls, planKey, implement } =
+      await plannedBehindAPlan();
+    await supervisor.startQueuedNow(implement.key);
+    await tick();
+    const shape = decideCalls.at(-1)?.shape as WorkShape;
+    expect(shape).toMatchObject({ kind: "implement", basis: planKey, basis_verified: false });
+    expect(tierFor(shape)).toMatchObject({ rule: "R3", bucket: "high" });
+    const started = tasks.get(implement.id);
+    expect(started && tasks.basisOf(started)).toEqual({ ref: planKey, verified: false });
+    expect(builder.promptCalls[0] ?? "").not.toContain("grounded in");
+  });
+
+  it("closes a parent no crewmate holds once every child is closed", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const planOf = (title: string, parent?: string) =>
+      supervisor.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
+    const closeAs = (id: string, status: "done" | "dropped") =>
+      tasks.close(id, {
+        status,
+        reason: status === "done" ? "merged" : "cancelled",
+        actor: "host",
+      });
+    const lineFor = (id: string) => {
+      const record = tasks.get(id) as TaskRecord;
+      const event = tasks.timeline(id).at(-1) as TaskEvent;
+      return taskFeedLine(record, event)?.text;
+    };
+
+    // Both children done: done, with its one feed line.
+    const both = planOf("Declutter the settings page");
+    const a = planOf("Plan it", both.id);
+    const b = planOf("Build it", both.id);
+    closeAs(a.id, "done");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(both.id)?.status).toBe("open");
+    closeAs(b.id, "done");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(both.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(lineFor(both.id)).toBe("Done: everything under it is finished");
+
+    // One dropped, one done: still done.
+    const mixed = planOf("Fix the meter");
+    closeAs(planOf("Reproduce it", mixed.id).id, "dropped");
+    closeAs(planOf("Fix it", mixed.id).id, "done");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(mixed.id)).toMatchObject({ status: "done", closedReason: "finished" });
+
+    // Every child dropped: dropped.
+    const none = planOf("Rename the dock");
+    closeAs(planOf("Plan the rename", none.id).id, "dropped");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(none.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(lineFor(none.id)).toBe("Stopped: nothing under it went ahead");
+
+    // An open child holds it.
+    const waiting = planOf("Tidy the feed");
+    closeAs(planOf("Plan the tidy", waiting.id).id, "done");
+    planOf("Do the tidy", waiting.id);
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(waiting.id)?.status).toBe("open");
+
+    // A parent that carries a crewmate is its crewmate's to settle.
+    const held = seedTask(tasks, {
+      id: "held1",
+      title: "Own work",
+      status: "completed",
+      worktreeDir: "/w/held1",
+    });
+    closeAs(planOf("A part of it", held.id).id, "done");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(held.id)?.status).toBe("active");
+
+    // A parent with no children is just a planned row.
+    const alone = planOf("Someday");
+    await supervisor.sweepGates(Date.now());
+    expect(tasks.get(alone.id)?.status).toBe("open");
+  });
+
+  it("names the basis's branch, or its kept work, and quotes its card's thread", async () => {
+    const builder = fakeCrewmate();
+    const { supervisor, tasks, cardStore } = setup(builder);
+    // A live working copy: the branch, which the builder's worktree can read.
+    seedTask(tasks, {
+      id: "rep1",
+      title: "Reproduce the meter bug",
+      status: "completed",
+      worktreeDir: "/w/rep1",
+      branch: "fm/task-rep1",
+      outcome: "reproduced: yes - the failing check is saved on the working copy.",
+    });
+    await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix it"),
+      shape: { basis: tasks.get("rep1")?.key ?? "rep1" },
+    });
+    await tick();
+    const onBranch = builder.promptCalls.at(-1) ?? "";
+    expect(onBranch).toContain(
+      "Its work is on branch fm/task-rep1 in this repository (worktrees share refs: git log fm/task-rep1)",
+    );
+    expect(onBranch).not.toContain("What was said under its card");
+
+    // An answer's working copy holds nothing of its answer (it commits
+    // nothing, and the copy goes when it closes): no branch is named, the
+    // report and card carry it.
+    seedTask(tasks, {
+      id: "rep0",
+      title: "Reproduce the clock drift",
+      status: "completed",
+      worktreeDir: "/w/rep0",
+      branch: "fm/task-rep0",
+      shape: { kind: "reproduce", kind_source: "classifier:test", deliverable: "answer" },
+      outcome: "reproduced: yes - the clock drifts a second a minute.",
+    });
+    await supervisor.commission({
+      title: "Fix the clock drift",
+      intent: intentOf("fix it"),
+      shape: { basis: tasks.get("rep0")?.key ?? "rep0" },
+    });
+    await tick();
+    const onAnswer = builder.promptCalls.at(-1) ?? "";
+    expect(onAnswer).toContain("reproduced: yes - the clock drifts a second a minute.");
+    expect(onAnswer).not.toContain("fm/task-rep0");
+
+    // Closed with its work saved: the kept ref.
+    seedTask(tasks, {
+      id: "rep2",
+      title: "Reproduce the dock bug",
+      status: "completed",
+      worktreeDir: "/w/rep2",
+      branch: "fm/task-rep2",
+      outcome: "reproduced: yes",
+    });
+    tasks.close("rep2", { status: "dropped", reason: "superseded", actor: "firstmate" });
+    tasks.markWorkspaceRemoved("rep2");
+    tasks.note("rep2", "working copy removed - 1 commit not in yet saved first", {
+      news: false,
+      data: {
+        saved: { ref: "refs/infinitary/kept/rep2", sha: "abc", dirty: false, unlandedCommits: 1 },
+      },
+    });
+    await supervisor.commission({
+      title: "Fix the dock",
+      intent: intentOf("fix it"),
+      shape: { basis: tasks.get("rep2")?.key ?? "rep2" },
+    });
+    await tick();
+    const kept = builder.promptCalls.at(-1) ?? "";
+    expect(kept).toContain("its work is saved in the repository at refs/infinitary/kept/rep2");
+    expect(kept).not.toContain("Its work is on branch");
+
+    // Neither: no working-copy sentence at all, and a card's thread quoted.
+    seedTask(tasks, {
+      id: "ans1",
+      title: "Why the meter idles",
+      status: "completed",
+      outcome: "The claim query filters on repo_id.",
+    });
+    cardStore.upsert({
+      id: "card-ans1-1",
+      taskId: "ans1",
+      author: "crewmate",
+      priority: 1,
+      title: "The claim query filters on repo_id",
+      meta: "",
+      body: "<p>The claim query filters on repo_id.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: Date.now(),
+    });
+    supervisor.addCardMessage("card-ans1-1", "captain", "and the dock too?");
+    supervisor.addCardMessage("card-ans1-1", "crewmate", "Yes,\n the dock reads the same query.");
+    await supervisor.commission({
+      title: "Fix the claim query",
+      intent: intentOf("fix it"),
+      shape: { basis: tasks.get("ans1")?.key ?? "ans1" },
+    });
+    await tick();
+    const threaded = builder.promptCalls.at(-1) ?? "";
+    expect(threaded).not.toContain("Its work is on branch");
+    expect(threaded).not.toContain("its work is saved");
+    expect(threaded).toContain(
+      "What was said under its card, newest last:\n- captain: and the dock too?\n- crewmate: Yes,\n the dock reads the same query.",
+    );
+  });
+});
+
+/**
+ * settle_task mode `answered` (the captain's call C of 2026-09-24): whether
+ * an answer task is the Firstmate's own internal step is its judgment,
+ * declared when it creates the task (`internal_step`). The host infers
+ * nothing: it stores the declaration and honours it - a declared step closes
+ * done/answered on the Firstmate's word once a live task builds on it, and
+ * anything else stays the captain's to close, whatever its kind.
+ */
+describe("closing an answer task another task builds on", () => {
+  /** The classifier sorts by title: Plan -> plan, Reproduce -> reproduce, else implement. */
+  const byTitle = {
+    classify: async (input: KindInput) =>
+      input.title.startsWith("Plan")
+        ? ({ kind: "plan", source: "classifier:test", version: "kc1" } as const)
+        : input.title.startsWith("Reproduce")
+          ? ({ kind: "reproduce", source: "classifier:test", version: "kc1" } as const)
+          : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
+  };
+
+  /** A crewmate that reports and goes idle. */
+  async function reportAndIdle(crew: FakeCrewmate, taskId: string, text: string) {
+    crew.emit({ type: "assistant_delta", taskId, text });
+    crew.emit({ type: "turn_end", taskId });
+    crew.finishPrompt();
+    await tick();
+  }
+
+  /** An idle answer task, declared a step or not, and a planned task built on it. */
+  async function answered(
+    harness: ReturnType<typeof setup>,
+    crew: FakeCrewmate,
+    title: string,
+    internalStep: boolean,
+  ) {
+    const { supervisor, tasks } = harness;
+    const spawned = await supervisor.commission({
+      title,
+      intent: intentOf(title.toLowerCase()),
+      ...(internalStep ? { shape: { internal_step: true } } : {}),
+    });
+    await tick();
+    await reportAndIdle(crew, spawned.taskId, `${title}: done.`);
+    const key = tasks.get(spawned.taskId)?.key ?? spawned.taskId;
+    const next = supervisor.plan({
+      title: `Build on ${title}`,
+      intent: intentOf("build on it"),
+      shape: { basis: key },
+    });
+    return { taskId: spawned.taskId, key, next };
+  }
+
+  it("stores a direct-build skip declaration on the task without judging its text", async () => {
+    const harness = setup(fakeCrewmate(), { classifier: byTitle });
+    const reason = "One label; no rule changes; inspect the screen";
+    const built = await harness.supervisor.commission({
+      title: "Rename a label",
+      intent: intentOf("rename the label"),
+      shape: { skipped_plan_because: reason },
+    });
+    expect(harness.tasks.get(built.taskId)?.shape?.skipped_plan_because).toBe(reason);
+    expect(harness.events).toContainEqual({
+      type: "firstmate_note",
+      text: `Plan skipped for this work: ${reason}`,
+    });
+  });
+
+  it("closes a declared step - plan or reproduce - as answered, with a feed line naming where it went", async () => {
+    const planner = fakeCrewmate();
+    const reproducer = fakeCrewmate();
+    const harness = setup(planner, { crewmates: [reproducer], classifier: byTitle });
+    const { supervisor, tasks, workspace } = harness;
+    const plan = await answered(harness, planner, "Plan the settings", true);
+    const reproduce = await answered(harness, reproducer, "Reproduce the meter reset", true);
+
+    for (const step of [plan, reproduce]) {
+      expect(tasks.get(step.taskId)?.shape).toMatchObject({
+        deliverable: "answer",
+        internal_step: true,
+      });
+      const result = await supervisor.closeAnswerUsedAsBasis(step.key);
+      expect(result.ok).toBe(true);
+      expect(tasks.get(step.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+      const closed = tasks.get(step.taskId) as TaskRecord;
+      const close = tasks
+        .timeline(step.taskId)
+        .find((event) => (event.data as { reason?: string } | null)?.reason === "answered");
+      const line = taskFeedLine(closed, close as TaskEvent);
+      expect(line?.kind).toBe("ok");
+      expect(line?.text).toBe(
+        `Answered: its answer carries on in ${step.next.key} "${step.next.title}"`,
+      );
+      expect(line?.text).not.toContain("discard");
+      expect((await supervisor.closeAnswerUsedAsBasis(step.key)).text).toContain("already");
+    }
+    // Their scratch copies go with them, like any answer task's.
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes a step a live task waits on through a blocks link into that task, clearing the wait", async () => {
+    const checker = fakeCrewmate();
+    const builder = fakeCrewmate();
+    const lateChecker = fakeCrewmate();
+    const harness = setup(checker, { crewmates: [builder, lateChecker], classifier: byTitle });
+    const { supervisor, tasks } = harness;
+    // FI3-417's shape: a check run for a build already under way, which
+    // names no basis of the check, linked as blocking the build's merge.
+    const check = await supervisor.commission({
+      title: "Reproduce the live cases on the meter",
+      intent: intentOf("run the live cases"),
+      shape: { internal_step: true },
+    });
+    await tick();
+    const build = await supervisor.commission({
+      title: "Implement the meter",
+      intent: intentOf("build the meter"),
+    });
+    await tick();
+    tasks.link(check.taskId, build.taskId, "blocks", "firstmate");
+    await reportAndIdle(checker, check.taskId, "checks: pass - ten of ten.");
+    const checkKey = tasks.get(check.taskId)?.key ?? check.taskId;
+    const buildKey = tasks.get(build.taskId)?.key ?? build.taskId;
+    expect(tasks.blockerRefusal(build.taskId)?.text).toContain(checkKey);
+
+    const result = await supervisor.closeAnswerUsedAsBasis(checkKey);
+    expect(result).toMatchObject({ ok: true });
+    expect(result.text).toContain(`its answer carries on in ${buildKey} "Implement the meter"`);
+    const closed = tasks.get(check.taskId) as TaskRecord;
+    expect(closed).toMatchObject({ status: "done", closedReason: "answered" });
+    const close = tasks
+      .timeline(check.taskId)
+      .find((event) => (event.data as { reason?: string } | null)?.reason === "answered");
+    expect(close?.data).toMatchObject({ waitedOnBy: build.taskId });
+    const line = taskFeedLine(closed, close as TaskEvent);
+    expect(line?.kind).toBe("ok");
+    expect(line?.text).toBe(`Answered: its answer carries on in ${buildKey} "Implement the meter"`);
+    // Done is what clears a wait: the build carries on, and nothing holds its merge.
+    expect(tasks.blockerRefusal(build.taskId)).toBeUndefined();
+    expect(tasks.waitingOn(build.taskId)).toEqual([]);
+    expect(tasks.get(build.taskId)?.status).toBe("active");
+
+    // A link to work that already closed carries the answer nowhere.
+    const late = await supervisor.commission({
+      title: "Reproduce the live cases on the dock",
+      intent: intentOf("run the dock's live cases"),
+      shape: { internal_step: true },
+    });
+    await tick();
+    const gone = supervisor.plan({ title: "Fix the dock", intent: intentOf("fix the dock") });
+    tasks.link(late.taskId, gone.id, "blocks", "firstmate");
+    tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
+    await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
+    const refused = await supervisor.closeAnswerUsedAsBasis(late.taskId);
+    expect(refused).toMatchObject({ ok: false });
+    expect(refused.text).toContain(
+      "no planned or started task names it as its basis or waits on it",
+    );
+    expect(tasks.get(late.taskId)?.status).toBe("active");
+  });
+
+  it("leaves an answer not declared a step - a repro or plan the captain asked for - to his click", async () => {
+    const reproducer = fakeCrewmate();
+    const planner = fakeCrewmate();
+    const harness = setup(reproducer, { crewmates: [planner], classifier: byTitle });
+    const { supervisor, tasks, cards, specs } = harness;
+    const reproduce = await answered(harness, reproducer, "Reproduce the dock flicker", false);
+    const plan = await answered(harness, planner, "Plan the dock", false);
+    for (const asked of [reproduce, plan]) {
+      expect(tasks.get(asked.taskId)?.shape?.internal_step).toBeUndefined();
+      const refused = await supervisor.closeAnswerUsedAsBasis(asked.key);
+      expect(refused).toMatchObject({ ok: false });
+      expect(refused.text).toContain("it was not opened as an internal step of yours");
+      expect(tasks.get(asked.taskId)?.status).toBe("active");
+    }
+    // His own close is unchanged: his choice on its card closes it answered.
+    specs[0]?.onCard?.({
+      title: "The dock flicker reproduces",
+      body: "<p>The dock flickers on resize.</p><ul><li>Seen three times.</li></ul>",
+      actions: [
+        { id: "leave", label: "Leave it" },
+        { id: "fix", label: "Fix it", default: true },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === reproduce.taskId) as Card;
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.act(card.id, "fix");
+    await tick();
+    expect(tasks.get(reproduce.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+  });
+
+  it("refuses a step still working, one nothing builds on, a change, and one whose card is up", async () => {
+    const working = fakeCrewmate();
+    const unused = fakeCrewmate();
+    const builder = fakeCrewmate();
+    const carded = fakeCrewmate();
+    const harness = setup(working, { crewmates: [unused, builder, carded], classifier: byTitle });
+    const { supervisor, tasks, specs } = harness;
+    const step = { shape: { internal_step: true } };
+
+    const busy = await supervisor.commission({
+      title: "Reproduce the drift",
+      intent: intentOf("reproduce the drift"),
+      ...step,
+    });
+    await tick();
+    const busyKey = tasks.get(busy.taskId)?.key ?? busy.taskId;
+    supervisor.plan({ title: "Fix the drift", intent: intentOf("fix"), shape: { basis: busyKey } });
+    const stillWorking = await supervisor.closeAnswerUsedAsBasis(busyKey);
+    expect(stillWorking).toMatchObject({ ok: false });
+    expect(stillWorking.text).toContain("its crewmate is still working");
+
+    const lone = await supervisor.commission({
+      title: "Plan the rename",
+      intent: intentOf("plan the rename"),
+      ...step,
+    });
+    await tick();
+    await reportAndIdle(unused, lone.taskId, "Rename it Dock.");
+    const nobody = await supervisor.closeAnswerUsedAsBasis(
+      tasks.get(lone.taskId)?.key ?? lone.taskId,
+    );
+    expect(nobody).toMatchObject({ ok: false });
+    expect(nobody.text).toContain("no planned or started task names it as its basis");
+
+    const change = await answered(harness, builder, "Implement the rename", true);
+    const notAnswer = await supervisor.closeAnswerUsedAsBasis(change.key);
+    expect(notAnswer).toMatchObject({ ok: false });
+    expect(notAnswer.text).toContain("delivers a change, not an answer");
+
+    const shown = await supervisor.commission({
+      title: "Reproduce the flash",
+      intent: intentOf("reproduce the flash"),
+      ...step,
+    });
+    await tick();
+    specs[3]?.onCard?.({
+      title: "The flash reproduces",
+      body: "<p>The screen flashes on wake.</p><ul><li>Seen twice.</li></ul>",
+      actions: [
+        { id: "leave", label: "Leave it" },
+        { id: "fix", label: "Fix it", default: true },
+      ],
+    });
+    await reportAndIdle(carded, shown.taskId, "reproduced: yes");
+    const shownKey = tasks.get(shown.taskId)?.key ?? shown.taskId;
+    supervisor.plan({
+      title: "Fix the flash",
+      intent: intentOf("fix"),
+      shape: { basis: shownKey },
+    });
+    const waiting = await supervisor.closeAnswerUsedAsBasis(shownKey);
+    expect(waiting).toMatchObject({ ok: false });
+    expect(waiting.text).toContain(
+      'its answer card "The flash reproduces" is waiting on the captain',
+    );
+
+    // Every refusal left its task exactly as it was.
+    for (const id of [busy.taskId, lone.taskId, change.taskId, shown.taskId]) {
+      expect(tasks.get(id)?.status).toBe("active");
+    }
+  });
+});
+
+/**
+ * The last wake families on the typed envelope (the primitives review's P3):
+ * every wake the host composes carries typed facts, and `renderWake` words
+ * it where it is served. Every literal below is the text the prose
+ * templates served before the move, byte for byte, read back through the
+ * inbox the way the Firstmate's drain and a crewmate's lane read it.
+ */
+describe("the served text of every remaining wake (the typed envelope, P3)", () => {
+  const MIN = 60_000;
+
+  /** Age every lane row past the retry grace, as if two minutes had passed. */
+  function ageRows(db: import("../storage/db").AppDatabase): void {
+    db.prepare(
+      "UPDATE inbox SET last_attempt_at = last_attempt_at - 120000, next_attempt_at = next_attempt_at - 120000 WHERE last_attempt_at IS NOT NULL",
+    ).run();
+  }
+
+  /** One crewmate turn that ends with `text` as its report. */
+  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
+    crewmate.emit({ type: "assistant_delta", taskId, text });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+  }
+
+  it("a failed turn with nothing to retry, and a sign-in failure", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Checks", intent: intentOf("go") });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const before = ops.length;
+    crewmate.emit({ type: "continuation_started" });
+    crewmate.emit({ type: "turn_failed", taskId, error: "Background command failed." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.emit({ type: "continuation_ended", error: "Background command failed." });
+    await tick();
+    expect(ops.slice(before)).toEqual([
+      `[fm-op] crewmate 1's turn on task ${taskId} "Checks" failed: Background command failed.. The crewmate is still steerable; you can retry, steer, or interrupt it.`,
+    ]);
+
+    const auth = fakeCrewmate();
+    const signIn = setup(auth);
+    const failed = await signIn.supervisor.commission({ title: "t", intent: intentOf("work") });
+    await tick();
+    auth.emit({
+      type: "turn_failed",
+      taskId: failed.taskId,
+      error: "401: Incorrect API key provided",
+    });
+    auth.emit({ type: "turn_end", taskId: failed.taskId });
+    auth.finishPrompt();
+    await tick();
+    expect(signIn.ops).toEqual([
+      `[fm-op] crewmate 1's turn on task ${failed.taskId} "t" failed: 401: Incorrect API key provided. The crewmate is still steerable; you can retry, steer, or interrupt it.`,
+    ]);
+  });
+
+  it("a report, with what it filed and its cards on screen, and without", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("fix it"),
+    });
+    await tick();
+    const spec = specs[0] as CrewmateSpec;
+    spec.onFollowup?.({ title: "Flaky meter test", goal: "g", why: "w" });
+    spec.onFollowup?.({ title: "Unblock", goal: "g", why: "w", blocksMe: true });
+    spec.onCard?.({ title: "PR 58 is merged", body: "<p>merged</p>", actions: [] });
+    spec.onCard?.({ title: "Also merged", body: "<p>merged too</p>", actions: [] });
+    await tick();
+    await reportTurn(crewmate, taskId, "Meter fixed; two follow-ups filed.");
+    expect(ops).toEqual([
+      `[fm-op] crewmate 1 reported on task ${taskId} "Fix the meter": Meter fixed; two follow-ups filed. Filed this turn: SCR-2 "Flaky meter test" (not blocking), SCR-3 "Unblock" (blocks this task). Each waits on request, discovered from this task. It waits on SCR-3 "Unblock" (not started); nothing starts that work by itself. Its cards on the captain's screen: card-${taskId}-1 (note) "PR 58 is merged", card-${taskId}-2 (note) "Also merged".`,
+    ]);
+
+    const plain = fakeCrewmate();
+    const bare = setup(plain);
+    const job = await bare.supervisor.commission({ title: "Job", intent: intentOf("go") });
+    await tick();
+    await reportTurn(plain, job.taskId, "All of it is done now.");
+    expect(bare.ops).toEqual([
+      `[fm-op] crewmate 1 reported on task ${job.taskId} "Job": All of it is done now.`,
+    ]);
+  });
+
+  it("a task that failed, and the queued task whose wait it ended", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, tasks } = setup(crewmate);
+    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    await tick();
+    const second = await supervisor.commission({
+      title: "Dependent",
+      intent: intentOf("needs"),
+      startAfter: { afterTask: first.taskId },
+    });
+    crewmate.failPrompt("crashed hard");
+    await tick();
+    const firstKey = tasks.get(first.taskId)?.key;
+    const secondKey = tasks.get(second.taskId)?.key;
+    expect(ops).toEqual([
+      `[fm-op] task ${first.taskId} "Doomed" failed: crashed hard`,
+      `[fm-op] queued task ${second.taskId} ${secondKey} "Dependent" waits on ${firstKey} "Doomed", which was failed, so its wait can never end; the dead edge is blocks ${firstKey} -> ${secondKey}.`,
+    ]);
+  });
+
+  it("a settle the captain chose: a refusal with its ways, and a success", async () => {
+    const { supervisor, tasks, workspace, ops } = setup(fakeCrewmate());
+    seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
+    seedTask(tasks, { id: "clean", title: "Clean", status: "idle", worktreeDir: "/clean" });
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: true, unlandedCommits: 2 });
+    for (const taskId of ["dirty", "clean"]) {
+      const id = supervisor.addFirstmateCard({
+        taskId,
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
+      });
+      supervisor.act(id, "discard");
+      await vi.waitFor(() =>
+        expect(settleWakes(ops).some((line) => line.includes(`task ${taskId} `))).toBe(true),
+      );
+    }
+    expect(settleWakes(ops)).toEqual([
+      `[fm-op] the captain chose discard for task dirty "Unlanded"; the host settled it and the outcome was: Cannot discard SCR-1 "Unlanded" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead.\n\`\`\`json\n{\n  "refused": "unlanded-work",\n  "task": {\n    "id": "dirty",\n    "key": "SCR-1",\n    "title": "Unlanded"\n  },\n  "tasks": [],\n  "ways": [\n    {\n      "label": "Discard anyway",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "discard",\n        "confirm": true\n      }\n    },\n    {\n      "label": "Merge the branch instead",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "land"\n      }\n    }\n  ],\n  "text": "Cannot discard SCR-1 \\"Unlanded\\" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead."\n}\n\`\`\``,
+      `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: Discarded "Clean".`,
+    ]);
+  });
+
+  it("guidance set aside after its attempts", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, db, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    vi.mocked(crewmate.steer).mockRejectedValue(new Error("always busy"));
+    await supervisor.steerCrewmate(taskId, "urgent fix");
+    for (let round = 0; round < 3; round += 1) {
+      ageRows(db);
+      await supervisor.sweepInbox(Date.now());
+    }
+    expect(ops).toEqual([
+      `[fm-op] guidance for task ${taskId} "Job" could not be delivered after 3 attempts and was set aside: urgent fix. You can interrupt the task or spawn a follow-up.`,
+    ]);
+  });
+
+  it("the quiet watchdog and the wall-clock bound", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Marathon", intent: intentOf("long") });
+    await tick();
+    const start = Date.now();
+    supervisor.checkQuietTasks(start + 21 * MIN);
+    supervisor.checkQuietTasks(start + 125 * MIN);
+    await tick();
+    expect(ops).toEqual([
+      `[fm-op] crewmate 1 on task ${taskId} "Marathon" has produced no events for 21 minutes; it may be stuck. You can steer or interrupt it.`,
+      `[fm-op] crewmate 1 on task ${taskId} "Marathon" has been on one turn for 2.1 hours.`,
+    ]);
+  });
+
+  it("a queued start that failed, and the one that started", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Queued",
+      intent: intentOf("do"),
+      startAfter: { at: Date.now() - 1 },
+    });
+    vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
+      new Error("a branch named 'fm/task-x' already exists"),
+    );
+    await supervisor.dispatchQueuedTask(taskId);
+    await supervisor.dispatchQueuedTask(taskId);
+    await tick();
+    expect(ops).toEqual([
+      `[fm-op] queued task ${taskId} "Queued" could not start: Could not commission a crewmate: a branch named 'fm/task-x' already exists`,
+      `[fm-op] queued task ${taskId} "Queued" started - its wait ended. A crewmate is working on it now.`,
+    ]);
+  });
+
+  it("a queued start of work the captain named a model for says which model took it (FI3-444)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops } = setup(crewmate);
+    const { taskId, crewmate: handle } = await supervisor.commission({
+      title: "Queued on Fable",
+      intent: intentOf("after the audit, on fable"),
+      shape: { override_model_id: "claude-fable-5-1" },
+      startAfter: { at: Date.now() - 1 },
+    });
+    expect(handle).toBe("queued");
+    await supervisor.dispatchQueuedTask(taskId);
+    await tick();
+    expect(ops).toEqual([
+      `[fm-op] queued task ${taskId} "Queued on Fable" started - its wait ended. A crewmate is working on it now, on fm-mock/mock-1: claude-fable-5-1 was not available.`,
+    ]);
+  });
+
+  it("a start someone asked for raises no started wake, and the captain's failed Start says he asked (FI3-695)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, ops, tasks } = setup(crewmate);
+    // The Firstmate's own start_now: the tool's answer is its receipt.
+    const own = supervisor.plan({ title: "Own", intent: intentOf("do") });
+    expect(await supervisor.startQueuedNow(own.key)).toBe(`Started ${own.key} "Own".`);
+    await tick();
+    expect(tasks.get(own.id)?.status).toBe("active");
+
+    // The captain's Start on the task card that could not start still wakes, in his words.
+    const planned = supervisor.plan({ title: "Planned", intent: intentOf("do") });
+    vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
+      new Error("a branch named 'fm/task-x' already exists"),
+    );
+    supervisor.runTaskOp(planned.id, "start-task");
+    await tick();
+    expect(tasks.get(planned.id)?.status).toBe("open");
+    // His Start that took raises nothing: his next context block lists it.
+    supervisor.runTaskOp(planned.id, "start-task");
+    await tick();
+    expect(tasks.get(planned.id)?.status).toBe("active");
+    expect(ops).toEqual([
+      `[fm-op] the captain pressed Start on task ${planned.id} "Planned", and it could not start: Could not commission a crewmate: a branch named 'fm/task-x' already exists`,
+    ]);
+  });
+
+  it("the ask-first wait on a reasoning class", async () => {
+    const { supervisor, ops } = setup(fakeCrewmate(), {
+      routeResult: {
+        choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
+        bucket: "premium",
+        servedBucket: "high",
+        rule: "R1a",
+      },
+      quotaGateCleared: () => true,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Later big one",
+      intent: intentOf("big"),
+      shape: { premium_ask: true },
+      startAfter: { at: Date.now() - 1000 },
+    });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(ops).toEqual([
+      `[fm-op] task ${taskId} "Later big one" needs a premium model and none has quota right now; it waits on the premium quota reset unless you say otherwise, and a high model could serve it now.`,
+    ]);
+  });
+
+  it("choices on the Firstmate's cards", async () => {
+    const { supervisor, ops } = setup(fakeCrewmate());
+    const one = supervisor.addFirstmateCard({
+      title: "Which one?",
+      body: "Two match.",
+      actions: [{ id: "one", label: "One" }],
+    });
+    supervisor.act(one, "one", "frame", { pick: 1 });
+    const again = supervisor.addFirstmateCard({
+      title: "Which again?",
+      body: "Two match.",
+      actions: [{ id: "two", label: "Two" }],
+    });
+    supervisor.act(again, "two");
+    await tick();
+    expect(ops).toEqual([
+      `[fm-op] a script chose "One" (one) on card "Which one?" (${one}).\nCard action value (JSON): {"pick":1}`,
+      `[user]\nTwo\nChoice on card "Which again?" (${again}).`,
+    ]);
+  });
+
+  it("choices on a crewmate's cards, as its steers", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate);
+    await supervisor.commission({
+      title: "Fix the flaky test",
+      intent: intentOf("fix"),
+    });
+    await tick();
+    const ways = syncCardId(
+      specs[0]?.onCard?.({
+        title: "Two ways",
+        body: "<p>Awaiting the queue.</p><ul><li>Mocking.</li></ul>",
+        actions: [
+          { id: "await-queue", label: "Await the queue", default: true },
+          { id: "mock-clock", label: "Mock the clock" },
+        ],
+      }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    const before = crewmate.promptCalls.length;
+    supervisor.act(ways ?? "", "await-queue");
+    await tick();
+    const pick = syncCardId(
+      specs[0]?.onCard?.({
+        title: "Pick",
+        body: "<p>Pick.</p><p>Both.</p>",
+        actions: [
+          { id: "x", label: "X", default: true },
+          { id: "y", label: "Y" },
+        ],
+      }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.act(pick ?? "", "x", "frame", [1]);
+    await tick();
+    expect(crewmate.promptCalls.slice(before)).toEqual([
+      `Card "Two ways": the user chose "Await the queue" (await-queue).`,
+      `Card "Pick": a script chose "X" (x).\nCard action value (JSON): [1]`,
+    ]);
+  });
+
+  it("the captain's thread replies, with and without pictures", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Owner", intent: intentOf("emit") });
+    await tick();
+    const card = syncCardId(
+      specs[0]?.onCard?.({ title: "Owner note", body: "<p>The body.</p>", actions: [] }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    const before = crewmate.promptCalls.length;
+    supervisor.replyToCard(card ?? "", "  the checks failed on windows  ");
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    supervisor.replyToCard(card ?? "", "see this", [pngImage]);
+    await tick();
+    expect(crewmate.promptCalls.slice(before)).toEqual([
+      `The captain replied in the thread on your card. Do the work his words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when his words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while he waits). Then report. His reply takes your card off his screen until the answer, unless it is his only card or asked to stay; he sees your answer only when you report, so never acknowledge his words or say what you are about to do: he reads your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `The captain replied in the thread on your card. Do the work his words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when his words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while he waits). Then report. His reply takes your card off his screen until the answer, unless it is his only card or asked to stay; he sees your answer only when you report, so never acknowledge his words or say what you are about to do: he reads your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+    ]);
+    expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
+  });
+
+  it("the end of a timed wait, with and without its reason", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("go") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const before = crewmate.promptCalls.length;
+    tasks.setGate(taskId, { kind: "at-time", until: Date.now() - 1, reason: "checks settle" });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    tasks.setGate(taskId, { kind: "at-time", until: Date.now() - 1 });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(crewmate.promptCalls.slice(before)).toEqual([
+      "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
+      "The time this task was waiting for has come. Carry on from where you stopped.",
+    ]);
+  });
+
+  it("the Firstmate's lane holds these wakes as typed facts, never their wording", async () => {
+    const crewmate = fakeCrewmate();
+    const marathon = fakeCrewmate();
+    const { supervisor, inbox, db } = setup(crewmate, { crewmates: [marathon] });
+    // The real agent's notifyOp: the inbox's wake path.
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    await tick();
+    await supervisor.commission({
+      title: "Dependent",
+      intent: intentOf("needs"),
+      startAfter: { afterTask: first.taskId },
+    });
+    crewmate.failPrompt("crashed hard");
+    await tick();
+    await supervisor.commission({ title: "Marathon", intent: intentOf("long") });
+    await tick();
+    const start = Date.now();
+    supervisor.checkQuietTasks(start + 21 * MIN);
+    supervisor.checkQuietTasks(start + 125 * MIN);
+    const payloads = (
+      db
+        .prepare("SELECT payload FROM inbox WHERE recipient = ? ORDER BY id")
+        .all(FIRSTMATE_RECIPIENT) as { payload: string }[]
+    ).map((row) => JSON.parse(row.payload) as { v: number; facts?: { kind: string } });
+    expect(payloads.map((payload) => payload.facts?.kind)).toEqual([
+      "task-failed",
+      "dead-gate",
+      "quiet",
+      "long-turn",
+    ]);
+    expect(payloads.every((payload) => !("text" in payload))).toBe(true);
+    // The dead wait built again, as the tick builds it, is not new information.
+    await supervisor.sweepGates(Date.now());
+    expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(4);
+  });
+
+  it("a crewmate's lane holds the host's steers as typed facts until its turn ends", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const waiting = fakeQueuedSteerCrewmate();
+    const { supervisor, specs, inbox, tasks } = setup(crewmate, { crewmates: [waiting] });
+    const { taskId } = await supervisor.commission({ title: "Owner", intent: intentOf("emit") });
+    const timed = await supervisor.commission({ title: "Waits", intent: intentOf("wait") });
+    await tick();
+    const card = syncCardId(
+      specs[0]?.onCard?.({
+        title: "Owner note",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [
+          { id: "a", label: "A", default: true },
+          { id: "b", label: "B" },
+        ],
+      }),
+    );
+    await tick();
+    // Streaming on a backend that cannot take a steer mid-turn: the rows wait.
+    specs[0]?.onReport?.("The decision is ready.");
+    supervisor.replyToCard(card ?? "", "see this", [pngImage]);
+    tasks.setGate(timed.taskId, { kind: "at-time", until: Date.now() - 1 });
+    await supervisor.sweepGates(Date.now());
+    await tick();
+    expect(inbox.allFor(taskId).map((row) => [row.facts?.kind, row.text])).toEqual([
+      ["attachments-kept", undefined],
+    ]);
+    expect(inbox.allFor(timed.taskId).map((row) => [row.facts?.kind, row.text])).toEqual([
+      ["timed-wait-over", undefined],
+    ]);
+    expect(inbox.allFor(taskId)[0]?.facts).toMatchObject({
+      guidance: { kind: "thread-reply", words: "see this" },
+    });
+  });
+});
+
+describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
+  // The host's one clock (P5): the case moves `hostNow`; nothing fakes a timer.
+  let hostNow = 0;
+  const hostClock = () => hostNow;
+  beforeEach(() => {
+    vi.useRealTimers();
+    hostNow = Date.now();
+  });
+  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const minutes = (n: number) => n * 60_000;
+
+  /** A change where the project lives whose checks the case moves between reads. */
+  class ChecksForge implements Forge {
+    readonly kind;
+    readonly host;
+    readonly place;
+    readonly hasChecks;
+    headSha = "cafe0001feedbeef";
+    states: ForgeCheckState[] = ["pending", "pending"];
+    /** Every read of the checks, by anyone: the crewmate's, the watch's. */
+    checkReads = 0;
+    failNext: ForgeError | undefined;
+
+    constructor(kind: "github" | "git" = "github") {
+      this.kind = kind;
+      this.host = kind === "github" ? "github.com" : "git.example.com";
+      this.place = kind === "github" ? "GitHub" : "git.example.com";
+      this.hasChecks = kind === "github";
+    }
+    async listProjects() {
+      return [];
+    }
+    async defaultBranch() {
+      return "main";
+    }
+    async openChange(input: { branch: string }): Promise<ForgeChange> {
+      return this.changeOf(input.branch);
+    }
+    async changeFor(branch: string) {
+      return this.changeOf(branch);
+    }
+    async checks() {
+      this.checkReads += 1;
+      const fail = this.failNext;
+      this.failNext = undefined;
+      if (fail) throw fail;
+      if (!this.hasChecks) return { overall: "green" as const, items: [] };
+      const items = this.states.map((state, index) => ({
+        name: ["linux-checks", "lint"][index] ?? `check-${index}`,
+        state,
+      }));
+      return { overall: overallOfChecks(items), items };
+    }
+    async putIn() {
+      return undefined;
+    }
+    async close() {}
+    label(change: ForgeChange) {
+      return change.number !== undefined ? `#${change.number}` : change.branch;
+    }
+    url(change: ForgeChange) {
+      return change.url;
+    }
+    private changeOf(branch: string): ForgeChange {
+      return this.kind === "github"
+        ? { number: 7, url: "https://github.com/o/r/pull/7", branch, headSha: this.headSha }
+        : { url: null, branch, headSha: this.headSha };
+    }
+  }
+
+  /**
+   * A direct-pr task on a real repository whose crewmate read its checks
+   * with check_change and ended its turn to wait, as the tool tells it to:
+   * the real check_change and the real watch, over the case's forge.
+   */
+  async function waiting(forge = new ChecksForge()) {
+    const crewmate = fakeCrewmate();
+    let prCi: PrCiService | undefined;
+    const service = () => {
+      if (!prCi) throw new Error("check service not ready");
+      return prCi;
+    };
+    const harness = setup(crewmate, {
+      now: hostClock,
+      openChange: (taskId, input) => service().open(taskId, input),
+      checkChange: (taskId, input) => service().checkForCrew(taskId, input),
+      readCheckWatch: (taskId) => service().readWatched(taskId),
+    });
+    prCi = new PrCiService({
+      tasks: harness.tasks,
+      repos: harness.repos,
+      forgeFor: () => forge,
+      now: hostClock,
+      onCap: (taskId, facts) => harness.supervisor.holdForCiCap(taskId, facts),
+    });
+    const { repo } = await harness.repos.setup({ kind: "init", name: "watched" });
+    harness.repos.configure(repo.id, { delivery: "direct-pr" });
+    const { taskId } = await harness.supervisor.commission({
+      title: "Ship it",
+      intent: intentOf("Ship the fix"),
+      repoId: repo.id,
+    });
+    await tick();
+    const said = (await harness.specs[0]?.onCheckChange?.()) ?? "";
+    crewmate.emit({
+      type: "assistant_delta",
+      taskId,
+      text: "PR #7 is open; waiting on its checks.",
+    });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const start = hostNow;
+    /** The shared tick at `ms` past the wait's start: the ladder, the sweeps, the watch. */
+    const at = async (ms: number) => {
+      hostNow = start + ms;
+      harness.supervisor.reconcileIdle(hostNow);
+      await harness.supervisor.sweepGates(hostNow);
+      await harness.supervisor.pollCheckWatches(hostNow);
+      await tick();
+    };
+    return { ...harness, crewmate, forge, prCi, taskId, said, start, at };
+  }
+
+  const watchWakes = (prompts: string[]) =>
+    prompts.filter((text) => text.startsWith("The checks on pull request"));
+
+  it("pending then green: exactly one wake, and no model turn while the checks run", async () => {
+    const { crewmate, forge, taskId, tasks, said, sorts, ops, at } = await waiting();
+    // The reading tells the crewmate to wait for the wake, and the watch stands.
+    expect(said).toContain("overall: pending");
+    expect(said).toContain("The app is watching these checks and will wake you once");
+    expect(tasks.get(taskId)?.delivery?.ciWatch).toMatchObject({ head: forge.headSha, tries: 0 });
+    // Its report waits on the watch: nobody's turn to act, so it wakes nobody.
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+    const prompts = crewmate.promptCalls.length;
+
+    // Forty minutes of running checks: the host reads them, the crewmate
+    // takes no turn - no nudge, no steer, no stall wake.
+    for (let minute = 1; minute <= 40; minute++) await at(minutes(minute));
+    expect(crewmate.promptCalls).toHaveLength(prompts);
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(forge.checkReads).toBeGreaterThan(2);
+    expect(ops).toEqual([]);
+    expect(tasks.timeline(taskId).filter((event) => event.kind === "steered")).toEqual([]);
+
+    forge.states = ["success", "success"];
+    await at(minutes(45));
+    const wokenAt = hostNow;
+    expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      "The checks on pull request #7 https://github.com/o/r/pull/7 passed at cafe000: all 2 completed successfully. Carry on from where you stopped. If the rest needs this merged first, file it as Continue: … and end this task with the completion decision.",
+    );
+    expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "green", headSha: forge.headSha });
+    expect(tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
+    expect(
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "steered")
+        .map((event) => event.actor),
+    ).toEqual(["supervisor"]);
+
+    // Its turn ends - the task's own, a fresh idle episode - and the watch
+    // is over. Quiet refresh continues, but never sends another wake.
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(tasks.get(taskId)?.idleSince).toBeGreaterThanOrEqual(wokenAt);
+    const reads = forge.checkReads;
+    for (let minute = 46; minute <= 55; minute++) await at(minutes(minute));
+    expect(forge.checkReads).toBe(reads + 2);
+    expect(watchWakes(crewmate.promptCalls)).toHaveLength(1);
+  });
+
+  it("saves every running check reading's time even when its result and head are unchanged", async () => {
+    // PR #1229's shape: three checks on one head, all running at check_change.
+    const forge = new ChecksForge();
+    forge.states = ["pending", "pending", "pending"];
+    const { crewmate, taskId, tasks, supervisor, at, start } = await waiting(forge);
+    const prompts = crewmate.promptCalls.length;
+    const log: string[] = [];
+    const readingTimes: { saved: number | undefined; read: number }[] = [];
+    let previousReads = forge.checkReads;
+    const rel = (ms: number | undefined) =>
+      ms === undefined ? "-" : `t+${Math.round((ms - start) / 60_000)}m`;
+    const snap = (minute: number) => {
+      const record = tasks.get(taskId) as TaskRecord;
+      const d = record.delivery;
+      const fact = ciFactOf(d, hostNow);
+      if (forge.checkReads > previousReads) {
+        readingTimes.push({ saved: d?.ciAt, read: hostNow });
+        previousReads = forge.checkReads;
+      }
+      log.push(
+        `t+${minute}m reads=${forge.checkReads} github=[${forge.states.join(",")}] ci=${d?.ci} ciAt=${rel(d?.ciAt)} age=${fact?.ageMinutes}m watch=${d?.ciWatch ? `since ${rel(d.ciWatch.since)} next ${rel(d.ciWatch.nextAt)}` : "none"} posture=${supervisor.workPosture(record).reason} wakes=${crewmate.promptCalls.length - prompts}`,
+      );
+    };
+    for (let minute = 1; minute <= 10; minute++) {
+      await at(minutes(minute));
+      snap(minute);
+    }
+    // Two Linux journey jobs fail; the full Mac lane keeps running.
+    forge.states = ["failure", "failure", "pending"];
+    for (let minute = 11; minute <= 56; minute++) {
+      await at(minutes(minute));
+      snap(minute);
+    }
+    const readsAtRed = Number(/reads=(\d+)/.exec(log[10] ?? "")?.[1]);
+    console.log(log.join("\n"));
+    console.log(
+      "ci events:",
+      tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "ci")
+        .map((event) => `${rel(event.at)} ${event.text}`),
+    );
+    const record = tasks.get(taskId) as TaskRecord;
+    console.log("crew_status ci fact:", ciFactOf(record.delivery, hostNow));
+    // The first failed check woke the crewmate once while one check still runs.
+    expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(crewmate.promptCalls.at(-1)).toContain("linux-checks (failure)");
+    expect(crewmate.promptCalls.at(-1)).toContain("lint (failure)");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    // Established: the host kept reading GitHub after the red...
+    expect(forge.checkReads).toBeGreaterThan(readsAtRed + 5);
+    // ...the watch still stands, so the tile says "Waiting for checks".
+    expect(supervisor.workPosture(record).reason).toBe("checks");
+    // The failing check: the recorded reading time should follow the last read.
+    expect(ciFactOf(record.delivery, hostNow)?.ageMinutes).toBeLessThanOrEqual(5);
+    // Both unchanged pending and unchanged red reads use the host's reading clock.
+    expect(readingTimes.length).toBeGreaterThan(10);
+    for (const { saved, read } of readingTimes) expect(saved).toBe(read);
+    expect(ciFactOf(record.delivery, hostNow)?.readAt).toBe(
+      new Date(record.delivery?.ciAt as number).toISOString(),
+    );
+    expect(record.delivery?.ciRounds ?? 0).toBe(0);
+  });
+
+  it("refreshes settled checks and every open card strip without an agent call", async () => {
+    const { crewmate, forge, taskId, tasks, specs, at, supervisor } = await waiting();
+    forge.states = ["success", "success"];
+    await at(minutes(5));
+    await specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "Ship it is ready",
+      body: completionBody("<p>The checks passed.</p>"),
+      actions: [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const checks = () =>
+      supervisor
+        .cardsSnapshot()
+        .find((c) => c.title === "Ship it is ready")
+        ?.body.match(/data-fact="checks"[\s\S]*?<\/span><\/span>/)?.[0];
+    expect(checks()).toContain("passed");
+    const prompts = crewmate.promptCalls.length;
+    forge.states = ["success", "failure"];
+    await at(minutes(10));
+    expect(tasks.get(taskId)?.delivery?.ci).toBe("red");
+    expect(checks()).toContain("failed");
+    expect(crewmate.promptCalls).toHaveLength(prompts);
+    forge.headSha = "beef0002cafef00d";
+    forge.states = ["pending", "pending"];
+    await at(minutes(15));
+    expect(tasks.get(taskId)?.delivery?.ci).toBe("pending");
+    expect(checks()).toContain("running");
+    forge.states = ["success", "success"];
+    await at(minutes(16));
+    expect(tasks.get(taskId)?.delivery?.ci).toBe("green");
+    expect(checks()).toContain("passed");
+  });
+
+  it("pending then red: one diagnosis wake naming the failing check, no repair spent", async () => {
+    const { crewmate, forge, taskId, tasks, at } = await waiting();
+    const prompts = crewmate.promptCalls.length;
+    for (let minute = 1; minute <= 5; minute++) await at(minutes(minute));
+    expect(crewmate.promptCalls).toHaveLength(prompts);
+
+    forge.states = ["success", "failure"];
+    for (let minute = 6; minute <= 20; minute++) await at(minutes(minute));
+    expect(watchWakes(crewmate.promptCalls)).toEqual([
+      `The checks on pull request #7 https://github.com/o/r/pull/7 failed at cafe000: lint (failure). ${CHECK_DIAGNOSIS_NEXT}`,
+    ]);
+    expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(tasks.get(taskId)?.delivery).toMatchObject({
+      ci: "red",
+      ciRepair: { failures: [{ headSha: forge.headSha, checks: ["lint"] }] },
+    });
+    expect(tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
+  });
+
+  it("three unsuccessful declared own repairs produce one cap wake and one decision, never raw failures", async () => {
+    const h = await waiting();
+    const { forge, taskId, tasks, supervisor, specs, ops, prCi } = h;
+    forge.states = ["success", "failure"];
+    await h.at(minutes(1));
+    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(ops).toEqual([]);
+    let sourceHead = forge.headSha;
+    for (let i = 1; i <= 3; i++) {
+      await specs[0]?.onCheckChange?.({
+        diagnosis: {
+          headSha: sourceHead,
+          check: "lint",
+          classification: "own-regression",
+          evidence: "Assertion fails only with my diff; failed-step log read",
+        },
+      });
+      forge.headSha = `repair${i}`;
+      await specs[0]?.onCheckChange?.({
+        repair: {
+          id: `own-${i}`,
+          sourceHead,
+          headSha: forge.headSha,
+          check: "lint",
+          evidence: "Corrected the failing path and pushed the fix",
+        },
+      });
+      await prCi?.readWatched(taskId);
+      sourceHead = forge.headSha;
+    }
+    expect(tasks.get(taskId)?.delivery).toMatchObject({ ciRounds: 3 });
+    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
+    expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "captain" });
+    const capCard = supervisor.addFirstmateCard({
+      taskId,
+      id: "own-repair-cap",
+      title: "The three repairs did not pass",
+      body: "<p>The three repairs did not pass; another try needs your choice.</p>",
+      actions: [
+        { id: "retry", label: "Try again", default: true },
+        { id: "stop", label: "Stop" },
+      ],
+    });
+    for (let i = 0; i < 3; i++) await prCi?.checkForCrew(taskId);
+    expect(supervisor.cardsSnapshot()).toHaveLength(1);
+    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
+    supervisor.act(capCard, "retry");
+    await supervisor.steerCrewmate(taskId, "The captain chose another repair attempt.");
+    expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
+    expect(tasks.get(taskId)?.delivery?.ciRepair?.repairs).toHaveLength(3);
+    await prCi?.checkForCrew(taskId);
+    expect(tasks.get(taskId)?.delivery?.ciRounds).toBeUndefined();
+    expect(ops.filter((op) => op.includes("hit its CI cap"))).toHaveLength(1);
+  });
+
+  it("a new push re-arms the watch for the new head, and only the new head is woken about", async () => {
+    const { crewmate, forge, taskId, tasks, at } = await waiting();
+    await at(minutes(1));
+    forge.headSha = "beadbeef00000002";
+    await at(minutes(3));
+    expect(tasks.get(taskId)?.delivery?.ciWatch).toMatchObject({ head: "beadbeef00000002" });
+    forge.states = ["success", "success"];
+    for (let minute = 4; minute <= 10; minute++) await at(minutes(minute));
+    expect(watchWakes(crewmate.promptCalls)).toEqual([
+      expect.stringContaining("passed at beadbee"),
+    ]);
+  });
+
+  it("a host without checks is never watched, and the crewmate is told no wake will come", async () => {
+    const forge = new ChecksForge("git");
+    const { crewmate, taskId, tasks, said, sorts, at } = await waiting(forge);
+    expect(said).toContain("overall: green");
+    expect(said).toContain(
+      "git.example.com runs no checks the app can watch, so no wake will come: the local gate you ran is the evidence.",
+    );
+    expect(tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
+    // Nothing waits on the host: the report is nobody's turn, as it always was.
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "stopped" });
+    for (let minute = 1; minute <= 9; minute++) await at(minutes(minute));
+    expect(forge.checkReads).toBe(1);
+    expect(watchWakes(crewmate.promptCalls)).toEqual([]);
+  });
+
+  it("a restart mid-watch still wakes once, and a wake already sent is never sent again", async () => {
+    const first = await waiting();
+    const { forge, taskId, db, paths, workspace, start } = first;
+    await first.at(minutes(1));
+    await first.at(minutes(2));
+    const watch = first.tasks.get(taskId)?.delivery?.ciWatch;
+    expect(watch).toMatchObject({ head: forge.headSha, since: start });
+    first.supervisor.disposeAll();
+
+    /** The app starting again over the same record: a new supervisor, a new crewmate session. */
+    const boot = () => {
+      const crewmate = fakeCrewmate();
+      const tasks = new TaskService({ db, strict: true, now: hostClock });
+      const repos = new RepoRegistry(db, paths.fleetDir);
+      const prCi = new PrCiService({ tasks, repos, forgeFor: () => forge, now: hostClock });
+      const supervisor = new CrewSupervisor({
+        now: hostClock,
+        ...crewSessions(paths, async () => crewmate),
+        workspace,
+        repos,
+        tasks,
+        cardStore: new CardStore(db),
+        inbox: new InboxStore(db, { now: hostClock }),
+        paths,
+        openChange: (id, input) => prCi.open(id, input),
+        checkChange: (id) => prCi.checkForCrew(id),
+        readCheckWatch: (id) => prCi.readWatched(id),
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+      return { crewmate, tasks, supervisor };
+    };
+    const second = boot();
+    expect(second.tasks.get(taskId)?.delivery?.ciWatch).toEqual(watch);
+
+    forge.states = ["success", "success"];
+    for (let minute = 3; minute <= 12; minute++) {
+      hostNow = start + minutes(minute);
+      await second.supervisor.pollCheckWatches(hostNow);
+      await tick();
+    }
+    // The resumed crewmate hears it once.
+    expect(watchWakes(second.crewmate.promptCalls)).toEqual([
+      expect.stringContaining("passed at cafe000"),
+    ]);
+    expect(second.tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
+    second.supervisor.disposeAll();
+
+    // The app stopped after the wake but before the watch cleared: the
+    // record still holds the watch. Its wake is not sent again.
+    second.tasks.recordDelivery(taskId, { ciWatch: watch });
+    const third = boot();
+    for (let minute = 13; minute <= 20; minute++) {
+      hostNow = start + minutes(minute);
+      await third.supervisor.pollCheckWatches(hostNow);
+      await tick();
+    }
+    expect(third.crewmate.promptCalls).toEqual([]);
+    expect(third.tasks.get(taskId)?.delivery?.ciWatch).toBeUndefined();
+    third.supervisor.disposeAll();
+  });
+});
+
+/**
+ * A crewmate whose backend reports a turn's usage only once the turn
+ * settles, as Claude's does: an abort just asks, the cut turn's `turn_end`
+ * arrives after the abort returned, and the session is gone (`closed()`)
+ * only when that turn has settled.
+ */
+function settlingCrewmate(): FakeCrewmate & {
+  settleCut: (taskId: string, usage: { input: number; output: number; cost: number }) => void;
+} {
+  const crewmate = fakeCrewmate();
+  const gone = deferred<void>();
+  let disposed = false;
+  const settle = crewmate.finishPrompt;
+  return Object.assign(crewmate, {
+    dispose: vi.fn(() => {
+      disposed = true;
+      if (!crewmate.isStreaming()) gone.resolve();
+    }),
+    closed: () => gone.promise,
+    settleCut: (taskId: string, usage: { input: number; output: number; cost: number }) => {
+      crewmate.emit({ type: "turn_end", taskId, usage });
+      crewmate.emit({ type: "turn_closed" });
+      settle();
+      if (disposed) gone.resolve();
+    },
+  });
+}
+
+describe("a turn cut by a close still reaches the usage ledger", () => {
+  const usage = { input: 1200, output: 340, cost: 0.42 };
+
+  it("records the turn a close interrupted once it settles, exactly once", async () => {
+    const crewmate = settlingCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor, tasks, events } = setup(crewmate, { recordUsage });
+    const { taskId } = await supervisor.commission({
+      title: "Answer the rivet question",
+      intent: intentOf("how many rivets hold the hatch?"),
+    });
+    await tick();
+    expect(crewmate.isStreaming()).toBe(true);
+
+    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    expect(crewmate.aborts).toEqual([undefined]);
+    expect(tasks.get(taskId)?.status).toBe("done");
+    expect(recordUsage).not.toHaveBeenCalled();
+
+    // The interrupted turn's result arrives after the close returned.
+    crewmate.settleCut(taskId, usage);
+    await tick();
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith({
+      taskId,
+      model: { provider: "fm-mock", id: "mock-1" },
+      usage,
+    });
+    // Only the usage: the closed task's feed and record are not the cut
+    // turn's to change.
+    expect(events.some((event) => event.type === "turn_end")).toBe(false);
+    expect(tasks.get(taskId)?.status).toBe("done");
+
+    // The session is gone: nothing it says later is heard.
+    crewmate.emit({ type: "turn_end", taskId, usage });
+    expect(recordUsage).toHaveBeenCalledOnce();
+  });
+
+  it("records context-shortening work that settles after the task closes", async () => {
+    const crewmate = settlingCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor } = setup(crewmate, { recordUsage });
+    const { taskId } = await supervisor.commission({
+      title: "Shorten before answering",
+      intent: intentOf("answer the question"),
+    });
+    await tick();
+    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    crewmate.emit({
+      type: "tool_end",
+      taskId,
+      callId: `${taskId}:compaction`,
+      toolName: "compact_context",
+      isError: false,
+      usage,
+    });
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ taskId, usage }));
+    crewmate.settleCut(taskId, { input: 1, output: 1, cost: 0.01 });
+    await tick();
+    expect(recordUsage).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts a turn that settled during the abort once, through the task itself", async () => {
+    const crewmate = fakeCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor } = setup(crewmate, { recordUsage });
+    const { taskId } = await supervisor.commission({
+      title: "Answer the hatch question",
+      intent: intentOf("which hatch leaks?"),
+    });
+    await tick();
+    // A backend whose abort waits for its turn (Pi's): the usage lands
+    // while the task still hears the session.
+    crewmate.abort = async () => {
+      crewmate.emit({ type: "turn_end", taskId, usage });
+      crewmate.finishPrompt();
+    };
+
+    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId, usage });
+    await tick();
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ taskId, usage }));
+  });
+
+  it("records the rejected attempt's cut turn when an escalation supersedes it", async () => {
+    const attempt = settlingCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor, tasks } = setup(attempt, {
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      recordUsage,
+      crewmates: [fakeCrewmate()],
+    });
+    const { taskId: previousId } = await supervisor.commission({
+      title: "Fix the flaky meter test",
+      intent: intentOf("fix the flaky meter test"),
+    });
+    await tick();
+    const previous = tasks.get(previousId);
+    if (!previous) throw new Error("the attempt has no record");
+
+    await supervisor.commission({
+      title: "Fix the flaky meter test",
+      intent: intentOf("that is not a fix, try again"),
+      shape: { escalate_from: previous.key },
+    });
+    await tick();
+    expect(tasks.get(previousId)).toMatchObject({ status: "dropped", closedReason: "superseded" });
+    expect(recordUsage).not.toHaveBeenCalled();
+
+    attempt.settleCut(previousId, usage);
+    await tick();
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: previousId, usage }),
+    );
+  });
+
+  it("records a turn the retention purge cut", async () => {
+    const crewmate = settlingCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor, tasks } = setup(crewmate, { recordUsage });
+    const { taskId } = await supervisor.commission({
+      title: "Count the rivets",
+      intent: intentOf("count the rivets"),
+    });
+    await tick();
+
+    await supervisor.purgeAllTasks();
+    expect(tasks.get(taskId)).toBeUndefined();
+    crewmate.settleCut(taskId, usage);
+    await tick();
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ taskId, usage }));
+  });
+
+  it("holds the quit until a cut turn settles, records it, and leaves the task to resume", async () => {
+    const crewmate = settlingCrewmate();
+    const recordUsage = vi.fn();
+    const { supervisor, tasks, ops } = setup(crewmate, { recordUsage });
+    const { taskId } = await supervisor.commission({
+      title: "Count the rivets",
+      intent: intentOf("count the rivets"),
+    });
+    await tick();
+    const opsBefore = ops.length;
+
+    let quit = false;
+    const quitting = supervisor.disposeAll().then(() => {
+      quit = true;
+    });
+    await tick();
+    expect(quit).toBe(false);
+    crewmate.settleCut(taskId, usage);
+    await quitting;
+    expect(recordUsage).toHaveBeenCalledOnce();
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ taskId, usage }));
+    // A quit is not a close: the record stays where the next launch finds
+    // it, and no report or wake is made of the cut turn.
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(ops.length).toBe(opsBefore);
+  });
+
+  it("never holds the quit past its bound for a client that does not answer", async () => {
+    const crewmate = settlingCrewmate();
+    const { supervisor } = setup(crewmate);
+    await supervisor.commission({ title: "Count", intent: intentOf("count the rivets") });
+    await tick();
+    vi.useFakeTimers();
+
+    let quit = false;
+    const quitting = supervisor.disposeAll().then(() => {
+      quit = true;
+    });
+    await vi.advanceTimersByTimeAsync(QUIT_SETTLE_MS - 1);
+    expect(quit).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await quitting;
+    expect(quit).toBe(true);
+  });
+});
+
+/** Choice admission is about the shown offer, not the durable head or id prefix. */
+describe("ready-card choice admission", () => {
+  for (const source of ["chrome", "frame"] as const)
+    for (const deliverable of ["answer", "change"] as const)
+      it(`refuses an undeclared ${source} choice without changing its ${deliverable} task or running an effect`, async () => {
+        const crewmate = fakeCrewmate();
+        const { supervisor, specs, tasks, cardStore, workspace, ops } = setup(crewmate);
+        const { taskId } = await supervisor.commission({
+          title: "Validate the choice",
+          intent: {
+            ...intentOf("Validate the choice"),
+            ...(deliverable === "answer" ? { constraints: [{ kind: "read-only" as const }] } : {}),
+          },
+        });
+        await tick();
+        const id =
+          syncCardId(
+            specs[0]?.onCard?.({
+              title: "Choose a route",
+              body: "<p>Choose a route.</p><p>Both routes work.</p>",
+              actions: [
+                {
+                  id: "open",
+                  label: "Open settings",
+                  default: true,
+                  effect: { kind: "open", target: "settings" },
+                },
+                { id: "later", label: "Not now" },
+              ],
+            }),
+          ) ?? "";
+        specs[0]?.onReport?.("The decision is ready.");
+        const card = supervisor.cardsSnapshot().find((entry) => entry.id === id);
+        const record = tasks.get(taskId);
+        const timeline = tasks.timeline(taskId);
+        const observations = cardStore.observations(id);
+        const wakes = [...ops];
+        expect(record?.shape?.deliverable).toBe(deliverable);
+        for (const action of ["not-offered", "", "Open settings"])
+          expect(() => supervisor.act(id, action, source)).toThrow(
+            "This choice is not offered on this card",
+          );
+        await tick();
+        expect(supervisor.cardsSnapshot().find((entry) => entry.id === id)).toEqual(card);
+        expect(cardStore.chosenAction(id)).toBeUndefined();
+        expect(cardStore.observations(id)).toEqual(observations);
+        expect(tasks.get(taskId)).toEqual(record);
+        expect(tasks.timeline(taskId)).toEqual(timeline);
+        expect(crewmate.steer).not.toHaveBeenCalled();
+        expect(workspace.landTaskWork).not.toHaveBeenCalled();
+        expect(workspace.retireTaskWorktree).not.toHaveBeenCalled();
+        expect(ops).toEqual(wakes);
+        // Refusal must not consume the offer: the captain can still choose it.
+        expect(supervisor.act(id, "open")).toEqual({
+          effect: { kind: "open", target: "settings" },
+        });
+        expect(cardStore.chosenAction(id)).toBe("open");
+        crewmate.finishPrompt();
+        await tick();
+      });
+
+  it("refuses hidden choices before resolution, steer or an effect, then uses the shown revision", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cardStore, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Choice safety",
+      intent: intentOf("choose"),
+    });
+    await tick();
+    const id =
+      syncCardId(
+        specs[0]?.onCard?.({
+          id: "safe",
+          title: "Choose a route",
+          body: "<p>Choose a route.</p><p>Both routes work.</p>",
+          actions: [
+            {
+              id: "open",
+              label: "Open settings",
+              default: true,
+              effect: { kind: "open", target: "settings" },
+            },
+            { id: "later", label: "Not now" },
+          ],
+        }),
+      ) ?? "";
+    const before = tasks.timeline(taskId);
+    expect(() => supervisor.act(id, "open")).toThrow("This choice is not ready");
+    expect(cardStore.chosenAction(id)).toBeUndefined();
+    expect(tasks.timeline(taskId)).toEqual(before);
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    specs[0]?.onReport?.("The decision is ready.");
+    specs[0]?.onCard?.({
+      id,
+      title: "Choose a route",
+      body: "<p>Full answer.</p><p>Both routes work.</p>",
+      actions: [
+        {
+          id: "open",
+          label: "Open settings",
+          default: true,
+          effect: { kind: "open", target: "settings" },
+        },
+        { id: "later", label: "Not now" },
+      ],
+    });
+    specs[0]?.onReport?.("The answer is ready.");
+    // A pending revision must neither remove a shown choice nor admit an unseen one.
+    specs[0]?.onCard?.({
+      id,
+      title: "A new route",
+      body: "<p>A new route.</p><p>The subscriptions are available there.</p>",
+      actions: [
+        {
+          id: "subscriptions",
+          label: "Open subscriptions",
+          default: true,
+          effect: { kind: "open", target: "subscriptions" },
+        },
+        { id: "later", label: "Not now" },
+      ],
+    });
+    expect(() => supervisor.act(id, "subscriptions")).toThrow(
+      "This choice is not offered on this card",
+    );
+    expect(cardStore.chosenAction(id)).toBeUndefined();
+    // A decision-to-note revision also leaves the old shown choice usable.
+    specs[0]?.onCard?.({
+      id,
+      title: "Now a note",
+      body: "<p>A note.</p><p>Nothing to choose.</p>",
+      actions: [],
+    });
+    // The action observation is written after the row resolution in one transaction.
+    // Advance logical time on each clock read so equality cannot hide that ordering.
+    let time = Date.now();
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => ++time);
+    let result: ReturnType<CrewSupervisor["act"]>;
+    let saved: ReturnType<CrewSupervisor["newestCardResolution"]>;
+    try {
+      result = supervisor.act(id, "open");
+      saved = supervisor.newestCardResolution(taskId);
+    } finally {
+      clock.mockRestore();
+    }
+    expect(result).toEqual({ effect: { kind: "open", target: "settings" } });
+    expect(cardStore.chosenAction(id)).toBe("open");
+    expect(saved?.offer).toMatchObject({
+      title: "Choose a route",
+      body: "<p>Full answer.</p><p>Both routes work.</p>",
+    });
+    // The stored newest revision is a note; recovery must use the dispatched offer.
+    expect(saved?.card.title).toBe("Now a note");
+
+    crewmate.finishPrompt();
+    await tick();
+  });
+
+  for (const byGate of [false, true])
+    it(`refuses choices associated with a closed task (${byGate ? "gate-backed" : "direct"})`, () => {
+      const { supervisor, tasks, cardStore, ops } = setup(fakeCrewmate());
+      const id = supervisor.addFirstmateCard({
+        ...(byGate ? {} : { taskId: "closed" }),
+        title: "Choose a route",
+        body: "Choose a route.",
+        actions: [
+          { id: "open", label: "Open settings", effect: { kind: "open", target: "settings" } },
+        ],
+      });
+      if (byGate) tasks.fileDecision({ id: "closed", title: "Route", cardId: id });
+      else seedTask(tasks, { id: "closed", title: "Route", status: "idle" });
+      tasks.close("closed", { status: "done", reason: "answered", actor: "captain" });
+      const timeline = tasks.timeline("closed");
+      expect(() => supervisor.act(id, "open")).toThrow("Its task is no longer open");
+      expect(supervisor.cardsSnapshot().some((card) => card.id === id)).toBe(true);
+      expect(cardStore.chosenAction(id)).toBeUndefined();
+      expect(tasks.timeline("closed")).toEqual(timeline);
+      expect(ops).toEqual([]);
+    });
+});
+
+describe("a cardless internal step's report", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const byTitle = {
+    classify: async (input: KindInput) =>
+      input.title.startsWith("Reproduce")
+        ? ({ kind: "reproduce", source: "classifier:test", version: "kc1" } as const)
+        : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
+  };
+  const ANSWER =
+    "reproduced: yes\n\nThe card's Checks cell is fixed when the card goes up. The failing check is in crewSupervisor.test.ts.";
+
+  async function scenario(backgroundWork: "host" | "client") {
+    const base = fakeCrewmate();
+    const crewmate: FakeCrewmate = {
+      ...base,
+      controlProfile: backgroundWork === "client" ? CLAUDE_CONTROL_PROFILE : PI_CONTROL_PROFILE,
+    };
+    const harness = setup(crewmate, { classifier: byTitle });
+    const { supervisor, tasks, inbox, ops } = harness;
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        const id = inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
+        ops.push(`[${origin}] ${served(wake)}`);
+        if (id !== null) {
+          inbox.markDelivered([id]);
+          inbox.ack([id]);
+        }
+      },
+      retryConverse: vi.fn(),
+    });
+    // The sequence as the Firstmate opens it (docs/sequences.md): a parent
+    // on request, the reproduce step running as a declared internal step,
+    // and the fix step planned on request with the step as its basis.
+    const parent = supervisor.plan({
+      title: "Check results stay stale",
+      intent: intentOf("it seems this is not updated when the external status changes"),
+    });
+    const step = await supervisor.commission({
+      title: "Reproduce: check results stay stale after GitHub changes",
+      intent: {
+        goal: "Reproduce a shown check result staying unchanged",
+        userWords: "it seems this is not updated when the external status changes",
+        constraints: [{ kind: "read-only" }],
+      },
+      parent: parent.key,
+      shape: { internal_step: true },
+    });
+    await tick();
+    const stepKey = tasks.get(step.taskId)?.key ?? step.taskId;
+    const fix = supervisor.plan({
+      title: "Fix: refresh check results everywhere from one source",
+      intent: intentOf("fix it"),
+      parent: parent.key,
+      shape: { basis: stepKey },
+    });
+    return { ...harness, crewmate, parent, step, stepKey, fix };
+  }
+
+  for (const backgroundWork of ["host", "client"] as const) {
+    for (const reportVia of ["tool", "final-text"] as const) {
+      it(`wakes the Firstmate when the step reports its answer (${backgroundWork} background work, ${reportVia})`, async () => {
+        const { crewmate, specs, step, fix, tasks, ops, sorts, ledgerFacts, supervisor } =
+          await scenario(backgroundWork);
+        const taskId = step.taskId;
+        // The crewmate does exactly what its brief says: the answer as its
+        // report, no card, and no declaration its tool descriptions allow.
+        if (reportVia === "tool") {
+          const receipt = specs[0]?.onReport?.(ANSWER, "Reproduced: the strip is frozen at emit.");
+          expect(receipt).toContain("Your internal step's report is handed to the first mate");
+        } else {
+          crewmate.emit({ type: "assistant_delta", taskId, text: ANSWER });
+        }
+        crewmate.emit({ type: "turn_end", taskId });
+        crewmate.finishPrompt();
+        await tick();
+        expect(tasks.get(taskId)?.shape).toMatchObject({
+          internal_step: true,
+          deliverable: "answer",
+          kind: "reproduce",
+        });
+        expect(tasks.get(fix.id)?.status).toBe("open");
+        expect(supervisor.cardsSnapshot()).toHaveLength(0);
+        expect(ledgerFacts.at(-1)).toMatchObject({ kind: "report" });
+        // The failing check: the step's report is the Firstmate's cue to start
+        // the next step (docs/sequences.md), so it must wake the Firstmate now.
+        expect(sorts.find((sort) => sort.taskId === taskId)?.rule).toBe("step-answered");
+        expect(ops.filter((line) => line.includes("reported on task")).length).toBeGreaterThan(0);
+      });
+    }
+  }
+  for (const backgroundWork of ["host", "client"] as const) {
+    it(`an internal step owns its decision, reply and captain-choice handoff (${backgroundWork})`, async () => {
+      const { crewmate, specs, step, fix, tasks, ops, sorts, supervisor, inbox } =
+        await scenario(backgroundWork);
+      const taskId = step.taskId;
+      specs[0]?.onCard?.({
+        id: "repro-choice",
+        title: "The link did not reproduce",
+        body: "<p>The link opened in fourteen clean runs.</p><p>Logging a refresh would narrow the cause.</p>",
+        actions: [
+          { id: "log", label: "Add logging", default: true },
+          { id: "stop", label: "Stop here" },
+        ],
+      });
+      specs[0]?.onReport?.("reproduced: no - fourteen clean runs; logging would narrow the cause.");
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      const card = supervisor.cardsSnapshot().find((entry) => entry.taskId === taskId)!;
+      expect(card.author).toBe("crewmate");
+      expect(sorts.at(-1)?.rule).toBe("captain-card");
+      expect(ops).toEqual([]);
+      expect(tasks.get(fix.id)?.status).toBe("open");
+
+      const before = crewmate.promptCalls.length;
+      supervisor.replyToCard(card.id, "What does logging cost?");
+      await tick();
+      expect(crewmate.promptCalls.slice(before).join("\n")).toContain("What does logging cost?");
+      expect(ops).toEqual([]);
+      specs[0]?.onReply?.({ cardId: card.id, text: "Logging adds no account access." });
+      specs[0]?.onReport?.("The choice remains logging or stopping.");
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      expect(sorts.at(-1)?.rule).toBe("captain-card");
+      expect(ops).toEqual([]);
+
+      supervisor.act(card.id, "log");
+      await tick();
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(
+        tasks
+          .timeline(taskId)
+          .find((event) => (event.data as { reason?: string } | null)?.reason === "answered"),
+      ).toMatchObject({
+        actor: "captain",
+      });
+      expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ facts: expect.objectContaining({ kind: "answer-closed" }) }),
+        ]),
+      );
+      expect(tasks.get(fix.id)?.status).toBe("open");
+      if (process.env.INFINITARY_OWNERSHIP_PROOF_DIR) {
+        mkdirSync(process.env.INFINITARY_OWNERSHIP_PROOF_DIR, { recursive: true });
+        writeFileSync(
+          join(process.env.INFINITARY_OWNERSHIP_PROOF_DIR, `owner-${backgroundWork}.json`),
+          JSON.stringify(
+            {
+              card,
+              deliveredReplies: crewmate.promptCalls.slice(before),
+              sorts,
+              handoff: inbox.allFor(FIRSTMATE_RECIPIENT),
+              closedAnswer: tasks.get(taskId),
+              nextStep: tasks.get(fix.id),
+            },
+            null,
+            2,
+          ),
+        );
+      }
+    });
+  }
+});
+
+describe("a task's own browser (docs/task-browser.md)", () => {
+  it("hands a crewmate on this Mac its own task's browser, and none when the app has no browser", async () => {
+    const asked: string[] = [];
+    const browser = {
+      navigate: vi.fn(async () => ({ text: "opened" })),
+      inspect: vi.fn(async () => ({ text: "read" })),
+      act: vi.fn(async () => ({ text: "used" })),
+      capture: vi.fn(async () => ({ text: "photographed" })),
+      close: vi.fn(async () => ({ text: "stopped" })),
+      pages: vi.fn(async () => ({ text: "one page" })),
+    };
+    const h = setup(fakeCrewmate(), {
+      browsers: {
+        forTask: (taskId) => {
+          asked.push(taskId);
+          return browser;
+        },
+        fact: () => undefined,
+        withCaptain: () => false,
+        requestHelp: async () => ({ ok: false, text: "no browser" }),
+        takeControl: async () => ({ ok: false, text: "no browser" }),
+      },
+    });
+    const { taskId } = await h.supervisor.commission({
+      title: "Check the sign-up page",
+      intent: intentOf("check the sign-up page the project serves"),
+    });
+    await tick();
+    expect(asked).toEqual([taskId]);
+    expect(h.specs.at(-1)?.browser).toBe(browser);
+    // It reaches that browser through its shell's command, on whichever
+    // backend runs it: the task's channel, and the one prompt line.
+    expect(h.sessionSpecs.at(-1)?.shell).toEqual({
+      env: { INFINITARY_AXI_KEY: `/channel/${taskId}.key` },
+      path: ["/app/axi-bin"],
+    });
+    expect(h.sessionSpecs.at(-1)?.instructions.base).toContain(CREWMATE_BROWSER_LINE);
+    expect(h.sessionSpecs.at(-1)?.tools.filter((tool) => tool.name.startsWith("browser_"))).toEqual(
+      [],
+    );
+
+    const bare = setup(fakeCrewmate());
+    await bare.supervisor.commission({
+      title: "Check the sign-up page",
+      intent: intentOf("check the sign-up page the project serves"),
+    });
+    await tick();
+    expect(bare.specs.at(-1)?.browser).toBeUndefined();
+    expect(bare.sessionSpecs.at(-1)?.shell).toBeUndefined();
+    expect(bare.sessionSpecs.at(-1)?.instructions.base).not.toContain(CREWMATE_BROWSER_LINE);
+    // Its card tool offers the browser button only beside a browser.
+    const emitCardOf = (harness: typeof h) =>
+      harness.sessionSpecs.at(-1)?.tools.find((tool) => tool.name === "emit_card");
+    expect(emitCardOf(h)?.parameters.properties).toHaveProperty("browser_button");
+    expect(emitCardOf(bare)?.parameters.properties).not.toHaveProperty("browser_button");
+  });
+
+  describe('a card\'s browser button ("From a card")', () => {
+    const browser = {
+      navigate: vi.fn(async () => ({ text: "opened" })),
+      inspect: vi.fn(async () => ({ text: "read" })),
+      act: vi.fn(async () => ({ text: "used" })),
+      capture: vi.fn(async () => ({ text: "photographed" })),
+      close: vi.fn(async () => ({ text: "stopped" })),
+      pages: vi.fn(async () => ({ text: "one page" })),
+    };
+
+    async function crewmateWithBrowser(fact: { current: TaskBrowserFact | undefined }) {
+      const h = setup(fakeCrewmate(), {
+        browsers: {
+          forTask: () => browser,
+          fact: () => fact.current,
+          withCaptain: () => false,
+          requestHelp: async () => ({ ok: false, text: "no browser" }),
+          takeControl: async () => ({ ok: false, text: "no browser" }),
+        },
+      });
+      const { taskId } = await h.supervisor.commission({
+        title: "Check the sign-up page",
+        intent: intentOf("check the sign-up page the project serves"),
+      });
+      await tick();
+      const emitCard = bindTool(EMIT_CARD_TOOL, h.specs.at(-1) as CrewmateSpec);
+      const saved = () => h.cardStore.listOpen().find((card) => card.taskId === taskId);
+      return { ...h, taskId, emitCard, saved };
+    }
+
+    const OPEN: TaskBrowserFact = {
+      state: "open",
+      site: "localhost:5173",
+      url: "http://localhost:5173/signup",
+      title: "Sign up",
+      session: "run-1",
+      generation: 2,
+    };
+    const DECISION = {
+      title: "The sign-up page thanks the name after Send",
+      body:
+        '<p>The sign-up page said "Thanks, Sam" after Send.</p>' +
+        "<p>Its browser is still open on this computer, so you can try the page yourself.</p>",
+      actions: [
+        { id: "not-yet", label: "Not yet" },
+        { id: "looks-right", label: "Looks right", default: true },
+      ],
+    };
+
+    it("puts the browser the task holds on the card, labeled as the crewmate asked", async () => {
+      const fact = { current: OPEN as TaskBrowserFact | undefined };
+      const { emitCard, saved, taskId, cardStore } = await crewmateWithBrowser(fact);
+      await emitCard.run({ ...DECISION, id: "try-sign-up", browser_button: "  Try   it " });
+      const card = saved();
+      expect(card?.attachment).toEqual({
+        kind: "browser",
+        label: "Try it",
+        taskId,
+        session: "run-1",
+        generation: 2,
+      });
+      // It is part of what the card offers, and no action of the card.
+      const offer = cardStore
+        .observations(card?.id ?? "")
+        .find((observation) => observation.kind === "offer");
+      expect(offer?.payload).toMatchObject({ attachment: card?.attachment });
+      expect(card?.actions.map((action) => action.id)).toEqual(["not-yet", "looks-right"]);
+      // A stopped browser Open again can still start is a door too; a
+      // revision without the button takes it away.
+      fact.current = { ...OPEN, state: "stopped", stopped: "idle", at: 1 } as TaskBrowserFact;
+      await emitCard.run({ ...DECISION, id: card?.id, browser_button: "View booking" });
+      expect(saved()?.attachment).toMatchObject({ label: "View booking", generation: 2 });
+      await emitCard.run({ ...DECISION, id: card?.id });
+      expect(saved()?.attachment).toBeUndefined();
+    });
+
+    it("refuses a button with no browser to open, or no label, in words", async () => {
+      const fact = { current: undefined as TaskBrowserFact | undefined };
+      const { emitCard, saved } = await crewmateWithBrowser(fact);
+      await expect(emitCard.run({ ...DECISION, browser_button: "Try it" })).rejects.toThrow(
+        "Card refused: this task has no browser for browser_button to open. Open one with `infinitary-browser-axi open <url>` first, or emit the card without browser_button.",
+      );
+      fact.current = {
+        ...OPEN,
+        state: "stopped",
+        stopped: "task-closed",
+        at: 1,
+      } as TaskBrowserFact;
+      await expect(emitCard.run({ ...DECISION, browser_button: "Try it" })).rejects.toThrow(
+        /no browser for browser_button to open/,
+      );
+      fact.current = OPEN;
+      await expect(emitCard.run({ ...DECISION, browser_button: "   " })).rejects.toThrow(
+        /browser_button is the label of one button, at most 32 characters/,
+      );
+      await expect(
+        emitCard.run({ ...DECISION, browser_button: "Open the browser and look at the page" }),
+      ).rejects.toThrow(/at most 32 characters/);
+      expect(saved()).toBeUndefined();
+    });
+  });
+});
+
+it("completed context shortening reaches the task ledger and every Usage grouping once", async () => {
+  const crewmate = fakeCrewmate();
+  const now = Date.now();
+  let ledger: UsageStore;
+  const { supervisor, db } = setup(crewmate, {
+    recordUsage: (input) => ledger.record({ ...input, at: now }),
+  });
+  ledger = new UsageStore(db);
+  const { taskId } = await supervisor.commission({
+    title: "Shorten context",
+    intent: intentOf("do the work"),
+  });
+  await tick();
+  const translate = piSessionEvents(taskId);
+  const emit = (event: unknown) => {
+    for (const normalized of translate(event)) crewmate.emit(normalized);
+  };
+  emit({ type: "compaction_start", reason: "overflow" });
+  const end = {
+    type: "compaction_end",
+    reason: "overflow",
+    aborted: false,
+    willRetry: true,
+    result: {
+      usage: {
+        input: 100,
+        output: 20,
+        cacheRead: 30,
+        cacheWrite: 4,
+        cost: { input: 0.1, output: 0.2, cacheRead: 0.03, cacheWrite: 0.04, total: 0.37 },
+      },
+    },
+  };
+  emit(end);
+  emit({ ...end });
+  crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2, cost: 0.01 } });
+  const row = ledger.byTask()[0];
+  expect(row).toMatchObject({
+    task_id: taskId,
+    input: 110,
+    output: 22,
+    cache_read: 30,
+    cache_write: 4,
+    cost: 0.38,
+    records: 2,
+  });
+  const summary = ledger.summary(
+    { period: "all", scope: "all" },
+    { now, names: { model: (ref) => ref.id, provider: (provider) => provider } },
+  );
+  expect(summary.total).toMatchObject({
+    records: 2,
+    tokens: { input: 110, output: 22, cacheRead: 30, cacheWrite: 4 },
+    cost: 0.38,
+  });
+  expect(summary.models[0]?.amount).toEqual(summary.total);
+  expect(summary.days[0]?.amount).toEqual(summary.total);
+  expect(summary.where.projects[0]?.amount).toEqual(summary.total);
+  expect(
+    ledger.tasks({ period: "all", scope: "task", limit: 10 }, { now }).tasks[0]?.amount,
+  ).toEqual(summary.total);
+});
+
+describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
+  it("steers the crewmate with the captain's words, recorded with its origin, and says so once in the feed", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Count the rivets",
+      intent: intentOf("count the rivets"),
+    });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    expect(
+      await supervisor.steerFromCrewmateTab(taskId, "  count the starboard hatch too "),
+    ).toEqual({
+      ok: true,
+    });
+    // Into the running turn, as a reply under its card goes: Firstmate is not in the loop.
+    expect(crewmate.steer).toHaveBeenCalledWith(
+      expect.stringContaining("count the starboard hatch too"),
+      undefined,
+      expect.stringMatching(/^rows:\d+:/),
+    );
+    const steered = tasks.timeline(taskId).findLast((event) => event.kind === "steered");
+    expect(steered?.actor).toBe("captain");
+    expect(steered?.data).toMatchObject({ via: CREWMATE_TAB_VIA, outcome: "mid-turn" });
+    const span = steered?.data?.words as { from: number; to: number };
+    expect(steered?.text.slice(span.from, span.to)).toBe("count the starboard hatch too");
+    const told = events.filter(
+      (event) => event.type === "firstmate_note" && event.text.includes("Count the rivets"),
+    );
+    expect(told).toHaveLength(1);
+    expect(told[0]).not.toHaveProperty("taskId");
+    expect(supervisor.turnStartedAt(taskId)).toEqual(expect.any(Number));
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+  });
+
+  it("refuses in words, and writes nothing, where no crewmate can be told anything", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    seedTask(tasks, { id: "queued", title: "Not started", status: "queued" });
+    expect(await supervisor.steerFromCrewmateTab("queued", "go")).toMatchObject({ ok: false });
+    expect(await supervisor.steerFromCrewmateTab("queued", "   ")).toMatchObject({ ok: false });
+    seedTask(tasks, { id: "closed", title: "Closed", status: "idle" });
+    tasks.close("closed", { status: "done", reason: "merged", actor: "host" });
+    expect(await supervisor.steerFromCrewmateTab("closed", "go")).toMatchObject({ ok: false });
+    expect(
+      [...tasks.timeline("queued"), ...tasks.timeline("closed")].some(
+        (event) => event.kind === "steered",
+      ),
+    ).toBe(false);
+  });
+
+  it("interrupts the running turn as the captain and keeps the task steerable; with no turn running it refuses", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Count the hatches",
+      intent: intentOf("count the hatches"),
+    });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    expect(await supervisor.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
+    expect(crewmate.aborts).toHaveLength(1);
+    const interrupted = tasks.timeline(taskId).filter((event) => event.kind === "interrupted");
+    expect(
+      interrupted.map((event) => [event.actor, event.data?.via, event.data?.mode]),
+    ).toContainEqual(["captain", CREWMATE_TAB_VIA, "interrupt"]);
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(supervisor.turnStartedAt(taskId)).toBeNull();
+    expect(await supervisor.interruptFromCrewmateTab(taskId)).toMatchObject({ ok: false });
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+  });
+});

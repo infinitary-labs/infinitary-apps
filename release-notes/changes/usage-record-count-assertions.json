@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "usage-record-count-assertions",
+      "reason": "Internal, tests only: two usage tests now read a task's saved usage count under its current name, records, after the ledger stopped calling usage records turns. No shipped behavior changed."
+    }
+  ]
+}

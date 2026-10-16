@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-past-branch-rules",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Merge past your branch rules, only on your click",
+      "body": "When your GitHub account may skip your default branch's rules, a crewmate can prepare a merge that skips them, such as a release still waiting on a code owner's review. Its card lists every rule and failed check it skips, and only your click merges it, squashed into one commit, once, at the version you saw.",
+      "picture": {
+        "dark": "merge-past-branch-rules-dark.webp",
+        "light": "merge-past-branch-rules-light.webp",
+        "alt": "A card titled Merge the release past its rules, listing a review rule, required checks and one failed check above a Merge, skipping the rules button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

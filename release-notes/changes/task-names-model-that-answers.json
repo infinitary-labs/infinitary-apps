@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-names-model-that-answers",
+      "kind": "fix",
+      "title": "A task names the model doing its work",
+      "body": "When Claude's safeguards stop a crewmate's reply and Claude moves the work to another Claude model, the task, its cards and Activity now name that model and say why it moved. When the crewmate picks up again, it asks for the model Firstmate chose.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "task-names-model-that-answers-dark.webp",
+        "light": "task-names-model-that-answers-light.webp",
+        "alt": "A task's record naming the model it moved to, with the Activity line that says the first model's safeguards stopped a reply"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

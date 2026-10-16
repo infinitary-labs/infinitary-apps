@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "bf-a869499c8",
+      "kind": "fix",
+      "title": "Find the GitHub tool when the app is opened from the Dock",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a869499c8cee54901cbe8867886001e2a7034473"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-8-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.8: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "d6efe4b1b8dba19fcf444cdcad2bc2e6bdc8c61b"
+      ]
+    }
+  ]
+}

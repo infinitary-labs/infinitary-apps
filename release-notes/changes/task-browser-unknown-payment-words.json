@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-unknown-payment-words",
+      "reason": "Development only: a crewmate using its task's own browser is told to keep a payment the site never confirmed unknown, never guessing whether it went through or suggesting another try, and the task browser stays hidden from installed builds until the captain lifts its gate."
+    }
+  ]
+}

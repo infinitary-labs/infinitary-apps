@@ -1,0 +1,193 @@
+import { describe, expect, it } from "vitest";
+import {
+  type AutonomyInput,
+  autonomyFor,
+  autonomyForRecord,
+  type DeliveryInput,
+  deliveryFor,
+  deliveryForRecord,
+  repoConfiguredEvent,
+  repoDeliverySchema,
+  repoKindSchema,
+  repoPolicyPatchSchema,
+  runsHereOnly,
+  runsOnLine,
+} from "./repos";
+
+describe("deliveryFor: a task-level ask overrides the repo, otherwise the repo stands", () => {
+  const table: Array<{ why: string; input: DeliveryInput; delivery: string; reason: string }> = [
+    {
+      why: "no ask inherits the repository",
+      input: { repo: "direct-pr" },
+      delivery: "direct-pr",
+      reason: "the repository ships direct-pr",
+    },
+    {
+      why: "no repo and no ask is local-only",
+      input: {},
+      delivery: "local-only",
+      reason: "no repository: local-only",
+    },
+    {
+      why: "the captain's ask beats a direct-pr repo: this task stays local",
+      input: { repo: "direct-pr", ask: "local-only" },
+      delivery: "local-only",
+      reason: "the captain asked for local-only",
+    },
+    {
+      why: "the captain's ask beats a local-only repo: this task opens a PR",
+      input: { repo: "local-only", ask: "direct-pr" },
+      delivery: "direct-pr",
+      reason: "the captain asked for direct-pr",
+    },
+    {
+      why: "the same posture as the repo is still the ask, so the reason names it",
+      input: { repo: "direct-pr", ask: "direct-pr" },
+      delivery: "direct-pr",
+      reason: "the captain asked for direct-pr",
+    },
+  ];
+
+  it.each(table)("$why", ({ input, delivery, reason }) => {
+    const decision = deliveryFor(input);
+    expect(decision.delivery).toBe(delivery);
+    expect(decision.reason).toContain(reason);
+  });
+});
+
+describe("deliveryForRecord", () => {
+  it("reads the task ask ahead of the repo", () => {
+    expect(deliveryForRecord({ shape: { delivery_ask: "local-only" } }, "direct-pr")).toBe(
+      "local-only",
+    );
+    expect(deliveryForRecord({ shape: { delivery_ask: "direct-pr" } }, "local-only")).toBe(
+      "direct-pr",
+    );
+    expect(deliveryForRecord({}, "direct-pr")).toBe("direct-pr");
+    expect(deliveryForRecord({})).toBe("local-only");
+  });
+});
+
+describe("the delivery enum says only where a change lands", () => {
+  it("has no personal posture: the workspace kind carries that", () => {
+    expect(repoDeliverySchema.options).toEqual(["direct-pr", "local-only"]);
+    expect(repoDeliverySchema.safeParse("live").success).toBe(false);
+    expect(repoKindSchema.options).toEqual(["project", "personal"]);
+  });
+
+  it("refuses a policy patch that names a posture the enum no longer has", () => {
+    expect(repoPolicyPatchSchema.safeParse({ delivery: "live" }).success).toBe(false);
+    expect(repoPolicyPatchSchema.safeParse({ delivery: "local-only" }).success).toBe(true);
+  });
+});
+
+describe("repoConfiguredEvent / repoPolicyOutcome", () => {
+  const repo = {
+    id: "r1",
+    name: "nimbus",
+    path: "/fleet/nimbus",
+    setupKind: "clone" as const,
+    kind: "project" as const,
+    origin: null,
+    host: null,
+    delivery: "direct-pr" as const,
+    autonomy: true,
+    rigor: "standard" as const,
+    runsOn: null,
+  };
+
+  it("is the one payload both writers broadcast", () => {
+    expect(repoConfiguredEvent(repo)).toEqual({
+      type: "repo_configured",
+      repoId: "r1",
+      name: "nimbus",
+      delivery: "direct-pr",
+      autonomy: true,
+      rigor: "standard",
+    });
+  });
+});
+
+describe("autonomyFor: the ask, then the repository (contract v3.9)", () => {
+  const table: Array<{ why: string; input: AutonomyInput; autonomy: boolean; reason: string }> = [
+    {
+      why: "no ask inherits an autonomous repository",
+      input: { repo: true },
+      autonomy: true,
+      reason: "the repository merges green work itself",
+    },
+    {
+      why: "no ask inherits an ask-first repository",
+      input: { repo: false },
+      autonomy: false,
+      reason: "the repository asks before merging",
+    },
+    {
+      why: "no repository is not held: there is no standing answer to enforce",
+      input: {},
+      autonomy: true,
+      reason: "no repository: nothing to hold",
+    },
+    {
+      why: "the captain's ask beats an ask-first repository: this task merges itself",
+      input: { repo: false, ask: true },
+      autonomy: true,
+      reason: "the captain asked for this task to merge itself",
+    },
+    {
+      why: "the captain's ask beats an autonomous repository: this one comes back to him",
+      input: { repo: true, ask: false },
+      autonomy: false,
+      reason: "the captain asked to be asked before this task merges",
+    },
+    {
+      why: "an ask with no repository stands on its own",
+      input: { ask: true },
+      autonomy: true,
+      reason: "the captain asked for this task to merge itself",
+    },
+  ];
+
+  it.each(table)("$why", ({ input, autonomy, reason }) => {
+    const decision = autonomyFor(input);
+    expect(decision.autonomy).toBe(autonomy);
+    expect(decision.reason).toContain(reason);
+  });
+});
+
+describe("autonomyForRecord", () => {
+  it("reads the task ask ahead of the repo, and reads `false` as an ask", () => {
+    expect(autonomyForRecord({ shape: { autonomy_ask: true } }, false)).toBe(true);
+    // The trap this field exists for: `false` is the captain asking to be
+    // asked, so it must not be read as "nothing was said".
+    expect(autonomyForRecord({ shape: { autonomy_ask: false } }, true)).toBe(false);
+    expect(autonomyForRecord({}, true)).toBe(true);
+    expect(autonomyForRecord({})).toBe(true);
+  });
+});
+
+describe("Runs on (docs/helper.md)", () => {
+  it("keeps the personal workspace and a project with no origin on this Mac", () => {
+    expect(runsHereOnly({ kind: "personal", origin: null })).toBe(
+      "The personal workspace stays on this computer.",
+    );
+    expect(runsHereOnly({ kind: "project", origin: null })).toBe(
+      "Kept on this computer only, so its tasks run here.",
+    );
+    expect(runsHereOnly({ kind: "project", origin: "https://github.com/o/website.git" })).toBe(
+      null,
+    );
+  });
+
+  it("says where the next task starts and where a running one finishes", () => {
+    expect(runsOnLine("website", "on Mac mini", true)).toBe(
+      "website runs on Mac mini now. Its next task starts there; the one running here finishes here.",
+    );
+    expect(runsOnLine("api", "as Builder", false)).toBe(
+      "api runs as Builder now. Its next task starts there; one already running finishes where it started.",
+    );
+    expect(runsOnLine("website", null, false)).toBe(
+      "website runs on this computer now. Its next task starts here.",
+    );
+  });
+});

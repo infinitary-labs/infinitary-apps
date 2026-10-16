@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "revision-links",
+      "kind": "feature",
+      "highlight": 2,
+      "area": "cards",
+      "title": "Jump to what changed on a card",
+      "body": "Each revised line in a card’s thread now keeps links to the areas that changed. Older links find those areas in the current card, and folded sections open for you.",
+      "picture": {
+        "dark": "revision-links-dark.webp",
+        "light": "revision-links-light.webp",
+        "alt": "A card thread with separate Sign-in and Checks links beneath its revised lines."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

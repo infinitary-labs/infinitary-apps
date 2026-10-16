@@ -1,0 +1,145 @@
+# The orchestrator contract
+
+The first mate's served prompt and its tools.
+Each revision is one file in `src/core/prompts/contract-revisions/`, and the version counts them (`src/core/prompts/contractVersion.ts`).
+Card authoring is `docs/card-authoring.md`; threads are `docs/card-threads.md`.
+
+## Notes
+
+Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+
+- Contract revisions live in `src/core/prompts/contract-revisions/`, one file each; `FIRSTMATE_CONTRACT_VERSION` counts them, and that folder's README keeps the ledger through 4.72.
+  The first mate persona holds 25 typed tools (`FIRSTMATE_TOOLS` in `src/core/session/tools.ts` is the pin, which `scripts/generate-self-source.mjs` reads and its test holds to the live tools) - no bash, no read/ls/grep/find.
+  The tools come from the one tool spec (`src/core/session/tools.ts`, runtime-neutral): each factory returns a bound tool (name, label, description, parameters, `run`), `FirstmateAgent.buildTools` binds them to the host, and each runtime generates its own tool from that one list - `piToolOf` (`src/core/pi/toolSpec.ts`) at the Pi session factory's boundary, `claudeToolsOf` (`src/core/claude/claudeTaskTools.ts`) for a Claude seat - so a new first mate tool is one entry both seats and the pin pick up.
+  The offline readers keep their own lists of those tools, which the same change updates (`docs/dispatch-extractor.md` "Tests", `docs/replay-harness.md` "What it replays").
+  The self-source test reads the live agent's list (`tests/helpers/firstmateTools.ts`) and holds both runtimes' generated names to the pin plus `emote`, and the stamp's `toolsSha` fingerprints every tool's name, description and schema (`firstmateAgent.test.ts` holds that each moves it), so a change to the tool words always shows in the record.
+  A first mate tool rule lives in a tool description or a top-level parameter's, never only a nested one, because a Claude seat's client drops those (`docs/claude-client.md`).
+  The seat itself is backend-neutral (`src/core/orchestrator/seat.ts`, `docs/architecture.md` §2 "The seat seam"): the spec carries the binding, the spec tools and a per-backend resume, and a seat speaks `FmEvent`s plus `turn_closed`, so nothing in `src/core/orchestrator/` reads a Pi event.
+  The answer move is answer-with-default: an answer that implies a next step is ONE `decision` whose proposed step is its `default` action; a pure fact is a `note`; an active crewmate shows what the captain must see or decide on its own card, and the first mate acts on its report rather than relaying it; there is no seventh move, no propose tool, no recommendation kind.
+  Reading is a crewmate's job: anything needing code, files, logs, git history, builds or reproduction is an investigation spawn (the standing rule in the prompt).
+  On a task whose crewmate has a card open, the first mate's `emit_card` is refused with "steer the crewmate to revise card X (same id)", and every emitter revises an overlapping open card in place (no one-card-per-topic cap).
+  Thinking is medium for a captain turn, low for an `[fm-op]` drain (`FIRSTMATE_CAPTAIN_THINKING_LEVEL`).
+  `emote` is visual only, and its required top-level `text` says in at most 40 characters what the captain should know about what happened; an emote with no words is refused like one with too many; on a captain turn its words are the reply line beside the captain's message, unless a later authored card title replaces them, and app-written replies never replace authored words (`docs/composer.md` "The last turn").
+  The first mate has no CI tool: `PrCiService` (`orchestrator/prCi.ts`) computes the PR-8 green rule in code and records per-task readings (the crewmate's `check_change`, the check watch and the completion card's gate take them), the host's settle-facts line renders them, and the first mate reads the latest in `crew_status`'s `ci` and at the end of a crewmate's report wake (`orchestrator/ciFact.ts`); a merge rechecks fresh whoever asks, and the first mate authors no merge card; `locate_project` (`workspace/projectLocator.ts`) replaces bash lookups.
+  `spawn_crewmate` carries a structured intent (goal, verbatim user_words, typed constraints, delivery_note), with its work-shape facts in `shape` and its waits in `start_after`; the HOST renders the fixed brief template (`orchestrator/intentBrief.ts`) and the crewmate self-briefs on turn 1.
+  The served prompt is `FIRSTMATE_PROMPT_CORE` plus `FIRSTMATE_CARD_AUTHORING` plus `CARD_REPLY` plus `FIRSTMATE_HANDOFF`, with the captain's sequences as Pi's appended section after it (`docs/sequences.md`) (the core stays byte-stable, six-way classify-first, no interpolation; the authoring constant is appended by `buildFirstmateSystemPrompt` exactly as `crewmateBackendNote` is on the crewmate side; the style appendix was folded away at v2.0, its one kept rule - a settle effect is run by the host, which reports the outcome - now lives in the first mate's emit_card addendum); a redline is a contract revision: add a file to `src/core/prompts/contract-revisions/`, and the session records the served prompt's sha itself (`recordContract`).
+  The card lint (`src/core/pi/cardLint.ts`, `docs/card-authoring.md` "The shape lint") asks for SHAPE through htmlparser2, never for the absence of words - never bring back a progress-phrase ban list: `lintCardShape` (an entity-escaped body - `&lt;p&gt;` with no real element - is refused as such before anything else, a card with actions is a decision and marks exactly one default with evidence after its first paragraph - no sentence counter; headings past 1,200 chars, voice over visible copy, an action whose id or label reads like merge/land carries a `settle` effect, no `host` effect from an agent; the five-heading rule left it at v3.6) runs at BOTH boundaries (crewmate cards in `CrewSupervisor.addCrewmateCard`, any backend); the settle-needs-task rule, attach-first, the closed-task choice refusal, and the carded-task refusal are first-mate-only, and G-1 and the PR-link rule are gone.
+  Supervision persona, brief close, output cap, watchdog, and inbox mechanics are unchanged.
+
+## Diagnosed check failures
+
+FI3-237 pairs persona clarification with the host repair allowance.
+An initial failed reading requests the failed-step/log diagnosis, not a captain card.
+The first mate coordinates an own repair, one evidenced failed-job rerun, or a confirmed separately owned baseline wait/resumption.
+Unknown needs one bounded investigation.
+Only three unsuccessful declared own repairs (or a real captain-only decision/access gap) earn the cap question; waits and raw failed versions spend nothing.
+The typed declarations, persistent ledger and strict all-current-checks-success completion gate are specified in `docs/delivery-rigor.md` and `docs/forge.md`.
+Existing recorded captain holds are not silently lifted.
+Model changes still require the captain.
+
+## App action catalog (4.54, pieces 1–4)
+
+`app_state` reads the shared catalog in `src/shared/actions.ts`: area, strict value schema, current value, tier, and consistent static `captainAllowed` / `firstmateAllowed` flags, plus `allowedNow` for the current code-stamped wake.
+`app_change` takes a top-level action enum, value, and evidence.
+The dispatcher enforces actor permissions independently.
+`asked` permits a captain message or schedule; `own-words` permits only a captain message.
+A message typed on a paired view is a captain message (the captain's pick on FI3-709, `docs/devices.md`).
+Reports and other wakes cannot change these settings.
+`hands` delegates to the captain, and `yours` is captain-only.
+Sharing switches and purge stay the captain's.
+Panels and plugins gain no change ability.
+`show-card` (FI3-579 piece 4, `asked`) is the one door that brings an earlier closed card forward: the first mate reads `resolution.card.id` from `tasks` by key and passes it as `cardId`; the Cards row and the filter take the same door as `inf:cards:show-past`.
+It is no tool of its own, raises no card and runs no effect; see `docs/card-evidence.md` "The past card".
+`show-whats-new` (FI3-932, `asked`) takes the What's new door, `inf:release-notes:show`: with no value the newest release note that listed changes, or the one for a `version` its current value lists, an open note to the front of the stack and a closed one read-only; it needs no card id (`docs/release-notes.md` "Reading a note again").
+`device-invite` and `device-remove` (FI3-679 at 4.72, `hands` since FI3-683) make a pairing link and remove a paired device, and `device-address` still answers and no longer chooses an address.
+They stay the captain's own on the home Mac's window: words typed on a paired view reach the first mate as the captain's, and a link never enters a conversation (`docs/devices.md`).
+Asked for one, `app_change` files a card the host writes from typed facts - "Connect your MacBook Air" with Make a link, or "Remove Mac mini?" with a danger Remove Mac mini - whose click opens Settings -> Devices and acts there.
+`project-setup` (FI3-1532, `hands`) proposes: any wake may call it, it changes nothing, and the host puts up its own setup card, whose Add project alone adds the project with the settings chosen there; the first mate hears the answer once as a `project-setup` wake (`docs/fleet.md` "Asking the first mate to add a project").
+
+Piece 1 covers projects folder (own-words), notifications, window wash, crew model names and panel collapse (asked).
+Folder paths expand `~`; existing projects never move and missing folders are refused, not created.
+Each applied catalog change leaves a feed line and an operation attributed to whoever acted, never a card: one per change the first mate makes, and one per run of the captain's own steps on one setting ("Settled runs" below); unchanged values and refusals leave no success trail (usage refresh records each successful refresh even when unchanged).
+A captain choice can request asked settings, but is not own words for the projects folder.
+Scheduled authority is persisted when a captain turn creates the schedule and travels as a typed wake fact.
+Autonomous and legacy schedules still run, but do not authorize asked app changes; recreating a schedule on a captain request records that authority.
+A recurring schedule made outside a captain's own turn is saved as a draft that runs only once the captain turns it on, and `schedule_prompt`'s `draft` keeps an underspecified ask for the captain to finish (`docs/automation.md`, "Drafts").
+Catalog writes are ordered so overlapping Settings calls cannot duplicate a change or attribute the next value to the previous call.
+Before piece 3, other changing channels remained named in the shrinking parity inventory.
+Piece 2 removes ten channels, bringing the ceiling to 18; its initial ceiling was 28 after the new dictation setter joined main before piece 1 shipped; dictation migration remains in piece 3.
+Theme/panel changes in `personalize` began refusing report wakes in piece 1; piece 4 replaces those write paths with the catalog.
+
+Piece 2 adds Intelligence: first mate model and account, crew slot membership/reset, model pins, dynamic routing, decision answerer, account rename/prefer/pause/disconnect and usage refresh.
+Disconnect requires typed captain words and refuses the currently attached first mate account, even if a different account is saved for the next turn.
+Own model changes reuse the existing idle-boundary rebind.
+Pins and routing preserve each other; decision answerer changes preserve outbound consent and never handle keys.
+Accounts are read back through their metadata view after writes; account write replies are acknowledgements, not the saved value.
+The first mate's own account (`firstmate-account`) is a line apart from crew work's preferred account (`account-prefer`), and Settings → Intelligence writes it through the same line.
+It takes an eligible account of the provider of the first mate's model and refuses another provider's account in words that point at the model; its feed line names the account by label.
+
+Each shared request's setting fields are claimed by action lines (`fields`), or named in `ACTION_FIELD_EXCEPTIONS`.
+Parity reads the request schema itself: adding a field to appearance, layout, presence, routing or decisions without a claim or named exception fails the check.
+Sharing's selector enum is checked per choice too.
+Usage's unit (a view choice inside Settings → Usage), default card size (a view choice in Settings → Appearance), decision format version and captain-only outbound consent are explicit exceptions.
+The first mate's shared-object boundary uses these same field claims to preserve every unrelated value; the one-panel limit remains separate.
+The tool's own-words action list is derived from the catalog tiers, including guidance actions.
+
+Piece 3 makes parity strict: every changing core channel is a catalog line, an existing-ability reference, or a named non-setting exception.
+There is no pending inventory.
+Project configuration was an explicit exception until piece 4.
+Login/dock now use core dispatch with field-scoped permissions.
+Release-page opening records every successful request; GitHub sign-out needs typed captain words.
+Sharing, its ask, purge, panels consent, recovery and ask-first merge remain captain-owned.
+Hand-over actions offer a card opening the relevant Settings section, never submit credentials.
+Voice download runs through core dispatch over a host capability; model-file serving remains desktop-owned, and a host without that capability refuses the request.
+The subsequently added dictation choices are inventoried as captain-owned, not a new first mate capability.
+Existing task/card/panel-removal abilities remain their only execution paths.
+Captain sign-in/key/consent actions also leave a trail, with no credentials in that trail.
+
+Piece 4 adds `theme`, `panel` (rail, position and visibility), and `project-settings` to the same catalog and dispatcher.
+`configure_repo` is retired; `personalize` keeps only removal and standing instructions.
+Both actors get an attributed feed line and operation for each applied change, the captain's settling as a run ("Settled runs" below); project operations stay with their project and use the existing `repo_configured` refresh event, not a second personalization event.
+No-ops and refusals add no success trail.
+Shared appearance/layout channels enforce the named action's field boundary; panel arrangement resolves defaults, preserves collapse, refuses unknown surfaces and a full target rail, and stores only placement deviations.
+Sign-in refusals' "Keep it on this computer" way now points at `app_change project-settings` too.
+
+`window-size` (FI3-524, `asked`) claims the appearance row's size: 100, 110, 125 or 150 percent.
+The Size picker, the size keys, the View menu and command search make the same change as the captain, so a run of them leaves one attributed feed line and operation, and the first mate makes it when asked.
+
+### Settled runs
+
+A run of the captain's own steps on one setting is one feed line and one operation, written where the trail writes them (`settle` in `src/core/dispatcher.ts`; the captain's answers on FI3-1330).
+One drag of the window wash slider, a held size key or a panel folded and opened again would otherwise write a line and file a task number for every step.
+A setting is one catalog action and its target: a panel by surface, an account by id, a provider's preferred account, a crew slot by offering and slot, or the action alone.
+The run's first step writes its line and files its operation, and each later step rewrites both in place: the same row and the same task key, with the step's words and time.
+A scale setting's line says where the run started and where it settled (`settled` on the catalog line: `window wash 48% → 76%`, `window size 100% → 125%`); every other line says the setting's settled state in its usual words, and a panel's says what changed since the run's first step.
+A run ends when `SETTLE_MS` (10 seconds) pass with no further step, when any other line enters Activity, or when the captain changes another setting; the next step starts a new run with a new line.
+A first mate change on the same setting writes its own line, so it ends the captain's run too.
+A run that comes back where it started is withdrawn at once: its line leaves Activity and its operation leaves the record, because nothing changed (`TaskService.withdrawOperation`; its task key is not reused).
+Only the captain's changes settle.
+Each change the first mate makes stays one line and one operation, so the answer check still finds one action per captain message (`docs/task-capture.md`).
+Acts rather than values never settle or withdraw: every `alwaysTrail` line, the usage refresh, an account renamed or disconnected, a device removed and crew slots reset.
+A project's setup, settings, where it runs and its removal write their own events (`repo_setup`, `repo_configured`, `repo_runs_on`, `repo_unregistered`), one line per change.
+
+The event seam holds the one fact the run needs from Activity: which run Activity's newest line belongs to (`activityRun` in `src/core/services.ts`).
+A step's `personalized` event carries its run's id, and a withdrawal carries `withdrawn`; the seam rewrites or deletes that row in `activity_events` only while it is still the newest line, and any other line ends the run.
+The run is the generic `feedRunSchema` (`src/shared/events.ts`), read through `feedRunOf`: a copy's count of what it sent so far to a Mac being set up rides the same seam as a `device_setup` run (`docs/devices.md`, "How far the copy has gone"), and so ends a captain's run as any other line does.
+`changesFeed` (`src/shared/feed.ts`) makes `feed.recent` read again on a rewrite and on a withdrawal, so Activity draws a run as one line with no change to the panel or to `PanelFeedLine`.
+A run lives in memory: a restart ends it, and the record and Activity keep what it settled.
+`src/core/core.test.ts` ("settles a run of the captain's steps on one setting into one line and one operation", "starts a new run once the captain's setting has rested for the wait") and `tests/e2e/activity-runs.spec.ts` hold it.
+
+### The fixed-context budget
+
+A rule that the core, a tool description and a parameter each stated is said once.
+
+- **One home per rule.**
+  The core keeps which move and when.
+  How a call works is the tool's own text: what a spawn's intent carries and what queues it, each `shape` fact's rule, the notes policy (`remember`), revise-in-place and what an effect is (`emit_card`).
+  A tool's text drops what the core already says: who may close a card, that crew_status outranks memory, that a red check is diagnosed first, where theme and panel changes go.
+- **A fixed choice is one string with an enum** (`stringEnum`, `src/core/session/tools.ts`), not a union of literals.
+  The values and the validation are the same on both runtimes; `claudeTaskTools.ts` reads the form.
+- **emit_card describes only its top-level parameters.**
+  The Claude client never served a nested description, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
+
+`tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past its 18,000-token ceiling.
+The ceiling has room for several revisions, so it moves rarely: a change that would cross it trims first, or raises it in a revision that says what the new words buy, and each revision file says what its words cost.
+The test's ledger names, for every rule taken out of one text, the text that still says it.

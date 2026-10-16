@@ -1,0 +1,7 @@
+{
+  "title": "Quota",
+  "placement": { "x": "left", "y": "top" },
+  "size": "content",
+  "order": 30,
+  "reads": ["quota.snapshot"]
+}

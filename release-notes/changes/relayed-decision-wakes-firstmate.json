@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "relayed-decision-wakes-firstmate",
+      "kind": "fix",
+      "title": "A decision you give by replying under a crewmate's card now reaches Firstmate",
+      "body": "When you reply under a crewmate's card with something only Firstmate can do - approving a plan so another task can build it, merging, discarding, or asking for a stronger model - the crewmate now passes it on in a way that brings Firstmate in to act on it, even while that card is still up. Before, the crewmate could record your words and nothing would happen until you asked again. Ordinary replies about the card itself still go only to the crewmate.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes: Firstmate now hears the decision and acts on it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

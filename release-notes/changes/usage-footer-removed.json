@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "usage-footer-removed",
+      "kind": "improvement",
+      "title": "Usage no longer repeats a footer line",
+      "body": "The line under the Usage dashboard that said recorded activity only is gone. Everything else on the dashboard stays as it was.",
+      "area": "settings",
+      "noPicture": "A single muted line was removed; there is no new view to show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

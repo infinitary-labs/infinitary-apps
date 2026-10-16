@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-card-links-press-key",
+      "reason": "Test-only repair: the pull request links journey presses Enter through pressKey, which waits for focus, so the bare-focus lint passes; no product behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "observe-responsiveness",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Observe stays responsive with long histories",
+      "body": "Opening Observe no longer stops the app while it reads saved conversations, and scrolling stays responsive as conversations grow.",
+      "noPicture": "The layout is unchanged; the improvement is input responsiveness during history reads, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

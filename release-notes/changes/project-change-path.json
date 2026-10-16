@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-change-path",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "Check a project change before Firstmate applies it",
+      "body": "You can now change a project's name, folder and where it lives in Settings → Projects, and Firstmate can change these and its other settings. A change you asked for in exact words applies at once; otherwise a card shows what changes, and only Apply change applies it. A new address for where it lives always asks first. Your project keeps its key and history. A folder change never moves files: move the folder yourself once its tasks are finished. A project kept on this computer offers only Local merge until you approve where it lives.",
+      "area": "projects",
+      "picture": {
+        "dark": "project-change-path-dark.webp",
+        "light": "project-change-path-light.webp",
+        "alt": "A card titled Change site? showing the project's Care going from Default to Careful under Now and After your click, with Apply change and Not now buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

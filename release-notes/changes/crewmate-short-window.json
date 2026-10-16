@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-short-window",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The Crewmate tab's message box stays whole in a short window",
+      "body": "In a short window, a task card's Crewmate tab used to cut off its status line and message box. Now the crewmate's conversation above them gets shorter first, then the card's title and tabs scroll away. A long message scrolls inside the box. Moving to a tab by keys brings the tabs back into view.",
+      "picture": {
+        "dark": "crewmate-short-window-dark.webp",
+        "light": "crewmate-short-window-light.webp",
+        "alt": "With its title and tabs scrolled away, the Crewmate tab keeps its top row, status line and whole message box above a four-line message to Firstmate."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

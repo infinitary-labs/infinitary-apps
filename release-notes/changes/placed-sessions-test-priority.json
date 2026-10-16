@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-sessions-test-priority",
+      "reason": "Test-only: the placed-task tests run their git at the test run's own priority, so a Mac loaded by other runs no longer pushes them past their budget. Nothing in the app changes."
+    }
+  ]
+}

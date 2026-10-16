@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "your-devices",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "Use Firstmate from your other Macs, and run work on them",
+      "body": "Settings → Devices connects your other Macs. Paste a link from there into Firstmate on another Mac at its first launch, and that Mac shows and answers your cards, tasks and conversation while Firstmate and your record stay here. Another Mac, or another user on this Mac, can run work for you: add it by a command or by its address, then choose in Settings → Projects where a project's tasks run. Each signs in to its own subscriptions and GitHub, and pull requests are still merged from this Mac.",
+      "area": "devices",
+      "picture": {
+        "dark": "your-devices-dark.webp",
+        "light": "your-devices-light.webp",
+        "alt": "Settings, Devices, listing this Mac, then a MacBook Air and an iMac that each control this Firstmate"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

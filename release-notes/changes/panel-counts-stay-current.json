@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "panel-counts-stay-current",
+      "kind": "fix",
+      "title": "Panel counts stay current",
+      "body": "A collapsed panel keeps showing what it holds after the screen has been off. Activity and your other panels no longer stay on their last counts until you press Retry or reopen the app. If a panel does stop, its header says so instead of those old counts.",
+      "area": "tasks",
+      "picture": {
+        "dark": "panel-counts-stay-current-dark.webp",
+        "light": "panel-counts-stay-current-light.webp",
+        "alt": "The collapsed Knowledge panel showing 3 concepts and 0 findings, under Tasks"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

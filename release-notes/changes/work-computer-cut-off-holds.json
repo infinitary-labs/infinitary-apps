@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-cut-off-holds",
+      "reason": "A task on a computer that runs work whose own sign-in there is cut off waits as one on this Mac's own does: that sign-in is skipped, the task is held with one card, a new task waits, and both go on once it serves again; part of the development-only multi-machine feature, unavailable in released apps."
+    }
+  ]
+}

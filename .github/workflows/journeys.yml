@@ -1,0 +1,127 @@
+name: journeys
+
+# The journeys a pull request can break, on the Mac mini, before the change
+# merges (captain, 2026-10-08, FI3-1305/FI3-1306: "on each pull request, only
+# the affected journey files, on the Mac mini"). It reverses decision B of
+# 2026-09-15 for pull requests in part. That decision moved the whole Mac
+# suite to the alpha because a hosted Mac cost ~$200/month; the Mac mini
+# (the MAC_RUNNER variable's label) costs nothing per run, and what the
+# decision left behind was the loop it made: a change merged with green
+# checks, the alpha's full Mac run found its one to three broken journeys
+# hours later, and every pull request waited on the fix.
+#
+# scripts/affected-journeys.ts picks the files: the specs the change edits,
+# the specs whose helpers import a changed helper, the specs that name what
+# a changed shared module adds or removes, and the specs that hold a whole
+# hook or a whole quoted sentence the change adds or removes in src/. A
+# fragment in the stand-in does not select every journey. Three targeted
+# fallback rows also cover cards/home, frame focus/recovery, and devices,
+# even when their diff changes no hook, symbol, or sentence. The full suite
+# stays verify.yml's, inside every alpha and on demand. The run-alone pass
+# is not repeated here (docs/testing.md, "Journeys on the pull request").
+
+on:
+  pull_request:
+
+# A newer push to the same pull request replaces the older run: the Mac mini
+# is one machine.
+concurrency:
+  group: journeys-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-source:
+    uses: ./.github/workflows/source-journeys.yml
+  choose-journeys:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    outputs:
+      count: ${{ steps.select.outputs.count }}
+      files: ${{ steps.select.outputs.files }}
+    steps:
+      # Pick from the merge diff without installing packages or taking the Mac.
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: select
+        name: Choose the journeys
+        run: |
+          node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
+          node -e '
+            const fs = require("node:fs");
+            const picked = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/affected.json", "utf8"));
+            const files = Object.keys(picked).sort();
+            const lines = ["### Journeys this change can break", ""];
+            if (files.length === 0) lines.push("None: no journey file reaches what the change edits.");
+            for (const file of files) lines.push("- `" + file + "` - " + picked[file].join("; "));
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, "count=" + files.length + "\nfiles=" + files.join(" ") + "\n");
+          '
+  affected-journeys:
+    needs: choose-journeys
+    # The implicit success() skips on chooser failure; zero skips by this
+    # job's own condition, so its check passes without taking a Mac runner.
+    if: needs.choose-journeys.outputs.count != '0'
+    runs-on: ${{ vars.MAC_RUNNER || 'macos-15' }}
+    # Every crewmate works under "Application Support", and so does this job
+    # (verify.yml): a check that only fails from a path with a space fails
+    # here, not only in a working copy.
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      # The merge of the pull request into its base, with the history the
+      # diff needs: the journeys run against what the merge would produce.
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          fetch-depth: 0
+      # Its own folder per job: both Mac runner slots run as one user, and
+      # setup wipes the default ~/setup-pnpm, pnpm's store included.
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - id: dev-signing
+        run: pnpm codesign:local
+      # Playwright's window recorder is not part of an install; a journey
+      # that records would otherwise fetch it in the middle of its test.
+      - run: pnpm exec playwright install ffmpeg
+      - id: e2e
+        name: Build, then run the chosen journeys
+        # --no-deps: the desktop lane is the other lanes' teardown and a
+        # teardown project ignores the file filter (docs/testing.md).
+        run: |
+          test -n "$FILES"
+          pnpm build
+          pnpm exec playwright test --no-deps $FILES
+        env:
+          FILES: ${{ needs.choose-journeys.outputs.files }}
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/journeys-results.json
+      - name: Keep the failed journeys' evidence
+        if: ${{ always() && steps.e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: journeys-failures
+          path: Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

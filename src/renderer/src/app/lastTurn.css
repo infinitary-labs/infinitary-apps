@@ -1,0 +1,174 @@
+/*
+ * The last turn above the input (docs/composer.md "The last turn"): the
+ * captain's last message and the Firstmate's reply as two lines of type,
+ * with no border, fill or padding around either (the Subtitles design the
+ * captain approved on FI3-1225's plan), each inside quotation marks drawn in
+ * --fg-3 (the Quotes the captain approved on FI3-1387's plan), so even a
+ * bare "Got it" reads as something said. Both sit centered on the axis the
+ * character and the input share, the same size on 18 px rows 4 px apart:
+ * the captain's words first in --fg-2, the reply under them in --fg-1. Each
+ * line takes at most 80% of the width and its words are cut with an
+ * ellipsis inside the marks; the pair is 40 px tall and 10 px above the
+ * input's top edge, in the slot hung from that edge, so it never moves the
+ * input. Neither line is a control: no pointer, underline or focus ring.
+ *
+ * A pair enters with a 6 px rise over --dur-med; the pair a new message
+ * replaces leaves over --dur-fast. The working words leave over --dur-fast
+ * and the reply rises in over --dur-med. A completed reply later dissolves
+ * in place over --dur-slow, with no movement, and the slot stays. Under
+ * reduced motion the durations are zero, so every move is a cut, and the
+ * dots stand still.
+ */
+
+[data-last-turn] {
+  position: relative;
+  height: 40px;
+  margin: 0 14px 10px;
+  pointer-events: none;
+}
+/* While the lines are up, the slot takes the pointer so resting on them pauses the fade. */
+[data-last-turn][data-last-turn-fade="shown"],
+[data-last-turn][data-last-turn-fade="fading"] {
+  pointer-events: auto;
+}
+
+[data-last-turn-pair] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+@starting-style {
+  [data-last-turn-pair] {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+[data-last-turn-pair][data-leaving] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: var(--dur-fast);
+}
+/* A completed reply dissolves in place after its reading time. No movement,
+   and reduced motion cuts --dur-slow to zero, so the dissolve is a cut. */
+[data-last-turn-pair][data-fading] {
+  opacity: 0;
+  transform: none;
+  pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+[data-last-turn] .row {
+  display: flex;
+  justify-content: center;
+  height: 18px;
+  min-width: 0;
+}
+
+[data-last-turn-bubble] {
+  /* Plain text, never a control: it takes the pointer only so a cut line
+     shows its whole text on rest. */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 80%;
+  height: 18px;
+  color: var(--fg-1);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  cursor: default;
+  pointer-events: auto;
+}
+[data-last-turn-bubble="you"] {
+  color: var(--fg-2);
+}
+
+/* The words inside their quotation marks: the marks stay whole, and the words are cut. */
+[data-last-turn] .said {
+  display: inline-flex;
+  gap: 1px;
+  min-width: 0;
+}
+[data-last-turn] .quote {
+  flex: none;
+  color: var(--fg-3);
+}
+[data-last-turn] .words {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-last-turn-bubble="firstmate"] .said {
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+@starting-style {
+  [data-last-turn-bubble="firstmate"] .said {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+[data-last-turn-bubble="firstmate"] .said[data-leaving] {
+  opacity: 0;
+  transition-duration: var(--dur-fast);
+}
+[data-last-turn-bubble][data-state="working"] .words {
+  color: var(--fg-3);
+}
+[data-last-turn-bubble][data-state="problem"] .words {
+  color: var(--danger);
+}
+
+/* The working dots: three, in ember (--hot, the app's working color), each brightening in turn. */
+[data-last-turn-dots] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--hot);
+}
+[data-last-turn-dots] i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: last-turn-dot 1.2s ease-in-out infinite;
+}
+[data-last-turn-dots] i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+[data-last-turn-dots] i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes last-turn-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-last-turn-dots] i {
+    animation: none;
+  }
+}
+
+/* The reply's polite status: read, never seen. */
+[data-last-turn] .status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

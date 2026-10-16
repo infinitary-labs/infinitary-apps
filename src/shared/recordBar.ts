@@ -1,0 +1,101 @@
+import { type TaskStatusInput, taskStatusOf } from "./taskPresentation";
+import { isUnstartedWork, type TaskView } from "./tasks";
+
+/**
+ * The task record's action bar (FI3-565 direction A, piece 4; the design
+ * skill's TaskRecord): every open record ends in one row of buttons - the end
+ * slot at its left edge, the next slot at its right (FI3-948) - read only
+ * from the task's typed fields, never from its prose. It says nothing of its
+ * own: the status reason and the body's attention box say what happens
+ * next. Dropped work may start again; Done records have none.
+ *
+ * - `end`: the one way to end the task from its record, labelled Drop task
+ *   in every state (the captain's `end_verb`). Before the work starts it is
+ *   the footer's own `drop-task` (the record stays, nothing to keep); once
+ *   started it is the stall card's `stop-task`, which ends the task and
+ *   keeps a copy of its unfinished work. Null where no host op ends the
+ *   row: the Firstmate's own decision and operation rows, and work returned
+ *   to the queue after it started.
+ * - `next`: `start` on open work that waits for the captain's word - on
+ *   request, held or not - with no parts (`blocked`, and disabled, while
+ *   something it waits on is still open; blocked work offers it whatever its
+ *   policy), `continue` on Interrupted work, `show-card` while a decision
+ *   card waits (`end_while_waiting`: the end slot stays), else null -
+ *   nothing needs the captain. Work that starts by itself, queued or held
+ *   for a later start, gets no Start now (no new task operation). The next
+ *   slot follows the shared status's precedence, so a waiting decision
+ *   outranks an interruption or a blocker.
+ */
+export type RecordBarEnd = "drop-task" | "stop-task";
+export type RecordBarNext =
+  | "start"
+  | "try-again"
+  | "starting"
+  | "start-again"
+  | "continue"
+  | "show-card";
+export type RecordBar = {
+  end: RecordBarEnd | null;
+  next: RecordBarNext | null;
+  /** The next slot's Start is shown disabled: something it waits on is still open. */
+  blocked: boolean;
+};
+
+export type RecordBarInput = TaskStatusInput &
+  Pick<
+    TaskView,
+    "kind" | "startedAt" | "children" | "blockedBy" | "replacedBy" | "startAttempt" | "startNotice"
+  >;
+
+export const RECORD_NEXT_LABELS: Record<RecordBarNext, string> = {
+  start: "Start",
+  "try-again": "Try again",
+  starting: "Starting",
+  "start-again": "Start again",
+  continue: "Continue",
+  "show-card": "Show the card",
+};
+
+/** The open record bar, or Start again on eligible dropped work. */
+export function recordBarOf(task: RecordBarInput): RecordBar | null {
+  if (task.status === "done") return null;
+  if (task.status === "dropped") {
+    return task.kind === "work" && !task.replacedBy && task.children.total === 0
+      ? { end: null, next: "start-again", blocked: false }
+      : null;
+  }
+  const work = task.kind === "work";
+  const end: RecordBarEnd | null = !work
+    ? null
+    : isUnstartedWork(task)
+      ? "drop-task"
+      : task.status === "active"
+        ? "stop-task"
+        : null;
+  const { mark } = taskStatusOf(task);
+  const parent = task.status === "open" && task.children.total > 0;
+  const blocked = task.blockedBy.length > 0 || task.flags.blocked;
+  const startable =
+    task.status === "open" && !parent && (task.startPolicy === "on-request" || blocked);
+  const next: RecordBarNext | null =
+    mark === "waiting"
+      ? task.waitingCardId || (task.requiredAction && task.requiredAction.state !== "blocked")
+        ? "show-card"
+        : null
+      : mark === "starting"
+        ? "starting"
+        : !work
+          ? null
+          : startable
+            ? task.startNotice
+              ? "try-again"
+              : "start"
+            : mark === "interrupted"
+              ? "continue"
+              : null;
+  return {
+    end: mark === "starting" ? null : end,
+    next,
+    blocked: next === "starting" || ((next === "start" || next === "try-again") && blocked),
+  };
+}

@@ -1,0 +1,495 @@
+import { createServer, type IncomingMessage } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { GithubGatewayService } from "../../../orchestrator/githubGateway";
+import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
+import { bindTool } from "../../../session/tools";
+import { openInMemoryDatabase } from "../../../storage/db";
+import { seedTask } from "../../../tasks/seedTask";
+import { TaskService } from "../../../tasks/taskService";
+import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { GitHubForge } from "./githubForge";
+
+const HEAD = "a".repeat(40);
+const cleanup: (() => Promise<void> | void)[] = [];
+afterEach(async () => {
+  for (const close of cleanup.splice(0)) await close();
+});
+
+type Seen = { method: string; path: string; auth?: string; body: string };
+
+async function fixture(
+  options: { oversize?: boolean; signedOut?: boolean; dispatchStatus?: number } = {},
+) {
+  const seen: Seen[] = [];
+  let base = "";
+  const server = createServer(async (req: IncomingMessage, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    seen.push({
+      method: req.method ?? "",
+      path: req.url ?? "",
+      auth: req.headers.authorization,
+      body,
+    });
+    const url = new URL(req.url ?? "/", base);
+    const json = (value: unknown, status = 200, headers: Record<string, string> = {}) => {
+      res.writeHead(status, {
+        "Content-Type": "application/json",
+        "x-github-request-id": "REQ-1",
+        "x-ratelimit-remaining": "4999",
+        ...headers,
+      });
+      res.end(JSON.stringify(value));
+    };
+    if (url.pathname === "/repos/octo/meter/pulls") {
+      json([{ number: 1 }], 200, {
+        link: `<${base}/repos/octo/meter/pulls?page=2>; rel="next"`,
+      });
+    } else if (url.pathname === "/repos/acme/site/issues") {
+      json([{ number: 5, title: "elsewhere" }]);
+    } else if (url.pathname === "/user/repos" || url.pathname === "/search/repositories") {
+      json({ items: [{ full_name: "acme/site" }] });
+    } else if (url.pathname === "/repos/octo/meter/big") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(options.oversize ? "x".repeat(300 * 1024) : "{}");
+    } else if (url.pathname === "/repos/octo/meter/issues/1/comments" && req.method === "POST") {
+      json({ id: 7 }, 201);
+    } else if (url.pathname === "/repos/octo/meter/issues/2/comments") {
+      json({ message: "Validation Failed" }, 422);
+    } else if (
+      /^\/repos\/octo\/meter\/actions\/workflows\/(?:verify\.yml|42)\/dispatches$/.test(
+        url.pathname,
+      )
+    ) {
+      if (options.dispatchStatus) json({ message: "Dispatch refused" }, options.dispatchStatus);
+      else {
+        res.writeHead(204);
+        res.end();
+      }
+    } else if (url.pathname === "/repos/octo/meter" && req.method === "GET") {
+      json({ default_branch: "main" });
+    } else if (
+      [
+        "/repos/octo/meter/actions/runs/9/cancel",
+        "/repos/octo/meter/actions/workflows/verify.yml/disable",
+        "/repos/octo/meter/contents/.github/workflows/verify.yml",
+        "/repos/octo/meter",
+        "/repos/octo/meter/collaborators/someone",
+        "/repos/octo/meter/actions/secrets",
+      ].includes(url.pathname)
+    ) {
+      json({ accepted: true });
+    } else if (url.pathname === "/repos/octo/meter/actions/runs/9/rerun-failed-jobs") {
+      json({}, 201);
+    } else if (url.pathname === "/repos/octo/meter/redirect") {
+      res.writeHead(302, { location: "https://elsewhere.example/" });
+      res.end();
+    } else json({ message: "Not Found" }, 404);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  cleanup.push(() => {
+    server.closeAllConnections();
+    return new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+  const onSignInRejected = vi.fn();
+  const forge = new GitHubForge(
+    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+    {
+      apiBaseUrl: base,
+      onSignInRejected,
+      token: async () => (options.signedOut ? undefined : "gho_fixture_owned_by_app"),
+    },
+  );
+  const dir = scratchDir("fm-gateway-");
+  const db = openInMemoryDatabase();
+  cleanup.push(() => {
+    db.close();
+  });
+  db.prepare("INSERT INTO repos (id, path, name, added_at, origin) VALUES (?, ?, ?, ?, ?)").run(
+    "repo-1",
+    dir,
+    "meter",
+    1,
+    "https://github.com/octo/meter.git",
+  );
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: "task-1",
+    title: "Fix",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-1",
+  });
+  seedTask(tasks, { id: "task-2", title: "Find", status: "idle" });
+  // The check reading arms the watch only once the rerun reads as running.
+  let readings = 0;
+  const readChecks = vi.fn(async () => {
+    readings += 1;
+    if (readings >= armOn)
+      tasks.recordDelivery("task-1", { ciWatch: { head: HEAD, since: 1 } as never });
+    return `reading ${readings}`;
+  });
+  let armOn = 1;
+  const service = new GithubGatewayService({
+    tasks,
+    repos: new RepoRegistry(db, join(dir, "fleet")),
+    forgeFor: () => forge,
+    accountForge: () =>
+      new GitHubForge(
+        { kind: "github", host: "github.com", dir: "" },
+        {
+          apiBaseUrl: base,
+          token: async () => "gho_fixture_owned_by_app",
+        },
+      ),
+    readChecks,
+    now: () => 1234,
+    sleep: async () => {},
+  });
+  const read = bindTool(GITHUB_READ_TOOL, { onGithubRead: (i) => service.read("task-1", i) });
+  const write = bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write("task-1", i) });
+  const readWithoutProject = bindTool(GITHUB_READ_TOOL, {
+    onGithubRead: (i) => service.read("task-2", i),
+  });
+  const writeWithoutProject = bindTool(GITHUB_WRITE_TOOL, {
+    onGithubWrite: (i) => service.write("task-2", i),
+  });
+  return {
+    readWithoutProject,
+    writeWithoutProject,
+    seen,
+    onSignInRejected,
+    tasks,
+    read,
+    write,
+    readChecks,
+    armOn: (n: number) => {
+      armOn = n;
+    },
+    reserve: () =>
+      tasks.recordDelivery("task-1", {
+        headSha: HEAD,
+        ci: "red",
+        ciRepair: {
+          failures: [{ headSha: HEAD, checks: ["mac"] }],
+          diagnoses: [],
+          repairs: [],
+          rerun: { headSha: HEAD, check: "mac", evidence: "flake" },
+        },
+      }),
+  };
+}
+
+describe("the GitHub gateway through crewmate tools and the app's sign-in", () => {
+  it("reads a project route with the app's token and hands back status, request id and a next page", async () => {
+    const { read, seen } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: "/repos/octo/meter/pulls?per_page=1" })).text,
+    );
+    expect(answer).toMatchObject({
+      status: 200,
+      ok: true,
+      requestId: "REQ-1",
+      nextPath: "/repos/octo/meter/pulls?page=2",
+      body: [{ number: 1 }],
+    });
+    expect(seen[0]).toMatchObject({ method: "GET", auth: "Bearer gho_fixture_owned_by_app" });
+    expect(JSON.stringify(answer)).not.toContain("gho_");
+  });
+
+  it("reads another repository, the repo list and search, and keeps a write there for the captain", async () => {
+    const { read, write, seen } = await fixture();
+    const other = JSON.parse((await read.run({ path: "/repos/acme/site/issues" })).text);
+    expect(other).toMatchObject({ status: 200, body: [{ number: 5 }] });
+    for (const path of ["/user/repos?per_page=100", "/search/repositories?q=site+in:name"]) {
+      expect(JSON.parse((await read.run({ path })).text)).toMatchObject({ status: 200 });
+    }
+    expect(seen.map((request) => request.path)).toEqual([
+      "/repos/acme/site/issues",
+      "/user/repos?per_page=100",
+      "/search/repositories?q=site+in%3Aname",
+    ]);
+    const before = seen.length;
+    expect(
+      (await write.run({ method: "POST", path: "/repos/acme/site/issues", body: "{}" })).text,
+    ).toContain("Not sent: it goes outside this task's own project");
+    expect(seen).toHaveLength(before);
+  });
+
+  it("gives a task with no project the reads through the github.com sign-in, and keeps its writes for the captain", async () => {
+    const { readWithoutProject, writeWithoutProject, seen } = await fixture();
+    const answer = JSON.parse((await readWithoutProject.run({ path: "/user/repos" })).text);
+    expect(answer).toMatchObject({ status: 200, body: { items: [{ full_name: "acme/site" }] } });
+    expect(seen[0]).toMatchObject({ auth: "Bearer gho_fixture_owned_by_app" });
+    expect(
+      (
+        await writeWithoutProject.run({
+          method: "POST",
+          path: "/repos/acme/site/issues",
+          body: "{}",
+        })
+      ).text,
+    ).toContain("Not sent: this task has no project");
+    expect(seen).toHaveLength(1);
+  });
+
+  it("keeps another project's and the account's writes, refuses GraphQL and invalid JSON before any request, and leaves an account read to GitHub", async () => {
+    const { read, write, seen } = await fixture();
+    expect(
+      (await write.run({ method: "POST", path: "/repos/octo/other/issues", body: "{}" })).text,
+    ).toContain("Not sent");
+    expect(
+      (
+        await write.run({
+          method: "POST",
+          path: "/orgs/octo/actions/permissions",
+        })
+      ).text,
+    ).toContain("Not sent");
+    expect((await write.run({ method: "POST", path: "/graphql", body: "{}" })).text).toContain(
+      "GraphQL",
+    );
+    expect((await read.run({ path: "/graphql" })).text).toContain("GraphQL");
+    expect(
+      (await write.run({ method: "POST", path: "/repos/octo/meter/issues", body: "{nope" })).text,
+    ).toContain("JSON");
+    expect(seen).toEqual([]);
+    // No read list: GitHub's own answer decides what the sign-in may see.
+    expect(JSON.parse((await read.run({ path: "/user/keys" })).text)).toMatchObject({
+      status: 404,
+    });
+    expect(seen.map((request) => request.path)).toEqual(["/user/keys"]);
+  });
+
+  it.each(["verify.yml", "42"])(
+    "dispatches %s with a caller-selected ref and inputs without changing checks or a rerun reservation",
+    async (workflow) => {
+      const { write, seen, tasks, readChecks, reserve } = await fixture();
+      reserve();
+      const before = tasks.get("task-1")?.delivery;
+      const answer = (
+        await write.run({
+          method: "POST",
+          path: `/repos/octo/meter/actions/workflows/${workflow}/dispatches`,
+          body: JSON.stringify({
+            ref: "release-candidate",
+            inputs: { profile: "alpha", perf: true },
+          }),
+        })
+      ).text;
+      expect(answer).toContain('"status": 204');
+      expect(JSON.parse(answer)).toMatchObject({ status: 204, ok: true });
+      expect(answer).not.toContain("gho_");
+      expect(seen).toEqual([
+        {
+          method: "POST",
+          path: `/repos/octo/meter/actions/workflows/${workflow}/dispatches`,
+          auth: "Bearer gho_fixture_owned_by_app",
+          body: '{"ref":"release-candidate","inputs":{"profile":"alpha","perf":true}}',
+        },
+      ]);
+      expect(readChecks).not.toHaveBeenCalled();
+      expect(tasks.get("task-1")?.delivery).toEqual(before);
+    },
+  );
+
+  it("passes project workflow controls, workflow files, settings and permissions through unchanged", async () => {
+    const { write, read, seen } = await fixture();
+    const requests = [
+      { method: "POST" as const, path: "/repos/octo/meter/actions/runs/9/cancel" },
+      { method: "PUT" as const, path: "/repos/octo/meter/actions/workflows/verify.yml/disable" },
+      {
+        method: "PUT" as const,
+        path: "/repos/octo/meter/contents/.github/workflows/verify.yml",
+        body: '{"branch":"topic","message":"update checks","content":"bmFtZTogdmVyaWZ5"}',
+      },
+      { method: "PATCH" as const, path: "/repos/octo/meter", body: '{"description":"Updated"}' },
+      {
+        method: "PUT" as const,
+        path: "/repos/octo/meter/collaborators/someone",
+        body: '{"permission":"pull"}',
+      },
+    ];
+    for (const request of requests) {
+      const answer = JSON.parse((await write.run(request)).text);
+      expect(answer).toMatchObject({ status: 200, ok: true });
+    }
+    expect(
+      JSON.parse((await read.run({ path: "/repos/octo/meter/actions/secrets" })).text),
+    ).toMatchObject({ status: 200, ok: true });
+    expect(seen.map(({ method, path, body }) => ({ method, path, body }))).toEqual([
+      ...requests.flatMap((request) => [
+        ...(request.path.includes("/contents/")
+          ? [{ method: "GET", path: "/repos/octo/meter", body: "" }]
+          : []),
+        { ...request, body: request.body ?? "" },
+      ]),
+      { method: "GET", path: "/repos/octo/meter/actions/secrets", body: "" },
+    ]);
+  });
+
+  it("reports missing sign-in without sending a dispatch", async () => {
+    const { write, seen } = await fixture({ signedOut: true });
+    const answer = (
+      await write.run({
+        method: "POST",
+        path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+        body: '{"ref":"fm/task-1"}',
+      })
+    ).text;
+    expect(answer).toContain("sign-in");
+    expect(seen).toEqual([]);
+  });
+
+  it.each([401, 403, 404, 422, 500])(
+    "does not retry a dispatch GitHub refuses with %s",
+    async (dispatchStatus) => {
+      const { write, seen, readChecks, onSignInRejected } = await fixture({ dispatchStatus });
+      const answer = (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+          body: '{"ref":"fm/task-1"}',
+        })
+      ).text;
+      expect(answer).not.toContain("accepted");
+      expect(seen).toHaveLength(1);
+      expect(readChecks).not.toHaveBeenCalled();
+      expect(JSON.parse(answer)).toMatchObject({ status: dispatchStatus, ok: false });
+      expect(onSignInRejected).toHaveBeenCalledTimes(dispatchStatus === 401 ? 1 : 0);
+    },
+  );
+
+  it("writes JSON to the project and answers a refusal from GitHub as a status, not a failure", async () => {
+    const { write, seen } = await fixture();
+    const created = JSON.parse(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/issues/1/comments",
+          body: '{"body":"hi"}',
+        })
+      ).text,
+    );
+    expect(created).toMatchObject({ status: 201, ok: true, body: { id: 7 } });
+    expect(seen[0]).toMatchObject({ method: "POST", body: '{"body":"hi"}' });
+    const invalid = JSON.parse(
+      (await write.run({ method: "POST", path: "/repos/octo/meter/issues/2/comments", body: "{}" }))
+        .text,
+    );
+    expect(invalid).toMatchObject({
+      status: 422,
+      ok: false,
+      body: { message: "Validation Failed" },
+    });
+  });
+
+  it("refuses an answer over 256 KiB and a redirect, and never echoes the token", async () => {
+    const { read } = await fixture({ oversize: true });
+    expect((await read.run({ path: "/repos/octo/meter/big" })).text).toContain("256 KiB");
+    const redirected = (await read.run({ path: "/repos/octo/meter/redirect" })).text;
+    expect(redirected).toContain("redirect");
+    expect(redirected).not.toContain("gho_");
+  });
+
+  it("answers a task with no sign-in as the sign-in failure, not a crash", async () => {
+    const forge = new GitHubForge(
+      { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+      { apiBaseUrl: "http://127.0.0.1:1", token: async () => undefined },
+    );
+    await expect(forge.api.call("GET", "/repos/octo/meter/pulls")).rejects.toMatchObject({
+      failure: "sign-in",
+    });
+  });
+
+  it("records an existing rerun reservation and watches checks without vetoing another project API request", async () => {
+    const { write, tasks, seen, readChecks, reserve } = await fixture();
+    const rerun = {
+      method: "POST" as const,
+      path: "/repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+    };
+    reserve();
+    const answer = (await write.run(rerun)).text;
+    expect(seen).toHaveLength(1);
+    expect(answer).toContain('"status": 201');
+    expect(answer).toContain("reading 1");
+    expect(readChecks).toHaveBeenCalledTimes(1);
+    expect(tasks.get("task-1")?.delivery?.ciWatch).toBeDefined();
+    expect(tasks.get("task-1")?.delivery?.ciRepair?.rerun?.startedAt).toBe(1234);
+
+    const delivery = tasks.get("task-1")?.delivery?.ciRepair;
+    expect((await write.run(rerun)).text).toContain('"status": 201');
+    expect(seen).toHaveLength(2);
+    expect(tasks.get("task-1")?.delivery?.ciRepair).toEqual(delivery);
+  });
+
+  it("allows a rerun without a reservation and does not invent repair history", async () => {
+    const { write, tasks, seen, readChecks } = await fixture();
+    expect(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+        })
+      ).text,
+    ).toContain('"status": 201');
+    expect(seen).toHaveLength(1);
+    expect(readChecks).toHaveBeenCalledTimes(1);
+    expect(tasks.get("task-1")?.delivery?.ciWatch).toBeDefined();
+    expect(tasks.get("task-1")?.delivery?.ciRepair).toBeUndefined();
+  });
+
+  it("does not spend a reservation from an older head when a project rerun is accepted", async () => {
+    const { write, tasks, reserve } = await fixture();
+    reserve();
+    const ledger = structuredClone(tasks.get("task-1")?.delivery?.ciRepair);
+    if (!ledger?.rerun) throw new Error("fixture has no reservation");
+    ledger.rerun.headSha = "b".repeat(40);
+    tasks.recordDelivery("task-1", { ciRepair: ledger });
+    expect(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+        })
+      ).text,
+    ).toContain('"status": 201');
+    expect(tasks.get("task-1")?.delivery?.ciRepair).toEqual(ledger);
+  });
+
+  it("reads the checks again while the rerun is not yet running, then says so if it never shows", async () => {
+    const first = await fixture();
+    first.reserve();
+    first.armOn(3);
+    const rerun = {
+      method: "POST" as const,
+      path: "/repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+    };
+    const answer = (await first.write.run(rerun)).text;
+    expect(first.readChecks).toHaveBeenCalledTimes(3);
+    expect(answer).toContain("reading 3");
+    expect(answer).not.toContain("did not read as running");
+
+    const second = await fixture();
+    second.reserve();
+    second.armOn(99);
+    const late = (await second.write.run(rerun)).text;
+    expect(second.readChecks).toHaveBeenCalledTimes(3);
+    expect(late).toContain("did not read as running yet");
+  });
+
+  it("stops a task at its call budget", async () => {
+    const { read, seen } = await fixture();
+    for (let call = 0; call < 200; call++) await read.run({ path: "/repos/octo/meter/pulls" });
+    expect(seen).toHaveLength(200);
+    expect((await read.run({ path: "/repos/octo/meter/pulls" })).text).toContain(
+      "200 GitHub calls",
+    );
+    expect(seen).toHaveLength(200);
+  });
+});

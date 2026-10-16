@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "remote-pi-background-work",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Background work on another computer shows as working",
+      "body": "A GPT crewmate waiting on a command on another computer now shows ‘Background work continues’, with a working Tasks dot. When no command remains, it shows ‘No continuing work’. Firstmate also counts that work before checking whether the crewmate stopped.",
+      "picture": {
+        "dark": "remote-pi-background-work-dark.webp",
+        "light": "remote-pi-background-work-light.webp",
+        "alt": "A crewmate's hover card reads Working · Background work continues beside an orange dot."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

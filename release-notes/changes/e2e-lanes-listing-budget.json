@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-lanes-listing-budget",
+      "reason": "Gives the e2e lanes test's listing of every spec a 180 s budget measured on the Linux checks, where it had grown to 52 s against a 60 s budget and timed out. No shipped behavior changed."
+    }
+  ]
+}

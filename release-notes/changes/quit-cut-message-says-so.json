@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "quit-cut-message-says-so",
+      "kind": "fix",
+      "title": "A message cut off when the app stops says so",
+      "body": "If the app stops suddenly while Firstmate is answering you, that message's task record now says the app closed before the turn ended. Before, it said the turn hit an unknown error.",
+      "area": "tasks",
+      "picture": {
+        "dark": "quit-cut-message-says-so-dark.webp",
+        "light": "quit-cut-message-says-so-light.webp",
+        "alt": "A question's task record says it hit a problem because the app closed before the turn ended."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

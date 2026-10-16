@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "playwright-crashed-page-patch",
+      "reason": "Patches the test tool Playwright with one line of its own later fix, so a test that crashes a window holding panel frames no longer fails on Playwright's late answers. No shipped behavior changed."
+    }
+  ]
+}

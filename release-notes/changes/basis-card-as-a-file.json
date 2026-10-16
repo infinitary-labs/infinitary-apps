@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "basis-card-as-a-file",
+      "kind": "improvement",
+      "title": "A build gets the card you chose as a file",
+      "body": "When new work builds on an earlier task, the new crewmate now gets that task's card as a file it opens, kept whole with its pictures and anything interactive. Before, the whole card was pasted into the crewmate's starting instructions. Your choice, your settings and the replies under the card are still written in those instructions.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a new crewmate receives.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

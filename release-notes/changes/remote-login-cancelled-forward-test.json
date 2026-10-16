@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remote-login-cancelled-forward-test",
+      "reason": "Internal test repair: wait for the server to close a cancelled SSH forward instead of checking once, since SSH answers the cancel before the server acts on it. No user-facing behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-follow-next-path",
+      "reason": "Updates the pull request history line in AGENTS.md to follow github_read's nextPath, which repository listings already return; documentation only, nothing a person notices."
+    }
+  ]
+}

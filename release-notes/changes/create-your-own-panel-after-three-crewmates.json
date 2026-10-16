@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "create-your-own-panel-after-three-crewmates",
+      "kind": "improvement",
+      "title": "Create your own panel waits for three finished crewmates",
+      "body": "The Create your own panel space at the top of the left side now appears once your crewmates have finished three tasks. Before, it appeared after your first finished task, even a question Firstmate answered on its own. If you already see it, it goes away until your third crewmate finishes.",
+      "area": "firstmate",
+      "noPicture": "The space looks the same as before; only when it first appears changed.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

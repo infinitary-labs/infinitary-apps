@@ -1,0 +1,47 @@
+# Infinitary for Arch Linux and Omarchy, from its Ubuntu package
+# (docs/linux-packages.md). scripts/linux-recipes.ts fills in the @ fields;
+# never edit a rendered copy by hand.
+# Maintainer: Kun Chen <3233006+kunchenguid@users.noreply.github.com>
+pkgname=@PKGNAME@
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="A calm first mate for your AI subscriptions"
+arch=('x86_64')
+url="https://github.com/infinitary-labs/homebrew-tap"
+license=('Apache-2.0')
+# git: Linux ships no git of its own; the app's crew works through the system's.
+# xorg-server-xvfb: running work for another computer, the app draws its
+# hidden windows on a display of its own.
+depends=('git' 'xorg-server-xvfb' 'gtk3' 'nss' 'alsa-lib' 'libxss' 'libxtst' 'libnotify' 'libsecret' 'xdg-utils' 'at-spi2-core' 'util-linux-libs' 'mesa')
+# It takes the place of Firstmate 3000's packages, which provided
+# firstmate-3000 (docs/linux-packages.md, "Arch, Omarchy and NixOS").
+provides=('infinitary' 'firstmate-3000')
+conflicts=(@CONFLICTS@)
+replaces=(@REPLACES@)
+options=('!strip' '!debug')
+source=("@DEBNAME@::@URL@")
+noextract=("@DEBNAME@")
+sha256sums=('@SHA256@')
+
+package() {
+  bsdtar -xOf "@DEBNAME@" 'data.tar.*' | bsdtar -xf - -C "$pkgdir"
+  # The Ubuntu package links its command and loads its sandbox profile in
+  # its install script; Arch keeps Chromium's sandbox through the system's
+  # user namespaces, so the helper stays an ordinary program.
+  chmod 0755 "$pkgdir/opt/infinitary/chrome-sandbox"
+  rm -f "$pkgdir/opt/infinitary/resources/apparmor-profile"
+  install -d "$pkgdir/usr/bin"
+  ln -s /opt/infinitary/infinitary "$pkgdir/usr/bin/infinitary"
+  # Firstmate 3000's program path, as the Ubuntu package leaves it
+  # (docs/linux-packages.md, "The old program path"): what an older app set
+  # up to start at login or in the background still starts this one.
+  install -d "$pkgdir/opt/firstmate-3000"
+  ln -s /opt/infinitary/infinitary "$pkgdir/opt/firstmate-3000/firstmate-3000"
+  ln -s /opt/infinitary/infinitary "$pkgdir/usr/bin/firstmate-3000"
+  install -Dm644 "$pkgdir/opt/infinitary/LICENSE.electron.txt" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE.electron.txt"
+  # What the app's update notice reads (src/core/update/linuxInstall.ts): an
+  # Arch package of its own channel, updated with makepkg and pacman.
+  printf 'arch\n' > "$pkgdir/opt/infinitary/resources/package-type"
+  printf '%s\n' '@MARKER@' > "$pkgdir/opt/infinitary/resources/update-channel.json"
+}

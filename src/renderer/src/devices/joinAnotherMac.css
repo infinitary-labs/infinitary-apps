@@ -1,0 +1,78 @@
+/* Joining Firstmate on another Mac at first launch (design skill
+   components/devices/JoinAnotherMac): a second group a hairline under the
+   provider chips, and the stage's sign-in aside for the link. */
+
+.fm-join-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(600px, 100%);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-join-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.fm-join-aside {
+  margin-top: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+/* The field and its buttons share one row, as the sign-in prompt's do. */
+.fm-join-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fm-join-field > :first-child {
+  flex: 1;
+  min-width: 220px;
+}
+
+.fm-join-head {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.fm-join-sub {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-join-warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-join-buttons {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.fm-join-aside code {
+  font-family: var(--font-mono);
+}
+
+/* After this Mac left, or was removed from, the Mac it controlled. */
+.fm-join-left {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}

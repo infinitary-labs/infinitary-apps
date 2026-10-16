@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "shorter-personal-instructions",
+      "reason": "Crewmate instructions for lessons, panels and quick local work name only the procedure and references that apply. No surface a person sees changes."
+    }
+  ]
+}

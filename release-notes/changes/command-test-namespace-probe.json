@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "command-test-namespace-probe",
+      "reason": "Gives the run-work journey's command for another computer the same stand-in user-namespace probe the test's SSH sessions get on Linux, so it passes on hosted Ubuntu 24.04, whose kernel refuses the real probe. No shipped behavior changed."
+    }
+  ]
+}

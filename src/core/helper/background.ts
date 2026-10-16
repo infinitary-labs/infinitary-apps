@@ -1,0 +1,654 @@
+import { execFile } from "node:child_process";
+import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { OWN_IDENTITY, type Spelling, workLabelOf, workLabels } from "@shared/codeNames";
+import type { BuildFlavor } from "@shared/userDataFolders";
+import { z } from "zod";
+import { writePrivate } from "../devices/identity";
+import { pathsOf } from "../folderMove/due";
+import { readMoveRecord } from "../folderMove/record";
+import { hostEnv } from "../hostEnv";
+import { folderHolder } from "./lock";
+
+/**
+ * Running in the background (docs/helper.md, "In the background"): once a
+ * user joins, the system's own service manager starts `<app> work run` as
+ * that user whenever they are logged in - at login, and again whenever it
+ * ends while they are still joined - including while another user is at the
+ * screen (captain's pick on FI3-673). Nothing needs an administrator and
+ * nothing runs as anyone else. One seam, two adapters:
+ *
+ * - **launchd** on a Mac: a LaunchAgent in that user's own
+ *   `~/Library/LaunchAgents`.
+ * - **systemd** on Linux: a user service in that user's own
+ *   `~/.config/systemd/user`, wanted by their login (`default.target`).
+ *
+ * The agent, and the copy of Firstmate a command fetched from its home, are
+ * the only things Firstmate puts outside its own data folder. `installed.json`
+ * there records both, so removing what Firstmate set up removes exactly
+ * those and nothing the person put there.
+ */
+
+/** How this app starts itself: its executable, and before `work` the folder an unpackaged run loads. */
+export type Launcher = { executable: string; args: readonly string[] };
+
+/** What one call to the service manager answered: `launchctl`, or `systemctl --user`. */
+export type LaunchctlResult = { ok: boolean; output: string };
+
+export type Launchctl = (args: readonly string[]) => Promise<LaunchctlResult>;
+
+/** `systemctl`, which the systemd adapter always asks with `--user` first. */
+export type Systemctl = Launchctl;
+
+/**
+ * The system's own service manager for this user's background work: launchd
+ * on a Mac, or this user's own systemd on Linux, whose units live under
+ * `configHome` (`$XDG_CONFIG_HOME`, `~/.config` unless the person moved it).
+ */
+export type ServiceManager =
+  | { launchctl: Launchctl }
+  | { systemctl: Systemctl; configHome: string };
+
+export type BackgroundContext = {
+  flavor: BuildFlavor;
+  dataDir: string;
+  /**
+   * The spelling whose folder `dataDir` is in (`HelperPlace.folderSpelling`):
+   * the agent's label follows the folder, so an agent set up while the work
+   * is still in an older spelling's folder keeps that spelling's label, and
+   * the one-time move hands it to this app's own. This app's own when absent.
+   */
+  spelling?: Spelling;
+  /** The user's home folder, whose `Library/LaunchAgents` holds a Mac's agent. */
+  homeDir: string;
+  /** The user's number: the agent runs in that user's own session. */
+  uid: number;
+} & ServiceManager;
+
+/** The agent as `installed.json` records it: its label, and the file it is set up by. */
+export type Service = { label: string; file: string };
+
+const INSTALLED_FILE = "installed.json";
+
+const installedSchema = z.strictObject({
+  version: z.literal(1),
+  /** The agent, by its label and its file. */
+  service: z.strictObject({ label: z.string().min(1), file: z.string().min(1) }).nullable(),
+  /** The copy of Firstmate a command fetched from its home; null when this user runs one already here. */
+  app: z.string().min(1).nullable(),
+});
+export type Installed = Omit<z.infer<typeof installedSchema>, "version">;
+
+/**
+ * This app's agent label: one per flavor, so a development copy never
+ * stands in for the installed one (`workLabelOf`, `@shared/codeNames`); for
+ * a work folder of another spelling, that spelling's.
+ */
+export function serviceLabel(flavor: BuildFlavor, spelling: Spelling = OWN_IDENTITY): string {
+  return workLabelOf(spelling, flavor);
+}
+
+/** What Firstmate set up outside its data folder here, or nothing when it set up nothing. */
+export function readInstalled(dataDir: string): Installed {
+  try {
+    const { version: _version, ...installed } = installedSchema.parse(
+      JSON.parse(readFileSync(join(dataDir, INSTALLED_FILE), "utf8")),
+    );
+    return installed;
+  } catch {
+    return { service: null, app: null };
+  }
+}
+
+export function writeInstalled(dataDir: string, installed: Installed): void {
+  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+  writePrivate(
+    join(dataDir, INSTALLED_FILE),
+    `${JSON.stringify({ version: 1, ...installed }, null, 2)}\n`,
+  );
+}
+
+export function forgetInstalled(dataDir: string): void {
+  rmSync(join(dataDir, INSTALLED_FILE), { force: true });
+}
+
+const xml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * The agent: `<app> work run` at login, kept running while the user is
+ * joined - while its grant (`home.json`) is in the data folder - so a stop
+ * after the home removes it is the last. What it says goes to the folder's
+ * own `service.log`. `env` is what it carries of the joining process's
+ * environment: a development run's stand-ins alone.
+ */
+export function servicePlist(options: {
+  label: string;
+  launcher: Launcher;
+  dataDir: string;
+  env: Readonly<Record<string, string>>;
+}): string {
+  const strings = (values: readonly string[]) =>
+    values.map((value) => `\t\t<string>${xml(value)}</string>`).join("\n");
+  const env = Object.entries(options.env);
+  const log = join(options.dataDir, "service.log");
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    "<dict>",
+    "\t<key>Label</key>",
+    `\t<string>${xml(options.label)}</string>`,
+    "\t<key>ProgramArguments</key>",
+    "\t<array>",
+    strings([options.launcher.executable, ...options.launcher.args, "work", "run"]),
+    "\t</array>",
+    "\t<key>RunAtLoad</key>",
+    "\t<true/>",
+    "\t<key>KeepAlive</key>",
+    "\t<dict>",
+    "\t\t<key>PathState</key>",
+    "\t\t<dict>",
+    `\t\t\t<key>${xml(join(options.dataDir, "home.json"))}</key>`,
+    "\t\t\t<true/>",
+    "\t\t</dict>",
+    "\t</dict>",
+    "\t<key>StandardOutPath</key>",
+    `\t<string>${xml(log)}</string>`,
+    "\t<key>StandardErrorPath</key>",
+    `\t<string>${xml(log)}</string>`,
+    ...(env.length > 0
+      ? [
+          "\t<key>EnvironmentVariables</key>",
+          "\t<dict>",
+          ...env.flatMap(([key, value]) => [
+            `\t\t<key>${xml(key)}</key>`,
+            `\t\t<string>${xml(value)}</string>`,
+          ]),
+          "\t</dict>",
+        ]
+      : []),
+    "</dict>",
+    "</plist>",
+    "",
+  ].join("\n");
+}
+
+/**
+ * A Linux user's service: `<app> work run` started by that user's own
+ * systemd whenever they are logged in (`WantedBy=default.target`), and again
+ * ten seconds after it ends, as launchd keeps a Mac's agent alive. Like the
+ * Mac's agent, it runs only while the folder holds its grant (`home.json`) or
+ * a removal it has yet to finish (`left.json`), so a finished removal is its
+ * last stop. What it says goes to the folder's own `service.log`. `env` is
+ * what it carries of the joining process's environment: a development run's
+ * stand-ins alone.
+ */
+export function serviceUnit(options: {
+  launcher: Launcher;
+  dataDir: string;
+  env: Readonly<Record<string, string>>;
+}): string {
+  const log = unitValue(join(options.dataDir, "service.log"));
+  const words = [options.launcher.executable, ...options.launcher.args, "work", "run"];
+  return [
+    '# Infinitary\'s work for this user (docs/helper.md, "In the background").',
+    "[Unit]",
+    "Description=Infinitary work",
+    // Never give up starting it while the user is joined, as launchd does not.
+    "StartLimitIntervalSec=0",
+    "",
+    "[Service]",
+    "Type=simple",
+    // Its run draws on a display of its own rather than a Wayland session's,
+    // which goes when that session does (src/main/ownDisplay.ts).
+    "UnsetEnvironment=WAYLAND_DISPLAY",
+    `ExecCondition=/bin/sh -c ${unitWord('test -e "$1" || test -e "$2"')} sh ${unitWord(join(options.dataDir, "home.json"))} ${unitWord(join(options.dataDir, "left.json"))}`,
+    `ExecStart=${words.map(unitWord).join(" ")}`,
+    "Restart=always",
+    "RestartSec=10",
+    // launchd's own wait before it ends an agent that does not stop. The
+    // run hears the stop first; its display goes once the run has.
+    "TimeoutStopSec=20",
+    "KillMode=mixed",
+    ...Object.entries(options.env).map(
+      ([key, value]) => `Environment=${unitQuoted(`${key}=${value}`)}`,
+    ),
+    `StandardOutput=append:${log}`,
+    `StandardError=append:${log}`,
+    "",
+    "[Install]",
+    "WantedBy=default.target",
+    "",
+  ].join("\n");
+}
+
+/** A value a unit file holds as it is: one line, with systemd's specifiers kept literal. */
+function unitValue(text: string): string {
+  if (/[\n\r\0]/.test(text)) throw new Error("A unit file cannot hold a line break.");
+  return text.replace(/%/g, "%%");
+}
+
+/** A quoted string in a unit file, its escapes and specifiers kept literal. */
+function unitQuoted(text: string): string {
+  return `"${unitValue(text).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** One word of a unit file's command line: quoted, and its variables kept literal too. */
+function unitWord(text: string): string {
+  return unitQuoted(text).replace(/\$/g, "$$$$");
+}
+
+/** One system's way of keeping the agent: launchd's or systemd's. */
+type Adapter = {
+  /** The agent under a label (this app's own unless named), and the file it is set up by. */
+  service: (context: BackgroundContext, label?: string) => Service;
+  /** Writes the agent's file, and whatever makes it start at login. */
+  write: (context: BackgroundContext, service: Service, text: AgentText) => void;
+  /** Starts it now, as the system answers: running, at the next login, or failed. */
+  load: (context: BackgroundContext, service: Service) => Promise<InBackgroundNow>;
+  /** Lets it go once its files are gone; run from the agent itself, this ends its process. */
+  unload: (context: BackgroundContext, service: Service) => Promise<void>;
+  /** Stops its run without taking it away. */
+  pause: (context: BackgroundContext, service: Service) => Promise<void>;
+  /** Starts it again after a pause that changed nothing. */
+  resume: (context: BackgroundContext, service: Service) => Promise<void>;
+  /** Whether it runs now. */
+  state: (context: BackgroundContext, service: Service) => Promise<InBackgroundNow>;
+};
+
+type AgentText = { launcher: Launcher; env: Readonly<Record<string, string>> };
+
+/** How the background answers: running now, starting at the next login, or failed for good. */
+export type InBackgroundNow = "running" | "at-login" | "failed";
+
+const launchd: Adapter = {
+  service: (context, named) => {
+    const label = named ?? serviceLabel(context.flavor, context.spelling);
+    return { label, file: join(context.homeDir, "Library", "LaunchAgents", `${label}.plist`) };
+  },
+  write: (context, service, text) => {
+    mkdirSync(dirname(service.file), { recursive: true });
+    writePrivate(
+      service.file,
+      servicePlist({ label: service.label, dataDir: context.dataDir, ...text }),
+    );
+  },
+  load: async (context, service) => {
+    const launchctl = launchctlOf(context);
+    const domain = `gui/${context.uid}`;
+    // One left loaded by an earlier join goes first, so launchd reads this file.
+    await launchctl(["bootout", `${domain}/${service.label}`]);
+    const started = await launchctl(["bootstrap", domain, service.file]);
+    if (started.ok) return "running";
+    // launchd knows the domain only while the user is logged in: asking for it
+    // tells an absent session from a refusal, without reading launchctl's words.
+    const session = await launchctl(["print", domain]);
+    return session.ok ? "failed" : "at-login";
+  },
+  unload: async (context, service) => {
+    await launchctlOf(context)(["bootout", `gui/${context.uid}/${service.label}`]);
+  },
+  pause: async (context, service) => {
+    await launchctlOf(context)(["bootout", `gui/${context.uid}/${service.label}`]);
+  },
+  resume: async (context, service) => {
+    await launchctlOf(context)(["bootstrap", `gui/${context.uid}`, service.file]);
+  },
+  state: async (context, service) => {
+    const launchctl = launchctlOf(context);
+    const domain = `gui/${context.uid}`;
+    if (!(await launchctl(["print", domain])).ok) return "at-login";
+    return (await launchctl(["print", `${domain}/${service.label}`])).ok ? "running" : "failed";
+  },
+};
+
+/** The states in which this user's systemd holds the service as running or about to. */
+const SYSTEMD_RUNNING = new Set(["active", "activating", "reloading", "deactivating"]);
+
+const systemd: Adapter = {
+  service: (context, named) => {
+    const label = `${named ?? serviceLabel(context.flavor, context.spelling)}.service`;
+    return { label, file: join(systemdUnits(context), label) };
+  },
+  write: (context, service, text) => {
+    mkdirSync(dirname(service.file), { recursive: true });
+    writePrivate(service.file, serviceUnit({ dataDir: context.dataDir, ...text }));
+    // What `systemctl --user enable` makes, made here so the service starts at
+    // the next login even when this user's systemd cannot be asked now.
+    const wants = wantedBy(service.file);
+    mkdirSync(dirname(wants), { recursive: true });
+    rmSync(wants, { force: true });
+    symlinkSync(service.file, wants);
+  },
+  load: async (context, service) => {
+    const systemctl = systemctlOf(context);
+    // Its user's systemd reads the file again; one an earlier join started
+    // stops first, so the new one runs.
+    const read = (await systemctl(["daemon-reload"])).ok;
+    if (read && (await systemctl(["restart", service.label])).ok) return "running";
+    // Asking for its environment tells an absent session from a refusal,
+    // without reading systemctl's words.
+    return (await systemctl(["show-environment"])).ok ? "failed" : "at-login";
+  },
+  unload: async (context, service) => {
+    const systemctl = systemctlOf(context);
+    await systemctl(["daemon-reload"]);
+    await systemctl(["reset-failed", service.label]);
+    // Not waited for: run from the service itself, the stop ends this process.
+    await systemctl(["stop", "--no-block", service.label]);
+  },
+  pause: async (context, service) => {
+    await systemctlOf(context)(["stop", service.label]);
+  },
+  resume: async (context, service) => {
+    await systemctlOf(context)(["start", service.label]);
+  },
+  state: async (context, service) => {
+    const systemctl = systemctlOf(context);
+    if (!(await systemctl(["show-environment"])).ok) return "at-login";
+    const active = await systemctl(["show", "--property=ActiveState", "--value", service.label]);
+    return active.ok && SYSTEMD_RUNNING.has(active.output.trim()) ? "running" : "failed";
+  },
+};
+
+function adapterOf(context: BackgroundContext): Adapter {
+  return "systemctl" in context ? systemd : launchd;
+}
+
+function launchctlOf(context: BackgroundContext): Launchctl {
+  if (!("launchctl" in context)) throw new Error("launchd is not this computer's service manager.");
+  return context.launchctl;
+}
+
+/** systemd's own, always about this user's services. */
+function systemctlOf(context: BackgroundContext): Systemctl {
+  if (!("systemctl" in context)) throw new Error("systemd is not this computer's service manager.");
+  const { systemctl } = context;
+  return (args) => systemctl(["--user", ...args]);
+}
+
+/** Where this user's own systemd reads their services. */
+function systemdUnits(context: BackgroundContext): string {
+  return join(
+    "configHome" in context ? context.configHome : join(context.homeDir, ".config"),
+    "systemd",
+    "user",
+  );
+}
+
+/** The link that has a user's login start a service: beside its file, in `default.target.wants`. */
+function wantedBy(file: string): string {
+  return join(dirname(file), "default.target.wants", basename(file));
+}
+
+/**
+ * The files a removal takes away for the agent, in order: a Linux service's
+ * link from the login first, so it never starts at another login, then its
+ * file; a Mac's agent is its file alone.
+ */
+export function serviceFiles(service: Service): string[] {
+  return service.file.endsWith(".service")
+    ? [wantedBy(service.file), service.file]
+    : [service.file];
+}
+
+/**
+ * Sets up the agent and starts it now: `running` once the service manager
+ * took it, `at-login` when the user has no login session to give it to (a
+ * Terminal reached over SSH while they are not logged in), so it starts the
+ * next time they log in, and `failed` when their session is there and still
+ * refused it, which no login mends. An agent `installed.json` records under
+ * another of the app's labels moves to this app's own (`moveInBackground`).
+ * Never run from that agent itself: taking it away would end this process.
+ */
+export async function startInBackground(
+  context: BackgroundContext,
+  options: { launcher: Launcher; env: Readonly<Record<string, string>>; app: string | null },
+): Promise<InBackgroundNow> {
+  const moved = await moveInBackground(context, {
+    ...options,
+    label: serviceLabel(context.flavor, context.spelling),
+  });
+  await moved.retire();
+  return moved.state;
+}
+
+/** What a move answers: how the agent it set up started, and what takes the one before it away. */
+export type MovedInBackground = {
+  state: InBackgroundNow;
+  /**
+   * Takes away the agent `installed.json` recorded before, when the move put
+   * another in its place: its files, then the service manager lets it go.
+   * Run from that agent itself, the second step ends this process, so it
+   * comes last. Nothing when nothing moved.
+   */
+  retire: () => Promise<void>;
+};
+
+/**
+ * Sets up the agent under `label` and starts it. Under the label
+ * `installed.json` records already, or with none recorded, that is all, as
+ * a join or an update always did. Under another label it is a move, in one
+ * step (the Infinitary rename, FI3-1780 step 2): a renamed app's agent, or
+ * one coming back to this app, takes the place of the one recorded. The
+ * new one is set up and started first, and recorded only once the service
+ * manager took it; the old one goes last (`retire`). Their runs never
+ * overlap: each works only while it holds the data folder
+ * (`src/core/helper/lock.ts`). A new one the service manager refuses is
+ * taken away again and the old one started again as it was, so a move
+ * that fails changes nothing.
+ */
+export async function moveInBackground(
+  context: BackgroundContext,
+  options: {
+    label: string;
+    launcher: Launcher;
+    env: Readonly<Record<string, string>>;
+    app: string | null;
+  },
+): Promise<MovedInBackground> {
+  const adapter = adapterOf(context);
+  const service = adapter.service(context, options.label);
+  const text = { launcher: options.launcher, env: options.env };
+  const before = readInstalled(context.dataDir).service;
+  const nothing = async () => {};
+  if (!before || before.label === service.label) {
+    adapter.write(context, service, text);
+    writeInstalled(context.dataDir, { service, app: options.app });
+    return { state: await adapter.load(context, service), retire: nothing };
+  }
+  const takeAway = async () => {
+    for (const file of serviceFiles(service)) rmSync(file, { force: true });
+    await adapter.unload(context, service);
+  };
+  let state: InBackgroundNow;
+  try {
+    adapter.write(context, service, text);
+    state = await adapter.load(context, service);
+  } catch (error) {
+    await takeAway().catch(() => undefined);
+    throw error;
+  }
+  if (state === "failed") {
+    await takeAway();
+    await adapter.resume(context, before);
+    return { state, retire: nothing };
+  }
+  writeInstalled(context.dataDir, { service, app: options.app });
+  return {
+    state,
+    retire: async () => {
+      for (const file of serviceFiles(before)) rmSync(file, { force: true });
+      await adapter.unload(context, before);
+    },
+  };
+}
+
+/**
+ * The grants an agent of this work folder may name: its own, and, once the
+ * one-time move brought its data folder over from an older one, the older
+ * folder's, as named and as the disk resolves it (`pathsOf`).
+ */
+function grantsOf(dataDir: string): string[] {
+  const from = readMoveRecord(dirname(dataDir))?.from;
+  return [
+    join(dataDir, "home.json"),
+    ...(from ? pathsOf(from).map((older) => join(older, basename(dataDir), "home.json")) : []),
+  ];
+}
+
+/**
+ * Writes the agent's file anew for this work folder and records it, without
+ * asking the service manager, which reads the file at its next load - the
+ * next login: for an agent whose own run cannot set it up anew now, after
+ * the one-time move took its folder elsewhere and the agent under this app's
+ * own label was refused.
+ */
+export function rewriteInBackground(
+  context: BackgroundContext,
+  service: Service,
+  options: { launcher: Launcher; env: Readonly<Record<string, string>>; app: string | null },
+): void {
+  adapterOf(context).write(context, service, { launcher: options.launcher, env: options.env });
+  writeInstalled(context.dataDir, { service, app: options.app });
+}
+
+/**
+ * What a move that stopped partway left beside the agent `installed.json`
+ * records, taken away by the run once it holds the data folder: an agent of
+ * this flavor under another of the app's labels whose file still names this
+ * folder - or the older folder the one-time move brought it from - and a
+ * copy of Firstmate in `app/` other than the one recorded. It reads only
+ * those labels' files and that folder, so another folder's agent stays.
+ * Run from such an agent, letting it go ends this process, as a retire
+ * does; the recorded one then runs.
+ */
+export async function retireStrays(context: BackgroundContext): Promise<void> {
+  const { service, app } = readInstalled(context.dataDir);
+  if (app) {
+    const kept = dirname(app);
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(kept);
+    } catch {
+      // Nothing kept there.
+    }
+    for (const entry of entries)
+      if (join(kept, entry) !== app && /\.app(\.next)?$/.test(entry))
+        rmSync(join(kept, entry), { recursive: true, force: true });
+  }
+  if (!service) return;
+  const adapter = adapterOf(context);
+  const grants = grantsOf(context.dataDir);
+  for (const label of workLabels(context.flavor)) {
+    const stray = adapter.service(context, label);
+    if (stray.label === service.label) continue;
+    let text = "";
+    try {
+      text = readFileSync(stray.file, "utf8");
+    } catch {
+      continue;
+    }
+    if (!grants.some((home) => text.includes(xml(home)) || text.includes(unitWord(home)))) continue;
+    for (const file of serviceFiles(stray)) rmSync(file, { force: true });
+    await adapter.unload(context, stray);
+  }
+}
+
+/**
+ * Takes the agent away: its files first, so it never starts at another
+ * login, then the service manager lets it go. Run from the agent itself,
+ * the second step ends this process, so it comes last.
+ */
+export async function stopInBackground(
+  context: BackgroundContext,
+  service: Service,
+): Promise<void> {
+  for (const file of serviceFiles(service)) rmSync(file, { force: true });
+  await adapterOf(context).unload(context, service);
+}
+
+/**
+ * Stops the agent's run without taking the agent away, so a running `work
+ * run` lets the folder go: what the home's update and removal over Remote
+ * Login do first. The file stays; `resumeInBackground` starts it again.
+ */
+export async function pauseInBackground(
+  context: BackgroundContext,
+  service: Service,
+): Promise<void> {
+  await adapterOf(context).pause(context, service);
+}
+
+/** Starts the agent again after a pause that changed nothing. */
+export async function resumeInBackground(
+  context: BackgroundContext,
+  service: Service,
+): Promise<void> {
+  await adapterOf(context).resume(context, service);
+}
+
+/**
+ * Whether the agent runs now, as the home's SSH connection asks it
+ * (docs/helper.md, "Through the home's SSH"): `running` while the service
+ * manager holds it in this user's session, `at-login` when this user has no
+ * login session for it, and `failed` when the session is there and holds no
+ * agent, which no login mends. The manager is asked, never its words read.
+ */
+export async function backgroundState(
+  context: BackgroundContext,
+  service: Service,
+): Promise<InBackgroundNow> {
+  return adapterOf(context).state(context, service);
+}
+
+/** The system's own launchctl, which a test never reaches. */
+export const systemLaunchctl: Launchctl = (args) => runManager("/bin/launchctl", args);
+
+/** A development run's stand-in for launchctl or systemctl, which tests use so no real agent is ever loaded. */
+export function launchctlAt(program: string): Launchctl {
+  return (args) => runManager(program, args);
+}
+
+/** This Linux computer's own systemctl, where its search path finds it. */
+export function systemSystemctl(program: string): Systemctl {
+  return (args) => runManager(program, args);
+}
+
+function runManager(program: string, args: readonly string[]): Promise<LaunchctlResult> {
+  return new Promise((resolve) => {
+    execFile(program, [...args], { env: hostEnv(), timeout: 15_000 }, (error, stdout, stderr) =>
+      resolve({ ok: !error, output: `${String(stdout)}${String(stderr)}`.trim() }),
+    );
+  });
+}
+
+/** How many beats in a row a loaded agent may hold no run before the work is said not to start. */
+const IDLE_BEATS_BEFORE_FAILED = 2;
+
+/**
+ * `backgroundState` for the connection's beats: an agent the service manager holds that
+ * leaves the data folder with no live run on two beats in a row keeps
+ * exiting, so the work cannot start (`failed`) rather than `running`.
+ * One beat with no run is a start in progress and answers `unknown`.
+ */
+export function agentProbe(
+  context: BackgroundContext,
+  service: Service,
+): () => Promise<"running" | "at-login" | "failed" | "unknown"> {
+  let idle = 0;
+  return async () => {
+    const state = await backgroundState(context, service);
+    if (state !== "running") {
+      idle = 0;
+      return state;
+    }
+    if (folderHolder(context.dataDir) !== null) {
+      idle = 0;
+      return "running";
+    }
+    idle += 1;
+    return idle >= IDLE_BEATS_BEFORE_FAILED ? "failed" : "unknown";
+  };
+}

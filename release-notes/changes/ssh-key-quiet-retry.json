@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ssh-key-quiet-retry",
+      "reason": "Internal, behind the development-only multi-machine gate: a Mac reached over this Mac's own SSH whose key is locked, or whose key's app did not answer, is tried again quietly when this Mac wakes and every few minutes, and the feed says it once. An installed app offers none of it."
+    }
+  ]
+}

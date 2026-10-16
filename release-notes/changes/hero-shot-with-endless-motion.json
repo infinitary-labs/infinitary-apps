@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hero-shot-with-endless-motion",
+      "reason": "Test tooling only: the shared hero picture capture no longer waits on motion that never ends, so a view with the working dots can take its pair."
+    }
+  ]
+}

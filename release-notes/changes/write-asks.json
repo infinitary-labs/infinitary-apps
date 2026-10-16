@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "write-asks",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A crewmate asks before changing anything outside its project",
+      "body": "When a crewmate needs to change something on GitHub or GitLab outside its task's project, such as opening an issue in another repository, changing your account, or creating the GitHub repository for a project kept on this computer, it asks you on a card. The card shows exactly what will be sent, and only your click sends it, once. A crewmate that is only answering a question asks before every change, even in its own project.",
+      "picture": {
+        "dark": "write-asks-dark.webp",
+        "light": "write-asks-light.webp",
+        "alt": "A card titled Send this write for me?, showing exactly what it will send to GitHub above Not now and Send it to GitHub buttons."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

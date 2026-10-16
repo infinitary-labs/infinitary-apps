@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-large-context-requests",
+      "kind": "fix",
+      "title": "Long conversations on a large custom model keep going",
+      "body": "A conversation with a custom API provider's model that takes a very large context, such as a million tokens, no longer stops partway with a size-limit message. It can now grow to the model's own context limit.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new on screen: a long conversation now simply carries on.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

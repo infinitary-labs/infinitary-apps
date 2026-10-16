@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-borderless-lines",
+      "kind": "improvement",
+      "highlight": 3,
+      "area": "message-box",
+      "title": "Your last message and Firstmate's reply now read as two plain lines",
+      "body": "The two bubbles above the message box are gone. Your last message now shows as a small grey line centered over the message box, with Firstmate's reply just under it, with no outline or fill around either. While Firstmate works, its line still shows three dots and \"Working…\". Resting the pointer on a line underlines it, and a click still opens Activity.",
+      "picture": {
+        "dark": "last-turn-borderless-lines-dark.webp",
+        "light": "last-turn-borderless-lines-light.webp",
+        "alt": "Your message \"resume paused work\" in small grey type, and under it Firstmate's reply \"Three paused crewmates resumed\", centered just above the message box with no shapes around them"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

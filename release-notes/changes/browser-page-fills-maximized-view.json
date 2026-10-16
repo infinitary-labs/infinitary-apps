@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "browser-page-fills-maximized-view",
+      "kind": "fix",
+      "title": "A task's browser fills its view when you maximize it",
+      "body": "When you maximize a task's browser, the page inside now lays itself out for the larger view, instead of showing a stretched picture of the page at its usual size. It follows the window as you resize it, and restoring the view puts the page back at its usual size.",
+      "area": "tasks",
+      "picture": {
+        "dark": "browser-page-fills-maximized-view-dark.webp",
+        "light": "browser-page-fills-maximized-view-light.webp",
+        "alt": "A task's browser maximized across the window, its page of releases laid out in seven columns edge to edge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

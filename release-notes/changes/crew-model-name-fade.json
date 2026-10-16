@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crew-model-name-fade",
+      "kind": "improvement",
+      "title": "A crewmate's model name fades in",
+      "body": "The model name above a crewmate now fades in instead of appearing all at once: when a crewmate gets its model or moves to another one, when your crew fit on one orbit again, and when you turn on Crew model names. With reduced motion on, it still fades, more briefly and at an even pace.",
+      "area": "crewmates",
+      "noPicture": "A still picture cannot show a fade; once in, the names look the same as before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

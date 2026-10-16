@@ -1,0 +1,119 @@
+// The hand-scored plain-language sample (roadmap 1.5, the plain-language
+// pass; design skill `copy/Vocabulary.prompt.md`). Every row is one card
+// from the recorded sessions under `tests/fixtures/replay/` - the two real
+// dogfood exports (`sep14-real`, `sep04-real`), the two reconstructions and
+// the synthetic Claude-served recording (`sep26-claude`) - read by hand against the vocabulary's one rule: a card is plain when
+// the sentence around every technical name would still be understood
+// without it, and a never-say word stands only where the person chose the
+// thing, where it is the thing itself in mono, or inside <details>. The
+// pre-pass that listed candidate words was an aid; each label is a reading.
+// `key` is sha256(title\nbody) truncated to 12, so a label can never drift
+// onto another card, and a card with no row is unknown - out of the
+// denominator, never a negative (`plain_language_share`,
+// `scripts/interaction-metrics.ts`). The sample's number is the starting
+// line: the recorded evenings predate the rule, and every real card leans
+// on a word from the table. A new recording under contract 4.0 is labelled
+// the same way, one row per card, and is where the number moves.
+// A card the app authors that no recording holds yet is labelled from the
+// end-to-end spec that shows it (git integration PR 1.3): its row names
+// that spec in `from`, and the spec reads the card off the running app and
+// fails when its words no longer match a row - so a copy change to the
+// card is read again by hand before it ships. Only the app's own words are
+// labelled this way; a card a spec scripts for its mock model measures
+// nothing about the app.
+// Each recorded card's row carries a second reading (contract 4.58,
+// FI3-542): `clear` is true when the card's open prose - outside <details>,
+// figures and code - follows the five sentence habits `CARD_AUTHORING`
+// states, and false when one is broken; `clear_note` names what broke. A
+// habit is broken by a sentence over 25 words (text in quotes or in
+// parentheses, a number and an identifier each count as one word) or one
+// holding three or more facts; by one thing under two names or one name for
+// two things; by a passive that hides who did the work when the author or
+// the reader's next step is the doer (a state such as "is merged" is not
+// one); by a figure of speech; or by three or more actions chained in one
+// sentence instead of a numbered list. The word count was an aid; each
+// label is a reading. `clear_copy_share` scores it, and a row with no
+// `clear` is out of its denominator.
+// A recorded card whose body names a pull request carries a third reading
+// (FI3-1307): `pr_links` is true when every pull request the body names -
+// by its number or by its address - is a link that opens that pull
+// request's page, and false when one is text or a link that opens nothing;
+// `pr_links_note` names which. A card whose body names none carries no
+// `pr_links`, and neither does one whose title alone names one: a title
+// holds no link. An action id that spells a number (`merge-pr55`) names no
+// pull request. `pr_link_share` scores it.
+{"key": "0007ed250324", "plain": false, "note": "branch, PR, CI, worktree, delivery posture in the open prose", "clear": false, "clear_note": "sentences of 46 and 49 words", "pr_links": false, "pr_links_note": "PR #61 is text, twice"}
+{"key": "9d75b2e5190a", "plain": false, "note": "branch, merged, crewmate, worktree, git", "clear": false, "clear_note": "sentences up to 34 words; figures of speech (a dead button, prose decays)"}
+{"key": "99041bd5a583", "plain": false, "note": "crewmates, merged", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 61 is text"}
+{"key": "d45b1692bed6", "plain": false, "note": "crewmates, worktrees, PR, merged", "clear": false, "clear_note": "were decommissioned hides who did it", "pr_links": false, "pr_links_note": "PR 61 is text"}
+{"key": "5311b571ce7a", "plain": false, "note": "quota, open a PR, CI check, repository", "clear": false, "clear_note": "four actions chained in one sentence: implement, test, open, verify"}
+{"key": "a311df6a9a78", "plain": false, "note": "branch, PR, CI, worktree, delivery posture", "clear": false, "clear_note": "three actions chained in one sentence: rechecks, merges, removes", "pr_links": false, "pr_links_note": "PR #86 is text, twice"}
+{"key": "44173d7db2fb", "plain": false, "note": "push a branch, open a pull request, CI check", "clear": false, "clear_note": "a 27-word sentence chaining five actions"}
+{"key": "60e07cc4c3c3", "plain": true, "note": "re-read under the adopted wording: open a PR and verify every CI check; those are now the outside words", "clear": false, "clear_note": "three actions chained in one sentence: add coverage, open, verify"}
+{"key": "a13100dbeac8", "plain": false, "note": "repository, branch, PR, CI, worktree", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR #89 is text, twice"}
+{"key": "0fddfdb75b86", "plain": false, "note": "repository, PR, CI is green", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 89 is text; only the address under it is a link"}
+{"key": "e5faa5fd9846", "plain": false, "note": "repository, branch, pull request, checks, worktree", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "#87 and PR #87 are text"}
+{"key": "1eeaadda05f5", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 87 is text; only the address under it is a link"}
+{"key": "713c77f0508e", "plain": false, "note": "repository, branch, head-commit checks, worktree", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR #88 links once, then is text in the Merge PR line"}
+{"key": "97e78b6c9f49", "plain": false, "note": "open a PR and verify every CI check", "clear": false, "clear_note": "sentences of 27 and 29 words"}
+{"key": "058cff3c99a8", "plain": false, "note": "repo, branch, direct-pr, crewmate, commit, CI", "clear": false, "clear_note": "sentences up to 43 words", "pr_links": false, "pr_links_note": "PR #90 links once, then is text six times, and PR 89 is text"}
+{"key": "bffa7374426a", "plain": false, "note": "crewmate, worktree, landed/merged, pipeline, posture", "clear": false, "clear_note": "sentences up to 32 words"}
+{"key": "6b7a8a8db4b0", "plain": false, "note": "repository, branch, CI checks, worktree", "clear": false, "clear_note": "three actions chained in one sentence: re-checks, merges, removes", "pr_links": false, "pr_links_note": "#91 and PR #91 are text"}
+{"key": "6fe47be1d61a", "plain": false, "note": "worktree, branch pushed, PR, CI, direct-pr merge gate", "clear": false, "clear_note": "sentences up to 42 words", "pr_links": true, "pr_links_note": ""}
+{"key": "7bdc413b674e", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": true, "pr_links_note": ""}
+{"key": "f2d06dd65d18", "plain": false, "note": "PR, worktree, git, branch", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 91 links once, then is text"}
+{"key": "170402b0b3a7", "plain": false, "note": "git/PR/CI state, crewmate, branch", "clear": false, "clear_note": "sentences of 35 and 41 words"}
+{"key": "52405f6d631c", "plain": false, "note": "branch, direct-pr, CI, PR, worktree", "clear": true, "clear_note": "", "pr_links": true, "pr_links_note": ""}
+{"key": "c00c6878ad85", "plain": false, "note": "repo, branch, direct-pr, PR, CI, worktree", "clear": false, "clear_note": "sentences up to 44 words", "pr_links": false, "pr_links_note": "PR #90 links once, then is text three times"}
+{"key": "8ae9ea2330eb", "plain": false, "note": "crewmate, git, branch, worktree", "clear": false, "clear_note": "sentences up to 44 words", "pr_links": false, "pr_links_note": "PR 91 is text, twice"}
+{"key": "3d390343fb97", "plain": false, "note": "branch, PR, delivery posture, worktree", "clear": false, "clear_note": "a 30-word sentence"}
+{"key": "cd2abe4ff98f", "plain": false, "note": "settle actions, CI settle, landed", "clear": true, "clear_note": ""}
+{"key": "989a8e0af21f", "plain": true, "note": "re-read under the adopted wording: crewmate, branch-collision; those are now the outside words", "clear": true, "clear_note": ""}
+{"key": "b6c4defc52db", "plain": false, "note": "worktree, branch, crewmate session, runtime", "clear": false, "clear_note": "a 31-word sentence"}
+{"key": "f9862cd71bfb", "plain": false, "note": "CI, PR, checks, crewmate, settle, steer", "clear": false, "clear_note": "a 28-word sentence"}
+{"key": "467d7eba01e8", "plain": false, "note": "branch, direct-pr, checks, worktree, merge", "clear": true, "clear_note": "", "pr_links": true, "pr_links_note": ""}
+{"key": "b97c89829409", "plain": false, "note": "branch, direct-pr, CI-pending, worktree, PR", "clear": false, "clear_note": "three actions chained in one option: gate, show, open"}
+{"key": "87d0b25c1e24", "plain": false, "note": "crewmate, supervisor, PR, CI, worktree", "clear": false, "clear_note": "a figure of speech in the title: how active would stick"}
+{"key": "3bd674f70bc0", "plain": false, "note": "branch, PR, CI checks, commit, merge, land", "clear": false, "clear_note": "a 34-word sentence", "pr_links": false, "pr_links_note": "the #93 link's address carries escaped quotes, so it opens nothing, and the second #93 is text"}
+{"key": "c6457abfd862", "plain": false, "note": "crewmate, PR, session, runtime", "clear": false, "clear_note": "a 50-word sentence"}
+{"key": "d67456bd9073", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "269623ff76cf", "plain": false, "note": "branch, direct-pr, worktree, PR", "clear": true, "clear_note": ""}
+{"key": "59a6c963b601", "plain": false, "note": "branch, direct-pr, worktree, runtime, CI, PR", "clear": false, "clear_note": "three actions chained in one sentence: claims, reuses, will not requeue", "pr_links": true, "pr_links_note": ""}
+{"key": "93a9d55afdb8", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "5859bef1fd38", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "c3a42db38a37", "plain": false, "note": "crewmate, PR, merge, branch", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 95, 88, 89, 91 and 90 are text in the table"}
+{"key": "4bde29147657", "plain": false, "note": "PR, merge, crewmate, conflicts", "clear": false, "clear_note": "a 27-word sentence", "pr_links": false, "pr_links_note": "PR 91, 88 and 89 are text"}
+{"key": "599aab6e5ffd", "plain": true, "note": "re-read under the adopted wording: unmerged PRs, crewmates, leftover branch; those are now the outside words", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 95 and PRs 88 and 89 are text"}
+{"key": "09719c6aa357", "plain": false, "note": "repo, lint, dispatch, CI, PR, merge", "clear": false, "clear_note": "sentences up to 39 words", "pr_links": false, "pr_links_note": "PR #86 and PR #85 are text"}
+{"key": "8af6cbee791e", "plain": false, "note": "PR, merged, rebased, session", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 91, 89, 88 and 95 are text"}
+{"key": "37b970ba62ae", "plain": false, "note": "PR, rebased, CI, worktree, crewmate", "clear": false, "clear_note": "three events chained in one sentence; is being finished hides who", "pr_links": false, "pr_links_note": "PR 88 is text"}
+{"key": "7c198ac93e0b", "plain": false, "note": "PR, merge, branch, worktree", "clear": false, "clear_note": "four actions chained in one line: choose, implement, PR, merge", "pr_links": false, "pr_links_note": "PR 90 and PR 95 are text"}
+{"key": "f7b87154ada0", "plain": false, "note": "repo, lint, dispatch, CI, PR, merge", "clear": false, "clear_note": "sentences up to 37 words", "pr_links": false, "pr_links_note": "PR #86 and PR #85 are text"}
+{"key": "c23c6e6e605d", "plain": false, "note": "git branch, PR, worktree", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 94 is text"}
+{"key": "297a4007d86b", "plain": false, "note": "PR, CI checks, merge, settle", "clear": false, "clear_note": "a 37-word sentence", "pr_links": false, "pr_links_note": "PR #58 is text"}
+{"key": "4a8fae7e09e7", "plain": false, "note": "PR, CI, merge, worktree, repo, push", "clear": false, "clear_note": "a 44-word sentence", "pr_links": false, "pr_links_note": "PR #58 and PR 58 are text"}
+{"key": "42f65ffb7d9f", "plain": false, "note": "PR, CI, worktree, settle, lint, unlanded commits", "clear": false, "clear_note": "sentences up to 53 words"}
+{"key": "d53bbb939235", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": false, "clear_note": "were just told hides who told them", "pr_links": false, "pr_links_note": "PR 54 and 56 are text"}
+{"key": "cdade4ef9a9d", "plain": false, "note": "PR, CI, worktree, settle, lint, branch", "clear": false, "clear_note": "sentences up to 52 words"}
+{"key": "daf3c70eaa95", "plain": false, "note": "repo, PRs, merged", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "#50 to #56 and #16 are text in the table"}
+{"key": "f385198577f8", "plain": false, "note": "crewmates, merge reports, session", "clear": true, "clear_note": ""}
+{"key": "c00c0ef8c1c9", "plain": true, "note": "re-read under the adopted wording: crewmates; those are now the outside words", "clear": true, "clear_note": ""}
+{"key": "98a4f99fa7ae", "plain": false, "note": "worktrees", "clear": true, "clear_note": ""}
+{"key": "1a8893c57f2e", "plain": false, "note": "crewmate, escalations, supervision", "clear": true, "clear_note": ""}
+{"key": "65042f10a1ba", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "4cb1e2cbfd25", "plain": true, "note": "re-read under the adopted wording: branch, commits, PR; those are now the outside words", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 95 is text"}
+{"key": "a2dfa464b566", "plain": true, "note": "the close path decides from the record alone - no table word, 'model' is allowed", "clear": false, "clear_note": "a figure of speech: no model in the loop"}
+{"key": "cb7d4b03b441", "plain": false, "note": "crewmate, worktree", "clear": true, "clear_note": ""}
+{"key": "9553cece238c", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "37e67ea9dcf2", "plain": false, "note": "worktree", "clear": true, "clear_note": ""}
+{"key": "dd9ab0cfd9df", "plain": false, "note": "PR", "clear": false, "clear_note": "eleven steps of 42 words each"}
+{"key": "4761979a9e8a", "plain": true, "note": "dropped and delivered are the record's own status words, the thing itself; no table word", "clear": true, "clear_note": ""}
+{"key": "d970e8bc8d0c", "plain": true, "note": "re-read under the adopted wording: PR, merged; those are now the outside words", "clear": true, "clear_note": ""}
+{"key": "16a56be23164", "plain": false, "note": "PR, CI is green", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 55 is plain text, not a link"}
+{"key": "d21685232b7c", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 56 is plain text, not a link"}
+{"key": "38282dacada7", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 57 is plain text, not a link"}
+{"key": "6d046ca40674", "plain": false, "note": "merge, steer, dispatches", "clear": false, "clear_note": "four facts in one sentence"}
+{"key": "b68edddbd930", "plain": false, "note": "merge, steer, dispatches", "clear": false, "clear_note": "four facts in one sentence"}
+{"key": "b31df8635062", "plain": true, "note": "re-read under the adopted wording: merge; those are now the outside words", "clear": false, "clear_note": "three facts in one sentence"}
+{"key": "4a0f8567b910", "plain": true, "note": "the app's own card when GitHub stops accepting the sign-in, with nothing waiting: GitHub is the host the person chose; sign-in, your first mate, pull requests, kept on this computer", "from": "tests/e2e/forge-signin.spec.ts"}
+{"key": "2a1d07ba7c03", "plain": true, "note": "release, sign-in test and crewmate carry their plain meaning; no word from the table", "clear": true, "clear_note": ""}

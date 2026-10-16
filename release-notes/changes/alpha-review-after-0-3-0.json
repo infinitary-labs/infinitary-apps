@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-3-0",
+      "reason": "Release review after stable 0.3.0: ranks Firstmate 3000 for Linux and its updates, then tasks saying when their computer is out of reach, as highlights, and pins stable 0.3.0's published record with the captain's picks. Nothing in the app changes."
+    }
+  ]
+}

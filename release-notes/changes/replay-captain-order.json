@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "replay-captain-order",
+      "reason": "The offline replay returns unread captain steers to the existing host redelivery path and records playback order; no app behavior changes."
+    }
+  ]
+}

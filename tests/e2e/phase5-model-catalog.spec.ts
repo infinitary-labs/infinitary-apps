@@ -1,0 +1,364 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  ALWAYS_USE_LEAD,
+  dropPlan,
+  removeAllLine,
+  usedLine,
+} from "../../src/renderer/src/settings/levelDrops";
+import { scratchDir } from "../helpers/scratchDirs";
+import { type LaunchedApp, launchApp } from "./launch";
+import {
+  claudeDefaultStore,
+  seedSignedInClaudeStore,
+  writeMockClaudeClient,
+} from "./mockClaudeClient";
+import {
+  alwaysUseSwitch,
+  closeModelPanel,
+  dragModel,
+  type Level,
+  levelLane,
+  modelName,
+  modelPill,
+  modelsSection,
+  openModelPanel,
+  removeFromAllLevels,
+  removeFromLevel,
+  setLevelInPanel,
+} from "./modelsBoard";
+import { claudeStarter } from "./starters";
+
+/**
+ * The Subscriptions "Models" section, run against the REAL catalog path -
+ * no INFINITARY_QUOTA_FIXTURE_DIR. That fixture substitutes a hand-authored
+ * two-model catalog for the whole fetcher, which is exactly why the section
+ * could list providers the user had never signed in to without any test
+ * noticing: piAuth.catalogModels() and buildModelsCatalog() never ran e2e.
+ *
+ * Here they do. Claude is signed in through its stand-in client and Grok
+ * with a key; a second Grok account is switched off; Codex was never
+ * connected at all. Only the signed-in subscriptions may appear.
+ *
+ * Nothing in this test reaches the network: the enabled Claude account
+ * resolves no usage credential - its stand-in store has no credentials file
+ * and no Keychain item exists for a throwaway config root - so the sensor
+ * reports auth_required without any HTTP; Grok's meter is pointed at a
+ * local port nothing listens on (`INFINITARY_GROK_USAGE_URL`), and its model
+ * list stays offline. The model catalog comes from pi-ai's bundled data
+ * (launch.ts sets PI_OFFLINE).
+ */
+
+const GROK_DISABLED = "acct_grok_off";
+const GROK_PERSONAL = "acct_grok1";
+const CLAUDE_PERSONAL = "acct_claude1";
+
+function seedAccounts(userDataDir: string): void {
+  const accountsDir = join(userDataDir, "accounts");
+  const grokDir = join(accountsDir, "xai", GROK_DISABLED);
+  mkdirSync(grokDir, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(grokDir, "auth.json"),
+    JSON.stringify({ xai: { type: "api_key", key: "x" } }),
+    {
+      mode: 0o600,
+    },
+  );
+  const grokOnDir = join(accountsDir, "xai", GROK_PERSONAL);
+  mkdirSync(grokOnDir, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(grokOnDir, "auth.json"),
+    JSON.stringify({ xai: { type: "api_key", key: "y" } }),
+    { mode: 0o600 },
+  );
+  mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
+    recursive: true,
+    mode: 0o700,
+  });
+  writeFileSync(
+    join(accountsDir, "registry.json"),
+    JSON.stringify({
+      version: 1,
+      accounts: [
+        {
+          id: GROK_DISABLED,
+          providerId: "xai",
+          kind: "api_key",
+          label: "Old key",
+          // Signed in, but switched off: it leaves the selection pool, so it
+          // leaves this section too.
+          enabled: false,
+          createdAt: Date.parse("2026-08-01T00:00:00Z"),
+        },
+        {
+          id: CLAUDE_PERSONAL,
+          providerId: "anthropic-claude",
+          kind: "subscription_oauth",
+          label: "Personal Max",
+          enabled: true,
+          createdAt: Date.parse("2026-08-02T00:00:00Z"),
+        },
+        {
+          id: GROK_PERSONAL,
+          providerId: "xai",
+          kind: "api_key",
+          label: "Personal",
+          enabled: true,
+          createdAt: Date.parse("2026-08-03T00:00:00Z"),
+        },
+      ],
+      pins: {},
+    }),
+    { mode: 0o600 },
+  );
+}
+
+let launched: LaunchedApp;
+
+test.beforeAll(async () => {
+  const userDataDir = scratchDir("infinitary-e2e-");
+  seedAccounts(userDataDir);
+  launched = await launchApp({
+    withMockProvider: true,
+    userDataDir,
+    prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
+    env: {
+      INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
+      // Port 9 (discard) has no listener: the meter read fails locally.
+      INFINITARY_GROK_USAGE_URL: "http://127.0.0.1:9/usage",
+    },
+  });
+  await launched.page.getByRole("button", { name: "Settings" }).click();
+  await launched.page.getByRole("tab", { name: "Intelligence" }).click();
+});
+
+test.afterAll(async () => {
+  await launched.close();
+});
+
+/** What a level says a drop will do before it happens, in the board's own words. */
+function dropHint(
+  slots: Level[],
+  from: Level | "off",
+  to: Level | "off",
+  keepBoth = false,
+): string {
+  const plan = dropPlan({ slots }, from, to, keepBoth);
+  if (!plan) throw new Error(`A drop from ${from} on ${to} does nothing`);
+  return plan.label;
+}
+
+/** Ensure the Models disclosure is open. */
+async function openModels(page: Page) {
+  const models = modelsSection(page);
+  await expect(models).toBeVisible({ timeout: 20_000 });
+  const head = models.getByRole("button", { name: /^Models/ });
+  if ((await head.getAttribute("aria-expanded")) !== "true") await head.click();
+  await expect(head).toHaveAttribute("aria-expanded", "true");
+  return models;
+}
+
+test("the models section offers the connected subscriptions' models only", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  // The rows a person can place or pin come from what is signed in and
+  // switched on - Claude and the enabled Grok key each bring rows from the
+  // real catalog.
+  const rows = models.locator("[data-model-row]");
+  await expect(rows.first()).toBeVisible();
+  const providers = new Set(
+    (
+      await rows.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-model-row")))
+    ).map((key) => key?.split("/")[0]),
+  );
+  expect(providers).toContain("anthropic-claude");
+  expect(providers).toContain("xai");
+  // Codex and OpenRouter were never connected: the provider-wide catalog
+  // behind the section still carries them, the section does not.
+  expect(providers).not.toContain("openai-codex");
+  expect(providers).not.toContain("openrouter");
+  // The paused Grok account keeps its own row in the list above.
+  await expect(page.locator(`[data-account-row="${GROK_DISABLED}"]`)).toHaveAttribute(
+    "data-paused",
+    "true",
+  );
+});
+
+test("an off catalog model can be added directly to a routing bucket", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  const high = models.locator('[data-slot-group="high"]');
+  const low = models.locator('[data-slot-group="low"]');
+  const off = () => models.locator('[data-slot-group="off"]');
+
+  // Take Haiku out of low first: it was in no other level, so it lands in Not in use.
+  await removeFromLevel(low, claudeStarter("low").name, "low");
+  await expect(
+    off().getByRole("button", { name: claudeStarter("low").name, exact: true }),
+  ).toBeVisible();
+
+  await high.getByRole("button", { name: "Add model" }).click();
+  await expect(high.getByRole("group", { name: "Add a model to high" })).toBeVisible();
+  await high.getByRole("button", { name: `Add ${claudeStarter("low").name} to high` }).click();
+
+  await expect(modelName(high, claudeStarter("low").name)).toBeVisible();
+  await expect(
+    off().getByRole("button", { name: claudeStarter("low").name, exact: true }),
+  ).toHaveCount(0);
+});
+
+test("a connected provider's models are pinnable from the section", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  // Always use is the model's own setting, so it lives in the panel its name opens.
+  const panel = await openModelPanel(page, models, "Claude Opus 5.5");
+  const banner = models.locator("[data-models-banner]");
+  await expect(banner).toHaveCount(0);
+  await alwaysUseSwitch(panel, "Claude Opus 5.5").click();
+  await expect(modelName(models, "Claude Opus 5.5", true).first()).toBeVisible();
+  // The board says out loud what that does to every level.
+  await expect(banner).toContainText(`${ALWAYS_USE_LEAD} Claude Opus 5.5`);
+  await alwaysUseSwitch(panel, "Claude Opus 5.5").click();
+  await expect(modelName(models, "Claude Opus 5.5", true)).toHaveCount(0);
+  await expect(banner).toHaveCount(0);
+  await closeModelPanel(models);
+});
+
+test("a model already in a bucket can be added to another from the catalog, and stays in both", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  const premium = models.locator('[data-slot-group="premium"]');
+  const high = models.locator('[data-slot-group="high"]');
+  const opusIn = (group: typeof premium) => modelName(group, "Claude Opus 5.5");
+
+  // The starter map puts Claude Opus 5.5 in high the first time the account is
+  // seen, so a picker that listed only OFF models could offer it to no
+  // bucket at all - premium least of all. Every Claude model on a signed-in
+  // account is placed that way, which is what made the board look like it
+  // refused Claude entirely. An offering may sit in more than one slot, so
+  // the picker offers every model not already in THIS bucket and says where
+  // each one sits now.
+  await expect(opusIn(high)).toBeVisible();
+  await premium.getByRole("button", { name: "Add model" }).click();
+  const picker = premium.getByRole("group", { name: "Add a model to premium" });
+  await expect(picker).toBeVisible();
+  const offer = picker.getByRole("button", { name: "Add Claude Opus 5.5 to premium" });
+  await expect(offer).toContainText("in high");
+  await offer.click();
+
+  // In both now: premium gained a row and high kept its own.
+  await expect(opusIn(premium)).toBeVisible();
+  await expect(opusIn(high)).toBeVisible();
+  // The pick closes the picker; reopened, it no longer offers what is here.
+  await expect(picker).toHaveCount(0);
+  await premium.getByRole("button", { name: "Add model" }).click();
+  await expect(picker).toBeVisible();
+  await expect(picker.getByRole("button", { name: "Add Claude Opus 5.5 to premium" })).toHaveCount(
+    0,
+  );
+  await premium.getByRole("button", { name: "Add model" }).click();
+  await expect(picker).toHaveCount(0);
+
+  // Leaving one bucket leaves the other alone.
+  await removeFromLevel(premium, "Claude Opus 5.5", "premium");
+  await expect(opusIn(premium)).toHaveCount(0);
+  await expect(opusIn(high)).toBeVisible();
+});
+
+/** A listed model that sits in exactly one level, and a level it is not in, read off the app. */
+async function modelInOneLevel(page: Page) {
+  const view = await page.evaluate(() => window.infinitary.models.slots());
+  const model = view.models.find((row) => row.slots.length === 1);
+  if (!model) throw new Error("No listed model sits in exactly one level");
+  const from = model.slots[0] as Level;
+  const others = (["high", "medium", "low"] as const).filter((level) => level !== from);
+  return {
+    key: `${model.provider}/${model.id}`,
+    label: model.label,
+    from,
+    to: others[0] as Level,
+    spare: others[1] as Level,
+  };
+}
+
+test("a model's panel appears only when its name is clicked, and changes the model as a whole", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  const { key, label, from, to } = await modelInOneLevel(page);
+
+  // No panel until someone asks for one model.
+  await closeModelPanel(models);
+  await expect(models.getByRole("complementary")).toHaveCount(0);
+  const panel = await openModelPanel(page, levelLane(models, from), label);
+  await expect(panel).toContainText(usedLine({ slots: [from] }));
+
+  // A second level from the panel is a second membership, not a move.
+  await setLevelInPanel(panel, label, to, true);
+  await expect(modelPill(models, to, key)).toBeVisible();
+  await expect(modelPill(models, from, key)).toBeVisible();
+
+  // One button takes it out of both, and names them first.
+  await expect(panel).toContainText(removeAllLine({ slots: [from, to] }));
+  await removeFromAllLevels(panel, label);
+  await expect(modelPill(models, "off", key)).toBeVisible();
+  await expect(modelPill(models, from, key)).toHaveCount(0);
+  await expect(modelPill(models, to, key)).toHaveCount(0);
+  await expect(panel).toContainText(usedLine({ slots: [] }));
+  await page.screenshot({ path: test.info().outputPath("dark-models-panel.png") });
+
+  // Put it back where it started and close the panel.
+  await setLevelInPanel(panel, label, from, true);
+  await expect(modelPill(models, from, key)).toBeVisible();
+  await closeModelPanel(models);
+  await expect(models.getByRole("complementary")).toHaveCount(0);
+});
+
+test("dragging a model moves it, ⌥ keeps both levels, and Not in use takes it out of every level", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  const { key, from, to, spare } = await modelInOneLevel(page);
+  await closeModelPanel(models);
+  const lane = (level: Level | "off") => levelLane(models, level);
+  const hint = (level: Level | "off") => lane(level).locator("[data-drop-hint]");
+
+  // A plain drag moves: the level says so before the drop, and the model leaves where it was.
+  await dragModel(page, modelPill(models, from, key), lane(to), {
+    whileOver: async () => {
+      await expect(hint(to)).toHaveText(dropHint([from], from, to));
+      await page.screenshot({ path: test.info().outputPath("dark-models-drag.png") });
+    },
+  });
+  await expect(modelPill(models, to, key)).toBeVisible();
+  await expect(modelPill(models, from, key)).toHaveCount(0);
+  // A drag is not a click: it opens no panel.
+  await expect(models.getByRole("complementary")).toHaveCount(0);
+
+  // ⌥ at the drop keeps the level it came from too.
+  await dragModel(page, modelPill(models, to, key), lane(spare), {
+    keepBoth: true,
+    whileOver: () => expect(hint(spare)).toHaveText(dropHint([to], to, spare, true)),
+  });
+  await expect(modelPill(models, spare, key)).toBeVisible();
+  await expect(modelPill(models, to, key)).toBeVisible();
+
+  // Not in use takes it out of every level, and names them before the drop.
+  await dragModel(page, modelPill(models, to, key), lane("off"), {
+    whileOver: () => expect(hint("off")).toHaveText(dropHint([to, spare], to, "off")),
+  });
+  await expect(modelPill(models, "off", key)).toBeVisible();
+  await expect(modelPill(models, to, key)).toHaveCount(0);
+  await expect(modelPill(models, spare, key)).toHaveCount(0);
+  expect(
+    (await page.evaluate(() => window.infinitary.models.slots())).models.find(
+      (model) => `${model.provider}/${model.id}` === key,
+    )?.slots,
+  ).toEqual([]);
+
+  // Dragging it out of Not in use places it again, back where it started.
+  await dragModel(page, modelPill(models, "off", key), lane(from), {
+    whileOver: () => expect(hint(from)).toHaveText(dropHint([], "off", from)),
+  });
+  await expect(modelPill(models, from, key)).toBeVisible();
+  await expect(modelPill(models, "off", key)).toHaveCount(0);
+});

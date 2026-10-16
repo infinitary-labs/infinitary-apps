@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "one-time-automation-leaves-when-done",
+      "kind": "fix",
+      "title": "A one-time automation leaves your list once it has run",
+      "body": "A one-time automation no longer stays in the Automation panel and Settings → Automation as Done. Once it has run and Firstmate has handled it, it is removed, and Activity says so. The tasks and cards it led to stay. One-time automations that already ran are removed when the app next starts.",
+      "area": "settings",
+      "noPicture": "The change takes a finished row out of the Automation list, which no single picture can show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

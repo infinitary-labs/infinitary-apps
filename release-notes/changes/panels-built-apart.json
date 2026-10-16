@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panels-built-apart",
+      "kind": "improvement",
+      "title": "Your panels stay put while a crewmate changes them",
+      "body": "While a crewmate builds or changes one of your panels, the panel on your side rail stays as it was, with its working dot. The new version takes its place all at once when the crewmate reports. A new panel appears when it is ready.",
+      "area": "crewmates",
+      "noPicture": "The change is that a panel does not move while it is rebuilt, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

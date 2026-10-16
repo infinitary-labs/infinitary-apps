@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "bf-340c325ed",
+      "kind": "fix",
+      "title": "Pause the black hole clock ahead of its install; tolerate an unread stub stdin",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "340c325edc02373e55db55e4de45847ccb497e01"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-13-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.13: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "3842275b7c05a89261988ada147941e2245b0e1f"
+      ]
+    }
+  ]
+}

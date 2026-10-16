@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-reads-recorded-checks",
+      "reason": "Internal change to what Firstmate is told: it reads the checks the app already recorded instead of calling its own check tool. No result a person notices changes; merges still recheck the checks fresh."
+    }
+  ]
+}

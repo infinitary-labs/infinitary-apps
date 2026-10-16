@@ -1,0 +1,32 @@
+{
+  "entries": [
+    {
+      "id": "automation-weekdays-time-zones",
+      "kind": "feature",
+      "title": "Automations run on the days you pick, in the time zone you pick",
+      "body": "An automation can now run on chosen days of the week, such as every Sunday at 7:00 AM. Daily and weekly automations keep their time zone, so they stay put when you travel. An automation can be about one of your projects, and Firstmate's prompt names it. Insert schedule detail adds the scheduled time, the time zone or the number of missed runs to the prompt, and Preview shows the prompt as Firstmate will get it. You can also ask Firstmate for these schedules, and command search has Pause all automations.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-weekdays-time-zones-dark.webp",
+        "light": "automation-weekdays-time-zones-light.webp",
+        "alt": "An automation set to run on Sundays at 7:00 AM in the Los Angeles time zone"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "automation-panel",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "An Automation panel lists your automations beside Tasks",
+      "body": "Once you have an automation, an Automation panel appears on the right, below Tasks. It shows each automation with its state and its next run, and opening one takes you to it in Settings. The panel goes away when you delete your last automation.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-panel-dark.webp",
+        "light": "automation-panel-light.webp",
+        "alt": "The Automation panel listing three automations with their next runs, one paused"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

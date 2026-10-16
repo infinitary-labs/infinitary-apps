@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "livelier-motion",
+      "kind": "improvement",
+      "title": "Cards, popovers, task summaries and button labels move more visibly",
+      "body": "Paging with the arrows now slides the next card in from that side, and closing a card lets it drop away while the next card comes forward from the stack. A card that arrives when no card is up rises and grows into place. The update panel and row menus grow from the button that opened them and fade as they close. The summary beside a Tasks row slides in, moves along as you go down the list, and fades when you leave. Icon buttons show their label after half a second, and the label moves with the pointer between neighbouring buttons. With Reduce motion on, everything still appears at once.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

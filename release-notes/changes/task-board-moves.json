@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-board-moves",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "Move tasks on the task board",
+      "body": "Drag a task to another column on the task board, or press Space on it for its ⋯ menu. Queued lets it start by itself, Backlog makes it wait for your word, Working starts it now, and Drop task drops it. A move that could start work or drop it asks once, on the task itself, and nothing changes until you confirm. Dragging a finished task onto Done brings its completion card forward; only the card's own button merges.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-moves-dark.webp",
+        "light": "task-board-moves-light.webp",
+        "alt": "A task dragged over the Queued column of the task board, the columns that take it tinted and the Drop task tray in the foot"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

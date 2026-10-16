@@ -1,0 +1,4 @@
+{
+  "entries": [],
+  "exclusions": [{"id": "observe-accounting", "reason": "Observe is a development-only surface; this fixes its accounting labels and coverage without changing the released app or saved usage."}]
+}

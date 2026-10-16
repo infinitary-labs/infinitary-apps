@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "record-key-keeps-focus",
+      "kind": "fix",
+      "title": "A task key in a record keeps your place",
+      "body": "When you reach a task key in a task's record with the keyboard, it stays focused while work updates the record. Enter still opens that task.",
+      "area": "tasks",
+      "noPicture": "A still picture cannot show focus staying put through an update; the record looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

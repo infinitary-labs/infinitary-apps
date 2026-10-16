@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-transfer-test-byte-comparison",
+      "reason": "Internal test repair: demo transport tests compare every payload byte with native buffer equality instead of expensive indexed-property traversal, retaining all sizes and ordering checks and the existing time limits. No product behavior changes."
+    }
+  ]
+}

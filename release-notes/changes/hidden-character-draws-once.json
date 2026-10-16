@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "hidden-character-draws-once",
+      "reason": "Fixes a regression in the unreleased smoother-card-close change: a Firstmate or crew orbit that mounted behind the card stack, such as after Settings, drew nothing, and under reduced motion stayed blank once the card closed. The smoother-card-close note already describes the change; no released behavior changes."
+    }
+  ]
+}

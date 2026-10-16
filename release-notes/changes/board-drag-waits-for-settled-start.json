@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "board-drag-waits-for-settled-start",
+      "reason": "The Tasks-panel-from-elsewhere journey waits until the board draws its two started tasks in Working, Queued holding only the tile it drags, and no move asking, before the drag: on the slow Linux runner the Queued lane reshuffled between the drag's measure and its press. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+// The unit cohort's fence (captain's A1, 2026-09-24; docs/test-cohorts.md).
+// A unit test runs in memory under vitest's 5 s default: it may not start a
+// child process, drive real git, or sleep on a real clock - so it imports
+// neither node:child_process, node:timers/promises, nor a product module
+// whose one job is to spawn (workspace/git, sql/forkChildProcess, devices/ssh,
+// devices/sshConnections, devices/relay, devices/dnsSd). A test that needs one of those is an integration test:
+// biome.json's unit-cohort override lists it as an exclusion,
+// vitest.config.ts reads that same list into the integration project, and
+// the file states a budget sized to its measured work. A type-only import
+// is not a dependency and passes. Runs inside `pnpm check` for the files
+// that override covers.
+
+language js
+
+or {
+  JsModuleSource() as $source,
+  `import($source)`,
+  `require($source)`,
+  `vi.importActual($source)`
+} where {
+  not $source <: within JsImport() as $import where { $import <: r"(?s)import\s+type\s.*" } ,
+  not $source <: within JsExport() as $export where { $export <: r"(?s)export\s+type\s.*" } ,
+  $source <: or {
+    r"[\"'](?:node:)?(?:child_process|timers/promises)[\"']",
+    r"[\"'](?:\.{1,2}/|@core/)(?:[^\"']*/)?(?:git|forkChildProcess|ssh|sshConnections|relay|dnsSd)(?:\.ts)?[\"']"
+  },
+  register_diagnostic(span=$source, message="A unit test runs in memory: it may not start a child process, drive real git or sleep on a real clock. Fake the dependency or inject a clock, or make the file an integration test - add it to the exclusions of biome.json's unit-cohort override and give it a budget sized to its measured work (docs/test-cohorts.md).")
+}

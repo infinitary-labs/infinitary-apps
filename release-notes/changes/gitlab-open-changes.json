@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-open-changes",
+      "kind": "feature",
+      "title": "Crewmates read GitLab pipelines, and your merge requests join Open changes",
+      "body": "On projects on gitlab.com or your own GitLab server, a crewmate can now read a failed job's log, save the files the job kept, and ask GitLab directly about its own project, with the key you made there. If Firstmate made you a panel of your open changes, it now lists your GitLab merge requests beside your GitHub pull requests, each numbered the way GitLab numbers it, with its pipeline's status.",
+      "area": "projects",
+      "picture": {
+        "dark": "gitlab-open-changes-dark.webp",
+        "light": "gitlab-open-changes-light.webp",
+        "alt": "The Open changes panel listing a GitLab merge request, !1, above three GitHub pull requests"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

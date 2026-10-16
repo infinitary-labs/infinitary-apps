@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "replay-host-retirements",
+      "reason": "The development-only replay recognizes settled-task card retirements from recorded closure facts as host output rather than captain choices; nothing in the app changes."
+    }
+  ]
+}

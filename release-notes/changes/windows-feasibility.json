@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-feasibility",
+      "reason": "Opt-in hosted Windows feasibility observations only; no product support, runtime behavior or release changes."
+    }
+  ]
+}

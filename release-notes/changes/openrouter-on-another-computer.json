@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "openrouter-on-another-computer",
+      "kind": "fix",
+      "title": "Another computer signed in to OpenRouter shows its sign-ins and takes tasks",
+      "body": "Settings → Intelligence now shows the sign-ins of a computer signed in to OpenRouter, and a task there can start on one of that account's OpenRouter models. Before, Settings said that computer did not say what it is signed in to, and its tasks did not start.",
+      "area": "devices",
+      "picture": {
+        "dark": "openrouter-on-another-computer-dark.webp",
+        "light": "openrouter-on-another-computer-light.webp",
+        "alt": "Another computer's own OpenRouter sign-in listed under its name in Settings → Intelligence"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

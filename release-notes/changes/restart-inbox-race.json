@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "restart-inbox-race",
+      "kind": "fix",
+      "title": "Firstmate picks up waiting updates without a busy failure",
+      "body": "After a restart, simultaneous checks for waiting updates no longer start competing Firstmate turns or briefly show a problem card.",
+      "area": "firstmate",
+      "noPicture": "This fixes concurrent update delivery without changing a view; the transient failure is verified through turn, inbox and decision state.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

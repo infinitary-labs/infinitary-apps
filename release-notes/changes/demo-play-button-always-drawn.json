@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "demo-play-button-always-drawn",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A demo on a card always has its Play button",
+      "body": "A card with a crewmate's demo recording could now and then show the poster with no Play button under it. The Play button is now always there.",
+      "noPicture": "The demo card looks as it always did; the fix only makes sure the Play button it already had is drawn every time.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

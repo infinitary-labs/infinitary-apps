@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-desktop-conventions",
+      "reason": "Internal Linux piece: Ctrl keys, window controls, closing to the top-bar icon, the autostart entry and Linux Settings rows behind the platform seam. No Linux build is released yet, and the Mac app is unchanged; the note people read comes with the Linux release piece."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-browser-sign-in",
+      "kind": "feature",
+      "title": "Sign in to GitLab in your browser",
+      "body": "Settings → Projects guides you through registering Firstmate on gitlab.com or your own GitLab server, then shows a code to approve in your browser. You can still use a key instead. Browser sign-in needs GitLab 17.9 or newer.",
+      "area": "projects",
+      "picture": {
+        "dark": "gitlab-browser-sign-in-dark.webp",
+        "light": "gitlab-browser-sign-in-light.webp",
+        "alt": "GitLab browser sign-in setup with registration instructions, an Application ID field and a key alternative"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

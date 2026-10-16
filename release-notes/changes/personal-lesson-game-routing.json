@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "personal-lesson-game-routing",
+      "kind": "fix",
+      "title": "Lessons come back as cards, games get their own projects",
+      "body": "Asking to learn or practise something, like a math quiz, now starts lessons on cards instead of building a new panel. A new game gets its own project setup card: a game for fun suggests keeping changes on this computer, merging them automatically and quick care, and a game meant to ship suggests the usual settings and a plan first. Panels you already have stay as they are.",
+      "area": "firstmate",
+      "noPicture": "This changes how asks reach existing lesson cards and project setup, not the appearance of those surfaces.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

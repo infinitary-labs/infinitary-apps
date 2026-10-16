@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "project-runs-on",
+      "reason": "Internal, behind the development-only multi-machine gate: a project's Runs on setting in Settings and by asking Firstmate, its tasks waiting for that computer while it is out of reach, and the computer named on a card from such a task. An installed app shows and offers none of it."
+    }
+  ]
+}

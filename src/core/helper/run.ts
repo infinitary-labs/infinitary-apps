@@ -1,0 +1,560 @@
+import { appendFileSync, existsSync, rmSync } from "node:fs";
+import type { NetworkInterfaceInfo } from "node:os";
+import { join } from "node:path";
+import type { MachineLoginOutcome } from "@shared/accounts";
+import type { DeviceGrant } from "@shared/devices";
+import type { WorkInvokeChannel } from "@shared/ipc";
+import { PLACEMENT_FACTS_ORDER, placementFactsRequestSchema } from "@shared/placement";
+import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/resources";
+import { isSignInOrderChannel } from "@shared/signIns";
+import {
+  isBrowserOrderChannel,
+  updateOrders,
+  WORK_UPDATE_ORDER,
+  type WorkUpdateAnswer,
+  workOrders,
+} from "@shared/work";
+import type { WebSocket } from "ws";
+import { dialHome } from "../devices/dial";
+import { HomeLink, type HomeLinkState } from "../devices/homeLink";
+import { JoinedHome } from "../devices/joinedHome";
+import type { MoveDeps } from "../folderMove/move";
+import type { HostKeychain } from "../host";
+import type { MediaProbe } from "../pi/cardImages";
+import { readPlacementFacts } from "../placed/placementFacts";
+import { ResourceSampler } from "../placed/resourceSampler";
+import type { ComputerAccounts } from "./accounts";
+import { type BackgroundContext, retireStrays } from "./background";
+import { type CleanUpResult, LEFT_CLAUDE_LOGIN } from "./cleanUp";
+import type { ComputerBrowserParts, Conversations } from "./conversations";
+import { configureComputerGit, holdsForgeSignIn } from "./forges";
+import { homeDialAddress, homePlace } from "./join";
+import { FolderBusyError, folderHolder, lockFolder } from "./lock";
+import { PlacedTasks } from "./placedTasks";
+import { homeDialOptions } from "./route";
+import type { HeldSignIns } from "./signIns";
+import { type UpdatedHere, updateHere } from "./update";
+import { helperWords, homeLabel } from "./words";
+
+/**
+ * What runs work for a home on another Mac, or as another user on the home's
+ * own Mac, entire (docs/helper.md): the composition the app's work mode
+ * starts. It holds the data folder, dials the home with the grant it joined
+ * with, keeps dialing while the home is out of reach, and says each change
+ * in plain words. Unlike `createServices` it has no Firstmate, task record,
+ * scheduler or sharing: the home keeps all of those. Beside the link it
+ * holds the crewmate conversations its home opens here (`SessionHost`,
+ * docs/helper.md "Holding a conversation"), loaded once there is one, and
+ * this computer's own sign-ins (`SignInHost`, docs/helper.md "Its own
+ * sign-ins"), loaded once the home asks about them or there is one. Every
+ * git it starts answers a host the app signs in to with this computer's own
+ * sign-in there, and never prompts (`configureComputerGit`).
+ */
+
+/**
+ * How a run ended: `removed` when the home took it off its list, `updated`
+ * when the home updated Firstmate here and the background starts it again,
+ * `stopped` otherwise.
+ */
+export type HelperEnded = "removed" | "updated" | "stopped";
+
+export type HelperRun = {
+  state: () => HomeLinkState;
+  /** Resolves once it stopped, saying how. */
+  readonly ended: Promise<HelperEnded>;
+  /**
+   * Lets every conversation it holds go, stops dialing, lets the folder go,
+   * and resolves `ended`; resolves once all of that is done.
+   */
+  stop: () => Promise<void>;
+};
+
+export type StartHelperOptions = {
+  dataDir: string;
+  say: (lines: readonly string[]) => void;
+  /** Whether it runs from a packaged app; the dev and test endpoint overrides are read only off one. */
+  packaged?: boolean;
+  /**
+   * The app's own git helper (`resources/git-askpass`), which every child
+   * it starts is given to answer a host with this computer's own sign-in.
+   * A test that starts no git leaves it out, and the process's git is left
+   * as it is.
+   */
+  gitAskpass?: string;
+  /**
+   * This Mac's saved passwords, where Claude Code keeps its login: a Claude
+   * sign-in looks there for the login already here, and its allowance is
+   * read with it, only ever without asking (docs/helper.md, "Its own
+   * sign-ins"). Without one, only the login's file is read.
+   */
+  keychain?: HostKeychain;
+  /** This computer's decoder for a card's demo recording; absent, a card naming one is refused here. */
+  probeMedia?: MediaProbe;
+  /** Host memory observations, independent of accounts and conversations. */
+  resourceMemory?: () => ResourceMemory | null;
+  /**
+   * This computer's browser engine and command process, which its tasks'
+   * own browsers run on (docs/task-browser.md, "On another computer");
+   * absent, it keeps none and its tasks have no browser.
+   */
+  browser?: Omit<ComputerBrowserParts, "version">;
+  interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
+  /** The contract version it speaks to the home; this build's own unless a test stands in another. */
+  protocolVersion?: string;
+  /** The version of Firstmate it runs, which its hello tells the home; unsaid when absent. */
+  appVersion?: string;
+  /**
+   * Opens the WebSocket to the home: by default where the grant dials now,
+   * read again on every dial (`homeDialOptions`), unless a test stands in
+   * its own.
+   */
+  dial?: (grant: DeviceGrant) => Promise<WebSocket>;
+  retryMs?: readonly number[];
+  now?: () => number;
+  /**
+   * Starts the conversations it holds; this computer's own Pi and Claude
+   * (`startConversations`) unless a test stands in its own.
+   */
+  conversations?: (options: {
+    dataDir: string;
+    ask: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
+    tell: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
+    browser?: ComputerBrowserParts;
+    accounts: () => Promise<ComputerAccounts>;
+    /** This computer's own sign-ins when it keeps or is making any, never loaded for nothing. */
+    signedIn: () => Promise<ComputerAccounts> | undefined;
+    probeMedia?: MediaProbe;
+  }) => Promise<Conversations>;
+  /**
+   * Loads this computer's own sign-ins (`startSignIns`) unless a test
+   * stands in its own.
+   */
+  signIns?: (options: {
+    dataDir: string;
+    packaged: boolean;
+    tell: (channel: "inf:work:sign-in" | "inf:work:sign-ins", args: unknown) => Promise<unknown>;
+    log: (line: string) => void;
+    keychain?: HostKeychain;
+  }) => Promise<HeldSignIns>;
+  /** Where notes about the work go; the folder's own `work.log` unless a test stands in its own. */
+  log?: (line: string) => void;
+  /**
+   * Removes what Firstmate set up here once the home removed it
+   * (`cleanUp`), after every conversation and sign-in let go; nothing is
+   * removed when absent.
+   */
+  cleanUp?: () => Promise<CleanUpResult>;
+  /**
+   * Brings Firstmate here to the home's version when the home asks
+   * (`updateHere`), unless a test stands in its own.
+   */
+  update?: (grant: DeviceGrant) => Promise<UpdatedHere>;
+  /**
+   * How the one-time move runs here when the home sends an app that keeps
+   * its work in another folder (`updateHere`); this computer's own unless a
+   * test stands in its own.
+   */
+  moveDeps?: MoveDeps;
+  /**
+   * This user's background, which the update moves to another spelling's
+   * app the home sends, and whose agent left beside it by a move that
+   * stopped partway the run takes away (`retireStrays`); none for a run
+   * started where nothing runs it in the background.
+   */
+  background?: { context: BackgroundContext; env: Readonly<Record<string, string>> } | null;
+  /**
+   * Signs out a Claude login Firstmate made here, as its record names it
+   * (`ClaudeAuthBackend.signOutMadeLogin`): one a join that left a home
+   * kept for this run (`LEFT_CLAUDE_LOGIN`) goes before anything else here
+   * can use it. Nothing is signed out when absent.
+   */
+  signOutClaude?: (record: string) => Promise<MachineLoginOutcome>;
+};
+
+export type StartHelperOutcome =
+  | { ok: true; run: HelperRun }
+  | { ok: false; reason: "busy" | "not-joined" };
+
+export function startHelper(options: StartHelperOptions): StartHelperOutcome {
+  const { dataDir, say } = options;
+  const joinedHome = new JoinedHome(dataDir, () => {});
+  if (!joinedHome.read()) {
+    say(helperWords.notJoined);
+    return { ok: false, reason: "not-joined" };
+  }
+  let release: () => void;
+  try {
+    release = lockFolder(dataDir);
+  } catch (error) {
+    if (!(error instanceof FolderBusyError)) throw error;
+    say(helperWords.busy);
+    return { ok: false, reason: "busy" };
+  }
+  // Read again under the lock: a join or a removal may have finished between.
+  const joined = joinedHome.read();
+  if (!joined) {
+    release();
+    say(helperWords.notJoined);
+    return { ok: false, reason: "not-joined" };
+  }
+  const log = options.log ?? workLog(dataDir);
+  // With the folder held, an agent or copy a move left behind goes.
+  if (options.background)
+    void retireStrays(options.background.context).catch((error) =>
+      log(`could not take away what a move left: ${String(error)}`),
+    );
+  const place = homePlace(joined.grant, options.interfaces);
+  const packaged = options.packaged ?? false;
+  const resources = new ResourceSampler({ memory: options.resourceMemory });
+  if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
+  let name = joined.name;
+  let said: HomeLinkState | null = null;
+  let finish: (how: HelperEnded) => void = () => {};
+  const ended = new Promise<HelperEnded>((resolve) => {
+    finish = resolve;
+  });
+  // Dialing waits on unreferenced timers between attempts; this keeps the
+  // process up while the home is out of reach.
+  const alive = setInterval(() => {}, 1 << 30);
+  let stopped = false;
+  // A home on this Mac is dialed at loopback from now on, so a change of
+  // this Mac's network address never strands it.
+  const grant = { ...joined.grant, at: homeDialAddress(joined.grant.at, options.interfaces) };
+  if (grant.at !== joined.grant.at) {
+    try {
+      joinedHome.dialAt(grant.at);
+    } catch (error) {
+      log(`could not keep where the home is dialed: ${String(error)}`);
+    }
+  }
+  // A Claude login Firstmate made for a home this user left, which the join
+  // kept for this run: signed out here, in this user's login session, before
+  // a sign-in or a conversation could use it (docs/helper.md, "Removed").
+  const leftLogin = join(dataDir, LEFT_CLAUDE_LOGIN);
+  const signOutClaude = options.signOutClaude;
+  const leftSignedOut: Promise<void> =
+    signOutClaude && existsSync(leftLogin)
+      ? signOutClaude(leftLogin)
+          .catch((): MachineLoginOutcome => "not-signed-out")
+          .then((outcome) => {
+            try {
+              rmSync(leftLogin, { force: true });
+            } catch (error) {
+              log(`could not remove ${leftLogin}: ${String(error)}`);
+            }
+            say(helperWords.claudeLogin(outcome));
+          })
+      : Promise.resolve();
+  // This computer's own sign-ins, loaded with the first order about them or
+  // the first conversation: a computer that signs in to nothing never loads
+  // a model's code.
+  let signIns: Promise<HeldSignIns> | undefined;
+  const signingIn = (): Promise<HeldSignIns> => {
+    signIns ??= leftSignedOut
+      .then(() =>
+        (options.signIns ?? (async (start) => (await import("./signIns")).startSignIns(start)))({
+          dataDir,
+          packaged,
+          // Asked once, while the home is in reach: a sign-in is the captain's
+          // to answer now, and stops when nobody can.
+          tell: (channel, args) => link.invoke(channel, args),
+          log,
+          ...(options.keychain ? { keychain: options.keychain } : {}),
+        }),
+      )
+      .then((held) => {
+        if (link.state().contact === "in-reach") held.host.reached();
+        return held;
+      });
+    return signIns;
+  };
+  // The conversations the home opened here, loaded with the first one: a
+  // computer never given work never loads a model's code.
+  let conversations: Promise<Conversations> | undefined;
+  const holding = (): Promise<Conversations> => {
+    conversations ??= leftSignedOut
+      .then(() =>
+        (
+          options.conversations ??
+          (async (start) => (await import("./conversations")).startConversations(start))
+        )({
+          dataDir,
+          ask: (channel, args) => link.ask(channel, args),
+          // A browser's fact and pictures go once, while the home is in reach.
+          tell: (channel, args) => link.invoke(channel, args),
+          ...(options.browser
+            ? { browser: { ...options.browser, version: options.appVersion ?? "0.0.0" } }
+            : {}),
+          accounts: async () => (await signingIn()).accounts,
+          signedIn: () => signIns?.then((held) => held.accounts),
+          ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
+        }),
+      )
+      .then((held) => {
+        if (link.state().contact === "in-reach") held.host.reached();
+        return held;
+      });
+    return conversations;
+  };
+  let ending: Promise<void> | undefined;
+  const end = (how: HelperEnded): Promise<void> => {
+    if (ending) return ending;
+    stopped = true;
+    clearInterval(alive);
+    // Every conversation lets go and writes what it holds before the link
+    // and the folder go.
+    const letGo = Promise.all([
+      leftSignedOut,
+      conversations?.then((held) => held.close()).catch(() => undefined),
+      signIns?.then((held) => held.close()).catch(() => undefined),
+    ]);
+    ending = letGo
+      .then(async () => {
+        link.close();
+        if (how !== "removed" || !options.cleanUp) return;
+        try {
+          const { kept, unreadable, unremoved, claude } = await options.cleanUp();
+          say(helperWords.cleanedUp(kept, unreadable, unremoved, claude ? { claude } : {}));
+        } catch (error) {
+          log(`could not remove what was set up here: ${String(error)}`);
+        }
+      })
+      .then(async () => {
+        release();
+        // What an update that moved the background leaves for last.
+        if (how === "updated" && afterUpdate)
+          await afterUpdate().catch((error) =>
+            log(`could not take away the copy it moved from: ${String(error)}`),
+          );
+        finish(how);
+      });
+    return ending;
+  };
+
+  // Updated by its home (docs/helper.md, "Updated by its home"): the home's
+  // Firstmate is kept here first, then the answer goes, then this run ends
+  // so the background starts it again from what is kept. One order at a
+  // time; one that failed changed nothing, and the home may ask again.
+  let updating: Promise<UpdatedHere> | undefined;
+  let afterUpdate: (() => Promise<void>) | undefined;
+  const update = async (args: unknown): Promise<WorkUpdateAnswer> => {
+    updateOrders[WORK_UPDATE_ORDER].request.parse(args);
+    updating ??= (
+      options.update ??
+      ((grant) =>
+        updateHere({
+          dataDir,
+          grant,
+          now: options.now,
+          // The contract its home said in its welcome, which decides whether it is told this system.
+          homeProtocol: link.state().homeVersion,
+          background: options.background ?? null,
+          ...(options.moveDeps ? { moveDeps: options.moveDeps } : {}),
+          log,
+        }))
+    )(joined.grant);
+    let answer: WorkUpdateAnswer;
+    try {
+      const { afterRun, ...answered } = await updating;
+      answer = answered;
+      afterUpdate = afterRun;
+    } catch (error) {
+      updating = undefined;
+      log(`could not update Infinitary here: ${String(error)}`);
+      throw error;
+    }
+    say(helperWords.updated(place, name, answer.restarts));
+    // The answer is written before the connection closes.
+    setImmediate(() => void end("updated"));
+    return answer;
+  };
+
+  const link: HomeLink = new HomeLink({
+    grant,
+    // A Mac that also controls its home says this connection is its work.
+    as: "work",
+    ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
+    ...(options.appVersion ? { appVersion: options.appVersion } : {}),
+    // A home that reaches this computer through its own SSH connection is
+    // dialed at the route its connection keeps now, never at the grant's
+    // address; with no route the dial fails, and the link keeps trying.
+    dial:
+      options.dial ?? ((grant) => dialHome(grant, homeDialOptions(dataDir, grant, options.now))),
+    ...(options.retryMs ? { retryMs: options.retryMs } : {}),
+    ...(options.now ? { now: options.now } : {}),
+    // A computer that runs work is sent no pushes.
+    onPush: () => {},
+    // Each welcome, the home may have restarted - within the link's grace,
+    // with no change of contact here - so what it has not kept goes again,
+    // and it hears this computer's sign-ins whole.
+    onCaughtUp: () => {
+      void conversations?.then((held) => held.host.reached());
+      void signIns?.then((held) => held.host.reached());
+    },
+    // What the home asks: the orders about the conversations it holds here,
+    // its own sign-ins, and an update.
+    onInvoke: async (channel, args) => {
+      if (stopped) throw new Error("This computer is stopping.");
+      if (channel === WORK_UPDATE_ORDER) return update(args);
+      if (channel === PLACEMENT_FACTS_ORDER) {
+        const [request] = workOrders[PLACEMENT_FACTS_ORDER].request.parse(args);
+        const [facts, accounts] = await Promise.all([
+          readPlacementFacts(placementFactsRequestSchema.parse(request), dataDir),
+          signingIn()
+            .then((held) => held.host.list())
+            .catch(() => null),
+        ]);
+        return { ...facts, signIns: accounts };
+      }
+      if (channel === RESOURCE_ORDER) {
+        resourceOrders[RESOURCE_ORDER].request.parse(args);
+        return resources.read();
+      }
+      if (isSignInOrderChannel(channel)) return (await signingIn()).host.answer(channel, args);
+      if (isBrowserOrderChannel(channel)) {
+        const held = await holding();
+        if (!held.browsers) throw new Error("This computer keeps no task browsers.");
+        return held.browsers.answer(channel, args);
+      }
+      return (await holding()).host.answer(channel, args);
+    },
+    onState: (state) => {
+      if (state.name && state.name !== name) {
+        name = state.name;
+        joinedHome.name(state.name);
+      }
+      if (state.removed) {
+        // Noted as not finished until the removal says what it could not remove.
+        joinedHome.leave(
+          { name: homeLabel(place, name), reason: "removed", at: (options.now ?? Date.now)() },
+          options.cleanUp ? [] : undefined,
+        );
+        say(helperWords.removed(place, name));
+        void end("removed");
+        return;
+      }
+      const before = said;
+      said = state;
+      // Nobody can answer a sign-in running here now, or watch a browser.
+      if (state.contact !== "in-reach" && before?.contact === "in-reach") {
+        void signIns?.then((held) => held.host.dropped());
+        void conversations?.then((held) => held.browsers?.dropped()).catch(() => undefined);
+      }
+      if (state.contact !== before?.contact) {
+        if (state.contact === "in-reach") say(helperWords.inReach(place, name));
+        else if (state.contact === "lost") say(helperWords.outOfReach(place, name));
+        else if (state.contact === "closed") say(helperWords.quit(place, name));
+      }
+      if (state.takesWork === false && before?.takesWork !== false)
+        say(helperWords.noNewWork(place, name));
+    },
+  });
+  // A conversation left on disk by an earlier run still has things to tell the home.
+  if (new PlacedTasks(dataDir).list().length > 0) void holding().catch(() => undefined);
+  // A sign-in kept here has an allowance to read, or a short-lived sign-in
+  // where projects live to keep renewed, and the home to tell.
+  if (existsSync(join(dataDir, "accounts", "registry.json")) || holdsForgeSignIn(dataDir))
+    void signingIn().catch((error: unknown) =>
+      log(`this computer's sign-ins did not load: ${String(error)}`),
+    );
+  link.start();
+  return {
+    ok: true,
+    run: { state: () => link.state(), ended, stop: () => end("stopped") },
+  };
+}
+
+/**
+ * A removal an earlier run could not finish (docs/helper.md, "Removed"): its
+ * home let it go, so this run finishes it instead of dialing, and says what
+ * is still left. Null when no removal waits here, `busy` while another
+ * process holds the folder.
+ */
+export async function finishRemoval(options: {
+  dataDir: string;
+  say: (lines: readonly string[]) => void;
+  cleanUp: () => Promise<CleanUpResult>;
+}): Promise<CleanUpResult | "busy" | null> {
+  const { dataDir, say } = options;
+  const joinedHome = new JoinedHome(dataDir, () => {});
+  if (joinedHome.read() || !joinedHome.unfinished()) return null;
+  let release: () => void;
+  try {
+    release = lockFolder(dataDir);
+  } catch (error) {
+    if (!(error instanceof FolderBusyError)) throw error;
+    say(helperWords.busy);
+    return "busy";
+  }
+  try {
+    // Read again under the lock: another run may have finished it, or a join begun.
+    if (joinedHome.read() || !joinedHome.unfinished()) return null;
+    const result = await options.cleanUp();
+    say(
+      helperWords.cleanedUp(
+        result.kept,
+        result.unreadable,
+        result.unremoved,
+        result.claude ? { claude: result.claude } : {},
+      ),
+    );
+    return result;
+  } finally {
+    release();
+  }
+}
+
+/** What this user has joined, in words, without dialing or taking the folder. */
+export function helperStatus(
+  dataDir: string,
+  options: {
+    interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
+    formatTime?: (ms: number) => string;
+  } = {},
+): readonly string[] {
+  const joinedHome = new JoinedHome(dataDir, () => {});
+  const joined = joinedHome.read();
+  if (!joined) {
+    const left = joinedHome.left();
+    return left
+      ? leftWords(dataDir, left.name, joinedHome.unfinished(), left.reason)
+      : helperWords.notJoined;
+  }
+  const format = options.formatTime ?? ((ms: number) => new Date(ms).toLocaleString());
+  return helperWords.status(
+    homePlace(joined.grant, options.interfaces),
+    joined.name,
+    joined.grant.at,
+    format(joined.joinedAt),
+    folderHolder(dataDir) !== null,
+  );
+}
+
+/**
+ * What a removal left, in words: the Claude login Firstmate made here, which
+ * the note keeps beside the paths for the work's own run, said as that and
+ * never as a path.
+ */
+function leftWords(
+  dataDir: string,
+  name: string,
+  unfinished: readonly string[] | null,
+  reason: Parameters<typeof helperWords.left>[2],
+): readonly string[] {
+  const record = join(dataDir, LEFT_CLAUDE_LOGIN);
+  const paths = unfinished?.filter((path) => path !== record) ?? null;
+  return helperWords.left(name, paths, reason, paths?.length !== unfinished?.length);
+}
+
+/** Notes about the work, kept in the folder's own log; Terminal never shows them. */
+export function workLog(dataDir: string): (line: string) => void {
+  return (line) => {
+    try {
+      appendFileSync(join(dataDir, "work.log"), `${new Date().toISOString()} ${line}\n`, {
+        mode: 0o600,
+      });
+    } catch {
+      // A note that cannot be kept is not the work's failure.
+    }
+  };
+}

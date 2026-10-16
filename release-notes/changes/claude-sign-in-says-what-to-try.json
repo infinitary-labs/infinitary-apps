@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-sign-in-says-what-to-try",
+      "kind": "fix",
+      "title": "A Claude sign-in that stops says what to try",
+      "body": "When Claude ends a sign-in without saying why, such as when it cannot be reached, you no longer see a bare \"Login failed:\". You read that the sign-in did not finish, and to check the internet connection and try again.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-sign-in-says-what-to-try-dark.webp",
+        "light": "claude-sign-in-says-what-to-try-light.webp",
+        "alt": "Settings, Intelligence, after a Claude sign-in stopped: the sign-in did not finish, check this Mac's internet connection, then try again"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

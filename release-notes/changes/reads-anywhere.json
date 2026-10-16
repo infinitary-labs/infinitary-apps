@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reads-anywhere",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Crewmates can read whatever your GitHub or GitLab sign-in can see",
+      "body": "Crewmates are no longer limited to repositories and search: they can read anything your sign-in can see, such as your notifications or your organizations' members. A task in a project kept on this computer reads GitHub through your GitHub sign-in. Your sign-in's own permissions still decide what they see.",
+      "noPicture": "This changes which reads a crewmate's calls reach, without changing any visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

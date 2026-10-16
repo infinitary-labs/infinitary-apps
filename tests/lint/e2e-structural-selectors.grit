@@ -1,0 +1,36 @@
+// An end-to-end spec finds what the captain sees by a hook or a role, never
+// by the page's structure (docs/testing.md, "The e2e assertion contract"):
+// a bare-tag query picks whichever element of that tag comes first, and a
+// class is the stylesheet's name for a look. Both move when the page grows
+// or restyles - one `document.querySelector("input")` chose a card's reply
+// box the day a card grew one. Runs inside `pnpm check` through biome.json's
+// plugins, as an error since the migration landed. A spec whose subject is
+// every element of a tag (a card body's iframes, a diagram's labels) says
+// so where it counts them, in a `biome-ignore` naming this rule and why.
+
+language js
+
+or {
+  `$target.$query($selector)` where {
+    $query <: or {
+      `querySelector`,
+      `querySelectorAll`
+    },
+    $selector <: r"^(?:[\"'`][a-z][a-z0-9-]*(?:\s*[ >+~,]\s*[a-z][a-z0-9-]*)*[\"'`])$",
+    $filename <: r".*tests/e2e/.*",
+    register_diagnostic(span=$selector, message="A bare-tag query takes whichever element of that tag comes first, so it silently moves when the page grows another. Find it by a data-* hook, a name or a role (docs/testing.md, the e2e assertion contract).", severity="error")
+  },
+  `$target.$query($selector, $...)` where {
+    $query <: or {
+      `locator`,
+      `querySelector`,
+      `querySelectorAll`,
+      `closest`,
+      `matches`,
+      `waitForSelector`
+    },
+    $selector <: r"(?s)^(?:[\"'`](?:[^\[\"'`.]|\[[^\]]*\])*\.[A-Za-z_-].*[\"'`])$",
+    $filename <: r".*tests/e2e/.*",
+    register_diagnostic(span=$selector, message="A class names a look, not a fact, and a restyle renames it. Find the element by a data-* hook or a role (docs/testing.md, the e2e assertion contract).", severity="error")
+  }
+}

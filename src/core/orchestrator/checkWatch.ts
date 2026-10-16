@@ -1,0 +1,335 @@
+import type { InboxStore } from "../storage/inboxStore";
+import type { CiWatch } from "../storage/taskStore";
+import { TaskService } from "../tasks/taskService";
+import type { TypedWake, WakeFacts } from "./wakes";
+
+/**
+ * The check watch (docs/forge.md, "The check watch"): the host reads a
+ * change's checks for the crewmate with plain forge calls - no model turn -
+ * and wakes it once when they finish. It replaces a crewmate re-reading
+ * `check_change` until its checks settle, a full-context model turn per read.
+ *
+ * - Armed by a reading that finds the checks running (`PrCiService`), on a
+ *   host whose forge has checks (`Forge.hasChecks`); a host without them is
+ *   never watched, and the crewmate is told so.
+ * - Durable: the watch is a delivery fact on the task (`ciWatch`), so it
+ *   outlives a restart and ends with the task.
+ * - Bound to the change's head: a new push the watch sees re-arms it for
+ *   the new head, and only the head it last saw is ever woken about.
+ * - Two wakes at most for one head: the first red check while others still
+ *   run, then the end - passed, failed with the red checks named, still
+ *   running at the bound, the change gone, or the checks unreadable.
+ *   Each is named by the watch (`once`), so the inbox never queues it
+ *   twice, even across a restart between the wake and the clear. A read
+ *   that first sees a failure and also sees the checks finished sends
+ *   only the end wake.
+ * - Bounded: it reads on the shared tick, every minute for ten minutes
+ *   and then every two, and stops at `CHECK_WATCH_BOUND_MS`.
+ * - Finished checks on live pull requests refresh quietly every five minutes
+ *   through the same reader. Only a running new head arms another watch.
+ *
+ * While a watch stands the crewmate is waiting on the host, so the idle
+ * ladder reads the task as moving (`Witnesses.checksWatched`).
+ */
+
+/** How long a watch reads one head before it wakes the crewmate that its checks are still running. */
+export const CHECK_WATCH_BOUND_MS = 2 * 60 * 60 * 1000;
+
+/** How long finished checks on a live pull request stand before the quiet refresh reads them again. */
+export const CHECK_REFRESH_MS = 5 * 60_000;
+
+/** How many reads stay one minute apart before the watch slows to every two minutes. */
+export const CHECK_WATCH_FAST_READS = 10;
+
+/** The pause before each of the first `CHECK_WATCH_FAST_READS` reads. */
+export const CHECK_WATCH_FAST_MS = 60_000;
+
+/** The pause before each later read, through the two-hour bound. */
+export const CHECK_WATCH_SLOW_MS = 2 * 60_000;
+
+/** The pause before the next read: every minute for 10 minutes, then every 2. */
+export function checkWatchDelay(tries: number): number {
+  return tries < CHECK_WATCH_FAST_READS ? CHECK_WATCH_FAST_MS : CHECK_WATCH_SLOW_MS;
+}
+
+/**
+ * The watch a reading of running checks at `head` leaves: the one already
+ * standing on that head keeps its start (its bound counts from the first
+ * reading), and any other head starts a new watch.
+ */
+export function armWatch(existing: CiWatch | undefined, head: string, now: number): CiWatch {
+  if (existing?.head === head) return existing;
+  return { head, since: now, nextAt: now + checkWatchDelay(0), tries: 0 };
+}
+
+/** The name one watch event goes out under: the head, when it began there, and which wake. */
+export function checkWatchOnce(watch: CiWatch, event: "failure" | "end" = "end"): string {
+  return `check-watch:${watch.head}:${watch.since}:${event}`;
+}
+
+/** The end-wake name a build before the early wake used, so a restart does not send it twice. */
+function legacyEndOnce(watch: CiWatch): string {
+  return `check-watch:${watch.head}:${watch.since}`;
+}
+
+/** One check the watch names: its name and state in the forge's words. */
+export type WatchedCheck = { name: string; state: string };
+
+/**
+ * What one read of a watched change found (`PrCiService.readWatched`). A
+ * settled reading is already recorded on the task, as every reading is.
+ */
+export type WatchedReading =
+  | {
+      kind: "pending";
+      head: string;
+      change: string;
+      pending: WatchedCheck[];
+      /** Red checks seen while others still run. Absent when none are red. */
+      failing?: WatchedCheck[];
+    }
+  | {
+      /**
+       * Nothing is running any more. `pending` here is a reading that
+       * finished without being green or red: a neutral check.
+       */
+      kind: "settled";
+      overall: "green" | "red" | "pending";
+      head: string;
+      change: string;
+      count: number;
+      failing: WatchedCheck[];
+      cap?: { rounds: number; cap: number };
+    }
+  | { kind: "gone" }
+  | { kind: "failed"; transient: boolean; problem: string; signIn?: boolean };
+
+export type CheckWatcherHost = {
+  tasks: TaskService;
+  inbox: Pick<InboxStore, "woken">;
+  /** Read the watched change's checks where the project lives. */
+  read(taskId: string): Promise<WatchedReading>;
+  /** The supervisor's own steer on the task's durable lane. */
+  steer(taskId: string, wake: TypedWake): Promise<unknown>;
+};
+
+type SettledFacts = Omit<Extract<WakeFacts, { kind: "checks-settled" }>, "kind">;
+
+export class CheckWatcher {
+  /** Tasks whose read is out now: a slow read is never doubled by the next tick. */
+  private readonly reading = new Set<string>();
+  /** Failed quiet reads back off too; a restart may try again on its first tick. */
+  private readonly refreshAfter = new Map<string, number>();
+
+  constructor(private readonly host: CheckWatcherHost) {}
+
+  /** One pass on the shared tick: every watch that is due reads once. */
+  async poll(now: number): Promise<void> {
+    const due = this.host.tasks.listLive().filter((record) => {
+      if (this.reading.has(record.id)) return false;
+      const delivery = record.delivery;
+      if (delivery?.ciWatch) return delivery.ciWatch.nextAt <= now;
+      // Finished checks remain live while the task owns an open pull request.
+      // This is display refresh only, not a new diagnosis turn.
+      return (
+        delivery?.prNumber !== undefined &&
+        delivery.ci !== "merged" &&
+        delivery.ci !== "no-pr" &&
+        now >=
+          Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0) + CHECK_REFRESH_MS
+      );
+    });
+    await Promise.all(
+      due.map((record) =>
+        (record.delivery?.ciWatch
+          ? this.pollTask(record.id, now)
+          : this.refreshTask(record.id, now)
+        ).catch((caught: unknown) => {
+          // One task's bookkeeping failing never stops the others' reads.
+          console.warn("[crew] check watch could not read a task:", caught);
+        }),
+      ),
+    );
+  }
+
+  private async refreshTask(taskId: string, now: number): Promise<void> {
+    const head = this.host.tasks.get(taskId)?.delivery?.headSha;
+    this.reading.add(taskId);
+    this.refreshAfter.set(taskId, now);
+    try {
+      const read = await this.host.read(taskId);
+      const after = this.host.tasks.get(taskId);
+      if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
+      // A new push whose checks are running gets the existing bounded watch.
+      // Same-head reruns only refresh the display, as do settled readings.
+      if (read.kind === "pending" && read.head !== head) {
+        this.host.tasks.recordDelivery(taskId, { ciWatch: armWatch(undefined, read.head, now) });
+      }
+    } finally {
+      this.reading.delete(taskId);
+    }
+  }
+
+  private async pollTask(taskId: string, now: number): Promise<void> {
+    const watch = this.watchOf(taskId);
+    if (!watch) return;
+    // Its wake already went out - the app stopped between the wake and the
+    // clear: the watch is over.
+    if (
+      this.host.inbox.woken(taskId, checkWatchOnce(watch, "end")) ||
+      this.host.inbox.woken(taskId, legacyEndOnce(watch))
+    ) {
+      this.clear(taskId);
+      return;
+    }
+    this.reading.add(taskId);
+    let read: WatchedReading;
+    try {
+      read = await this.host.read(taskId);
+    } catch (caught) {
+      read = {
+        kind: "failed",
+        transient: true,
+        problem: caught instanceof Error ? caught.message : String(caught),
+      };
+    } finally {
+      this.reading.delete(taskId);
+    }
+    // The task closed while the read was out: nothing wakes a closed task.
+    const after = this.host.tasks.get(taskId);
+    if (!after || TaskService.isClosed(after)) return;
+    // A reading taken meanwhile re-armed or ended the watch: that one is in charge.
+    if (!sameWatch(after.delivery?.ciWatch, watch)) return;
+    // A new push re-arms the watch for the new head.
+    const current =
+      (read.kind === "pending" || read.kind === "settled") && read.head !== watch.head
+        ? { head: read.head, since: now, nextAt: now, tries: 0 }
+        : watch;
+    const inBound = now - current.since < CHECK_WATCH_BOUND_MS;
+    switch (read.kind) {
+      case "pending": {
+        if (!inBound) {
+          return this.end(taskId, current, {
+            outcome: "timed-out",
+            change: read.change,
+            head: read.head,
+            checks: read.pending,
+            waitedMs: now - current.since,
+          });
+        }
+        const next = await this.noteFailure(taskId, watch, current, read);
+        if (!next) return;
+        return this.readAgain(taskId, watch, next, now);
+      }
+      case "settled":
+        return this.end(taskId, current, {
+          outcome:
+            read.overall === "green" ? "passed" : read.overall === "red" ? "failed" : "not-green",
+          change: read.change,
+          head: read.head,
+          ...(read.overall === "green" ? { count: read.count } : { checks: read.failing }),
+          ...(read.cap ? { cap: read.cap } : {}),
+        });
+      case "gone":
+        return this.end(taskId, current, { outcome: "gone" });
+      case "failed":
+        // A host hiccup is not a verdict: read again, inside the bound.
+        if (read.transient && inBound) return this.readAgain(taskId, watch, current, now);
+        return this.end(taskId, current, {
+          outcome: "unreadable",
+          problem: read.problem,
+          ...(read.signIn ? { signIn: true } : {}),
+        });
+    }
+  }
+
+  /**
+   * The first red check on this head, while others still run: one steer,
+   * then the watch keeps reading. A turn that already replaced the watch
+   * keeps that replacement.
+   */
+  private async noteFailure(
+    taskId: string,
+    started: CiWatch,
+    watch: CiWatch,
+    read: Extract<WatchedReading, { kind: "pending" }>,
+  ): Promise<CiWatch | undefined> {
+    const failing = read.failing ?? [];
+    if (watch.failureSeen || failing.length === 0) return watch;
+    const once = checkWatchOnce(watch, "failure");
+    if (!this.host.inbox.woken(taskId, once)) {
+      try {
+        await this.host.steer(taskId, {
+          facts: {
+            kind: "checks-settled",
+            outcome: "first-failure",
+            change: read.change,
+            head: read.head,
+            checks: failing,
+          },
+          once,
+        });
+      } catch (caught) {
+        console.warn("[crew] check watch's early steer not delivered:", caught);
+      }
+    }
+    const standing = this.watchOf(taskId);
+    if (!standing) return undefined;
+    const same = (candidate: CiWatch) =>
+      candidate.head === standing.head && candidate.since === standing.since;
+    if (!same(started) && !same(watch)) return undefined;
+    return { ...watch, failureSeen: true };
+  }
+
+  /**
+   * Schedule the next read. `started` is the watch this poll began with;
+   * a replacement that is neither that watch nor the one being written
+   * keeps the replacement.
+   */
+  private readAgain(taskId: string, started: CiWatch, watch: CiWatch, now: number): void {
+    const standing = this.watchOf(taskId);
+    if (!standing) return;
+    const same = (a: CiWatch) => a.head === standing.head && a.since === standing.since;
+    if (!same(started) && !same(watch)) return;
+    const sameHead = standing.head === watch.head && standing.since === watch.since;
+    this.host.tasks.recordDelivery(taskId, {
+      ciWatch: {
+        ...watch,
+        ...(watch.failureSeen || (sameHead && standing.failureSeen) ? { failureSeen: true } : {}),
+        tries: watch.tries + 1,
+        nextAt: now + checkWatchDelay(watch.tries + 1),
+      },
+    });
+  }
+
+  /**
+   * The watch is over: one steer on the crewmate's lane, named by the watch
+   * so the inbox queues it once, then the watch clears. The wait's end
+   * opens a new idle episode, as a timed wait's does.
+   */
+  private end(taskId: string, watch: CiWatch, facts: SettledFacts): void {
+    const once = checkWatchOnce(watch);
+    if (!this.host.inbox.woken(taskId, once)) {
+      this.host.tasks.endIdle(taskId);
+      void this.host
+        .steer(taskId, { facts: { kind: "checks-settled", ...facts }, once })
+        .catch((caught: unknown) => {
+          // No conversation to resume: the ladder reads the task on its own clock.
+          console.warn("[crew] check watch's steer not delivered:", caught);
+        });
+    }
+    this.clear(taskId);
+  }
+
+  private clear(taskId: string): void {
+    this.host.tasks.recordDelivery(taskId, { ciWatch: undefined });
+  }
+
+  private watchOf(taskId: string): CiWatch | undefined {
+    return this.host.tasks.get(taskId)?.delivery?.ciWatch;
+  }
+}
+
+function sameWatch(a: CiWatch | undefined, b: CiWatch): boolean {
+  return a?.head === b.head && a.since === b.since;
+}

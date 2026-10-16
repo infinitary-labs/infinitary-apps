@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-notes-moved-to-docs",
+      "reason": "Moves the local signing, install and pull request history rules that only Claude crewmates had noted into AGENTS.md and the project's documents, checked against the code; documentation only, nothing a person notices."
+    }
+  ]
+}

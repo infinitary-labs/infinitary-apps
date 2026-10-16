@@ -1,0 +1,31 @@
+# Local/dev packaging config. CI release builds use electron-builder.yml
+# directly. A distinct appId and productName keeps local bundles from
+# colliding with the installed cask app in macOS LaunchServices.
+extends: ./electron-builder.yml
+appId: com.getinfinitary.infinitary.dev
+productName: Infinitary Dev
+# Stamps the bundle's own package.json as the dev flavor, so the local app
+# keeps its state in <appData>/infinitary-dev like `pnpm dev` does and
+# never opens the installed release's <appData>/infinitary
+# (src/shared/userDataFolders.ts, src/main/userDataDir.ts).
+extraMetadata:
+  infinitaryBuildFlavor: dev
+mac:
+  # The electron fuses are flipped after Electron's own linker signature, so
+  # the binary must be re-signed or Apple Silicon SIGKILLs it at exec. That
+  # re-signature used to be ad-hoc, which gave the local app a designated
+  # requirement of `cdhash H"..."` - a new one on every rebuild - and cost the
+  # captain a fresh macOS Keychain grant each time. It is now made with this
+  # machine's own local certificate (scripts/local-codesign.mjs), whose
+  # designated requirement names the certificate instead of the build.
+  #
+  # `identity` is only electron-builder's discovery placeholder: it searches
+  # with `security find-identity -v`, which lists trusted certificates only,
+  # and the local one is deliberately untrusted. "-" keeps the packager on its
+  # signing path and `sign` below does the real signing. Release builds are
+  # untouched - electron-builder.yml still signs with Developer ID (phase 8).
+  identity: "-"
+  sign: ./scripts/sign-local-mac.mjs
+  hardenedRuntime: false
+  extendInfo:
+    CFBundleDisplayName: Infinitary Dev

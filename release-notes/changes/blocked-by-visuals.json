@@ -1,0 +1,32 @@
+{
+  "entries": [
+    {
+      "id": "waiting-crew-orbit",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A waiting crewmate orbits the one it waits on",
+      "body": "When an idle crewmate waits on one other crewmate you can see, it leaves its own path and circles that crewmate. The circle stands at a right angle to the other crewmate's path. In a busier case it keeps its place, and a line points to the crewmate it waits on.",
+      "picture": {
+        "dark": "waiting-crew-orbit-dark.webp",
+        "light": "waiting-crew-orbit-light.webp",
+        "alt": "Firstmate in the center, with a working crewmate and a smaller idle crewmate close together on the right"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "task-margin-edges",
+      "kind": "feature",
+      "highlight": 2,
+      "area": "tasks",
+      "title": "Tasks draws a line to the task that has to finish first",
+      "body": "A quiet line on the left runs from a waiting task to the task it is blocked by. The arrow sits on the task that has to finish first. Resting on a row lights that line.",
+      "picture": {
+        "dark": "task-margin-edges-dark.webp",
+        "light": "task-margin-edges-light.webp",
+        "alt": "The Tasks list with two quiet lines in the left margin, both ending in an arrow at Check the connection"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

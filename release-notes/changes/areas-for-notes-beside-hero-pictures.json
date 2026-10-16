@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "areas-for-notes-beside-hero-pictures",
+      "reason": "Gives five notes that merged beside the hero-picture rule their area and a reason for no picture, so the ledger check passes. No shipped behavior changed."
+    }
+  ]
+}

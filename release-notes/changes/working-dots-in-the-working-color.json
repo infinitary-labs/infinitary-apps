@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "working-dots-in-the-working-color",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "The working dots above the message box are now orange",
+      "body": "While Firstmate works on your message, the three dots beside \"Working…\" now show the same orange as a working crewmate, instead of blue.",
+      "picture": {
+        "dark": "working-dots-in-the-working-color-dark.webp",
+        "light": "working-dots-in-the-working-color-light.webp",
+        "alt": "Your message \"How is everyone doing? keep looking at the crew\" over the message box, and under it three orange dots beside \"Working…\""
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

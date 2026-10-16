@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "task-card-crewmate-tab",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Watch and steer a crewmate from its task's card",
+      "body": "A task's card has a Crewmate tab once a crewmate starts on it. It shows the crewmate's work as it goes: what it says, each step it takes and what came back, the changes it makes to files, the pictures it takes, and its plan, reports, cards and pull request. Type a line at the bottom and press Enter to tell the crewmate something yourself; it reads the line at its next step. Control-C or Stop stops its current turn, and it waits for what you say next. A finished task keeps its Crewmate tab to read back.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-crewmate-tab-dark.webp",
+        "light": "task-card-crewmate-tab-light.webp",
+        "alt": "A task's Crewmate tab showing the crewmate's steps, an edit's changed lines and the line to type into"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

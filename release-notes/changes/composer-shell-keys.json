@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "composer-shell-keys",
+      "kind": "feature",
+      "title": "Editing keys in the message box",
+      "body": "The message box and card replies now take a few editing keys. Control-U removes the text before the cursor on its line, Control-K the text after it, Control-W the word before it, and Control-Y puts back what you removed. Control-P in an empty message box brings back your last message, like the Up arrow. The usual Mac shortcuts work as before.",
+      "area": "message-box",
+      "noPicture": "A picture cannot show a key press, and the message box looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

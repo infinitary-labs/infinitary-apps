@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "start-applies-directions",
+      "kind": "fix",
+      "title": "Starting a task applies your standing directions",
+      "body": "When you press Start, drag a task to Working or queue it, the task shows Starting while Firstmate applies the directions that fit it, then it begins. A task set to merge on its own now merges after its checks pass, without asking you to click.",
+      "area": "tasks",
+      "noPicture": "The change is Firstmate's behavior and a task's history lines; there is no new screen to photograph.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

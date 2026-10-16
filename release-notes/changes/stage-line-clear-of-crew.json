@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "stage-line-clear-of-crew",
+      "kind": "fix",
+      "title": "Firstmate's words sit clear of the crew",
+      "body": "The words above Firstmate, and \"Thinking…\" on your first message, now sit higher and a little larger. Crewmates passing over Firstmate no longer cover them, and in a short window they move down with the crew.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "stage-line-clear-of-crew-dark.webp",
+        "light": "stage-line-clear-of-crew-light.webp",
+        "alt": "Firstmate's words above the character, clear of three crewmates and their model names"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

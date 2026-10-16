@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "knowledge-bulk-retire",
+      "reason": "Internal: Firstmate can retire a captain-approved list of knowledge entries in one write; knowledge is an alpha and development experiment with no new surface a person uses."
+    }
+  ]
+}

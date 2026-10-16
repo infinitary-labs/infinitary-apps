@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-settings",
+      "kind": "feature",
+      "title": "Change Firstmate's keys",
+      "body": "Settings → Keyboard lists every command with its keys. Record a new key, remove one, or put it back, and if a key already belongs to another command, Firstmate names it and moves it only when you save. Your keys work everywhere in the window, show on buttons, in ⌘K and in the menu, and stay after a restart. Keyboard Settings… and Reset All Keys… in the app menu are always there.",
+      "highlight": 2,
+      "area": "settings",
+      "picture": {
+        "dark": "keyboard-settings-dark.webp",
+        "light": "keyboard-settings-light.webp",
+        "alt": "Keyboard settings recording ⌘L for Show the next card, saying the key already runs Go to the main message and that saving moves it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

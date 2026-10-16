@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "every-mac-controls-and-runs-work",
+      "kind": "improvement",
+      "title": "Every Mac you add can control Firstmate and run work",
+      "body": "A Mac you add with a link at its first launch can now also run a project's work. A Mac you add by a command or by its address can open Firstmate there and control this one, with no new link. Running as another user on this Mac still only runs work. A Mac you added before keeps what it could do until you add it again, and no Mac runs anything until you set a project to run on it.",
+      "area": "devices",
+      "picture": {
+        "dark": "every-mac-controls-and-runs-work-dark.webp",
+        "light": "every-mac-controls-and-runs-work-light.webp",
+        "alt": "Settings, Devices, listing this Mac, a MacBook Air controlling this Firstmate that can run work, and a Mac mini"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-small-window-compaction",
+      "kind": "fix",
+      "title": "Firstmate and crewmates keep working on custom models with small conversation limits",
+      "body": "Long conversations on a custom model are now shortened to fit the room the model has, instead of stopping with an error because too much earlier conversation was kept.",
+      "area": "subscriptions",
+      "noPicture": "The existing conversation and cards look the same; Firstmate now carries on after shortening the conversation.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

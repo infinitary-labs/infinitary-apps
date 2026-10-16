@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "startup-note-pictures-and-areas",
+      "kind": "improvement",
+      "title": "The note after an update shows pictures and groups changes by area",
+      "body": "When Firstmate 3000 opens on a newer version, each highlight in the note on top of your cards now shows a picture of what changed, in your light or dark theme, and names the part of the app it belongs to. The full list groups every change by that part of the app, such as Cards or Tasks, with new features first.",
+      "area": "updates",
+      "picture": {
+        "dark": "startup-note-pictures-and-areas-dark.webp",
+        "light": "startup-note-pictures-and-areas-light.webp",
+        "alt": "Two highlights of the note after an update, each named with its part of the app and showing a picture of what changed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pin-published-0-2-1-alpha-52",
+      "reason": "Pins the published manifest for 0.2.1-alpha.52, cut from the reviewed candidate 99761497, after its private tag existed. Nothing in the app changes."
+    }
+  ]
+}

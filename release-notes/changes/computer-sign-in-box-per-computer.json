@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computer-sign-in-box-per-computer",
+      "kind": "fix",
+      "title": "A key or code typed for one computer stays in that computer's box",
+      "body": "With sign-ins open on two computers at once in Settings, what you typed for one computer also showed in the other's box, and the other's Send button could send it to the wrong computer. When either computer asked its next question, both boxes emptied. Each computer's box now holds only what you type in it, and only its own next question empties it.",
+      "area": "devices",
+      "noPicture": "Nothing new is drawn: each computer's box looks as before, now holding only what is typed in it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "interactive-card-continuity",
+      "kind": "improvement",
+      "highlight": 3,
+      "title": "Some cards stay in front while you ask about them",
+      "body": "A card that needs you through a back-and-forth, such as a lesson card, now stays in front when you reply beneath it, and the answer appears beside it. Choosing an answer still closes it, and its next version comes to the front when it is ready. Other cards work as before.",
+      "area": "cards",
+      "picture": {
+        "dark": "interactive-card-continuity-dark.webp",
+        "light": "interactive-card-continuity-light.webp",
+        "alt": "An interactive card with its question field and answer choices, ready to keep its place during a reply"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

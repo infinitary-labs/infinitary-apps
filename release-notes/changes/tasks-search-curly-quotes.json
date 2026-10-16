@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "tasks-search-curly-quotes",
+      "kind": "fix",
+      "title": "Tasks search finds titles with curly apostrophes",
+      "body": "Typing what's new in Tasks search now finds your What’s new notes. A title written with a curly apostrophe or quote is found by the plain one you type, in Tasks search, in Find on the task board and when Firstmate looks up your tasks.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-search-curly-quotes-dark.webp",
+        "light": "tasks-search-curly-quotes-light.webp",
+        "alt": "Tasks search with what's new typed, listing two What’s new notes under Earlier"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

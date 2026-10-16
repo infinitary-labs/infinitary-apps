@@ -1,0 +1,424 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["src/**", "tests/**", "*.ts", "*.tsx", "*.json", "*.md", "!.claude", "!.lavish"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+              },
+              {
+                "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**"],
+      "plugins": ["./tests/lint/platform-reader.grit"]
+    },
+    {
+      "includes": ["tests/e2e/**"],
+      "plugins": [
+        "./tests/lint/e2e-no-ms-budgets.grit",
+        "./tests/lint/e2e-structural-selectors.grit",
+        "./tests/lint/e2e-measured-box.grit",
+        "./tests/lint/e2e-layout-state.grit",
+        "./tests/lint/e2e-model-id-literal.grit",
+        "./tests/lint/e2e-feed-line-prose.grit",
+        "./tests/lint/e2e-run-evidence-path.grit",
+        "./tests/lint/e2e-typed-keys.grit",
+        "./tests/lint/e2e-firstmate-pose.grit",
+        "./tests/lint/e2e-frame-door.grit",
+        "./tests/lint/e2e-bare-focus.grit",
+        "./tests/lint/e2e-text-lookup.grit"
+      ]
+    },
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./decisions/jev/**",
+                      "../decisions/jev/**",
+                      "../../decisions/jev/**",
+                      "../../../decisions/jev/**"
+                    ],
+                    "message": "A native decision model's client and key store are reachable only through src/core/decisions/ (S7b): nothing else may build a request to that endpoint or read that key."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/services.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/decisions/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/pi/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/claude/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/forge/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./decisions/jev/**",
+                      "../decisions/jev/**",
+                      "../../decisions/jev/**",
+                      "../../../decisions/jev/**"
+                    ],
+                    "message": "A native decision model's client and key store are reachable only through src/core/decisions/ (S7b): nothing else may build a request to that endpoint or read that key."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "tests/**/*.test.ts",
+        "tests/**/*.test.tsx",
+        "!tests/helpers/customApiCaFixture.ts",
+        "!tests/helpers/sshServer.ts",
+        "!src/core/pi/customApiCertificates.integration.test.ts",
+        "!src/core/claude/claudeAutoMemory.integration.test.ts",
+        "!src/core/claude/claudeClassifierSession.integration.test.ts",
+        "!src/core/claude/claudeCrewAgents.integration.test.ts",
+        "!src/core/claude/claudeCrewContract.integration.test.ts",
+        "!src/core/claude/claudeProjectResources.integration.test.ts",
+        "!src/core/claude/claudeToolWait.integration.test.ts",
+        "!src/core/claude/claudeCrewCard.integration.test.ts",
+        "!src/core/claude/claudeSession.contract.integration.test.ts",
+        "!src/core/claude/claudeSession.integration.test.ts",
+        "!src/core/claude/claudeCli.test.ts",
+        "!src/core/claude/claudeFirstmateSeat.live.test.ts",
+        "!src/core/claude/claudeFirstmateSession.integration.test.ts",
+        "!src/core/claude/claudeLoginProbe.test.ts",
+        "!src/core/claude/claudeModelProbe.test.ts",
+        "!src/core/claude/claudeRenewProbe.test.ts",
+        "!src/core/claude/claudeToolSurface.test.ts",
+        "!src/core/core.test.ts",
+        "!src/core/forge/providers/plainGit.test.ts",
+        "!src/core/forge/signIns.test.ts",
+        "!src/core/hostEnv.gitSignIn.test.ts",
+        "!src/core/hostEnv.test.ts",
+        "!src/core/jobs/jobManager.test.ts",
+        "!src/core/orchestrator/crewSupervisor.test.ts",
+        "!src/core/orchestrator/firstmateAgent.test.ts",
+        "!src/core/orchestrator/prCi.test.ts",
+        "!src/core/placed/placedSessions.test.ts",
+        "!src/core/placed/placedAccounts.test.ts",
+        "!src/core/placed/placedCutOff.test.ts",
+        "!src/core/helper/workingCopies.test.ts",
+        "!src/core/folderMove/move.test.ts",
+        "!src/core/helper/cleanUp.test.ts",
+        "!src/core/helper/fromHome.test.ts",
+        "!src/core/devices/joinCommand.test.ts",
+        "!src/core/devices/remoteLogin.test.ts",
+        "!src/core/devices/sshConnections.test.ts",
+        "!src/core/helper/connect.test.ts",
+        "!src/core/devices/relay.test.ts",
+        "!src/core/devices/dnsSd.test.ts",
+        "!src/core/devices/computerUpdate.test.ts",
+        "!src/core/devices/farSystems.test.ts",
+        "!src/core/personal/captainSkill.test.ts",
+        "!src/core/personal/liveWorkspace.test.ts",
+        "!src/core/personal/personalExtensions.test.ts",
+        "!src/core/personal/sequencesSkill.test.ts",
+        "!src/core/personal/workspace.test.ts",
+        "!src/core/pi/personalizeTool.test.ts",
+        "!src/core/plugins/pluginInstaller.test.ts",
+        "!src/core/sql/sqlService.test.ts",
+        "!src/core/axi/channel.test.ts",
+        "!src/core/utilityQos.test.ts",
+        "!src/core/workspace/repoRegistry.test.ts",
+        "!src/core/workspace/git.test.ts",
+        "!src/core/knowledge/knowledgeSources.integration.test.ts",
+        "!src/core/workspace/workspaceService.test.ts",
+        "!src/core/workspace/conventional.test.ts",
+        "!src/core/workspace/worktreePool.test.ts",
+        "!src/main/host/darwinKeychain.scratch.test.ts",
+        "!src/main/host/claudeKeychainAccess.integration.test.ts",
+        "!tests/bench-attempt.test.ts",
+        "!tests/eval-auth-turn-taking.test.ts",
+        "!tests/account-eval.test.ts",
+        "!tests/bench-patch-pool.test.ts",
+        "!tests/cask-consumers.test.ts",
+        "!tests/e2e-contract-lint.test.ts",
+        "!tests/e2e-lanes.test.ts",
+        "!tests/ensure-electron-installed.test.ts",
+        "!tests/export-tasks.test.ts",
+        "!tests/generate-self-source.test.ts",
+        "!tests/install-clones.test.ts",
+        "!tests/local-codesign.test.ts",
+        "!tests/mockClaudeClient.test.ts",
+        "!tests/module-runner.test.ts",
+        "!tests/release-contract.test.ts",
+        "!tests/release-publication.test.ts",
+        "!tests/release-notes.test.ts",
+        "!tests/replay-captain-session.test.ts",
+        "!tests/replay-claude-session.test.ts",
+        "!tests/replay-gate-catches-lint.test.ts",
+        "!tests/replay-gate-catches-lock-refusal.test.ts",
+        "!tests/run-temp-root.test.ts",
+        "!tests/test-workload.test.ts",
+        "!tests/run-evidence-playwright.test.ts"
+      ],
+      "plugins": ["./tests/lint/unit-cohort.grit"]
+    }
+  ]
+}

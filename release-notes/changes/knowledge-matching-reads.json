@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-matching-reads",
+      "reason": "Internal alpha-only knowledge matching and agent read payloads; no visible interface or guaranteed change to a person's answer."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "route-removed-under-lock",
+      "reason": "A finished removal on a computer added by Remote Login deletes its route file under the route's write lock, so the home's SSH connection renewing or withdrawing it from another process cannot write it back. Fixes an intermittently failing removal journey; nothing a person sees changes."
+    }
+  ]
+}

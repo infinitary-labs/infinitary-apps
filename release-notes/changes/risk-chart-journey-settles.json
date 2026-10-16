@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "risk-chart-journey-settles",
+      "reason": "The risk chart journey compares the chart with the headline, Why and Before's picture only after the card's body has drawn and the boxes hold still, since a card shown with nothing to hold grows to its body and centres again after it appears. Test code only; nothing a person notices changes."
+    }
+  ]
+}

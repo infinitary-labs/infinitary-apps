@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-panel-active-paused",
+      "kind": "improvement",
+      "title": "The Automation panel says how many automations are active and how many are paused",
+      "body": "The Automation panel's header now reads, for example, \"1 active · 2 paused\" instead of \"3 automations\". It changes as you pause or resume an automation, and leaves out the paused count when nothing is paused.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-panel-active-paused-dark.webp",
+        "light": "automation-panel-active-paused-light.webp",
+        "alt": "The Tasks panel's header reading \"0 waiting · 1 working\" above the Automation panel's header reading \"1 active · 2 paused\""
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

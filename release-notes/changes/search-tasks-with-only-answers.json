@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "search-tasks-with-only-answers",
+      "kind": "fix",
+      "title": "Search tasks opens when the Tasks panel lists nothing",
+      "body": "When every task is an answered question, such as the welcome on a new install, Search tasks in the Tasks panel now opens the search, and typing finds those answers by the words of their titles.",
+      "area": "tasks",
+      "picture": {
+        "dark": "search-tasks-with-only-answers-dark.webp",
+        "light": "search-tasks-with-only-answers-light.webp",
+        "alt": "The Tasks panel with its search open on the word welcome, listing the Welcome aboard answer under earlier"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

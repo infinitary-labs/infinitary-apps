@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-update-notice",
+      "reason": "Development only: a Mac controlling Firstmate on another Mac shows its own update notice, and multi-machine support stays hidden from installed builds until the captain explicitly lifts the gate."
+    }
+  ]
+}

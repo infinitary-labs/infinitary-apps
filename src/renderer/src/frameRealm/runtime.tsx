@@ -1,0 +1,134 @@
+import type { PanelProps } from "@shared/personal/contracts";
+import type { FrameBridgeApi } from "@shared/plugins/bridge";
+import {
+  PANEL_CONFIG_ID,
+  PANEL_ROOT_ID,
+  type PanelDocumentConfig,
+} from "@shared/plugins/frameDocument";
+import { type ComponentType, useMemo, useState, useSyncExternalStore } from "react";
+import { createRoot } from "react-dom/client";
+import { PanelBoundary, PanelStoppedLine } from "../personal/panelBoundary";
+import { frameBridge } from "./bridge";
+import {
+  cardData,
+  cardKept,
+  cardRevision,
+  firstState,
+  frameKeep,
+  framePanelProps,
+  frameRail,
+  frameView,
+} from "./panelProps";
+
+/**
+ * The frame realm's runtime (one plugin vehicle, Phase A item 4; captain's
+ * A1a): what the lib's boot module runs inside a panel document. It reads
+ * the config the host wrote into the document, imports the panel's module
+ * (a lib file for the app's own panels, the mount's own compiled files for
+ * one the captain added), builds `PanelProps` over the bridge, and renders
+ * the panel into the root inside the same boundary the app's window uses.
+ *
+ * A module that will not import, a default export that is not a component,
+ * and a render that throws all end the same way: the quiet line, inside
+ * the host's chrome, never a blank frame. The theme follows the bridge's
+ * `onTheme`, so the panel re-renders on a theme change the way an
+ * in-process panel does when the shell's theme moves.
+ */
+export type ModuleLoader = (url: string) => Promise<unknown>;
+
+const importForReal: ModuleLoader = (url) => import(/* @vite-ignore */ url);
+
+export function readPanelConfig(doc: Document): PanelDocumentConfig {
+  const text = doc.getElementById(PANEL_CONFIG_ID)?.textContent;
+  if (!text) throw new Error("this panel document carries no config");
+  return JSON.parse(text) as PanelDocumentConfig;
+}
+
+export async function bootPanel(
+  doc: Document = document,
+  bridge: FrameBridgeApi = frameBridge(),
+  load: ModuleLoader = importForReal,
+): Promise<void> {
+  const host = doc.getElementById(PANEL_ROOT_ID);
+  if (!host) throw new Error("this panel document has no root");
+  const root = createRoot(host);
+  let Panel: unknown;
+  let config: PanelDocumentConfig | null = null;
+  try {
+    config = readPanelConfig(doc);
+    Panel = ((await load(config.module)) as { default?: unknown } | null)?.default;
+  } catch (error) {
+    console.warn("panel module did not load:", error);
+  }
+  if (!config || typeof Panel !== "function") {
+    root.render(<PanelStoppedLine card={config?.card !== undefined} />);
+    return;
+  }
+  const props = framePanelProps(config, bridge);
+  // A card's page starts from the place the card kept, which rides the
+  // first view state the host pushes it.
+  if (config.card) await firstState(bridge);
+  root.render(
+    <FramePanel
+      Panel={Panel as ComponentType<PanelProps>}
+      props={props}
+      cardId={config.card?.id ?? null}
+      bridge={bridge}
+    />,
+  );
+}
+
+function FramePanel({
+  Panel,
+  props,
+  cardId,
+  bridge,
+}: {
+  Panel: ComponentType<PanelProps>;
+  props: Omit<PanelProps, "theme" | "card" | "view" | "rail">;
+  /** Set when this document draws one of the panel's cards. */
+  cardId: string | null;
+  bridge: FrameBridgeApi;
+}) {
+  const theme = useSyncExternalStore(
+    (onChange) => bridge.onTheme(onChange),
+    () => bridge.theme,
+  );
+  // A card's data is view state: a revised card is a new value here, so the
+  // view hears it without a new document - one new value each time the card
+  // was put up again, and not at every push of the view beside it.
+  const state = useSyncExternalStore(
+    (onChange) => bridge.onState(onChange),
+    () => bridge.state,
+  );
+  const revision = cardId === null ? 0 : cardRevision(state);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the data is read anew only when the card was put up again
+  const data = useMemo(() => (cardId === null ? null : cardData(state)), [cardId, revision]);
+  // What the card kept, as this page was born: a later keep is for the next page.
+  const [kept] = useState(() => (cardId === null ? null : cardKept(bridge.state)));
+  const keep = useMemo(() => frameKeep(bridge), [bridge]);
+  const card = useMemo(
+    () => (cardId === null ? undefined : { id: cardId, data, revision, kept, keep }),
+    [cardId, data, revision, kept, keep],
+  );
+  // The view and whether the panel is collapsed are view state: each is a
+  // new value only when it moved, so the panel re-renders only then.
+  const viewKey = JSON.stringify(frameView(state));
+  const view = useMemo(() => JSON.parse(viewKey) as PanelProps["view"], [viewKey]);
+  const collapsed = cardId === null && frameRail(state, bridge).collapsed;
+  const rail = useMemo(
+    () => (cardId === null ? frameRail({ collapsed }, bridge) : undefined),
+    [cardId, collapsed, bridge],
+  );
+  return (
+    <PanelBoundary card={cardId !== null}>
+      <Panel
+        {...props}
+        theme={theme}
+        view={view}
+        {...(card ? { card } : {})}
+        {...(rail ? { rail } : {})}
+      />
+    </PanelBoundary>
+  );
+}

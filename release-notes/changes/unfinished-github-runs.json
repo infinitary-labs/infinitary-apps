@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "unfinished-github-runs",
+      "kind": "fix",
+      "area": "projects",
+      "title": "GitHub merges wait for checks still being created",
+      "body": "A pull request no longer reads ready to merge while GitHub is still running its checks, including the moment before a later check shows up.",
+      "noPicture": "This changes when a merge is allowed, not the appearance of a view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "hosted-journey-chooser",
+      "reason": "Internal CI work: pick journeys on hosted Linux and skip the Mac runner when no files are selected; preserve the Linux jobs and all-checks gate."
+    }
+  ]
+}

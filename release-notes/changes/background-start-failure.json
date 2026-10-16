@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "background-start-failure",
+      "reason": "Internal, behind the development-only multi-machine gate: a computer joined or updated over Remote Login whose login session refused to start it in the background now says it failed, instead of promising the next login or claiming it runs. An installed app shows and offers none of it."
+    }
+  ]
+}

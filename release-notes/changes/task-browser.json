@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-browser",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Each task can use a browser of its own",
+      "body": "A crewmate can now open a website, or a page your project shows on this Mac, in its task's own browser: it reads the page, fills it in, clicks through it and takes pictures of it. Open the Browser line on the task to watch it work. When a page needs you, such as a sign-in, take control, then hand it back. A crewmate never pays or sends a final form itself: it stops on a review card and you finish on the page. You can remember a website's sign-in on this Mac, and a later task uses it only after you allow it on that task's card. Settings lists the sign-ins you saved, each with Remove.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-dark.webp",
+        "light": "task-browser-light.webp",
+        "alt": "A task's own browser on the stage, showing a cafe's Book a table page while its crewmate fills it in"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

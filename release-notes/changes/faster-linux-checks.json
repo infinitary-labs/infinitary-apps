@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "faster-linux-checks",
+      "reason": "Internal CI work: the pull request checks run on four Linux machines side by side, and the end-to-end lint rules read only the end-to-end test files. Nothing in the app changes."
+    }
+  ]
+}

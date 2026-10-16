@@ -1,0 +1,400 @@
+import { validateToolArguments } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
+import { claudeCrewmateTools, zodShapeOf } from "../claude/claudeTaskTools";
+import { crewmateTool } from "../session/tools";
+import { CREWMATE_TOOLS, CREWMATE_TOOLS_MODULE, crewmateToolManifest } from "./crewmateTaskTools";
+import { createCrewmateTools } from "./crewmateTools";
+
+/**
+ * The crewmate tool spec (primitives P7): one list both runtimes generate
+ * their tools from. These tests hold the generated tools - the Pi tools a
+ * crewmate session is handed and the Claude tools its in-process server
+ * carries - to the spec and to each other, by what they serve and what
+ * they do, never by how they are written.
+ */
+
+type PiTool = ReturnType<typeof createCrewmateTools>[number];
+type ClaudeTool = ReturnType<typeof claudeCrewmateTools>[number];
+
+/** A JSON Schema without the wrapper keys each library adds on its own. */
+function normalized(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(normalized);
+  if (!schema || typeof schema !== "object") return schema;
+  const entries = Object.entries(schema as Record<string, unknown>)
+    .filter(([key]) => key !== "$schema" && key !== "additionalProperties")
+    .map(([key, value]) => [key, normalized(value)] as const)
+    .sort(([a], [b]) => a.localeCompare(b));
+  const out = Object.fromEntries(entries) as Record<string, unknown>;
+  // A union of discriminated objects: zod says oneOf, typebox anyOf.
+  if (Array.isArray(out.oneOf)) {
+    out.anyOf = out.oneOf;
+    delete out.oneOf;
+  }
+  // A union of string constants is an enum, however it is spelled.
+  const members = out.anyOf as Record<string, unknown>[] | undefined;
+  if (members?.every((member) => typeof member.const === "string")) {
+    out.type = "string";
+    out.enum = members.map((member) => member.const);
+    delete out.anyOf;
+  }
+  // An empty required list and no required list say the same thing.
+  if (Array.isArray(out.required) && out.required.length === 0) delete out.required;
+  // An integer bound is the same bound whichever way the library spells it.
+  if (out.type === "integer") {
+    delete out.maximum;
+    delete out.minimum;
+  }
+  return out;
+}
+
+/** What the Claude client is handed for a tool's parameters, as JSON Schema. */
+function claudeSchema(tool: ClaudeTool): unknown {
+  return z.toJSONSchema(z.object(tool.inputSchema as Record<string, z.ZodType>));
+}
+
+async function runPi(tool: PiTool, params: unknown) {
+  const result = await tool.execute("call-1", params as never, undefined, undefined, {} as never);
+  return result.content;
+}
+
+async function runClaude(tool: ClaudeTool, params: unknown) {
+  const result = await tool.handler(params as never, {});
+  return result.content;
+}
+
+/** A completion decision's whole risk: every dimension rated (FI3-1128). */
+const RISK = {
+  blast: { level: "low", why: "Two files in the meter" },
+  behavior: { level: "low", why: "Corrects the unit" },
+  undo: { level: "low", why: "A revert restores the old meter" },
+  evidence: { level: "medium", why: "The meter test" },
+  sensitivity: { level: "low", why: "No sign-in, data or release code" },
+  novelty: { level: "low", why: "Edits the existing reading" },
+  deps: { level: "high", why: "Adds a parser package" },
+} as const;
+
+/** One valid call per crewmate tool, with the callback it must reach. */
+const CALLS: Record<string, { params: Record<string, unknown>; callback: string }> = {
+  emit_card: {
+    params: {
+      title: "Ready to merge",
+      body: "<p>Green on the head.</p>",
+      actions: [
+        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "hold", label: "Hold" },
+      ],
+      risk: RISK,
+    },
+    callback: "onCard",
+  },
+  close_card: { params: { card_id: "card-task-1-1", reason: "stale" }, callback: "onCloseCard" },
+  file_followup: {
+    params: { title: "Fix the flake", goal: "It passes", why: "It failed twice", blocks_me: true },
+    callback: "onFollowup",
+  },
+  note_progress: { params: { text: "Reproduced it" }, callback: "onProgress" },
+  report: {
+    params: { text: "Done and verified", summary: "The search reads keys." },
+    callback: "onReport",
+  },
+  reply: { params: { card_id: "card-task-1-1", text: "Yes" }, callback: "onReply" },
+  tasks: { params: { status: "live", limit: 5 }, callback: "onQueryTasks" },
+  knowledge: { params: { action: "search", query: "wake queue" }, callback: "knowledge.read" },
+  record_knowledge: {
+    params: {
+      action: "publish",
+      request_id: "r1",
+      kind: "finding",
+      text: "A failed turn is retried.",
+      basis: "observation",
+      about: ["c-1a2b3c"],
+      conditions: "main",
+      sources: [{ path: "src/inbox.ts", start_line: 1, end_line: 4 }],
+    },
+    callback: "knowledge.record",
+  },
+  lint_panel: { params: { id: "weather" }, callback: "onLintPanel" },
+  capture_panel: { params: { id: "weather" }, callback: "onCapturePanel" },
+  read_workflow: { params: { runId: 10, jobId: 20, offset: 5 }, callback: "onReadWorkflow" },
+  download_artifact: { params: { runId: 10, artifactId: 30 }, callback: "onDownloadArtifact" },
+  github_read: { params: { path: "/repos/o/r/pulls/1" }, callback: "onGithubRead" },
+  github_write: {
+    params: { method: "POST", path: "/repos/o/r/issues/1/comments", body: '{"body":"hi"}' },
+    callback: "onGithubWrite",
+  },
+  open_change: { params: { title: "Fix", body: "Intent" }, callback: "onOpenChange" },
+  check_change: {
+    params: {
+      diagnosis: {
+        headSha: "a",
+        check: "linux-checks",
+        classification: "own-regression",
+        evidence: "The failed assertion reproduces only with my change",
+      },
+    },
+    callback: "onCheckChange",
+  },
+};
+
+describe("the crewmate tool spec", () => {
+  it("keeps the progress rule within Claude's tool description limit", () => {
+    const tool = CREWMATE_TOOLS.find((entry) => entry.name === "note_progress");
+    expect(tool?.description.length).toBeLessThan(2048);
+    expect(tool?.description).toContain(
+      "whole list with every later note, unchanged if nothing moved",
+    );
+  });
+
+  it("serves every entry on Pi and on Claude, in the spec's order", () => {
+    const delegate = crewmateToolDelegate();
+    const names = CREWMATE_TOOLS.map((tool) => tool.name);
+    expect(createCrewmateTools(delegate).map((tool) => tool.name)).toEqual(names);
+    expect(claudeCrewmateTools(delegate).map((tool) => tool.name)).toEqual(names);
+    expect(Object.keys(CALLS).sort()).toEqual([...names].sort());
+  });
+
+  it("gives both runtimes the spec's words and the same parameters", () => {
+    const delegate = crewmateToolDelegate();
+    const pi = createCrewmateTools(delegate);
+    const claude = claudeCrewmateTools(delegate);
+    CREWMATE_TOOLS.forEach((spec, index) => {
+      const piTool = pi[index] as PiTool;
+      const claudeTool = claude[index] as ClaudeTool;
+      expect(piTool.description, spec.name).toBe(spec.description);
+      expect(piTool.label, spec.name).toBe(spec.label);
+      expect(claudeTool.description, spec.name).toBe(spec.description);
+      expect(piTool.parameters, spec.name).toBe(spec.parameters);
+      expect(normalized(claudeSchema(claudeTool)), spec.name).toEqual(normalized(spec.parameters));
+    });
+  });
+
+  it("does the same thing on both runtimes: one callback, one answer", async () => {
+    for (const spec of CREWMATE_TOOLS) {
+      const call = CALLS[spec.name];
+      if (!call) throw new Error(`no call for ${spec.name}`);
+      const piDelegate = crewmateToolDelegate();
+      const claudeDelegate = crewmateToolDelegate();
+      const piTool = createCrewmateTools(piDelegate).find((tool) => tool.name === spec.name);
+      const claudeTool = claudeCrewmateTools(claudeDelegate).find(
+        (tool) => tool.name === spec.name,
+      );
+      const piContent = await runPi(piTool as PiTool, call.params);
+      const claudeContent = await runClaude(claudeTool as ClaudeTool, call.params);
+      expect(claudeContent, spec.name).toEqual(piContent);
+      expect(
+        piDelegate.calls.map((entry) => entry.callback),
+        spec.name,
+      ).toEqual([call.callback]);
+      expect(claudeDelegate.calls, spec.name).toEqual(piDelegate.calls);
+    }
+  });
+
+  it("carries a report's declarations to the host on both runtimes (FI3-435, FI3-710)", async () => {
+    const declared: unknown[] = [];
+    const delegate = {
+      ...crewmateToolDelegate(),
+      onReport: (_text: string, _summary?: string, declaration?: unknown) => {
+        declared.push(declaration);
+        return "reported";
+      },
+    };
+    const params = {
+      text: "The captain approved the plan by reply, with the limit at 32.",
+      needs_firstmate: "start the builder on the approved plan",
+      finished: true,
+    };
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
+    const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
+    await runPi(pi as PiTool, params);
+    await runClaude(claude as ClaudeTool, params);
+    const expected = { needsFirstmate: "start the builder on the approved plan", finished: true };
+    expect(declared).toEqual([expected, expected]);
+    // The rule rides a top-level parameter, which the Claude client serves.
+    expect(
+      (
+        claudeSchema(claude as ClaudeTool) as {
+          properties: Record<string, { description?: string }>;
+        }
+      ).properties.needs_firstmate?.description,
+    ).toContain("authorizes nothing");
+  });
+
+  it("carries a capture's pictures beside its text on both runtimes", async () => {
+    const pi = createCrewmateTools(crewmateToolDelegate()).find(
+      (tool) => tool.name === "capture_panel",
+    );
+    const content = await runPi(pi as PiTool, { id: "weather" });
+    expect(content.map((part) => part.type)).toEqual(["text", "image"]);
+  });
+
+  it("serves no browser tool, with a browser or without: the browser is a command in the crewmate's shell", () => {
+    const { browser: _browser, ...without } = crewmateToolDelegate();
+    for (const delegate of [crewmateToolDelegate(), without]) {
+      const names = createCrewmateTools(delegate).map((tool) => tool.name);
+      expect(names.filter((name) => name.startsWith("browser_"))).toEqual([]);
+      expect(claudeCrewmateTools(delegate).map((tool) => tool.name)).toEqual(names);
+    }
+  });
+
+  it("serves only the tools a crewmate's callbacks bind, on both runtimes", () => {
+    const { onCard, onReport, taskId, cwd } = crewmateToolDelegate();
+    const partial = { onCard, onReport, taskId, cwd };
+    expect(createCrewmateTools(partial).map((tool) => tool.name)).toEqual(["emit_card", "report"]);
+    expect(claudeCrewmateTools(partial).map((tool) => tool.name)).toEqual(["emit_card", "report"]);
+  });
+
+  it("validates a nested card action on Claude the way Pi's schema does", () => {
+    const emitCard = claudeCrewmateTools(crewmateToolDelegate()).find(
+      (tool) => tool.name === "emit_card",
+    ) as ClaudeTool;
+    const schema = z.object(emitCard.inputSchema as Record<string, z.ZodType>);
+    expect(schema.safeParse(CALLS.emit_card?.params).success).toBe(true);
+    const unknownEffect = {
+      title: "t",
+      body: "b",
+      actions: [{ id: "a", label: "A", effect: { kind: "host", mode: "merge" } }],
+    };
+    expect(schema.safeParse(unknownEffect).success).toBe(false);
+  });
+
+  it("refuses a retired keeps_open on both runtimes rather than dropping it (contract 4.65)", async () => {
+    // A crewmate whose earlier turns declared a keep-open Revise button may
+    // send it again. Dropped, it would become a choice that closes the card.
+    const call = {
+      id: "call-1",
+      name: "emit_card",
+      arguments: {
+        title: "Plan the cache",
+        body: "<p>Cache the keys.</p><ul><li>Reads halve.</li></ul>",
+        actions: [
+          { id: "revise", label: "Revise the plan", keeps_open: true },
+          { id: "approve", label: "Approve and build", default: true },
+        ],
+      },
+    };
+    const refusal = /action "revise" passes keeps_open, which is retired.*changes by reply/;
+
+    const piDelegate = crewmateToolDelegate();
+    const piTool = createCrewmateTools(piDelegate).find(
+      (tool) => tool.name === "emit_card",
+    ) as PiTool;
+    // What Pi's agent loop hands the tool after checking the call against its schema.
+    const piArgs = validateToolArguments(piTool as never, { type: "toolCall", ...call } as never);
+    await expect(runPi(piTool, piArgs)).rejects.toThrow(refusal);
+    expect(piDelegate.calls).toEqual([]);
+
+    const claudeDelegate = crewmateToolDelegate();
+    const claudeTool = claudeCrewmateTools(claudeDelegate).find(
+      (tool) => tool.name === "emit_card",
+    ) as ClaudeTool;
+    // What the Claude client hands the tool after parsing the call with the served schema.
+    const claudeArgs = z
+      .object(claudeTool.inputSchema as Record<string, z.ZodType>)
+      .parse(call.arguments);
+    await expect(runClaude(claudeTool, claudeArgs)).rejects.toThrow(refusal);
+    expect(claudeDelegate.calls).toEqual([]);
+
+    // The same card without the retired flag goes up on both.
+    const plain = {
+      ...call.arguments,
+      actions: [
+        { id: "later", label: "Not now" },
+        { id: "approve", label: "Approve and build", default: true },
+      ],
+    };
+    await runPi(piTool, plain);
+    await runClaude(claudeTool, plain);
+    expect(piDelegate.calls.map((entry) => entry.callback)).toEqual(["onCard"]);
+    expect(claudeDelegate.calls).toEqual(piDelegate.calls);
+  });
+
+  it("takes a completion decision that declares the merge without a label on both runtimes (FI3-249)", async () => {
+    // The crewmate is told the host attaches the completion buttons and to
+    // declare no labels, so its schema must let the merge go unlabeled; the
+    // host words the buttons (`CrewSupervisor.withCompletionActions`).
+    const call = {
+      id: "call-1",
+      name: "emit_card",
+      arguments: {
+        title: "The meter reads true",
+        body: "<h3>Why</h3><p>The meter read low.</p>",
+        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+        risk: RISK,
+      },
+    };
+    // Both of a crewmate's schemas: with its task's browser and without one.
+    const delegateFor = (withBrowser: boolean) => {
+      const { browser, ...delegate } = crewmateToolDelegate();
+      return withBrowser ? { ...delegate, browser } : delegate;
+    };
+    for (const withBrowser of [true, false]) {
+      const piDelegate = delegateFor(withBrowser);
+      const piTool = createCrewmateTools(piDelegate).find(
+        (tool) => tool.name === "emit_card",
+      ) as PiTool;
+      // What Pi's agent loop hands the tool after checking the call against its schema.
+      const piArgs = validateToolArguments(piTool as never, { type: "toolCall", ...call } as never);
+      await runPi(piTool, piArgs);
+
+      const claudeDelegate = delegateFor(withBrowser);
+      const claudeTool = claudeCrewmateTools(claudeDelegate).find(
+        (tool) => tool.name === "emit_card",
+      ) as ClaudeTool;
+      // What the Claude client hands the tool after parsing the call with the served schema.
+      const claudeArgs = z
+        .object(claudeTool.inputSchema as Record<string, z.ZodType>)
+        .parse(call.arguments);
+      await runClaude(claudeTool, claudeArgs);
+
+      expect(piDelegate.calls, `browser: ${withBrowser}`).toEqual([
+        {
+          callback: "onCard",
+          input: expect.objectContaining({
+            actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+            // Its risk reaches the host whole, through either runtime's schema.
+            riskDeclaration: RISK,
+          }),
+        },
+      ]);
+      expect(claudeDelegate.calls, `browser: ${withBrowser}`).toEqual(piDelegate.calls);
+    }
+  });
+
+  it("makes a new crewmate tool one entry that both runtimes and the pin pick up", async () => {
+    const ping = crewmateTool({
+      name: "ping",
+      label: "Ping",
+      description: "Answer pong.",
+      parameters: Type.Object({
+        times: Type.Optional(Type.Integer({ minimum: 1, maximum: 3, description: "How often" })),
+      }),
+      bind: ({ onProgress }) =>
+        onProgress &&
+        (async (params) => ({ text: await onProgress(`pong x${params.times ?? 1}`) })),
+    });
+    const spec = [...CREWMATE_TOOLS, ping];
+    const delegate = crewmateToolDelegate();
+
+    const piPing = createCrewmateTools(delegate, spec).at(-1) as PiTool;
+    const claudePing = claudeCrewmateTools(delegate, spec).at(-1) as ClaudeTool;
+    expect(piPing.name).toBe("ping");
+    expect(claudePing.name).toBe("ping");
+    expect(claudePing.description).toBe("Answer pong.");
+    expect(normalized(claudeSchema(claudePing))).toEqual(normalized(ping.parameters));
+    expect(await runPi(piPing, { times: 2 })).toEqual(await runClaude(claudePing, { times: 2 }));
+    expect(delegate.calls.map((entry) => entry.input)).toEqual(["pong x2", "pong x2"]);
+
+    expect(crewmateToolManifest(spec).at(-1)).toEqual({
+      name: "ping",
+      module: CREWMATE_TOOLS_MODULE,
+    });
+  });
+
+  it("refuses a parameter Claude's tool server cannot carry rather than loosening it", () => {
+    const schema = Type.Object({ map: Type.Record(Type.String(), Type.String()) });
+    expect(() => zodShapeOf(schema)).toThrow(/parameters\.map/);
+  });
+});

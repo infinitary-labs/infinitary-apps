@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-0-alpha-70",
+      "reason": "Release review after alpha 0.4.0-alpha.70: ranks a card's choice keys, the Tasks lines to a blocking task and a reply setting a card aside as the highlights; corrects 17 notes against their changes in plain words; folds the first Crewmate tab short-window fix into the later one and the two other check-watch notes into named-run-watch. Nothing in the app changes."
+    }
+  ]
+}

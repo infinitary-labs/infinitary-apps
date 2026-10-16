@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-task-key-links",
+      "kind": "feature",
+      "title": "Task numbers in a card are links to their task",
+      "body": "When a card mentions one of your tasks by its number, like FI3-572, the number is now a link. Resting on it shows the same task summary as the Tasks panel, beside the card, and clicking it opens the task the way clicking its row in Tasks does: its waiting decision comes forward, or its record opens. A number that matches none of your tasks stays plain text.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-key-rest-routed-pointer",
+      "reason": "Test-only: the journeys rest on a task key with Chromium's routed pointer, which moves no focus, instead of Playwright's mouse; the released app is unchanged."
+    }
+  ]
+}

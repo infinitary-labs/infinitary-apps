@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "browser-reads-the-page-a-link-opened",
+      "kind": "fix",
+      "title": "A crewmate reads the page a link opened",
+      "body": "When a crewmate clicks something that opens a page without a full reload, it now reads that new page. It can read a long passage in full, and a time such as 2 hours ago comes with the exact time.",
+      "area": "tasks",
+      "noPicture": "The change is in what a crewmate reads back from a page, which is not drawn on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

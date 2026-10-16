@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "empty-premium-level-waits",
+      "kind": "fix",
+      "title": "An empty premium level says premium work waits",
+      "body": "With no model at premium, the Models board said work that asks for premium runs on high. That work actually waits. The board now says it waits until you add a model there or choose to run it lower.",
+      "area": "settings",
+      "picture": {
+        "dark": "empty-premium-level-waits-dark.webp",
+        "light": "empty-premium-level-waits-light.webp",
+        "alt": "The Models board with an empty premium level, saying work that asks for premium waits until a model is added or you choose to run it lower"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

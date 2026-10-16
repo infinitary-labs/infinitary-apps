@@ -1,0 +1,401 @@
+import { settingFrom } from "@shared/envSettings";
+import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
+import type { HostAppInfo } from "../host";
+import { hostEnv } from "../hostEnv";
+import { thisDeviceSystem } from "../platform";
+import {
+  createLinuxInstaller,
+  INSTALLS_IN_APP,
+  type LinuxInstallation,
+  type LinuxInstallPlan,
+  linuxUpdateCommand,
+  readLinuxInstallation,
+  UpdateInstallProblem,
+} from "./linuxInstall";
+import { isAlphaVersion, isNewerVersion, isStableVersion, parseSemver } from "./semver";
+import {
+  BUILDS_URL,
+  type BuildDownload,
+  buildOfferFor,
+  parseBuilds,
+  parseUpdateTargets,
+  releasesPageFor,
+  resolveUpdateChannel,
+  resolveUpdateTap,
+  TAP,
+  type TapNames,
+  targetsUrlOf,
+  upgradeCommandFor,
+} from "./updateChannels";
+
+// The app ships through GitHub Releases and the Homebrew casks built from
+// them (docs/architecture.md section 10), so "is there a newer version" is
+// answered from the PUBLIC tap (roadmap 1.2, docs/alpha.md): the product
+// repository is private through the beta gate. There is no in-app
+// auto-updater (baby-menu's pattern): the quiet indicator points at the
+// release page and the installed channel's cask upgrade command.
+//
+// Each channel's installable version is the tap's published targets file
+// (docs/alpha.md "Update channels"), written with the casks only after the
+// download was verified. Until that file exists, a stable installation
+// keeps the legacy reader of the tap's release list; an alpha one is
+// offered nothing rather than a guess.
+//
+// A Linux installation reads the builds file beside it instead, keyed by
+// system and chip (docs/alpha.md "Updates on Linux"), and is offered its
+// own package's build: a deb, an rpm or an AppImage the app installs
+// itself, after checking the build's published checksum; an Arch or NixOS
+// package the notice names the command for.
+//
+// A Mac that came to Infinitary through Firstmate 3000's cask (the old-cask
+// switch) reads that tap instead, and its notice names that cask's command,
+// so it is offered only what the command it uses installs.
+const releasesUrlOf = (tap: TapNames) =>
+  `https://api.github.com/repos/${tap.repo}/releases?per_page=100`;
+// A check at most every 4 hours.
+const DEFAULT_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const REQUEST_HEADERS = { "User-Agent": "infinitary" };
+
+export type UpdateChecker = {
+  /** Returns the cached status for the installed channel, refreshing once it goes stale. */
+  getStatus: () => Promise<UpdateStatus>;
+  /** Opens the offered version's release page (or the channel's release list). */
+  openReleasePage: () => Promise<void>;
+  /**
+   * Installs the offered version where the app installs its own updates,
+   * then starts it; answers only when it could not.
+   */
+  install: () => Promise<UpdateInstallResult>;
+};
+
+export type CreateUpdateCheckerOptions = {
+  currentVersion: string;
+  /**
+   * The installation's subscription, asked on every check: the installer
+   * owns it and may rewrite it while the app runs.
+   */
+  channel: () => UpdateChannel;
+  /**
+   * The tap the installation updates through, asked on every check:
+   * this build's own unless its installer came through the old cask.
+   */
+  tap?: () => TapNames;
+  /** The published targets file; the public tap's by default. */
+  targetsUrl?: string;
+  /** The legacy stable reader's release list; the public tap's by default. */
+  releasesUrl?: string;
+  intervalMs?: number;
+  fetchImpl?: typeof fetch;
+  now?: () => number;
+  openExternal?: (url: string) => void | Promise<void>;
+  // Dev affordance: a dev/source build's version is never behind the latest
+  // release, so the indicator would never show. When true the checker
+  // fabricates an available update for the channel (no network call) so the
+  // UI can be exercised in dev mode.
+  simulateUpdate?: boolean;
+  /**
+   * A Linux installation: read the builds file for its chip and package
+   * rather than the targets file installed Macs read.
+   */
+  linux?: LinuxInstallation;
+  /** The published builds file; the public tap's by default. */
+  buildsUrl?: string;
+  /** Installs an offered Linux build (`createLinuxInstaller`); absent, nothing installs. */
+  installLinux?: (plan: LinuxInstallPlan) => Promise<void>;
+};
+
+type Offer = { version: string; url: string | null; download?: BuildDownload | null };
+
+/**
+ * The legacy stable reader, for the rollout before the targets file
+ * exists: the newest of this app's stable releases in a GitHub
+ * releases-list payload. Only the tap's stable tags carrying a stable
+ * version count - the tap's other products, drafts, prereleases and alpha
+ * tags never do - and "newest" is the highest version, not the list order.
+ */
+export function pickNewestStableRelease(payload: unknown, tap: TapNames = TAP): Offer | null {
+  const prefix = tap.stableTagPrefix;
+  if (!Array.isArray(payload)) return null;
+  let newest: Offer | null = null;
+  for (const entry of payload) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    if (record.draft === true || record.prerelease === true) continue;
+    if (typeof record.tag_name !== "string") continue;
+    if (!record.tag_name.startsWith(prefix)) continue;
+    const version = record.tag_name.slice(prefix.length);
+    if (!isStableVersion(version)) continue;
+    if (newest && !isNewerVersion(version, newest.version)) continue;
+    const url =
+      typeof record.html_url === "string" &&
+      record.html_url.startsWith(`https://github.com/${tap.repo}/releases/`)
+        ? record.html_url
+        : null;
+    newest = { version, url };
+  }
+  return newest;
+}
+
+/** A plausible next version on the channel, for the dev affordance only. */
+function simulatedNext(currentVersion: string, channel: UpdateChannel): string {
+  const parsed = parseSemver(currentVersion);
+  if (!parsed) return channel === "alpha" ? "0.0.1-alpha.1" : "0.0.1";
+  const nextPatch = `${parsed.major}.${parsed.minor}.${Number(parsed.patch) + 1}`;
+  if (channel === "stable") return nextPatch;
+  if (isAlphaVersion(currentVersion)) {
+    const run = Number(parsed.prerelease[1]) + 1;
+    return `${parsed.major}.${parsed.minor}.${parsed.patch}-alpha.${run}`;
+  }
+  return `${nextPatch}-alpha.1`;
+}
+
+export function createUpdateChecker(options: CreateUpdateCheckerOptions): UpdateChecker {
+  const tapNow = options.tap ?? (() => TAP);
+  const targetsUrlFor = (tap: TapNames) => options.targetsUrl ?? targetsUrlOf(tap);
+  const releasesUrlFor = (tap: TapNames) => options.releasesUrl ?? releasesUrlOf(tap);
+  const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const now = options.now ?? (() => Date.now());
+  const openExternal = options.openExternal ?? (() => undefined);
+
+  // Per channel and tap, so switching installations never shows the other
+  // channel's, or the other tap's, last answer.
+  const lastGood = new Map<string, UpdateStatus>();
+  const attemptedAt = new Map<string, number>();
+  const keyOf = (channel: UpdateChannel, tap: TapNames) => `${tap.repo} ${channel}`;
+
+  const linux = options.linux;
+  const buildsUrl = options.buildsUrl ?? BUILDS_URL;
+  // The offer each channel's last good status was read from, for install().
+  const lastOffer = new Map<string, Offer | null>();
+  let installing = false;
+
+  const statusFor = (channel: UpdateChannel, tap: TapNames, offer: Offer | null): UpdateStatus => {
+    const updateAvailable = offer ? isNewerVersion(offer.version, options.currentVersion) : false;
+    const status: UpdateStatus = {
+      currentVersion: options.currentVersion,
+      channel,
+      latestVersion: offer?.version ?? null,
+      updateAvailable,
+      releaseUrl: offer?.url ?? null,
+      upgradeCommand: linux ? "" : upgradeCommandFor(channel, tap),
+    };
+    if (!linux || !offer?.download) return status;
+    const inApp = linux.package ? INSTALLS_IN_APP[linux.package] : undefined;
+    return {
+      ...status,
+      upgradeCommand: linuxUpdateCommand(linux, offer.download) ?? "",
+      ...(inApp && updateAvailable && options.installLinux
+        ? { install: { asksPassword: inApp.asksPassword } }
+        : {}),
+    };
+  };
+
+  async function readLegacyStable(tap: TapNames): Promise<Offer> {
+    const response = await fetchImpl(releasesUrlFor(tap), {
+      headers: { Accept: "application/vnd.github+json", ...REQUEST_HEADERS },
+    });
+    if (!response.ok) throw new Error(`GitHub releases request failed: ${response.status}`);
+    const release = pickNewestStableRelease(await response.json(), tap);
+    if (!release) throw new Error(`GitHub releases response has no ${tap.stableTagPrefix} tag`);
+    return release;
+  }
+
+  async function readBuildsOffer(
+    channel: UpdateChannel,
+    where: LinuxInstallation,
+  ): Promise<Offer | null> {
+    const response = await fetchImpl(buildsUrl, {
+      headers: { Accept: "application/json", ...REQUEST_HEADERS },
+    });
+    // Before the first release that carries Linux there is no file: a Linux
+    // installation is offered nothing, never a Mac's version.
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Update builds request failed: ${response.status}`);
+    const builds = parseBuilds(await response.json());
+    if (!builds) throw new Error("Update builds are invalid");
+    const offer = buildOfferFor(builds, channel, {
+      system: "linux",
+      chip: where.chip,
+      kind: where.package ?? "",
+    });
+    return offer
+      ? { version: offer.version, url: offer.releaseUrl, download: offer.download }
+      : null;
+  }
+
+  async function readOffer(channel: UpdateChannel, tap: TapNames): Promise<Offer | null> {
+    if (linux) return readBuildsOffer(channel, linux);
+    const response = await fetchImpl(targetsUrlFor(tap), {
+      headers: { Accept: "application/json", ...REQUEST_HEADERS },
+    });
+    if (response.status === 404) {
+      return channel === "stable" ? readLegacyStable(tap) : null;
+    }
+    if (!response.ok) throw new Error(`Update targets request failed: ${response.status}`);
+    const targets = parseUpdateTargets(await response.json(), tap);
+    if (!targets) throw new Error("Update targets are invalid");
+    // A valid file without this channel's target offers nothing; it never
+    // authorizes a guess from the release history.
+    const target = targets.targets[channel];
+    return target ? { version: target.version, url: target.releaseUrl } : null;
+  }
+
+  async function getStatus(): Promise<UpdateStatus> {
+    const channel = options.channel();
+    // Linux has no casks: an installation there always reads this build's own tap.
+    const tap = linux ? TAP : tapNow();
+    if (options.simulateUpdate) {
+      return {
+        ...statusFor(channel, tap, null),
+        latestVersion: simulatedNext(options.currentVersion, channel),
+        updateAvailable: true,
+        releaseUrl: releasesPageFor(channel, tap),
+      };
+    }
+    const key = keyOf(channel, tap);
+    const timestamp = now();
+    const good = lastGood.get(key);
+    const attempted = attemptedAt.get(key);
+    if (good && attempted !== undefined && timestamp - attempted < intervalMs) return good;
+    attemptedAt.set(key, timestamp);
+    if (!fetchImpl) return good ?? statusFor(channel, tap, null);
+    try {
+      const offer = await readOffer(channel, tap);
+      const status = statusFor(channel, tap, offer);
+      lastGood.set(key, status);
+      lastOffer.set(key, offer);
+      return status;
+    } catch {
+      // Update checks are best-effort. Keep the last good status if we have
+      // one, otherwise report "no update" so the shell never shows a false
+      // positive. Only successes cache: a failure retries on the next ask.
+      return good ?? statusFor(channel, tap, null);
+    }
+  }
+
+  async function openReleasePage(): Promise<void> {
+    const status = await getStatus();
+    await openExternal(
+      status.releaseUrl ?? releasesPageFor(status.channel, linux ? TAP : tapNow()),
+    );
+  }
+
+  async function install(): Promise<UpdateInstallResult> {
+    const status = await getStatus();
+    const offer = lastOffer.get(keyOf(status.channel, TAP));
+    if (!linux?.package || !status.install || !offer?.download || !options.installLinux) {
+      return { ok: false, problem: "There is no update this app can install itself." };
+    }
+    if (installing) return { ok: false, problem: "The update is already installing." };
+    installing = true;
+    try {
+      await options.installLinux({
+        package: linux.package,
+        version: offer.version,
+        channel: status.channel,
+        download: offer.download,
+        ...(linux.appImage ? { appImage: linux.appImage } : {}),
+      });
+      return { ok: true };
+    } catch (caught) {
+      return {
+        ok: false,
+        problem:
+          caught instanceof UpdateInstallProblem
+            ? caught.message
+            : "The update could not be installed, so nothing changed.",
+      };
+    } finally {
+      installing = false;
+    }
+  }
+
+  return { getStatus, openReleasePage, install };
+}
+
+export type InstalledUpdateCheckerOptions = {
+  app: Pick<HostAppInfo, "version" | "packaged" | "userDataDir"> &
+    Partial<Pick<HostAppInfo, "platform" | "resourcesDir">>;
+  openExternal: (url: string) => void | Promise<void>;
+  /**
+   * Quits and starts the app again, from `execPath` when an AppImage was
+   * replaced; absent, a Linux installation installs nothing itself.
+   */
+  relaunch?: (execPath?: string) => void;
+  /** Read for the development stand-ins below; the process's own by default. */
+  env?: NodeJS.ProcessEnv;
+  fetchImpl?: typeof fetch;
+};
+
+/**
+ * The update checker for the app installed on this computer: its version,
+ * the installer's channel marker in its own data root and, on Linux, the
+ * package it was installed from. The core makes one, and so does an app
+ * controlling Firstmate on another computer, which runs no core and still
+ * answers its own update notice (docs/view.md).
+ */
+export function createInstalledUpdateChecker(
+  options: InstalledUpdateCheckerOptions,
+): UpdateChecker {
+  const { app } = options;
+  const env = options.env ?? process.env;
+  // Dev/e2e only, like the quota endpoints: a packaged app never reads
+  // these, so its update source and installed version cannot be redirected.
+  const overrides = app.packaged
+    ? {}
+    : {
+        targetsUrl: settingFrom(env, "UPDATE_TARGETS_URL")?.trim() || undefined,
+        releasesUrl: settingFrom(env, "UPDATE_RELEASES_URL")?.trim() || undefined,
+        currentVersion: settingFrom(env, "UPDATE_CURRENT_VERSION")?.trim() || undefined,
+        buildsUrl: settingFrom(env, "UPDATE_BUILDS_URL")?.trim() || undefined,
+        linuxPackage: settingFrom(env, "UPDATE_LINUX_PACKAGE")?.trim() || undefined,
+      };
+  const currentVersion = overrides.currentVersion ?? app.version;
+  // An installed Linux app knows which package it came from; a run from
+  // source is no installation, so it reads what a Mac reads unless a stand-in
+  // names a package.
+  const resourcesDir = app.resourcesDir ?? "";
+  const linux =
+    app.platform === "linux" && (app.packaged || overrides.linuxPackage)
+      ? readLinuxInstallation({
+          chip: thisDeviceSystem(app.platform).chip ?? process.arch,
+          resourcesDir,
+          execPath: process.execPath,
+          env,
+          override: overrides.linuxPackage,
+        })
+      : undefined;
+  // The process's fetch, looked up at each download rather than kept from startup.
+  const fetchImpl: typeof fetch =
+    options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
+  return createUpdateChecker({
+    currentVersion,
+    // The installer's marker in this run's own data root: a dev or
+    // isolated run never reads the installed app's subscription. An Arch or
+    // NixOS package carries its own beside the app.
+    channel: () =>
+      resolveUpdateChannel(app.userDataDir, currentVersion, linux ? resourcesDir : undefined),
+    // A Mac that came through Firstmate 3000's cask keeps reading that tap.
+    tap: () => resolveUpdateTap(app.userDataDir, currentVersion),
+    ...(overrides.targetsUrl ? { targetsUrl: overrides.targetsUrl } : {}),
+    ...(overrides.releasesUrl ? { releasesUrl: overrides.releasesUrl } : {}),
+    ...(linux ? { linux } : {}),
+    ...(overrides.buildsUrl ? { buildsUrl: overrides.buildsUrl } : {}),
+    ...(linux && options.relaunch
+      ? {
+          installLinux: createLinuxInstaller({
+            dataRoot: app.userDataDir,
+            fetchImpl,
+            env: () => hostEnv(),
+            relaunch: options.relaunch,
+          }),
+        }
+      : {}),
+    openExternal: options.openExternal,
+    ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    // Dev/source builds are never behind a release, so force the indicator
+    // on there to make it visible while developing; e2e opts out.
+    simulateUpdate: !app.packaged && settingFrom(env, "SIMULATE_UPDATE") !== "0",
+  });
+}

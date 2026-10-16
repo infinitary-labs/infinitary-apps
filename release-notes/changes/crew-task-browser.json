@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crew-task-browser",
+      "reason": "Internal, behind the development-only task browser gate: a crewmate on this Mac gets its task's own browser for the project's local pages, and an installed app shows and offers none of it."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-lessons-moved-to-docs",
+      "reason": "Moves maintenance lessons the crew recorded as knowledge into the project's documents and code comments before those entries are retired; documentation and comments only, nothing a person notices."
+    }
+  ]
+}

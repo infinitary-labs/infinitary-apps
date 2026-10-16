@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "response-card-lint-props",
+      "reason": "The design lint's list of card props now matches the card component. Nothing in the app changes."
+    }
+  ]
+}

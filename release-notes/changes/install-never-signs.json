@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "install-never-signs",
+      "reason": "How the project itself is developed: installing the project's packages no longer signs the local development build or opens its signing keychain; running the development build does. Nothing in the shipped app changes."
+    }
+  ]
+}

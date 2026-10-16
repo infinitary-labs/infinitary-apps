@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "activity-newest-last-window",
+      "reason": "Internal: the window now keeps a newest-last panel's end in sight instead of Activity asking it to scroll; the visible behavior is unchanged."
+    }
+  ]
+}

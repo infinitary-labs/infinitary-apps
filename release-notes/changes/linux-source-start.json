@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-source-start",
+      "reason": "Internal Linux foundation: source startup, platform seam and isolated starter journeys. Linux packages, desktop conventions and public releases remain later pieces of the accepted plan."
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+<!-- part: board. Draws a chess board or a number line into an element. Paste once per card, before quiz. -->
+<script>
+window.FMLesson = window.FMLesson || {};
+(function (L) {
+  var NS = "http://www.w3.org/2000/svg";
+  var GLYPH = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
+    k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+  function node(name, attrs, parent) {
+    var el = document.createElementNS(NS, name);
+    for (var key in attrs) el.setAttribute(key, attrs[key]);
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+  // spec: { pieces: [["R","a4"]], mark: ["a8"], pick: true }. onPick(square) runs when pick is set.
+  L.drawBoard = function (el, spec, onPick) {
+    var size = 25, files = "abcdefgh";
+    el.textContent = "";
+    var svg = node("svg", { viewBox: "0 0 " + size * 8 + " " + size * 8, width: "200", role: "img",
+      "aria-label": spec.label || "A chess board" }, el);
+    for (var rank = 8; rank >= 1; rank--) for (var file = 0; file < 8; file++) {
+      var name = files[file] + rank, x = file * size, y = (8 - rank) * size;
+      var dark = (file + rank) % 2 === 0;
+      var cell = node("g", { "data-square": name }, svg);
+      node("rect", { x: x, y: y, width: size, height: size,
+        fill: dark ? "var(--accent-dim)" : "var(--bg-1)", stroke: "var(--line-2)", "stroke-width": "0.5" }, cell);
+      if ((spec.mark || []).indexOf(name) >= 0)
+        node("circle", { cx: x + size / 2, cy: y + size / 2, r: "6", fill: "var(--accent)" }, cell);
+      if (spec.pick) {
+        cell.setAttribute("tabindex", "0");
+        cell.setAttribute("role", "button");
+        cell.setAttribute("aria-label", "Square " + name);
+        cell.style.cursor = "pointer";
+        cell.addEventListener("click", function () { onPick(this.getAttribute("data-square")); });
+        cell.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onPick(this.getAttribute("data-square")); }
+        });
+      }
+    }
+    (spec.pieces || []).forEach(function (piece) {
+      var f = files.indexOf(piece[1][0]), r = Number(piece[1][1]);
+      var text = node("text", { x: f * size + size / 2, y: (8 - r) * size + size * 0.78,
+        "text-anchor": "middle", "font-size": "21", fill: "var(--fg-1)", "pointer-events": "none" }, svg);
+      text.textContent = GLYPH[piece[0]] || piece[0];
+    });
+  };
+  // spec: { min: 0, max: 1, step: 0.25, marks: [{ at: 0.5, label: "1/2" }] }
+  L.drawLine = function (el, spec) {
+    el.textContent = "";
+    var w = 300, pad = 20, span = spec.max - spec.min;
+    var svg = node("svg", { viewBox: "0 0 " + w + " 56", width: "260", role: "img",
+      "aria-label": spec.label || "A number line" }, el);
+    var at = function (value) { return pad + ((value - spec.min) / span) * (w - 2 * pad); };
+    node("line", { x1: pad, y1: 28, x2: w - pad, y2: 28, stroke: "var(--fg-2)", "stroke-width": "1.5" }, svg);
+    for (var value = spec.min; value <= spec.max + 1e-9; value += spec.step) {
+      node("line", { x1: at(value), y1: 22, x2: at(value), y2: 34, stroke: "var(--fg-2)" }, svg);
+      var tick = node("text", { x: at(value), y: 50, "text-anchor": "middle", "font-size": "11", fill: "var(--fg-3)" }, svg);
+      tick.textContent = String(Math.round(value * 1000) / 1000);
+    }
+    (spec.marks || []).forEach(function (mark) {
+      node("circle", { cx: at(mark.at), cy: 28, r: "6", fill: "var(--accent)" }, svg);
+      if (mark.label) {
+        var label = node("text", { x: at(mark.at), y: 14, "text-anchor": "middle", "font-size": "12", fill: "var(--fg-1)" }, svg);
+        label.textContent = mark.label;
+      }
+    });
+  };
+})(window.FMLesson);
+</script>

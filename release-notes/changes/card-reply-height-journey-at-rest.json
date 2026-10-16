@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-reply-height-journey-at-rest",
+      "reason": "Internal, tests only: the card reply height journey reads the reply box once the card has finished growing into place, so the arrival motion no longer shows up as a height change in the Mac checks. No shipped behavior changed."
+    }
+  ]
+}

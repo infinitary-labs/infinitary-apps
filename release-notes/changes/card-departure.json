@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-departure",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Cards close without waiting for the next card",
+      "body": "Choosing Build it or Approve and build no longer leaves a frozen card while the next card loads. Closing a card works the same way.",
+      "noPicture": "The fix changes when a card disappears, not a static view; a still picture cannot show the removed wait.",
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

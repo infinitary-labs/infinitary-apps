@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "command-mac-held-on-local-network",
+      "reason": "Devices says why a Mac added by a command never reached this Mac on the local network, where macOS holds its work's dial until someone there allows it, and offers Add it by its address; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

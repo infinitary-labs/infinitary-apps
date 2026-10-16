@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-recorder-frames",
+      "reason": "Dev tooling only: the demo recorder encodes the screencast's own frames instead of a re-encoded WebM, so nothing in the app changes."
+    }
+  ]
+}

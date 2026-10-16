@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "claude-one-percent-utilization",
+      "kind": "fix",
+      "title": "Claude at 1% used no longer reads as used up",
+      "body": "In one of the forms Claude reports its allowance, a session at 1% used was shown as used up, with 0% left. It now shows 99% left.",
+      "area": "subscriptions",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+name: Keep the Mac awake
+description: Hold a job-lifetime idle-sleep assertion tied to the runner worker.
+
+runs:
+  using: composite
+  steps:
+    - name: Assert idle sleep for the job
+      shell: bash
+      # A self-hosted Mac can idle-sleep during a long release job (a dry run
+      # lost its runner after about 11 minutes). -w ties this assertion to the
+      # runner worker that launched this shell, so it covers the rest of the
+      # job and releases when the worker exits, including a failed step. -s
+      # applies on AC power; -i covers idle sleep otherwise. This is the one
+      # definition both macOS release jobs run; do not copy the command.
+      run: |
+        caffeinate -is -w "$PPID" >/dev/null 2>&1 &

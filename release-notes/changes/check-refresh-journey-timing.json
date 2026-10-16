@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "check-refresh-journey-timing",
+      "reason": "Makes the end-to-end test of the quiet check refresh wait for the refresh itself instead of five minutes of real time, so the alpha's Mac checks stop missing it. No shipped behavior changed."
+    }
+  ]
+}

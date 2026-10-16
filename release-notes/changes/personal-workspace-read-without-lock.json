@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "personal-workspace-read-without-lock",
+      "reason": "Internal fix with no on-screen change: the host's background check of which panels a live build touched no longer takes git's index lock, so the commit it makes when the build reports can no longer fail on that lock and skip a save point. The panel looked and behaved the same either way; the panel build journey now names the commit failure if one ever recurs."
+    }
+  ]
+}

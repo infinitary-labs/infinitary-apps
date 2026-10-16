@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "folded-panel-tabs",
+      "kind": "fix",
+      "title": "Show panels appears only when the panels can come back",
+      "body": "When you read a card without its replies open, Show panels appears only if the panels have room to return. Widen the window or close the card to see the panels again.",
+      "area": "cards",
+      "picture": {
+        "dark": "folded-panel-tabs-dark.webp",
+        "light": "folded-panel-tabs-light.webp",
+        "alt": "A card at the smallest window without inactive Show panels tabs at its edges"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

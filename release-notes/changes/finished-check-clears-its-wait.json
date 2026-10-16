@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "finished-check-clears-its-wait",
+      "kind": "fix",
+      "title": "A finished check stops holding the work it was run for",
+      "body": "When Firstmate starts a check for another task and the check finishes, Firstmate now closes it as answered and names the task it was for. That task stops waiting on it, so its merge is no longer held, and a passing check is never closed as discarded.",
+      "area": "tasks",
+      "picture": {
+        "dark": "finished-check-clears-its-wait-dark.webp",
+        "light": "finished-check-clears-its-wait-light.webp",
+        "alt": "A finished check's task record reading Done and Answered, naming the build its answer carries on in"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

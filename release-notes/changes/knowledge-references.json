@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-references",
+      "kind": "feature",
+      "title": "Alpha only: see the findings behind an answer",
+      "body": "In alpha builds, an answer that relies on what the crew learned shows each finding it used as a small link, with a dot that says whether the finding was checked or needs another look. Open one to read its evidence in the Knowledge browser. A task's record now lists the findings its work relied on, and opens the exact revision it used beside the current one. Ask about this, in the browser, starts a question for Firstmate in the message box for you to finish; nothing is sent until you send it. Stable releases do not have it.",
+      "area": "cards",
+      "picture": {
+        "dark": "knowledge-references-dark.webp",
+        "light": "knowledge-references-light.webp",
+        "alt": "An answer card listing the two findings it relies on, each as a small link led by a dot: one checked, one with differing evidence"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

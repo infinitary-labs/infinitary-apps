@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ready-plan-starts-the-next-step",
+      "kind": "fix",
+      "title": "Agreeing to a plan starts the next safe step",
+      "body": "A ready plan's main button now starts the next step that is safe to start, whether that step changes your project or carries out an agreed operation. A later step that still needs you, such as a sign-in, waits. Save and defer and Abandon stay the other choices.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes by itself. The difference is which button a ready plan offers and that choosing it starts the next safe step.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "prototype-is-a-plan",
+      "kind": "improvement",
+      "title": "A prototype is now a plan you can play with",
+      "body": "When you ask for a prototype, a mock-up or something to try, Firstmate now always opens a plan whose card you can play with. The card ends in Approve and build, Save and defer and Abandon, like every plan. Approve and build hands the plan and the settings you left on it to a new task that builds it.",
+      "area": "cards",
+      "picture": {
+        "dark": "prototype-is-a-plan-dark.webp",
+        "light": "prototype-is-a-plan-light.webp",
+        "alt": "A plan card with a tilt control to try, ending in Abandon, Save and defer and Approve and build"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-save-checks-everything",
+      "kind": "improvement",
+      "title": "Adding a custom API is one form, and Save checks it",
+      "body": "Add and Edit open the same short form, with no network question: Firstmate reads from the address whether the server is on this Mac, your organization's network or the public internet. The key is optional, Fetch from server lists the server's models, and each model takes one line. Save reaches the server and tests each model, and anything wrong stays beside the field to fix, such as a refused key or an address missing /v1, which one press corrects. Crew levels for custom models are set on the Models board.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-api-save-checks-everything-dark.webp",
+        "light": "custom-api-save-checks-everything-light.webp",
+        "alt": "The Add a custom API form after Save: one model's line asks for its sizes, the other checked, with the address's network read as On this Mac"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

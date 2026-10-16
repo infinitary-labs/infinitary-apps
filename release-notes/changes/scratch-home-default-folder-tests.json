@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "scratch-home-default-folder-tests",
+      "reason": "Tests only: the offline tools' default data folder is read under a scratch home, so the tests no longer depend on which app folders this computer has."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-reports-in-activity",
+      "kind": "improvement",
+      "title": "Read every report from a task's Activity",
+      "body": "Open any line in Activity to read that report in full, next to how long ago it was. Earlier reports and a finished answer open the same way, and the separate Full report row is gone.",
+      "highlight": 1,
+      "area": "tasks",
+      "picture": {
+        "dark": "task-reports-in-activity-dark.webp",
+        "light": "task-reports-in-activity-light.webp",
+        "alt": "A task's Activity with an earlier report opened under its line, showing its whole text"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

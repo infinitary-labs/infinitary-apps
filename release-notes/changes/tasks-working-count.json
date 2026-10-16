@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "tasks-working-count",
+      "kind": "fix",
+      "title": "The Tasks working count counts only working tasks",
+      "body": "Parents and other tasks shown for context no longer increase the working count. The expanded Tasks panel still keeps the task tree together.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-working-count-dark.webp",
+        "light": "tasks-working-count-light.webp",
+        "alt": "The collapsed Tasks panel showing one working task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

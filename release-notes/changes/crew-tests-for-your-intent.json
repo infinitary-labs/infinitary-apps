@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crew-tests-for-your-intent",
+      "kind": "improvement",
+      "title": "Crewmates write tests only for what you asked for",
+      "body": "A crewmate now writes a test only for something you asked for, a standing rule of yours, or a bug it is fixing, and it treats a failing test as a possible bug before changing the test. If your project's own instructions say how tests are written and run, the crewmate follows those instead.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in which tests a crewmate writes and how it repairs them.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

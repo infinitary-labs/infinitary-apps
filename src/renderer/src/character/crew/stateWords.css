@@ -1,0 +1,53 @@
+/* The crewmate's state words (docs/first-launch.md "The crewmate's state
+   words"): one small word directly under a crewmate. --text-xs, --fg-2,
+   4px under the solid - the model name's own treatment, mirrored below - and
+   never the state's color: the color stays on the solid. Like the names, the
+   text is counter-scaled so a fitted formation never shrinks it. It fades in
+   over --dur-med and out over --dur-slow; under reduced motion the fade is
+   opacity alone. */
+.fm-crew-state-words {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fm-crew-state-word-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.fm-crew-state-word {
+  position: absolute;
+  transform-origin: 50% 0;
+  transform: translate(-50%, calc(var(--crew-state-word-gap) / var(--crew-fit-scale)))
+    scale(calc(1 / var(--crew-fit-scale)));
+  margin: 0;
+  padding: 0;
+  color: var(--fg-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--crew-state-word-fade-out) var(--ease-out);
+}
+.fm-crew-state-word[data-on="true"] {
+  opacity: 1;
+  animation: fm-crew-state-word-in var(--crew-state-word-fade-in) var(--ease-out);
+}
+@keyframes fm-crew-state-word-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fm-crew-state-word {
+    transition-duration: var(--dur-fade);
+    transition-timing-function: linear;
+  }
+  .fm-crew-state-word[data-on="true"] {
+    animation-duration: var(--dur-fade);
+    animation-timing-function: linear;
+  }
+}

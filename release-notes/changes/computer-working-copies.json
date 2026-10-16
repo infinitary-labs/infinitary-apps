@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "computer-working-copies",
+      "reason": "Internal, behind the development-only multi-machine gate: a task on a computer that runs work gets a working copy cloned there, the home opens, checks and merges its change after bringing its branch home over the connection, and its unmerged work comes home before that computer deletes its copy. An installed app shows and offers none of it."
+    }
+  ]
+}

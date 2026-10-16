@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-diagnostics",
+      "kind": "improvement",
+      "title": "A crewmate can look into why a web page misbehaves",
+      "body": "In a task's browser, a crewmate can now read the messages a page writes about itself and the list of what the page loaded, with whether each part loaded or failed. After you take control and hand it back, or when it uses a sign-in you saved, it sees only how many messages there were, not their words.",
+      "area": "tasks",
+      "noPicture": "This adds guarded text answers for crewmates, with no change to a visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

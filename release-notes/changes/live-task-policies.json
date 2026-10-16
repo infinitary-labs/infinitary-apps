@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "live-task-policies",
+      "kind": "feature",
+      "title": "Change how an open task finishes",
+      "body": "Ask Firstmate to change an open task's delivery, merging or care, or return it to your project's settings. Details shows each current choice and where it came from. A change does not start queued work, and checks and other holds still apply before a merge.",
+      "area": "tasks",
+      "picture": {
+        "dark": "live-task-policies-dark.webp",
+        "light": "live-task-policies-light.webp",
+        "alt": "The task's Details shows Delivery, Merging and Care, each marked This task, with a reminder to ask Firstmate to change them."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

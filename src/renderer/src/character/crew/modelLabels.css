@@ -1,0 +1,62 @@
+/* Model text follows each painted glyph, never its spin or heat. Counter-scale
+   the text when crowded crew fit to a short window: 11 px remains 11 px.
+   The name stays plain text: no plate behind it, including while pointed at
+   or focused, so the graph lines stay visible through the gap.
+   A name fades in by opacity alone over --dur-med each time it shows: hidden
+   names are display: none, which replays the animation, and CrewOrbit
+   replays it when a reroute renames the button. Under reduced motion it
+   keeps an even --dur-fade, like the state word. Hiding is immediate. */
+.fm-crew-model-names {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+  pointer-events: none;
+}
+.fm-crew-model-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.fm-crew-model-anchor:not([data-painted]) {
+  visibility: hidden;
+}
+.fm-crew-model-name {
+  position: absolute;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, calc(-100% - var(--crew-name-gap) / var(--crew-fit-scale)))
+    scale(calc(1 / var(--crew-fit-scale)));
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  animation: fm-crew-model-name-in var(--dur-med) var(--ease-out);
+}
+@keyframes fm-crew-model-name-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fm-crew-model-name {
+    animation-duration: var(--dur-fade);
+    animation-timing-function: linear;
+  }
+}
+.fm-crew-model-name:hover,
+.fm-crew-model-name:focus-visible {
+  color: var(--fg-1);
+  outline: none;
+}

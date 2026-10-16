@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "run-work-with-no-window",
+      "reason": "Internal: the app can start with no window (`<app> work <command>`) to run work for another Mac, but nothing uses that mode yet, so nothing a person sees or receives changes. The note goes with the piece that puts it to use."
+    }
+  ]
+}

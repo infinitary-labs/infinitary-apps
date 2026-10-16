@@ -1,0 +1,110 @@
+import { describe, expect, it } from "vitest";
+import {
+  backendForProvider,
+  CLAUDE_PROVIDER_ID,
+  isOfferedProvider,
+  isPiProvider,
+  isRetiredProvider,
+  PROVIDER_CATALOG,
+  providerServesRole,
+} from "./providers";
+import { isSensedProvider, QUOTA_TO_PI_PROVIDER, quotaSnapshotViewSchema } from "./quota";
+
+describe("PROVIDER_CATALOG", () => {
+  it("offers the four managed providers, Claude the one outside Pi", () => {
+    expect(PROVIDER_CATALOG.map((entry) => entry.id)).toEqual([
+      "openai-codex",
+      "xai",
+      CLAUDE_PROVIDER_ID,
+      "openrouter",
+    ]);
+    expect(PROVIDER_CATALOG.map((entry) => entry.name)).toEqual([
+      "Codex",
+      "Grok",
+      "Claude",
+      "OpenRouter",
+    ]);
+    expect(PROVIDER_CATALOG.find((entry) => entry.id === "openrouter")?.tier).toBe("key");
+    // The bare "anthropic" Pi provider is still not offered: a Claude
+    // subscription is reachable only through Claude's own client, never
+    // through Pi (its OAuth is refused for third-party clients).
+    expect(PROVIDER_CATALOG.some((entry) => entry.id === "anthropic")).toBe(false);
+    expect(isOfferedProvider("anthropic")).toBe(false);
+    expect(isOfferedProvider(CLAUDE_PROVIDER_ID)).toBe(true);
+    expect(isOfferedProvider("openai-codex")).toBe(true);
+    expect(isOfferedProvider("openrouter")).toBe(true);
+  });
+
+  it("serves every subscription through Pi, Claude the sole exception (captain, 2026-09-24)", () => {
+    expect(PROVIDER_CATALOG.filter((entry) => entry.backend !== "pi").map((e) => e.id)).toEqual([
+      CLAUDE_PROVIDER_ID,
+    ]);
+    // Cursor left with Kimi and Copilot: not offered, and a stored account
+    // for it is retired rather than read as a Pi provider.
+    expect(isOfferedProvider("cursor")).toBe(false);
+    expect(isRetiredProvider("cursor")).toBe(true);
+    expect(isPiProvider("cursor")).toBe(false);
+  });
+
+  it("routes each provider to the backend that can actually reach it", () => {
+    expect(backendForProvider("openai-codex")).toBe("pi");
+    expect(backendForProvider("openrouter")).toBe("pi");
+    expect(backendForProvider(CLAUDE_PROVIDER_ID)).toBe("claude");
+    expect(isPiProvider("openai-codex")).toBe(true);
+    expect(isPiProvider(CLAUDE_PROVIDER_ID)).toBe(false);
+    // An unknown id defaults to Pi but is not offered anywhere.
+    expect(backendForProvider("mystery")).toBe("pi");
+    expect(isPiProvider("mystery")).toBe(false);
+  });
+
+  it("lets every offered provider run the Firstmate and crew, Claude included (W1)", () => {
+    for (const entry of PROVIDER_CATALOG) {
+      expect(providerServesRole(entry.id, "firstmate")).toBe(true);
+      expect(providerServesRole(entry.id, "crewmate")).toBe(true);
+    }
+    expect(providerServesRole(CLAUDE_PROVIDER_ID, "firstmate")).toBe(true);
+    // A custom provider from models.json is outside the catalog but rides
+    // the base Pi runtime, so it serves both roles; a retired one serves none.
+    expect(providerServesRole("fm-mock", "firstmate")).toBe(true);
+    expect(providerServesRole("fm-mock", "crewmate")).toBe(true);
+    expect(providerServesRole("cursor", "firstmate")).toBe(false);
+  });
+});
+
+describe("quota mapping", () => {
+  it("maps Claude quota to its own provider, never to a Pi one", () => {
+    expect(QUOTA_TO_PI_PROVIDER.claude).toBe(CLAUDE_PROVIDER_ID);
+    expect(QUOTA_TO_PI_PROVIDER.claude).not.toBe("anthropic");
+    expect(QUOTA_TO_PI_PROVIDER.codex).toBe("openai-codex");
+    expect(QUOTA_TO_PI_PROVIDER.grok).toBe("xai");
+    expect(QUOTA_TO_PI_PROVIDER.cursor).toBeUndefined();
+    expect(QUOTA_TO_PI_PROVIDER.copilot).toBeUndefined();
+    expect(QUOTA_TO_PI_PROVIDER.kimi).toBeUndefined();
+  });
+
+  it("marks only sensed providers as having an allowance reader", () => {
+    expect(isSensedProvider("openai-codex")).toBe(true);
+    expect(isSensedProvider("xai")).toBe(true);
+    expect(isSensedProvider(CLAUDE_PROVIDER_ID)).toBe(true);
+    expect(isSensedProvider("cursor")).toBe(false);
+    expect(isSensedProvider("openrouter")).toBe(false);
+    expect(isSensedProvider("mystery")).toBe(false);
+  });
+
+  it("still parses a persisted Claude quota snapshot without crashing", () => {
+    const parsed = quotaSnapshotViewSchema.parse({
+      generatedAt: "2026-08-13T20:00:00Z",
+      fetchedAt: 1,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          status: "ok",
+          stale: false,
+          windows: [],
+        },
+      ],
+    });
+    expect(parsed.providers[0]?.provider).toBe("claude");
+  });
+});

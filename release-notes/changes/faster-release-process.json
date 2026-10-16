@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "faster-release-process",
+      "reason": "Changes how releases are cut and promoted: an alpha from one reviewed candidate checked once, a signing job that no longer repeats the checks, shorter end-to-end journeys, and stable promotions with no pull request. Nothing in the app changes."
+    }
+  ]
+}

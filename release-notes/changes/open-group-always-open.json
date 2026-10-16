@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "open-group-always-open",
+      "reason": "Test helper only: the e2e openGroup helper treats a Tasks group the panel always shows, such as Queued, as open instead of waiting for a collapse control it no longer has. No shipped behavior changed."
+    }
+  ]
+}

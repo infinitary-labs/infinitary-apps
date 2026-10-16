@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "unlisted-models-by-name-hint",
+      "kind": "fix",
+      "title": "An empty Not in use list points to models you can add by name",
+      "body": "In Settings → Intelligence → Models, an empty Not in use list said every model sat in a level, even when your subscriptions serve older models the board does not show. It now says you can find more by name under Add model. With only Grok signed in, for example, that is how Grok 4.6, 4.5 and 4.3 are reached.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "unlisted-models-by-name-hint-dark.webp",
+        "light": "unlisted-models-by-name-hint-light.webp",
+        "alt": "The Models board with Grok 4.7 in medium and an empty Not in use list pointing to Add model for more models by name"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

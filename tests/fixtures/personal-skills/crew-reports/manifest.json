@@ -1,0 +1,7 @@
+{
+  "title": "Reports",
+  "placement": { "x": "right", "y": "top" },
+  "size": "content",
+  "order": 40,
+  "reads": ["feed.recent"]
+}

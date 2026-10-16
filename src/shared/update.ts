@@ -1,0 +1,53 @@
+import { z } from "zod";
+
+/**
+ * Which updates an installation is offered (docs/alpha.md "Update
+ * channels"): the installed cask remembers it, independently of the
+ * version running.
+ */
+export const updateChannelSchema = z.enum(["stable", "alpha"]);
+export type UpdateChannel = z.infer<typeof updateChannelSchema>;
+
+export const updateStatusSchema = z.object({
+  currentVersion: z.string(),
+  /** The subscription the status was read for. */
+  channel: updateChannelSchema,
+  latestVersion: z.string().nullable(),
+  updateAvailable: z.boolean(),
+  releaseUrl: z.string().nullable(),
+  /**
+   * The command that installs the offered version by hand, shown selectable
+   * in the panel: the installed channel's cask upgrade on a Mac, the package
+   * manager's on Arch or NixOS, or the system installer's when installing
+   * from the app could not finish. Empty when there is none.
+   */
+  upgradeCommand: z.string(),
+  /**
+   * Present when the app installs the offered version itself (a deb, an rpm
+   * or an AppImage on Linux; docs/alpha.md "Updates on Linux").
+   */
+  install: z
+    .object({
+      /** The system asks for the person's password before it installs. */
+      asksPassword: z.boolean(),
+    })
+    .optional(),
+});
+export type UpdateStatus = z.infer<typeof updateStatusSchema>;
+
+/** How installing the offered version ended, when the app is still running to say. */
+export const updateInstallResultSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({
+    ok: z.literal(false),
+    /** What happened and what to do, in the panel's own words. */
+    problem: z.string(),
+  }),
+]);
+export type UpdateInstallResult = z.infer<typeof updateInstallResultSchema>;
+
+export const presenceSettingsSchema = z.object({
+  startAtLogin: z.boolean(),
+  showInDock: z.boolean(),
+});
+export type PresenceSettings = z.infer<typeof presenceSettingsSchema>;

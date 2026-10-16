@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "held-task-says-why",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task that waits to start says what it is waiting for",
+      "body": "When you ask for a premium model and none has allowance left, the task waits instead of starting on a lesser model. Its details now say so, and that it starts by itself once a premium model has allowance, or sooner if you ask Firstmate. A retry on a stronger model says the same for the model it needs. A task Firstmate set to start later says what it waits for: a model's allowance, your plan's allowance, or a time. Before, each of these said no reason had been reported yet.",
+      "picture": {
+        "dark": "held-task-says-why-dark.webp",
+        "light": "held-task-says-why-light.webp",
+        "alt": "A queued task's details titled Waiting for a premium model, saying no premium model has allowance now and that it starts by itself once one does."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

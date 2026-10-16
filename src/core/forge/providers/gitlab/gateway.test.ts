@@ -1,0 +1,293 @@
+import { createServer, type IncomingMessage } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { GithubGatewayService } from "../../../orchestrator/githubGateway";
+import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
+import { bindTool } from "../../../session/tools";
+import { openInMemoryDatabase } from "../../../storage/db";
+import { seedTask } from "../../../tasks/seedTask";
+import { TaskService } from "../../../tasks/taskService";
+import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { GitLabForge } from "./gitlabForge";
+
+/**
+ * The crewmate's API tools on a GitLab project (`docs/forge.md`, "The
+ * gateway"), driven through the tool entries, the gateway service and the
+ * real GitLab forge over a local HTTP stand-in: GitLab's own paths, the key
+ * made there, project-scoped writes, and a job retry that arms the check
+ * watch the way a GitHub rerun does.
+ */
+
+const KEY = "glpat-fixture-owned-by-app";
+const HEAD = "a".repeat(40);
+const PROJECT = "group/sub/field-notes";
+const OWN = `/projects/${encodeURIComponent(PROJECT)}`;
+const cleanup: (() => Promise<void> | void)[] = [];
+afterEach(async () => {
+  for (const close of cleanup.splice(0)) await close();
+});
+
+type Seen = { method: string; path: string; key?: string; body: string };
+
+async function fixture(
+  options: {
+    host?: string;
+    signedOut?: boolean;
+    oversize?: boolean;
+    /** What GitLab answers a write to the project's notes. */
+    notesStatus?: number;
+    keyRefused?: boolean;
+  } = {},
+) {
+  const seen: Seen[] = [];
+  let base = "";
+  const server = createServer(async (req: IncomingMessage, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const key = req.headers.authorization?.replace(/^Bearer /, "");
+    seen.push({
+      method: req.method ?? "",
+      path: req.url ?? "",
+      key: typeof key === "string" ? key : undefined,
+      body,
+    });
+    const url = new URL(req.url ?? "/", base);
+    const path = url.pathname.replace(/^\/api\/v4/, "");
+    const json = (value: unknown, status = 200, headers: Record<string, string> = {}) => {
+      res.writeHead(status, {
+        "Content-Type": "application/json",
+        "x-request-id": "REQ-GL-1",
+        "ratelimit-remaining": "1999",
+        "ratelimit-reset": "1760000000",
+        ...headers,
+      });
+      res.end(JSON.stringify(value));
+    };
+    if (path === "/user") {
+      if (options.keyRefused) json({ message: "401 Unauthorized" }, 401);
+      else json({ username: "octo" });
+    } else if (path === `${OWN}/merge_requests`) {
+      json([{ iid: 1 }], 200, {
+        link: `<${base}/api/v4${OWN}/merge_requests?id=group%2Fsub%2Ffield-notes&page=2&per_page=1>; rel="next"`,
+      });
+    } else if (path === "/projects/acme%2Fsite/issues" || path === "/projects/42/issues") {
+      json([{ iid: 5, title: "elsewhere" }]);
+    } else if (path === "/projects" || path === "/search") {
+      json([{ path_with_namespace: "acme/site" }]);
+    } else if (path === `${OWN}/big`) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(options.oversize ? "x".repeat(300 * 1024) : "{}");
+    } else if (path === `${OWN}/merge_requests/1/notes` && req.method === "POST") {
+      if (options.notesStatus) json({ message: "401 Unauthorized" }, options.notesStatus);
+      else json({ id: 7 }, 201);
+    } else if (path === `${OWN}/jobs/20/retry` && req.method === "POST") {
+      json({ id: 21, status: "pending" }, 201);
+    } else if (path === `${OWN}/redirect`) {
+      res.writeHead(302, { location: "https://elsewhere.example/" });
+      res.end();
+    } else json({ message: "404 Not Found" }, 404);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  cleanup.push(() => {
+    server.closeAllConnections();
+    return new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+  const onSignInRejected = vi.fn();
+  const host = options.host ?? "gitlab.com";
+  const forge = new GitLabForge(
+    { kind: "gitlab", host, owner: "group/sub", name: "field-notes", dir: "/unused" },
+    {
+      apiBaseUrl: `${base}/api/v4`,
+      onSignInRejected,
+      token: async () => (options.signedOut ? undefined : KEY),
+    },
+  );
+  const dir = scratchDir("fm-gitlab-gateway-");
+  const db = openInMemoryDatabase();
+  cleanup.push(() => {
+    db.close();
+  });
+  db.prepare("INSERT INTO repos (id, path, name, added_at, origin) VALUES (?, ?, ?, ?, ?)").run(
+    "repo-1",
+    dir,
+    "field-notes",
+    1,
+    `https://${host}/${PROJECT}.git`,
+  );
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: "task-1",
+    title: "Fix",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-1",
+  });
+  const readChecks = vi.fn(async () => {
+    tasks.recordDelivery("task-1", { ciWatch: { head: HEAD, since: 1 } as never });
+    return "checks pending";
+  });
+  const service = new GithubGatewayService({
+    tasks,
+    repos: new RepoRegistry(db, join(dir, "fleet")),
+    forgeFor: () => forge,
+    readChecks,
+    now: () => 1234,
+    sleep: async () => {},
+  });
+  const read = bindTool(GITHUB_READ_TOOL, { onGithubRead: (i) => service.read("task-1", i) });
+  const write = bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write("task-1", i) });
+  return {
+    read,
+    write,
+    seen,
+    tasks,
+    readChecks,
+    onSignInRejected,
+    reserve: () =>
+      tasks.recordDelivery("task-1", {
+        headSha: HEAD,
+        ci: "red",
+        ciRepair: {
+          failures: [{ headSha: HEAD, checks: ["test"] }],
+          diagnoses: [],
+          repairs: [],
+          rerun: { headSha: HEAD, check: "test", evidence: "flake" },
+        },
+      }),
+  };
+}
+
+describe("the gateway on a GitLab project, through crewmate tools and the key made there", () => {
+  it("reads the project by its encoded path with the key, and hands back GitLab's ids, allowance and next page", async () => {
+    const { read, seen } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: "/projects/group%2Fsub%2Ffield-notes/merge_requests?per_page=1" }))
+        .text,
+    );
+    expect(answer).toMatchObject({
+      status: 200,
+      ok: true,
+      requestId: "REQ-GL-1",
+      rateLimit: { remaining: 1999, resetAt: new Date(1_760_000_000_000).toISOString() },
+      nextPath: `${OWN}/merge_requests?id=group%2Fsub%2Ffield-notes&page=2&per_page=1`,
+      body: [{ iid: 1 }],
+    });
+    expect(seen[0]).toMatchObject({
+      method: "GET",
+      path: `/api/v4${OWN}/merge_requests?per_page=1`,
+      key: KEY,
+    });
+    expect(JSON.stringify(answer)).not.toContain("glpat-");
+  });
+
+  it("reads other projects, the project list and search, and keeps a write there for the captain", async () => {
+    const { read, write, seen } = await fixture();
+    for (const path of [
+      "/projects/acme%2Fsite/issues",
+      "/projects/42/issues",
+      "/projects?membership=true",
+      "/search?scope=projects&search=site",
+    ]) {
+      expect(JSON.parse((await read.run({ path })).text)).toMatchObject({ status: 200 });
+    }
+    const before = seen.length;
+    for (const path of ["/projects/acme%2Fsite/issues", "/projects/42/issues"]) {
+      expect((await write.run({ method: "POST", path, body: "{}" })).text).toContain("Not sent");
+    }
+    expect((await write.run({ method: "DELETE", path: OWN })).text).toContain(
+      "Deleting the project itself",
+    );
+    expect(seen).toHaveLength(before);
+    // No read list: GitLab's own answer decides what the key may see.
+    for (const path of ["/user/keys", "/groups/acme/members"]) {
+      expect(JSON.parse((await read.run({ path })).text)).toMatchObject({ status: 404 });
+    }
+    expect(seen.slice(before).map((entry) => entry.path)).toEqual([
+      "/api/v4/user/keys",
+      "/api/v4/groups/acme/members",
+    ]);
+  });
+
+  it("writes JSON to the project, and answers GitLab's refusal as a status", async () => {
+    const { write, seen } = await fixture();
+    const created = JSON.parse(
+      (
+        await write.run({
+          method: "POST",
+          path: "/projects/group%2Fsub%2Ffield-notes/merge_requests/1/notes",
+          body: '{"body":"pipeline read"}',
+        })
+      ).text,
+    );
+    expect(created).toMatchObject({ status: 201, ok: true, body: { id: 7 } });
+    expect(seen[0]).toMatchObject({
+      method: "POST",
+      path: `/api/v4${OWN}/merge_requests/1/notes`,
+      key: KEY,
+      body: '{"body":"pipeline read"}',
+    });
+    const missing = JSON.parse(
+      (await write.run({ method: "PUT", path: `${OWN}/merge_requests/9`, body: "{}" })).text,
+    );
+    expect(missing).toMatchObject({ status: 404, ok: false });
+  });
+
+  it("asks GitLab who the key is before a 401 counts as a sign-in", async () => {
+    const permitted = await fixture({ notesStatus: 401 });
+    const answer = JSON.parse(
+      (
+        await permitted.write.run({
+          method: "POST",
+          path: `${OWN}/merge_requests/1/notes`,
+          body: "{}",
+        })
+      ).text,
+    );
+    expect(answer).toMatchObject({ status: 401, ok: false });
+    expect(permitted.seen.map((entry) => entry.path)).toEqual([
+      `/api/v4${OWN}/merge_requests/1/notes`,
+      "/api/v4/user",
+    ]);
+    expect(permitted.onSignInRejected).not.toHaveBeenCalled();
+    const lapsed = await fixture({ notesStatus: 401, keyRefused: true });
+    await lapsed.write.run({ method: "POST", path: `${OWN}/merge_requests/1/notes`, body: "{}" });
+    expect(lapsed.onSignInRejected).toHaveBeenCalledTimes(1);
+  });
+
+  it("records an existing rerun reservation and arms the check watch when a job retry is accepted", async () => {
+    const { write, tasks, readChecks, reserve } = await fixture();
+    reserve();
+    const answer = (await write.run({ method: "POST", path: `${OWN}/jobs/20/retry` })).text;
+    expect(answer).toContain('"status": 201');
+    expect(answer).toContain("checks pending");
+    expect(readChecks).toHaveBeenCalledTimes(1);
+    expect(tasks.get("task-1")?.delivery?.ciWatch).toBeDefined();
+    expect(tasks.get("task-1")?.delivery?.ciRepair?.rerun?.startedAt).toBe(1234);
+  });
+
+  it("refuses an answer over 256 KiB and a redirect, and names a self-hosted server in its refusals", async () => {
+    const { read } = await fixture({ oversize: true, host: "gitlab.example.com" });
+    expect((await read.run({ path: `${OWN}/big` })).text).toContain("256 KiB");
+    const redirected = (await read.run({ path: `${OWN}/redirect` })).text;
+    expect(redirected).toContain("Cannot call gitlab.example.com (refused)");
+    expect(redirected).toContain("redirect");
+    expect(redirected).not.toContain("glpat-");
+  });
+
+  it("answers a missing sign-in without a request, and stops a task at its call budget", async () => {
+    const signedOut = await fixture({ signedOut: true });
+    expect((await signedOut.read.run({ path: `${OWN}/merge_requests` })).text).toContain(
+      "Not signed in to GitLab",
+    );
+    expect(signedOut.seen).toEqual([]);
+    const { read, seen } = await fixture();
+    for (let call = 0; call < 200; call++) await read.run({ path: "/projects" });
+    expect(seen).toHaveLength(200);
+    expect((await read.run({ path: "/projects" })).text).toContain("200 GitLab calls");
+    expect(seen).toHaveLength(200);
+  });
+});

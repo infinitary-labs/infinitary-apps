@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "retried-message-filed-once",
+      "kind": "fix",
+      "title": "A message answered after a problem is filed with its answer",
+      "body": "When Firstmate could not answer a message at first, because its provider had a problem or needed you to sign in again, it kept your words and answered them later. Tasks also listed a second, done task for that message that ended in the problem. Now the message is filed once, with its answer.",
+      "area": "tasks",
+      "noPicture": "The change is a task Tasks search no longer lists; a picture cannot show what is missing.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

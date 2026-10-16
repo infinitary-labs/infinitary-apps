@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "revised-card-change-bars",
+      "kind": "fix",
+      "title": "Revised cards no longer cover text with New tags",
+      "body": "Changed paragraphs and lists keep their change bars without covering words. Changed table rows stay aligned.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

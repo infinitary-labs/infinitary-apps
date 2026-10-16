@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "notes-without-older-technical-entries",
+      "kind": "improvement",
+      "title": "The note after an update lists only changes written for you",
+      "body": "After an update from an early version, the note on top of your cards no longer lists hundreds of older changes in technical wording. It lists the changes written for you, grouped by part of the app as before.",
+      "area": "updates",
+      "noPicture": "What changed is what the note leaves out, so a picture of it would show nothing new.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "release-note-rules",
+      "reason": "Release process: docs/release-notes.md now holds the rules for what a note may say (only changes a person notices, and only products the app supports), and the ledger check refuses a new maintenance note."
+    }
+  ]
+}

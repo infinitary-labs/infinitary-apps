@@ -1,0 +1,1140 @@
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
+import { promisify } from "node:util";
+import { HERE } from "@shared/deviceNames";
+import type { KnownForgeHost } from "@shared/forge";
+import { hostEnv } from "../hostEnv";
+import type { AppPaths } from "../paths";
+import { atUtilityQos } from "../utilityQos";
+import { requireConventionalRange } from "./conventional";
+import { forgeAuthRequired } from "./forgeAuth";
+import { APP_GIT_IDENTITY, git, gitFailure, isGitRepo } from "./git";
+import { WorktreePool, type WorktreePoolOptions } from "./worktreePool";
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * The work substrate (decision D-8): crewmates operate on git repos,
+ * worktree per task. Repo-less tasks land in the app-managed default
+ * local-only repo (git init on first use), so every crewmate has a real,
+ * versioned cwd. Phase 3 adds the user-registered repo registry on top.
+ */
+
+export type TaskWorkspace = {
+  taskId: string;
+  /** The worktree the crewmate runs in. */
+  cwd: string;
+  branch: string;
+  /** The repo the worktree belongs to. */
+  repoDir: string;
+  /** How a dispatch got this tree; absent on a tree that was already there. */
+  acquired?: WorktreeAcquisition;
+};
+
+/**
+ * The commit a task's branch starts at (captain's board answer, 2026-09-23:
+ * "fetch the default branch at dispatch"): the repository's default branch,
+ * refreshed from `origin` first. `fetch` says whether that refresh ran and
+ * worked; a failed one never fails the dispatch - the task starts from what
+ * this machine last saw. A repository without `origin` starts from its own
+ * checked-out commit, as before.
+ */
+export type DispatchBase = {
+  sha: string;
+  /** What the commit was read from: `origin/main`, `main`, or `HEAD`. */
+  ref: string;
+  fetch: "fetched" | "failed" | "none";
+  fetchError?: string;
+};
+
+/** A warm tree from the pool, or a new one; with the base and the time it took. */
+export type WorktreeAcquisition = {
+  source: "pool" | "new";
+  base: DispatchBase;
+  ms: number;
+};
+
+/**
+ * How a commissioned worktree got its dependencies (interaction P0, WI-7):
+ * from the shared pnpm store alone, from the network after the offline
+ * attempt missed, not at all because the repo has no pnpm lockfile, or a
+ * failure the crewmate can still recover from itself.
+ */
+export type DependencyInstall =
+  | { outcome: "skipped" }
+  | { outcome: "offline" | "online"; ms: number }
+  | { outcome: "failed"; ms: number; error: string };
+
+/**
+ * The folders a workspace keeps working copies in: the app's own here, and
+ * a computer that runs work's own there (`../helper/workingCopies.ts`).
+ */
+export type WorkspacePaths = Pick<
+  AppPaths,
+  "worktreesDir" | "worktreeTrashDir" | "worktreePoolDir" | "defaultWorkspaceDir"
+>;
+
+export type WorkspaceServiceOptions = {
+  /** The pnpm executable; tests point it at a stub. */
+  pnpm?: string;
+  /** Bound on one install attempt. */
+  installTimeoutMs?: number;
+  /** Deletes a retired tree in the background; tests hold it to observe the order. */
+  deleteTree?: (dir: string) => Promise<void>;
+  /** The warm worktree pool's limits; false turns pooling off (every tree is new and deleted). */
+  pool?: WorktreePoolOptions | false;
+  /** Bound on the dispatch-time fetch of the default branch. */
+  fetchTimeoutMs?: number;
+  /**
+   * The hosts on the person's own server the app signs in to (a GitHub
+   * Enterprise host): a fetch refused there waits for that host's sign-in,
+   * as one refused by github.com does.
+   */
+  knownHosts?: () => readonly KnownForgeHost[];
+};
+
+/** A slow remote must not hold a dispatch; the last fetched commit is the fallback. */
+const FETCH_TIMEOUT_MS = 30 * 1000;
+
+/** A fetch overtaken by another fetch of the same ref runs again, this many times in all. */
+const FETCH_ATTEMPTS = 3;
+
+/** A cold online install of a large monorepo fits comfortably; a hang does not. */
+const INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
+
+/** A branch the app named for a task: `fm/task-<id>`. */
+const TASK_BRANCH_PREFIX = "fm/task-";
+
+/**
+ * Where a computer that runs work keeps the home's default workspace in its
+ * own (docs/helper.md, "Its working copies"): the commit a task with no
+ * project there starts from.
+ */
+export const SEEDED_REF = "refs/infinitary/home-main";
+/** Where Firstmate 3000 kept it, read beside `SEEDED_REF` (the Infinitary rename). */
+export const OLDER_SEEDED_REF = "refs/fm3000/home-main";
+
+/**
+ * Where a closed task's unlanded work is kept once its worktree and branch
+ * are gone: a ref outside `refs/heads`, `refs/tags` and `refs/remotes`, so
+ * no branch listing, no branch picker and no push of branches or tags ever
+ * shows it. `git log refs/infinitary/kept/<id>` reads it back; nothing
+ * expires it yet.
+ */
+export const KEPT_REF_PREFIX = "refs/infinitary/kept/";
+/**
+ * Where Firstmate 3000 kept that work before the Infinitary rename: still
+ * read, so work kept before an update is found after it, here and on a
+ * computer that runs work.
+ */
+export const OLDER_KEPT_REF_PREFIX = "refs/fm3000/kept/";
+
+export function keptRefFor(taskId: string): string {
+  return `${KEPT_REF_PREFIX}${taskId}`;
+}
+
+/** Every name a task's kept work may be under, Infinitary's first. */
+export function keptRefsFor(taskId: string): string[] {
+  return [keptRefFor(taskId), `${OLDER_KEPT_REF_PREFIX}${taskId}`];
+}
+
+/**
+ * The private ref a destination computer fetches a task's starting work
+ * into (docs/helper.md, "Starting from a source task"): Infinitary's name
+ * for a computer that takes it (`speaksInfinitaryNames`), Firstmate 3000's
+ * for an older one, which takes no other.
+ */
+export function sourceRefFor(taskId: string, sourceId: string, infinitary: boolean): string {
+  return `refs/${infinitary ? "infinitary" : "fm3000"}/sources/${taskId}-${sourceId}`;
+}
+
+/** The refs a destination computer may keep a task's starting work under, in either name. */
+export function sourceRefPatterns(taskId: string): string[] {
+  return [`refs/infinitary/sources/${taskId}-*`, `refs/fm3000/sources/${taskId}-*`];
+}
+
+/** The one commit a retired worktree's unlanded work was saved as. */
+export type KeptWork = {
+  ref: string;
+  sha: string;
+  dirty: boolean;
+  unlandedCommits: number;
+};
+
+/** What a save held, in the timeline's words: "its 2 commits not in yet and uncommitted edits". */
+export function keptWorkWords(kept: KeptWork): string {
+  const commits =
+    kept.unlandedCommits > 0
+      ? `${kept.unlandedCommits} ${kept.unlandedCommits === 1 ? "commit" : "commits"} not in yet`
+      : "";
+  const edits = kept.dirty ? "uncommitted edits" : "";
+  const held = [commits, edits].filter(Boolean).join(" and ");
+  return held ? `its ${held}` : "its work";
+}
+
+/**
+ * A retired worktree: removed, with the work it held saved first when any
+ * never landed - or, the one exception, left in place because that save
+ * failed and removing it would have thrown the work away.
+ */
+export type WorktreeRetirement =
+  | { outcome: "removed"; kept: KeptWork | null }
+  | { outcome: "kept"; reason: string };
+
+export class WorkspaceService {
+  /** Retired trees still being deleted in the background. */
+  private readonly deletions = new Set<Promise<void>>();
+  /** Warm trees between tasks; null when pooling is off. */
+  private readonly pool: WorktreePool | null;
+  /** Serialize refreshes targeting the same main checkout. */
+  private readonly refreshQueues = new Map<string, Promise<unknown>>();
+  /** One fetch from `origin` at a time per repository (`fetchDefaultBranch`). */
+  private readonly fetchQueues = new Map<string, Promise<unknown>>();
+
+  constructor(
+    private readonly paths: WorkspacePaths,
+    private readonly options: WorkspaceServiceOptions = {},
+  ) {
+    this.pool =
+      options.pool === false
+        ? null
+        : new WorktreePool(paths.worktreePoolDir, (dir) => this.discardDir(dir), options.pool);
+  }
+
+  /**
+   * Install a fresh worktree's dependencies before the crewmate's first turn,
+   * so the worktree can build without the crewmate spending a turn on it.
+   * pnpm's content-addressed store is shared across every worktree on the
+   * machine, so `--offline` usually links everything with no network; only
+   * when the store is missing a package does the online attempt run. The
+   * lockfile is frozen either way - installing never rewrites the branch.
+   * Never throws: a failed install is an outcome the caller records.
+   */
+  async installDependencies(cwd: string): Promise<DependencyInstall> {
+    if (!existsSync(join(cwd, "pnpm-lock.yaml"))) return { outcome: "skipped" };
+    const started = Date.now();
+    const base = ["install", "--frozen-lockfile"];
+    try {
+      await this.pnpm(cwd, [...base, "--offline"]);
+      return { outcome: "offline", ms: Date.now() - started };
+    } catch {
+      // The shared store lacks something: fetch it.
+    }
+    try {
+      await this.pnpm(cwd, base);
+      return { outcome: "online", ms: Date.now() - started };
+    } catch (caught) {
+      return { outcome: "failed", ms: Date.now() - started, error: installError(caught) };
+    }
+  }
+
+  private async pnpm(cwd: string, args: string[]): Promise<void> {
+    // An install links thousands of files and may build native modules:
+    // below the UI, with everything it starts (../utilityQos.ts).
+    const command = atUtilityQos(this.options.pnpm ?? "pnpm", args);
+    await execFileAsync(command.file, command.args, {
+      cwd,
+      timeout: this.options.installTimeoutMs ?? INSTALL_TIMEOUT_MS,
+      maxBuffer: 16 * 1024 * 1024,
+      env: hostEnv({ CI: "true" }),
+    });
+  }
+
+  /**
+   * Every `fm/task-*` branch in a repo, with the task id it names. Read-only:
+   * boot reconciliation reports leftovers and never deletes one.
+   */
+  async listTaskBranches(repoDir: string): Promise<{ branch: string; taskId: string }[]> {
+    let out: string;
+    try {
+      out = await git(repoDir, [
+        "for-each-ref",
+        "--format=%(refname:short)",
+        `refs/heads/${TASK_BRANCH_PREFIX}*`,
+      ]);
+    } catch {
+      return [];
+    }
+    return out
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((branch) => branch.startsWith(TASK_BRANCH_PREFIX))
+      .map((branch) => ({ branch, taskId: branch.slice(TASK_BRANCH_PREFIX.length) }));
+  }
+
+  /**
+   * The commit a task's branch stands at, or null when the branch is gone.
+   * Host bookkeeping, not a gate: the reviewed tier's brief names the head
+   * an independent reviewer reads (the review runs BEFORE the pull request
+   * since the captain's 2026-09-19 ruling, so there is no PR head to name),
+   * and a re-review counts a round only when this moved.
+   */
+  async branchHead(repoDir: string, branch: string): Promise<string | null> {
+    try {
+      const sha = await git(repoDir, ["rev-parse", "--verify", "--quiet", `${branch}^{commit}`]);
+      return sha || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Complete committed-file checklist for a review at a named head. Use the
+   * merge base of the default branch, as the reviewer's own diff does. Never
+   * fetch here: a review must describe the head the host actually named.
+   */
+  async reviewChangedFiles(repoDir: string, headSha: string): Promise<string[] | null> {
+    // An already-open PR may have a recorded head that is not in this
+    // checkout. The reviewer must enumerate its remote diff instead of
+    // receiving a misleading checklist from another commit.
+    if (!(await resolveCommit(repoDir, headSha))) return null;
+    const name = await defaultBranchName(repoDir);
+    const base = (await resolveCommit(repoDir, `refs/remotes/origin/${name}`))
+      ? `refs/remotes/origin/${name}`
+      : `refs/heads/${name}`;
+    const out = await git(repoDir, ["diff", "--name-only", "-z", `${base}...${headSha}`], {
+      trim: false,
+    });
+    return out.split("\0").filter(Boolean);
+  }
+
+  /** Lazily creates the default local-only repo with an initial commit. */
+  async ensureDefaultRepo(): Promise<string> {
+    const dir = this.paths.defaultWorkspaceDir;
+    if (!existsSync(join(dir, ".git"))) {
+      await mkdir(dir, { recursive: true });
+      await git(dir, ["init", "--initial-branch=main"]);
+      await git(dir, ["config", "user.name", "Infinitary"]);
+      await git(dir, ["config", "user.email", "infinitary@localhost"]);
+      await writeFile(
+        join(dir, "README.md"),
+        "# Infinitary workspace\n\nThe app-managed default workspace. Tasks not tied to a registered repo run here, one git worktree per task.\n",
+      );
+      await git(dir, ["add", "-A"]);
+      await git(dir, ["commit", "-m", "chore: initialize default workspace"]);
+    }
+    return dir;
+  }
+
+  /**
+   * Creates the task's worktree on branch fm/task-<id>, starting at the
+   * dispatch base (`dispatchBase`). A warm tree from the pool is taken when
+   * one is idle for the repository - moved to the task's path and switched
+   * to the new branch, its dependency tree intact - and a new one is added
+   * otherwise. Idempotent: a retry reuses an existing matching worktree, or
+   * checks out an existing branch without `-b`, so a leftover from a failed
+   * or overlapping start never fails with "branch already exists". `startAt`
+   * can name a seeded dispatch base (`SEEDED_REF`) for projectless work,
+   * or an exact review commit. An existing review copy moves only from its
+   * previous assigned base, never over other commits or edits.
+   */
+  async createTaskWorktree(
+    taskId: string,
+    repoDir?: string,
+    startAt?: DispatchBase | { headSha: string; previousHead?: string },
+  ): Promise<TaskWorkspace> {
+    const started = Date.now();
+    const at = startAt && "headSha" in startAt ? startAt : undefined;
+    const repo = repoDir ?? (await this.ensureDefaultRepo());
+    const cwd = join(this.paths.worktreesDir, taskId);
+    const branch = `${TASK_BRANCH_PREFIX}${taskId}`;
+    await mkdir(this.paths.worktreesDir, { recursive: true });
+    await git(repo, ["worktree", "prune"]);
+    if (at && (await resolveCommit(repo, at.headSha)) !== at.headSha)
+      throw new Error(`The assigned commit ${at.headSha} is not in this repository.`);
+    if (await isMatchingWorktree(cwd, branch)) {
+      if (at) {
+        const head = await this.branchHead(repo, branch);
+        if (await git(cwd, ["status", "--porcelain"]))
+          throw new Error("The working copy has edits; nothing was replaced.");
+        if (head !== at.headSha) {
+          if (!at.previousHead || head !== at.previousHead)
+            throw new Error("The working copy has other commits; nothing was replaced.");
+          // Only an idle copy still at its assigned base may move. --keep
+          // also refuses an edit that raced the clean check above.
+          await git(cwd, ["reset", "--keep", at.headSha]);
+        }
+      }
+      return { taskId, cwd, branch, repoDir: repo };
+    }
+    if (existsSync(cwd)) {
+      if (at || (await isGitRepo(cwd))) {
+        throw new Error(`Worktree path ${cwd} exists but is not on ${branch}; refuse to reuse it.`);
+      }
+      await rm(cwd, { recursive: true, force: true });
+    }
+    const existing = await branchExists(repo, branch);
+    const existingHead = existing ? await this.branchHead(repo, branch) : null;
+    if (at && existing && existingHead !== at.headSha)
+      throw new Error("The task's branch holds another commit; nothing was replaced.");
+    const base: DispatchBase = at
+      ? { sha: at.headSha, ref: at.headSha, fetch: "none" }
+      : existing
+        ? { sha: existingHead ?? "", ref: branch, fetch: "none" }
+        : startAt && "sha" in startAt
+          ? startAt
+          : await this.dispatchBase(repo);
+    // `checkout <branch>` / `checkout -b <branch> <base>` in a pooled tree;
+    // `worktree add <cwd> <branch>` / `worktree add -b <branch> <cwd> <base>` otherwise.
+    const checkout = existing ? [branch] : ["-b", branch, base.sha];
+    const add = existing ? [cwd, branch] : ["-b", branch, cwd, base.sha];
+    let source: WorktreeAcquisition["source"] = "new";
+    if (this.pool && (await this.pool.acquire(repo, cwd))) {
+      try {
+        await git(cwd, ["checkout", "--quiet", ...checkout]);
+        source = "pool";
+      } catch (caught) {
+        // A warm tree that cannot take the branch goes; a new one instead.
+        console.warn(`[workspace] a pooled tree could not take ${branch}:`, caught);
+        await this.discardDir(cwd);
+        await git(repo, ["worktree", "prune"]);
+      }
+    }
+    if (source === "new") await git(repo, ["worktree", "add", ...add]);
+    return {
+      taskId,
+      cwd,
+      branch,
+      repoDir: repo,
+      acquired: { source, base, ms: Date.now() - started },
+    };
+  }
+
+  /**
+   * Where a new task starts (captain's board answer, 2026-09-23: "fetch the
+   * default branch at dispatch"). With an `origin`, its default branch is
+   * fetched - bounded, never prompting - and the base is whichever of the
+   * local branch and `origin/<branch>` is further ahead, `origin` when they
+   * diverged (treehouse's rule). A failed fetch falls back to what this
+   * machine last saw and says so; it never fails the dispatch. Without an
+   * `origin`, the base is the repository's checked-out commit.
+   */
+  async dispatchBase(repo: string): Promise<DispatchBase> {
+    const remotes = await git(repo, ["remote"]).catch(() => "");
+    if (!remotes.split("\n").some((remote) => remote.trim() === "origin")) {
+      return {
+        sha: await git(repo, ["rev-parse", "--verify", "HEAD^{commit}"]),
+        ref: "HEAD",
+        fetch: "none",
+      };
+    }
+    const origin = await git(repo, ["remote", "get-url", "origin"]).catch(() => "");
+    const name = await defaultBranchName(repo);
+    let fetch: DispatchBase["fetch"] = "fetched";
+    let fetchError: string | undefined;
+    try {
+      await this.fetchDefaultBranch(repo, name);
+    } catch (caught) {
+      const authRequired = forgeAuthRequired(origin, caught, this.options.knownHosts?.() ?? []);
+      if (authRequired) throw authRequired;
+      fetch = "failed";
+      fetchError = gitFailure(caught);
+    }
+    const local = await resolveCommit(repo, `refs/heads/${name}`);
+    const remote = await resolveCommit(repo, `refs/remotes/origin/${name}`);
+    const failure = fetchError ? { fetchError } : {};
+    // The local branch wins only when it is strictly ahead of origin's.
+    const localAhead =
+      local !== null &&
+      remote !== null &&
+      local !== remote &&
+      (await isAncestor(repo, remote, local));
+    if (remote && !localAhead) return { sha: remote, ref: `origin/${name}`, fetch, ...failure };
+    if (local) return { sha: local, ref: name, fetch, ...failure };
+    return {
+      sha: await git(repo, ["rev-parse", "--verify", "HEAD^{commit}"]),
+      ref: "HEAD",
+      fetch,
+      ...failure,
+    };
+  }
+
+  /**
+   * Best-effort refresh for a registered managed checkout after host merge.
+   * Only the clean checked-out default branch may fast-forward from origin.
+   */
+  async refreshManagedCheckout(
+    repoDir: string,
+  ): Promise<{ refreshed: true } | { refreshed: false; reason: string }> {
+    const prior = this.refreshQueues.get(repoDir) ?? Promise.resolve();
+    const run = prior.catch(() => {}).then(() => this.refreshManagedCheckoutOnce(repoDir));
+    this.refreshQueues.set(repoDir, run);
+    try {
+      return await run;
+    } finally {
+      if (this.refreshQueues.get(repoDir) === run) this.refreshQueues.delete(repoDir);
+    }
+  }
+
+  private async refreshManagedCheckoutOnce(
+    repoDir: string,
+  ): Promise<{ refreshed: true } | { refreshed: false; reason: string }> {
+    const fail = (reason: string) => ({ refreshed: false as const, reason });
+    const remotes = await git(repoDir, ["remote"]).catch(() => "");
+    if (!remotes.split("\n").includes("origin")) return fail("no origin remote");
+    const branch = await git(repoDir, [
+      "symbolic-ref",
+      "--quiet",
+      "--short",
+      "refs/remotes/origin/HEAD",
+    ])
+      .then((head) => (head.startsWith("origin/") ? head.slice("origin/".length) : ""))
+      .catch(() => "");
+    if (!branch) return fail("origin does not declare its default branch");
+    const check = async (): Promise<string | null> => {
+      const current = await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
+        () => "",
+      );
+      if (current !== branch) return null;
+      if (await git(repoDir, ["status", "--porcelain"]).catch(() => "dirty")) return null;
+      return resolveCommit(repoDir, `refs/heads/${branch}`);
+    };
+    const before = await check();
+    if (!before) return fail("checkout is dirty, detached, or not on the default branch");
+    try {
+      await this.fetchDefaultBranch(repoDir, branch);
+    } catch (caught) {
+      console.warn(`[workspace] refreshing ${repoDir}: ${gitFailure(caught)}`);
+      return fail("fetch from origin failed or timed out");
+    }
+    const remote = await resolveCommit(repoDir, `refs/remotes/origin/${branch}`);
+    if (!remote) return fail("origin default branch was not available");
+    if (!(await isAncestor(repoDir, before, remote)))
+      return fail("origin has diverged from the local checkout");
+    const current = await check();
+    if (current !== before) return fail("checkout changed while refresh was in progress");
+    try {
+      await git(repoDir, ["merge", "--ff-only", remote]);
+      return { refreshed: true };
+    } catch {
+      return fail("fast-forward was refused");
+    }
+  }
+
+  /**
+   * Fetches `origin`'s `branch` into `refs/remotes/origin/<branch>`. Git
+   * reads that ref before it downloads and refuses to move it when another
+   * fetch moved it meanwhile, so a dispatch a merge starts would fail that
+   * merge's refresh. The app's own fetches of one repository therefore run
+   * one at a time, and a fetch that lost to one outside the app - a
+   * crewmate's own `git fetch` in its worktree, which shares these refs -
+   * runs again, up to `FETCH_ATTEMPTS` in all. A failure that left the ref
+   * where it was is the fetch's own and throws at once.
+   */
+  private async fetchDefaultBranch(repo: string, branch: string): Promise<void> {
+    const key = resolve(repo);
+    const prior = this.fetchQueues.get(key) ?? Promise.resolve();
+    const run = prior.catch(() => {}).then(() => this.fetchDefaultBranchOnce(repo, branch));
+    this.fetchQueues.set(key, run);
+    try {
+      await run;
+    } finally {
+      if (this.fetchQueues.get(key) === run) this.fetchQueues.delete(key);
+    }
+  }
+
+  private async fetchDefaultBranchOnce(repo: string, branch: string): Promise<void> {
+    const tracking = `refs/remotes/origin/${branch}`;
+    for (let attempt = 1; ; attempt++) {
+      const before = await resolveCommit(repo, tracking);
+      try {
+        await git(
+          repo,
+          ["fetch", "--quiet", "--no-tags", "origin", `+refs/heads/${branch}:${tracking}`],
+          {
+            timeoutMs: this.options.fetchTimeoutMs ?? FETCH_TIMEOUT_MS,
+            env: { GIT_TERMINAL_PROMPT: "0" },
+          },
+        );
+        return;
+      } catch (caught) {
+        const moved = (await resolveCommit(repo, tracking)) !== before;
+        if (!moved || attempt >= FETCH_ATTEMPTS) throw caught;
+      }
+    }
+  }
+
+  /**
+   * Lands a finished task's branch into the branch currently checked out in
+   * its repo (captain decision Q5). Deliberately forge-agnostic: pure local
+   * git - fast-forward when possible, a merge commit otherwise - and never
+   * a forge API, so GitHub, GitLab, Bitbucket, and plain remotes are all
+   * equal. Refuses loudly (with the concrete reason) on a dirty repo, a
+   * detached HEAD, or a merge conflict; a refused conflict is aborted so
+   * the repo is left exactly as found.
+   */
+  async landTaskWork(
+    workspace: TaskWorkspace,
+    beforeDispatch?: () => string | undefined,
+  ): Promise<{ mode: "fast-forward" | "merge" }> {
+    const { repoDir, branch } = workspace;
+    const base = await git(repoDir, ["merge-base", "HEAD", branch]);
+    await requireConventionalRange(repoDir, base, branch);
+    const dirty = await git(repoDir, ["status", "--porcelain"]);
+    if (dirty) {
+      throw new Error("The repository has uncommitted changes; commit or stash them first.");
+    }
+    let current: string;
+    try {
+      current = await git(repoDir, ["symbolic-ref", "--short", "HEAD"]);
+    } catch {
+      throw new Error("The repository is on a detached HEAD; check out a branch first.");
+    }
+    const check = () => {
+      const refusal = beforeDispatch?.();
+      if (refusal) throw new Error(refusal);
+    };
+    check();
+    try {
+      await git(repoDir, ["merge", "--ff-only", branch]);
+      return { mode: "fast-forward" };
+    } catch {
+      // Fall through to a real merge commit.
+    }
+    check();
+    try {
+      await git(repoDir, ["merge", "--no-ff", "-m", "chore: integrate task work", branch]);
+      return { mode: "merge" };
+    } catch (caught) {
+      await git(repoDir, ["merge", "--abort"]).catch(() => {});
+      const message = caught instanceof Error ? caught.message : String(caught);
+      throw new Error(
+        `Merging ${branch} into ${current} hit a conflict; resolve it manually. ${firstGitError(message)}`,
+      );
+    }
+  }
+
+  /**
+   * What a discard would destroy: uncommitted edits in the worktree plus
+   * branch commits not reachable from the repo's checked-out HEAD or its
+   * tracked remote integration refs. A missing worktree or branch counts as
+   * nothing to lose - there is nothing left to protect, and discard must
+   * still be able to clean up the bookkeeping.
+   */
+  async taskWorkStatus(
+    workspace: TaskWorkspace,
+    options: { strict?: boolean } = {},
+  ): Promise<{
+    dirty: boolean;
+    unlandedCommits: number;
+  }> {
+    let dirty = false;
+    let unlandedCommits = 0;
+    try {
+      // No folder is no working copy here: `git -C ""` would read the
+      // process's own folder instead.
+      if (!workspace.cwd) throw new Error(`The task has no working copy on ${HERE.this}.`);
+      dirty = (await git(workspace.cwd, ["status", "--porcelain"])) !== "";
+    } catch (caught) {
+      // Discard can clean up a missing tree; a verified release cannot infer
+      // that missing means safe to close.
+      if (options.strict) throw caught;
+    }
+    try {
+      const integrationRefs = await trackedIntegrationRefs(workspace);
+      const count = await git(workspace.repoDir, [
+        "rev-list",
+        "--count",
+        workspace.branch,
+        "--not",
+        "HEAD",
+        ...integrationRefs,
+      ]);
+      unlandedCommits = Number.parseInt(count, 10) || 0;
+    } catch (caught) {
+      if (options.strict) throw caught;
+      // Branch already gone.
+    }
+    return { dirty, unlandedCommits };
+  }
+
+  /**
+   * A closed task's worktree ALWAYS goes (captain, 2026-09-22: "when a task
+   * closes, its worktree gets cleaned up period. no exceptions"). Whatever
+   * it holds that never landed - uncommitted edits, tracked and untracked
+   * (ignored files are not work), and branch commits - is first saved as ONE
+   * commit on the task's hidden kept ref (`keptRefFor`), so removing it
+   * destroys nothing. Git ancestry only decides whether that save is
+   * needed; it never decides whether the tree goes, because a squash-merged
+   * pull request reads as unlanded to ancestry forever.
+   *
+   * The one exception: when the save itself fails, the tree stays exactly
+   * as it was and the outcome says why - never a removal on a guess.
+   */
+  async retireTaskWorktree(
+    workspace: TaskWorkspace,
+    options: { keepAlways?: boolean } = {},
+  ): Promise<WorktreeRetirement> {
+    let kept: KeptWork | null;
+    try {
+      kept = await this.keepUnlandedWork(workspace, options);
+    } catch (caught) {
+      const reason = gitFailure(caught);
+      console.warn(`[workspace] kept ${workspace.cwd}: its work could not be saved: ${reason}`);
+      return { outcome: "kept", reason };
+    }
+    await this.removeTaskWorktree(workspace);
+    return { outcome: "removed", kept };
+  }
+
+  /**
+   * Saves what a worktree holds that never landed as one commit - the
+   * worktree's full state (a temporary index, so the crewmate's own index
+   * is untouched) whose parents are the checked-out tip, the branch head
+   * when it differs, and any earlier save for the same task - and points
+   * the task's kept ref at it. Null when nothing is unlanded, unless
+   * `keepAlways` asks for the save anyway (an escalation's brief names the
+   * ref, so it must exist whatever ancestry says). Throws when
+   * a tree still on disk cannot be read as a checkout: then nothing proves
+   * it holds no work.
+   */
+  async keepUnlandedWork(
+    workspace: TaskWorkspace,
+    options: { keepAlways?: boolean } = {},
+  ): Promise<KeptWork | null> {
+    const { cwd, repoDir, branch, taskId } = workspace;
+    const branchTip = branch ? await this.branchHead(repoDir, branch) : null;
+    let tip = branchTip;
+    let dirty = false;
+    if (cwd && existsSync(cwd)) {
+      await assertCheckoutRoot(cwd);
+      tip = await git(cwd, ["rev-parse", "--verify", "HEAD^{commit}"]);
+      dirty = (await git(cwd, ["status", "--porcelain"])) !== "";
+    }
+    if (!tip) return null;
+    const tips = [...new Set([tip, branchTip].filter((sha): sha is string => Boolean(sha)))];
+    const integrationRefs = await trackedIntegrationRefs(workspace);
+    const count = await git(repoDir, [
+      "rev-list",
+      "--count",
+      ...tips,
+      "--not",
+      "HEAD",
+      ...integrationRefs,
+    ]);
+    const unlandedCommits = Number.parseInt(count, 10) || 0;
+    if (!dirty && unlandedCommits === 0 && !options.keepAlways) return null;
+
+    let tree = await git(repoDir, ["rev-parse", `${tip}^{tree}`]);
+    if (dirty) {
+      const index = resolve(
+        cwd,
+        await git(cwd, ["rev-parse", "--git-path", "infinitary-kept-index"]),
+      );
+      const env = { GIT_INDEX_FILE: index };
+      try {
+        await git(cwd, ["read-tree", tip], { env });
+        await git(cwd, ["add", "-A"], { env });
+        tree = await git(cwd, ["write-tree"], { env });
+      } finally {
+        await rm(index, { force: true });
+      }
+    }
+    const ref = keptRefFor(taskId);
+    let earlier = "";
+    // An earlier save, under Firstmate 3000's name too, stays an ancestor.
+    for (const name of keptRefsFor(taskId)) {
+      try {
+        earlier = await git(repoDir, ["rev-parse", "--verify", "--quiet", `${name}^{commit}`]);
+        if (earlier) break;
+      } catch {
+        // The first save for this task, under this name.
+      }
+    }
+    const parents = [...new Set([...tips, earlier].filter(Boolean))].flatMap((sha) => ["-p", sha]);
+    const held =
+      [
+        unlandedCommits > 0 ? `${unlandedCommits} unlanded commit(s)` : "",
+        dirty ? "uncommitted edits" : "",
+      ]
+        .filter(Boolean)
+        .join(" and ") || "nothing unlanded";
+    const sha = await git(repoDir, [
+      ...APP_GIT_IDENTITY,
+      "commit-tree",
+      tree,
+      ...parents,
+      "-m",
+      `chore: keep work of task ${taskId}${branch ? ` (${branch})` : ""}`,
+      "-m",
+      `Saved when the task closed and its working copy was removed: ${held}.`,
+    ]);
+    await git(repoDir, ["update-ref", "-m", `keep task ${taskId}`, ref, sha]);
+    return { ref, sha, dirty, unlandedCommits };
+  }
+
+  /**
+   * The directories under the app's worktrees area, by name (a task id
+   * when the app made it). Boot hygiene reads it to find trees no record
+   * explains.
+   */
+  listWorktreeDirs(): string[] {
+    try {
+      return readdirSync(this.paths.worktreesDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * The workspace a tree under the worktrees area really is, read from git
+   * itself - for a tree whose task record is gone. The branch is named
+   * only when it is the app's own `fm/task-<name>`, so retiring the tree
+   * never deletes a branch the app did not make. Null when the directory
+   * is not a checkout of its own.
+   */
+  async workspaceAt(name: string): Promise<TaskWorkspace | null> {
+    const cwd = join(this.paths.worktreesDir, name);
+    try {
+      await assertCheckoutRoot(cwd);
+      const common = await git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+      const repoDir = basename(common) === ".git" ? dirname(common) : common;
+      let branch = "";
+      try {
+        const head = await git(cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
+        if (head === `${TASK_BRANCH_PREFIX}${name}`) branch = head;
+      } catch {
+        // Detached: no branch to retire with it.
+      }
+      return { taskId: name, cwd, branch, repoDir };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Removes a directory under the worktrees area only when it is empty -
+   * the stale path a failed `worktree add` can leave. Answers whether it
+   * is gone.
+   */
+  async removeEmptyWorktreeDir(name: string): Promise<boolean> {
+    const dir = join(this.paths.worktreesDir, name);
+    try {
+      if (readdirSync(dir).length > 0) return false;
+      await rm(dir, { recursive: true, force: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Removes a task's worktree and branch (decision D-13: a task's workspace
+   * dies with it). The repo itself and anything merged from the branch stay.
+   *
+   * The tree leaves its path in one rename into the trash, git forgets the
+   * worktree and the branch, and this returns: deleting the tree itself -
+   * with `node_modules`, tens of thousands of files and many seconds of
+   * disk and CPU - happens in the background below the UI, so a settle
+   * never waits on it (character-jank scout, fm3000-character-anim-jank-s1).
+   * A tree the rename cannot move is removed in place, as before.
+   */
+  async removeTaskWorktree(workspace: TaskWorkspace): Promise<void> {
+    if (await this.parkInPool(workspace)) {
+      try {
+        await git(workspace.repoDir, ["branch", "-D", workspace.branch]);
+      } catch {
+        // Branch already gone.
+      }
+      return;
+    }
+    const trashed = await this.moveToTrash(workspace.cwd);
+    if (trashed) {
+      // The worktree's path is gone, so prune drops its bookkeeping.
+      await git(workspace.repoDir, ["worktree", "prune"]);
+      this.deleteInBackground(trashed);
+    } else {
+      try {
+        await git(workspace.repoDir, ["worktree", "remove", "--force", workspace.cwd]);
+      } catch {
+        // The worktree dir may already be gone; prune bookkeeping either way.
+        await rm(workspace.cwd, { recursive: true, force: true });
+        await git(workspace.repoDir, ["worktree", "prune"]);
+      }
+    }
+    try {
+      await git(workspace.repoDir, ["branch", "-D", workspace.branch]);
+    } catch {
+      // Branch already gone.
+    }
+  }
+
+  /**
+   * A removed tree goes to the warm pool instead of the trash when it can
+   * (`WorktreePool.park`): only a tree the app made, under the worktrees
+   * area. Every caller has already saved the work it held, or chose to
+   * throw it away - exactly what deleting it assumed - and the pool resets
+   * it clean before any other task can have it.
+   */
+  private async parkInPool(workspace: TaskWorkspace): Promise<boolean> {
+    const { cwd, repoDir } = workspace;
+    if (!this.pool || !cwd || !repoDir) return false;
+    if (dirname(resolve(cwd)) !== resolve(this.paths.worktreesDir) || !existsSync(cwd)) {
+      return false;
+    }
+    return this.pool.park(cwd, repoDir);
+  }
+
+  /**
+   * Boot: finish the pool returns a quit interrupted, and retire idle trees
+   * past the pool's budget or age. Runs in the background; never throws.
+   */
+  sweepPool(): void {
+    if (this.pool) void this.pool.sweep().catch(() => {});
+  }
+
+  /** Resolves once every pool return started so far has finished (tests). */
+  async poolSettled(): Promise<void> {
+    await this.pool?.settled();
+  }
+
+  /** The idle trees in the pool (tests and diagnostics). */
+  pooledTrees(): string[] {
+    return this.pool?.idle() ?? [];
+  }
+
+  /**
+   * Boot: finish deleting what a quit interrupted. Never throws; what
+   * cannot be deleted now is tried again at the next boot.
+   */
+  sweepTrash(): void {
+    let entries: string[];
+    try {
+      entries = readdirSync(this.paths.worktreeTrashDir);
+    } catch {
+      return;
+    }
+    for (const entry of entries) this.deleteInBackground(join(this.paths.worktreeTrashDir, entry));
+  }
+
+  /** Resolves once every background deletion started so far has finished. */
+  async deletionsSettled(): Promise<void> {
+    await Promise.all([...this.deletions]);
+  }
+
+  private async moveToTrash(cwd: string): Promise<string | null> {
+    // Only a tree the app made (`createTaskWorktree`) moves aside; anything
+    // else takes the in-place route, where git checks it is a worktree.
+    if (!cwd || dirname(resolve(cwd)) !== resolve(this.paths.worktreesDir)) return null;
+    if (!existsSync(cwd)) return null;
+    const target = join(
+      this.paths.worktreeTrashDir,
+      `${basename(cwd)}-${randomUUID().slice(0, 8)}`,
+    );
+    try {
+      await mkdir(this.paths.worktreeTrashDir, { recursive: true });
+      await rename(cwd, target);
+      return target;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Out of its path in one rename, deleted in the background; in place when the rename fails. */
+  private async discardDir(dir: string): Promise<void> {
+    if (!existsSync(dir)) return;
+    const target = join(
+      this.paths.worktreeTrashDir,
+      `${basename(dir)}-${randomUUID().slice(0, 8)}`,
+    );
+    try {
+      await mkdir(this.paths.worktreeTrashDir, { recursive: true });
+      await rename(dir, target);
+      this.deleteInBackground(target);
+    } catch {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  /**
+   * Deletes a folder already moved into the trash, below the UI; what a
+   * quit leaves behind is swept at the next boot. A closed task's leftover
+   * files take this way too (`../tasks/closedTaskFiles.ts`).
+   */
+  deleteInBackground(dir: string): void {
+    const deletion: Promise<void> = (this.options.deleteTree ?? deleteTree)(dir)
+      // A tree left behind is swept at the next boot.
+      .catch(() => {})
+      .finally(() => {
+        this.deletions.delete(deletion);
+      });
+    this.deletions.add(deletion);
+  }
+}
+
+/** `rm -rf` below the UI (../utilityQos.ts), with the in-process delete as the fallback. */
+async function deleteTree(dir: string): Promise<void> {
+  const command = atUtilityQos("rm", ["-rf", dir]);
+  try {
+    await execFileAsync(command.file, command.args);
+  } catch {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Refuses a directory that is not the root of its own checkout: `git -C`
+ * walks up to any enclosing repository, and reading THAT repository's
+ * status would say nothing about this tree.
+ */
+async function assertCheckoutRoot(cwd: string): Promise<void> {
+  const top = await git(cwd, ["rev-parse", "--show-toplevel"]);
+  if (realpathSync(top) !== realpathSync(cwd)) {
+    throw new Error(`${cwd} is not a checkout of its own`);
+  }
+}
+
+/**
+ * The branch a new task starts from: `origin`'s declared default when git
+ * knows it, else `main` or `master` where either exists, else whatever the
+ * repository has checked out.
+ */
+async function defaultBranchName(repo: string): Promise<string> {
+  try {
+    const head = await git(repo, [
+      "symbolic-ref",
+      "--quiet",
+      "--short",
+      "refs/remotes/origin/HEAD",
+    ]);
+    if (head.startsWith("origin/")) return head.slice("origin/".length);
+  } catch {
+    // origin/HEAD is only set by a clone; many repositories never have it.
+  }
+  for (const name of ["main", "master"]) {
+    if (
+      (await resolveCommit(repo, `refs/remotes/origin/${name}`)) ||
+      (await resolveCommit(repo, `refs/heads/${name}`))
+    ) {
+      return name;
+    }
+  }
+  try {
+    return await git(repo, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
+  } catch {
+    return "main";
+  }
+}
+
+async function resolveCommit(repo: string, ref: string): Promise<string | null> {
+  try {
+    return (await git(repo, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`])) || null;
+  } catch {
+    return null;
+  }
+}
+
+async function isAncestor(repo: string, ancestor: string, descendant: string): Promise<boolean> {
+  try {
+    await git(repo, ["merge-base", "--is-ancestor", ancestor, descendant]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isMatchingWorktree(cwd: string, branch: string): Promise<boolean> {
+  if (!existsSync(cwd)) return false;
+  try {
+    return (await git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])) === branch;
+  } catch {
+    return false;
+  }
+}
+
+async function branchExists(repo: string, branch: string): Promise<boolean> {
+  try {
+    await git(repo, ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remote destinations that can prove task commits were integrated without a
+ * local pull: the checked-out branch's upstream and each remote's declared
+ * default branch. The task branch's own tracking ref is never a destination.
+ * Every optional ref is discovered and verified independently so one stale
+ * remote does not hide work or invalidate the final reachability count.
+ */
+async function trackedIntegrationRefs(workspace: TaskWorkspace): Promise<string[]> {
+  const { repoDir, branch } = workspace;
+  const taskRemoteRefs = new Set<string>();
+  const candidates = new Set<string>();
+  // What the home sent this computer's default workspace is where its tasks
+  // started, so it is merged work, not the task's.
+  candidates.add(SEEDED_REF);
+  candidates.add(OLDER_SEEDED_REF);
+
+  try {
+    const remotes = (await git(repoDir, ["remote"]))
+      .split("\n")
+      .map((remote) => remote.trim())
+      .filter(Boolean);
+    for (const remote of remotes) taskRemoteRefs.add(`refs/remotes/${remote}/${branch}`);
+  } catch {
+    // No configured remotes.
+  }
+
+  try {
+    const head = await git(repoDir, ["symbolic-ref", "--quiet", "HEAD"]);
+    const upstream = await git(repoDir, ["for-each-ref", "--format=%(upstream)", head]);
+    if (upstream) candidates.add(upstream);
+  } catch {
+    // Detached HEAD or no upstream.
+  }
+
+  try {
+    const refs = await git(repoDir, ["for-each-ref", "--format=%(refname)", "refs/remotes"]);
+    for (const ref of refs.split("\n")) {
+      if (ref.endsWith("/HEAD")) candidates.add(ref);
+    }
+  } catch {
+    // No remote-tracking refs.
+  }
+
+  const integrationRefs: string[] = [];
+  for (const candidate of candidates) {
+    let destination = candidate;
+    try {
+      destination = await git(repoDir, ["symbolic-ref", "--quiet", candidate]);
+    } catch {
+      // A direct remote-tracking ref is expected to be non-symbolic.
+    }
+    if (taskRemoteRefs.has(candidate) || taskRemoteRefs.has(destination)) continue;
+    try {
+      await git(repoDir, ["rev-parse", "--verify", "--quiet", `${candidate}^{commit}`]);
+      integrationRefs.push(candidate);
+    } catch {
+      // A stale optional ref must not poison the valid destinations.
+    }
+  }
+  return integrationRefs;
+}
+
+/** The last meaningful line of a failed install, for a timeline-sized reason. */
+function installError(caught: unknown): string {
+  const failure = caught as { stderr?: string; message?: string; killed?: boolean };
+  if (failure.killed) return "timed out";
+  const lines = `${failure.stderr ?? ""}\n${failure.message ?? ""}`
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const reason = lines.find((line) => /ERR_|error/i.test(line)) ?? lines.at(-1) ?? "unknown error";
+  return reason.length > 200 ? `${reason.slice(0, 200)}...` : reason;
+}
+
+/** The first stderr-ish line of a git failure, for a card-sized reason. */
+function firstGitError(message: string): string {
+  const line = message
+    .split("\n")
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith("CONFLICT") || entry.startsWith("error:"));
+  return line ?? "";
+}

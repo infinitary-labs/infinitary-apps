@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-card-model-above-actions",
+      "kind": "improvement",
+      "title": "Model details sit above a task's actions",
+      "body": "On a task card, the model, its intelligence and its reasoning now sit just above the buttons, under Goal and your words, Activity and Details.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-model-above-actions-dark.webp",
+        "light": "task-card-model-above-actions-light.webp",
+        "alt": "A task card with Model, Intelligence and Reasoning just above Drop task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-setup-card",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Check a project and its settings before Firstmate adds it",
+      "body": "When Firstmate wants to add a project - because you asked, because a crewmate's work needs it, or on its own - a card now shows where the project comes from and how it lands on this computer, with where it runs, where its changes go, whether it asks before merging and its care, set the way Firstmate suggests. Nothing is added until you click Add project, and Firstmate then starts the work the card names. Not now adds nothing.",
+      "area": "projects",
+      "picture": {
+        "dark": "project-setup-card-dark.webp",
+        "light": "project-setup-card-light.webp",
+        "alt": "A card asking to add dotfiles-private as a project, cloned from GitHub, set to run on Mac mini with pull requests, Asks first and Default care, with Not now and Add project buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

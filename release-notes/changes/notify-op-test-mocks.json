@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "notify-op-test-mocks",
+      "reason": "Internal fix for main's checks after two changes merged a minute apart: two core tests mock Firstmate's notice with the return type it now has, and the schedule action's description says the same rule in seven fewer characters so Firstmate's fixed instructions fit their budget again. Nothing a person sees changes."
+    }
+  ]
+}

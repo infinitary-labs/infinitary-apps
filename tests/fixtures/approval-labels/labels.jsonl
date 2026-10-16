@@ -1,0 +1,13 @@
+// Hand-labelled captain choices for the plan-to-build handoff
+// (docs/replay-harness.md, "The plan-to-build handoff"). One row per choice a
+// recorded session under tests/fixtures/replay/ shows the captain making,
+// filed under the recorded card id and the action chosen. `builds` says
+// whether that choice authorized building: the plan it closed, or the
+// builder its card was about. It is a person's reading of the captain's ask
+// and the card as offered (docs/card-authoring.md, "The handoff"), never a
+// rule over the card's words; `note` says why. The replay scores the
+// Firstmate's answer against it: exactly one builder grounded on the plan
+// for a build approval, none for any other choice. A choice with no row is
+// not scored.
+{"card":"card-1cf310e2-fm-crew-fi3-309-plan","choice":"agree","builds":true,"note":"sep30-handoff-agree. FI3-309's plan card. The captain asked for the change itself (\"i'd like to make task popovers render just like a normal card in the main card stack\", solid card backgrounds, the character hidden under cards) and a planner to look into it; the card offered the full spec with its questions answered, and \"Agree the plan\" was its default closing choice, with no design-only wording. The Firstmate had already planned FI3-310 on this plan's basis. The FI3-329 audit names this the clearest handoff failure: an accepted plan for requested work."}
+{"card":"card-fm-4-c3408c","choice":"start-implementation","builds":true,"note":"oct01-handoff-start. The Firstmate's own card on FI3-310, answering \"did we land the work to make main cards background solid?\": it recommended starting the queued builder from the agreed plan, and the captain chose \"Start implementation\" over \"Keep it queued\"."}

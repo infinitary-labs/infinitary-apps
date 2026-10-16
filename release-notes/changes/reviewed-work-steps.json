@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "reviewed-work-steps",
+      "reason": "Moves the careful-review guidance from Firstmate's fixed instructions to the builder's brief and the review messages, without changing the product interface or intended behavior."
+    }
+  ]
+}

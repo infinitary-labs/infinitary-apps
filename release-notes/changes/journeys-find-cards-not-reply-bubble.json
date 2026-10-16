@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-find-cards-not-reply-bubble",
+      "reason": "The end-to-end journeys find a card by the card itself instead of by its title's words, which the Firstmate's reply above the input also shows, so they stop failing on the Mac that runs the release checks. Test code only; nothing a person notices changes."
+    }
+  ]
+}

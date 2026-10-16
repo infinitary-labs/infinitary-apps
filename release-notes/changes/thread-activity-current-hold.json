@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "thread-activity-current-hold",
+      "reason": "Corrects what Firstmate is told about card threads: each thread line now says who owes an answer from the card's current state, so a reply a closed or re-raised card kept no longer reads as still waiting on its author. Nothing a person sees on screen changes."
+    }
+  ]
+}

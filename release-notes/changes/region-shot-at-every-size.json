@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "region-shot-at-every-size",
+      "reason": "Test tooling only: the shared region picture capture photographs the region it measured at every Size, so evidence pictures of a change seen only at 110-150% show the right place."
+    }
+  ]
+}

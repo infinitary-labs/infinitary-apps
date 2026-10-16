@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "repoless-tasks-on-other-computers",
+      "kind": "improvement",
+      "title": "Ask for a task with no project to run on another computer",
+      "body": "Tell Firstmate to run a task on one of your other computers, such as \"on the mini, find out why its disk is full\", even when the task belongs to no project. The task's record shows where it runs under Details, and merging its change brings the work back to this computer. If that computer needs an update first, the task waits and Firstmate says to update it in Settings \u2192 Devices.",
+      "area": "devices",
+      "noPicture": "You ask for it in words and the cards read as they do for any task on another computer; no screen is new.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

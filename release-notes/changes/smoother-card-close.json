@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "smoother-card-close",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Closing a card is smoother",
+      "body": "Closing a card now stutters less while the next card comes forward. The move looks the same and takes as long as before.",
+      "noPicture": "The card looks the same; only the smoothness of the move changed, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

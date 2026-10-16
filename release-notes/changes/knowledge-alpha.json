@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-alpha",
+      "kind": "feature",
+      "title": "Alpha only: the crew keeps what it learns",
+      "body": "In alpha builds, crewmates record what they learn as named ideas and findings about them, each finding with the lines, report or quotation it rests on. The next crewmate and Firstmate look there first, even when they ask in other words, and see whether the evidence still reads the same. New facts you tell Firstmate go there too, while your preferences stay as they were. Purge in Settings clears it, and says so first. Stable releases do not have it.",
+      "area": "crewmates",
+      "noPicture": "What changes is what crewmates and Firstmate read and record; the one visible change is a sentence on the Purge row.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

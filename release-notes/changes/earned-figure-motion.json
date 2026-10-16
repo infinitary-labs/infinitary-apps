@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "earned-figure-motion",
+      "kind": "fix",
+      "title": "Card figures stay still when a press adds nothing",
+      "body": "Timelines, charts and flows stay still when the drawing already shows every state. A figure plays when a press shows what one still drawing cannot hold. Figures with a value you can vary keep a control, and playable previews are unchanged.",
+      "area": "cards",
+      "noPicture": "This changes guidance for newly written cards, not a fixed view or any existing card.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

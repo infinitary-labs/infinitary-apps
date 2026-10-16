@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "mac-setup-copy-progress",
+      "kind": "improvement",
+      "title": "See how far Firstmate has gone to a Mac you add",
+      "body": "When you add a Mac by its address, its row in Settings → Devices and the activity feed say when Firstmate is being prepared, how much of it has been sent so far, and when it is starting on that Mac. The amount moves while the copy goes. Firstmate shows no percentage, because the full size is not known until the copy ends.",
+      "area": "devices",
+      "picture": {
+        "dark": "mac-setup-copy-progress-dark.webp",
+        "light": "mac-setup-copy-progress-light.webp",
+        "alt": "Settings, Devices, adding Mac mini by its address, its row reading Sending Firstmate to Mac mini, 108.2 MB sent"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

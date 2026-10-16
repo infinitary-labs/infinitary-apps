@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "browser-reads-long-pages",
+      "kind": "fix",
+      "title": "A crewmate can read all of a long page in its browser",
+      "body": "A crewmate used to see only the top of a long page in its browser, however far it scrolled. Now it can read from any part of the page, find words anywhere on it, and see what is on screen after it scrolls, so it no longer misses what sits further down.",
+      "area": "tasks",
+      "noPicture": "The change is in what a crewmate reads back from a page, which is not drawn on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

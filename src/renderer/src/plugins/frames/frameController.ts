@@ -1,0 +1,963 @@
+import {
+  CARD_QUESTIONS_MAX_BYTES,
+  type CardAnswer,
+  type CardQuestionsGap,
+  type CardWidth,
+  cardQuestionsBytes,
+  cardQuestionsSchema,
+} from "@shared/cards";
+import {
+  type PersonalStoreChange,
+  type PersonalStoreRequest,
+  type PersonalStoreResponse,
+  personalStoreRequestSchema,
+} from "@shared/personal/manifest";
+import {
+  ACTION_VALUE_MAX_BYTES,
+  FRAME_BRIDGE_VERSION,
+  FRAME_MAX_IN_FLIGHT,
+  FRAME_MAX_SUBSCRIPTIONS,
+  type FrameAnswers,
+  type FrameBox,
+  type FrameDemo,
+  type FrameEntryRef,
+  type FrameError,
+  type FramePicture,
+  type FrameRequest,
+  type FrameTaskGesture,
+  frameMessageSchema,
+  frameRequestSchema,
+  type HostMessage,
+} from "@shared/plugins/bridge";
+import type { MediatedFetchCall, MediatedFetchResult } from "@shared/plugins/fetch";
+import type { FrameTheme } from "@shared/plugins/frameDocument";
+import type { ReadGrant } from "@shared/reads";
+import { type ReadExecutor, ReadSubscriptionError } from "../reads/executor";
+import { noteDroppedLinkMessage, noteFrameLink } from "./frameLink";
+
+/**
+ * The host side of bridge v2 (docs/ui-plugins.md, phase 1): one controller
+ * per frame, whichever vehicle carries it. It receives the frame's
+ * messages - already source-checked by the caller - zod-parses the closed
+ * envelope, and answers every request of its current document with exactly
+ * one correlated response.
+ *
+ * What it enforces, per mount, is the plugin's declaration: a read must be
+ * one the plugin declared and the catalog knows; an action must be one the
+ * mount declared, with a bounded value; a fetch is forwarded to the core's
+ * mediated-fetch seam and never decided here; a store request reaches the
+ * one slice the host bound to the mount (a panel drawn in the frame realm,
+ * its own extension id), and is refused on a mount bound to none. Bounds hold the frame to
+ * FRAME_MAX_SUBSCRIPTIONS live subscriptions and FRAME_MAX_IN_FLIGHT
+ * unanswered async requests, so a misbehaving template can wedge only
+ * itself. Framework-free: React wires a window listener and a port.
+ *
+ * An answer goes only to the document that asked. Each new document of a
+ * mount numbers its requests from 1 again, so an answer finished after its
+ * document was replaced is dropped, and every answer names the document it
+ * is for, which the bridge in any other document ignores. A dropped answer's
+ * request still counts against FRAME_MAX_IN_FLIGHT until it settles, so a
+ * document that replaces itself cannot escape the cap.
+ */
+
+export type FramePort = {
+  post: (message: HostMessage) => void;
+};
+
+/** A box the chrome holds over a document's top right (`FrameMountSpec.inset`). */
+export type FrameInset = { width: number; height: number };
+
+export type FrameMountSpec = {
+  pluginId: string;
+  revision?: { offerId: string; starts: readonly number[] };
+  /** Read-catalog names the plugin declared (its manifest's capabilities.reads). */
+  reads: readonly string[];
+  /** What the host adds to the plugin's reads from its grant (the views `sql` reaches). */
+  grant?: ReadGrant;
+  /** Action ids the mount declared (a card's actions; none for a section). */
+  actions: readonly string[];
+  /**
+   * The gesture, and where the frame was when it made it: only the host
+   * knows the iframe's place in the window, so anything it must position
+   * against a frame's own contents (a panel's crew summary, which sits
+   * beside the one row it rests on) needs the rect here to turn frame
+   * coordinates into window ones.
+   *
+   * Its answer, when it is plain data, goes back to the frame as the
+   * action's result (a panel's `cards.emit` answers the card's id).
+   */
+  onAction: (actionId: string, value: unknown, frame?: DOMRect) => unknown;
+  onResize?: (height: number) => void;
+  /**
+   * Initialized, positive drawing at the reported viewport width, not
+   * document birth. `held` when the page drew held (a card's page before it
+   * is shown, `activate`): its scripts and animations have not started.
+   */
+  onDrawn?: (height: number, width: number, held: boolean) => void;
+  /** A new document of the mount was born (its bridge posted `ready`). */
+  onBorn?: () => void;
+  onInteraction?: () => void;
+  onLiveChange?: () => void;
+  onLink?: (href: string) => void;
+  /**
+   * A press on a `data-inf-draft` control in the frame's current document:
+   * the words to start the message box with. Whether the press was the
+   * captain's own is the caller's call, as a link's is.
+   */
+  onDraft?: (text: string) => void;
+  /**
+   * A picture in the frame was clicked (card pictures, phase 3): the
+   * pictures of its group as the frame saw them, and which one. The
+   * envelope is checked here; which sources may be shown is the caller's
+   * call (`viewablePictures`).
+   */
+  onImage?: (index: number, pictures: FramePicture[]) => void;
+  /**
+   * A demo's Play button or poster was pressed (docs/card-authoring.md
+   * "Demo recordings"): the recording's served name, its poster and caption
+   * as the frame saw them, and whether to play. Which recordings may play is
+   * the caller's call (the card's own, `isPlayableDemoSource`).
+   */
+  onDemo?: (demo: FrameDemo) => void;
+  /**
+   * The task keys a card body or a task's record writes that name recorded
+   * tasks (FI3-594, FI3-1271): pushed to every document after its `ready`
+   * and again on every change, so the bridge links each one. A mount
+   * without them links nothing.
+   */
+  taskKeys?: readonly string[];
+  /**
+   * A gesture on a linked key: `rest` with the key's box in the frame's
+   * viewport, `leave`, or `open`. Only for a key this mount's document was
+   * told, so a frame can point at no task its body does not name. A mount
+   * (`FrameMount`) adds the frame the key is in.
+   */
+  onTask?: (
+    gesture: FrameTaskGesture,
+    key: string,
+    box?: FrameBox,
+    frame?: HTMLIFrameElement | null,
+  ) => void;
+  /**
+   * The knowledge entries a card body names that the window reads
+   * (docs/knowledge.md, "References in an answer"), with the words each
+   * reference is read by: pushed like the task keys, so the bridge links
+   * each one. A mount without them links none.
+   */
+  entryRefs?: readonly FrameEntryRef[];
+  /**
+   * A click or Enter on a linked reference. Only for an entry this mount's
+   * document was told, so a frame can open no entry its body does not name.
+   */
+  onEntry?: (id: string) => void;
+  /**
+   * An Escape nothing in a card body used (docs/keyboard.md, "Cards and
+   * frames"): the document asks to be left for its card. Only a mount that
+   * hears it is told to send it, and only its current document is heard;
+   * whether focus moves is the host's call.
+   */
+  onEscape?: () => void;
+  /**
+   * View state pushed down to the frame, re-pushed on every document birth
+   * (`inf.state` / `inf.onState`). Host-owned and not app data: the now
+   * panel's selected row is the shell's, because the shell owns the pane
+   * docked beside it.
+   */
+  state?: unknown;
+  /**
+   * A card's shown size (`data-width` in its document), pushed after every
+   * `ready` and on every change, the way the theme is. Only a card's frame
+   * carries one; the bridge caps full-width drawings only in a frame told it.
+   */
+  width?: CardWidth;
+  /**
+   * The box the card's chrome holds over the top right of the document, in
+   * CSS pixels from its top and right edges (a merge card's risk chart,
+   * docs/card-authoring.md "The risk chart"): the bridge sets it as
+   * `--inf-inset-width` and `--inf-inset-height`, which the frame stylesheet's
+   * `[data-inf-inset]` spacer keeps clear. Pushed after every `ready` and on
+   * every change, the way the width is.
+   */
+  inset?: FrameInset;
+  /**
+   * The document's markup, refreshed in place (FI3-1093): pushed after every
+   * `ready` and on every change, and the bridge rewrites only what differs,
+   * so a node the refresh leaves alone - the link under a press - stays. Only
+   * a card's fact strip carries it; its document is never rebuilt for it.
+   */
+  markup?: string;
+  /**
+   * The store slice this mount may reach (one plugin vehicle, Phase A item
+   * 4): the extension id the HOST bound, never one the frame names. Absent,
+   * the `store` verb is refused.
+   */
+  store?: { extensionId: string };
+  /**
+   * Arms the frame watchdog (WI-16): from `expectDocument` or `ready` on, the
+   * controller ticks every FRAME_WATCHDOG_INTERVAL_MS, and a frame that is
+   * not born or leaves FRAME_WATCHDOG_MISSES pings in a row unanswered - its
+   * event loop wedged by a runaway script - is reported once. The caller
+   * tears the frame down. Misses are not counted while `paused` says the
+   * page is hidden.
+   */
+  onUnresponsive?: () => void;
+  /**
+   * A card body's form (inline decisions, contract 4.22): the host tells
+   * every document of the mount to watch its named controls, handing it the
+   * shell's draft to reapply by name (`fill`), and hears each reading. A
+   * mount without it - a panel, a section - never has its controls read.
+   */
+  form?: {
+    fill: () => CardAnswer[] | undefined;
+    onAnswers: (answers: FrameAnswers) => void;
+    /**
+     * A past card's body (FI3-579): the document fills the draft, then
+     * disables every control it holds and any that arrive later.
+     */
+    readOnly?: true;
+  };
+};
+
+/** How long a footer click waits for the frame's fresh reading of its form. */
+export const FRAME_COLLECT_TIMEOUT_MS = 1_000;
+
+/** How often an armed controller pings its frame. */
+export const FRAME_WATCHDOG_INTERVAL_MS = 1_000;
+/** Consecutive unanswered pings that make a frame unresponsive. */
+export const FRAME_WATCHDOG_MISSES = 4;
+
+export type WatchdogTimers = {
+  setInterval: (callback: () => void, ms: number) => unknown;
+  clearInterval: (handle: unknown) => void;
+};
+
+const browserTimers: WatchdogTimers = {
+  setInterval: (callback, ms) => globalThis.setInterval(callback, ms),
+  clearInterval: (handle) => globalThis.clearInterval(handle as ReturnType<typeof setInterval>),
+};
+
+/** The extension store's two ends, as the app's IPC serves them (`inf:plugins:db`). */
+export type FrameStoreDeps = {
+  request: (request: PersonalStoreRequest) => Promise<PersonalStoreResponse>;
+  onChange: (listener: (change: PersonalStoreChange) => void) => () => void;
+};
+
+export type FrameControllerDeps = {
+  executor: ReadExecutor;
+  fetch: (call: MediatedFetchCall) => Promise<MediatedFetchResult>;
+  /** Absent, every store request is refused whatever the mount was bound to. */
+  store?: FrameStoreDeps;
+  /** The watchdog's clock; tests drive a fake one. */
+  timers?: WatchdogTimers;
+  /**
+   * While this is true, a missed ping is not a wedge: the page is hidden
+   * (a collapsed or off-rail panel, or the window itself) and may not run.
+   * Absent, every miss counts, as a showing card does.
+   */
+  paused?: () => boolean;
+};
+
+const V = FRAME_BRIDGE_VERSION;
+
+/** A request's correlation id, and which document of the mount sent it. */
+type Asker = { id: number; document: string | undefined; birth: number };
+
+function byteLength(value: unknown): number {
+  const text = JSON.stringify(value) ?? "";
+  return new TextEncoder().encode(text).byteLength;
+}
+
+/**
+ * A collect's question definitions, validated on their own and under their
+ * bound (docs/card-evidence.md): definitions the host cannot read become the
+ * reason there are none, never a lost reading.
+ */
+function questionsOf(message: {
+  questions?: unknown;
+  questionsGap?: CardQuestionsGap | undefined;
+}): Pick<FrameAnswers, "questions" | "questionsGap"> {
+  if (message.questions === undefined) {
+    return message.questionsGap ? { questionsGap: message.questionsGap } : {};
+  }
+  const questions = cardQuestionsSchema.safeParse(message.questions);
+  if (!questions.success) return { questionsGap: "invalid" };
+  if (cardQuestionsBytes(questions.data) > CARD_QUESTIONS_MAX_BYTES) {
+    return { questionsGap: "too-large" };
+  }
+  return { questions: questions.data };
+}
+
+export class FrameController {
+  private spec: FrameMountSpec;
+  private theme: FrameTheme;
+  private ready = false;
+  private documentId: string | undefined;
+  private retiredDocuments = new Set<string>();
+  /** Counts the documents the mount was pointed at, so an answer finds the one that asked. */
+  private births = 0;
+  private disposed = false;
+  private inFlight = 0;
+  private readonly subscriptions = new Map<number, () => void>();
+  private watchdog: unknown = null;
+  private pingSeq = 0;
+  private answeredSeq = 0;
+  private missed = 0;
+  private unborn = 0;
+  private stopStoreNotices: (() => void) | null = null;
+  private activated = false;
+  private revealSeq = 0;
+  private revealing?: {
+    seq: number;
+    offerId: string;
+    resolve: (box: { top: number; height: number } | undefined) => void;
+  };
+  private collectSeq = 0;
+  private readonly collecting = new Map<number, (answers: FrameAnswers | undefined) => void>();
+
+  constructor(
+    spec: FrameMountSpec,
+    theme: FrameTheme,
+    private readonly deps: FrameControllerDeps,
+    private readonly port: FramePort,
+  ) {
+    this.spec = spec;
+    this.theme = theme;
+  }
+
+  get isReady(): boolean {
+    return this.ready;
+  }
+
+  get subscriptionCount(): number {
+    return this.subscriptions.size;
+  }
+
+  /** The latest declaration; a card's actions can change between renders. */
+  update(spec: Partial<FrameMountSpec>): void {
+    this.spec = { ...this.spec, ...spec };
+  }
+
+  setTheme(theme: FrameTheme): void {
+    this.theme = theme;
+    if (this.ready) this.port.post({ fm: V, type: "theme", theme });
+  }
+
+  /**
+   * Pushes the host's view state. A document not yet born gets it on its
+   * `ready` instead, the way the theme does, so a frame never has to ask
+   * for the state it was born into.
+   */
+  setState(state: unknown): void {
+    this.spec = { ...this.spec, state };
+    if (this.ready) this.port.post({ fm: V, type: "state", state });
+  }
+
+  /** Pushes a card's shown size; a document not yet born gets it on its `ready`. */
+  setWidth(width: CardWidth | undefined): void {
+    this.spec = { ...this.spec, ...(width ? { width } : {}) };
+    if (this.ready && width) this.port.post({ fm: V, type: "width", width });
+  }
+
+  /** Pushes the chrome's box over the document; a document not yet born gets it on its `ready`. */
+  setInset(inset: FrameInset | undefined): void {
+    const before = this.spec.inset;
+    if (before?.width === inset?.width && before?.height === inset?.height) return;
+    this.spec = { ...this.spec, inset };
+    if (this.ready && inset) this.port.post({ fm: V, type: "inset", ...inset });
+  }
+
+  /** Pushes the document's markup; a document not yet born gets it on its `ready`. */
+  setMarkup(markup: string | undefined): void {
+    if (markup === this.spec.markup) return;
+    this.spec = { ...this.spec, markup };
+    if (this.ready && markup !== undefined) this.port.post({ fm: V, type: "markup", html: markup });
+  }
+
+  /** Pushes the keys a card body links; a document not yet born gets them on its `ready`. */
+  setTaskKeys(keys: readonly string[] | undefined): void {
+    this.spec = { ...this.spec, taskKeys: keys };
+    if (this.ready && keys) this.port.post({ fm: V, type: "tasks", keys: [...keys] });
+  }
+
+  /** Pushes the knowledge references a card body links; a document not yet born gets them on its `ready`. */
+  setEntryRefs(refs: readonly FrameEntryRef[] | undefined): void {
+    this.spec = { ...this.spec, entryRefs: refs };
+    if (this.ready && refs) this.port.post({ fm: V, type: "entries", entries: [...refs] });
+  }
+
+  /**
+   * The card is shown (FI3-871): its page, and every later document of the
+   * mount, releases its held scripts and animations. A document not yet
+   * born gets it on its `ready`, after the rest of what it was born into.
+   * Once shown, a mount stays shown.
+   */
+  activate(): void {
+    if (this.disposed || this.activated) return;
+    this.activated = true;
+    if (this.ready) this.port.post({ fm: V, type: "activate" });
+  }
+
+  /**
+   * One message from the frame. Anything outside the envelope is dropped; a
+   * link says so on the console at each step (`noteFrameLink`).
+   */
+  receive(data: unknown): void {
+    if (this.disposed) {
+      noteDroppedLinkMessage(data, "its frame is gone");
+      return;
+    }
+    const parsed = frameMessageSchema.safeParse(data);
+    if (!parsed.success) {
+      noteDroppedLinkMessage(data, "its message is not one the bridge sends");
+      return;
+    }
+    const message = parsed.data;
+    if (message.type === "link") noteFrameLink(message.href, "heard from its frame");
+    if (
+      message.type !== "ready" &&
+      typeof data === "object" &&
+      data !== null &&
+      "document" in data &&
+      data.document !== this.documentId
+    ) {
+      if (message.type === "link")
+        noteFrameLink(
+          message.href,
+          "not opened, it came from a document the frame no longer shows",
+        );
+      return;
+    }
+    switch (message.type) {
+      case "ready":
+        if (message.document && this.retiredDocuments.has(message.document)) return;
+        if (this.documentId !== message.document) this.retireDocument();
+        // The bridge posts this before any template code runs, so it marks
+        // a document's birth: a fresh document (a card body rebuilt) starts
+        // with no subscriptions, and whatever the old one held is void.
+        this.dropSubscriptions();
+        this.births += 1;
+        this.ready = true;
+        this.documentId = message.document;
+        this.port.post({ fm: V, type: "theme", theme: this.theme });
+        if (this.spec.state !== undefined) {
+          this.port.post({ fm: V, type: "state", state: this.spec.state });
+        }
+        if (this.spec.form) {
+          this.port.post({
+            fm: V,
+            type: "form",
+            fill: this.spec.form.fill() ?? null,
+            ...(this.spec.form.readOnly ? { readOnly: true as const } : {}),
+          });
+        }
+        if (this.spec.width) this.port.post({ fm: V, type: "width", width: this.spec.width });
+        if (this.spec.inset) this.port.post({ fm: V, type: "inset", ...this.spec.inset });
+        if (this.spec.markup !== undefined)
+          this.port.post({ fm: V, type: "markup", html: this.spec.markup });
+        if (this.spec.taskKeys) {
+          this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
+        }
+        if (this.spec.entryRefs) {
+          this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
+        }
+        // The keys the host hears from this document: a picture's, for a
+        // mount that opens pictures, and an Escape that leaves it.
+        if (this.spec.onImage || this.spec.onEscape) {
+          this.port.post({
+            fm: V,
+            type: "keys",
+            pictures: this.spec.onImage !== undefined,
+            escape: this.spec.onEscape !== undefined,
+          });
+        }
+        if (message.document)
+          this.port.post({ fm: V, type: "initialize", document: message.document });
+        if (this.activated) this.port.post({ fm: V, type: "activate" });
+        this.armWatchdog();
+        this.listenToStore();
+        this.spec.onBorn?.();
+        return;
+      case "revealed": {
+        const pending = this.revealing;
+        if (
+          !pending ||
+          message.seq !== pending.seq ||
+          message.offerId !== pending.offerId ||
+          this.spec.revision?.offerId !== pending.offerId
+        )
+          return;
+        pending.resolve(
+          message.top !== undefined && message.height !== undefined
+            ? { top: message.top, height: message.height }
+            : undefined,
+        );
+        return;
+      }
+      case "pong":
+        if (message.seq > this.answeredSeq) this.answeredSeq = message.seq;
+        return;
+      case "resize":
+        if (message.document !== this.documentId) return;
+        if (message.initialized && message.live) this.spec.onLiveChange?.();
+        this.spec.onResize?.(message.height);
+        if (
+          message.initialized &&
+          message.height > 0 &&
+          message.width !== undefined &&
+          message.width > 0
+        ) {
+          this.spec.onDrawn?.(message.height, message.width, message.held === true);
+        }
+        return;
+      case "interaction":
+        if (message.document === this.documentId) this.spec.onInteraction?.();
+        return;
+      // The window's own focus guards read it (`guardFrameActivation`).
+      case "focused":
+        return;
+      case "escape":
+        if (message.document === this.documentId) this.spec.onEscape?.();
+        return;
+      case "link":
+        this.spec.onLink?.(message.href);
+        return;
+      case "draft":
+        this.spec.onDraft?.(message.text);
+        return;
+      case "task":
+        if (message.document !== this.documentId) return;
+        if (!this.spec.taskKeys?.includes(message.key)) return;
+        if (message.gesture === "rest" && !message.box) return;
+        this.spec.onTask?.(message.gesture, message.key, message.box);
+        return;
+      case "entry":
+        if (message.document !== this.documentId) return;
+        if (!this.spec.entryRefs?.some((ref) => ref.id === message.id)) return;
+        this.spec.onEntry?.(message.id);
+        return;
+      case "image":
+        if (message.index < message.pictures.length) {
+          this.spec.onImage?.(message.index, message.pictures);
+        }
+        return;
+      case "demo": {
+        const { src, poster, caption, durationMs, play } = message;
+        this.spec.onDemo?.({ src, poster, caption, durationMs, play });
+        return;
+      }
+      case "answers": {
+        if (!this.spec.form) return;
+        const { answered, of, changed, picked, answers, seq } = message;
+        if (answered > of || changed > of || picked > of || answers.length !== of) return;
+        const reading = { answered, of, changed, picked, answers };
+        this.spec.form.onAnswers(reading);
+        if (seq !== undefined) {
+          this.collecting.get(seq)?.({ ...reading, ...questionsOf(message) });
+          this.collecting.delete(seq);
+        }
+        return;
+      }
+      case "request": {
+        const { id, fm: _fm, type: _type, ...rest } = message;
+        const asker: Asker = { id, document: this.documentId, birth: this.births };
+        const request = frameRequestSchema.safeParse(rest);
+        if (!request.success) {
+          this.refuse(asker, "bad_request", "malformed request");
+          return;
+        }
+        this.handle(asker, request.data);
+        return;
+      }
+    }
+  }
+
+  /** Reveal a known target on this exact offer; a retired or silent document answers nothing. */
+  reveal(
+    offerId: string,
+    start: number,
+    keyboard: boolean,
+  ): Promise<{ top: number; height: number } | undefined> {
+    if (
+      this.disposed ||
+      !this.ready ||
+      !this.documentId ||
+      this.spec.revision?.offerId !== offerId ||
+      !this.spec.revision.starts.includes(start)
+    )
+      return Promise.resolve(undefined);
+    this.revealing?.resolve(undefined);
+    const seq = ++this.revealSeq;
+    return new Promise((resolve) => {
+      const finish = (box: { top: number; height: number } | undefined) => {
+        globalThis.clearTimeout(timer);
+        if (this.revealing?.seq === seq) this.revealing = undefined;
+        resolve(box);
+      };
+      const timer = globalThis.setTimeout(() => finish(undefined), FRAME_COLLECT_TIMEOUT_MS);
+      this.revealing = { seq, offerId, resolve: finish };
+      this.port.post({
+        fm: V,
+        type: "reveal",
+        document: this.documentId!,
+        seq,
+        offerId,
+        start,
+        keyboard,
+      });
+    });
+  }
+
+  /**
+   * A fresh reading of a card body's form, for the footer click that sends
+   * it: undefined when the mount watches no form, the document is not born,
+   * or it does not answer within FRAME_COLLECT_TIMEOUT_MS (a wedged frame) -
+   * the caller then falls back on the last reading it heard.
+   */
+  collect(focusUnpicked = false): Promise<FrameAnswers | undefined> {
+    if (this.disposed || !this.ready || !this.spec.form) return Promise.resolve(undefined);
+    this.collectSeq += 1;
+    const seq = this.collectSeq;
+    return new Promise((resolve) => {
+      const timer = globalThis.setTimeout(() => {
+        this.collecting.delete(seq);
+        resolve(undefined);
+      }, FRAME_COLLECT_TIMEOUT_MS);
+      this.collecting.set(seq, (answers) => {
+        globalThis.clearTimeout(timer);
+        resolve(answers);
+      });
+      this.port.post({ fm: V, type: "collect", seq, focusUnpicked });
+    });
+  }
+
+  /**
+   * The host just gave the frame focus back (docs/keyboard.md, "Cards and
+   * frames"): the document's element that last had focus takes it again,
+   * with its caret. Nothing for a document not yet born.
+   */
+  returnFocus(): void {
+    if (this.disposed || !this.ready) return;
+    this.port.post({ fm: V, type: "focus" });
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.revealing?.resolve(undefined);
+    for (const resolve of this.collecting.values()) resolve(undefined);
+    this.collecting.clear();
+    this.disarmWatchdog();
+    this.dropSubscriptions();
+    this.stopStoreNotices?.();
+    this.stopStoreNotices = null;
+  }
+
+  /**
+   * Tells the frame which keys of ITS slice changed, from whichever side
+   * wrote them. Started once, with the first document of a store-bound
+   * mount; the slice is the one the host bound, read at each change.
+   */
+  private listenToStore(): void {
+    if (this.stopStoreNotices || !this.spec.store || !this.deps.store) return;
+    this.stopStoreNotices = this.deps.store.onChange((change) => {
+      if (this.disposed || !this.ready) return;
+      if (change.extensionId !== this.spec.store?.extensionId) return;
+      this.port.post({ fm: V, type: "store", key: change.key });
+    });
+  }
+
+  /**
+   * The host just pointed the frame at a new document. An armed watchdog
+   * starts counting at once: a document must be born (post `ready`) within
+   * FRAME_WATCHDOG_MISSES intervals, because a script that wedges its frame
+   * before the bridge's `ready` reaches the host would otherwise never arm
+   * the ping clock at all.
+   */
+  expectDocument(): void {
+    if (this.disposed) return;
+    this.retireDocument();
+    this.documentId = undefined;
+    this.births += 1;
+    this.ready = false;
+    this.dropSubscriptions();
+    this.armWatchdog();
+  }
+
+  private retireDocument(): void {
+    this.revealing?.resolve(undefined);
+    if (!this.documentId) return;
+    this.retiredDocuments.add(this.documentId);
+    // A bounded birth history rejects queued notices without retaining an
+    // unbounded amount of agent-authored message data.
+    if (this.retiredDocuments.size > 32) {
+      const first = this.retiredDocuments.values().next().value;
+      if (first !== undefined) this.retiredDocuments.delete(first);
+    }
+  }
+
+  /**
+   * A fresh document gets a fresh watchdog. Before `ready` a tick counts the
+   * document as not yet born; after it, a ping is missed when the next tick
+   * finds it still unanswered, so a throttled host clock only pings less
+   * often - it never counts a miss the frame did not make. A tick while the
+   * page is hidden counts nothing and sends nothing: a collapsed panel, or
+   * the window while the screen is off, may not run, and that is not a wedge.
+   * The streak starts again when the page is showing.
+   */
+  private armWatchdog(): void {
+    this.disarmWatchdog();
+    if (!this.spec.onUnresponsive) return;
+    const timers = this.deps.timers ?? browserTimers;
+    this.missed = 0;
+    this.unborn = 0;
+    this.answeredSeq = this.pingSeq;
+    this.watchdog = timers.setInterval(() => {
+      if (this.deps.paused?.()) {
+        this.missed = 0;
+        this.unborn = 0;
+        this.answeredSeq = this.pingSeq;
+        return;
+      }
+      if (!this.ready) {
+        this.unborn += 1;
+        if (this.unborn >= FRAME_WATCHDOG_MISSES) this.unresponsive();
+        return;
+      }
+      if (this.answeredSeq < this.pingSeq) {
+        this.missed += 1;
+        if (this.missed >= FRAME_WATCHDOG_MISSES) {
+          this.unresponsive();
+          return;
+        }
+      } else {
+        this.missed = 0;
+      }
+      this.pingSeq += 1;
+      this.port.post({ fm: V, type: "ping", seq: this.pingSeq });
+    }, FRAME_WATCHDOG_INTERVAL_MS);
+  }
+
+  private unresponsive(): void {
+    this.disarmWatchdog();
+    this.ready = false;
+    this.dropSubscriptions();
+    this.spec.onUnresponsive?.();
+  }
+
+  private disarmWatchdog(): void {
+    if (this.watchdog === null) return;
+    (this.deps.timers ?? browserTimers).clearInterval(this.watchdog);
+    this.watchdog = null;
+  }
+
+  private handle(asker: Asker, request: FrameRequest): void {
+    switch (request.verb) {
+      case "subscribe":
+        this.subscribe(asker, request);
+        return;
+      case "unsubscribe": {
+        const stop = this.subscriptions.get(request.sub);
+        if (!stop) {
+          this.refuse(asker, "subscription_unknown", `no subscription ${request.sub}`);
+          return;
+        }
+        this.subscriptions.delete(request.sub);
+        stop();
+        this.respond(asker);
+        return;
+      }
+      case "action":
+        void this.action(asker, request);
+        return;
+      case "fetch":
+        void this.fetch(asker, request);
+        return;
+      case "store":
+        void this.storeRequest(asker, request);
+        return;
+    }
+  }
+
+  private async storeRequest(asker: Asker, request: Extract<FrameRequest, { verb: "store" }>) {
+    const slice = this.spec.store;
+    if (!slice || !this.deps.store) {
+      this.refuse(asker, "capability_not_granted", "this frame has no store");
+      return;
+    }
+    // The slice is the host's to name: whatever the frame sent, the request
+    // that leaves is for the mount's own extension id.
+    const { verb: _verb, ...rest } = request;
+    const parsed = personalStoreRequestSchema.safeParse({
+      ...rest,
+      extensionId: slice.extensionId,
+    });
+    if (!parsed.success) {
+      this.refuse(
+        asker,
+        "bad_request",
+        parsed.error.issues[0]?.message ?? "malformed store request",
+      );
+      return;
+    }
+    if (!this.admit(asker)) return;
+    try {
+      this.respond(asker, await this.deps.store.request(parsed.data));
+    } catch (caught) {
+      this.refuse(asker, "store_failed", caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+
+  private subscribe(asker: Asker, request: Extract<FrameRequest, { verb: "subscribe" }>): void {
+    if (!this.spec.reads.includes(request.read)) {
+      this.refuse(
+        asker,
+        "read_not_declared",
+        `plugin "${this.spec.pluginId}" does not declare the read "${request.read}"`,
+      );
+      return;
+    }
+    if (this.subscriptions.has(request.sub)) {
+      this.refuse(asker, "bad_request", `subscription ${request.sub} already exists`);
+      return;
+    }
+    if (this.subscriptions.size >= FRAME_MAX_SUBSCRIPTIONS) {
+      this.refuse(
+        asker,
+        "too_many_subscriptions",
+        `a frame may hold ${FRAME_MAX_SUBSCRIPTIONS} subscriptions`,
+      );
+      return;
+    }
+    const sub = request.sub;
+    let stop: () => void;
+    try {
+      stop = this.deps.executor.subscribe(
+        request.read,
+        request.args,
+        {
+          onValue: (value) => {
+            if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, value });
+          },
+          onError: (error) => {
+            if (this.subscriptions.has(sub)) this.port.post({ fm: V, type: "data", sub, error });
+          },
+        },
+        this.spec.grant,
+      );
+    } catch (caught) {
+      if (caught instanceof ReadSubscriptionError) {
+        this.refuse(asker, caught.code, caught.message);
+      } else {
+        this.refuse(
+          asker,
+          "read_failed",
+          caught instanceof Error ? caught.message : String(caught),
+        );
+      }
+      return;
+    }
+    this.subscriptions.set(sub, stop);
+    this.respond(asker);
+  }
+
+  private async action(asker: Asker, request: Extract<FrameRequest, { verb: "action" }>) {
+    if (!this.spec.actions.includes(request.action)) {
+      this.refuse(asker, "action_not_declared", `"${request.action}" is not a declared action`);
+      return;
+    }
+    if (request.value !== undefined && byteLength(request.value) > ACTION_VALUE_MAX_BYTES) {
+      this.refuse(
+        asker,
+        "value_too_large",
+        `an action value may be ${ACTION_VALUE_MAX_BYTES} bytes`,
+      );
+      return;
+    }
+    if (!this.admit(asker)) return;
+    try {
+      this.respond(asker, plainAnswer(await this.spec.onAction(request.action, request.value)));
+    } catch (caught) {
+      this.refuse(asker, "bad_request", caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+
+  private async fetch(asker: Asker, request: Extract<FrameRequest, { verb: "fetch" }>) {
+    if (!this.admit(asker)) return;
+    try {
+      const result = await this.deps.fetch({
+        pluginId: this.spec.pluginId,
+        alias: request.alias,
+        request: request.request,
+      });
+      if (result.ok) {
+        this.respond(asker, result);
+      } else if (result.error.code === "capability_not_granted") {
+        this.refuse(asker, "capability_not_granted", result.error.message);
+      } else {
+        this.refuse(asker, "fetch_failed", `${result.error.code}: ${result.error.message}`);
+      }
+    } catch (caught) {
+      this.refuse(asker, "fetch_failed", caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      this.inFlight -= 1;
+    }
+  }
+
+  /** Counts one async request in, refusing past the cap. */
+  private admit(asker: Asker): boolean {
+    if (this.inFlight >= FRAME_MAX_IN_FLIGHT) {
+      this.refuse(asker, "too_many_in_flight", `a frame may await ${FRAME_MAX_IN_FLIGHT} requests`);
+      return false;
+    }
+    this.inFlight += 1;
+    return true;
+  }
+
+  /** Where an answer goes: nowhere once the document that asked was replaced. */
+  private addressed(asker: Asker): { id: number; document?: string } | undefined {
+    if (this.disposed || asker.birth !== this.births) return undefined;
+    return asker.document === undefined
+      ? { id: asker.id }
+      : { id: asker.id, document: asker.document };
+  }
+
+  private respond(asker: Asker, result?: unknown): void {
+    const to = this.addressed(asker);
+    if (!to) return;
+    this.port.post(
+      result === undefined
+        ? { fm: V, type: "response", ...to, ok: true }
+        : { fm: V, type: "response", ...to, ok: true, result },
+    );
+  }
+
+  private refuse(asker: Asker, code: FrameError["code"], message: string): void {
+    const to = this.addressed(asker);
+    if (!to) return;
+    this.port.post({ fm: V, type: "response", ...to, ok: false, error: { code, message } });
+  }
+
+  private dropSubscriptions(): void {
+    for (const stop of this.subscriptions.values()) stop();
+    this.subscriptions.clear();
+  }
+}
+
+/**
+ * An action's answer as the frame may receive it: plain JSON data, or
+ * nothing - a handler's other return values (a promise's own value, an
+ * object of the window's) never cross into the frame.
+ */
+function plainAnswer(answer: unknown): unknown {
+  if (answer === undefined) return undefined;
+  try {
+    const text = JSON.stringify(answer);
+    return text === undefined ? undefined : JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}

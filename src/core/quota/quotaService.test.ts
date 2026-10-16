@@ -1,0 +1,229 @@
+import type { QuotaSnapshotView } from "@shared/quota";
+import { describe, expect, it, vi } from "vitest";
+import { openInMemoryDatabase } from "../storage/db";
+import { mergeStaleProviders, QuotaService } from "./quotaService";
+
+const SNAPSHOT: QuotaSnapshotView = {
+  generatedAt: "2026-08-13T20:00:00Z",
+  fetchedAt: 1000,
+  providers: [
+    {
+      provider: "claude",
+      label: "Claude",
+      plan: "Max 20x",
+      account: "kun@example.com",
+      status: "ok",
+      stale: false,
+      windows: [
+        {
+          id: "session",
+          label: "session",
+          percentRemaining: 74,
+          resetText: "resets 3pm",
+          pace: "ahead",
+        },
+        { id: "weekly", label: "weekly", percentRemaining: 62, pace: "on_pace" },
+      ],
+    },
+    {
+      provider: "grok",
+      label: "Grok",
+      status: "auth_required",
+      stale: true,
+      windows: [],
+    },
+  ],
+};
+
+const CATALOG = {
+  generatedAt: "2026-08-13T20:00:00Z",
+  models: [
+    {
+      provider: "claude",
+      id: "claude-opus-4-5",
+      label: "opus 4.5",
+      effectivePercentRemaining: 62,
+      paceStatus: "unknown" as const,
+    },
+    {
+      provider: "codex",
+      id: "gpt-5.5",
+      label: "gpt-5.5",
+    },
+  ],
+};
+
+describe("QuotaService", () => {
+  it("persists snapshots, restores the latest on boot, and single-flights refreshes", async () => {
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    const refresh = vi.fn(async () => ({ snapshot: SNAPSHOT, catalog: CATALOG }));
+    const service = new QuotaService({ refresh, db, broadcast, now: () => 5000 });
+    const [a, b] = await Promise.all([service.refresh("demand"), service.refresh("demand")]);
+    expect(a).toBe(b);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(service.latest()?.providers).toHaveLength(2);
+    expect(service.latestModels()?.models).toHaveLength(2);
+
+    const restored = new QuotaService({ refresh, db, broadcast });
+    expect(restored.latest()?.generatedAt).toBe("2026-08-13T20:00:00Z");
+  });
+
+  it("rebuilds the model catalog over the last snapshot without fetching, and re-pushes it", async () => {
+    // docs/model-lists.md: a runtime catalog read landed a model the catalog
+    // had no row for, so routing could neither name nor pick it.
+    const db = openInMemoryDatabase();
+    const broadcast = vi.fn();
+    const refresh = vi.fn(async () => ({ snapshot: SNAPSHOT, catalog: CATALOG }));
+    let served = CATALOG.models;
+    const service = new QuotaService({
+      refresh,
+      db,
+      broadcast,
+      catalogFor: (snapshot) => ({ generatedAt: snapshot.generatedAt, models: served }),
+    });
+    service.recatalog();
+    expect(broadcast).not.toHaveBeenCalled();
+    await service.refresh("startup");
+    served = [...CATALOG.models, { provider: "xai", id: "grok-4.8", label: "Grok 4.8" }];
+    service.recatalog();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(service.latestModels()?.models.map((model) => model.id)).toContain("grok-4.8");
+    expect(broadcast).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the last snapshot when the refresh throws", async () => {
+    const db = openInMemoryDatabase();
+    let fail = false;
+    const refresh = vi.fn(async () => {
+      if (fail) throw new Error("network down");
+      return { snapshot: SNAPSHOT, catalog: CATALOG };
+    });
+    const service = new QuotaService({ refresh, db, broadcast: () => {} });
+    await service.refresh("demand");
+    fail = true;
+    const snapshot = await service.refresh("demand");
+    expect(snapshot?.providers).toHaveLength(2);
+  });
+
+  it("a demand refresh chains after an in-flight background tick instead of being swallowed", async () => {
+    const db = openInMemoryDatabase();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reasons: string[] = [];
+    const refresh = vi.fn(async (reason?: string) => {
+      reasons.push(reason ?? "");
+      if (reasons.length === 1) await gate;
+      return { snapshot: SNAPSHOT, catalog: CATALOG };
+    });
+    const service = new QuotaService({ refresh, db, broadcast: () => {}, now: () => 5000 });
+    const background = service.refresh("interval");
+    const demand = service.refresh("demand");
+    release();
+    const [fromBackground, fromDemand] = await Promise.all([background, demand]);
+    expect(refresh.mock.calls.map((call) => call[0])).toEqual(["interval", "demand"]);
+    expect(fromBackground).toBeDefined();
+    expect(fromDemand).toBeDefined();
+  });
+});
+
+describe("mergeStaleProviders", () => {
+  it("does not revive auth_required from a previous ok card", () => {
+    const next: QuotaSnapshotView = {
+      generatedAt: "later",
+      fetchedAt: 2000,
+      providers: [
+        { provider: "claude", label: "Claude", status: "auth_required", stale: false, windows: [] },
+      ],
+    };
+    expect(mergeStaleProviders(next, SNAPSHOT).providers[0]?.status).toBe("auth_required");
+  });
+
+  const emptyRow = (status: QuotaSnapshotView["providers"][number]["status"], reason?: string) => ({
+    generatedAt: "later",
+    fetchedAt: 2000,
+    providers: [
+      {
+        provider: "claude",
+        label: "Claude",
+        status,
+        stale: false,
+        windows: [],
+        ...(reason ? { reason } : {}),
+      },
+    ],
+  });
+
+  it.each(["unavailable", "rate_limited", "not_measured"] as const)(
+    "keeps a real reading through a %s pass instead of wiping the card",
+    (status) => {
+      const merged = mergeStaleProviders(emptyRow(status, "timeout"), SNAPSHOT, 3000);
+      expect(merged.providers[0]).toMatchObject({
+        status: "ok",
+        stale: true,
+        reason: "timeout",
+        // The row states when the windows it is showing were measured, rather
+        // than borrowing the new snapshot's fetch time.
+        measuredAt: 1000,
+      });
+      expect(merged.providers[0]?.windows).toHaveLength(2);
+    },
+  );
+
+  it("drops a carried-forward window whose own reset has already passed", () => {
+    const previous: QuotaSnapshotView = {
+      generatedAt: "earlier",
+      fetchedAt: 1000,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          status: "ok",
+          stale: false,
+          measuredAt: 1000,
+          windows: [
+            { id: "session", label: "session", percentRemaining: 20, resetsAtMs: 2500 },
+            { id: "weekly", label: "weekly", percentRemaining: 62, resetsAtMs: 9000 },
+          ],
+        },
+      ],
+    };
+    const merged = mergeStaleProviders(emptyRow("unavailable"), previous, 3000);
+    expect(merged.providers[0]?.windows.map((window) => window.id)).toEqual(["weekly"]);
+  });
+
+  it("never borrows a sibling account's windows", () => {
+    const previous: QuotaSnapshotView = {
+      generatedAt: "earlier",
+      fetchedAt: 1000,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_a",
+          status: "ok",
+          stale: false,
+          windows: [{ id: "session", label: "session", percentRemaining: 40 }],
+        },
+      ],
+    };
+    const next: QuotaSnapshotView = {
+      generatedAt: "later",
+      fetchedAt: 2000,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_b",
+          status: "unavailable",
+          stale: false,
+          windows: [],
+        },
+      ],
+    };
+    expect(mergeStaleProviders(next, previous, 3000).providers[0]?.windows).toEqual([]);
+  });
+});

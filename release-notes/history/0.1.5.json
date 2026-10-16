@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "bf-54fd51537",
+      "kind": "fix",
+      "title": "Name the earlier generations the client now serves",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "54fd5153725aa307c787071f5d18dfccf34cadf3"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-5-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.5: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "35acab2b1d019b0768294424a8909a1afecfd3a5"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { clearClaudeCredentialCache, resolveClaudeQuotaAuthResult } from "@core/claude/claudeQuota";
+import { describe, expect, it } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { readClaudeThroughTrustedTool } from "./claudeKeychainTool";
+import { createDarwinKeychain, openDarwinKeychainApiForTest } from "./darwinKeychain";
+
+/**
+ * The Mac mini's Claude row, on a throwaway keychain only.
+ * HOME, CFFIXED_USER_HOME and INFINITARY_LOCAL_CODESIGN_DIR are a scratch
+ * directory. Every security command names that keychain file. Nothing is
+ * added to a search list, and the login keychain is never named.
+ *
+ * Six extra items trust a large app. Listing every saved password to check
+ * signatures runs past the old 15 second limit; reading this one item does not.
+ */
+const PREMIERE = "/Applications/Adobe Premiere Pro 2026/Adobe Premiere Pro 2026.app";
+const FILLERS = 6;
+const SERVICE = "Claude Code-credentials";
+const ACCOUNT = "scratch";
+const TOKEN = "not-a-real-credential";
+const PASSWORD = "throwaway-scratch-password";
+
+describe("Claude's item is read without listing the other saved passwords", () => {
+  it.runIf(process.platform === "darwin")(
+    "returns the sign-in when other items trust a large app",
+    async () => {
+      const dir = scratchDir("infinitary-claude-item-");
+      const home = join(dir, "home");
+      const signing = join(dir, "signing");
+      mkdirSync(join(home, "Library", "Keychains"), { recursive: true });
+      mkdirSync(signing, { recursive: true });
+      const store = join(home, "Library", "Keychains", "scratch.keychain-db");
+      const env = {
+        ...process.env,
+        HOME: home,
+        CFFIXED_USER_HOME: home,
+        INFINITARY_LOCAL_CODESIGN_DIR: signing,
+      };
+      const run = (...args: string[]) =>
+        execFileSync("/usr/bin/security", args, {
+          env,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: 20_000,
+        });
+      const login = JSON.stringify({
+        claudeAiOauth: { accessToken: TOKEN, expiresAt: Date.now() + 3_600_000 },
+      });
+      run("create-keychain", "-p", PASSWORD, store);
+      run("set-keychain-settings", store);
+      run(
+        "add-generic-password",
+        "-U",
+        "-a",
+        ACCOUNT,
+        "-s",
+        SERVICE,
+        "-X",
+        Buffer.from(login).toString("hex"),
+        store,
+      );
+      run(
+        "add-generic-password",
+        "-a",
+        "other",
+        "-s",
+        SERVICE,
+        "-w",
+        "not-the-login",
+        "-T",
+        "/usr/bin/security",
+        store,
+      );
+      for (let index = 1; index <= FILLERS; index += 1) {
+        run(
+          "add-generic-password",
+          "-T",
+          PREMIERE,
+          "-a",
+          `filler${index}`,
+          "-s",
+          `lab-filler-${index}`,
+          "-w",
+          "x",
+          store,
+        );
+      }
+      run(
+        "set-generic-password-partition-list",
+        "-a",
+        "other",
+        "-s",
+        SERVICE,
+        "-S",
+        "apple-tool:,teamid:OTHER",
+        "-k",
+        PASSWORD,
+        store,
+      );
+      try {
+        const api = openDarwinKeychainApiForTest(store);
+        // Prove the other item's ordinary decrypt grant is valid too: its
+        // extra team partition, not a missing tool grant, causes refusal.
+        run(
+          "set-generic-password-partition-list",
+          "-a",
+          "other",
+          "-s",
+          SERVICE,
+          "-S",
+          "apple-tool:",
+          "-k",
+          PASSWORD,
+          store,
+        );
+        expect(api.claudeItemTrustsAppleTool?.(SERVICE, "other")).toBe(true);
+        run(
+          "set-generic-password-partition-list",
+          "-a",
+          "other",
+          "-s",
+          SERVICE,
+          "-S",
+          "apple-tool:,teamid:OTHER",
+          "-k",
+          PASSWORD,
+          store,
+        );
+        expect(api.claudeItemTrustsAppleTool?.(SERVICE, ACCOUNT)).toBe(true);
+        expect(api.claudeItemTrustsAppleTool?.(SERVICE, "other")).toBe(false);
+        api.setUserInteractionAllowed(false);
+        expect(api.readGenericPassword(SERVICE, ACCOUNT).status).toBe(-25293);
+        const reads: string[] = [];
+        const keychain = createDarwinKeychain(api, undefined, async (account, path) => {
+          reads.push(account);
+          return readClaudeThroughTrustedTool(account, path);
+        });
+        expect(await keychain.readGenericPassword({ service: SERVICE, account: ACCOUNT })).toEqual({
+          kind: "value",
+          value: login,
+        });
+        expect(await keychain.readGenericPassword({ service: SERVICE, account: "other" })).toEqual({
+          kind: "failed",
+          code: -25293,
+          message: "Auth failed.",
+        });
+        expect(reads).toEqual([ACCOUNT]);
+        console.info(
+          "Scratch Library/Keychains item: direct read refused; Apple-tool-only item read; Apple-tool plus other team refused without running the tool.",
+        );
+        const configDir = join(dir, "claude");
+        mkdirSync(configDir);
+        clearClaudeCredentialCache(configDir);
+        expect(
+          await resolveClaudeQuotaAuthResult(configDir, {
+            keychain,
+            allowPrompt: false,
+            env: { USER: ACCOUNT },
+          }),
+        ).toEqual({
+          status: "resolved",
+          auth: { accessToken: TOKEN, expiresAt: expect.any(Number) },
+        });
+      } finally {
+        try {
+          run("delete-keychain", store);
+        } catch {
+          /* the throwaway file is removed with the scratch directory */
+        }
+      }
+    },
+  );
+});

@@ -1,0 +1,117 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    // scripts/*.ts (C2 miss deriver, C4 corpus export, C5 dispatch extractor) run straight
+    // through Node 24 type stripping, which needs explicit .ts specifiers
+    // on their relative imports.
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/core/*"],
+      "@shared/*": ["src/shared/*"],
+      // The personal fixtures' server halves are extension code: they import
+      // the authoring types by the specifier the workspace serves, under
+      // either name.
+      "@infinitary/contracts": ["src/shared/personal/contracts.ts"],
+      "@firstmate/contracts": ["src/shared/personal/contracts.ts"]
+    }
+  },
+  "include": [
+    "src/core/**/*.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "electron.vite.config.ts",
+    "vitest.config.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    // The card geometry is pure arithmetic the e2e specs read their layout
+    // constants from (docs/testing.md, the e2e assertion contract). The crew
+    // plane constants are pure too; the orbit e2e reads its capacity here.
+    // Framework-free consumers joined to the real card/task producers in readyWaiting.test.
+    "src/renderer/src/cards/recordFooter.ts",
+    "src/renderer/src/plugins/reads/executor.ts",
+    "src/renderer/src/cards/cardGeometry.ts",
+    // The focus grace is pure too; frame journeys wait out synthetic gestures with its frame count.
+    "src/renderer/src/plugins/frames/gestureFocusFrames.ts",
+    "src/renderer/src/cards/threadGeometry.ts",
+    // The card size control's words; the maximize e2e finds the control by them.
+    "src/renderer/src/design/cards/cardSizeWords.ts",
+    // The words of Settings -> Devices, a computer's GitHub row and the view
+    // of another Mac; the devices e2e specs read what they expect from them.
+    "src/renderer/src/settings/devicesWords.ts",
+    "src/renderer/src/settings/deviceForgeWords.ts",
+    "src/renderer/src/devices/viewWords.ts",
+    // The card words the card e2e specs read: the revised line, the answers
+    // line and the picture viewer's.
+    "src/renderer/src/cards/revisedLine.ts",
+    "src/renderer/src/cards/answersLine.ts",
+    "src/renderer/src/design/cards/pictureViewerWords.ts",
+    // The Intelligence tab's words and the Models board's drop plans; their e2e reads them here.
+    "src/renderer/src/settings/subscriptionsWords.ts",
+    "src/renderer/src/settings/modelsWords.ts",
+    "src/renderer/src/settings/reasoningWords.ts",
+    "src/renderer/src/settings/levelDrops.ts",
+    "src/renderer/src/character/crew/orbitalPlanes.ts",
+    "src/renderer/src/character/crew/stateWords.ts",
+    // The built-in manifest is pure data; the side-rails e2e reads the
+    // Settings tabs it declares here.
+    "src/renderer/src/plugins/builtin/manifest.ts",
+    // The first turn's label rule is pure too; its e2e reads the label's words here.
+    "src/renderer/src/app/firstTurn.ts",
+    // The sky fidgets' geometry and the fidget pool are pure too; the sky
+    // fidget e2e reads its star positions, ring points, arm points and the
+    // pool's draw order from them.
+    "src/renderer/src/character/algol.ts",
+    "src/renderer/src/character/constellations.ts",
+    "src/renderer/src/character/face.ts",
+    "src/renderer/src/character/galaxy.ts",
+    "src/renderer/src/character/machine.ts",
+    "src/renderer/src/character/replies.ts",
+    "src/renderer/src/character/saturn.ts",
+    "src/renderer/src/character/sky.ts",
+    // The black hole's rush is pure too; its e2e reads the crew's top speed
+    // from it, and the rush reads the black hole's schedule.
+    "src/renderer/src/character/crew/rush.ts",
+    "src/renderer/src/character/blackhole.ts",
+    // The stage clock is pure too; the crew hover e2e reads its slow rate.
+    "src/renderer/src/character/stageClock.ts",
+    // Words the e2e specs read from their owner (docs/e2e-contracts.md,
+    // "Words come from their owner").
+    "src/renderer/src/settings/addProjectWords.ts",
+    "src/renderer/src/settings/generalWords.ts",
+    "src/renderer/src/settings/projectsWords.ts",
+    "src/renderer/src/cards/cardBodyWords.ts",
+    "src/renderer/src/app/firstRunGateWords.ts",
+    "src/renderer/src/personal/panelBoundaryWords.ts",
+    "src/renderer/src/plugins/panelTasks.ts",
+    "src/panels/knowledge/words.ts"
+  ],
+  // Extension code, not app code. The e2e fixtures are renderer-shaped
+  // modules type-checked by tsconfig.web.json against the real contracts and
+  // design library, and compiled for real by the host at e2e time
+  // (tests/e2e/personal-panels.spec.ts); the lint fixtures
+  // (tests/fixtures/personal-lint/) are deliberately wrong and compile
+  // nowhere.
+  "exclude": [
+    "tests/fixtures/personal/**/*",
+    "tests/fixtures/personal-skills/**/*",
+    "tests/fixtures/frame-realm/**/*",
+    "tests/fixtures/personal-lint/**/*",
+    // The panel-cards fixtures are panel folders the host compiles at e2e
+    // time (tests/e2e/panel-cards.spec.ts, panel-tasks.spec.ts); one brings
+    // its own stylesheet, which only a panel's workspace types as text.
+    "tests/fixtures/panel-cards/**/*"
+  ]
+}

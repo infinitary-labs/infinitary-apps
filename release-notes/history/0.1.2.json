@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "id": "bf-88240e2f6",
+      "kind": "feature",
+      "title": "Warm worktree pool, fetched default branch at dispatch",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "88240e2f6f5d98f89f74de6fb844e56f945e4381"
+        ]
+      }
+    },
+    {
+      "id": "bf-49c707174",
+      "kind": "fix",
+      "title": "Dev runs keep their state in firstmate-3000-dev, apart from the release",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "49c707174b93b1ea1f680416f2d8abafede1f602"
+        ]
+      }
+    },
+    {
+      "id": "bf-f1d0d8e2c",
+      "kind": "fix",
+      "title": "Re-clamp a growing record pane before it paints; settle two layout e2e reads",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f1d0d8e2ceff0d68cef7a45d28a784b65bc7e0a1"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-2-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.2: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "3f882c7221db7733db481ca63a14f3143bf21af0"
+      ]
+    }
+  ]
+}

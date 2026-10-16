@@ -1,0 +1,356 @@
+{
+  "entries": [
+    {
+      "id": "bf-d6d232c27",
+      "kind": "feature",
+      "title": "Add Intelligence to the shared action catalog",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d6d232c270c5ceacfc08f2342709a70a357ae0ec"
+        ]
+      }
+    },
+    {
+      "id": "bf-18df3bc04",
+      "kind": "feature",
+      "title": "Add the shared actor-gated app action catalog",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "18df3bc0471dd5cfff3693538459ce14abf3bb31"
+        ]
+      }
+    },
+    {
+      "id": "bf-ba391ed31",
+      "kind": "feature",
+      "title": "Complete the app action catalog and enforce strict parity",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ba391ed31835acc82176cf560097baf149906606"
+        ]
+      }
+    },
+    {
+      "id": "bf-46f16bf25",
+      "kind": "feature",
+      "title": "Add persisted whole-window size choices",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "46f16bf25622be7017b1d8f69d98f1d5aae8473e"
+        ]
+      }
+    },
+    {
+      "id": "bf-03984baf5",
+      "kind": "feature",
+      "title": "Accept editable body files for crewmate cards",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "03984baf5450456994adeac77f3f0cdf718f4262"
+        ]
+      }
+    },
+    {
+      "id": "bf-d4a8b0b4d",
+      "kind": "feature",
+      "title": "Default to wide except short plain notes",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d4a8b0b4d5e9365a463603e1fa3a01c354485693"
+        ]
+      }
+    },
+    {
+      "id": "bf-3020a69f6",
+      "kind": "feature",
+      "title": "Give card authors five sentence habits and score them on recorded cards",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "3020a69f63b9dd1c359a131628b3a7957ba94cc2"
+        ]
+      }
+    },
+    {
+      "id": "bf-d1733aa31",
+      "kind": "feature",
+      "title": "Mark what changed since the captain last saw a card",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d1733aa31bb93536e39197c295d0e808f1f0d286"
+        ]
+      }
+    },
+    {
+      "id": "bf-38198fcd2",
+      "kind": "feature",
+      "title": "Reveal the first card after a dismissal",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "38198fcd234b8dea8e4881bc545a624ba1179e95"
+        ]
+      }
+    },
+    {
+      "id": "bf-23a6978c0",
+      "kind": "feature",
+      "title": "Send long pastes as local file snippets",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "23a6978c02bfcc2eb540b8ff13c95607fa64f7ca"
+        ]
+      }
+    },
+    {
+      "id": "bf-92d4e0986",
+      "kind": "feature",
+      "title": "Race the crew round their orbits during the black hole",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "92d4e0986245d576540e3480495d9071c47b5603"
+        ]
+      }
+    },
+    {
+      "id": "bf-878182006",
+      "kind": "feature",
+      "title": "Send the captain's close of a card to its crewmate",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "878182006bc393f840eb4b7e07fc0b765d8819dc"
+        ]
+      }
+    },
+    {
+      "id": "bf-99637f09f",
+      "kind": "feature",
+      "title": "Show a crewmate's model, intelligence and reasoning as a labeled readout",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "99637f09ff67e3621d747f287b35285bc62a5686"
+        ]
+      }
+    },
+    {
+      "id": "bf-1e8f188ab",
+      "kind": "feature",
+      "title": "Offer OpenRouter classifiers through signed-in accounts",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1e8f188ab8282490a3666f5066ada73d5898fa3b"
+        ]
+      }
+    },
+    {
+      "id": "bf-6962eadde",
+      "kind": "feature",
+      "title": "Add an off switch and configurable talk key",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "6962eadde54a6b73da78718e4909ba37f9fd9bf7"
+        ]
+      }
+    },
+    {
+      "id": "bf-4c68fc2c8",
+      "kind": "feature",
+      "title": "Add projects directly from Settings",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4c68fc2c8868ca7e13f260bee5585d7dae16af3e"
+        ]
+      }
+    },
+    {
+      "id": "bf-7e0d54063",
+      "kind": "feature",
+      "title": "Remove a project from its open row in Settings",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7e0d540638f2554735cda7fb5e62ae5d05e98bfd"
+        ]
+      }
+    },
+    {
+      "id": "bf-0e9ec69a3",
+      "kind": "feature",
+      "title": "Group visual settings in Appearance",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0e9ec69a3f7261c6958c21d0c7d51a4e26c6cf02"
+        ]
+      }
+    },
+    {
+      "id": "bf-44fa44be6",
+      "kind": "fix",
+      "title": "Support approved HTTP AI gateways",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "44fa44be6de21f94bfbbce18af219b07970db32c"
+        ]
+      }
+    },
+    {
+      "id": "bf-c4a4a97a8",
+      "kind": "fix",
+      "title": "Migrate saved 20% wash to zero once",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c4a4a97a85f21a00a5bc15b55f6f701acab85827"
+        ]
+      }
+    },
+    {
+      "id": "bf-ca9783d4c",
+      "kind": "fix",
+      "title": "Ask decision choices unpicked and refuse preanswered ones",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ca9783d4c40afdd951e1b3812b412e163717230f"
+        ]
+      }
+    },
+    {
+      "id": "bf-8d5aa27e8",
+      "kind": "fix",
+      "title": "Close untouched prefilled answers without asking",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "8d5aa27e80ca13e58945afc532455af8a24798e7"
+        ]
+      }
+    },
+    {
+      "id": "bf-edd1eb5cd",
+      "kind": "fix",
+      "title": "Rename Stop it to Stop task",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "edd1eb5cd7a85a0170ecf1570caa8921ecbfc9a2"
+        ]
+      }
+    },
+    {
+      "id": "bf-1c7ac06dc",
+      "kind": "fix",
+      "title": "Separate recommended options from explicit picks",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1c7ac06dc66152d705acc138b17e5a01e79b1ada"
+        ]
+      }
+    },
+    {
+      "id": "bf-f3a6c72ff",
+      "kind": "fix",
+      "title": "Keep the welcome when setup leaves Settings records",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f3a6c72ffbfb0d05807273f9adbafca6ff9823e1"
+        ]
+      }
+    },
+    {
+      "id": "bf-44ae4cfa8",
+      "kind": "fix",
+      "title": "Accept completed skipped checks in PR verdicts",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "44ae4cfa86314598bd6ac04d996e1277cc7549fa"
+        ]
+      }
+    },
+    {
+      "id": "bf-59f016483",
+      "kind": "fix",
+      "title": "Require a 64K local context so Firstmate's fixed prompt leaves room",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "59f01648345f52f5854c6cac1b9acadadc08ae4c"
+        ]
+      }
+    },
+    {
+      "id": "bf-faa563b66",
+      "kind": "fix",
+      "title": "Require full Mac checks for alpha releases",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "faa563b660b50c8fe60e6e32144c4a0ee9ded20e"
+        ]
+      }
+    },
+    {
+      "id": "bf-0da8d648b",
+      "kind": "fix",
+      "title": "Default an unset window wash to 0%",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0da8d648ba38545c8ef695d23c8b03fc33445a1e"
+        ]
+      }
+    },
+    {
+      "id": "bf-e4568a2b1",
+      "kind": "fix",
+      "title": "Name the installed version in the update panel",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e4568a2b1e7d40fd1fffcdf32cdc171e05a1c0a7"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-27-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.27: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "8b84df16589e354a942eecbf59d027080c4b277b",
+        "1cd229a66674a9db585c9c0f1b3a032022dbcba5",
+        "c713da8a343a5ed5500738e077a58488ee8cb02e",
+        "f2052282d993882c3d9a313ec6992fc3fd19e72f",
+        "e19544bf81fa5458efaf71d7e003b1ee5be325eb",
+        "a903c8425663ebab1d630bd98cb98cca6b023832",
+        "6eed980dd0d15b492df31163627da87afd1d6b62",
+        "f0f2f1c5304ac699f29edbca5f267e45e8d33ee6",
+        "0b4156c70d654308d37b7c5a759f6a69251fbb36",
+        "07ca1ff8292552e33cf799fe3ffa4d54da8f1984",
+        "2e40119a302d5fbf978919cde47e4fd95c9adcec",
+        "071a666074926367b910eeb6badcb10ac2fc2615",
+        "54ec8f51f0ff9434aef790ad74bbd62d598afffe",
+        "ab8a3d67f12d766da6e3222be765bf7998d7c241"
+      ]
+    }
+  ]
+}

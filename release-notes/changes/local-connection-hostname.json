@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "local-connection-hostname",
+      "kind": "fix",
+      "title": "Local custom connections can use their server's name",
+      "body": "Choose On this Mac to connect to a local server by its hostname. Firstmate keeps that name for the server's routing and connects only when every address it points to is on this Mac.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "local-connection-hostname-dark.webp",
+        "light": "local-connection-hostname-light.webp",
+        "alt": "The local server's model appears after reviewing its hostname in a custom connection."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+import { join } from "node:path";
+import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import Database from "better-sqlite3";
+import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
+import { frameIn, panelElement } from "./frames";
+import { knowledgePanel, knowledgeSummary } from "./knowledgeBrowser";
+import { seedKnowledge } from "./knowledgeSeed";
+import { launchApp } from "./launch";
+import { KNOWLEDGE_RETIRE_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { dockSummary, dockSummaryLine } from "./rails";
+
+/**
+ * A collapsed panel keeps refreshing after its page misses pings
+ * (FI3-1293). The frame watchdog used to treat four missed pings as a
+ * wedge, drop the page's reads, and leave the header on the last counts.
+ * This journey pauses a collapsed page for longer than that, then records
+ * knowledge: the header must say the new totals, with no Retry.
+ */
+
+/** Longer than the watchdog's four one-second pings. */
+const PAUSE_MS = 6_000;
+
+const RETIRED = [
+  "lifecycle",
+  "reuse",
+  "retry",
+  "identity",
+  "delivery",
+  "failures",
+  "pins",
+  "keeps",
+  "returns",
+  "retains",
+] as const;
+
+function revisions(userDataDir: string, ids: readonly string[]): Map<string, number> {
+  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
+  try {
+    const read = db.prepare("SELECT revision FROM entries WHERE id = ?");
+    return new Map(
+      ids.map((id) => {
+        const row = read.get(id) as { revision: number } | undefined;
+        if (!row) throw new Error(`${id} is not in the collection`);
+        return [id, row.revision];
+      }),
+    );
+  } finally {
+    db.close();
+  }
+}
+
+function lifecycles(userDataDir: string, ids: readonly string[]): string[] {
+  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
+  try {
+    const read = db.prepare("SELECT lifecycle FROM entries WHERE id = ?");
+    return ids.map((id) => (read.get(id) as { lifecycle: string }).lifecycle);
+  } finally {
+    db.close();
+  }
+}
+
+/** The panel page's process, matched by the iframe the window is showing. */
+async function pagePid(app: ElectronApplication, page: Page, panelId: string): Promise<number> {
+  const src = await panelElement(page, panelId).getAttribute("src");
+  expect(src, `${panelId} has a page`).toBeTruthy();
+  const frames = await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows().flatMap((win) =>
+      win.webContents.mainFrame.framesInSubtree.map((frame) => ({
+        url: frame.url,
+        pid: frame.osProcessId,
+        windowPid: win.webContents.getOSProcessId(),
+      })),
+    ),
+  );
+  const match = frames.find((frame) => src && frame.url.startsWith(src));
+  expect(match, `${panelId} page process`).toBeTruthy();
+  expect(match?.pid).not.toBe(match?.windowPid);
+  return match?.pid ?? -1;
+}
+
+/** Holds the page's process, then lets it run. A gone process stays gone. */
+async function pauseProcess(pid: number): Promise<void> {
+  process.kill(pid, "SIGSTOP");
+  try {
+    await new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
+  } finally {
+    try {
+      process.kill(pid, "SIGCONT");
+    } catch {
+      // The watchdog already removed the page.
+    }
+  }
+}
+
+test("a collapsed panel paused past the watchdog still shows new knowledge, and Activity does too", async () => {
+  test.setTimeout(120_000);
+  const userDataDir = scratchDir("infinitary-knowledge-refresh-");
+  const seeded = await seedKnowledge(userDataDir);
+  const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const knowledge = knowledgePanel(page);
+    const activity = page.locator('[data-side-panel="activity"]');
+    await expect(knowledge).toBeAttached({ timeout: 30_000 });
+    await expect(knowledge).toHaveAttribute("data-side-panel-collapsed", "");
+    await expect(activity).toHaveAttribute("data-side-panel-collapsed", "");
+    const summary = knowledgeSummary(page);
+    await expect(summary).toContainText("9 concepts");
+    const activityWords = dockSummaryLine(page, "activity").locator("[data-panel-summary-words]");
+    await expect(activityWords).toBeVisible();
+    const activityBefore = await activityWords.innerText();
+    await waitForFirstmateIdle(page);
+
+    const knowledgePid = await pagePid(app, page, "knowledge");
+    const activityPid = await pagePid(app, page, "activity");
+    await Promise.all([pauseProcess(knowledgePid), pauseProcess(activityPid)]);
+
+    await expect(page.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
+    await expect(frameIn(knowledge)).toHaveCount(1);
+    await expect(frameIn(activity)).toHaveCount(1);
+
+    const targets = RETIRED.map((name) => seeded[name]);
+    const named = revisions(userDataDir, targets);
+    const input = promptInput(page);
+    await input.click();
+    await input.fill(
+      `${KNOWLEDGE_RETIRE_PROMPT_MARKER} ${targets.map((id) => `${id}@${named.get(id)}`).join(" ")}`,
+    );
+    await input.press("Enter");
+    await expect
+      .poll(() => lifecycles(userDataDir, targets), { timeout: 60_000 })
+      .toEqual(targets.map(() => "retired"));
+    await waitForFirstmateIdle(page);
+
+    await expect(summary).toContainText("3 concepts");
+    await expect(page.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
+    await expect(activityWords).not.toHaveText(activityBefore);
+    await expect(dockSummary(page, "activity")).not.toContainText("stopped responding");
+  } finally {
+    await app.close();
+  }
+});
+
+test("a panel the watchdog stops does not keep its old counts in the header", async () => {
+  test.setTimeout(90_000);
+  const userDataDir = scratchDir("infinitary-knowledge-stopped-");
+  await seedKnowledge(userDataDir);
+  const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const knowledge = knowledgePanel(page);
+    const summary = knowledgeSummary(page);
+    await expect(summary).toContainText("9 concepts", { timeout: 30_000 });
+    await knowledge.getByRole("button", { name: "Expand Knowledge" }).click();
+    await expect(knowledge).not.toHaveAttribute("data-side-panel-collapsed", "");
+    await expect(frameIn(knowledge)).toBeVisible();
+
+    await pauseProcess(await pagePid(app, page, "knowledge"));
+
+    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toBeVisible();
+    await knowledge.getByRole("button", { name: "Collapse Knowledge" }).click();
+    await expect(summary).toContainText("stopped responding");
+    await expect(summary).not.toContainText("9 concepts");
+  } finally {
+    await app.close();
+  }
+});

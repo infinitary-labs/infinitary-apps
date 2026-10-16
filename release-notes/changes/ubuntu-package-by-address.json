@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ubuntu-package-by-address",
+      "kind": "feature",
+      "title": "Set up an Ubuntu computer from its address",
+      "body": "On a Mac, you can now add an Ubuntu 24.04 or 26.04 computer by its address: turn on SSH there, then type the password of an account that can install software, once, and Firstmate installs itself there. Each later update asks for the password again. Removing the computer leaves Firstmate installed.",
+      "area": "devices",
+      "noPicture": "The new password aside is the same shape as the one for an SSH key, with different words, and a still of that aside does not show the install on the other computer.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

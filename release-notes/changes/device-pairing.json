@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "device-pairing",
+      "reason": "Adds how another Mac or computer pairs with this one and the list of what paired. Nothing in the app can make a pairing link yet, so the app listens nowhere and nothing changes until the Devices tab ships."
+    }
+  ]
+}

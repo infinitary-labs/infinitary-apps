@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "usage-projects-recent-tasks",
+      "kind": "improvement",
+      "title": "See Usage by project, and for each recent task",
+      "body": "In Settings, Usage, Where it went now lists Firstmate first, then each project with its subtotal and its kinds of work beneath it, such as Implementation and Fixes, then other work. A new Recent tasks list shows each task's input, output, cache read, cache write and total, newest first, ten at a time with See more. The rows no longer have lines between them.",
+      "area": "settings",
+      "picture": {
+        "dark": "usage-projects-recent-tasks-dark.webp",
+        "light": "usage-projects-recent-tasks-light.webp",
+        "alt": "Settings, Usage: the Recent tasks list, each task beside its input, output, cache read, cache write and total"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "progress-list-age",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Task progress keeps its list with each update",
+      "body": "After a crewmate sends its progress list, each later update must include the whole list. The task record and crew summary also show how old the list is.",
+      "picture": {
+        "dark": "progress-list-age-dark.webp",
+        "light": "progress-list-age-light.webp",
+        "alt": "The task record shows a finished library check, image preparation in progress, and the list's age beside Progress."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

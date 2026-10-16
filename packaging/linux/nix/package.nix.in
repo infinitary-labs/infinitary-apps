@@ -1,0 +1,158 @@
+# Infinitary for NixOS, from its Ubuntu package (docs/linux-packages.md).
+# scripts/linux-recipes.ts fills in the @ fields; never edit a rendered copy
+# by hand. Build it with
+#   nix-build -E 'with import <nixpkgs> {}; callPackage ./package.nix {}'
+# and pass `src` to build from a package file on this computer instead.
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoPatchelfHook,
+  makeWrapper,
+  alsa-lib,
+  at-spi2-atk,
+  at-spi2-core,
+  cairo,
+  cups,
+  dbus,
+  expat,
+  git,
+  glib,
+  gtk3,
+  libdrm,
+  libgbm,
+  libGL,
+  libnotify,
+  libsecret,
+  libuuid,
+  libxkbcommon,
+  nspr,
+  nss,
+  pango,
+  systemd,
+  vulkan-loader,
+  wayland,
+  xdg-utils,
+  xvfb,
+  libx11,
+  libxcomposite,
+  libxdamage,
+  libxext,
+  libxfixes,
+  libxrandr,
+  libxscrnsaver,
+  libxtst,
+  libxcb,
+  libxshmfence,
+  src ? fetchurl {
+    url = "@URL@";
+    hash = "@HASH@";
+  },
+}:
+
+stdenv.mkDerivation {
+  pname = "@PNAME@";
+  version = "@VERSION@";
+  inherit src;
+
+  nativeBuildInputs = [
+    autoPatchelfHook
+    makeWrapper
+  ];
+
+  buildInputs = [
+    alsa-lib
+    at-spi2-atk
+    at-spi2-core
+    cairo
+    cups
+    dbus
+    expat
+    glib
+    gtk3
+    libdrm
+    libgbm
+    libnotify
+    libsecret
+    libuuid
+    libxkbcommon
+    nspr
+    nss
+    pango
+    stdenv.cc.cc.lib
+    libx11
+    libxcomposite
+    libxdamage
+    libxext
+    libxfixes
+    libxrandr
+    libxscrnsaver
+    libxtst
+    libxcb
+    libxshmfence
+  ];
+
+  # The package carries glibc x64 code only; never satisfy a musl library.
+  autoPatchelfIgnoreMissingDeps = [ "libc.musl-x86_64.so.1" ];
+
+  # Loaded by name while the app runs, so autoPatchelf cannot see them.
+  runtimeDependencies = [
+    (lib.getLib systemd)
+    libGL
+    vulkan-loader
+    wayland
+  ];
+
+  unpackPhase = ''
+    runHook preUnpack
+    ar x "$src"
+    tar xf data.tar.*
+    runHook postUnpack
+  '';
+
+  installPhase = ''
+    runHook preInstall
+    mkdir -p "$out/lib" "$out/bin"
+    cp -r opt/infinitary "$out/lib/infinitary"
+    cp -r usr/share "$out/share"
+    # Chromium's sandbox runs through the system's user namespaces on NixOS;
+    # the store holds no setuid helper and no AppArmor profile.
+    rm -f "$out/lib/infinitary/resources/apparmor-profile"
+    # git: Linux ships no git of its own; the app's crew works through this one.
+    # Xvfb: running work for another computer, the app draws its hidden
+    # windows on a display of its own.
+    makeWrapper "$out/lib/infinitary/infinitary" "$out/bin/infinitary" \
+      --prefix PATH : ${
+        lib.makeBinPath [
+          git
+          xdg-utils
+          xvfb
+        ]
+      } \
+      --prefix LD_LIBRARY_PATH : ${
+        lib.makeLibraryPath [
+          libGL
+          vulkan-loader
+        ]
+      }
+    # Firstmate 3000's command, which this package takes the place of
+    # (docs/linux-packages.md, "Arch, Omarchy and NixOS").
+    ln -s "$out/bin/infinitary" "$out/bin/firstmate-3000"
+    substituteInPlace "$out/share/applications/infinitary.desktop" \
+      --replace-fail "/opt/infinitary/infinitary" "$out/bin/infinitary"
+    # What the app's update notice reads (src/core/update/linuxInstall.ts): a
+    # Nix package of its own channel, updated with nix-env.
+    printf 'nix\n' > "$out/lib/infinitary/resources/package-type"
+    printf '%s\n' '@MARKER@' > "$out/lib/infinitary/resources/update-channel.json"
+    runHook postInstall
+  '';
+
+  meta = {
+    description = "A calm first mate for your AI subscriptions";
+    homepage = "https://github.com/infinitary-labs/homebrew-tap";
+    license = lib.licenses.asl20;
+    mainProgram = "infinitary";
+    platforms = [ "x86_64-linux" ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+  };
+}

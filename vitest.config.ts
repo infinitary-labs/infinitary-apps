@@ -1,0 +1,169 @@
+import { readFileSync } from "node:fs";
+import os from "node:os";
+import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
+import { PROBE_FILES } from "./scripts/affected-probes.ts";
+
+/**
+ * The integration cohort (captain's A1, docs/test-cohorts.md) is the list of
+ * files the unit cohort's lint fence exempts: the exclusions of the
+ * biome.json override that runs tests/lint/unit-cohort.grit. One list, read
+ * by both, so a file cannot be fenced as a unit test and run as an
+ * integration test or the other way round.
+ */
+function integrationTests(): string[] {
+  const biome = JSON.parse(readFileSync(resolve(__dirname, "biome.json"), "utf8")) as {
+    overrides?: { includes?: string[]; plugins?: string[] }[];
+  };
+  const fence = biome.overrides?.find((override) =>
+    override.plugins?.includes("./tests/lint/unit-cohort.grit"),
+  );
+  if (!fence?.includes) throw new Error("biome.json has no unit-cohort override to read");
+  return fence.includes.filter((glob) => glob.startsWith("!")).map((glob) => glob.slice(1));
+}
+
+const integration = integrationTests();
+
+// The probes (docs/test-cohorts.md, "Probes"): integration files that can fail
+// with no code change. They stay on the integration list, so the unit fence
+// still exempts them, and run as their own project: a change runs only the
+// probes whose paths it edits (scripts/affected-probes.ts).
+for (const file of PROBE_FILES) {
+  if (!integration.includes(file)) throw new Error(`probe ${file} is not on the integration list`);
+}
+
+// Module mocks, process-state writers and cold-cache fixture guards retain isolation.
+const isolatedUnit = [
+  "src/core/axi/cli.test.ts",
+  "src/core/axi/browserCommands.test.ts",
+  "src/core/accounts/claudeAccounts.test.ts",
+  "src/core/claude/claudeClassifierSession.test.ts",
+  "src/core/claude/claudeFirstmateSession.test.ts",
+  "src/core/claude/claudeModelCatalog.test.ts",
+  "src/core/claude/claudeSession.contract.test.ts",
+  "src/core/claude/claudeSession.test.ts",
+  "src/core/claude/claudeStoreLease.test.ts",
+  "src/core/helper/signIns.test.ts",
+  "src/core/models/catalogReaders.test.ts",
+  "src/core/orchestrator/localOrchestrator.test.ts",
+  "src/core/pi/accountVault.test.ts",
+  "src/core/pi/classifierSession.realSession.test.ts",
+  "src/core/pi/codexLogin.integration.test.ts",
+  "src/core/pi/codingSession.realSession.test.ts",
+  "src/core/pi/crewmateTaskTools.test.ts",
+  "src/core/pi/customApiAccounts.test.ts",
+  "src/core/pi/customApiPolicy.test.ts",
+  "src/core/pi/customApiProtocol.test.ts",
+  "src/core/pi/customApiTransport.pin.test.ts",
+  "src/core/pi/customApiTransport.test.ts",
+  "src/core/pi/firstmateSession.realSession.test.ts",
+  "src/core/pi/piAccountBackend.test.ts",
+  "src/core/pi/piCatalogCheck.test.ts",
+  "src/core/pi/piCatalogProbe.test.ts",
+  "src/core/pi/piResources.isolation.test.ts",
+  "src/core/pi/sessionFactory.test.ts",
+  "src/core/pi/toolSpec.test.ts",
+  "src/core/placed/placedClaude.contract.test.ts",
+  "src/main/voice/voiceHelper.test.ts",
+  "src/main/voice/voiceProtocol.test.ts",
+  "src/renderer/src/app/store.test.ts",
+  "src/renderer/src/cards/taskLinks.test.ts",
+  "src/renderer/src/plugins/panelCards.test.ts",
+  "src/renderer/src/plugins/panelPoint.test.ts",
+  "src/renderer/src/plugins/railStore.test.ts",
+  "src/renderer/src/plugins/reads/appExecutor.test.ts",
+  "src/renderer/src/voice/micRecorder.test.ts",
+  "src/renderer/src/voice/prepareClip.test.ts",
+  "src/renderer/src/voice/voiceController.test.ts",
+  "src/renderer/src/voice/whisperClient.test.ts",
+  "tests/check-account-models.test.ts",
+  "tests/derive-miss-candidates.test.ts",
+  "tests/extract-dispatch-corpus.test.ts",
+  // Its fixed-clock migration comparison must not inherit a warmed template.
+  "tests/helpers/database.test.ts",
+];
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@core": resolve(__dirname, "src/core"),
+      "@shared": resolve(__dirname, "src/shared"),
+      "@infinitary/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
+      "@infinitary/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+      "@firstmate/ui": resolve(__dirname, "src/renderer/src/design/index.ts"),
+      "@firstmate/contracts": resolve(__dirname, "src/shared/plugins/personalPanel.ts"),
+    },
+  },
+  test: {
+    environment: "node",
+    // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
+    globalSetup: ["./tests/helpers/vitestGlobalSetup.ts"],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "pure",
+          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          include: ["src/shared/**/*.test.ts"],
+          isolate: false,
+          setupFiles: ["./tests/helpers/pureProject.ts", "./tests/helpers/scratchDirCleanup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
+          exclude: ["src/shared/**/*.test.ts", ...integration, ...isolatedUnit],
+          isolate: false,
+          setupFiles: ["./tests/helpers/pureProject.ts", "./tests/helpers/scratchDirCleanup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "unit-isolated",
+          maxWorkers: Math.max(2, os.availableParallelism() - 1),
+          include: isolatedUnit,
+          isolate: true,
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          // The fence also exempts shared process fixtures; they are helpers,
+          // not suites. Keep actual tests in the same single-owned cohort list.
+          include: integration.filter(
+            (path) => /\.test\.tsx?$/.test(path) && !PROBE_FILES.includes(path),
+          ),
+          isolate: true,
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+          // Real git, pnpm and child processes: eight on Mac, four elsewhere, after the
+          // in-memory cohorts finish, so the suite is not its own load
+          // generator. Each file states its own budget; the default stays 5 s.
+          maxWorkers: process.platform === "darwin" ? 8 : 4,
+          sequence: { groupOrder: 1 },
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "probe",
+          include: [...PROBE_FILES],
+          isolate: true,
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+          // The integration cohort's workers, in a group of their own after it,
+          // so a whole run never loads the host with both at once.
+          maxWorkers: process.platform === "darwin" ? 8 : 4,
+          sequence: { groupOrder: 2 },
+        },
+      },
+    ],
+    // The frame stylesheet imports the design tokens as text (`?raw`);
+    // vitest otherwise blanks every .css module, query or not.
+    css: true,
+  },
+});

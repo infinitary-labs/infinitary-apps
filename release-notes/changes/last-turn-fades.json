@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-fades",
+      "kind": "improvement",
+      "area": "message-box",
+      "title": "The lines above the message box fade after you have had time to read them",
+      "body": "Your last message and Firstmate's short reply now fade after you have had them in view for about 15 seconds. Resting the pointer on them holds them, and nothing brings them back once they fade. The message box does not move. A reply still in progress, still waiting, or reporting a problem stays until your next message.",
+      "noPicture": "The lines fade away after a short while, so a still picture cannot show the change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "command-search",
+      "kind": "feature",
+      "title": "Find any command with ⌘K",
+      "body": "Press ⌘K anywhere in the window, even inside a card, and type what you want to do. Each command shows its key, and one that can't run right now says why. Arrow keys choose, Enter runs it, and Escape takes you back where you were.",
+      "highlight": 1,
+      "area": "other",
+      "picture": {
+        "dark": "command-search-dark.webp",
+        "light": "command-search-light.webp",
+        "alt": "Command search over the window, narrowed to the card commands, each with its key, and Show the previous card saying it is the first card"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "keys-for-cards-tasks-settings",
+      "kind": "feature",
+      "title": "Keys for your cards, Tasks and Settings",
+      "body": "⇧⌘L goes to the shown card's reply, ⇧⌘[ and ⇧⌘] page through your cards, ⇧⌘F opens the search in Tasks, and ⌘, opens Settings. They work wherever you are in the window, and the buttons they match show their key when you rest on them.",
+      "area": "other",
+      "noPicture": "Each key does what a button already does; the one new thing on screen, the key in each button's label, is too small for a picture to carry.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

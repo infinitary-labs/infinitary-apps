@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "agent-test-work-trial",
+      "reason": "Instruction-only development policy trial: retain existing suites and gates, require captain requests for new retained coverage, and stop routine local unit/integration runs. No shipped product surface changes."
+    }
+  ]
+}

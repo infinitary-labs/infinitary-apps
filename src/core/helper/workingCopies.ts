@@ -1,0 +1,576 @@
+import { createHash, randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readdirSync,
+  readSync,
+  writeSync,
+} from "node:fs";
+import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
+import { join } from "node:path";
+import { forgeOf } from "@shared/forge";
+import {
+  type BundledRef,
+  PLACED_COPY_CHUNK_BYTES,
+  placedTaskIdSchema,
+  type WorkingCopyBase,
+  type WorkOrderRequest,
+  type WorkOrderResponse,
+} from "@shared/work";
+import { writeArtifact } from "../workspace/artifacts";
+import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
+import { forgeAuthRequired } from "../workspace/forgeAuth";
+import { git } from "../workspace/git";
+import {
+  type DependencyInstall,
+  type DispatchBase,
+  keptRefFor,
+  keptRefsFor,
+  OLDER_SEEDED_REF,
+  SEEDED_REF,
+  sourceRefPatterns,
+  type TaskWorkspace,
+  WorkspaceService,
+  type WorkspaceServiceOptions,
+} from "../workspace/workspaceService";
+
+/**
+ * The working copies a computer that runs work keeps for its home
+ * (docs/helper.md, "Its working copies"), the one writer over `repos/`,
+ * `worktrees/`, `worktree-pool/`, `worktree-trash/`, `default-workspace/`,
+ * `bundles/` and `artifacts/` in its data folder.
+ *
+ * A project is cloned here once, from where it lives, with this computer's
+ * own git and sign-in: a bare clone in `repos/` that knows only `origin`'s
+ * default branch. Each task then gets a working copy of its own on
+ * `fm/task-<id>`, made exactly as the home makes one (`WorkspaceService`):
+ * from `origin`'s default branch, fetched first, or a warm working copy
+ * from the pool; its dependencies installed the same way. The crewmate
+ * pushes from it with this computer's own sign-in.
+ *
+ * Its work goes home as a git bundle over the connection, never through
+ * where the project lives: the branch when the home reads it, and, when
+ * the task closes, one commit holding whatever never merged, on the task's
+ * kept ref. The working copy is deleted only once the home holds that
+ * commit (`retire`).
+ */
+
+/** A working copy made or found here, as `inf:working-copy:prepare` answers it when nothing refused. */
+export type PreparedCopy = Extract<WorkOrderResponse<"inf:working-copy:prepare">, { dir: string }>;
+
+export type WorkingCopiesOptions = Pick<WorkspaceServiceOptions, "pnpm" | "pool"> & {
+  /** Bound on a clone's and a dispatch's fetch. */
+  fetchTimeoutMs?: number;
+  /**
+   * Whether this computer holds its own sign-in for a host where projects
+   * live (`../helper/forges.ts`), which its git answers that host with.
+   */
+  signedInTo?: (host: string) => boolean;
+};
+
+/** A slow or silent remote must not hold the home's start for long. */
+const FETCH_TIMEOUT_MS = 2 * 60 * 1000;
+
+/** Git never waits on a terminal nobody sees here. */
+const NO_PROMPT = { GIT_TERMINAL_PROMPT: "0" } as const;
+
+/** One artifact's pieces as they arrive, before it is whole. */
+type Arriving = { file: string; size: number };
+
+export class WorkingCopies {
+  readonly worktreesDir: string;
+  private readonly reposDir: string;
+  private readonly bundlesDir: string;
+  private readonly artifactsDir: string;
+  private readonly workspace: WorkspaceService;
+  private readonly fetchTimeoutMs: number;
+  /** One clone of a project at a time. */
+  private readonly cloning = new Map<string, Promise<{ dir: string; cloned: boolean }>>();
+  /** One change to a task's working copy at a time, in order. */
+  private readonly chains = new Map<string, Promise<unknown>>();
+  private readonly arriving = new Map<string, Arriving>();
+  private readonly signedInTo: (host: string) => boolean;
+
+  constructor(dataDir: string, options: WorkingCopiesOptions = {}) {
+    this.signedInTo = options.signedInTo ?? (() => false);
+    this.worktreesDir = join(dataDir, "worktrees");
+    this.reposDir = join(dataDir, "repos");
+    this.bundlesDir = join(dataDir, "bundles");
+    this.artifactsDir = join(dataDir, "artifacts");
+    this.fetchTimeoutMs = options.fetchTimeoutMs ?? FETCH_TIMEOUT_MS;
+    this.workspace = new WorkspaceService(
+      {
+        worktreesDir: this.worktreesDir,
+        worktreeTrashDir: join(dataDir, "worktree-trash"),
+        worktreePoolDir: join(dataDir, "worktree-pool"),
+        defaultWorkspaceDir: join(dataDir, "default-workspace"),
+      },
+      {
+        ...(options.pnpm ? { pnpm: options.pnpm } : {}),
+        ...(options.pool !== undefined ? { pool: options.pool } : {}),
+        fetchTimeoutMs: this.fetchTimeoutMs,
+      },
+    );
+  }
+
+  /** Every task with a working copy here, by the folder it is in. */
+  list(): string[] {
+    try {
+      return readdirSync(this.worktreesDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && placedTaskIdSchema.safeParse(entry.name).success)
+        .map((entry) => entry.name)
+        .sort();
+    } catch (caught) {
+      if ((caught as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw caught;
+    }
+  }
+
+  /** The task's working copy is here. */
+  has(task: string): boolean {
+    try {
+      lstatSync(this.dir(task));
+      return true;
+    } catch (caught) {
+      if ((caught as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw caught;
+    }
+  }
+
+  /** Where the task's working copy is, whether or not it is there yet. */
+  dir(task: string): string {
+    return join(this.worktreesDir, checked(task));
+  }
+
+  /**
+   * Boot: finish what a quit left of the pool and the trash, and forget
+   * pieces of an artifact that never arrived whole.
+   */
+  sweep(): void {
+    this.workspace.sweepPool();
+    this.workspace.sweepTrash();
+    void rm(this.artifactsDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+
+  /** Resolves once every pool return started so far has finished (tests). */
+  async poolSettled(): Promise<void> {
+    await this.workspace.poolSettled();
+  }
+
+  // ---- making one -----------------------------------------------------------
+
+  /**
+   * The task's working copy, made now or found as it was
+   * (`inf:working-copy:prepare`). A clone the host refuses for want of this
+   * computer's own sign-in throws `ForgeAuthRequiredError`, which the
+   * order's answer carries home typed (`SessionHost`).
+   */
+  prepare(
+    task: string,
+    project: { origin: string } | undefined,
+    seed?: string,
+    base?: WorkingCopyBase,
+  ): Promise<PreparedCopy> {
+    return this.serial(task, async () => {
+      if (base?.task === task) throw new Error("A working copy must be separate from its source.");
+      const source = base ? await this.workspaceOf(base.task) : undefined;
+      if (base && !source) throw new Error("The source task has no working copy here.");
+      const repo = source
+        ? { dir: source.repoDir, cloned: false }
+        : project
+          ? await this.clone(project.origin)
+          : undefined;
+      // Ordinary projectless work starts from the home's seeded workspace.
+      // A review instead uses its builder's local repository and exact commit.
+      const startAt = !base && !project && seed ? await this.seededBase(seed) : undefined;
+      const made = await this.workspace.createTaskWorktree(
+        checked(task),
+        repo?.dir,
+        base ?? startAt,
+      );
+      const host = project ? forgeOf(project.origin).host : null;
+      return {
+        dir: made.cwd,
+        branch: made.branch,
+        ...(base ? { headSha: await git(made.cwd, ["rev-parse", "HEAD"]) } : {}),
+        cloned: repo?.cloned ?? false,
+        ...(repo?.cloned && host && this.signedInTo(host) ? { signedIn: true } : {}),
+        ...(made.acquired ? { acquired: made.acquired } : {}),
+      };
+    });
+  }
+
+  /**
+   * The home's default workspace as this computer keeps it
+   * (`inf:working-copy:seed`): the commit named is asked for first, then the
+   * bundle's pieces gather outside the working copy and, once whole and
+   * matching its digest, are fetched into `SEEDED_REF` of this computer's
+   * own default workspace, never its checked-out branch.
+   */
+  seed(
+    request: WorkOrderRequest<"inf:working-copy:seed">[0],
+  ): Promise<WorkOrderResponse<"inf:working-copy:seed">> {
+    const { task, sha, piece } = request;
+    return this.serial(`${task}:seed`, async () => {
+      const repo = await this.workspace.ensureDefaultRepo();
+      if (!piece) {
+        const seeded = await commitOf(repo, SEEDED_REF);
+        if (seeded === sha) return { outcome: "have" as const };
+        // What it holds may be under Firstmate 3000's name, from before an update.
+        const held = seeded ?? (await commitOf(repo, OLDER_SEEDED_REF));
+        // Held already, say as a part of an earlier one: only the ref moves.
+        if (await commitOf(repo, sha)) {
+          await git(repo, ["update-ref", SEEDED_REF, sha]);
+          return { outcome: "have" as const };
+        }
+        return { outcome: "need" as const, ...(held ? { have: [held] } : {}) };
+      }
+      const file = join(this.bundlesDir, `${checked(task)}-seed.bundle`);
+      if (piece.offset === 0) {
+        await mkdir(this.bundlesDir, { recursive: true, mode: 0o700 });
+        await rm(file, { force: true });
+      }
+      const bytes = Buffer.from(piece.data, "base64");
+      if (piece.offset + bytes.length > piece.size)
+        throw new Error("The workspace's pieces run past its size.");
+      const fd = openSync(file, "a+", 0o600);
+      closeSync(fd);
+      const handle = openSync(file, "r+");
+      try {
+        let written = 0;
+        while (written < bytes.length)
+          written += writeSync(
+            handle,
+            bytes,
+            written,
+            bytes.length - written,
+            piece.offset + written,
+          );
+      } finally {
+        closeSync(handle);
+      }
+      if ((await stat(file)).size < piece.size) return { outcome: "partial" as const };
+      try {
+        await takeBundle(
+          repo,
+          file,
+          { size: piece.size, sha256: piece.sha256 },
+          "HEAD",
+          SEEDED_REF,
+          sha,
+        );
+      } finally {
+        await rm(file, { force: true });
+      }
+      return { outcome: "ready" as const };
+    });
+  }
+
+  /** Where a seeded task starts: the commit the home sent, which must be here. */
+  private async seededBase(seed: string): Promise<DispatchBase> {
+    const repo = await this.workspace.ensureDefaultRepo();
+    if ((await commitOf(repo, SEEDED_REF)) !== seed)
+      throw new Error("The home's workspace did not arrive here before the working copy.");
+    return { sha: seed, ref: `main (${seed.slice(0, 7)})`, fetch: "none" };
+  }
+
+  /** The working copy's dependencies, as a new one's are installed at the home. */
+  install(task: string): Promise<DependencyInstall> {
+    return this.serial(task, async () => {
+      if (!this.has(task))
+        return { outcome: "failed", ms: 0, error: "no working copy is here for this task" };
+      return this.workspace.installDependencies(this.dir(task));
+    });
+  }
+
+  /**
+   * The project's clone here: made once per origin, as a bare repository
+   * that knows only `origin`'s default branch, under a temporary name that
+   * becomes its own only once it is whole.
+   */
+  private clone(origin: string): Promise<{ dir: string; cloned: boolean }> {
+    const key = createHash("sha256").update(origin).digest("hex").slice(0, 16);
+    const known = this.cloning.get(key);
+    if (known) return known.then(({ dir }) => ({ dir, cloned: false }));
+    const run = this.cloneOnce(origin, join(this.reposDir, key));
+    this.cloning.set(key, run);
+    run.catch(() => this.cloning.delete(key));
+    return run;
+  }
+
+  private async cloneOnce(origin: string, dir: string): Promise<{ dir: string; cloned: boolean }> {
+    if (existsSync(dir)) {
+      const url = await git(dir, ["remote", "get-url", "origin"]).catch(() => "");
+      if (url !== origin)
+        throw new Error("This computer's clone of the project names another origin.");
+      return { dir, cloned: false };
+    }
+    await mkdir(this.reposDir, { recursive: true, mode: 0o700 });
+    const making = join(this.reposDir, `.cloning-${randomUUID().slice(0, 8)}`);
+    try {
+      await git(this.reposDir, ["init", "--quiet", "--bare", making]);
+      await git(making, ["remote", "add", "origin", origin]);
+      const remote = { timeoutMs: this.fetchTimeoutMs, env: NO_PROMPT };
+      // The default branch, as origin declares it.
+      const head = await git(making, ["ls-remote", "--symref", "origin", "HEAD"], remote);
+      const name = /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(head)?.[1];
+      if (!name) throw new Error("The project's origin declares no default branch.");
+      await git(
+        making,
+        [
+          "fetch",
+          "--quiet",
+          "--no-tags",
+          "origin",
+          `+refs/heads/${name}:refs/remotes/origin/${name}`,
+        ],
+        remote,
+      );
+      await git(making, ["symbolic-ref", "HEAD", `refs/heads/${name}`]);
+      await git(making, ["update-ref", `refs/heads/${name}`, `refs/remotes/origin/${name}`]);
+      await git(making, [
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        `refs/remotes/origin/${name}`,
+      ]);
+      await rename(making, dir);
+      return { dir, cloned: true };
+    } catch (caught) {
+      await rm(making, { recursive: true, force: true }).catch(() => undefined);
+      throw forgeAuthRequired(origin, caught) ?? caught;
+    }
+  }
+
+  // ---- what it holds ---------------------------------------------------------
+
+  /** A named commit, or the task branch's head, read where the working copy lives. */
+  async revision(
+    task: string,
+    headSha?: string,
+  ): Promise<WorkOrderResponse<"inf:working-copy:revision">> {
+    const workspace = await this.workspaceOf(task);
+    if (!workspace) throw new Error("The source task has no working copy here.");
+    const head = headSha ?? (await this.workspace.branchHead(workspace.repoDir, workspace.branch));
+    if (!head) throw new Error("The task has no committed revision here.");
+    const changedFiles = await this.workspace.reviewChangedFiles(workspace.repoDir, head);
+    if (!changedFiles) throw new Error("The requested commit is not on this computer.");
+    return { headSha: head, changedFiles };
+  }
+
+  /**
+   * Whether the working copy holds edits or commits that never merged, and
+   * where the project it was cloned from lives (`inf:working-copy:status`):
+   * null for one of this computer's own local workspace, which has none.
+   */
+  async status(task: string): Promise<WorkOrderResponse<"inf:working-copy:status">> {
+    const workspace = await this.workspaceOf(task);
+    if (!workspace) return { present: false, dirty: false, unlandedCommits: 0 };
+    const held = await this.workspace.taskWorkStatus(workspace, { strict: true });
+    const origin = await git(workspace.repoDir, ["remote", "get-url", "origin"]).catch(() => "");
+    return { present: true, ...held, origin: origin || null };
+  }
+
+  /**
+   * One of the task's refs as a bundle for the home, leaving out what it
+   * has (`inf:working-copy:bundle`): the bundle stays in `bundles/` for the
+   * home to read until the next one of that ref, or until the task retires.
+   */
+  bundle(
+    task: string,
+    ref: BundledRef,
+    have: readonly string[],
+  ): Promise<WorkOrderResponse<"inf:working-copy:bundle">> {
+    return this.serial(task, async () => {
+      const workspace = await this.workspaceOf(task);
+      if (!workspace) return { sha: null };
+      if (ref === "branch" && !workspace.branch) return { sha: null };
+      const name =
+        ref === "branch"
+          ? `refs/heads/${workspace.branch}`
+          : ((await keptRefHere(workspace.repoDir, task)) ?? keptRefFor(task));
+      return bundleRef(workspace.repoDir, name, have, this.bundleFile(task, ref));
+    });
+  }
+
+  /** The bundle made last for that ref, from `offset` (`inf:working-copy:read`). */
+  read(task: string, ref: BundledRef, offset: number): WorkOrderResponse<"inf:working-copy:read"> {
+    const fd = openSync(this.bundleFile(task, ref), "r");
+    try {
+      const size = fstatSync(fd).size;
+      const from = Math.min(offset, size);
+      const bytes = Buffer.alloc(Math.min(PLACED_COPY_CHUNK_BYTES, size - from));
+      let read = 0;
+      while (read < bytes.length) {
+        const got = readSync(fd, bytes, read, bytes.length - read, from + read);
+        if (got === 0) break;
+        read += got;
+      }
+      return { size, offset: from, data: bytes.subarray(0, read).toString("base64") };
+    } finally {
+      closeSync(fd);
+    }
+  }
+
+  /**
+   * Saves what the working copy holds that never merged as one commit on
+   * the task's kept ref (`inf:working-copy:keep`), as the home saves its
+   * own: uncommitted edits and branch commits, null when there is nothing.
+   */
+  keep(task: string): Promise<WorkOrderResponse<"inf:working-copy:keep">> {
+    return this.serial(task, async () => {
+      const workspace = await this.workspaceOf(task);
+      if (!workspace) return { kept: null };
+      return { kept: await this.workspace.keepUnlandedWork(workspace) };
+    });
+  }
+
+  /**
+   * Deletes the task's working copy once the home holds its kept work
+   * (`inf:working-copy:retire`): `kept` must be the commit the kept ref
+   * points at here, and with none, nothing may be unmerged. The copy goes
+   * to the pool or the trash as the home's does, its branch and kept ref
+   * go, and so do its bundles.
+   */
+  retire(task: string, kept: string | null): Promise<void> {
+    return this.serial(task, async () => {
+      const workspace = await this.workspaceOf(task);
+      if (workspace) {
+        // Even a kept ref does not prove an unreadable copy is safe to remove.
+        const status = await this.workspace.taskWorkStatus(workspace, { strict: true });
+        const keptName = await keptRefHere(workspace.repoDir, task);
+        const here = keptName ? await commitOf(workspace.repoDir, keptName) : null;
+        if (kept !== null && here !== kept)
+          throw new Error("The home does not hold this task's kept work yet, so it stays here.");
+        if (kept === null) {
+          if (here !== null)
+            throw new Error("This task's work was kept here; the home must take it first.");
+          if (status.dirty || status.unlandedCommits > 0)
+            throw new Error("This task's working copy holds unmerged work the home has not kept.");
+        }
+        const sources = await git(workspace.repoDir, [
+          "for-each-ref",
+          "--format=%(refname)",
+          ...sourceRefPatterns(task),
+        ]);
+        for (const ref of sources.split("\n").filter(Boolean))
+          await git(workspace.repoDir, ["update-ref", "-d", ref]);
+        await this.workspace.removeTaskWorktree(workspace);
+        if (here !== null)
+          for (const name of keptRefsFor(task))
+            await git(workspace.repoDir, ["update-ref", "-d", name]).catch(() => {});
+      }
+      for (const ref of ["branch", "kept"] as const)
+        await rm(this.bundleFile(task, ref), { force: true });
+    });
+  }
+
+  /** Fetch starting work into a private ref; leave the new task branch untouched. */
+  sourceRef(
+    input: WorkOrderRequest<"inf:working-copy:source-ref">[0],
+    file: string,
+  ): Promise<WorkOrderResponse<"inf:working-copy:source-ref">> {
+    return this.serial(input.task, async () => {
+      const workspace = await this.workspaceOf(input.task);
+      if (!workspace) throw new Error("The destination task has no working copy.");
+      if ((await commitOf(workspace.repoDir, input.to)) !== input.sha)
+        await takeBundle(workspace.repoDir, file, input, input.from, input.to, input.sha);
+      await rm(file, { force: true });
+      return { ref: input.to };
+    });
+  }
+
+  /**
+   * One piece of an artifact the home downloaded for the task
+   * (`inf:working-copy:artifact`): pieces gather outside the working copy,
+   * and once every byte is there and its digest matches, it is written into
+   * the working copy as the home writes one (`writeArtifact`).
+   */
+  artifact(
+    request: WorkOrderRequest<"inf:working-copy:artifact">[0],
+  ): Promise<WorkOrderResponse<"inf:working-copy:artifact">> {
+    const { task, runId, artifactId, size, sha256, offset } = request;
+    return this.serial(`${task}:artifact`, async () => {
+      if (!this.has(task)) throw new Error("No working copy is here for this task.");
+      const key = `${checked(task)}-run-${runId}-artifact-${artifactId}`;
+      let arriving = this.arriving.get(key);
+      if (!arriving || arriving.size !== size) {
+        await mkdir(this.artifactsDir, { recursive: true, mode: 0o700 });
+        arriving = { file: join(this.artifactsDir, `${key}.part`), size };
+        await rm(arriving.file, { force: true });
+        this.arriving.set(key, arriving);
+      }
+      const bytes = Buffer.from(request.data, "base64");
+      if (offset + bytes.length > size) throw new Error("The artifact's pieces run past its size.");
+      const fd = openSync(arriving.file, "a+", 0o600);
+      closeSync(fd);
+      const handle = openSync(arriving.file, "r+");
+      try {
+        let written = 0;
+        while (written < bytes.length)
+          written += writeSync(handle, bytes, written, bytes.length - written, offset + written);
+      } finally {
+        closeSync(handle);
+      }
+      if ((await stat(arriving.file)).size < size) return { outcome: "partial" as const };
+      this.arriving.delete(key);
+      try {
+        if ((await sha256Of(arriving.file)) !== sha256)
+          throw new Error("The artifact that arrived is not the one the home downloaded.");
+        await writeArtifact(this.dir(task), runId, artifactId, await readFile(arriving.file));
+        return { outcome: "written" as const };
+      } catch (caught) {
+        if ((caught as NodeJS.ErrnoException).code === "EEXIST")
+          return { outcome: "exists" as const };
+        throw caught;
+      } finally {
+        await rm(arriving.file, { force: true });
+      }
+    });
+  }
+
+  // ---- inside -------------------------------------------------------------------
+
+  /** Null only when the folder is absent; unreadable existing work refuses every consumer. */
+  private async workspaceOf(task: string): Promise<TaskWorkspace | null> {
+    if (!this.has(task)) return null;
+    const workspace = await this.workspace.workspaceAt(checked(task));
+    if (!workspace)
+      throw new Error(
+        `Infinitary cannot read the work history in ${this.dir(task)}. The working copy stays here until its history can be read.`,
+      );
+    return workspace;
+  }
+
+  private bundleFile(task: string, ref: BundledRef): string {
+    return join(this.bundlesDir, `${checked(task)}-${ref}.bundle`);
+  }
+
+  private serial<T>(key: string, run: () => Promise<T>): Promise<T> {
+    const next = (this.chains.get(key) ?? Promise.resolve()).then(run, run);
+    const settled = next.catch(() => undefined);
+    this.chains.set(key, settled);
+    void settled.then(() => {
+      if (this.chains.get(key) === settled) this.chains.delete(key);
+    });
+    return next;
+  }
+}
+
+/** A task id names a folder: anything but a minted one is refused before a path is built. */
+function checked(task: string): string {
+  if (!placedTaskIdSchema.safeParse(task).success) throw new Error(`No task is named ${task}.`);
+  return task;
+}
+
+/**
+ * The name a task's kept work is under in this repository: Infinitary's, or
+ * Firstmate 3000's for work kept before this computer was updated; null
+ * when there is none.
+ */
+async function keptRefHere(repoDir: string, task: string): Promise<string | null> {
+  for (const name of keptRefsFor(task)) if (await commitOf(repoDir, name)) return name;
+  return null;
+}

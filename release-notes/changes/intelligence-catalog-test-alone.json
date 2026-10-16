@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intelligence-catalog-test-alone",
+      "reason": "Internal test repair: the Intelligence catalog core test sets Firstmate's starting seat itself, so it passes alone from a fresh profile. No user-facing behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remote-login-mac-found-again",
+      "reason": "A Mac added by its address is brought back from Settings -> Devices as the same computer after this Mac's address changes, and Devices says how each stranded computer comes back; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

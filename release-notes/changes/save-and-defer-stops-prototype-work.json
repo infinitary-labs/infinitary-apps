@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "save-and-defer-stops-prototype-work",
+      "kind": "fix",
+      "title": "Save and defer on a prototype that was about to be built keeps its build for later",
+      "body": "When a prototype belongs to work that would build it, Save and defer now stops that work and puts its build under planned in Tasks, with the settings you left on the prototype. Abandon stops it and keeps nothing waiting. Before, the work stayed open with nothing left to do.",
+      "area": "tasks",
+      "picture": {
+        "dark": "save-and-defer-stops-prototype-work-dark.webp",
+        "light": "save-and-defer-stops-prototype-work-light.webp",
+        "alt": "The saved build of a prototype under planned in Tasks, starting when you press Start"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

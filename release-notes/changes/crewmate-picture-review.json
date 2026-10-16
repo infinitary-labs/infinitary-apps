@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-picture-review",
+      "kind": "fix",
+      "title": "Crewmates check pictures before sharing them",
+      "body": "Crewmates now look at each picture, and the still shown for each recording, before putting it on a card. They retake one that came out blank, half drawn or cut off, and describe what it actually shows.",
+      "area": "cards",
+      "noPicture": "This changes how crewmates review their evidence, not a fixed app view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

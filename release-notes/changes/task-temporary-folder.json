@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-temporary-folder",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Finished tasks no longer keep temporary working files",
+      "body": "When a task closes, the app removes the temporary folder its crewmate used for downloads, test runs and throwaway copies. Pictures, logs and other proof it chose to keep still stay for a week, or while other open work needs them.",
+      "noPicture": "Nothing on screen changes: the app frees disk space in the background.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

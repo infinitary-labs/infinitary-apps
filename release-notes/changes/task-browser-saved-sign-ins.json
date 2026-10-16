@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-saved-sign-ins",
+      "reason": "Internal, behind the development-only task browser gate: the captain can save a website's sign-in on this Mac as a task's browser is handed back, let a later task use it from its request card, and remove it in Settings; an installed app shows none of it."
+    }
+  ]
+}

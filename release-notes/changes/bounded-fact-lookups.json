@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "bounded-fact-lookups",
+      "kind": "improvement",
+      "title": "Fact lookups ask for low intelligence",
+      "body": "Bounded questions about existing facts now ask for a low-intelligence crewmate, instead of being treated as investigations. Investigating causes and reproducing bugs still ask for high intelligence. Your model choices still take priority, and Usage lists these answers as Lookups.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "bounded-fact-lookups-dark.webp",
+        "light": "bounded-fact-lookups-light.webp",
+        "alt": "A lookup's crew summary shows Low intelligence and Looking up existing facts beneath its model"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

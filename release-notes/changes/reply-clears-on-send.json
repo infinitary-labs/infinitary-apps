@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reply-clears-on-send",
+      "kind": "fix",
+      "title": "Card replies clear as soon as you send",
+      "body": "Sending a reply under a card now clears its words and attached files immediately, instead of leaving them in the box while the app catches up. If the reply cannot be sent, your draft and attachments return for retry.",
+      "area": "cards",
+      "noPicture": "A picture cannot show a reply clearing at once, and the reply box looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

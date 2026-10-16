@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "followup-answer-brief",
+      "kind": "fix",
+      "title": "A follow-up that asks a question ends with an answer on a card",
+      "body": "When a crewmate files follow-up work that turns out to be a question, the crewmate that takes it up now answers it on a card. Before, it also expected to open a pull request it had no way to open, and could report that as a problem.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the answer arrives on an ordinary card.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

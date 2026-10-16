@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "knowledge-journeys-steady-on-linux",
+      "reason": "Makes two knowledge browser journeys pass reliably on the hosted Linux journey lane: the test collection's ids are pinned so its graph lays out the same on every run, and Ask about this is pressed only once its page can take the key. No shipped behavior changed."
+    }
+  ]
+}

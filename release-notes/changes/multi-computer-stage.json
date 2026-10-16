@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "multi-computer-stage",
+      "kind": "improvement",
+      "title": "Crew on your other computers get room of their own",
+      "body": "With work running on more than one computer, each other computer's crew now form their own formation beside Firstmate's, half the size of the home one, with the same orbits opening as crew pile up and model names shown while a formation has one orbit. The formations keep clear of each other and may sit under an open panel; the whole scene shrinks only when the window is narrower than it. A crewmate starting elsewhere flies one smooth path from Firstmate to its place and comes home the same way, without jolting the crew at home, and Firstmate's black hole no longer speeds up crew elsewhere.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "multi-computer-stage-dark.webp",
+        "light": "multi-computer-stage-light.webp",
+        "alt": "Firstmate with its crew at home and a smaller crew formation on each side, one for each other computer, named under it"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

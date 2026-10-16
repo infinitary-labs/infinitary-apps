@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "connection-refusal-test-race",
+      "reason": "Test-only repair: observe the pending connection ask's rejection immediately and exercise a delayed assertion after disconnect, without changing app behavior."
+    }
+  ]
+}

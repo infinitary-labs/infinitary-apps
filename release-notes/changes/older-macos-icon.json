@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "older-macos-icon",
+      "kind": "fix",
+      "title": "The Dock icon has rounded corners on older Macs",
+      "body": "Firstmate 3000’s icon now has the standard rounded shape and margin on macOS 12–15. Its appearance on macOS 26 stays the same.",
+      "area": "settings",
+      "noPicture": "This changes the native macOS Dock icon, outside the app’s theme-based hero capture.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

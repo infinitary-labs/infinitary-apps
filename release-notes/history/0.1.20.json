@@ -1,0 +1,57 @@
+{
+  "entries": [
+    {
+      "id": "bf-92e5290b1",
+      "kind": "fix",
+      "title": "Advance Claude Sonnet starter to 5.5",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "92e5290b15a277fb2f9ec0433ad1727bc32cd557"
+        ]
+      }
+    },
+    {
+      "id": "bf-e7737550c",
+      "kind": "fix",
+      "title": "Quote dry-run fixture check path",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e7737550ce81a0768c0727023706ab76ccac7b23"
+        ]
+      }
+    },
+    {
+      "id": "bf-8e549266a",
+      "kind": "fix",
+      "title": "Raise the send timeout to 10 s",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "8e549266aa89f1cd48b44e51c8e098e4ecf32551"
+        ]
+      }
+    },
+    {
+      "id": "bf-20f1a1d30",
+      "kind": "maintenance",
+      "title": "Budget the recorded Claude replay for hosted Linux",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "20f1a1d30d2a8ca0b7f17ddf74ffd2c543c2af50"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-20-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.20: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "f477d2988539f503578c1932aea471d17080fe26"
+      ]
+    }
+  ]
+}

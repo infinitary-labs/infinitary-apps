@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-board-confirmed-move-focus",
+      "kind": "fix",
+      "title": "Task board focus no longer jumps after switching views",
+      "body": "After you confirm a move, keyboard focus follows its result without waiting for another update if it is already shown. Switching views or pages cancels any focus follow still waiting, so it cannot take focus from your next selection.",
+      "area": "tasks",
+      "noPicture": "This fixes delayed keyboard focus after a confirmed move, not the board's appearance; a still picture cannot show that timing.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

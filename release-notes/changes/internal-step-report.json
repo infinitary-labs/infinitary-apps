@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "internal-step-report",
+      "kind": "fix",
+      "title": "Firstmate hears when a Claude crewmate finishes without asking you",
+      "body": "When a Claude crewmate finishes work that did not ask you a question, Firstmate now hears its report immediately and can start the next task. Before, that could wait until you asked about it.",
+      "area": "crewmates",
+      "noPicture": "No view changes: this fixes when Firstmate receives an internal task's report.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

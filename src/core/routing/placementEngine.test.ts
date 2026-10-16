@@ -1,0 +1,82 @@
+import { describe, expect, it } from "vitest";
+import {
+  evaluatePlacement,
+  type PlacementCandidate,
+  resolvePlacementRequirements,
+} from "./placementEngine";
+import type { RoutePreview } from "./router";
+
+const KIB = 1024;
+
+/**
+ * FI3-1733: a new task in an Automatic project waited for "a compatible
+ * computer with room to start" on a 24 GiB Mac in ordinary use. The reading
+ * is that Mac's own, as Electron's process.getSystemMemoryInfo() reported it
+ * in KiB (SCR-380): macOS keeps almost no page empty, and hands back cached
+ * file pages and purgeable memory without compressing or swapping.
+ */
+const thisMac: PlacementCandidate = {
+  computerId: null,
+  inReach: true,
+  workEnabled: true,
+  system: "macos",
+  chip: "arm64",
+  tools: { git: "available" },
+  projectAccess: "available",
+  physicalComputerId: "a".repeat(64),
+  resources: {
+    status: "fresh",
+    ageMs: 50,
+    observation: {
+      epoch: "4f0c2a8e-6b1d-4c3e-9a57-2d8f1e0b7c64",
+      sequence: 1,
+      status: "sampled",
+      sampleMs: 250,
+      cpu: { logicalCpus: 10, idleFraction: 0.77 },
+      memory: {
+        totalBytes: 25_165_824 * KIB,
+        freeBytes: 356_672 * KIB,
+        purgeableBytes: 335_184 * KIB,
+        fileBackedBytes: 6_852_624 * KIB,
+      },
+    },
+  },
+  model: {
+    result: {
+      choice: { provider: "anthropic-claude", id: "claude-opus-5-5" },
+      bucket: "high",
+      rule: "R1a",
+    },
+    reasons: [],
+    preferenceRank: 0,
+    requiresReasoningWait: false,
+  } satisfies RoutePreview,
+};
+
+/** A paired computer too old to report what it can run: no facts at all. */
+const olderMacMini: PlacementCandidate = {
+  computerId: "mac-mini",
+  inReach: true,
+  workEnabled: true,
+  tools: {},
+  projectAccess: "unknown",
+  physicalComputerId: null,
+  resources: { status: "unknown", reason: "missing" },
+  model: null,
+};
+
+describe("evaluatePlacement on a Mac in ordinary use", () => {
+  it("starts a new standard task on this Mac when the other computer cannot take work", () => {
+    const decision = evaluatePlacement({
+      requirements: resolvePlacementRequirements({
+        home: { system: "macos", chip: "arm64" },
+        workingCopy: true,
+      }),
+      candidates: [thisMac, olderMacMini],
+      reservations: [],
+    });
+    expect(decision.candidates[0]?.rejections).toEqual([]);
+    expect(decision.status).toBe("chosen");
+    expect(decision.chosen?.computerId).toBeNull();
+  });
+});

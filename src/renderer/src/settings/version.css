@@ -1,0 +1,47 @@
+/* Settings -> General -> Version (VersionRow.tsx): every release note the
+   app showed, a hairline list under the version, each row a button that
+   opens its note. The hover state inline styles cannot express lives here. */
+
+.fm-version-notes {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-version-note {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-1);
+  cursor: pointer;
+  text-align: left;
+  color: var(--fg-1);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.fm-version-notes li:last-child .fm-version-note {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.fm-version-note:hover {
+  color: var(--accent);
+}
+
+.fm-version-note-quiet {
+  color: var(--fg-3);
+}
+
+.fm-version-note-date {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: nowrap;
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-conversations-wire",
+      "reason": "Internal, behind the development-only multi-machine gate: a computer that runs work can hold a crewmate's conversation for its home over the existing connection, and nothing in an installed app opens one."
+    }
+  ]
+}

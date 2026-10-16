@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-browser",
+      "kind": "feature",
+      "title": "Alpha only: browse what the crew learned",
+      "body": "In alpha builds, once the crew has recorded something, the Knowledge panel under Tasks and Open Knowledge in command search open a browser of what the crew learned: a 3D map of concepts you turn by dragging, the way a game camera turns, and lists of concepts and findings that show how well each finding was checked. Select anything to read its evidence, its history and the work that used it. Browsing changes nothing. Stable releases do not have it.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "knowledge-browser-dark.webp",
+        "light": "knowledge-browser-light.webp",
+        "alt": "The Knowledge browser with its 3D map of concepts, a selected claim lit between two concepts, its list of connections, and the inspector beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

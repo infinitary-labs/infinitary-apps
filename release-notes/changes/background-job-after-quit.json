@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "background-job-after-quit",
+      "kind": "fix",
+      "title": "Activity names the background jobs a quit stopped",
+      "body": "After you quit while a crewmate's background job is running, the next launch names that job in Activity as stopped when the app quit. If the app quit unexpectedly, the line now says the job may have kept running, even to the end, instead of saying it did not finish.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "background-job-after-quit-dark.webp",
+        "light": "background-job-after-quit-light.webp",
+        "alt": "Activity after a relaunch, naming a crewmate's background job as stopped when the app quit"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

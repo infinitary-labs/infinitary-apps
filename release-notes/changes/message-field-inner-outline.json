@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "message-field-inner-outline",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Message fields no longer show an extra inner outline",
+      "body": "The main message and card replies keep their rounded focus border without a second outline inside the text field.",
+      "picture": {
+        "dark": "message-field-inner-outline-dark.webp",
+        "light": "message-field-inner-outline-light.webp",
+        "alt": "The focused message box with a single rounded border."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

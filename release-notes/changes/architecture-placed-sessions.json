@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "architecture-placed-sessions",
+      "reason": "Internal documentation: the architecture overview now matches placed crewmate sessions and names the device setup that is still planned. A person sees no change, and the development-only multi-machine gate is unchanged."
+    }
+  ]
+}

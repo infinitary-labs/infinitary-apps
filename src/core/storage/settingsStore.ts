@@ -1,0 +1,478 @@
+import {
+  DEFAULT_DECISIONS,
+  type DecisionsSettings,
+  decisionsSettingsSchema,
+} from "@shared/decisions";
+import {
+  DEFAULT_DICTATION,
+  type DictationKey,
+  type DictationSettings,
+  dictationSettingsSchema,
+} from "@shared/dictation";
+import { EMPTY_FIRST_RUN, type FirstRunRecord, firstRunRecordSchema } from "@shared/firstRun";
+import { readSavedKeymap, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
+import {
+  DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
+  type LocalOrchestratorSetting,
+  localOrchestratorSettingSchema,
+} from "@shared/localOrchestrator";
+import {
+  EMPTY_MODEL_SLOTS,
+  type ModelSlotsState,
+  modelSlotsStateSchema,
+  type ServedBaselines,
+  servedBaselinesSchema,
+} from "@shared/modelSlots";
+import {
+  type Appearance,
+  appearanceSchema,
+  DEFAULT_APPEARANCE,
+  DEFAULT_LAYOUT,
+  DEFAULT_PERSONAL_PANELS,
+  type Layout,
+  layoutSchema,
+  type PersonalPanels,
+  personalPanelsSchema,
+} from "@shared/preferences";
+import {
+  type PiModelRefView,
+  piModelRefViewSchema,
+  type RoutingSettings,
+  routingSettingsSchema,
+} from "@shared/quota";
+import {
+  type ReleaseTrackingRecord,
+  releaseTrackingSchema,
+  UNKNOWN_RELEASE_TRACKING,
+} from "@shared/releaseTracking";
+import { DEFAULT_SHARING, type Sharing, sharingSchema } from "@shared/sharing";
+import { z } from "zod";
+import { type SeatDigestEntry, seatDigestEntrySchema } from "../orchestrator/seatDigest";
+import type { AppDatabase } from "./db";
+
+const dockSchema = z.object({ showInDock: z.boolean() });
+
+const projectsFolderSchema = z.object({ path: z.string().min(1) });
+
+const firstmateMovedFromSchema = z.object({
+  providerId: z.string(),
+  accountId: z.string(),
+  class: z.enum(["signed_out", "no_headroom", "refused", "client", "unavailable"]),
+  offered: z.boolean().optional(),
+});
+export type FirstmateMovedFrom = z.infer<typeof firstmateMovedFromSchema>;
+
+const firstmatePausedSchema = z.object({
+  accountId: z.string(),
+  class: z.enum(["signed_out", "no_headroom", "refused", "client", "unavailable"]),
+  move: z.string().optional(),
+});
+export type FirstmatePaused = z.infer<typeof firstmatePausedSchema>;
+
+/** What one launch left behind for the next one to read (Step 5). */
+export const launchRecordSchema = z.object({
+  /** True while a launch has not settled; a launch that finds it true is after a crash. */
+  pending: z.boolean(),
+  /** Consecutive launches that ended before settling. */
+  earlyCrashes: z.number().int().min(0),
+});
+export type LaunchRecord = z.infer<typeof launchRecordSchema>;
+
+/** Small persisted app settings (KV rows in SQLite). */
+export class SettingsStore {
+  constructor(
+    private readonly db: AppDatabase,
+    /**
+     * The dictation key until the person picks one: right ⌥ on a Mac, right
+     * Ctrl on Linux, where right Alt types accents (src/shared/platform.ts,
+     * `desktopConventions`). The core passes its host's.
+     */
+    private readonly dictationKey: DictationKey = DEFAULT_DICTATION.key,
+  ) {}
+
+  private has(key: string): boolean {
+    return this.db.prepare("SELECT 1 FROM settings WHERE key = ?").get(key) !== undefined;
+  }
+
+  private get(key: string): unknown {
+    const row = this.db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
+      | { value: string }
+      | undefined;
+    if (!row) return undefined;
+    try {
+      return JSON.parse(row.value);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private set(key: string, value: unknown): void {
+    this.db
+      .prepare(
+        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run(key, JSON.stringify(value));
+  }
+
+  getRoutingSettings(): RoutingSettings {
+    const parsed = routingSettingsSchema.safeParse(this.get("routing"));
+    return parsed.success ? parsed.data : { dynamicRouting: true, pins: [] };
+  }
+
+  setRoutingSettings(settings: RoutingSettings): void {
+    this.set("routing", settings);
+  }
+
+  /**
+   * The install's model-slot record. An offering absent from `assignments`
+   * is off; an offering absent from `seen` has never been seeded.
+   */
+  getModelSlots(): ModelSlotsState {
+    const parsed = modelSlotsStateSchema.safeParse(this.get("model-slots"));
+    return parsed.success ? parsed.data : { ...EMPTY_MODEL_SLOTS, assignments: {}, seen: [] };
+  }
+
+  setModelSlots(state: ModelSlotsState): void {
+    this.set("model-slots", state);
+  }
+
+  /** The last successful catalog read per account (docs/model-lists.md). */
+  getServedBaselines(): ServedBaselines {
+    const parsed = servedBaselinesSchema.safeParse(this.get("served-baselines"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setServedBaselines(baselines: ServedBaselines): void {
+    this.set("served-baselines", baselines);
+  }
+
+  /**
+   * Which model answers typed decisions, and whether a native one's egress
+   * is on (S7, `src/shared/decisions.ts`). Absent - every install before
+   * S7, and every fresh one - is the adapter's own walk over the cheapest
+   * slotted model, which is what the app already did. The KEY is not here:
+   * it lives in its own 0700 store, so this row carries no secret.
+   */
+  getDecisions(): DecisionsSettings {
+    const parsed = decisionsSettingsSchema.safeParse(this.get("decisions"));
+    return parsed.success ? parsed.data : DEFAULT_DECISIONS;
+  }
+
+  setDecisions(decisions: DecisionsSettings): void {
+    this.set("decisions", decisions);
+  }
+
+  /**
+   * The captain's presentation choices (src/shared/preferences.ts). Held
+   * here, not in the window, so they survive a relaunch with a fresh window
+   * profile and are readable by anything but the renderer.
+   */
+  getAppearance(): Appearance {
+    const parsed = appearanceSchema.safeParse(this.get("appearance"));
+    let appearance = parsed.success ? parsed.data : DEFAULT_APPEARANCE;
+    if (parsed.success && !this.has("wash-opacity-v2")) {
+      // The old slider was a percentage of 78% opacity. The old default
+      // (100) now follows the accepted 20% look; preserve other deliberate
+      // strengths as their approximate visual opacity.
+      const oldStrength = parsed.data.washStrength ?? 100;
+      const converted = {
+        ...parsed.data,
+        washStrength: oldStrength === 100 ? 20 : Math.round(oldStrength * 0.78),
+      };
+      this.set("appearance", converted);
+      this.set("wash-opacity-v2", true);
+      appearance = converted;
+    }
+    if (!this.has("wash-default-zero-v1")) {
+      if (appearance.washStrength === 20) {
+        appearance = { ...appearance, washStrength: 0 };
+        this.set("appearance", appearance);
+      }
+      this.set("wash-default-zero-v1", true);
+    }
+    return { ...DEFAULT_APPEARANCE, ...appearance };
+  }
+
+  setAppearance(appearance: Appearance): void {
+    this.set("appearance", { ...this.getAppearance(), ...appearance });
+    this.set("wash-opacity-v2", true);
+  }
+
+  getLayout(): Layout {
+    const parsed = layoutSchema.safeParse(this.get("layout"));
+    return parsed.success ? parsed.data : DEFAULT_LAYOUT;
+  }
+
+  setLayout(layout: Layout): void {
+    this.set("layout", layout);
+  }
+
+  /**
+   * The host-owned switch over the captain's own panels (Step 5). Absent
+   * (every install before Step 5) means on, which is what the app did.
+   */
+  getPersonalPanels(): PersonalPanels {
+    const parsed = personalPanelsSchema.safeParse(this.get("panels"));
+    return parsed.success ? parsed.data : DEFAULT_PERSONAL_PANELS;
+  }
+
+  setPersonalPanels(panels: PersonalPanels): void {
+    this.set("panels", panels);
+  }
+
+  /**
+   * The keys a person changed on this Mac (docs/keyboard.md, "Changing
+   * keys"). Absent is nothing changed; a row that cannot be read is the
+   * catalog's keys, said so, and stays as it was until the next change.
+   */
+  getKeymap(): SavedKeymapRead {
+    return readSavedKeymap(this.has("keyboard") ? (this.get("keyboard") ?? null) : undefined);
+  }
+
+  setKeymap(keymap: SavedKeymap): void {
+    this.set("keyboard", keymap);
+  }
+
+  /** The two switches (roadmap 1.4). Absent - every install before them - means both off. */
+  /**
+   * A missing row is a fresh install (Diagnostics on). A row that is
+   * there but unreadable could have been someone's "off", so it reads as
+   * off rather than as the default.
+   */
+  getSharing(): Sharing {
+    const raw = this.get("sharing");
+    if (raw === undefined && !this.has("sharing")) return DEFAULT_SHARING;
+    const parsed = sharingSchema.safeParse(raw);
+    if (parsed.success) return parsed.data;
+    return { ...DEFAULT_SHARING, diagnostics: { ...DEFAULT_SHARING.diagnostics, enabled: false } };
+  }
+
+  setSharing(sharing: Sharing): void {
+    this.set("sharing", sharing);
+  }
+
+  /** The dev-only local seat's row (roadmap 1.7); a packaged build never reads it. */
+  getLocalOrchestrator(): LocalOrchestratorSetting {
+    const parsed = localOrchestratorSettingSchema.safeParse(this.get("local-orchestrator"));
+    return parsed.success ? parsed.data : DEFAULT_LOCAL_ORCHESTRATOR_SETTING;
+  }
+
+  setLocalOrchestrator(setting: LocalOrchestratorSetting): void {
+    this.set("local-orchestrator", setting);
+  }
+
+  /**
+   * The launch marker safe mode is decided from (Step 5, `personal/
+   * safeMode.ts`): a row written at boot and cleared once the app has been
+   * up long enough to call the launch good, or on a clean quit. A launch
+   * that finds the previous one still pending is counting a crash.
+   */
+  getLaunchRecord(): LaunchRecord {
+    const parsed = launchRecordSchema.safeParse(this.get("launch"));
+    return parsed.success ? parsed.data : { pending: false, earlyCrashes: 0 };
+  }
+
+  setLaunchRecord(record: LaunchRecord): void {
+    this.set("launch", record);
+  }
+
+  /**
+   * Which app version this profile last ran (docs/release-notes.md "Version
+   * tracking"). A missing or unreadable row has no known baseline; nothing is
+   * inferred from it.
+   */
+  getReleaseTracking(): ReleaseTrackingRecord {
+    const parsed = releaseTrackingSchema.safeParse(this.get("release-tracking"));
+    return parsed.success ? parsed.data : UNKNOWN_RELEASE_TRACKING;
+  }
+
+  setReleaseTracking(record: ReleaseTrackingRecord): void {
+    this.set("release-tracking", releaseTrackingSchema.parse(record));
+  }
+
+  /**
+   * The first-launch record (docs/first-launch.md): when the host welcomed
+   * the captain and when their first turn was accepted, plus durable welcome
+   * eligibility/identity. New welcomedAt means committed creation; legacy
+   * values mean wake scheduling. The gate remains derived from serving facts.
+   */
+  getFirstRun(): FirstRunRecord {
+    const parsed = firstRunRecordSchema.safeParse(this.get("first-run"));
+    return parsed.success ? parsed.data : EMPTY_FIRST_RUN;
+  }
+
+  setFirstRun(record: FirstRunRecord): void {
+    this.set("first-run", record);
+  }
+
+  getDictation(): DictationSettings {
+    const parsed = dictationSettingsSchema.safeParse(this.get("dictation"));
+    return parsed.success ? parsed.data : { ...DEFAULT_DICTATION, key: this.dictationKey };
+  }
+
+  setDictation(setting: DictationSettings): void {
+    this.set("dictation", setting);
+  }
+
+  /** Global instructions and skills for new crewmate sessions, off by default. */
+  getPersonalResourcesEnabled(): boolean {
+    return this.get("personal-resources") === true;
+  }
+
+  setPersonalResourcesEnabled(enabled: boolean): void {
+    this.set("personal-resources", enabled);
+  }
+
+  /** Notifications when the window is not front (P2): default on. */
+  getNotificationsEnabled(): boolean {
+    return this.get("notifications") !== false;
+  }
+
+  setNotificationsEnabled(enabled: boolean): void {
+    this.set("notifications", enabled);
+  }
+
+  /**
+   * The folder the person chose for new projects (Settings -> Projects);
+   * null = the app's own fleet root. `RepoRegistry` validates every write.
+   */
+  getProjectsFolder(): string | null {
+    const parsed = projectsFolderSchema.safeParse(this.get("projects-folder"));
+    return parsed.success ? parsed.data.path : null;
+  }
+
+  setProjectsFolder(path: string | null): void {
+    this.set("projects-folder", path === null ? null : { path });
+  }
+
+  /** Presence default (D-17): dock on. Start-at-login lives with the OS. */
+  getShowInDock(): boolean {
+    const parsed = dockSchema.safeParse(this.get("dock"));
+    return parsed.success ? parsed.data.showInDock : true;
+  }
+
+  setShowInDock(showInDock: boolean): void {
+    this.set("dock", { showInDock });
+  }
+
+  getFlag(key: string): boolean {
+    return this.get(`flag:${key}`) === true;
+  }
+
+  setFlag(key: string, value: boolean): void {
+    this.set(`flag:${key}`, value);
+  }
+
+  /**
+   * The fixed model the Firstmate agent runs on (captain decision Q2).
+   * Null means not chosen yet; the agent derives a subscription-based
+   * default once and persists it here so behavior never silently changes.
+   */
+  getFirstmateModel(): PiModelRefView | null {
+    const parsed = piModelRefViewSchema.safeParse(this.get("firstmate-model"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setFirstmateModel(model: PiModelRefView | null): void {
+    this.set("firstmate-model", model);
+  }
+
+  /** Persist the model and its provider-compatible account as one attachment choice. */
+  setFirstmateBinding(model: PiModelRefView | null, accountId: string | null): void {
+    this.db.transaction(() => {
+      this.setFirstmateModel(model);
+      this.setFirstmateAccount(accountId);
+    })();
+  }
+
+  /**
+   * The flagship account the Firstmate agent is bound to (broker phase 6):
+   * a broker-derived default chosen once and persisted, exactly parallel to
+   * the fixed Firstmate model - user-visible, never silently changed except
+   * by the sibling-rebind ladder, which announces itself.
+   */
+  getFirstmateAccount(): string | null {
+    const value = this.get("firstmate-account");
+    return typeof value === "string" && value.length > 0 ? value : null;
+  }
+
+  setFirstmateAccount(accountId: string | null): void {
+    this.set("firstmate-account", accountId);
+  }
+
+  /** The Firstmate agent's rolling session file (captain decision Q4). */
+  getFirstmateSessionFile(): string | null {
+    const value = this.get("firstmate-session-file");
+    return typeof value === "string" && value.length > 0 ? value : null;
+  }
+
+  setFirstmateSessionFile(path: string | null): void {
+    this.set("firstmate-session-file", path);
+  }
+
+  /**
+   * The Firstmate's rolling session on the Claude seat, by the client's
+   * session id: the Claude backend's resume pointer beside the Pi file's.
+   */
+  getFirstmateClaudeSession(): string | null {
+    const value = this.get("firstmate-claude-session");
+    return typeof value === "string" && value.length > 0 ? value : null;
+  }
+
+  setFirstmateClaudeSession(sessionId: string | null): void {
+    this.set("firstmate-claude-session", sessionId);
+  }
+
+  /**
+   * Where the Firstmate's seat was when the captain moved it off a paused
+   * account (W1 S9): the provider and account it left and why, and whether
+   * the "move back" card has been offered since that account served again.
+   * Null once the seat is back, or the captain chose another model.
+   */
+  getFirstmateMovedFrom(): FirstmateMovedFrom | null {
+    const parsed = firstmateMovedFromSchema.safeParse(this.get("firstmate-moved-from"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setFirstmateMovedFrom(movedFrom: FirstmateMovedFrom | null): void {
+    this.set("firstmate-moved-from", movedFrom);
+  }
+
+  /**
+   * The pause the Firstmate's seat is in (W1 S9): the account, its class,
+   * and where its card offered to move. Durable, so a restart neither
+   * repeats the pause's feed line and ledger row nor leaves its card up
+   * once the account serves again. Null while the seat serves.
+   */
+  getFirstmatePaused(): FirstmatePaused | null {
+    const parsed = firstmatePausedSchema.safeParse(this.get("firstmate-paused"));
+    return parsed.success ? parsed.data : null;
+  }
+
+  setFirstmatePaused(paused: FirstmatePaused | null): void {
+    this.set("firstmate-paused", paused);
+  }
+
+  /**
+   * The bounded record of the Firstmate's recent turns a seat move carries
+   * across (`seatDigest.ts`), oldest first. An unreadable record is empty.
+   */
+  getFirstmateSeatDigest(): SeatDigestEntry[] {
+    const parsed = z.array(seatDigestEntrySchema).safeParse(this.get("firstmate-seat-digest"));
+    return parsed.success ? parsed.data : [];
+  }
+
+  setFirstmateSeatDigest(entries: readonly SeatDigestEntry[]): void {
+    this.set("firstmate-seat-digest", entries);
+  }
+
+  /** The supervision session's rolling session file (design B). */
+  getSupervisionSessionFile(): string | null {
+    const value = this.get("supervision-session-file");
+    return typeof value === "string" && value.length > 0 ? value : null;
+  }
+
+  setSupervisionSessionFile(path: string | null): void {
+    this.set("supervision-session-file", path);
+  }
+}

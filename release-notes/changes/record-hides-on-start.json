@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "record-hides-on-start",
+      "kind": "improvement",
+      "title": "A task card leaves as soon as you press Start",
+      "body": "Pressing Start on a task's card hides the card right away, while the task reads Starting, instead of keeping it on screen until its crewmate begins. If the task cannot start, the feed says why and the task returns to Backlog, where its card shows the reason when you open it again.",
+      "area": "tasks",
+      "noPicture": "The change is a card that leaves sooner; a still shows only the screen without it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

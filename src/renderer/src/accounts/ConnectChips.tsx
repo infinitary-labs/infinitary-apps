@@ -1,0 +1,493 @@
+import type { AccountView } from "@shared/accounts";
+import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
+import {
+  API_KEY_LABEL,
+  CLAUDE_PROVIDER_ID,
+  providerServesRole,
+  providerSignInNote,
+} from "@shared/providers";
+import type React from "react";
+import { useState } from "react";
+import { Button, Input } from "../design";
+import { useRestLabel } from "../design/core/restLabel";
+import { CustomApiDialog, CustomApiForm } from "./CustomApiForm";
+import "./connectChips.css";
+import { HERE } from "@shared/deviceNames";
+
+/**
+ * The provider chip row and the sign-in aside, shared by the first-launch
+ * gate on the stage and the Intelligence tab's "Add account" foot (design
+ * skill `components/core/ConnectChips`). One row: the providers whose
+ * accounts can serve Firstmate itself, and - a hairline apart, under the
+ * micro label "crew only" - any whose accounts can only run crew. The
+ * grouping is derived from the catalog's roles and is the guidance; every
+ * provider in today's catalog serves Firstmate, so the row is one group.
+ * Every chip stays a live button. Sign-in is the provider's
+ * own flow (a browser bounce, a device code, a pasted key), rendered by the
+ * same aside wherever the row sits; nothing here names the machinery.
+ */
+
+const plusIcon = (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    aria-hidden="true"
+  >
+    <path d="M5 12h14M12 5v14" />
+  </svg>
+);
+
+/**
+ * A connected account on the stage, in its chip's place: why it cannot
+ * answer yet (or that it is connected) shows on rest, the pointer's or the
+ * keyboard's focus, so it is a Tab stop of its own, and its accessible
+ * description carries the same sentence (docs/keyboard.md, "Facts shown on
+ * rest").
+ */
+function ConnectedAccount({
+  providerId,
+  why,
+  unavailable,
+  children,
+}: {
+  providerId: string;
+  why: string;
+  unavailable: boolean;
+  children: React.ReactNode;
+}) {
+  const rest = useRestLabel(why, { fact: true });
+  return (
+    <span
+      className="fm-connect-account"
+      data-connect-account={providerId}
+      data-unavailable={unavailable ? "true" : undefined}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: a fact shown on rest is a stop of its own, so the keyboard reads it as the pointer does
+      tabIndex={0}
+      aria-description={why}
+      {...rest}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A provider's chip. One that cannot be pressed for a reason (nothing on
+ * this computer runs it, or Claude already uses this computer's login)
+ * stays a Tab stop, marked off rather than disabled, so the keyboard reaches
+ * the reason: it shows on rest, the pointer's or the keyboard's focus, and
+ * rides the chip's accessible description (docs/keyboard.md, "Facts shown
+ * on rest"). A press there does nothing.
+ */
+function ProviderChip({
+  providerId,
+  name,
+  reason,
+  busy,
+  onConnect,
+  children,
+}: {
+  providerId: string;
+  name: string;
+  /** Why the chip cannot be pressed; absent while it can. */
+  reason: string | undefined;
+  busy: boolean;
+  onConnect: () => void;
+  children: React.ReactNode;
+}) {
+  const rest = useRestLabel(reason, { fact: true });
+  return (
+    <button
+      type="button"
+      className="fm-connect-chip"
+      data-connect-provider={providerId}
+      aria-label={name}
+      title={reason === undefined ? name : undefined}
+      aria-description={reason !== undefined && reason !== name ? reason : undefined}
+      aria-disabled={reason !== undefined ? "true" : undefined}
+      disabled={busy}
+      {...rest}
+      onClick={() => {
+        if (reason === undefined) onConnect();
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export type ProviderGroups = { firstmate: ProviderView[]; crew: ProviderView[] };
+
+/** The two groups, in catalog order: Firstmate-capable first, crew only after. */
+export function groupProviders(providers: readonly ProviderView[]): ProviderGroups {
+  const groups: ProviderGroups = { firstmate: [], crew: [] };
+  for (const provider of providers) {
+    const serves = providerServesRole(provider.id, "firstmate");
+    (serves ? groups.firstmate : groups.crew).push(provider);
+  }
+  return groups;
+}
+
+export type ProviderChipsProps = {
+  providers: readonly ProviderView[];
+  /** The accounts already connected; a provider with one reads differently. */
+  accounts: readonly AccountView[];
+  /** The provider whose sign-in is in flight, if any. */
+  busyProviderId: string | null;
+  onConnect: (provider: ProviderView) => void;
+  /**
+   * `foot`: the Intelligence tab's row, where accounts are listed above and
+   * a connected provider's chip offers another account. `stage`: the
+   * first-launch gate, where a connected account - one that cannot answer
+   * yet, or the gate would be down - shows in place of its chip, since
+   * nothing else on the stage lists it.
+   */
+  variant: "foot" | "stage";
+  /**
+   * Where the accounts sign in: this Mac, or a computer that runs work,
+   * which says Claude's words about that computer (docs/helper.md, "Its own
+   * sign-ins"). A computer's Custom API chip is `custom`, drawn by its group.
+   */
+  place?: "here" | "there";
+  /**
+   * A computer's Custom API chip. `onOpen` absent keeps it disabled, with
+   * `note` (an older Firstmate there).
+   */
+  custom?: { onOpen?: () => void; note?: string };
+};
+
+export function ProviderChips({
+  providers,
+  accounts,
+  busyProviderId,
+  onConnect,
+  variant,
+  place = "here",
+  custom,
+}: ProviderChipsProps) {
+  const [customOpen, setCustomOpen] = useState(false);
+  const groups = groupProviders(providers);
+  const connected = new Map<string, AccountView>();
+  for (const account of accounts) {
+    if (!connected.has(account.providerId)) connected.set(account.providerId, account);
+  }
+  const chip = (provider: ProviderView) => {
+    const busy = busyProviderId === provider.id;
+    const account = connected.get(provider.id);
+    // No way in, and the backend said why (a client the person installs,
+    // F14): a chip stays, disabled, with its words.
+    const unavailable = provider.authTypes.length === 0 ? provider.unavailable : undefined;
+    if (variant === "stage" && account) {
+      // An account on the stage while the gate is up says why it cannot
+      // answer yet, when it knows: nothing to run it on this Mac, or a
+      // login not signed in.
+      const note = unavailable?.note ?? (account.connected ? undefined : "not signed in");
+      const why =
+        account.detail ??
+        unavailable?.detail ??
+        (account.connected ? undefined : `${provider.name} is not signed in on ${HERE.this} yet.`);
+      return (
+        <ConnectedAccount
+          key={provider.id}
+          providerId={provider.id}
+          why={why ?? `${provider.name} is connected`}
+          unavailable={Boolean(note)}
+        >
+          <span className="fm-connect-account-dot" aria-hidden="true" />
+          <b>{provider.name}</b>
+          <span>{account.label}</span>
+          {note && <span className="fm-connect-chip-note">{note}</span>}
+        </ConnectedAccount>
+      );
+    }
+    const claudeTaken = provider.id === CLAUDE_PROVIDER_ID && account !== undefined;
+    const note =
+      unavailable && provider.id === CLAUDE_PROVIDER_ID && place === "there"
+        ? CLAUDE_CHIP_INSTALL_THERE_NOTE
+        : unavailable?.note;
+    const name = claudeTaken
+      ? place === "there"
+        ? "Claude uses the login there"
+        : `Claude uses the login on ${HERE.this}`
+      : account
+        ? `Add another ${provider.name} account`
+        : `Connect ${provider.name}`;
+    // Why the chip cannot be pressed: what the backend said (F14), or the
+    // login Claude already uses; a provider with no way in and no word why
+    // says that it cannot be added.
+    const reason =
+      provider.authTypes.length === 0
+        ? (unavailable?.detail ?? name)
+        : claudeTaken
+          ? name
+          : undefined;
+    return (
+      <ProviderChip
+        key={provider.id}
+        providerId={provider.id}
+        name={name}
+        reason={reason}
+        busy={busy}
+        onConnect={() => onConnect(provider)}
+      >
+        {plusIcon}
+        <span>{busy ? "Connecting..." : provider.name}</span>
+        {note && <span className="fm-connect-chip-note">{note}</span>}
+        {providerSignInNote(provider.tier) && (
+          <span className="fm-connect-chip-note">{providerSignInNote(provider.tier)}</span>
+        )}
+      </ProviderChip>
+    );
+  };
+  return (
+    <div className="fm-connect-chips" data-connect-chips={variant}>
+      {groups.firstmate.map(chip)}
+      {place === "here" && (
+        <button
+          type="button"
+          className="fm-connect-chip"
+          data-connect-custom-api
+          onClick={() => setCustomOpen(true)}
+        >
+          {plusIcon}
+          <span>Custom API</span>
+        </button>
+      )}
+      {place === "there" && custom && (
+        <button
+          type="button"
+          className="fm-connect-chip"
+          data-connect-custom-api
+          disabled={!custom.onOpen}
+          title={custom.note}
+          onClick={() => custom.onOpen?.()}
+        >
+          {plusIcon}
+          <span>Custom API</span>
+          {custom.note && <span className="fm-connect-chip-note">{custom.note}</span>}
+        </button>
+      )}
+      {customOpen && (
+        <CustomApiDialog label="Add a custom API" onClose={() => setCustomOpen(false)}>
+          <CustomApiForm firstSetup={variant === "stage"} onClose={() => setCustomOpen(false)} />
+        </CustomApiDialog>
+      )}
+      {groups.crew.length > 0 && (
+        // The label and its chips wrap as one unit, so "crew only" never
+        // ends a line with its group on the next.
+        <span className="fm-connect-group" data-connect-group="crew">
+          {groups.firstmate.length > 0 && <span className="fm-connect-sep" aria-hidden="true" />}
+          <span className="fm-connect-label">crew only</span>
+          {groups.crew.map(chip)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A Claude chip on a computer that runs work, where Claude Code is not installed. */
+export const CLAUDE_CHIP_INSTALL_THERE_NOTE = "install Claude Code there first";
+
+/** A Custom API chip on a computer that runs an older Firstmate. */
+export const CUSTOM_API_UPDATE_THERE_NOTE = "update Infinitary there first";
+
+/** The sign-in a provider offers; two means the person picks first. */
+export function connectMethods(provider: Pick<ProviderView, "authTypes">): ("oauth" | "api_key")[] {
+  return provider.authTypes.filter((type) => type === "oauth" || type === "api_key");
+}
+
+/**
+ * A provider that signs in either way asks which, before anything opens:
+ * the browser bounce, or a pasted key. Rendered like Pi's own select, in
+ * the same aside, so the two flows read as one. A provider with one way in
+ * never shows this.
+ */
+export function AuthMethodChoice({
+  provider,
+  onPick,
+  onCancel,
+  framed = false,
+}: {
+  provider: ProviderView;
+  onPick: (type: "oauth" | "api_key") => void;
+  onCancel: () => void;
+  framed?: boolean;
+}) {
+  const body = (
+    <div
+      className="fm-connect-aside"
+      data-connect-method={provider.id}
+      style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}
+    >
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>
+        How do you want to connect {provider.name}?
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Button variant="secondary" size="sm" onClick={() => onPick("oauth")}>
+          Sign in with your browser
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onPick("api_key")}>
+          {API_KEY_LABEL}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+  return framed ? (
+    <div className="fm-connect-aside-frame" data-connect-aside="">
+      {body}
+    </div>
+  ) : (
+    body
+  );
+}
+
+export function AuthPromptPanel({
+  prompt,
+  promptValue,
+  onPromptValue,
+  onAnswer,
+}: {
+  prompt: AuthPromptView;
+  promptValue: string;
+  onPromptValue: (value: string) => void;
+  onAnswer: (value: string | null) => void;
+}) {
+  return (
+    <div
+      className="fm-connect-aside"
+      style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}
+    >
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)" }}>{prompt.message}</div>
+      {prompt.kind === "select" && prompt.options ? (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {prompt.options.map((option) => (
+            <Button
+              key={option.id}
+              variant="secondary"
+              size="sm"
+              onClick={() => onAnswer(option.id)}
+            >
+              {option.label}
+            </Button>
+          ))}
+          <Button variant="ghost" size="sm" onClick={() => onAnswer(null)}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <form
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+          onSubmit={(event: React.FormEvent) => {
+            event.preventDefault();
+            onAnswer(promptValue);
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <Input
+              mono
+              type={prompt.kind === "secret" ? "password" : "text"}
+              value={promptValue}
+              placeholder={prompt.placeholder ?? ""}
+              onChange={(event) => onPromptValue(event.target.value)}
+              autoFocus
+            />
+          </div>
+          <Button variant="primary" size="sm" type="submit">
+            Submit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onAnswer(null)}>
+            Cancel
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A sign-in's notice and prompt, anchored under whatever started it: the
+ * chip on the stage, the account row signing in again, or the "Add
+ * account" foot for a new one. `framed` draws the panel the stage uses;
+ * inside the tab's list box it sits flush.
+ */
+export function AuthAside({
+  notice,
+  prompt,
+  promptValue,
+  onPromptValue,
+  onAnswerPrompt,
+  framed = false,
+}: {
+  notice?: AuthNotice;
+  prompt?: AuthPromptView;
+  promptValue: string;
+  onPromptValue: (value: string) => void;
+  onAnswerPrompt: (value: string | null) => void;
+  framed?: boolean;
+}) {
+  const body = (
+    <>
+      {notice && (
+        <div
+          className="fm-connect-aside"
+          style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
+        >
+          {notice.message}
+          {notice.url && (
+            <div style={{ marginTop: 8 }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const url = notice.url;
+                  if (!url) return;
+                  void window.infinitary.app.openExternal(url).catch(() => {});
+                }}
+              >
+                Open the sign-in page
+              </Button>
+            </div>
+          )}
+          {notice.userCode && (
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                color: "var(--fg-1)",
+                letterSpacing: "0.12em",
+                background: "var(--bg-3)",
+                borderRadius: "var(--radius-s)",
+                padding: "2px 8px",
+                marginLeft: 8,
+              }}
+            >
+              {notice.userCode}
+            </span>
+          )}
+        </div>
+      )}
+      {prompt && (
+        <AuthPromptPanel
+          prompt={prompt}
+          promptValue={promptValue}
+          onPromptValue={onPromptValue}
+          onAnswer={onAnswerPrompt}
+        />
+      )}
+    </>
+  );
+  return framed ? (
+    <div className="fm-connect-aside-frame" data-connect-aside="">
+      {body}
+    </div>
+  ) : (
+    body
+  );
+}

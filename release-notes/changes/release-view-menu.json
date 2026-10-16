@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "release-view-menu",
+      "kind": "fix",
+      "title": "The window reloads by itself after a crash",
+      "body": "If the Firstmate window crashes, it now reloads by itself, at most once a minute, so a window that keeps crashing is not restarted over and over. Words you had not sent are lost when it reloads. The View menu no longer offers Reload, Force Reload or Toggle Developer Tools.",
+      "area": "other",
+      "noPicture": "The native macOS menu is outside the hidden window used for hermetic pictures; crash recovery restores the existing page without adding a visible control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

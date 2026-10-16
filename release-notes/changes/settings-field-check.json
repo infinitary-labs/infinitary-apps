@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "settings-field-check",
+      "kind": "fix",
+      "title": "Settings changes follow one shared set of permissions",
+      "body": "Firstmate's settings actions now share the same rules about which choices they can change and which actions need your own words.",
+      "area": "settings",
+      "noPicture": "Nothing on screen changes: Firstmate's settings actions share one set of rules.",
+      "provenance": {
+        "origin": "change",
+        "covers": [
+          "395bfc710d762fc239664a494909bbd24ea095e5",
+          "9a2bdf6667c27b5806471751bda188efee91a478"
+        ]
+      }
+    }
+  ]
+}

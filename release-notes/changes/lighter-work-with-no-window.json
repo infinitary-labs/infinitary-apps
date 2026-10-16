@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "lighter-work-with-no-window",
+      "reason": "Internal: when the app starts with no window (`<app> work <command>`) it loads only the work mode's code and runs as one process, using about a third of the memory. Nothing uses that mode yet, so nothing a person sees or receives changes."
+    }
+  ]
+}

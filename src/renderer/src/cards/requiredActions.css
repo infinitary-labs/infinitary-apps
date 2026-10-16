@@ -1,0 +1,32 @@
+.required-actions {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  padding: clamp(var(--space-2), calc(var(--required-action-room) - 420px), var(--space-3));
+  margin-top: clamp(0px, calc(var(--required-action-room) - 420px), var(--space-3));
+  font-size: var(--text-base);
+  color: var(--fg-1);
+}
+.required-actions p {
+  margin: 0;
+}
+.required-actions ul {
+  margin: clamp(var(--space-1), calc(var(--required-action-room) - 420px), var(--space-2)) 0 0;
+  padding-left: var(--space-4);
+  max-height: clamp(2.8em, calc(var(--required-action-room) - 300px), 160px);
+  overflow: auto;
+}
+.required-actions li + li {
+  margin-top: var(--space-3);
+}
+.required-actions li p {
+  color: var(--fg-2);
+}
+.required-actions summary {
+  margin-top: clamp(var(--space-1), calc(var(--required-action-room) - 420px), var(--space-2));
+  cursor: pointer;
+}
+.required-actions summary:focus-visible,
+.required-actions ul:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

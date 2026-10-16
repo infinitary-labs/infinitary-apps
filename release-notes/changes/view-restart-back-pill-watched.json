@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-restart-back-pill-watched",
+      "reason": "The view restart journey notes the pill that says the other Mac is back from before that Mac restarts, instead of looking for it after the restarted launch returns, when under load it may already have faded. No shipped behavior changed."
+    }
+  ]
+}

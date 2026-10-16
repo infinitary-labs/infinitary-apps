@@ -1,0 +1,20 @@
+/* Firstmate 3000 — spacing scale (4px base). Generous whitespace is the default; density is the exception. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  /* layout - dock rails are at least one fifth of the window, not resizable */
+  --rail-width: max(300px, 20vw);
+  /* layout - the voice input: one line is the pill, and the radius stays half of it at every height */
+  --prompt-height: calc(var(--space-7) + var(--space-1));
+  --prompt-radius: calc(var(--prompt-height) / 2);
+  /* layout - a card's reply field: one line of --text-sm is the pill (2px is its hairline), and the radius stays half of it at every height */
+  --reply-height: calc(var(--text-sm) * var(--leading-body) + 2 * var(--space-2) + 2px);
+  --reply-radius: calc(var(--reply-height) / 2);
+}

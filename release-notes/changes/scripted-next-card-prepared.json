@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "scripted-next-card-prepared",
+      "kind": "improvement",
+      "title": "An interactive next card appears as quickly as any other",
+      "body": "When you close a card, the next one appears as quickly whether it is plain or one you can play with. It loads while you read, and its motion and sound start only once it is shown.",
+      "area": "cards",
+      "noPicture": "The change is how soon the next card appears: a still picture looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

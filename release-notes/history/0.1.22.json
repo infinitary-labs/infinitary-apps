@@ -1,0 +1,75 @@
+{
+  "entries": [
+    {
+      "id": "bf-bae6de277",
+      "kind": "feature",
+      "title": "The card reply row takes more than one line",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bae6de2775fefcf05a3baa76eceb00915fcae8ab"
+        ]
+      }
+    },
+    {
+      "id": "bf-0b085e505",
+      "kind": "feature",
+      "title": "The multi-line composer",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0b085e5057f2845381d5fc3da710186342baffc2"
+        ]
+      }
+    },
+    {
+      "id": "bf-b9bf821df",
+      "kind": "feature",
+      "title": "Close verified external releases without task-owned changes",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b9bf821dfa0ed084a84b96b864a774e9ee925166"
+        ]
+      }
+    },
+    {
+      "id": "bf-2a4843244",
+      "kind": "fix",
+      "title": "Never lose a draft",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "2a4843244c9a28f0c2c3d12f70baeab898aff1ac"
+        ]
+      }
+    },
+    {
+      "id": "bf-eae7c14bb",
+      "kind": "fix",
+      "title": "Drop the review electron orbital lines",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "eae7c14bba7a506bc85292281cecb7ca4855866c"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-22-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.22: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "51c81d96a532eb64334d6e4680e1934891075894",
+        "bb0e30aef89f2dae7bd88bd50bf839ec0fc7a613",
+        "601e01c44bc21c26b86e59a9e7f9f7b0fe12f21a",
+        "44bedb7ed0848f0594fd77b513c66fea34344589",
+        "abed37ac6affcba3300e39ca07b01cd53122bd31",
+        "eedcd8ed3763b414e9d74f60a46ca1687ebdec05",
+        "2d79a390b245de55c4ac7d16f81cef1d9b1106cf",
+        "ac48db26d2735360263367202c7632980ea1cc34"
+      ]
+    }
+  ]
+}

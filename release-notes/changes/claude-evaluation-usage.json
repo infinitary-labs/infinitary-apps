@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-evaluation-usage",
+      "reason": "Developer-only account evaluation artifacts now retain Claude token counts and mark unknown usage explicitly; no app surface changes."
+    }
+  ]
+}

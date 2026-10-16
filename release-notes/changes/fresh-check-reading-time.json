@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "fresh-check-reading-time",
+      "kind": "fix",
+      "title": "A pull request's checks show when they were last looked at",
+      "body": "On a task's record, the time beside a pull request's checks now stays current while they are still running, even when nothing changed. Before, it could read 45m when they had just been checked.",
+      "area": "tasks",
+      "picture": {
+        "dark": "fresh-check-reading-time-dark.webp",
+        "light": "fresh-check-reading-time-light.webp",
+        "alt": "The task record shows failed checks with a fresh reading time while waiting for checks"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

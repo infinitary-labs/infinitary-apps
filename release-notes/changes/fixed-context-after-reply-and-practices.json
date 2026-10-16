@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "fixed-context-after-reply-and-practices",
+      "reason": "Internal fix for main's checks after two changes merged against the same older main: Firstmate's instructions drop three phrases that a tool or another instruction already says, so its fixed instructions fit their budget again. No rule changes and nothing a person sees changes."
+    }
+  ]
+}

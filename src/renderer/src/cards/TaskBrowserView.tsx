@@ -1,0 +1,997 @@
+import { HERE } from "@shared/deviceNames";
+import {
+  attachmentStanding,
+  browserDriverOf,
+  CLOSE_PAGE_LABEL,
+  canOpenAgain,
+  KEEP_CONTROL_LABEL,
+  OPEN_AGAIN_CAPTION,
+  OPEN_AGAIN_LABEL,
+  REPORT_PROBLEM_DRAFT,
+  RETURN_CONTROL_LABEL,
+  RETURN_CONTROL_QUESTION,
+  rememberSignInLabel,
+  STALE_ATTACHMENT_WORDS,
+  STOP_VIEW_WORDS,
+  signInCaption,
+  TAKE_CONTROL_LABEL,
+  TASK_BROWSER_PAGE,
+  TASK_BROWSER_PAGE_MAX,
+  TASK_BROWSER_PAGE_MIN,
+  type TaskBrowserDriver,
+  type TaskBrowserFrame,
+  type TaskBrowserInput,
+  VIEW_DRIVER_WORDS,
+} from "@shared/taskBrowser";
+import type { TaskDetail } from "@shared/tasks";
+import type React from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useShellStore } from "../app/store";
+import { Button, IconButton, MicroLabel, RowMenu, StatusDot } from "../design";
+import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
+import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
+import { useOverflowTitle } from "../design/core/overflowTitle";
+import { useRestLabel } from "../design/core/restLabel";
+import { browserShownThereWords, isView } from "../devices/viewWords";
+import { appReadExecutor } from "../plugins/reads/appExecutor";
+import { TAB_STRIP_HEIGHT, TaskTabStrip } from "./TaskTabStrip";
+import { hasCrewmateTab } from "./taskTabs";
+
+/**
+ * A task's own browser on the stage (docs/task-browser.md, "The view"; the
+ * design skill's `components/cards/TaskBrowser`): one row of chrome, the
+ * live page, a foot line and Hide, where the captain watches the crewmate
+ * drive. A shell-held stack entry like the record.
+ *
+ * The page is a picture: the host streams the hidden page's own pictures
+ * while this view is up, and the view draws the newest on a canvas. The page
+ * never enters the app's window, so More's menu may sit over it, and
+ * nothing here reaches the page while the captain watches - watching is not
+ * control. Take control makes it his (docs/task-browser.md, "Taking
+ * control"): his pointer, wheel and keys on the picture go to the page as
+ * they came, and nothing records them; Return control asks once first, with
+ * a tick that saves the site's sign-in on this Mac (docs/task-browser.md,
+ * "Saved sign-ins").
+ * The card's tab strip names each page Browser and its title; picking
+ * another page is the captain's while he holds the browser, as navigation is.
+ * Maximized, the view gives the page its room: the page lays out afresh at
+ * that size, and goes back to its own once the view is restored.
+ */
+
+const CHROME_HEIGHT = 44;
+const FOOT_HEIGHT = 36;
+/** The line a card's stale door adds under the row, with its hairline; the return question's row too. */
+const NOTICE_HEIGHT = 32;
+/** The return question's row: its line, then the tick that remembers the site's sign-in. */
+const QUESTION_HEIGHT = 44 + 28;
+/** The page's room: the card's cap less the row above it, any lines under it, and the foot line. */
+const pageMaxHeight = (notice: boolean, question: boolean) =>
+  `calc(${CARD_MAX_HEIGHT} - ${CHROME_HEIGHT + FOOT_HEIGHT + 2 + (notice ? NOTICE_HEIGHT + 1 : 0) + (question ? QUESTION_HEIGHT + 1 : 0) + TAB_STRIP_HEIGHT}px)`;
+
+/** The row's tint and dot for who holds the browser: his violet, attention's ember, or none. */
+const ROW_TINT: Partial<Record<TaskBrowserDriver, string>> = {
+  waiting: "var(--warn-dim)",
+  captain: "var(--captain-dim)",
+};
+const DOT_TONE: Record<TaskBrowserDriver, "busy" | "idle" | "warn" | "captain"> = {
+  crewmate: "busy",
+  nobody: "idle",
+  waiting: "warn",
+  taking: "busy",
+  captain: "captain",
+};
+
+/** Alt 1, Control 2, Meta 4, Shift 8: the browser protocol's own modifier bits. */
+function modifiersOf(event: {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}): number {
+  return (
+    (event.altKey ? 1 : 0) |
+    (event.ctrlKey ? 2 : 0) |
+    (event.metaKey ? 4 : 0) |
+    (event.shiftKey ? 8 : 0)
+  );
+}
+
+/** A Mac's editing keys, sent to the page as its own editing commands. */
+const EDITING_COMMANDS: Record<string, "selectAll" | "undo" | "cut" | "copy" | "paste"> = {
+  a: "selectAll",
+  z: "undo",
+  x: "cut",
+  c: "copy",
+  v: "paste",
+};
+
+/** What a key types on the page, for a key that types. */
+function typedText(event: React.KeyboardEvent): string | undefined {
+  if (event.metaKey || event.ctrlKey) return undefined;
+  if (event.key === "Enter") return "\r";
+  return event.key.length === 1 ? event.key : undefined;
+}
+
+const MOUSE_BUTTONS = ["left", "middle", "right"] as const;
+
+/**
+ * The captain's own input on the page while he has control: the pointer,
+ * the wheel and the keys on the picture, at the page's own pixels, sent as
+ * they came. Moves go at most once a frame. Nothing here keeps any of it.
+ */
+function useCaptainInput(taskId: string, enabled: boolean) {
+  const area = useRef<HTMLDivElement | null>(null);
+  const pendingMove = useRef<TaskBrowserInput | null>(null);
+  const frame = useRef(0);
+  const keysDown = useRef(new Set<string>());
+
+  const send = useCallback(
+    (input: TaskBrowserInput) => {
+      void window.infinitary.browser.input(taskId, input).catch(() => undefined);
+    },
+    [taskId],
+  );
+
+  /**
+   * A point on the picture, as the page's own pixels at the size of the
+   * picture drawn now; null off the page, unless `edge` holds it to the
+   * page's edge (a button let go off it).
+   */
+  const pointOf = useCallback((clientX: number, clientY: number, edge = false) => {
+    const canvas = area.current?.querySelector("canvas");
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    const { width, height } = canvas;
+    const x = ((clientX - rect.left) * width) / rect.width;
+    const y = ((clientY - rect.top) * height) / rect.height;
+    const off = x < 0 || y < 0 || x > width || y > height;
+    if (off && !edge) return null;
+    return {
+      x: Math.min(width, Math.max(0, x)),
+      y: Math.min(height, Math.max(0, y)),
+    };
+  }, []);
+
+  useEffect(() => {
+    const node = area.current;
+    if (!enabled || !node) return;
+    // The wheel scrolls the page, not the view: a listener that may say so.
+    const onWheel = (event: WheelEvent) => {
+      const point = pointOf(event.clientX, event.clientY);
+      if (!point) return;
+      event.preventDefault();
+      send({
+        kind: "wheel",
+        ...point,
+        deltaX: Math.max(-10_000, Math.min(10_000, event.deltaX)),
+        deltaY: Math.max(-10_000, Math.min(10_000, event.deltaY)),
+        modifiers: modifiersOf(event),
+      });
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      node.removeEventListener("wheel", onWheel);
+      cancelAnimationFrame(frame.current);
+      pendingMove.current = null;
+      keysDown.current.clear();
+    };
+  }, [enabled, pointOf, send]);
+
+  const mouse = (type: "down" | "up" | "move") => (event: React.MouseEvent) => {
+    if (!enabled) return;
+    const point = pointOf(event.clientX, event.clientY, type === "up");
+    if (!point) return;
+    if (type === "down") area.current?.focus({ preventScroll: true });
+    if (type !== "move") event.preventDefault();
+    const input: TaskBrowserInput = {
+      kind: "pointer",
+      type,
+      ...point,
+      button: type === "move" ? "none" : (MOUSE_BUTTONS[event.button] ?? "left"),
+      clickCount: type === "move" ? 0 : Math.min(3, Math.max(1, event.detail)),
+      modifiers: modifiersOf(event),
+    };
+    if (type !== "move") {
+      send(input);
+      return;
+    }
+    const waiting = pendingMove.current !== null;
+    pendingMove.current = input;
+    if (waiting) return;
+    frame.current = requestAnimationFrame(() => {
+      const next = pendingMove.current;
+      pendingMove.current = null;
+      if (next) send(next);
+    });
+  };
+
+  const key = (type: "down" | "up") => (event: React.KeyboardEvent) => {
+    if (!enabled || event.nativeEvent.isComposing) return;
+    const command =
+      event.metaKey && !event.ctrlKey && !event.altKey
+        ? event.key.toLowerCase() === "z" && event.shiftKey
+          ? ("redo" as const)
+          : EDITING_COMMANDS[event.key.toLowerCase()]
+        : undefined;
+    // The app's own ⌘ shortcuts stay the app's; every other key is the page's.
+    if (event.metaKey && !command) return;
+    if (type === "up" && !keysDown.current.delete(event.code || event.key)) return;
+    if (type === "down") keysDown.current.add(event.code || event.key);
+    event.preventDefault();
+    event.stopPropagation();
+    const text = type === "down" ? typedText(event) : undefined;
+    send({
+      kind: "key",
+      type,
+      key: event.key.slice(0, 32),
+      code: event.code.slice(0, 32),
+      keyCode: Math.min(255, Math.max(0, event.keyCode)),
+      ...(text ? { text } : {}),
+      modifiers: modifiersOf(event),
+      ...(command && type === "down" ? { command } : {}),
+    });
+  };
+
+  return {
+    ref: area,
+    handlers: enabled
+      ? {
+          tabIndex: 0,
+          onMouseDown: mouse("down"),
+          onMouseUp: mouse("up"),
+          onMouseMove: mouse("move"),
+          onContextMenu: (event: React.MouseEvent) => event.preventDefault(),
+          onKeyDown: key("down"),
+          onKeyUp: key("up"),
+        }
+      : {},
+  };
+}
+
+const SURFACE: React.CSSProperties = {
+  width: "100%",
+  maxHeight: CARD_MAX_HEIGHT,
+  minHeight: cardFloor(0),
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  background: "var(--acrylic-bg)",
+  backdropFilter: "var(--acrylic-blur)",
+  WebkitBackdropFilter: "var(--acrylic-blur)",
+  border: "1px solid var(--acrylic-border)",
+  borderRadius: "var(--radius-l)",
+  boxShadow: "var(--acrylic-shadow)",
+};
+
+const ROW: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-1)",
+  height: CHROME_HEIGHT,
+  padding: "0 var(--space-2)",
+  borderBottom: "1px solid var(--line-1)",
+  flexShrink: 0,
+  minWidth: 0,
+};
+
+const LINE: React.CSSProperties = {
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+};
+
+const LINK: React.CSSProperties = {
+  padding: 0,
+  border: 0,
+  background: "none",
+  font: "inherit",
+  color: "var(--accent)",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  flexShrink: 0,
+};
+
+function icon(paths: string[]) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+const BACK = icon(["m15 18-6-6 6-6"]);
+const FORWARD = icon(["m9 18 6-6-6-6"]);
+const RELOAD = icon(["M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5"]);
+const HIDE = icon(["M18 6 6 18", "m6 6 12 12"]);
+
+/** A frame's JPEG, decoded off the base64 the host sent. */
+function bitmapOf(frame: TaskBrowserFrame): Promise<ImageBitmap> {
+  const raw = atob(frame.data);
+  const bytes = new Uint8Array(raw.length);
+  for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index);
+  return createImageBitmap(new Blob([bytes], { type: "image/jpeg" }));
+}
+
+/**
+ * Watches the task's page while the view is up and paints the newest
+ * picture on the canvas the answered ref holds. A picture that arrives while
+ * one decodes replaces the waiting one, so a busy page never queues; the
+ * newest is kept for a canvas that mounts later (after Open again).
+ */
+function useWatchedPage(taskId: string): (node: HTMLCanvasElement | null) => void {
+  const canvas = useRef<HTMLCanvasElement | null>(null);
+  const latest = useRef<TaskBrowserFrame | null>(null);
+  const waiting = useRef<TaskBrowserFrame | null>(null);
+  const painting = useRef(false);
+  const painted = useRef(0);
+
+  const paint = useCallback(async () => {
+    if (painting.current) return;
+    painting.current = true;
+    try {
+      for (let next = waiting.current; next; next = waiting.current) {
+        waiting.current = null;
+        const target = canvas.current;
+        if (!target) break;
+        try {
+          const bitmap = await bitmapOf(next);
+          if (target.width !== bitmap.width) target.width = bitmap.width;
+          if (target.height !== bitmap.height) target.height = bitmap.height;
+          target.getContext("2d")?.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          painted.current += 1;
+          // Typed hooks a check reads: how many pictures, at what size.
+          target.dataset.browserFrames = String(painted.current);
+          target.dataset.browserFrameSize = `${next.width}x${next.height}`;
+        } catch {
+          // A picture that does not decode is skipped; the next one follows.
+        }
+      }
+    } finally {
+      painting.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const off = window.infinitary.browser.onFrame((frame) => {
+      if (frame.taskId !== taskId) return;
+      latest.current = frame;
+      waiting.current = frame;
+      void paint();
+    });
+    void window.infinitary.browser.watch(taskId).catch(() => undefined);
+    return () => {
+      off();
+      void window.infinitary.browser.unwatch(taskId).catch(() => undefined);
+    };
+  }, [taskId, paint]);
+
+  return useCallback(
+    (node: HTMLCanvasElement | null) => {
+      canvas.current = node;
+      painted.current = 0;
+      if (node && latest.current) {
+        waiting.current = latest.current;
+        void paint();
+      }
+    },
+    [paint],
+  );
+}
+
+/** How long a maximized view's room holds still before the page lays out at it again. */
+const ROOM_SETTLE_MS = 120;
+
+const within = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Math.floor(value)));
+
+/**
+ * While the view is maximized, the page takes the room the view gives it
+ * (docs/task-browser.md, "The view"): the page's own place under the row,
+ * the browser's lines and above the foot line. The return question and a
+ * refusal line come and go, so the page keeps its size under them and fits.
+ * Restored or gone, the view gives the page back its own size. Answers the
+ * ref the view's surface takes.
+ */
+function usePageRoom(
+  taskId: string,
+  maximized: boolean,
+  open: boolean,
+): React.RefObject<HTMLElement | null> {
+  const surface = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!maximized) return;
+    return () => {
+      void window.infinitary.browser.size(taskId, null).catch(() => undefined);
+    };
+  }, [taskId, maximized]);
+
+  useEffect(() => {
+    const node = surface.current;
+    const page = node?.querySelector<HTMLElement>("[data-browser-page]");
+    if (!maximized || !open || !node || !page) return;
+    let asked = "";
+    let timer = 0;
+    const measure = () => {
+      let height = page.clientHeight;
+      for (const passing of node.querySelectorAll<HTMLElement>("[data-browser-passing]")) {
+        height += passing.offsetHeight;
+      }
+      const size = {
+        width: within(page.clientWidth, TASK_BROWSER_PAGE_MIN.width, TASK_BROWSER_PAGE_MAX.width),
+        height: within(height, TASK_BROWSER_PAGE_MIN.height, TASK_BROWSER_PAGE_MAX.height),
+      };
+      const key = `${size.width}x${size.height}`;
+      if (key === asked) return;
+      asked = key;
+      void window.infinitary.browser.size(taskId, size).catch(() => undefined);
+    };
+    // A window being resized settles before the page lays out again.
+    const observer = new ResizeObserver(() => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(measure, ROOM_SETTLE_MS);
+    });
+    observer.observe(node);
+    observer.observe(page);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [taskId, maximized, open]);
+
+  return surface;
+}
+
+export function TaskBrowserView({
+  taskId,
+  from,
+  onClose,
+  onDrawn,
+}: {
+  taskId: string;
+  /**
+   * The browser a card's live attachment named, when a card opened the view
+   * (docs/task-browser.md, "From a card"): a line under the row says when it
+   * is no longer the task's.
+   */
+  from?: { session: string; generation: number };
+  onClose: () => void;
+  onDrawn: () => void;
+}) {
+  const [detail, setDetail] = useState<TaskDetail | null>(null);
+  const [unreadable, setUnreadable] = useState(false);
+  const [fit, setFit] = useState(true);
+  /** Why Open again could not open one now; cleared by the next try. */
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  /** Return control's one question is open. */
+  const [asking, setAsking] = useState(false);
+  /** The question's tick: return control and save the site's sign-in on this Mac. */
+  const [remember, setRemember] = useState(false);
+  /** The captain's Take control or Return control is on its way. */
+  const [moving, setMoving] = useState<"take" | "return" | null>(null);
+  const canvas = useWatchedPage(taskId);
+  const maximized = useContext(CardSizeContext)?.maximized ?? false;
+  // On a Mac controlling another, the page shows only there (docs/view.md).
+  const thisMac = useShellStore((s) => s.thisMac);
+  const there = isView(thisMac) ? browserShownThereWords(thisMac) : null;
+
+  useEffect(() => {
+    setDetail(null);
+    setUnreadable(false);
+    return appReadExecutor().subscribe(
+      "tasks.detail",
+      { id: taskId },
+      {
+        onValue: (value) => setDetail(value as TaskDetail),
+        onError: () => setUnreadable(true),
+      },
+    );
+  }, [taskId]);
+
+  // Drawn when shown, never prepared: the stage may bring it in at once.
+  useEffect(() => {
+    onDrawn();
+  }, [onDrawn]);
+
+  const fact = detail?.browser;
+  const room = usePageRoom(taskId, maximized, fact?.state === "open");
+  const driver: TaskBrowserDriver = detail ? browserDriverOf(detail, fact) : "nobody";
+  const who = VIEW_DRIVER_WORDS[driver];
+  const captain = fact?.state === "open" && driver === "captain";
+  const input = useCaptainInput(taskId, captain);
+  // A refusal belongs to the state it answered.
+  const factState = fact?.state;
+  useEffect(() => {
+    if (factState !== undefined) setRefusal(null);
+  }, [factState]);
+  // A refused move belongs to the page it was refused on.
+  const factUrl = fact?.state === "open" ? fact.url : undefined;
+  useEffect(() => {
+    if (factUrl !== undefined) setRefusal(null);
+  }, [factUrl]);
+  // The return question belongs to the captain's own control.
+  useEffect(() => {
+    if (!captain) setAsking(false);
+  }, [captain]);
+  // The tick is never already ticked when the question opens: nothing is saved without it.
+  useEffect(() => {
+    if (!asking) setRemember(false);
+  }, [asking]);
+  const openRecord = () => useShellStore.getState().openRecord(taskId);
+  // A card's browser that is no longer the task's is said so, above
+  // whatever the task's browser is now.
+  const standing = from && detail ? attachmentStanding(from, fact) : "same";
+  const noticeWords = standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing];
+  const noticeFit = useOverflowTitle(noticeWords);
+  const whoFit = useOverflowTitle(who ? `· ${who}` : undefined);
+  const questionFit = useOverflowTitle(RETURN_CONTROL_QUESTION);
+  // The page's title and whole address, which the status line has no room
+  // for: it is a Tab stop that shows them on rest (docs/keyboard.md, "Facts
+  // shown on rest").
+  const pageWords =
+    fact && fact.state !== "stopped" ? [fact.title, fact.url].filter(Boolean).join(" · ") : "";
+  const pageRest = useRestLabel(pageWords || undefined, { fact: true });
+  const notice =
+    standing === "same" ? null : (
+      <div
+        data-browser-notice={standing}
+        ref={noticeFit.ref}
+        title={noticeFit.title}
+        style={{
+          ...LINE,
+          height: NOTICE_HEIGHT,
+          lineHeight: `${NOTICE_HEIGHT}px`,
+          padding: "0 var(--space-3)",
+          borderBottom: "1px solid var(--line-1)",
+          fontSize: "var(--text-sm)",
+          color: "var(--fg-2)",
+          flexShrink: 0,
+        }}
+      >
+        {STALE_ATTACHMENT_WORDS[standing]}
+      </div>
+    );
+  const hide = (
+    <CardCorner>
+      <IconButton label="Hide" onClick={onClose}>
+        {HIDE}
+      </IconButton>
+    </CardCorner>
+  );
+
+  if (there !== null || !fact || fact.state === "stopped") {
+    const stopped = fact?.state === "stopped" ? fact : null;
+    const words = there ?? (stopped ? STOP_VIEW_WORDS[stopped.stopped] : null);
+    const again = there === null && stopped !== null && canOpenAgain(stopped);
+    const openAgain = async () => {
+      setOpening(true);
+      setRefusal(null);
+      try {
+        const result = await window.infinitary.browser.reopen(taskId);
+        if (!result.ok) setRefusal(result.text);
+      } catch {
+        setRefusal(`${HERE.This} could not open a browser for this task right now.`);
+      } finally {
+        setOpening(false);
+      }
+    };
+    return (
+      <section
+        ref={room}
+        data-task-browser={taskId}
+        data-browser-state={
+          there !== null ? "there" : refusal ? "unavailable" : stopped ? "stopped" : "none"
+        }
+        aria-label="Task browser"
+        style={SURFACE}
+      >
+        <TaskTabStrip
+          taskId={taskId}
+          shown="browser"
+          browser={fact}
+          crewmate={detail ? hasCrewmateTab(detail) : false}
+          captain={false}
+        />
+        <div data-browser-chrome="" style={{ ...ROW, gap: "var(--space-3)", paddingLeft: 16 }}>
+          <MicroLabel style={{ flexShrink: 0 }}>Browser</MicroLabel>
+          <span style={{ ...LINE, flex: 1, color: "var(--fg-1)" }}>{detail?.title ?? ""}</span>
+          <button type="button" style={LINK} data-browser-record="" onClick={openRecord}>
+            Task record
+          </button>
+          {hide}
+        </div>
+        {notice}
+        <div
+          data-browser-stopped={stopped?.stopped ?? ""}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-2)",
+            minHeight: 320,
+            padding: "var(--space-6)",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ color: "var(--fg-1)", fontSize: "var(--text-base)", fontWeight: 500 }}>
+            {refusal ??
+              words?.lead ??
+              (detail || unreadable ? `This task has no browser on ${HERE.this}.` : "")}
+          </div>
+          {words && !refusal && (
+            <div style={{ color: "var(--fg-2)", fontSize: "var(--text-sm)" }}>{words.detail}</div>
+          )}
+          {again && (
+            <>
+              <span data-browser-open-again="" style={{ marginTop: "var(--space-2)" }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  pending={opening}
+                  onClick={() => void openAgain()}
+                >
+                  {OPEN_AGAIN_LABEL}
+                </Button>
+              </span>
+              <div style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>
+                {OPEN_AGAIN_CAPTION}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  // What the crewmate did last while it drives, or why it asked for him.
+  const did =
+    driver === "crewmate" ? fact.did : driver === "waiting" ? fact.request?.reason : undefined;
+  const handle =
+    fact.session !== undefined && fact.generation !== undefined
+      ? { session: fact.session, generation: fact.generation }
+      : null;
+  const stop = async () => {
+    const result = await window.infinitary.browser.stop(taskId).catch(() => null);
+    if (result && !result.ok) setRefusal(result.text);
+  };
+  const handOver = async (which: "take" | "return") => {
+    if (!handle) return;
+    setMoving(which);
+    setRefusal(null);
+    try {
+      const result =
+        which === "return"
+          ? await window.infinitary.browser.return(taskId, handle, { remember })
+          : await window.infinitary.browser.take(taskId, handle);
+      if (!result.ok) setRefusal(result.text);
+      else if (which === "return") setAsking(false);
+    } catch {
+      setRefusal(`${HERE.This} could not hand the browser over right now.`);
+    } finally {
+      setMoving(null);
+    }
+  };
+  const copyAddress = () => void navigator.clipboard.writeText(fact.url).catch(() => undefined);
+  const navigation = (label: string, go: "back" | "forward" | "reload", glyph: React.ReactNode) =>
+    // Navigation belongs to whoever has control; watching is not control.
+    captain ? (
+      <IconButton
+        label={label}
+        onClick={() => {
+          setRefusal(null);
+          // A move the browser refused - one that would send a form again - says why.
+          void window.infinitary.browser
+            .input(taskId, { kind: "go", go })
+            .then((result) => {
+              if (!result.ok) setRefusal(result.text);
+            })
+            .catch(() => undefined);
+        }}
+        style={{ flexShrink: 0 }}
+      >
+        {glyph}
+      </IconButton>
+    ) : (
+      <IconButton label={`${label} · ${who}`} disabled style={{ flexShrink: 0 }}>
+        {glyph}
+      </IconButton>
+    );
+  const control =
+    driver === "captain" ? (
+      // A browser his own click opened has no crewmate to hand to: it closes.
+      fact.own ? (
+        <Button
+          variant="primary"
+          size="sm"
+          pending={moving === "return"}
+          onClick={() => void handOver("return")}
+          style={{ flexShrink: 0 }}
+        >
+          {CLOSE_PAGE_LABEL}
+        </Button>
+      ) : asking ? null : (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setAsking(true)}
+          style={{ flexShrink: 0 }}
+        >
+          {RETURN_CONTROL_LABEL}
+        </Button>
+      )
+    ) : driver === "taking" ? null : (
+      <Button
+        variant={driver === "waiting" ? "primary" : "secondary"}
+        size="sm"
+        pending={moving === "take"}
+        onClick={() => void handOver("take")}
+        style={{ flexShrink: 0 }}
+      >
+        {TAKE_CONTROL_LABEL}
+      </Button>
+    );
+  const question = captain && asking;
+  // The card's tab strip names each page Browser and its title; picking
+  // another page is the controller's, as navigation is.
+  const strip = (
+    <TaskTabStrip
+      taskId={taskId}
+      shown="browser"
+      browser={fact}
+      crewmate={detail ? hasCrewmateTab(detail) : false}
+      captain={captain}
+    />
+  );
+
+  return (
+    <section
+      ref={room}
+      data-task-browser={taskId}
+      data-browser-state={driver === "crewmate" ? "watching" : driver}
+      aria-label="Task browser"
+      style={SURFACE}
+    >
+      {strip}
+      <div
+        data-browser-chrome=""
+        data-browser-control={driver}
+        style={{ ...ROW, ...(ROW_TINT[driver] ? { background: ROW_TINT[driver] } : {}) }}
+      >
+        {navigation("Back", "back", BACK)}
+        {navigation("Forward", "forward", FORWARD)}
+        {navigation("Reload", "reload", RELOAD)}
+        <div
+          data-browser-status=""
+          data-browser-driver={driver}
+          tabIndex={pageWords ? 0 : undefined}
+          aria-description={pageWords || undefined}
+          {...pageRest}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            padding: "0 var(--space-2)",
+            fontSize: "var(--text-sm)",
+          }}
+        >
+          <StatusDot tone={DOT_TONE[driver]} label={who} nativeTitle={whoFit.hidden} />
+          <span
+            data-browser-site=""
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-1)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {fact.site}
+          </span>
+          <span ref={whoFit.ref} style={{ ...LINE, color: "var(--fg-2)", flexShrink: 1 }}>
+            · {who}
+          </span>
+          {did && (
+            <span
+              data-browser-did=""
+              style={{ ...LINE, color: "var(--fg-3)", flexShrink: 1000, flexBasis: 0, flexGrow: 1 }}
+            >
+              · {did}
+            </span>
+          )}
+        </div>
+        <span data-browser-control-button="" style={{ display: "contents" }}>
+          {control}
+        </span>
+        <RowMenu
+          label="More"
+          word="More"
+          items={[
+            { id: "fit", label: fit ? "Actual size" : "Fit", onSelect: () => setFit(!fit) },
+            { id: "stop", label: "Stop browser", onSelect: () => void stop() },
+            { id: "copy", label: "Copy page address", onSelect: copyAddress },
+            {
+              id: "report",
+              label: "Report a problem",
+              onSelect: () => useShellStore.getState().beginDraft(REPORT_PROBLEM_DRAFT),
+            },
+          ]}
+        />
+        {hide}
+      </div>
+      {question && (
+        <div
+          data-browser-return-question=""
+          data-browser-passing=""
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            height: QUESTION_HEIGHT,
+            padding: "0 var(--space-3)",
+            borderBottom: "1px solid var(--line-1)",
+            background: "var(--captain-dim)",
+            fontSize: "var(--text-sm)",
+            color: "var(--fg-1)",
+            flexShrink: 0,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}
+          >
+            <span ref={questionFit.ref} title={questionFit.title} style={{ ...LINE, flex: 1 }}>
+              {RETURN_CONTROL_QUESTION}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAsking(false)}
+              style={{ flexShrink: 0 }}
+            >
+              {KEEP_CONTROL_LABEL}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              pending={moving === "return"}
+              onClick={() => void handOver("return")}
+              style={{ flexShrink: 0 }}
+            >
+              {RETURN_CONTROL_LABEL}
+            </Button>
+          </div>
+          <label
+            data-browser-remember=""
+            style={{
+              ...LINE,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              alignSelf: "flex-start",
+              maxWidth: "100%",
+              fontSize: "var(--text-xs)",
+              color: remember ? "var(--fg-1)" : "var(--fg-2)",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+              style={{ margin: 0, flex: "none", accentColor: "var(--accent)" }}
+            />
+            {rememberSignInLabel(fact.site)}
+          </label>
+        </div>
+      )}
+      {notice}
+      <div
+        ref={input.ref}
+        data-browser-page=""
+        data-browser-input={captain ? "captain" : undefined}
+        // Under his control the page takes the keyboard and pointer as they come.
+        role={captain ? "application" : undefined}
+        {...input.handlers}
+        style={{
+          display: "flex",
+          justifyContent: fit ? "center" : "flex-start",
+          alignItems: "flex-start",
+          background: "var(--bg-1)",
+          maxHeight: pageMaxHeight(notice !== null, question),
+          overflow: fit ? "hidden" : "auto",
+          minHeight: 0,
+          flex: "1 1 auto",
+          outline: "none",
+        }}
+      >
+        <canvas
+          ref={canvas}
+          width={TASK_BROWSER_PAGE.width}
+          height={TASK_BROWSER_PAGE.height}
+          data-browser-canvas=""
+          data-browser-fit={fit ? "fit" : "actual"}
+          aria-label={
+            captain
+              ? `The page at ${fact.site}, under your control`
+              : `The page at ${fact.site}, as the crewmate's browser shows it`
+          }
+          role="img"
+          style={
+            fit
+              ? {
+                  display: "block",
+                  width: "auto",
+                  height: "auto",
+                  maxWidth: "100%",
+                  maxHeight: pageMaxHeight(notice !== null, question),
+                }
+              : // At its own size: one pixel of the picture per point.
+                { display: "block", flex: "none" }
+          }
+        />
+      </div>
+      <div
+        data-browser-foot=""
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+          height: FOOT_HEIGHT,
+          padding: "0 var(--space-3)",
+          borderTop: "1px solid var(--line-1)",
+          fontSize: "var(--text-sm)",
+          flexShrink: 0,
+          minWidth: 0,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--text-xs)",
+            color: "var(--fg-3)",
+            flexShrink: 0,
+          }}
+        >
+          {detail?.key}
+        </span>
+        <span style={{ ...LINE, flex: 1, color: "var(--fg-2)" }}>{detail?.title}</span>
+        <button type="button" style={LINK} data-browser-record="" onClick={openRecord}>
+          Task record
+        </button>
+        <span data-browser-sign-ins="" style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>
+          · {signInCaption(fact, captain)}
+        </span>
+      </div>
+      {refusal && (
+        <div
+          role="status"
+          data-browser-passing=""
+          style={{ padding: "var(--space-2) var(--space-3)", color: "var(--fg-2)" }}
+        >
+          {refusal}
+        </div>
+      )}
+    </section>
+  );
+}

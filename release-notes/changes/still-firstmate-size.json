@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "still-firstmate-size",
+      "kind": "fix",
+      "title": "The still Firstmate stays sharp when you change its size",
+      "body": "When your Mac's Reduce motion setting is on, Firstmate is one still picture. Making everything bigger or smaller with Command plus or Command minus now redraws that picture at the new size. Before, it stretched the old picture, so Firstmate looked blurry.",
+      "area": "firstmate",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "infinitary-work-folder-move",
+      "reason": "Follow-up to step 3 of the Infinitary rename: a computer that only runs work moves its folder into Infinitary's from its work run, and a home finds that work under either folder name. It stays asleep until an app has Infinitary's identity, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{
+  "entries": [
+    {
+      "id": "bf-7d4505de3",
+      "kind": "feature",
+      "title": "A reply sends its card to the back of the stack instead of off it",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7d4505de3e32635af5681119ef29f5940e3f7a2f"
+        ]
+      }
+    },
+    {
+      "id": "bf-5f93d508e",
+      "kind": "feature",
+      "title": "Give the crewmate summary side labels, more room and the reason for its model",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5f93d508e24c1f4d2acdf5ec621aa3ef414ef8c9"
+        ]
+      }
+    },
+    {
+      "id": "bf-7d7003472",
+      "kind": "feature",
+      "title": "Slow the stage near the pointer, pause on a crewmate and summarize it",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7d700347257739c700faad2c588c9d608e86459e"
+        ]
+      }
+    },
+    {
+      "id": "bf-2d30f0392",
+      "kind": "feature",
+      "title": "Read model names and limits from the server's model list",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "2d30f0392d7171df8e8d833433978c329bca3d7a"
+        ]
+      }
+    },
+    {
+      "id": "bf-47290ebae",
+      "kind": "feature",
+      "title": "Choose the folder new projects go in",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "47290ebaeaf8fc25343278fb76deeabd2be09558"
+        ]
+      }
+    },
+    {
+      "id": "bf-358dd0ea4",
+      "kind": "feature",
+      "title": "Promote a published alpha to stable on a release branch",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "358dd0ea40ac833c504eb0d1c93468969852a4df"
+        ]
+      }
+    },
+    {
+      "id": "bf-63cc4d080",
+      "kind": "fix",
+      "title": "Keep a crewmate's note on the stack when its task closes done",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "63cc4d08092df83f946bbf81ae860b3883b1194c"
+        ]
+      }
+    },
+    {
+      "id": "bf-6872c1362",
+      "kind": "fix",
+      "title": "Keep a new body frame's first document until it loads",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "6872c136213ef75e86bb4bfd4ea3550cf81f1125"
+        ]
+      }
+    },
+    {
+      "id": "bf-317bdb8de",
+      "kind": "fix",
+      "title": "Hand accepted plans to grounded implementation",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "317bdb8de32e021b6e6e06909faba19a1044a772"
+        ]
+      }
+    },
+    {
+      "id": "bf-907d5edb9",
+      "kind": "fix",
+      "title": "Keep crewmate evidence out of commits and remove committed artifacts",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "907d5edb9a3c5fcac71d69ab666812fa2243dc54"
+        ]
+      }
+    },
+    {
+      "id": "bf-b790096e8",
+      "kind": "fix",
+      "title": "Leave a crewmate's model label empty until a model is assigned",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b790096e83016efae103a05345d1aec069e80cc5"
+        ]
+      }
+    },
+    {
+      "id": "bf-eb140c034",
+      "kind": "fix",
+      "title": "Re-space every orbit evenly when crew join or leave",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "eb140c034548b1ccfa1432e788281fca859dada5"
+        ]
+      }
+    },
+    {
+      "id": "bf-bee6f23b9",
+      "kind": "fix",
+      "title": "Tell Firstmate when a crewmate's completion card was refused",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bee6f23b91f699fa2f9aec3cfe6d613adac3a615"
+        ]
+      }
+    },
+    {
+      "id": "bf-da1def46a",
+      "kind": "fix",
+      "title": "Turn a merge card back while a wait would refuse the click",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "da1def46abee6d3725732fa9a29b4a741ad9dbf7"
+        ]
+      }
+    },
+    {
+      "id": "bf-911311555",
+      "kind": "fix",
+      "title": "Fix each live check's call allowance on the run sheet",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "91131155587984dc4a0e287f62baf6a2c9fc9815"
+        ]
+      }
+    },
+    {
+      "id": "bf-44865e92f",
+      "kind": "fix",
+      "title": "Judge a basis edit by the task the record names",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "44865e92f4676d2ac07454996513bc54b2c71dac"
+        ]
+      }
+    },
+    {
+      "id": "bf-080ca9fee",
+      "kind": "fix",
+      "title": "Keep ordinary words readable in live-check evidence",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "080ca9fee414563aaebe3b9ea6dd6f19bea3a13b"
+        ]
+      }
+    },
+    {
+      "id": "bf-d7d6bf429",
+      "kind": "fix",
+      "title": "Read checks that have not started as pending, not green",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d7d6bf4291f3d7f8fdbd82d10a53258d70610b1b"
+        ]
+      }
+    },
+    {
+      "id": "bf-80a2758ec",
+      "kind": "fix",
+      "title": "Show a card body's visible text, not its HTML markup",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "80a2758ecc4623ad55cb9d6517fd926ef1593a0c"
+        ]
+      }
+    },
+    {
+      "id": "bf-ed5a8524f",
+      "kind": "improvement",
+      "title": "Reuse database fixtures and replay results",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ed5a8524fcf6bc9555abd958a2a7e2d8a25b0312"
+        ]
+      }
+    },
+    {
+      "id": "bf-36d1ada16",
+      "kind": "improvement",
+      "title": "Share guarded unit code and size Mac integration workers",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "36d1ada161109423990b1ddc337a78f2eb977199"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-26-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.26: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "7181a08834b42f476dbf4e5f8091ab496f1193e9",
+        "ea177161dddb73f874778ee8d0d4a0134556bb01",
+        "903cd81ce9125dbc76cb0736464fc859afacf039",
+        "bf7159226d060fc9d6b9b7aac359d72aa6a27956",
+        "42bcc2c876892fb99f7448548756fde0a81ac4bb",
+        "4224ad4498cd360e420d6ef555f9f9892c71fe8e",
+        "38c1d25b0ee9c134bbe7fb84b52a1dc37d3777ce",
+        "83f8c6665b1a11911cb0daf28789f0f03d120ea3",
+        "fd24a704cddf83ce46ec319c6b86958485794bde",
+        "ee2d6088ae04fd6290b40ba7f97b8d8841940958"
+      ]
+    }
+  ]
+}

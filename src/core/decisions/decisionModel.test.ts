@@ -1,0 +1,481 @@
+import {
+  DEFAULT_DECISIONS,
+  type DecisionQuestion,
+  type DecisionsSettings,
+} from "@shared/decisions";
+import { describe, expect, it, vi } from "vitest";
+import {
+  AdaptedDecisionModel,
+  type DecisionModel,
+  DecisionModels,
+  type DecisionRun,
+  failedAnswer,
+  parseOption,
+  questionVersion,
+  renderAdapterInstruction,
+  renderAdapterState,
+} from "./decisionModel";
+
+/**
+ * The class itself, away from any consumer (S7a): what a question renders
+ * to when nobody pinned its bytes, how an answer is fingerprinted, and the
+ * two rules the service owes every caller - it never throws, and a native
+ * model that cannot answer is answered for by the adapter rather than by
+ * silence.
+ */
+
+const QUESTION: DecisionQuestion = {
+  type: "choice",
+  instructions: "Which way does this go?",
+  criteria: { left: "towards the door", right: "away from it" },
+  abstain: "unsure",
+  version: "q1",
+};
+
+const WITH_ABSTAIN: DecisionQuestion = {
+  ...QUESTION,
+  criteria: { ...QUESTION.criteria, unsure: "cannot tell" },
+};
+
+describe("parseOption", () => {
+  it("reads a bare word in any casing or punctuation", () => {
+    expect(parseOption("left", ["left", "right"])).toBe("left");
+    expect(parseOption(" Right.\n", ["left", "right"])).toBe("right");
+    expect(parseOption("LEFT", ["left", "right"])).toBe("left");
+  });
+
+  it("honors an unambiguous word wrapped in a sentence", () => {
+    expect(parseOption("This one goes left.", ["left", "right"])).toBe("left");
+  });
+
+  it("refuses an answer naming two options, or none", () => {
+    expect(parseOption("either left or right", ["left", "right"])).toBeUndefined();
+    expect(parseOption("I am not able to answer that", ["left", "right"])).toBeUndefined();
+    expect(parseOption("", ["left", "right"])).toBeUndefined();
+  });
+});
+
+describe("rendering a question the consumer did not pin", () => {
+  it("serves the instructions, every option with what it means, and the closed list", () => {
+    const served = renderAdapterInstruction(WITH_ABSTAIN);
+    expect(served).toContain("Which way does this go?");
+    expect(served).toContain("left - towards the door");
+    expect(served).toContain("unsure - cannot tell");
+    expect(served).toContain("Answer with exactly one of: left, right, unsure.");
+  });
+
+  it("serves a pinned instruction verbatim instead", () => {
+    const pinned = renderAdapterInstruction({ ...QUESTION, adapterInstruction: "Say left." });
+    expect(pinned).toBe("Say left.");
+  });
+
+  it("renders facts as named lines, dropping the ones with nothing to say", () => {
+    expect(renderAdapterState({ facts: { a: "one", b: null, c: 2, d: "" } })).toBe("a: one\nc: 2");
+  });
+
+  it("serves pinned state text verbatim instead", () => {
+    expect(renderAdapterState({ facts: { a: "one" }, adapterText: "[work]\na" })).toBe("[work]\na");
+  });
+});
+
+describe("questionVersion", () => {
+  it("stamps the consumer's contract number and the proof of the bytes served", () => {
+    const served = renderAdapterInstruction(QUESTION);
+    expect(questionVersion(QUESTION, served)).toMatch(/^q1-[0-9a-f]{12}$/);
+    // Two implementations serving different bytes get different stamps,
+    // which is the honest answer - they did not ask the same thing.
+    expect(questionVersion(QUESTION, served)).not.toBe(questionVersion(QUESTION, "other"));
+  });
+});
+
+/** A decision model that answers whatever it was told to. */
+function model(
+  id: string,
+  native: boolean,
+  run: (questions: Record<string, DecisionQuestion>) => DecisionRun,
+): DecisionModel {
+  return {
+    id,
+    native,
+    decide: async (_caller, _state, questions) => run(questions),
+  };
+}
+
+function answering(id: string, native: boolean, value: string, tokens = 0): DecisionModel {
+  return model(id, native, (questions) => ({
+    answers: Object.fromEntries(
+      Object.keys(questions).map((key) => [
+        key,
+        { value, outcome: "answered" as const, source: `${id}/v1`, version: "q1-abc" },
+      ]),
+    ),
+    usage: tokens ? [{ model: { provider: id, id: "v1" }, usage: { input: tokens } }] : [],
+  }));
+}
+
+function failing(id: string, native: boolean, reason: string): DecisionModel {
+  return model(id, native, (questions) => ({
+    answers: Object.fromEntries(
+      Object.entries(questions).map(([key, question]) => [
+        key,
+        failedAnswer(question, reason, "q1-abc", `${id}/v1`),
+      ]),
+    ),
+    usage: [],
+  }));
+}
+
+type RecordUsage = NonNullable<ConstructorParameters<typeof DecisionModels>[0]["recordUsage"]>;
+
+function serviceWith(
+  adapted: DecisionModel,
+  native?: DecisionModel,
+  settings: DecisionsSettings = DEFAULT_DECISIONS,
+  recordUsage?: RecordUsage,
+): DecisionModels {
+  return new DecisionModels({
+    settings: settingsPort(settings),
+    adapted,
+    ...(native ? { createNative: () => native } : {}),
+    ...(recordUsage ? { recordUsage } : {}),
+    ...(native ? KEY_PORT : {}),
+  });
+}
+
+/** A settings row held in memory, written back the way the store would. */
+function settingsPort(initial: DecisionsSettings): {
+  getDecisions(): DecisionsSettings;
+  setDecisions(next: DecisionsSettings): void;
+} {
+  let value = initial;
+  return {
+    getDecisions: () => value,
+    setDecisions: (next) => {
+      value = next;
+    },
+  };
+}
+
+/** The stored key's value, distinctive so a view can be checked for it. */
+const STORED_KEY = "ts-live-1234567890";
+
+/** A key store that always has one. */
+const KEY_PORT = {
+  keys: {
+    has: () => true,
+    read: () => STORED_KEY,
+    set: () => {},
+    remove: () => {},
+  },
+};
+
+const NATIVE_SETTINGS: DecisionsSettings = {
+  version: 1,
+  answerer: { kind: "native", id: "jev" },
+  egress: { jev: { enabled: true, consentedVersion: 1 } },
+};
+
+describe("DecisionModels", () => {
+  it("uses the adapter by default, which is what the app already did", async () => {
+    const answers = await serviceWith(answering("adapted", false, "left")).decide(
+      { purpose: "test" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    expect(answers.q).toMatchObject({ value: "left", outcome: "answered" });
+  });
+
+  it("stays on the adapter when the row names a native model that is not available", async () => {
+    // Off by default is enforced in code, not by remembering to check: with
+    // no native model there is no client, no endpoint and no request.
+    const adapted = answering("adapted", false, "left");
+    const answers = await new DecisionModels({
+      settings: settingsPort(NATIVE_SETTINGS),
+      adapted,
+      ...KEY_PORT,
+    }).decide({ purpose: "test" }, { facts: {} }, { q: QUESTION }, new AbortController().signal);
+    expect(answers.q?.source).toBe("adapted/v1");
+  });
+
+  it("lets the adapter answer when a native model fails, and says so on the record", async () => {
+    const answers = await serviceWith(
+      answering("adapted", false, "left"),
+      failing("jev", true, "rate-limited"),
+      NATIVE_SETTINGS,
+    ).decide({ purpose: "test" }, { facts: {} }, { q: QUESTION }, new AbortController().signal);
+    expect(answers.q).toMatchObject({ value: "left", outcome: "answered", source: "adapted/v1" });
+    expect(answers.q?.detail).toBe(
+      "decision model jev failed: rate-limited; answered by adapted:adapted/v1",
+    );
+  });
+
+  it("never throws: a model that does is still an abstention with a reason", async () => {
+    const thrower: DecisionModel = {
+      id: "adapted",
+      native: false,
+      decide: async () => {
+        throw new Error("boom");
+      },
+    };
+    const answers = await serviceWith(thrower).decide(
+      { purpose: "test" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    expect(answers.q).toMatchObject({ value: "unsure", outcome: "failed", reason: "error" });
+  });
+
+  it("spends under the caller's task, or under its purpose when there is no task", async () => {
+    const recordUsage = vi.fn();
+    const service = serviceWith(
+      answering("adapted", false, "left", 120),
+      undefined,
+      DEFAULT_DECISIONS,
+      recordUsage,
+    );
+    await service.decide(
+      { purpose: "kind", taskId: "task-9" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    await service.decide(
+      { purpose: "fleet-sort" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    expect(recordUsage.mock.calls[0]?.[0]).toMatchObject({ taskId: "task-9" });
+    expect(recordUsage.mock.calls[1]?.[0]).toMatchObject({ taskId: "fleet-sort" });
+  });
+
+  it("keeps the last native answer on the row, and never a key", async () => {
+    const service = new DecisionModels({
+      settings: settingsPort(NATIVE_SETTINGS),
+      adapted: answering("adapted", false, "left"),
+      createNative: () => answering("jev", true, "right", 42),
+      ...KEY_PORT,
+    });
+    await service.decide(
+      { purpose: "test" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    const row = service.view().natives.find((native) => native.id === "jev");
+    expect(row).toMatchObject({ state: "ready", keyStored: true, consented: true });
+    expect(row?.last).toMatchObject({ value: "right", tokens: 42 });
+    // The view is pushed to the window and read by Settings: it carries
+    // whether a key is stored, never the key.
+    expect(JSON.stringify(service.view())).not.toContain(STORED_KEY);
+  });
+
+  it("says key rejected once, on the vendor's own 401 and nothing else", async () => {
+    const notes: string[] = [];
+    const service = new DecisionModels({
+      settings: settingsPort(NATIVE_SETTINGS),
+      adapted: answering("adapted", false, "left"),
+      createNative: () => failing("jev", true, "key-rejected"),
+      onNote: (text) => notes.push(text),
+      ...KEY_PORT,
+    });
+    const ask = () =>
+      service.decide(
+        { purpose: "test" },
+        { facts: {} },
+        { q: QUESTION },
+        new AbortController().signal,
+      );
+    await ask();
+    await ask();
+    expect(service.view().natives[0]?.state).toBe("key-rejected");
+    // Once per key: a standing state the row already carries is not news
+    // every time the tick comes round.
+    expect(notes).toHaveLength(1);
+  });
+
+  it("a rate limit is transient: the row keeps saying ready", async () => {
+    const service = new DecisionModels({
+      settings: settingsPort(NATIVE_SETTINGS),
+      adapted: answering("adapted", false, "left"),
+      createNative: () => failing("jev", true, "rate-limited"),
+      ...KEY_PORT,
+    });
+    await service.decide(
+      { purpose: "test" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
+    expect(service.view().natives[0]?.state).toBe("ready");
+  });
+
+  it("an unconsented or switched-off egress reaches no endpoint at all", async () => {
+    const built: string[] = [];
+    const off = (egress: DecisionsSettings["egress"]) =>
+      new DecisionModels({
+        settings: settingsPort({ ...NATIVE_SETTINGS, egress }),
+        adapted: answering("adapted", false, "left"),
+        createNative: () => {
+          built.push("native");
+          return answering("jev", true, "right");
+        },
+        ...KEY_PORT,
+      });
+    const egressCases: Array<DecisionsSettings["egress"]> = [
+      {},
+      { jev: { enabled: false, consentedVersion: 1 } },
+      { jev: { enabled: true } },
+    ];
+    for (const egress of egressCases) {
+      const answers = await off(egress).decide(
+        { purpose: "test" },
+        { facts: {} },
+        { q: QUESTION },
+        new AbortController().signal,
+      );
+      expect(answers.q?.source).toBe("adapted/v1");
+    }
+    expect(built).toEqual([]);
+  });
+
+  it("removing a native model takes the key, the egress and the pick with it", async () => {
+    const removed: string[] = [];
+    const service = new DecisionModels({
+      settings: settingsPort(NATIVE_SETTINGS),
+      adapted: answering("adapted", false, "left"),
+      createNative: () => answering("jev", true, "right"),
+      keys: {
+        has: () => removed.length === 0,
+        read: () => (removed.length === 0 ? STORED_KEY : undefined),
+        set: () => {},
+        remove: (id) => removed.push(id),
+      },
+    });
+    const view = service.removeKey("jev");
+    expect(removed).toEqual(["jev"]);
+    expect(view.settings.answerer).toEqual({ kind: "adapted", offering: "auto" });
+    expect(view.settings.egress.jev).toBeUndefined();
+    expect(view.natives[0]?.state).toBe("absent");
+  });
+});
+
+it("does not move an unavailable named custom decision connection to another account", async () => {
+  const selectAccount = vi.fn(() => "other-account");
+  const runtimeFor = vi.fn(async () => {
+    throw new Error("Must not bind another account");
+  });
+  const adapter = new AdaptedDecisionModel({
+    homeDir: "/synthetic",
+    availableModels: () => [{ provider: "xai", id: "grok-4.7", slot: "low" }],
+    quotaModels: () => undefined,
+    selectAccount,
+    flagshipAccountId: () => null,
+    runtimeFor,
+    offering: () => "fm-custom-0123456789abcdef/operator-model",
+    sessions: {
+      pi: {
+        backend: "pi",
+        controlProfile: {
+          steer: "native",
+          interruptGranularity: "turn",
+          quotaEvents: false,
+          backgroundWork: "host",
+          failureSignals: "text",
+        },
+        open: async () => {
+          throw new Error("Must not open another account");
+        },
+      },
+    },
+  });
+  const result = await adapter.decide(
+    { purpose: "synthetic" },
+    { facts: { text: "Synthetic question" } },
+    { q: QUESTION },
+    new AbortController().signal,
+  );
+  expect(result.answers.q).toMatchObject({ outcome: "failed", reason: "no-model" });
+  expect(selectAccount).not.toHaveBeenCalled();
+  expect(runtimeFor).not.toHaveBeenCalled();
+});
+
+describe("what a pinned offering comes to", () => {
+  const PI_FACTORY = {
+    pi: {
+      backend: "pi" as const,
+      controlProfile: {
+        steer: "native" as const,
+        interruptGranularity: "turn" as const,
+        quotaEvents: false,
+        backgroundWork: "host" as const,
+        failureSignals: "text" as const,
+      },
+      open: async () => {
+        throw new Error("Must not open a session to read a state");
+      },
+    },
+  };
+
+  function adapterServing(named: { provider: string; id: string }[]): AdaptedDecisionModel {
+    return new AdaptedDecisionModel({
+      homeDir: "/synthetic",
+      // The slotted pool the walk reads: only the cheap model has a level.
+      availableModels: () => [{ provider: "xai", id: "grok-cheap", slot: "low" }],
+      namedModels: () => named,
+      quotaModels: () => undefined,
+      selectAccount: () => "acct_a",
+      flagshipAccountId: () => null,
+      runtimeFor: async () => {
+        throw new Error("Must not bind an account to read a state");
+      },
+      sessions: PI_FACTORY,
+    });
+  }
+
+  it("is ready while a signed-in account serves it, in use or not", () => {
+    const adapter = adapterServing([
+      { provider: "xai", id: "grok-cheap" },
+      { provider: "xai", id: "grok-unslotted" },
+    ]);
+    expect(adapter.pinState("xai/grok-unslotted")).toBe("ready");
+    expect(adapter.pinState("xai/grok-cheap")).toBe("ready");
+  });
+
+  it("falls back to the walk when nothing serves it, and holds a named custom connection", () => {
+    const adapter = adapterServing([{ provider: "xai", id: "grok-cheap" }]);
+    expect(adapter.pinState("xai/retired-model")).toBe("fallback");
+    expect(adapter.pinState("fm-custom-0123456789abcdef/operator-model")).toBe("held");
+    // A string that names no offering is the walk, as it is at the call.
+    expect(adapter.pinState("not-an-offering")).toBe("fallback");
+  });
+
+  it("falls back for a served model whose backend has no session to answer on", () => {
+    const adapter = adapterServing([{ provider: "anthropic-claude", id: "claude-haiku-4-5" }]);
+    expect(adapter.pinState("anthropic-claude/claude-haiku-4-5")).toBe("fallback");
+  });
+
+  it("reaches the view only while a specific model is pinned", () => {
+    const pinState = vi.fn((offering: string) =>
+      offering === "xai/grok-unslotted" ? ("ready" as const) : ("fallback" as const),
+    );
+    const settings = settingsPort(DEFAULT_DECISIONS);
+    const service = new DecisionModels({
+      settings,
+      adapted: answering("adapted", false, "left"),
+      pinState,
+    });
+    expect(service.view()).not.toHaveProperty("pinned");
+    expect(pinState).not.toHaveBeenCalled();
+
+    const pin = (offering: string) =>
+      service.setSettings({ ...DEFAULT_DECISIONS, answerer: { kind: "adapted", offering } });
+    expect(pin("xai/grok-unslotted").pinned).toBe("ready");
+    expect(pin("xai/retired-model").pinned).toBe("fallback");
+    expect(
+      service.setSettings({ ...NATIVE_SETTINGS, answerer: { kind: "native", id: "jev" } }),
+    ).not.toHaveProperty("pinned");
+  });
+});

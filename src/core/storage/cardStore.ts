@@ -1,0 +1,1081 @@
+import { randomUUID } from "node:crypto";
+import {
+  CARD_CAPTURE_VERSION,
+  type Card,
+  type CardAnswer,
+  type CardMessage,
+  type CardMessageWho,
+  type CardObservation,
+  type CardObservationActor,
+  type CardObservationKind,
+  type CardObservationPayload,
+  type CardObservationSource,
+  type CardRevisionLinks,
+  cardAnswersSchema,
+  cardObservationPayloadSchemas,
+  cardRevisionSchema,
+  cardSchema,
+  cardWord,
+  type LiveAttachment,
+  liveAttachmentSchema,
+  type PastCard,
+  type PastEnding,
+  replyWithSettings,
+} from "@shared/cards";
+import { pastEndingWords } from "@shared/pastCard";
+import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
+import type { TaskCardRow } from "@shared/tasks";
+import type { AppDatabase } from "./db";
+
+/**
+ * Persisted cards (decision D-9): unresolved cards survive a restart and
+ * reappear in the stack; resolving keeps the chosen action on the row.
+ * A task's cards die with the task (decision D-13).
+ *
+ * Two interaction P1 additions ride the same rows: a card revised in place
+ * keeps its history in `card_revisions` (WI-12, migration 24), and the
+ * captain's confirmed duplicate label lives on `cards` (WI-14, migration 25).
+ *
+ * One card shape since cards/tasks/agents P1 (migration 29): the `kind`
+ * columns stay for the schema's sake and every new row writes `card`; what
+ * a card is comes from its actions and its `author`, never from the column.
+ */
+
+/** What the `kind` columns say since P1: the column is kept, the value is not a kind. */
+const ONE_CARD_KIND = "card";
+
+type Row = {
+  id: string;
+  task_id: string | null;
+  kind: string;
+  author: Card["author"];
+  priority: number;
+  title: string;
+  meta: string;
+  model: string | null;
+  place: string | null;
+  body: string;
+  actions_json: string;
+  status: Card["status"];
+  created_at: number;
+  resolved_at: number | null;
+  duplicate_of: string | null;
+  duplicate_note: string | null;
+  duplicate_at: number | null;
+  pictures_json: string | null;
+  awaiting: string | null;
+  sent_back_at: number | null;
+  width: string | null;
+  lifecycle_id: string | null;
+  offer_id: string | null;
+  attachment_json: string | null;
+  risk_json: string | null;
+  replies: number | null;
+  holds_place: number | null;
+  required_actions_json: string | null;
+};
+
+/** One superseded version of a card revised in place (WI-12). */
+export type CardRevision = {
+  cardId: string;
+  revision: number;
+  title: string;
+  body: string;
+  actions: Card["actions"];
+  createdAt: number;
+  replacedAt: number;
+  replacedBy: string;
+};
+
+/** Every outcome of flagging a duplicate; refusals are values, never throws. */
+export type DuplicateResult =
+  | { status: "flagged"; card: DuplicateCardRef; original: DuplicateCardRef; at: number }
+  | { status: "same-card"; cardId: string }
+  | { status: "no-card"; cardId: string }
+  | { status: "no-original"; cardId: string }
+  | { status: "already-flagged"; card: DuplicateCardRef; duplicateOf: string; note: string };
+
+export type DuplicateCardRef = { id: string; title: string; resolved: boolean };
+
+/** One card's thread, counted, with its newest message (the context section). */
+export type ThreadSummary = { cardId: string; count: number; last: CardMessage };
+
+/**
+ * A resolved card and the action that resolved it (`close` is a dismissal),
+ * with the captain's answers to the body's own questions when the click
+ * carried any (`cards.answers_json`, migration 54).
+ */
+export type CardResolution = {
+  card: Card;
+  action: string;
+  resolvedAt: number;
+  answers?: CardAnswer[];
+  /** Exact offer dispatched at the closing interaction, when capture exists. */
+  offer?: CardObservationPayload<"offer">;
+};
+
+/**
+ * A row's live attachment, read on its own: one that no longer reads as an
+ * attachment is left off its card rather than taking the card with it.
+ */
+function attachmentOf(row: Row): LiveAttachment | undefined {
+  if (!row.attachment_json) return undefined;
+  try {
+    const parsed = liveAttachmentSchema.safeParse(JSON.parse(row.attachment_json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A row's risk assessment, read on its own like its attachment: one that no
+ * longer reads is left off its card rather than taking the card with it.
+ */
+function riskOf(row: Row): RiskAssessment | undefined {
+  if (!row.risk_json) return undefined;
+  try {
+    const parsed = riskAssessmentSchema.safeParse(JSON.parse(row.risk_json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function fromRow(row: Row): Card | undefined {
+  const attachment = attachmentOf(row);
+  const risk = riskOf(row);
+  const parsed = cardSchema.safeParse({
+    id: row.id,
+    ...(row.task_id ? { taskId: row.task_id } : {}),
+    author: row.author,
+    priority: row.priority,
+    title: row.title,
+    meta: row.meta,
+    ...(row.model ? { model: row.model } : {}),
+    ...(row.place ? { place: row.place } : {}),
+    body: row.body,
+    actions: JSON.parse(row.actions_json),
+    status: row.status,
+    createdAt: row.created_at,
+    ...(row.pictures_json ? { pictures: JSON.parse(row.pictures_json) } : {}),
+    ...(row.awaiting ? { awaiting: row.awaiting } : {}),
+    ...(row.sent_back_at !== null ? { sentBackAt: row.sent_back_at } : {}),
+    ...(row.width ? { width: row.width } : {}),
+    ...(attachment ? { attachment } : {}),
+    ...(risk ? { risk } : {}),
+    ...(row.required_actions_json
+      ? { requiredActions: JSON.parse(row.required_actions_json) }
+      : {}),
+    ...(row.replies === 0 ? { replies: false } : {}),
+    ...(row.holds_place === 1 ? { holdsPlace: true } : {}),
+    ...(row.lifecycle_id ? { lifecycleId: row.lifecycle_id } : {}),
+    ...(row.offer_id ? { offerId: row.offer_id } : {}),
+  });
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** Whether a card's actions offer the merge decision of a finished build. */
+function isMergeDecision(actions: Card["actions"]): boolean {
+  return actions.some(
+    (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+  );
+}
+
+type ObservationRow = {
+  seq: number;
+  id: string;
+  card_id: string;
+  lifecycle_id: string;
+  task_id: string | null;
+  kind: CardObservationKind;
+  schema_version: number;
+  capture_version: number;
+  recorded_at: number;
+  actor: CardObservationActor;
+  source: CardObservationSource;
+  offer_id: string | null;
+  interaction_id: string | null;
+  message_id: number | null;
+  build: string | null;
+  payload_json: string;
+};
+
+function observationOf(row: ObservationRow): CardObservation | undefined {
+  const schema = cardObservationPayloadSchemas[row.kind];
+  if (!schema) return undefined;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(row.payload_json);
+  } catch {
+    return undefined;
+  }
+  const payload = schema.safeParse(raw);
+  if (!payload.success) return undefined;
+  return {
+    seq: row.seq,
+    id: row.id,
+    kind: row.kind,
+    cardId: row.card_id,
+    lifecycleId: row.lifecycle_id,
+    taskId: row.task_id,
+    schemaVersion: row.schema_version,
+    captureVersion: row.capture_version,
+    recordedAt: row.recorded_at,
+    actor: row.actor,
+    source: row.source,
+    offerId: row.offer_id,
+    interactionId: row.interaction_id,
+    messageId: row.message_id,
+    build: row.build,
+    payload: payload.data,
+  } as CardObservation;
+}
+
+/**
+ * A thread row with the payload of the `message_ref` observation written
+ * with it in one transaction, whose `answers` are the settings a captain's
+ * reply carried.
+ */
+type MessageRow = {
+  id: number;
+  card_id: string;
+  who: CardMessageWho;
+  text: string;
+  at: number;
+  ref_json: string | null;
+  revision_json: string | null;
+};
+
+const MESSAGE_COLUMNS = `m.id, m.card_id, m.who, m.text, m.at, m.revision_json,
+  (SELECT o.payload_json FROM card_observations o
+    WHERE o.card_id = m.card_id AND o.kind = 'message_ref' AND o.message_id = m.id
+    ORDER BY o.seq LIMIT 1) AS ref_json`;
+
+function messageOf(row: MessageRow): CardMessage {
+  const message: CardMessage = {
+    id: row.id,
+    cardId: row.card_id,
+    who: row.who,
+    text: row.text,
+    at: row.at,
+  };
+  if (row.who === "host" && row.revision_json) {
+    try {
+      const revision = cardRevisionSchema.safeParse(JSON.parse(row.revision_json));
+      if (revision.success) message.revision = revision.data;
+    } catch {
+      /* An unreadable association never becomes guessed links. */
+    }
+  }
+  if (row.who !== "captain" || row.ref_json === null) return message;
+  let ref: unknown;
+  try {
+    ref = JSON.parse(row.ref_json);
+  } catch {
+    return message;
+  }
+  const parsed = cardAnswersSchema.safeParse((ref as { answers?: unknown } | null)?.answers);
+  if (!parsed.success || parsed.data.length === 0) return message;
+  const words = wordsWithoutSettings(row.text, parsed.data);
+  return words === undefined ? message : { ...message, text: words, answers: parsed.data };
+}
+
+/**
+ * A captain's reply is saved as its author read it: his words, then the
+ * settings the card sent with them (`replyWithSettings`), then the app's
+ * picture line when pictures rode along. The thread shows the settings
+ * apart (FI3-617), so they come off only where the text holds exactly the
+ * app's own rendering of the answers recorded with that reply. Anything
+ * else is shown whole, never cut on a guess, and carries no `answers`.
+ */
+function wordsWithoutSettings(text: string, answers: readonly CardAnswer[]): string | undefined {
+  const settings = replyWithSettings("", answers);
+  if (text.endsWith(settings)) return text.slice(0, -settings.length);
+  const at = text.lastIndexOf(`${settings}\n[attached `);
+  const pictures = at < 0 ? "" : text.slice(at + settings.length + 1);
+  if (!pictures || pictures.includes("\n") || !pictures.endsWith("]")) return undefined;
+  const words = text.slice(0, at);
+  return words ? `${words}\n${pictures}` : pictures;
+}
+
+function refOf(row: Row): DuplicateCardRef {
+  return { id: row.id, title: row.title, resolved: row.resolved_at !== null };
+}
+
+export class CardStore {
+  constructor(private readonly db: AppDatabase) {}
+
+  upsert(card: Card): void {
+    this.db
+      .prepare(
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           kind = excluded.kind,
+           author = excluded.author,
+           priority = excluded.priority,
+           title = excluded.title,
+           meta = excluded.meta,
+           model = excluded.model,
+           place = excluded.place,
+           body = excluded.body,
+           actions_json = excluded.actions_json,
+           status = excluded.status,
+           created_at = excluded.created_at,
+           pictures_json = excluded.pictures_json,
+           awaiting = excluded.awaiting,
+           sent_back_at = excluded.sent_back_at,
+           width = excluded.width,
+           lifecycle_id = COALESCE(excluded.lifecycle_id, cards.lifecycle_id),
+           offer_id = COALESCE(excluded.offer_id, cards.offer_id),
+           attachment_json = excluded.attachment_json,
+           risk_json = excluded.risk_json,
+           replies = excluded.replies,
+           holds_place = excluded.holds_place,
+           required_actions_json = excluded.required_actions_json`,
+      )
+      .run(
+        card.id,
+        card.taskId ?? null,
+        ONE_CARD_KIND,
+        card.author,
+        card.priority,
+        card.title,
+        card.meta,
+        card.model ?? null,
+        card.place ?? null,
+        card.body,
+        JSON.stringify(card.actions),
+        card.status,
+        card.createdAt,
+        card.pictures?.length ? JSON.stringify(card.pictures) : null,
+        card.awaiting ?? null,
+        card.sentBackAt ?? null,
+        card.width ?? null,
+        card.lifecycleId ?? null,
+        card.offerId ?? null,
+        card.attachment ? JSON.stringify(card.attachment) : null,
+        card.risk ? JSON.stringify(card.risk) : null,
+        card.replies === false ? 0 : null,
+        card.holdsPlace ? 1 : null,
+        card.requiredActions !== undefined ? JSON.stringify(card.requiredActions) : null,
+      );
+  }
+
+  /**
+   * An emitter revising its open card under the same id (WI-12): the
+   * version it replaces is kept as a revision in the same transaction, so a
+   * revision is one card with history rather than a second card. A write
+   * that changes nothing an emitter authored records no revision.
+   */
+  revise(card: Card): void {
+    this.db.transaction(() => {
+      const previous = this.row(card.id);
+      const actionsJson = JSON.stringify(card.actions);
+      if (
+        previous &&
+        previous.resolved_at === null &&
+        (previous.title !== card.title ||
+          previous.body !== card.body ||
+          previous.actions_json !== actionsJson)
+      ) {
+        const next = this.db
+          .prepare(
+            "SELECT COALESCE(MAX(revision), 0) + 1 AS next FROM card_revisions WHERE card_id = ?",
+          )
+          .get(card.id) as { next: number };
+        this.db
+          .prepare(
+            `INSERT INTO card_revisions
+               (card_id, revision, kind, title, body, actions_json, created_at, replaced_at, replaced_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            previous.id,
+            next.next,
+            ONE_CARD_KIND,
+            previous.title,
+            previous.body,
+            previous.actions_json,
+            previous.created_at,
+            Date.now(),
+            card.id,
+          );
+      }
+      this.upsert(card);
+    })();
+  }
+
+  /** A card's superseded versions, oldest first. */
+  history(cardId: string): CardRevision[] {
+    const rows = this.db
+      .prepare("SELECT * FROM card_revisions WHERE card_id = ? ORDER BY revision")
+      .all(cardId) as {
+      card_id: string;
+      revision: number;
+      kind: string;
+      title: string;
+      body: string;
+      actions_json: string;
+      created_at: number;
+      replaced_at: number;
+      replaced_by: string;
+    }[];
+    return rows.map((row) => ({
+      cardId: row.card_id,
+      revision: row.revision,
+      title: row.title,
+      body: row.body,
+      actions: JSON.parse(row.actions_json),
+      createdAt: row.created_at,
+      replacedAt: row.replaced_at,
+      replacedBy: row.replaced_by,
+    }));
+  }
+
+  /** Includes resolved cards: cleanup never turns existing history into a new profile. */
+  hasHistory(): boolean {
+    return this.db.prepare("SELECT 1 FROM cards LIMIT 1").get() !== undefined;
+  }
+
+  /** Unresolved cards, restored into the stack on boot. */
+  listOpen(): Card[] {
+    const rows = this.db
+      .prepare("SELECT * FROM cards WHERE resolved_at IS NULL ORDER BY created_at")
+      .all() as Row[];
+    return rows.flatMap((row) => {
+      const card = fromRow(row);
+      return card ? [card] : [];
+    });
+  }
+
+  resolve(cardId: string, chosenAction: string, answers?: readonly CardAnswer[]): void {
+    this.db
+      .prepare("UPDATE cards SET resolved_at = ?, chosen_action = ?, answers_json = ? WHERE id = ?")
+      .run(Date.now(), chosenAction, answers?.length ? JSON.stringify(answers) : null, cardId);
+  }
+
+  /**
+   * Cards resolved at or after `since`, newest first, with the action that
+   * resolved them: the first `limit` that `keep` accepts.
+   */
+  resolvedSince(
+    since: number,
+    limit: number,
+    keep: (resolution: CardResolution) => boolean = () => true,
+    taskId?: string,
+  ): CardResolution[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM cards
+         WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND chosen_action IS NOT NULL
+           AND (? IS NULL OR task_id = ?)
+         ORDER BY resolved_at DESC, id`,
+      )
+      .all(since, taskId ?? null, taskId ?? null) as (Row & {
+      chosen_action: string;
+      resolved_at: number;
+      answers_json: string | null;
+    })[];
+    const kept: CardResolution[] = [];
+    for (const row of rows) {
+      if (kept.length >= limit) break;
+      const card = fromRow(row);
+      if (!card) continue;
+      const answers = row.answers_json
+        ? cardAnswersSchema.safeParse(JSON.parse(row.answers_json))
+        : undefined;
+      const observations = this.observations(card.id);
+      // CardService commits the row resolution first, then its action observation.
+      // Earlier observations belong to a previous resolution, not this offer.
+      const closing = observations.findLast(
+        (entry) =>
+          entry.kind === "action" &&
+          entry.payload.closes &&
+          entry.payload.actionId === row.chosen_action &&
+          entry.recordedAt >= row.resolved_at,
+      );
+      const offer = closing?.offerId
+        ? observations.find((entry) => entry.id === closing.offerId && entry.kind === "offer")
+        : undefined;
+      const resolution = {
+        card,
+        action: row.chosen_action,
+        resolvedAt: row.resolved_at,
+        ...(offer?.kind === "offer" ? { offer: offer.payload } : {}),
+        ...(answers?.success && answers.data.length > 0 ? { answers: answers.data } : {}),
+      };
+      if (keep(resolution)) kept.push(resolution);
+    }
+    return kept;
+  }
+
+  /**
+   * Whether a completion card was ever emitted on a task - any card of its
+   * crewmate's carrying a `settle merge` effect, open or resolved (contract
+   * v3.6, captain lock 3). It answers one question: does the crewmate still
+   * owe the captain the one merge decision on its task, or has it already
+   * written it? Read off the DECLARED effect, the way the host dispatches,
+   * never off an action id or a label.
+   */
+  hasCompletionCard(taskId: string): boolean {
+    const rows = this.db
+      .prepare("SELECT actions_json FROM cards WHERE task_id = ? AND author = 'crewmate'")
+      .all(taskId) as { actions_json: string }[];
+    return rows.some((row) => {
+      let actions: unknown;
+      try {
+        actions = JSON.parse(row.actions_json);
+      } catch {
+        return false;
+      }
+      return (
+        Array.isArray(actions) &&
+        actions.some((action) => {
+          const effect = (action as { effect?: { kind?: unknown; mode?: unknown } } | null)?.effect;
+          return effect?.kind === "settle" && effect.mode === "merge";
+        })
+      );
+    });
+  }
+
+  /**
+   * A task's newest card, open or already resolved (Task B): an answer
+   * task's card IS its deliverable, so the builder that names it as `basis`
+   * is handed that card's body in its brief, and the `tasks` query by key
+   * hands it back on demand. Newest by creation, so a revision - which
+   * replaces the row under the same id - reads as the version the captain
+   * last saw.
+   */
+  newestForTask(taskId: string): Card | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM cards WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
+      .get(taskId) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
+  /**
+   * The card a task answered with: what a builder grounded on it is handed
+   * as its basis. Only its own crewmate's cards count, never a Firstmate or
+   * host card filed under the task, and never a merge decision. A basis that
+   * prototyped and then built shows the prototype, sometimes a note, and a
+   * completion card; the builder needs the one the captain chose on. So the
+   * newest card the captain chose one of its actions on, else the newest
+   * card, and the merge decision only when it is all there is.
+   */
+  newestAnswerForTask(taskId: string): Card | undefined {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM cards WHERE task_id = ? AND author = 'crewmate' ORDER BY created_at DESC, id DESC",
+      )
+      .all(taskId) as (Row & { chosen_action: string | null })[];
+    const cards = rows.flatMap((row) => {
+      const card = fromRow(row);
+      return card ? [{ card, chosen: row.chosen_action }] : [];
+    });
+    const answers = cards.filter(({ card }) => !isMergeDecision(card.actions));
+    return (
+      answers.find(({ card, chosen }) => card.actions.some((action) => action.id === chosen)) ??
+      answers[0] ??
+      cards[0]
+    )?.card;
+  }
+
+  /**
+   * Every card a task showed, newest first, for the record's Cards row
+   * (FI3-579 piece 1): the rows filed under the task plus any `extraIds` its
+   * timeline names (a Firstmate decision's card carries no task of its own).
+   * A closed card reads as the version last seen, with how it ended; a purged
+   * card is simply absent. Pure read.
+   */
+  forTask(taskId: string, extraIds: readonly string[] = []): TaskCardRow[] {
+    const ids = new Set(
+      (
+        this.db.prepare("SELECT id FROM cards WHERE task_id = ?").all(taskId) as { id: string }[]
+      ).map((row) => row.id),
+    );
+    for (const id of extraIds) ids.add(id);
+    const rows: { row: TaskCardRow; created: number }[] = [];
+    for (const id of ids) {
+      const raw = this.row(id);
+      const card = raw ? fromRow(raw) : undefined;
+      if (!raw || !card) continue;
+      if (raw.resolved_at === null) {
+        rows.push({
+          created: card.createdAt,
+          row: {
+            id,
+            kind: cardWord(card),
+            title: card.title,
+            state: "open",
+            at: card.createdAt,
+          },
+        });
+        continue;
+      }
+      const past = this.past(id);
+      if (!past) continue;
+      rows.push({
+        created: card.createdAt,
+        row: {
+          id,
+          kind: cardWord(past),
+          title: past.title,
+          state: "closed",
+          ending: pastEndingWords(past.ending),
+          at: past.ending.at,
+        },
+      });
+    }
+    return rows
+      .sort((a, b) => b.created - a.created || b.row.id.localeCompare(a.row.id))
+      .map((x) => x.row);
+  }
+
+  /** One card by id, resolved or not. */
+  get(cardId: string): Card | undefined {
+    const row = this.row(cardId);
+    return row ? fromRow(row) : undefined;
+  }
+
+  /**
+   * A card returning to the stack under a stable id it once had (a host
+   * singleton raised again, an emitter reusing an id): clear the resolution
+   * so the card is open again and survives the next restart like any other.
+   */
+  reopen(cardId: string): void {
+    this.db
+      .prepare("UPDATE cards SET resolved_at = NULL, chosen_action = NULL WHERE id = ?")
+      .run(cardId);
+  }
+
+  /**
+   * A closed card as the captain last saw it (FI3-579 piece 2): the version
+   * the stage showed him - the newest `seen` offer on the card's lifecycle,
+   * else the offer its closing interaction chose from, else the newest
+   * offer, else the row itself - how it ended, the answers he submitted and
+   * its thread. Absent for an unknown or still open card. Pure read.
+   */
+  past(cardId: string): PastCard | undefined {
+    const row = this.row(cardId) as
+      | (Row & { chosen_action: string | null; answers_json: string | null })
+      | undefined;
+    if (!row || row.resolved_at === null) return undefined;
+    const card = fromRow(row);
+    if (!card) return undefined;
+    const observations = this.observations(cardId).filter(
+      (entry) => !row.lifecycle_id || entry.lifecycleId === row.lifecycle_id,
+    );
+    const closing = observations.findLast(
+      (entry) =>
+        (entry.kind === "action" && entry.payload.closes && entry.payload.recognized) ||
+        entry.kind === "exit",
+    );
+    const offers = observations.flatMap((entry) => (entry.kind === "offer" ? [entry] : []));
+    const seenOfferId = observations.findLast((entry) => entry.kind === "seen")?.offerId;
+    const offerId = seenOfferId ?? closing?.offerId ?? offers.at(-1)?.id;
+    const offer = offers.find((entry) => entry.id === offerId)?.payload;
+
+    let how: PastEnding = "unknown";
+    let actionId: string | undefined;
+    let label: string | undefined;
+    let by: PastCard["ending"]["by"];
+    let answers: CardAnswer[] = [];
+    const parsedAnswers = row.answers_json
+      ? cardAnswersSchema.safeParse(JSON.parse(row.answers_json))
+      : undefined;
+    if (parsedAnswers?.success) answers = parsedAnswers.data;
+    const actions = offer?.actions ?? card.actions;
+    // The risk of the version shown: an offer taken before risk existed has
+    // none, and neither did its card.
+    const risk = offer ? offer.risk : card.risk;
+    const requiredActions = offer ? offer.requiredActions : card.requiredActions;
+    if (closing?.kind === "action") {
+      how = "chose";
+      actionId = closing.payload.actionId;
+      label = closing.payload.label ?? actions.find((action) => action.id === actionId)?.label;
+      by = closing.actor;
+      if (closing.payload.answers?.length) answers = closing.payload.answers;
+    } else if (closing?.kind === "exit") {
+      how = closing.payload.reason;
+      by = closing.actor;
+    } else if (row.chosen_action === "close") {
+      how = "dismissed";
+    } else if (row.chosen_action === "duplicate") {
+      how = "duplicate";
+    } else if (row.chosen_action && actions.some((action) => action.id === row.chosen_action)) {
+      how = "chose";
+      actionId = row.chosen_action;
+      label = actions.find((action) => action.id === actionId)?.label;
+    }
+    return {
+      id: card.id,
+      ...(card.taskId ? { taskId: card.taskId } : {}),
+      author: offer?.author ?? card.author,
+      title: offer?.title ?? card.title,
+      meta: offer?.meta ?? card.meta,
+      ...((offer?.model ?? card.model) ? { model: offer?.model ?? card.model } : {}),
+      body: offer?.body ?? card.body,
+      actions: actions.map(({ effect: _effect, ...action }) => action),
+      ...((offer?.width ?? card.width) ? { width: offer?.width ?? card.width } : {}),
+      ...(risk ? { risk } : {}),
+      ...(requiredActions !== undefined ? { requiredActions } : {}),
+      ending: {
+        how,
+        at: closing?.recordedAt ?? row.resolved_at,
+        ...(actionId ? { actionId } : {}),
+        ...(label ? { label } : {}),
+        ...(by ? { by } : {}),
+      },
+      answers,
+      messages: this.messages(cardId),
+    };
+  }
+
+  chosenAction(cardId: string): string | undefined {
+    const row = this.db.prepare("SELECT chosen_action FROM cards WHERE id = ?").get(cardId) as
+      | { chosen_action: string | null }
+      | undefined;
+    return row?.chosen_action ?? undefined;
+  }
+
+  /**
+   * The captain's confirmed duplicate label (WI-14): write-once on the
+   * duplicate's row, naming the card it repeats. The label is data for the
+   * eval, never a user surface; closing the card is the caller's.
+   */
+  flagDuplicate(input: {
+    cardId: string;
+    duplicateOf: string;
+    note: string;
+    at?: number;
+  }): DuplicateResult {
+    if (input.cardId === input.duplicateOf) return { status: "same-card", cardId: input.cardId };
+    const card = this.row(input.cardId);
+    if (!card) return { status: "no-card", cardId: input.cardId };
+    const original = this.row(input.duplicateOf);
+    if (!original) return { status: "no-original", cardId: input.duplicateOf };
+    if (card.duplicate_of !== null) {
+      return {
+        status: "already-flagged",
+        card: refOf(card),
+        duplicateOf: card.duplicate_of,
+        note: card.duplicate_note ?? "",
+      };
+    }
+    const at = input.at ?? Date.now();
+    this.db
+      .prepare(
+        "UPDATE cards SET duplicate_of = ?, duplicate_note = ?, duplicate_at = ? WHERE id = ? AND duplicate_of IS NULL",
+      )
+      .run(input.duplicateOf, input.note, at, input.cardId);
+    return { status: "flagged", card: refOf(card), original: refOf(original), at };
+  }
+
+  /** The duplicate label on a card, when stamped. */
+  duplicateLabel(cardId: string): { duplicateOf: string; note: string; at: number } | undefined {
+    const row = this.row(cardId);
+    if (!row || row.duplicate_of === null) return undefined;
+    return {
+      duplicateOf: row.duplicate_of,
+      note: row.duplicate_note ?? "",
+      at: row.duplicate_at ?? 0,
+    };
+  }
+
+  /**
+   * One message onto a card's thread (cards-as-threads phase 1, migration
+   * 38): the captain's reply, the author's prose answer, or the host's own
+   * line when the author revised the head instead of answering. Appending
+   * never touches the card row - a reply resolves nothing.
+   */
+  appendMessage(input: {
+    cardId: string;
+    who: CardMessageWho;
+    text: string;
+    at?: number;
+    revision?: CardRevisionLinks;
+  }): CardMessage {
+    const at = input.at ?? Date.now();
+    const result = this.db
+      .prepare(
+        "INSERT INTO card_messages (card_id, who, text, at, revision_json) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(
+        input.cardId,
+        input.who,
+        input.text,
+        at,
+        input.revision ? JSON.stringify(cardRevisionSchema.parse(input.revision)) : null,
+      );
+    return {
+      id: Number(result.lastInsertRowid),
+      cardId: input.cardId,
+      who: input.who,
+      text: input.text,
+      at,
+      ...(input.revision ? { revision: input.revision } : {}),
+    };
+  }
+
+  /** Publish every write from the turn, not merely its newest offer. */
+  releaseRevisions(cardId: string, lifecycleId: string): boolean {
+    return (
+      this.db
+        .prepare(`UPDATE card_messages SET revision_json = json_set(revision_json, '$.released', json('true'))
+      WHERE card_id = ? AND json_valid(revision_json) AND json_extract(revision_json, '$.lifecycleId') = ?
+      AND json_extract(revision_json, '$.released') = 0`)
+        .run(cardId, lifecycleId).changes > 0
+    );
+  }
+
+  /**
+   * A card's thread, oldest first. A captain's reply carries the settings
+   * it was sent with beside his words (`CardMessage.answers`).
+   */
+  messages(cardId: string): CardMessage[] {
+    const rows = this.db
+      .prepare(`SELECT ${MESSAGE_COLUMNS} FROM card_messages m WHERE m.card_id = ? ORDER BY m.id`)
+      .all(cardId) as MessageRow[];
+    return rows.map(messageOf);
+  }
+
+  /** One card's thread, counted, with its newest message; absent when it has none. */
+  threadStat(cardId: string): ThreadSummary | undefined {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS count, MAX(id) AS last_id FROM card_messages WHERE card_id = ?")
+      .get(cardId) as { count: number; last_id: number | null };
+    if (!row || row.count === 0 || row.last_id === null) return undefined;
+    const last = this.messageById(row.last_id);
+    return last ? { cardId, count: row.count, last } : undefined;
+  }
+
+  /**
+   * How many messages every card with a thread holds, and its newest - the
+   * one query the Firstmate's context section is rendered from, so it never
+   * walks the table card by card. Newest thread first, capped by `limit`,
+   * because the section that reads it is bounded anyway.
+   */
+  threadSummaries(since: number, limit = 8): ThreadSummary[] {
+    const rows = this.db
+      .prepare(
+        `SELECT card_id, COUNT(*) AS count, MAX(id) AS last_id FROM card_messages
+         GROUP BY card_id HAVING MAX(at) >= ? ORDER BY MAX(at) DESC LIMIT ?`,
+      )
+      .all(since, limit) as { card_id: string; count: number; last_id: number }[];
+    return rows.flatMap((row) => {
+      const last = this.messageById(row.last_id);
+      return last ? [{ cardId: row.card_id, count: row.count, last }] : [];
+    });
+  }
+
+  private messageById(id: number): CardMessage | undefined {
+    const row = this.db
+      .prepare(`SELECT ${MESSAGE_COLUMNS} FROM card_messages m WHERE m.id = ?`)
+      .get(id) as MessageRow | undefined;
+    return row ? messageOf(row) : undefined;
+  }
+
+  /**
+   * Whether an open card currently waits for its author's answer. The
+   * persisted hold belongs to this lifecycle; historical thread messages
+   * survive resolution and reopening and cannot establish a new obligation.
+   */
+  awaitingAuthor(cardId: string): boolean {
+    const row = this.db
+      .prepare("SELECT awaiting FROM cards WHERE id = ? AND resolved_at IS NULL")
+      .get(cardId) as { awaiting: string | null } | undefined;
+    return row?.awaiting === "answer";
+  }
+
+  deleteForTask(taskId: string): void {
+    this.db.transaction(() => {
+      // The thread, the revisions and the evidence die with their card.
+      for (const table of ["card_messages", "card_revisions", "card_observations"]) {
+        this.db
+          .prepare(`DELETE FROM ${table} WHERE card_id IN (SELECT id FROM cards WHERE task_id = ?)`)
+          .run(taskId);
+      }
+      this.db.prepare("DELETE FROM card_observations WHERE task_id = ?").run(taskId);
+      this.db.prepare("DELETE FROM cards WHERE task_id = ?").run(taskId);
+    })();
+  }
+
+  /**
+   * The evidence of cards with no task of their own (a Firstmate decision
+   * filed as its own row, a host card's operation row): the purge removes
+   * it with the rows that stood for those cards. The card rows stay, as
+   * they always have.
+   */
+  deleteEvidenceFor(cardIds: readonly string[]): void {
+    if (cardIds.length === 0) return;
+    this.db.transaction(() => {
+      const remove = this.db.prepare("DELETE FROM card_observations WHERE card_id = ?");
+      for (const cardId of cardIds) remove.run(cardId);
+    })();
+  }
+
+  // ---- the card evidence (docs/card-evidence.md) --------------------------
+
+  /**
+   * Runs `write` as one transaction: a card or thread write and the
+   * observation that describes it commit together or not at all. Nested
+   * calls join the outer one.
+   */
+  transaction<T>(write: () => T): T {
+    return this.db.transaction(write)();
+  }
+
+  /**
+   * Append one observation. Its payload is validated against its kind's
+   * schema here, so nothing unreadable is ever written. Returns false when
+   * the same interaction on the same card is already recorded - a
+   * retransmitted click is one observation, never two.
+   */
+  observe<K extends CardObservationKind>(input: {
+    id: string;
+    kind: K;
+    cardId: string;
+    lifecycleId: string;
+    taskId?: string | undefined;
+    at: number;
+    actor: CardObservationActor;
+    source: CardObservationSource;
+    offerId?: string | undefined;
+    interactionId?: string | undefined;
+    messageId?: number | undefined;
+    build?: string | undefined;
+    payload: CardObservationPayload<K>;
+  }): boolean {
+    const payload = cardObservationPayloadSchemas[input.kind].parse(input.payload);
+    const result = this.db
+      .prepare(
+        `INSERT INTO card_observations
+           (id, card_id, lifecycle_id, task_id, kind, schema_version, capture_version,
+            recorded_at, actor, source, offer_id, interaction_id, message_id, build, payload_json)
+         VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT DO NOTHING`,
+      )
+      .run(
+        input.id,
+        input.cardId,
+        input.lifecycleId,
+        input.taskId ?? null,
+        input.kind,
+        CARD_CAPTURE_VERSION,
+        input.at,
+        input.actor,
+        input.source,
+        input.offerId ?? null,
+        input.interactionId ?? null,
+        input.messageId ?? null,
+        input.build ?? null,
+        JSON.stringify(payload),
+      );
+    return result.changes > 0;
+  }
+
+  /** A card's observations, every lifecycle, oldest first. */
+  observations(cardId: string): CardObservation[] {
+    const rows = this.db
+      .prepare("SELECT * FROM card_observations WHERE card_id = ? ORDER BY seq")
+      .all(cardId) as ObservationRow[];
+    return rows.flatMap((row) => {
+      const observation = observationOf(row);
+      return observation ? [observation] : [];
+    });
+  }
+
+  /** The newest availability of one offer on a lifecycle, if any. */
+  lastAvailabilityOf(
+    cardId: string,
+    lifecycleId: string,
+    offerId: string,
+  ): Extract<CardObservation, { kind: "availability" }>["payload"] | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT payload_json FROM card_observations
+         WHERE card_id = ? AND lifecycle_id = ? AND kind = 'availability' AND offer_id = ?
+         ORDER BY seq DESC LIMIT 1`,
+      )
+      .get(cardId, lifecycleId, offerId) as { payload_json: string } | undefined;
+    if (!row) return undefined;
+    const payload = cardObservationPayloadSchemas.availability.safeParse(
+      JSON.parse(row.payload_json),
+    );
+    return payload.success ? payload.data : undefined;
+  }
+
+  /** The offer a lifecycle last had available on the stage, if any. */
+  lastAvailableOffer(cardId: string, lifecycleId: string): string | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT offer_id FROM card_observations
+         WHERE card_id = ? AND lifecycle_id = ? AND kind = 'availability'
+           AND json_extract(payload_json, '$.state') = 'available'
+         ORDER BY seq DESC LIMIT 1`,
+      )
+      .get(cardId, lifecycleId) as { offer_id: string | null } | undefined;
+    return row?.offer_id ?? undefined;
+  }
+
+  /**
+   * The offer the captain last saw on a lifecycle (`seen`), passing over
+   * `except` - the version on the stage, which is compared with the one
+   * seen before it.
+   */
+  lastSeenOffer(cardId: string, lifecycleId: string, except?: string): string | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT offer_id FROM card_observations
+         WHERE card_id = ? AND lifecycle_id = ? AND kind = 'seen' AND offer_id IS NOT ?
+         ORDER BY seq DESC LIMIT 1`,
+      )
+      .get(cardId, lifecycleId, except ?? null) as { offer_id: string | null } | undefined;
+    return row?.offer_id ?? undefined;
+  }
+
+  /** One offer as the host put it up, and when. */
+  offer(
+    cardId: string,
+    offerId: string,
+  ): { at: number; payload: CardObservationPayload<"offer"> } | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT recorded_at, payload_json FROM card_observations
+         WHERE card_id = ? AND kind = 'offer' AND id = ?`,
+      )
+      .get(cardId, offerId) as { recorded_at: number; payload_json: string } | undefined;
+    if (!row) return undefined;
+    let raw: unknown;
+    try {
+      raw = JSON.parse(row.payload_json);
+    } catch {
+      return undefined;
+    }
+    const payload = cardObservationPayloadSchemas.offer.safeParse(raw);
+    return payload.success ? { at: row.recorded_at, payload: payload.data } : undefined;
+  }
+
+  /**
+   * Record that this capture version is running, once: the first boot on
+   * it stamps when and on which build, so a reader can tell an interval the
+   * capture covered from one it did not.
+   */
+  markCaptureEpoch(at: number, build?: string): void {
+    // One namespace per installation: the first epoch's, kept by every later one.
+    const first = this.db
+      .prepare("SELECT namespace FROM card_capture_epochs ORDER BY capture_version LIMIT 1")
+      .get() as { namespace: string } | undefined;
+    this.db
+      .prepare(
+        "INSERT OR IGNORE INTO card_capture_epochs (capture_version, activated_at, build, namespace) VALUES (?, ?, ?, ?)",
+      )
+      .run(CARD_CAPTURE_VERSION, at, build ?? null, first?.namespace ?? randomUUID());
+  }
+
+  private row(cardId: string): Row | undefined {
+    return this.db.prepare("SELECT * FROM cards WHERE id = ?").get(cardId) as Row | undefined;
+  }
+}

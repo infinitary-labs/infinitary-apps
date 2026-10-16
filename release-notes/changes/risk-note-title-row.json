@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "risk-note-title-row",
+      "kind": "improvement",
+      "title": "A risk dot's note sets its rating apart from the reason",
+      "body": "Resting on a dot of a merge card's risk chart opens a note whose first line, the risk and its rating, now stands out brighter, with a gap before the crewmate's reason under it.",
+      "area": "cards",
+      "picture": {
+        "dark": "risk-note-title-row-dark.webp",
+        "light": "risk-note-title-row-light.webp",
+        "alt": "A risk dot's note with Undo and its rating on a bright first line, and the crewmate's reason in softer text a gap below"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

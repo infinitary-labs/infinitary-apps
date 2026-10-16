@@ -1,0 +1,18 @@
+/** What the picture viewer's player reads in place of its time when a recording cannot play (`PictureViewer.tsx`). */
+export const RECORDING_UNPLAYABLE = "This recording could not be played.";
+
+/** A picture's own size, "1600 × 400". */
+export function pictureSize(size: { width: number; height: number }): string {
+  return `${size.width} × ${size.height}`;
+}
+
+/** The hint under a picture: its size, then how it is shown at 1:1, at its own size or fitted. */
+export function pictureHint(
+  size: { width: number; height: number },
+  shown: "one" | "own" | "fitted",
+): string {
+  const dims = pictureSize(size);
+  if (shown === "one") return `${dims} · 1:1 · drag or scroll to move`;
+  if (shown === "own") return `${dims} · shown at its own size`;
+  return `${dims} · fitted · click or Z for 1:1`;
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "decisions-give-two-or-three-choices",
+      "kind": "fix",
+      "title": "A question on a card always offers two or three choices",
+      "body": "When Firstmate or a crewmate asks you to choose on a card, the card now always offers two or three choices, never a single button to press or a long row of them.",
+      "area": "cards",
+      "noPicture": "Cards look as they did; the fix is that a card with one choice, or more than three, no longer reaches the stack.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

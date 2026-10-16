@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "work-computer-codex-paste-address",
+      "reason": "Internal, behind the development-only multi-machine gate: signing a computer that runs work in to Codex or OpenRouter with the browser now asks for the address the browser ends on, which cannot be reached from another Mac, instead of a code that page never shows. An installed app shows and offers none of it."
+    }
+  ]
+}

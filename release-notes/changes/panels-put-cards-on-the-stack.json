@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "panels-put-cards-on-the-stack",
+      "kind": "feature",
+      "title": "Your panels can open cards beside your other cards",
+      "body": "A panel Firstmate builds for you, or one you add, can now open any number of its own cards on your card stack, put up from buttons in its header and from its own commands in command search, which can have keys. A card you open comes to the front; one a panel opens on its own waits behind the card you are reading, marked new. Hide or Esc puts it away.",
+      "area": "cards",
+      "picture": {
+        "dark": "panels-put-cards-on-the-stack-dark.webp",
+        "light": "panels-put-cards-on-the-stack-light.webp",
+        "alt": "A Reading card opened from the Reading list panel, whose header now has an open button and a search button beside its collapse arrow"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "api": 1,
+  "title": "Knowledge",
+  "placement": { "x": "right", "y": "bottom" },
+  "order": 20,
+  "size": "content",
+  "presence": { "code": true },
+  "reads": [
+    "knowledge.collections",
+    "knowledge.graph",
+    "knowledge.concepts",
+    "knowledge.findings",
+    "knowledge.entry",
+    "knowledge.directions",
+    "knowledge.direction",
+    "tasks.board",
+    "tasks.search"
+  ],
+  "cards": {
+    "browser": { "view": "browser", "title": "Knowledge", "width": "wide", "height": "fill" }
+  },
+  "header": [{ "id": "open", "icon": "open", "label": "Open Knowledge", "emits": "browser" }],
+  "commands": [
+    {
+      "id": "open",
+      "label": "Open Knowledge",
+      "emits": "browser",
+      "data": { "focus": "pane" },
+      "words": ["concepts", "findings", "graph", "learned", "evidence", "directions", "notes"]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crew-sign-in-card-plain-words",
+      "kind": "fix",
+      "title": "A crewmate's sign-in card says what to do",
+      "body": "When a crewmate cannot reach its model, its card now says so in plain words. For a custom connection, it names the connection and says to press Edit and then Save in Settings → Intelligence to check it again. The card no longer shows sign-in commands or file paths from the app.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "crew-sign-in-card-plain-words-dark.webp",
+        "light": "crew-sign-in-card-plain-words-light.webp",
+        "alt": "A provider needs sign in card naming Operator gateway, a custom connection, and saying to press Edit and then Save in Settings, Intelligence"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

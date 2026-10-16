@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-facts-beside-buttons",
+      "kind": "improvement",
+      "title": "A merge card's project, model, care, pull request and checks now stay beside its buttons",
+      "body": "On a card that merges or discards work, the row that names the project, the model, the care level, the pull request, the checks and any hold now sits next to the card's buttons. Before, it came at the very end of the card, so a long card hid it until you scrolled down. It stays in view while you scroll, and when the card is narrow it takes its own line just above the buttons.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

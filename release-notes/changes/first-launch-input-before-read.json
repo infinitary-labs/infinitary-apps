@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "first-launch-input-before-read",
+      "kind": "fix",
+      "title": "A new install no longer takes words before it knows a subscription is connected",
+      "body": "In the first moment after opening a new install, the message box could send words before the app had checked whether a subscription was connected. Firstmate could not answer them, the sign-in choices gave way to a card, and the welcome was skipped. The message box now waits for that check, which takes a split second, and the welcome arrives once you connect.",
+      "area": "message-box",
+      "noPicture": "Nothing on screen looks different: the message box only waits for the split second before the app has checked.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

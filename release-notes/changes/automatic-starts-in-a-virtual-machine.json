@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automatic-starts-in-a-virtual-machine",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Automatic starts tasks in a virtual machine",
+      "body": "A new task in a project set to Automatic now starts on a computer that runs as a virtual machine, on a Mac or on Linux, when it has room, instead of waiting for a compatible computer with room to start.",
+      "picture": {
+        "dark": "automatic-starts-in-a-virtual-machine-dark.webp",
+        "light": "automatic-starts-in-a-virtual-machine-light.webp",
+        "alt": "Task Details, on a Mac virtual machine, show Runs on This computer and say Automatic chose This computer because it had room to start."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

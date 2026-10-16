@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "task-card-tabs",
+      "kind": "improvement",
+      "highlight": 2,
+      "title": "A task's card has tabs",
+      "body": "When a task has a browser, its card shows tabs under the title: Info, with everything the card showed before, and Browser, which watches the crewmate's page. A browser with two pages gets a tab for each, named Browser and the page's title. Tab and the arrow keys move between them, and command search has Show Info, Show Browser, Next tab and Previous tab.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-tabs-dark.webp",
+        "light": "task-card-tabs-light.webp",
+        "alt": "A task's card with its Info and Browser tabs under the title"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

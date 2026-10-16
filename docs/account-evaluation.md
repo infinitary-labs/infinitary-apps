@@ -1,0 +1,169 @@
+# Signed-in account evaluations
+
+Developer tooling only; nothing in `src/` imports this runner, and no app feature or release is added.
+A live run spends allowance only after the captain approves that run's sheet.
+
+## Run sheet, then the captain's go
+
+Bring the version being evaluated up to date first.
+Run from a clean committed working copy:
+
+```sh
+pnpm eval:accounts --out /tmp/approval-eval \
+  --builder-account ACCOUNT_ID --builder-provider PROVIDER --builder-model MODEL
+```
+
+This opens no model session.
+It uses account metadata, and (only when no first mate model/account was named) a read-only connection selecting exactly the `firstmate-model` and `firstmate-account` settings rows.
+To avoid even that read, name all three `--firstmate-account`, `--firstmate-provider`, `--firstmate-model` options.
+The builder's selection must be explicit: there is no durable universal “builder model” setting.
+
+Show `run-sheet.json` and its hash on a decision card.
+It names the committed version, both accounts/models, nine first mate checks and two builder reviews, prompt/instruction/tool/turn fingerprints, each check's own call allowance and input reservation, and the run's call/token limits.
+It binds approval to a unique run and output folder.
+No model calls, sign-in probes, login commands or credential reads occur in this mode.
+
+After the captain approves that sheet, a Claude crewmate runs it from its own shell and holds its turn until the run exits (see "The Claude crewmate's client"):
+
+```sh
+pnpm eval:accounts --out /tmp/approval-eval \
+  --builder-account ACCOUNT_ID --builder-provider PROVIDER --builder-model MODEL \
+  --live --approved-hash APPROVED_HASH --claude-crew-turn
+```
+
+Use exactly the same model/account arguments as the dry run.
+Approval permits this one run, never a merge.
+A consumed output folder refuses another run, including another dry run; use a fresh folder and obtain fresh approval instead.
+Output folders within either real app profile are refused, so use a scratch location even if your working copy happens to live under the release profile.
+
+## The Claude crewmate's client
+
+The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.
+A live run with a Claude role therefore runs under that client, and the runner checks it rather than trusting the caller (`claudeCrewClient` in `scripts/evals/runner.ts`).
+The client names itself to every command it runs (`CLAUDE_PID`), and the app starts a crewmate's client through the SDK (`CLAUDE_CODE_ENTRYPOINT=sdk-ts`), unlike a person's terminal session.
+Before the run uses the sheet, at each case's start, at each model request and on every tick of the run's clock, that client must be one of the run's ancestors in the process table.
+A run that is not under it is refused before `run-started.json` is written, so the approval is not spent.
+A run that stops being under it, because its client ended or because it was detached with `nohup`, `setsid` or a shell that exited, cuts its open case and opens no other; the case files and `usage.json` record `Claude crewmate client ended`.
+A Pi crewmate's shell has no Claude client and moves every command past 3 seconds to a background job, so a Pi crewmate prepares the sheet and a Claude crewmate runs it.
+
+The Claude crewmate keeps the run inside its turn:
+
+1. Start the command from its own shell.
+   Claude's shell runs a foreground command for at most 10 minutes and then moves it to the background, still under the client; a run that may take longer starts as the shell's own background command with its longest allowance.
+2. Hold the turn until the run exits by waiting on it in the foreground: `caffeinate -w PID` with the `pid` that `run-started.json` records, again after each wait's timeout.
+3. Report only after the run has exited, because a report can close the task, and the end of the task's client stops the run.
+
+## Sign-in boundary
+
+- Claude uses production `createClaudeSessionFactory`, `defaultClaudeConfigDir()`, production environment stripping and `settingSources: []`.
+  The client owns its sign-in; no sign-in, login probe, Keychain command or credential copy runs.
+- Pi uses the release profile's `AccountVault.list/get/runtimeFor` only.
+  A proxy refuses every other vault operation.
+  Production runtimes own refreshes in their existing account stores.
+  No environment secret or command-line secret is set.
+- Registry bytes are hashed before and after.
+  If the running app itself changes account metadata, the evaluation becomes invalid too; never restore an older registry over the app's newer one.
+- `tests/eval-auth-turn-taking.test.ts` runs two processes against one disposable auth file and a single-use expired fake OAuth server, for both provider ids.
+  The installed Pi resolver and file store refresh exactly once, both processes receive the new auth and both resolve again.
+  This verifies the shared refresh-lock mechanism, not the real providers' OAuth endpoints, and spends no allowance.
+
+## Isolation and evidence
+
+`approvalHost` uses the same `isolatedWorkspace` and `wireIsolatedHost` as replay, with app migrations, real task/card services and supervisor.
+Every case gets fresh disposable state and ids; fixture tasks enter through `seedTask`.
+Crew dispatch opens inert sessions only; it never opens another model session, creates a git repository or merges.
+Tools come from the production seat/crewmate presets, restricted to the fictional graph, crew and cards (builder reviews only get read/report/card tools).
+Coding built-ins, project discovery/setup, schedules, sign-in operations and real-account writes are disconnected.
+Only `settle_task answered` may close a fictional internal answer; merges, discards and releases are refused before execution.
+
+The runner records request events, response content/usage/model fields, executed calls and exact returned text, final graph/card state, starts, endings and checksums from an artifact allowlist.
+Credential-shaped text is redacted before writing, string by string before serialization so an escape such as `\n` never hides where a word starts: `Bearer` and its token, `access_token`/`refresh_token` and their values, and `sk-`/`eyJ` keys and tokens only where a word starts and in their real case, so ordinary words such as task-card and task-first stay readable A key that needed redaction takes its value with it.
+No headers, provider exceptions, environment or config objects enter the artifacts.
+The served model comes from the recorded assistant response, not the requested model.
+Pi's transcript uses the model id its backend reports; it cannot reveal an upstream alias that Pi itself discards.
+`native` entries retain request order and per-assistant usage from the conversation transcript.
+The shared reader preserves Claude's input, output, cache-read and cache-write counters, keeping the last reported value per field across one assistant message's content blocks rather than summing repeated usage.
+Each assistant entry's `usage` and each case's `usageTotals` use `null` for an absent or invalid counter; a reported zero remains zero.
+Each case names its `usageSource`: Claude uses the normalized `turn_end` totals, including the client's side-model calls that are absent from `native`, while Pi uses its native assistant entries.
+The runner never adds Claude's transcript usage to its turn totals, and never assigns a whole turn's usage to one assistant message.
+`usage.json` sums those case totals; any unknown contribution makes that counter's total unknown, not a partial sum or zero.
+A case skipped before a connection attempt consumes nothing; an attempted case with no usage evidence is unknown.
+Input reservations and observed request counts remain separate from actual usage, and client side calls do not increase `callsUsed`.
+Both hermetic backend proofs read every string of every output file, keys included: none holds `Bearer`, `access_token` or `refresh_token`, or `sk-`/`eyJ` where a word starts, the planted mock sign-ins appear nowhere, and each case file's user turn still matches its `turnSha`.
+
+The default limit is 80 calls globally, 6 per first mate case and 4 per builder review, production 8192 output tokens, 300-second request and 10-minute case watchers.
+The run sheet names the total calls these twelve cases may make under the reservation ceiling, never the larger global limit alone.
+A smaller prompt can restore a case’s full allowance; cases that cannot fit receive the reduced allowance shown on that sheet.
+
+Each case's input is reserved before its session opens, counting UTF-8 bytes as tokens: the first request's instructions, user turn and tool schemas once per call, plus every earlier call's maximum output and its bounded tool-result text.
+The sheet fixes the plan before approval: every case row carries `promptBytes`, its `calls` allowance and the `inputTokens` reserved for them, and `maximumCalls` and `maximumInputTokens` are their sums.
+The run reserves exactly that plan, so an earlier case can never shorten a later one.
+The reservation ceiling is 12 million.
+If a module's full plan passes either ceiling, the largest allowance gives up one call at a time (the later case on a tie) until it fits, and the sheet states those smaller allowances before anyone approves it.
+
+A cut-off, refused/invalid/failed tool execution, missing served-model evidence or exhausted budget stops subsequent cases.
+Each case file's `reason` and `usage.json`'s `stop` name what stopped it.
+When the runner cuts a turn itself, on a tool refusal or its call limit, the cut turn's failure keeps the runner's reason; only a failed turn the runner did not cut reads as a cut-off class or `provider failure`.
+Missing/bounded cases never pass.
+There are no runner retries.
+The evaluation overrides Pi's request retry bound to zero and sets the Claude client's own retry limit to zero, so provider retries cannot silently spend extra model calls; the run sheet includes this policy.
+Disposable 503-provider tests observe exactly one attempt on each backend.
+
+`responses.json` is the `EvalRun` input to the existing scorer.
+Review fields deliberately start false; the evaluating crewmate, not the tested model, must independently fill the three review judgments with trace quotations.
+Then:
+
+```sh
+pnpm eval:approval --out /tmp/approval-score --responses /tmp/approval-eval/responses.json
+```
+
+A run is a pass only if all twelve cases end normally and the scorer exits zero after independent review.
+A mock run proves plumbing, not instruction following.
+
+## Other evaluations
+
+`--module PATH` loads a developer module through `scripts/moduleRunner.ts`.
+It exports `evaluation: EvaluationModule`: a name, cases and a fresh disposable host factory, with production specs, user turns, effect observations and final state.
+The default module is approval handoff; artifacts retain its scorer's shape.
+Every module stays outside production imports.
+
+## No-cost proof
+
+```sh
+pnpm exec vitest run tests/account-eval.test.ts tests/account-eval-usage.test.ts tests/eval-auth-turn-taking.test.ts
+```
+
+The complete twelve-case path runs on the e2e mock Pi provider and the mock Claude client, with disposable HOME and local fake endpoints.
+The Claude usage proof scripts two tool-using cases with nonzero cache counters, checks native per-message usage and whole-run totals against the local server's independent token ledger, and repeats with deliberately missing transcript and turn counters to check explicit unknowns.
+`tests/account-eval-usage.test.ts` also checks partial unknowns, side-model contributions and reported zeros; `src/core/storage/sessionReader.test.ts` checks repeated content blocks and late usage updates.
+It checks sheet/hash admission, registry checksums, native response/model/usage artifacts, all twelve normal endings, review fields left unapproved, repeat-run refusal, graph effects and repeated-start refusal.
+The allowance proofs build the twelve real hosts: the sheet gives every case its full allowance under the ceiling, a plan padded past the ceiling states smaller allowances, and one twelve-case run on the mock provider opens every session with exactly its sheet allowance (the old running reservation opened cases six to eight with 5 calls even when every case made one request).
+A basis edit is judged by the task the record now names, whether the tool stored its key or its id, so welcome-recovery's attach-then-start path is checked through the production tools.
+A scripted local endpoint asks for a settle, which the evaluation refuses, and the case and `usage.json` keep `tool refusal or failure` after the cut turn reports its failure.
+The crewmate-client proofs find the client among the run's ancestors in the real process table and nowhere else, let go of a run the system adopted away from it, refuse a Claude run outside a crewmate's client without writing `run-started.json`, and stop a mock Claude run whose client ends during its first request at that request, opening no later case.
+The two-process proof never uses real auth.
+No UI changed, so no desktop end-to-end lane is needed; replay's callers and gate cover its shared wiring extraction.
+
+## Answer ownership
+
+The approved FI3-1162 module is `scripts/evals/answerOwnership.ts`, selected with `--module scripts/evals/answerOwnership.ts` on `pnpm eval:accounts`.
+Its eight first mate cases cover a code-dependent thread reply, non-reproduction questions and fix options staying with the available author; crew-wide, closed-record, permission and reviewer questions staying with the first mate; and a clean reproduction advancing without a captain card.
+Available authors open real inert supervisor sessions before the tested turn, so guidance must reach a real fictional owner rather than merely appear in a proposed call.
+Setup starts are excluded from observed evaluation effects.
+All eight cases use the configured first mate model; the runner still requires an explicit builder selection for its shared sheet format, but this module opens no builder model session.
+The current runner reserves up to six calls per case (48 total), not the planning estimate of 24; the exact conservative byte-based input reservation is on the sheet the captain approves.
+Use the same approval, account, isolation and foreground-Claude boundaries as above.
+After the run, independently review each trace into a separate JSON file keyed by case id, with `correctAnswer`, `noRelayConstraint`, `threadNamesOwner` for the code-reply case, and `quotations` supporting the judgments.
+Those judgments concern actual answer ownership and content, never matching a prescribed phrase.
+Score with `node scripts/evals/answer-ownership.ts --out /tmp/ownership-score --responses /tmp/ownership-eval/responses.json --reviews /tmp/ownership-reviews.json`.
+A run passes only when all eight normal endings, executed effects, observed state and independent judgments pass; a scripted interface proof is not live instruction-following evidence.
+
+## Lessons
+
+The FI3-1474 module is `scripts/evals/lessons.ts`, selected with `--module scripts/evals/lessons.ts` on `pnpm eval:accounts`.
+Its four first mate cases check the routing of a lesson request: a new subject starts exactly one teacher with `personal_ui` true, the captain's words verbatim, no `repo_id` and no read-only constraint; a request about a subject with an open teacher steers that teacher and starts none; a second subject starts its own teacher; and an ordinary research ask is not a lesson.
+The scorer reads the first mate's chosen calls and their closed arguments, never prose: the isolated host binds a personal-workspace stand-in (a registered personal repo and inert hooks), so a personal-workspace start succeeds and opens only the inert crew session.
+The run opens no teacher session, so it says nothing about how a model follows the lessons guide or how long a round takes to write.
+The runner still requires an explicit builder selection for the shared sheet format, but this module opens no builder session.
+Score with `node scripts/evals/lessons-score.ts --out /tmp/lesson-score --responses /tmp/lesson-eval/responses.json`.
+Use the same approval, account, isolation and foreground-Claude boundaries as above.

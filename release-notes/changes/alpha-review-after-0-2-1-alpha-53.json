@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-1-alpha-53",
+      "reason": "Release review after alpha 0.2.1-alpha.53: ranks the quoted last turn above the message box, picking a nearby Mac when adding one by its address, and Claude's allowance reading fresh again as highlights; rewords the Claude allowance fix and the approved-plan build note in plain words. Nothing in the app changes."
+    }
+  ]
+}

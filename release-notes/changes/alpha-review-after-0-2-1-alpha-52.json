@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-1-alpha-52",
+      "reason": "Release review after alpha 0.2.1-alpha.52: ranks the password-once Mac add, the finish-setup card and running one task on another Mac as highlights; widens the Claude allowance fix to any Mac with many saved passwords; drops an error code and a company name from two custom connection notes; names who reads the page in the browser fix. Nothing in the app changes."
+    }
+  ]
+}

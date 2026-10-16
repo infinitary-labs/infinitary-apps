@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-on-another-computer",
+      "kind": "feature",
+      "title": "Tasks on your other computers have their own browser",
+      "body": "A task that runs on another Mac, or as another user on this Mac, now opens its own browser there, reaching websites and the pages that computer serves. From this Mac you watch it, take control, sign in and hand it back, as for a task here, and a sign-in you saved here reaches it only when you allow it on its card.",
+      "area": "devices",
+      "picture": {
+        "dark": "task-browser-on-another-computer-dark.webp",
+        "light": "task-browser-on-another-computer-light.webp",
+        "alt": "A card from a task running as another user asks you to sign in to a club page, with its browser paused for your help and an Open browser and sign in button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

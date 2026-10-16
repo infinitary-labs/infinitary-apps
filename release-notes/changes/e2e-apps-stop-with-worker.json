@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-apps-stop-with-worker",
+      "reason": "Test harness only: an end-to-end test app now stops when the test worker that launched it ends, so a cancelled CI job no longer leaves test apps running on the Mac that ran it; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "keyboard-command-catalog",
+      "reason": "Moves the size keys, the View menu's size shortcuts and the message box's Control-key edits and recall onto one shared list of keyboard commands, the base that command search and changeable shortcuts will build on. Every key does what it did before, so nothing a person notices changes."
+    }
+  ]
+}

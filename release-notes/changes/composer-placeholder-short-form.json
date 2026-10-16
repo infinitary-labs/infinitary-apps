@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "composer-placeholder-short-form",
+      "kind": "fix",
+      "title": "The message box hint stays whole in a narrow window",
+      "body": "When the message box is too narrow for its grey hint, as in a small window with both side panels open, it now shows a shorter hint, such as \"press/hold right ⌥ to talk\". Before, the hint was cut off mid-sentence.",
+      "area": "message-box",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

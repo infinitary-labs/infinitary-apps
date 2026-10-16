@@ -1,0 +1,52 @@
+#!/bin/sh
+# Firstmate 3000's git helper (git integration PR 1.2, docs/forge.md).
+#
+# Git runs this when a project's host asks who is pushing or pulling and no
+# credential helper answered: GIT_ASKPASS names it in every child the app
+# starts (src/core/hostEnv.ts). It answers ONLY for a host the person signed
+# in to inside the app - the sign-in file under $INFINITARY_GIT_SIGNIN_DIR/<host>/
+# (or the older $FM3000_GIT_SIGNIN_DIR) - and says nothing for any other
+# host, so git fails at once instead of waiting on a prompt nobody sees. It
+# reads the sign-in from its 0600 file and prints it to git alone: never an
+# argument, never the environment.
+#
+# The user name is the host's own: the file's "gitUser" where the sign-in
+# names one (a host on the person's own server), else GitHub's
+# x-access-token.
+#
+# Git asks twice, with the address in quotes:
+#   Username for 'https://github.com':
+#   Password for 'https://x-access-token@github.com':
+
+prompt=$1
+dir=${INFINITARY_GIT_SIGNIN_DIR:-${FM3000_GIT_SIGNIN_DIR:-}}
+[ -n "$dir" ] || exit 1
+
+url=$(printf '%s\n' "$prompt" | sed -n "s/^[^']*'\([^']*\)'.*$/\1/p" | head -n 1)
+case $url in
+  https://*) ;;
+  *) exit 1 ;;
+esac
+
+host=${url#https://}
+host=${host%%/*}
+host=${host##*@}
+host=${host%%:*}
+host=$(printf '%s' "$host" | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')
+case $host in
+  '' | .* | *..* | *[!a-z0-9.-]*) exit 1 ;;
+esac
+
+file=$dir/$host/sign-in.json
+[ -f "$file" ] || exit 1
+token=$(sed -n 's/.*"token":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+[ -n "$token" ] || exit 1
+
+user=$(sed -n 's/.*"gitUser":"\([^"\\]*\)".*/\1/p' "$file" | head -n 1)
+[ -n "$user" ] || user=x-access-token
+
+case $prompt in
+  Username*) printf '%s\n' "$user" ;;
+  Password*) printf '%s\n' "$token" ;;
+  *) exit 1 ;;
+esac

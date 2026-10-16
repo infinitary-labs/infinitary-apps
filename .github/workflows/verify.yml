@@ -1,0 +1,399 @@
+name: verify
+
+# The full verification PR CI no longer pays for (captain decision B,
+# 2026-09-15; scout fm3000-ci-release-only-s1): the unit gate and the
+# Playwright e2e suite on hosted Linux, then the unit suite again, the e2e
+# suite, the replay gate and the universal package smoke on macOS. It runs
+# inside every alpha before signing, and on demand for any ref:
+#
+#   gh workflow run verify.yml --ref <branch|tag|sha>
+#
+# Its lanes follow a profile (docs/alpha.md "The signed channel workflow"):
+# stable and alpha both run the full Linux and Mac lanes. Stable
+# promotions omit this workflow entirely, relying on their published alpha's run.
+#
+# The e2e paint and latency budgets are graded only on request, on a quiet
+# host (captain's B1, 2026-09-24; tests/e2e/perf.ts): every e2e run prints
+# them, and `-f perf=true` adds a run of the @perf-tagged specs that holds
+# them to their budgets.
+#
+# Deliberately no pull_request, push or schedule trigger (captain's call):
+# the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
+# label still comes from the MAC_RUNNER repository variable so a self-hosted
+# runner can take it over without a workflow change. A pull request gets the
+# journeys its change can break from journeys.yml instead, on that runner
+# (FI3-1305): the whole suite stays here.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to verify (default - the caller's ref)
+        required: false
+        type: string
+      profile:
+        description: Which lanes run - stable or alpha (both run the full checks)
+        required: false
+        type: string
+        default: stable
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to verify (default - the selected ref)
+        required: false
+        type: string
+      profile:
+        description: Which lanes run - stable or alpha (both run the full checks)
+        required: false
+        type: choice
+        options:
+          - stable
+          - alpha
+        default: stable
+      perf:
+        description: Also grade the e2e paint and latency budgets (run this on a quiet host)
+        required: false
+        type: boolean
+        default: false
+
+# On demand, a newer verify of the same ref and profile replaces an older
+# one. Called by a release, verify belongs to that run alone and nothing
+# outside it cancels it - a rehearsal of the same commit must never cancel a
+# live release. (In a called workflow, github.workflow is the caller's name.)
+concurrency:
+  group: verify-${{ github.workflow == 'verify' && format('{0}-{1}', inputs.ref || github.ref, inputs.profile || 'stable') || github.run_id }}
+  cancel-in-progress: ${{ github.workflow == 'verify' }}
+
+jobs:
+  # linux-e2e: every Playwright journey on the app built from source on
+  # hosted Ubuntu, in shards (docs/testing.md, "The Linux source desktop").
+  # Journeys that are the Mac's alone skip there and say why.
+  linux-e2e:
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+      suite: full
+  # The profile's lanes, as one matrix: an omitted lane is absent from the
+  # run, never a skipped job that reads as green. linux-checks is the PR
+  # checks' commands in one job; mac is the full macOS verification. Each step names
+  # the lane it belongs to.
+  lane:
+    name: ${{ matrix.lane }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: ${{ fromJSON('["linux-checks","mac"]') }}
+    runs-on: ${{ matrix.lane == 'mac' && (vars.MAC_RUNNER || 'macos-15') || 'ubuntu-latest' }}
+    # Every crewmate works under "Application Support". The gate here does
+    # too, so a check that only fails from a path with a space fails here
+    # instead of only in a working copy (FI3-152).
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      # The shared action has to be on disk before it can run, and this job's
+      # default working directory does not exist until the real checkout.
+      # Fetch only that action, start the assertion, then check out the tree
+      # the rest of the job runs in. The assertion is .github/actions/keep-mac-awake
+      # (also used by the signing job); it is not copied here.
+      - name: Checkout the keep-awake action
+        if: matrix.lane == 'mac'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        if: matrix.lane == 'mac'
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          path: Application Support/firstmate
+      # Its own folder per job: both Mac runner slots run as one user, and
+      # setup wipes the default ~/setup-pnpm, pnpm's store included.
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - id: install
+        run: pnpm install --frozen-lockfile
+      # An install never signs (docs/local-code-signing.md), so the mac lane
+      # signs the dev Electron here, the way `pnpm dev` does on a person's
+      # Mac: e2e runs on it signed, and the codesign stage checks it.
+      - id: dev-signing
+        if: matrix.lane == 'mac'
+        run: pnpm codesign:local
+      # linux-checks: the commands of ci.yml's PR jobs, in one job on hosted Linux.
+      # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"),
+      # where the PR jobs run only the probes a change reaches.
+      - if: matrix.lane == 'linux-checks'
+        run: pnpm typecheck
+      - if: matrix.lane == 'linux-checks'
+        run: pnpm check
+      - if: matrix.lane == 'linux-checks'
+        run: pnpm lint:adherence
+      - if: matrix.lane == 'linux-checks'
+        run: pnpm test
+      - if: matrix.lane == 'linux-checks'
+        run: pnpm build
+      # The unit suite on macOS too: some suites are darwin-only (the local
+      # code signing contract in tests/local-codesign.test.ts, among others)
+      # and skip on the Linux PR check, so this is the only CI that runs them.
+      # About 25s in CI.
+      - id: unit
+        if: matrix.lane == 'mac'
+        run: pnpm test
+      # Playwright's window recorder is not part of an install. A journey that
+      # records would otherwise fetch it in the middle of its test, and where
+      # the fetch fails the window never reports itself loaded.
+      - if: matrix.lane == 'mac'
+        run: pnpm exec playwright install ffmpeg
+      # test:e2e builds once before launching the complete desktop suite.
+      # A local run keeps its JSON result in its own run directory
+      # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
+      - id: e2e
+        if: matrix.lane == 'mac'
+        run: pnpm test:e2e
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
+      # What the e2e run leaves for whoever reads it (docs/testing.md):
+      # Playwright's machine-readable result whenever the suite ran, and on a
+      # failure every result directory - each failed journey's error context
+      # (the error and the app's accessibility snapshot), its trace and its
+      # screenshot. Each app ran on a throwaway userData and HOME and no step
+      # of this job holds a secret; a trace records the launch environment's
+      # shape, never its values. Neither upload can fail the job, and neither
+      # runs when an earlier stage kept e2e from starting.
+      - name: Keep the e2e result
+        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: Application Support/firstmate/playwright-report/e2e-results.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Keep the failed journeys' evidence
+        if: ${{ always() && steps.e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failures
+          path: Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+      # The demos a journey recorded (tests/e2e/demo.ts, docs/testing.md
+      # "Recording a demo"), passed or failed, so a requested demo can be
+      # watched from the run's page. Only a journey that asks records.
+      - name: Keep the recorded demos
+        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-demos
+          path: Application Support/firstmate/test-results/runs/*/*/demo/
+          if-no-files-found: ignore
+          retention-days: 14
+      # The budgets the suite above only reported, graded (tests/e2e/perf.ts).
+      # Whole files, because a serial spec's later tests stand on its earlier
+      # ones; --no-deps, because the desktop lane is the other lanes' teardown
+      # and a teardown project ignores the file filter.
+      - id: perf
+        if: ${{ inputs.perf && matrix.lane == 'mac' }}
+        run: |
+          grep -l "tag: PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
+        env:
+          INFINITARY_PERF_BUDGETS: "1"
+          # Its own result file: the one the summary reads stays the suite's.
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/perf-results.json
+      # The Claude transport runs the client the machine has installed and the
+      # app ships none (F14), so a release has to prove today's client still
+      # serves the tool surface the source declares, and adds to the Firstmate
+      # seat only the attachments docs/claude-client.md accepts
+      # (claudeToolSurface.test.ts otherwise runs against the SDK's own
+      # copy). A runner that has a client - a self-hosted one is somebody's
+      # own Mac - is captured against that client exactly as installed, never
+      # updated or replaced from here; only a runner with none gets one the
+      # way a person does, from the vendor's native installer.
+      - id: claude-client
+        if: matrix.lane == 'mac'
+        run: |
+          claude_bin="$(command -v claude || true)"
+          if [ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ]; then claude_bin="$HOME/.local/bin/claude"; fi
+          if [ -z "$claude_bin" ]; then
+            curl -fsSL https://claude.ai/install.sh | bash
+            claude_bin="$HOME/.local/bin/claude"
+          fi
+          test -x "$claude_bin" || { echo "::error title=Claude Code missing::no installed client, and the native installer left none at ~/.local/bin/claude"; exit 1; }
+          "$claude_bin" --version
+          INFINITARY_CLAUDE_CLI="$claude_bin" pnpm exec vitest run src/core/claude/claudeToolSurface.test.ts
+      # The interaction eval gate (docs/replay-harness.md): replays the
+      # committed captain sessions and fails on any metric that regressed
+      # from tests/fixtures/replay/baseline.json.
+      - id: replay
+        if: matrix.lane == 'mac'
+        run: pnpm replay:gate
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.lane == 'mac'
+        with:
+          name: replay-report
+          path: Application Support/firstmate/replay-report.json
+          if-no-files-found: ignore
+      # electron-builder refuses to sign pull-request builds by default, which
+      # would skip the one step this smoke exists for: the fuse-flipped
+      # binary has to be re-signed or Apple Silicon SIGKILLs it at exec. This
+      # workflow never runs on a pull request, but the flag stays so the smoke
+      # keeps signing if a PR trigger is ever added. The flag's usual security
+      # concern is a fork reaching a stored certificate; there is none here -
+      # `pnpm codesign:local` generated this runner's own local certificate
+      # (docs/local-code-signing.md) and it dies with the runner.
+      - id: package
+        if: matrix.lane == 'mac'
+        run: pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml
+        env:
+          CSC_FOR_PULL_REQUEST: "true"
+      - id: codesign
+        if: matrix.lane == 'mac'
+        run: pnpm codesign:verify
+      # The local dev bundle is the dev flavor: it must open
+      # <appData>/infinitary-dev, never the installed release's folder
+      # (src/shared/userDataFolders.ts). The release's own folder is checked
+      # on the signed app in release.yml.
+      - id: data-folder
+        if: matrix.lane == 'mac'
+        run: scripts/check-user-data-dir.sh "dist/mac-universal/Infinitary Dev.app" infinitary-dev
+      # The app's own git (docs/forge.md): both architectures ship, and the
+      # runner's answers through the directory a crewmate's shell runs it
+      # from, with no search path at all.
+      - id: bundled-git
+        if: matrix.lane == 'mac'
+        run: scripts/check-bundled-git.sh "dist/mac-universal/Infinitary Dev.app"
+      # The app runs work for another Mac with no window (docs/helper.md):
+      # started as `<app> work`, on the runner's own architecture and on
+      # Intel through Rosetta when the runner has it.
+      - id: helper
+        if: matrix.lane == 'mac'
+        run: scripts/check-helper.sh "dist/mac-universal/Infinitary Dev.app"
+      # The run-alone pass (docs/testing.md "Each test owns its
+      # prerequisites"): each later test of a spec file that shares one app
+      # (test.beforeAll) runs by itself, by file:line, on the build the suite
+      # ran, so a test that leans on what an earlier one made fails here even
+      # when its whole file passes. It runs whether the suite passed or
+      # failed, after every other stage so it hides none of them, and the
+      # summary lists its failures apart from the suite's.
+      - id: alone
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.e2e.outcome != 'skipped' }}
+        run: node scripts/e2e-alone.ts --out playwright-report/alone
+      - name: Keep the run-alone result
+        if: ${{ always() && steps.alone.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-alone
+          path: Application Support/firstmate/playwright-report/alone/
+          if-no-files-found: ignore
+          retention-days: 14
+      # The run's page says what a red verify needs first (docs/testing.md):
+      # the exact commit it checked, the first stage that failed, and the e2e
+      # counts, skipped included, with every failure in the order it started
+      # and the first one's assertion. It reads the stages' typed outcomes and
+      # Playwright's JSON result, never the log's prose, and it decides
+      # nothing about which failure caused which - that stays with whoever
+      # reviews the evidence. A report, never a gate.
+      - name: Summarize
+        if: always() && matrix.lane == 'mac'
+        continue-on-error: true
+        env:
+          REQUESTED: ${{ inputs.ref || github.ref }}
+          STAGES: >-
+            install=${{ steps.install.outcome }}
+            dev-signing=${{ steps.dev-signing.outcome }}
+            unit=${{ steps.unit.outcome }}
+            e2e=${{ steps.e2e.outcome }}
+            perf=${{ steps.perf.outcome }}
+            claude-client=${{ steps.claude-client.outcome }}
+            replay=${{ steps.replay.outcome }}
+            package=${{ steps.package.outcome }}
+            codesign=${{ steps.codesign.outcome }}
+            data-folder=${{ steps.data-folder.outcome }}
+            bundled-git=${{ steps.bundled-git.outcome }}
+            helper=${{ steps.helper.outcome }}
+            alone=${{ steps.alone.outcome }}
+        run: |
+          first_failed=none
+          for stage in $STAGES; do
+            if [ "${stage#*=}" = failure ] && [ "$first_failed" = none ]; then first_failed="${stage%%=*}"; fi
+          done
+          {
+            echo "### verify of \`$REQUESTED\` at \`$(git rev-parse HEAD)\`"
+            echo
+            echo "First failed stage: **$first_failed**. Stages: \`$STAGES\`."
+            echo
+            node - <<'SUMMARY'
+          const fs = require("node:fs");
+          const file = "playwright-report/e2e-results.json";
+          if (!fs.existsSync(file)) {
+            console.log("No e2e result: the suite did not run to its end.");
+            process.exit(0);
+          }
+          const plain = (text) => String(text ?? "").replace(/\u001b\[[0-9;]*m/g, "");
+          // Playwright reports where an assertion failed by its real path.
+          const here = (path) => (path ?? "").replace(`${fs.realpathSync(process.cwd())}/`, "");
+          const report = JSON.parse(fs.readFileSync(file, "utf8"));
+          const stats = report.stats ?? {};
+          console.log(
+            `E2E: ${stats.expected ?? 0} passed, ${stats.unexpected ?? 0} failed, ` +
+              `${stats.flaky ?? 0} flaky, ${stats.skipped ?? 0} skipped or not run.`,
+          );
+          const failed = [];
+          const visit = (suite, titles) => {
+            for (const spec of suite.specs ?? [])
+              for (const test of spec.tests ?? [])
+                if (test.status === "unexpected")
+                  for (const result of test.results ?? [])
+                    if (result.status !== "passed" && result.status !== "skipped")
+                      failed.push({
+                        name: [...titles, spec.title].join(" › "),
+                        where: `${spec.file}:${spec.line}`,
+                        lane: test.projectName,
+                        startedAt: Date.parse(result.startTime),
+                        error: result.errors?.[0] ?? result.error ?? {},
+                      });
+            for (const child of suite.suites ?? []) visit(child, [...titles, child.title]);
+          };
+          for (const suite of report.suites ?? []) visit(suite, []);
+          failed.sort((a, b) => a.startedAt - b.startedAt);
+          const [first] = failed;
+          if (first) {
+            const at = first.error.location;
+            console.log(
+              `\nFirst to fail: **${first.name}** (\`${first.where}\`, ${first.lane})` +
+                (at ? `, at \`${here(at.file)}:${at.line}\`` : ""),
+            );
+            console.log(["```", ...plain(first.error.message).split("\n").slice(0, 12), "```"].join("\n"));
+            console.log("\nEvery failure, in the order it started:");
+            for (const failure of failed)
+              console.log(`- \`${failure.where}\` ${failure.name} (${failure.lane})`);
+          }
+          for (const error of report.errors ?? [])
+            console.log(`\nOutside any test: ${plain(error.message).split("\n")[0]}`);
+          SUMMARY
+            node - <<'ALONE'
+          const fs = require("node:fs");
+          const file = "playwright-report/alone/alone-results.json";
+          if (!fs.existsSync(file)) process.exit(0);
+          const { results } = JSON.parse(fs.readFileSync(file, "utf8"));
+          const failed = results.filter((result) => result.status === "failed");
+          console.log(
+            `\nRun alone: ${results.length - failed.length} passed, ${failed.length} failed, ` +
+              "each a later test of a file that shares one app, selected by itself.",
+          );
+          if (failed.length > 0) {
+            console.log("\nFailed alone (each error is in the e2e-alone artifact):");
+            for (const result of failed)
+              console.log(`- \`${result.file}:${result.line}\` ${result.title} (${result.lane})`);
+          }
+          ALONE
+          } | tee -a "$GITHUB_STEP_SUMMARY"

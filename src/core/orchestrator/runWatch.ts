@@ -1,0 +1,176 @@
+import { ForgeError, type WorkflowJobLine, type WorkflowJobList, type WorkflowRun } from "../forge";
+import type { InboxStore } from "../storage/inboxStore";
+import type { RunWatch } from "../storage/taskStore";
+import { TaskService } from "../tasks/taskService";
+import type { TypedWake } from "./wakes";
+
+export const RUN_WATCH_BOUND_MS = 3 * 60 * 60_000;
+export const RUN_WATCH_LIMIT = 5;
+export const RUN_WATCH_TICK_MS = 60_000;
+
+export type RunReading = { run: WorkflowRun; list: WorkflowJobList };
+
+export function runFinished(run: WorkflowRun): boolean {
+  return run.status === "completed" || run.conclusion !== null;
+}
+
+/** Hosts normalize terminal job conclusions; GitLab exposes allowed failures explicitly. */
+export function failedRunJobs(list: WorkflowJobList): WorkflowJobLine[] {
+  return list.jobs.filter(
+    (job) =>
+      !job.allowedToFail &&
+      ["failure", "failed", "timed_out", "startup_failure", "action_required"].includes(
+        job.conclusion ?? "",
+      ),
+  );
+}
+
+export function runWatchOnce(watch: RunWatch, event: "failure" | "end"): string {
+  return `run-watch:${watch.runId}:${watch.since}:${event}`;
+}
+
+/** Saved task facts, plain forge reads on the supervisor's tick, and durable named steers. */
+export class RunWatcher {
+  private readonly reading = new Set<string>();
+
+  constructor(
+    private readonly host: {
+      tasks: TaskService;
+      inbox: Pick<InboxStore, "woken">;
+      read(taskId: string, runId: number): Promise<RunReading>;
+      steer(taskId: string, wake: TypedWake): Promise<unknown>;
+    },
+  ) {}
+
+  async poll(now: number): Promise<void> {
+    await Promise.all(
+      this.host.tasks.listLive().flatMap((task) =>
+        (task.delivery?.runWatches ?? [])
+          .filter((watch) => watch.nextAt <= now)
+          .map((watch) =>
+            this.pollRun(task.id, watch, now).catch((caught: unknown) => {
+              console.warn("[crew] run watch could not read a task:", caught);
+            }),
+          ),
+      ),
+    );
+  }
+
+  private async pollRun(taskId: string, watch: RunWatch, now: number): Promise<void> {
+    const key = `${taskId}:${watch.runId}`;
+    if (this.reading.has(key)) return;
+    this.reading.add(key);
+    try {
+      if (!this.current(taskId, watch)) return;
+      if (this.host.inbox.woken(taskId, runWatchOnce(watch, "end"))) {
+        this.clear(taskId, watch);
+        return;
+      }
+      let read: RunReading;
+      try {
+        read = await this.host.read(taskId, watch.runId);
+      } catch (caught) {
+        if (!this.current(taskId, watch)) return;
+        const transient = !(caught instanceof ForgeError) || caught.failure === "transient";
+        if (transient && now - watch.since < RUN_WATCH_BOUND_MS) {
+          this.update(taskId, watch, { ...watch, nextAt: now + RUN_WATCH_TICK_MS });
+          return;
+        }
+        await this.end(taskId, watch, {
+          kind: "run-watch",
+          outcome:
+            caught instanceof ForgeError && caught.failure === "not-found" ? "gone" : "unreadable",
+          runId: watch.runId,
+          name: watch.name,
+          problem: caught instanceof ForgeError ? caught.message : "The host did not answer.",
+        });
+        return;
+      }
+      // A close or a crewmate read during this request owns the newer facts.
+      if (!this.current(taskId, watch)) return;
+      const current = { ...watch, attempt: read.run.attempt, name: read.run.name };
+      const failed = failedRunJobs(read.list);
+      const facts = {
+        kind: "run-watch" as const,
+        runId: read.run.id,
+        name: read.run.name,
+        attempt: read.run.attempt,
+        jobs: failed,
+        complete: read.list.complete,
+      };
+      if (runFinished(read.run)) {
+        const conclusion = read.run.conclusion;
+        await this.end(taskId, current, {
+          ...facts,
+          outcome:
+            conclusion === "success"
+              ? "passed"
+              : conclusion === "cancelled" || conclusion === "canceled"
+                ? "cancelled"
+                : "failed",
+          state: conclusion ?? read.run.status,
+        });
+        return;
+      }
+      if (now - watch.since >= RUN_WATCH_BOUND_MS) {
+        await this.end(taskId, current, { ...facts, outcome: "timed-out" });
+        return;
+      }
+      if (!watch.failureSeen && failed.length > 0) {
+        const once = runWatchOnce(watch, "failure");
+        if (!this.host.inbox.woken(taskId, once)) {
+          await this.host.steer(taskId, { facts: { ...facts, outcome: "first-failure" }, once });
+        }
+        // A turn woken above may already have taken its own reading.
+        if (!this.current(taskId, watch)) return;
+        current.failureSeen = true;
+      }
+      this.update(taskId, watch, { ...current, nextAt: now + RUN_WATCH_TICK_MS });
+    } finally {
+      this.reading.delete(key);
+    }
+  }
+
+  private current(taskId: string, watch: RunWatch): boolean {
+    const task = this.host.tasks.get(taskId);
+    return (
+      !!task &&
+      !TaskService.isClosed(task) &&
+      task.delivery?.runWatches?.some(
+        (w) => w.runId === watch.runId && w.since === watch.since && w.nextAt === watch.nextAt,
+      ) === true
+    );
+  }
+
+  private update(taskId: string, watch: RunWatch, next: RunWatch): void {
+    if (!this.current(taskId, watch)) return;
+    const watches = this.host.tasks.get(taskId)?.delivery?.runWatches ?? [];
+    this.host.tasks.recordDelivery(taskId, {
+      runWatches: watches.map((w) => (w.runId === watch.runId ? next : w)),
+    });
+  }
+
+  private clear(taskId: string, watch: RunWatch): void {
+    if (!this.current(taskId, watch)) return;
+    const watches = this.host.tasks.get(taskId)?.delivery?.runWatches ?? [];
+    this.host.tasks.recordDelivery(taskId, {
+      runWatches: watches.filter((w) => w.runId !== watch.runId),
+    });
+    this.host.tasks.note(taskId, `Stopped watching ${watch.name} (run ${watch.runId}).`, {
+      news: false,
+    });
+  }
+
+  private async end(
+    taskId: string,
+    watch: RunWatch,
+    facts: Extract<TypedWake["facts"], { kind: "run-watch" }>,
+  ): Promise<void> {
+    const once = runWatchOnce(watch, "end");
+    if (!this.host.inbox.woken(taskId, once)) {
+      this.host.tasks.endIdle(taskId);
+      await this.host.steer(taskId, { facts, once });
+    }
+    this.clear(taskId, watch);
+  }
+}

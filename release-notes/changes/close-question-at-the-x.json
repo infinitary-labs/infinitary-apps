@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "close-question-at-the-x",
+      "kind": "improvement",
+      "title": "Closing a card asks right under the ×",
+      "body": "When you close a card after picking answers, a small question now opens under the × you clicked: \"You picked 2 answers. Closing will discard them.\" Choose Keep answering or Discard and close. The card's own buttons no longer change, and Escape or a click anywhere else keeps the card open.",
+      "area": "cards",
+      "picture": {
+        "dark": "close-question-at-the-x-dark.webp",
+        "light": "close-question-at-the-x-light.webp",
+        "alt": "A decision card with a small question under its × reading You picked 2 answers. Closing will discard them., with Keep answering and Discard and close"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

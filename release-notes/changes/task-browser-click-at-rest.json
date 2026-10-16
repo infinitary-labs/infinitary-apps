@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-click-at-rest",
+      "reason": "Internal, tests only: the task browser journeys click the captain's page only once its view has stopped sliding into place, so the sign-in journey no longer loses his typing in a busy Mac check. No shipped behavior changed."
+    }
+  ]
+}

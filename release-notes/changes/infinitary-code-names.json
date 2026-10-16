@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "infinitary-code-names",
+      "reason": "Steps 7 and 8 of the Infinitary rename: releases number from a one-commit history through a record of past releases, and the app writes Infinitary's code names while still reading Firstmate 3000's. A release build bakes its Diagnostics destination again. Nothing a person sees on screen changes."
+    }
+  ]
+}

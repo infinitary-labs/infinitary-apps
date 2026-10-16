@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "tasks-search-glow-whole",
+      "kind": "fix",
+      "title": "The glow around the Tasks search box is no longer cut off",
+      "body": "When you type in the Tasks panel's search box, the soft glow around it now shows on every side instead of stopping in a hard line at the panel's edge.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-search-glow-whole-dark.webp",
+        "light": "tasks-search-glow-whole-light.webp",
+        "alt": "The Tasks panel with its search box focused and a soft glow showing evenly on all four sides, above the project chips and the backlog group"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

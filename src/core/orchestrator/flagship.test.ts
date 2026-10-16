@@ -1,0 +1,576 @@
+import type { QuotaSnapshotView } from "@shared/quota";
+import { describe, expect, it } from "vitest";
+import type { ModelRuntime } from "../pi/types";
+import { Flagship, type FlagshipVaultView } from "./flagship";
+
+type FakeAccount = {
+  id: string;
+  providerId: string;
+  label: string;
+  enabled: boolean;
+  connected?: boolean;
+  /** Connected, but withheld from serving: its reason (a missing client, a standing cut-off). */
+  withheld?: string;
+  /** A standing cut-off on the account, as the vault records it. */
+  cutOff?: { class: "signed_out" | "no_headroom" | "refused"; resetsAt?: number };
+  /** Simulates a non-Pi store (the Claude backend, phase 7). */
+  via?: string;
+};
+
+const baseRuntime = { kind: "base" } as unknown as ModelRuntime;
+
+function vaultOf(accounts: FakeAccount[]): FlagshipVaultView & { runtimes: string[] } {
+  const runtimes: string[] = [];
+  return {
+    runtimes,
+    list: (providerId?: string) =>
+      accounts.filter((account) => !providerId || account.providerId === providerId),
+    get: (accountId) => accounts.find((account) => account.id === accountId),
+    connectedSync: (accountId) => accounts.find((account) => account.id === accountId)?.connected,
+    servesSync: (accountId) => {
+      const account = accounts.find((entry) => entry.id === accountId);
+      return account?.withheld ? false : account?.connected;
+    },
+    withheldReason: (accountId) => accounts.find((entry) => entry.id === accountId)?.withheld,
+    withheldDetail: () => undefined,
+    cutOff: (accountId) => accounts.find((entry) => entry.id === accountId)?.cutOff,
+    tryAgain: () => false,
+    runtimeFor: async (accountId) => {
+      runtimes.push(accountId);
+      return { kind: `runtime-${accountId}` } as unknown as ModelRuntime;
+    },
+    binding: (accountId) => ({
+      via: accounts.find((account) => account.id === accountId)?.via ?? "pi-runtime",
+    }),
+  };
+}
+
+function settingsOf(initial: string | null = null) {
+  let value = initial;
+  return {
+    getFirstmateAccount: () => value,
+    setFirstmateAccount: (accountId: string | null) => {
+      value = accountId;
+    },
+  };
+}
+
+const snapshot = (
+  rows: { accountId: string; percent?: number; resetText?: string }[],
+): QuotaSnapshotView => ({
+  generatedAt: "2026-08-17T12:00:00Z",
+  fetchedAt: 0,
+  providers: rows.map((row) => ({
+    provider: "codex",
+    label: "Codex",
+    accountId: row.accountId,
+    status: "ok" as const,
+    stale: false,
+    windows:
+      row.percent === undefined
+        ? []
+        : [
+            {
+              id: "weekly",
+              label: "weekly",
+              percentRemaining: row.percent,
+              ...(row.resetText ? { resetText: row.resetText } : {}),
+            },
+          ],
+  })),
+});
+
+describe("Flagship", () => {
+  it("keeps the persisted pin while it is healthy", async () => {
+    const settings = settingsOf("acct_pin");
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_pin", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_big", providerId: "openai-codex", label: "Work #2", enabled: true },
+      ]),
+      settings,
+      quota: { latest: () => snapshot([{ accountId: "acct_big", percent: 99 }]) },
+      baseRuntime,
+    });
+    const binding = await flagship.resolveBinding("openai-codex");
+    expect(binding.accountId).toBe("acct_pin");
+  });
+
+  it("rejects a persisted account from a different provider than the selected model", async () => {
+    const settings = settingsOf("acct_codex");
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+        { id: "acct_grok", providerId: "xai", label: "Grok", enabled: true },
+      ]),
+      settings,
+      quota: { latest: () => undefined },
+      baseRuntime,
+    });
+
+    const binding = await flagship.resolveBinding("xai");
+
+    expect(binding.accountId).toBe("acct_grok");
+    expect(settings.getFirstmateAccount()).toBe("acct_grok");
+  });
+
+  it("clears a persisted account when the selected provider has no matching account", async () => {
+    const settings = settingsOf("acct_codex");
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+      ]),
+      settings,
+      quota: { latest: () => undefined },
+      baseRuntime,
+    });
+
+    const binding = await flagship.resolveBinding("xai");
+
+    expect(binding.accountId).toBeUndefined();
+    expect(settings.getFirstmateAccount()).toBeNull();
+  });
+
+  it("derives the most-headroom account once and persists it (never silently changes)", async () => {
+    const settings = settingsOf(null);
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_low", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_high", providerId: "openai-codex", label: "Work #2", enabled: true },
+      ]),
+      settings,
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_low", percent: 12 },
+            { accountId: "acct_high", percent: 80 },
+          ]),
+      },
+      baseRuntime,
+    });
+    const binding = await flagship.resolveBinding("openai-codex");
+    // A Pi binding on the account's own runtime (the seat seam's shape).
+    expect(binding).toEqual({
+      backend: "pi",
+      accountId: "acct_high",
+      runtime: { kind: "runtime-acct_high" },
+    });
+    expect(settings.getFirstmateAccount()).toBe("acct_high");
+  });
+
+  it("falls back to the base runtime when no eligible account exists", async () => {
+    const flagship = new Flagship({
+      vault: vaultOf([]),
+      settings: settingsOf(null),
+      quota: { latest: () => undefined },
+      baseRuntime,
+    });
+    const binding = await flagship.resolveBinding("fm-mock");
+    expect(binding).toEqual({ backend: "pi", runtime: baseRuntime });
+  });
+
+  it("is eligible only when the catalog role, a seat backend and its binding agree", () => {
+    const flagship = new Flagship({
+      vault: vaultOf([
+        // A leftover Anthropic API row: a provider this build does not offer.
+        {
+          id: "acct_anthropic",
+          providerId: "anthropic",
+          label: "Max",
+          enabled: true,
+          via: "default-login",
+        },
+        { id: "acct_pi", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_off", providerId: "openai-codex", label: "Paused", enabled: false },
+        {
+          id: "acct_dead",
+          providerId: "openai-codex",
+          label: "Dead",
+          enabled: true,
+          connected: false,
+        },
+      ]),
+      settings: settingsOf(null),
+      quota: { latest: () => undefined },
+      baseRuntime,
+    });
+    expect(flagship.isEligible("acct_anthropic")).toBe(false);
+    expect(flagship.isEligible("acct_pi")).toBe(true);
+    expect(flagship.isEligible("acct_off")).toBe(false);
+    expect(flagship.isEligible("acct_dead")).toBe(false);
+  });
+
+  it("never seats an account the serveability predicate withholds, though it stays connected", async () => {
+    // A standing refusal or a missing client: connected, serving nothing.
+    const flagship = new Flagship({
+      vault: vaultOf([
+        {
+          id: "acct_held",
+          providerId: "openai-codex",
+          label: "Personal",
+          enabled: true,
+          connected: true,
+          withheld: "refused",
+        },
+        { id: "acct_ok", providerId: "openai-codex", label: "Work", enabled: true },
+      ]),
+      settings: settingsOf("acct_held"),
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_held", percent: 90 },
+            { accountId: "acct_ok", percent: 10 },
+          ]),
+      },
+      baseRuntime,
+    });
+    expect(flagship.isEligible("acct_held")).toBe(false);
+    expect(flagship.isEligible("acct_ok")).toBe(true);
+    expect(flagship.deriveForProvider("openai-codex")).toBe("acct_ok");
+    expect(flagship.sibling("acct_ok")).toBeUndefined();
+    expect(flagship.resolveAccountId("openai-codex")).toBe("acct_ok");
+  });
+
+  it("finds a sibling with measured headroom for the rung-1 rebind", () => {
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_a", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_b", providerId: "openai-codex", label: "Work #2", enabled: true },
+      ]),
+      settings: settingsOf("acct_a"),
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 0, resetText: "resets Fri" },
+            { accountId: "acct_b", percent: 46 },
+          ]),
+      },
+      baseRuntime,
+    });
+    expect(flagship.headroom("acct_a")).toBe(0);
+    expect(flagship.resetText("acct_a")).toBe("resets Fri");
+    expect(flagship.sibling("acct_a")).toEqual({ id: "acct_b", label: "Work #2" });
+  });
+
+  it("offers another provider for rung 2 only when one has measured headroom", () => {
+    const flagship = new Flagship({
+      vault: vaultOf([
+        { id: "acct_codex", providerId: "openai-codex", label: "Personal", enabled: true },
+        { id: "acct_grok", providerId: "xai", label: "Personal", enabled: true },
+        // A retired provider can still sit in an old vault. It is not a rung.
+        { id: "acct_kimi", providerId: "kimi-coding", label: "Personal", enabled: true },
+      ]),
+      settings: settingsOf(null),
+      quota: {
+        latest: () => ({
+          generatedAt: "",
+          fetchedAt: 0,
+          providers: [
+            {
+              provider: "grok",
+              label: "Grok",
+              accountId: "acct_grok",
+              status: "ok" as const,
+              stale: false,
+              windows: [{ id: "weekly", label: "weekly", percentRemaining: 61 }],
+            },
+            {
+              provider: "kimi",
+              label: "Kimi",
+              accountId: "acct_kimi",
+              status: "ok" as const,
+              stale: false,
+              windows: [{ id: "weekly", label: "weekly", percentRemaining: 90 }],
+            },
+          ],
+        }),
+      },
+      baseRuntime,
+    });
+    expect(flagship.otherProviderOption("openai-codex")).toEqual({
+      providerId: "xai",
+      providerName: "Grok",
+    });
+    expect(flagship.otherProviderOption("xai")).toBeUndefined();
+  });
+});
+
+describe("a paused seat's class, words and ledger (W1 S9)", () => {
+  const account = (overrides: Partial<FakeAccount>): FakeAccount => ({
+    id: "acct",
+    providerId: "openai-codex",
+    label: "Personal",
+    enabled: true,
+    connected: true,
+    ...overrides,
+  });
+
+  function over(entry: FakeAccount, percent?: number) {
+    const ledger: unknown[] = [];
+    const flagship = new Flagship({
+      vault: vaultOf([entry]),
+      settings: settingsOf(),
+      quota: {
+        latest: () => snapshot([{ accountId: entry.id, percent, resetText: "resets Fri" }]),
+      },
+      baseRuntime,
+      decisions: {
+        recordAccount: (input) => ledger.push(input),
+      },
+    });
+    return { flagship, ledger };
+  }
+
+  it("reads each class from typed facts, never from words", () => {
+    expect(over(account({}), 40).flagship.pause("acct")).toBeUndefined();
+    expect(over(account({ enabled: false })).flagship.pause("acct")).toEqual({
+      class: "unavailable",
+    });
+    expect(over(account({ connected: false })).flagship.pause("acct")).toEqual({
+      class: "signed_out",
+    });
+    expect(over(account({ withheld: "signed_out" })).flagship.pause("acct")).toEqual({
+      class: "signed_out",
+    });
+    expect(over(account({ withheld: "refused" })).flagship.pause("acct")).toEqual({
+      class: "refused",
+    });
+    expect(over(account({ withheld: "client_missing" })).flagship.pause("acct")).toEqual({
+      class: "client",
+    });
+    // A standing spent allowance carries its reset; a zero reading is one too.
+    expect(
+      over(account({ cutOff: { class: "no_headroom", resetsAt: 5_000 } }), 40).flagship.pause(
+        "acct",
+      ),
+    ).toEqual({ class: "no_headroom", resetsAt: 5_000 });
+    expect(over(account({}), 0).flagship.pause("acct")).toEqual({ class: "no_headroom" });
+    // Unknown quota is never zero.
+    expect(over(account({})).flagship.pause("acct")).toBeUndefined();
+    expect(over(account({ via: "default-login" }), 40).flagship.pause("acct")).toEqual({
+      class: "unavailable",
+    });
+  });
+
+  it("reads a standing refusal before a lapsed sign-in, since signing in again does not clear it (review N2)", () => {
+    const { flagship } = over(account({ connected: false, cutOff: { class: "refused" } }));
+    expect(flagship.pause("acct")).toEqual({ class: "refused" });
+  });
+
+  it("keeps a pin a fact pauses bound, so admission pauses on it, and lets go of one that is gone (review S3)", () => {
+    const settings = settingsOf("acct");
+    const paused = account({ withheld: "refused" });
+    const flagship = new Flagship({
+      vault: vaultOf([paused]),
+      settings,
+      quota: { latest: () => snapshot([{ accountId: "acct", percent: 40 }]) },
+      baseRuntime,
+    });
+    expect(flagship.resolveAccountId("openai-codex")).toBe("acct");
+    expect(settings.getFirstmateAccount()).toBe("acct");
+    // Paused by the captain in Settings is not a fact the seat waits out.
+    paused.enabled = false;
+    expect(flagship.resolveAccountId("openai-codex")).toBeUndefined();
+    expect(settings.getFirstmateAccount()).toBeNull();
+  });
+
+  it("says why a withheld account cannot be the Firstmate in its class's words", () => {
+    expect(over(account({ withheld: "refused" })).flagship.ineligibilityReason("acct")).toBe(
+      "Codex is not answering your first mate right now.",
+    );
+    expect(over(account({ withheld: "signed_out" })).flagship.ineligibilityReason("acct")).toBe(
+      "Personal needs you to sign in again.",
+    );
+    expect(over(account({ connected: false })).flagship.ineligibilityReason("acct")).toBe(
+      "Personal needs you to sign in again.",
+    );
+    const { flagship } = over(account({}), 0);
+    expect(flagship.ineligibilityReason("acct")).toBeUndefined();
+    expect(flagship.pauseSentence("acct", { class: "no_headroom" })).toBe(
+      "Personal has used up its allowance (resets Fri).",
+    );
+  });
+
+  it("records each seat decision as an account row on the one ledger", () => {
+    const { flagship, ledger } = over(account({}), 40);
+    expect(flagship.resolveAccountId("openai-codex")).toBe("acct");
+    flagship.record("paused", "acct", ["Personal: refused", "nothing else can serve"]);
+    expect(ledger).toEqual([
+      {
+        taskId: "firstmate",
+        provider: "openai-codex",
+        accountId: "acct",
+        reasons: [
+          "seat derived",
+          "no account pinned for openai-codex",
+          "picked Personal: most headroom among eligible accounts",
+        ],
+      },
+      {
+        taskId: "firstmate",
+        provider: "openai-codex",
+        accountId: "acct",
+        reasons: ["seat paused", "Personal: refused", "nothing else can serve"],
+      },
+    ]);
+  });
+});
+
+describe("a Claude account seats the Firstmate on the machine's login (W1 S12)", () => {
+  const claude = (overrides: Partial<FakeAccount> = {}): FakeAccount => ({
+    id: "acct_claude",
+    providerId: "anthropic-claude",
+    label: "Claude Max",
+    enabled: true,
+    connected: true,
+    via: "default-login",
+    ...overrides,
+  });
+  const codex: FakeAccount = {
+    id: "acct_codex",
+    providerId: "openai-codex",
+    label: "Codex",
+    enabled: true,
+    connected: true,
+  };
+
+  function flagshipOver(pool: FakeAccount[], initialPin: string | null = null) {
+    const settings = settingsOf(initialPin);
+    const vault = vaultOf(pool);
+    return {
+      settings,
+      vault,
+      flagship: new Flagship({
+        vault,
+        settings,
+        quota: {
+          latest: () =>
+            snapshot([
+              { accountId: "acct_claude", percent: 99 },
+              { accountId: "acct_codex", percent: 0 },
+            ]),
+        },
+        baseRuntime,
+      }),
+    };
+  }
+
+  it("is eligible while it serves, through the same three assertions as a Pi account", () => {
+    const { flagship } = flagshipOver([claude(), codex]);
+    expect(flagship.isEligible("acct_claude")).toBe(true);
+    // The binding must be the one the Claude seat stands on: a Claude
+    // account the vault would hand a Pi runtime is not seatable, and a Pi
+    // account on the machine's default login is not either.
+    expect(flagshipOver([claude({ via: "pi-runtime" })]).flagship.isEligible("acct_claude")).toBe(
+      false,
+    );
+    expect(
+      flagshipOver([{ ...codex, via: "default-login" }]).flagship.isEligible("acct_codex"),
+    ).toBe(false);
+    // The one serveability predicate still withholds it (S7).
+    expect(flagshipOver([claude({ withheld: "refused" })]).flagship.isEligible("acct_claude")).toBe(
+      false,
+    );
+    expect(
+      flagshipOver([claude({ withheld: "client_missing" })]).flagship.isEligible("acct_claude"),
+    ).toBe(false);
+  });
+
+  it("binds the Claude seat on its login, never reaching for a runtime", async () => {
+    const { flagship, settings, vault } = flagshipOver([claude(), codex]);
+    expect(await flagship.resolveBinding("anthropic-claude")).toEqual({
+      backend: "claude",
+      accountId: "acct_claude",
+    });
+    expect(settings.getFirstmateAccount()).toBe("acct_claude");
+    expect(vault.runtimes).toEqual([]);
+  });
+
+  it("leaves an existing Pi pin exactly where it is", async () => {
+    const { flagship, settings } = flagshipOver([claude(), codex], "acct_codex");
+    expect(await flagship.resolveBinding("openai-codex")).toEqual({
+      backend: "pi",
+      accountId: "acct_codex",
+      runtime: { kind: "runtime-acct_codex" },
+    });
+    expect(settings.getFirstmateAccount()).toBe("acct_codex");
+  });
+
+  it("stands on a Claude login a fact pauses, so admission pauses and asks, without pinning it", async () => {
+    const { flagship, settings } = flagshipOver([claude({ withheld: "client_missing" }), codex]);
+    expect(await flagship.resolveBinding("anthropic-claude")).toEqual({
+      backend: "claude",
+      accountId: "acct_claude",
+    });
+    expect(settings.getFirstmateAccount()).toBeNull();
+    expect(flagship.pause("acct_claude")).toEqual({ class: "client" });
+  });
+
+  it("fails the attach for a Claude model with no account to stand on, rather than a Pi runtime", async () => {
+    const { flagship } = flagshipOver([codex]);
+    await expect(flagship.resolveBinding("anthropic-claude")).rejects.toThrow(
+      "No signed-in model is available for your first mate: Claude is not connected.",
+    );
+  });
+
+  it("is offered as a rung-2 move for a Pi seat that runs out, and still only asks (Q6 a)", () => {
+    const { flagship } = flagshipOver([claude(), codex]);
+    // Rung 1 is a sibling of the same provider; Claude has one login ever.
+    expect(flagship.sibling("acct_claude")).toBeUndefined();
+    expect(flagship.otherProviderOption("openai-codex")).toEqual({
+      providerId: "anthropic-claude",
+      providerName: "Claude",
+    });
+    // A refused login is no rung.
+    expect(
+      flagshipOver([claude({ withheld: "refused" }), codex]).flagship.otherProviderOption(
+        "openai-codex",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("serves the Firstmate only while an account the seat can stand on is there", () => {
+    expect(flagshipOver([claude()]).flagship.servesFirstmate("anthropic-claude")).toBe(true);
+    expect(
+      flagshipOver([claude({ withheld: "refused" })]).flagship.servesFirstmate("anthropic-claude"),
+    ).toBe(false);
+    // No Claude login: nothing serves a Claude model, while a custom
+    // provider with no accounts rides the base runtime.
+    expect(flagshipOver([codex]).flagship.servesFirstmate("anthropic-claude")).toBe(false);
+    expect(flagshipOver([codex]).flagship.servesFirstmate("fm-mock")).toBe(true);
+    // A retired provider serves no role at all.
+    expect(flagshipOver([codex]).flagship.servesFirstmate("kimi-coding")).toBe(false);
+  });
+
+  it("stands on a login a typed cut-off pauses, not one with no client or never signed in", () => {
+    for (const cutOff of [
+      { class: "refused" as const },
+      { class: "signed_out" as const },
+      { class: "no_headroom" as const, resetsAt: Date.now() + 3_600_000 },
+    ]) {
+      expect(
+        flagshipOver([claude({ withheld: cutOff.class, cutOff })]).flagship.standsOnCutOff(),
+      ).toBe(true);
+    }
+    expect(flagshipOver([claude()]).flagship.standsOnCutOff()).toBe(false);
+    expect(flagshipOver([claude({ withheld: "client_missing" })]).flagship.standsOnCutOff()).toBe(
+      false,
+    );
+    expect(flagshipOver([claude({ connected: false })]).flagship.standsOnCutOff()).toBe(false);
+    // A cut-off on an account the seat cannot stand on at all is not the seat's.
+    expect(
+      flagshipOver([
+        claude({ via: "pi-runtime", cutOff: { class: "refused" } }),
+      ]).flagship.standsOnCutOff(),
+    ).toBe(false);
+  });
+
+  it("explains a withheld Claude login in the user's terms, never the machinery's", () => {
+    expect(flagshipOver([claude()]).flagship.ineligibilityReason("acct_claude")).toBeUndefined();
+    const reason = flagshipOver([claude({ withheld: "refused" })]).flagship.ineligibilityReason(
+      "acct_claude",
+    );
+    expect(reason).toBe("Claude is not answering your first mate right now.");
+    expect(reason).not.toMatch(/harness|agent-sdk|config-dir|backend/i);
+  });
+});

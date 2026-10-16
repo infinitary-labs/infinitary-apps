@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-wait-for-the-answer",
+      "reason": "The end-to-end journeys that ask the Firstmate something wait for its answer to that message instead of trying to catch the character's brief working state, which a quick turn passes through before a busy test machine looks again. Test code only; nothing a person notices changes."
+    }
+  ]
+}

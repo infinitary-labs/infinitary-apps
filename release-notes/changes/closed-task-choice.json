@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "closed-task-choice",
+      "kind": "fix",
+      "title": "Firstmate no longer shows a choice that fails because its task is closed",
+      "body": "Firstmate could put up a decision about a task that had already closed, such as one offering to build something a finished prototype explored. Every button on it then failed with \"Its task is no longer open.\" Firstmate now asks such a question as a new decision, or about a new follow-up task, so its buttons work.",
+      "area": "cards",
+      "noPicture": "Nothing new appears: a card whose buttons could not work no longer shows up, and the one that replaces it looks like any decision.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

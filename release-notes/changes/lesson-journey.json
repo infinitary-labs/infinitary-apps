@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "lesson-journey",
+      "kind": "feature",
+      "title": "Your lessons have a progress panel",
+      "body": "After your first finished lesson in a subject, a progress panel appears at the side with your goal, the days you practised and the skills you learned. Every five days of practice earns a rest day, up to two, and a holiday you ask for keeps your run going; the panel's next-lesson button opens your waiting lesson card.",
+      "area": "cards",
+      "picture": {
+        "dark": "lesson-journey-dark.webp",
+        "light": "lesson-journey-light.webp",
+        "alt": "The Chess panel shows the learner's goal, three days practised, skill progress and a next-lesson button beside the lesson card."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

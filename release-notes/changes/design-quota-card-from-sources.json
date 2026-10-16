@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "design-quota-card-from-sources",
+      "reason": "The design skill's quota component card loads QuotaMeter, SlotBadge and SubscriptionCard from their sources instead of the prebuilt bundle's stale copy that blanked it; the card is a design reference for building the app and is never shown to a person using it."
+    }
+  ]
+}

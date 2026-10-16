@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-sign-in-card-plain-words",
+      "kind": "fix",
+      "title": "Firstmate's sign-in card says what to do",
+      "body": "When Firstmate cannot reach its own model, its card now says so in plain words. It names the provider to sign in to again. For a custom connection, it says to press Edit and then Save in Settings → Intelligence to check it again. The card no longer shows sign-in commands or file paths from the app.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "firstmate-sign-in-card-plain-words-dark.webp",
+        "light": "firstmate-sign-in-card-plain-words-light.webp",
+        "alt": "A provider needs sign in card from Firstmate saying it could not reach Grok, which needs you to sign in again"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

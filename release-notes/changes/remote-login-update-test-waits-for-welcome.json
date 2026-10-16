@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "remote-login-update-test-waits-for-welcome",
+      "reason": "Tests only: the Remote Login update test now waits for the work computer to hear its home's welcome before updating it, so a slow machine no longer reads it as still connecting. Nothing in the shipped app changed."
+    }
+  ]
+}

@@ -1,0 +1,922 @@
+# Running work for another Mac
+
+How the app runs a home's work on another computer - a Mac or a Linux computer - or as another user on the home's own computer, with no window (`docs/architecture.md` §9).
+It is the app itself, started in a mode of its own; it joins the home as a Mac (`mac`, which may also control the home from Infinitary opened there), or as another user on the home's own Mac, which only runs work (`work`, `docs/devices.md`), and dials it over the connection as its work (`docs/connection.md`).
+Its words in Terminal are the design skill's `components/devices/AddAMac`; a person never reads the word helper, which the code uses for this part.
+
+## What it is
+
+- **The app's own executable, started as `<app> work <command> ...`.**
+  The main entry (`src/main/index.ts`) reads the words after `work` before anything of the app loads (`workCommand`, `src/main/workCommand.ts`) and loads `runWorkMode` (`src/main/work.ts`) instead of the app (`src/main/app.ts`).
+  Each is a chunk of its own, so none of the app's modules are evaluated: no window, no core, no single-instance lock.
+  It sets its activation policy to `prohibited`, so macOS lists it as background-only, with no Dock icon or menu bar.
+  On Linux it draws on a display of its own (below, "No screen needed").
+- **One process.**
+  Nothing is drawn and the connection is Node's own, so hardware acceleration is off and Chromium's graphics and network services run as threads of the app's process (`in-process-gpu`, `NetworkServiceInProcess2`) rather than as processes beside it.
+- **The core's windowless composition** (`src/core/helper/`) does the work, on the Node.js already inside Electron; it imports no Electron, like the rest of `src/core/`.
+  `src/main/work.ts` only gives it the app's version, where its data lives, and the Terminal it was started from.
+- **No new program ships.**
+  Electron's run-as-Node switch stays off (`electronFuses.runAsNode`, §4): with it on, any program could run its own code as Infinitary, with Infinitary's microphone and Keychain grants.
+  The work mode runs only Infinitary's own code, from the archive the fuses already pin, and joining still needs its person's typed yes.
+  On another Mac, the whole app is what the one command gets from the home and keeps in the data folder's `app/` (`docs/devices.md`, "Joining by a command").
+- **Terminal shows only what it says to its person.**
+  The notes its parts leave on the console go to the folder's `work.log`; an error stays on stderr.
+
+## Where it keeps its data
+
+`userData/work/` for the app's flavor - `<appData>/infinitary/work` for the release, `<appData>/infinitary-dev/work` for every other build - in the home folder of the macOS user it runs as (`helperPlace`, `src/core/helper/place.ts`).
+Nothing else in that folder is opened: not the record, not the single-instance lock, not a sign-in.
+Only a development run reads `INFINITARY_HELPER_DATA_DIR`, which tests use to isolate it.
+`work/` moves with the rest of the data folder when Infinitary moves an older folder in (`docs/saved-data-compatibility.md`, "The one-time move"): the move rewrites `installed.json` and `left.json`, and git's links in `repos/` and `worktrees/`, to name the new folder.
+A move waits while the older app's run holds `running.lock`, and leaves behind what a live process still writes: `chromium/`, the logs, the route and the locks.
+Until it is made, Infinitary's work is read where it is, in Firstmate 3000's folder, and its own run makes it (below, "Under the other name").
+
+| File | Holds |
+| --- | --- |
+| `home.json` | The grant (`docs/devices.md`, "Joining"), the home's name once it has said it, and when it joined, written by `JoinedHome` (`src/core/devices/joinedHome.ts`), the same writer the app as a view uses; for a Mac that joined at Infinitary's first launch, the window keeps its grant here too (below, "A Mac that also controls") |
+| `route.json`, `route.lock` | For a home that reaches this computer through its own SSH connection, the private socket that connection forwards to it now, written by `HomeRoute` (`src/core/helper/route.ts`), its one writer (below, "Through the home's SSH") |
+| `left.json` | The home that removed it, which `status` says while the removal has not finished or unmerged work is kept; it goes once nothing is kept |
+| `running.lock` | The process that works from the folder now |
+| `tasks/<task>/` | One crewmate conversation the home opened here (below), written by `PlacedTasks` (`src/core/helper/placedTasks.ts`), the one writer of `tasks/` |
+| `repos/` | One bare clone per project the home gave it work in, from where the project lives (below, "Its working copies") |
+| `worktrees/<task>/` | One task's working copy, on its branch `fm/task-<task>` |
+| `worktree-pool/`, `worktree-trash/` | Warm working copies between tasks, and retired ones being deleted, as the home keeps its own |
+| `default-workspace/` | This computer's own local workspace, for a task with no project |
+| `bundles/`, `artifacts/` | A task's branch or kept work waiting for the home to read it, and the pieces of an artifact the home is writing here |
+| `pi-agent/` | Pi's own folder for the conversations held here, never `~/.pi` |
+| `accounts/` | This computer's own sign-ins (below): `registry.json` and one 0700 folder per account, written by its `AccountVault`, the same writer the home keeps its own in; a Claude account's folder holds `made-login.json` when Infinitary made that login here |
+| `claude-login.json` | The Claude login Infinitary made here, which a removal begun outside the work's own run keeps for that run to sign out (below, "Removed") |
+| `forges/` | This computer's own sign-in where projects live, for its clones and pushes (below): one 0700 folder per host with its 0600 `sign-in.json`, and `health.log`, written by its `ForgeSignIns`, the same writer the home keeps its own in |
+| `pi-base/` | Pi's catalog, which says how each provider signs in; it holds no sign-in |
+| `app/` | On another Mac, the copy of Infinitary its command got from the home, which the background starts |
+| `installed.json` | What Infinitary set up outside this folder: the background agent's label and file, and the copy in `app/` (below, "In the background") |
+| `work.log` | Notes about the conversations held here, and every console note, which Terminal never shows |
+| `service.log` | What the run the background started says |
+| `display.auth` | On Linux, the key to the work mode's own display (below, "No screen needed") |
+| `chromium/` | What Electron itself writes, even with no window, kept out of the app's own userData |
+| `task-channel/` | One key per task whose crewmate here has its own browser, which its `infinitary-browser-axi` reaches it by (`docs/axi-commands.md`), emptied when the conversations start and stop |
+
+The folder is 0700 and every file in it 0600.
+One process at a time works from it (`src/core/helper/lock.ts`): `join` and `run` take `running.lock`, a second is refused, and a lock whose process is gone, or that was written before this computer last started (its number may belong to anyone now), is taken over.
+
+## Its commands
+
+`<app> work <command>` (`src/core/helper/cli.ts`), where `<app>` is `Infinitary.app/Contents/MacOS/Infinitary` on a Mac, `/opt/infinitary/infinitary` (the `infinitary` command) from a Linux package, the AppImage file itself, or `electron . work` in a checkout.
+Chromium's own switches may stand before `work` (`workCommand`): an AppImage's runtime adds `--no-sandbox` where it cannot make the sandbox.
+
+| Command | What it does |
+| --- | --- |
+| `join <link>` | Joins the home a link names (below), then sets itself to run in the background; with a link from the home it already joined, finds that home where the link says it is now (below, "Finding the home again"). Exits 0 joined or found, 1 refused. `join --fetched <app> <link>` is what the command for another Mac starts: the person agreed already, and `<app>` is the copy it got. `join --fetched <app> --from-home` is what the home starts over Remote Login, with the link on its input (below, "Started by the home"). |
+| `run` | Dials the home with the grant and keeps dialing while it is out of reach, until it is stopped or the home removes it. When a removal an earlier run could not finish waits here, it finishes that instead (below, "Removed"). |
+| `status` | Says what this user joined, where, since when, and whether it is running, without dialing. |
+| `version` | `Infinitary <app version> · contract <PROTOCOL_VERSION>`. |
+| `update --fetched <app> --from-home` | The home's own, over Remote Login: keeps the copy it sent in place of the one kept here and starts the background from it again. |
+| `remove --from-home` | The home's own, over Remote Login: lets the home go and removes what Infinitary set up here, or finishes a removal an earlier run could not. |
+| `connect --from-home` | The far end of the home's own SSH connection: keeps the route this computer's work dials for as long as that connection lasts (below, "Through the home's SSH"). |
+
+Anything else prints how to use it and exits 2.
+Ctrl-C or a stop signal quits the app; the command ends first, says so, and the app exits with its code.
+That holds once it loaded its own sign-ins too: the work mode listens for SIGINT, SIGTERM and SIGHUP itself from its start, so a module that listens later (Pi's sign-in store, through signal-exit) never ends the process by the signal instead (`src/main/work.ts`).
+
+## Joining
+
+1. It reads the link (`parsePairingLink`) and refuses one that is not a link, or one an older home made for the app on another Mac only (`view`).
+2. It opens TLS to the link's address and checks the home's key against the link's pin, sending nothing and showing no key of its own (`probeHome`, `src/core/devices/dial.ts`).
+   Nothing answering, or something answering that is not that home, is refused before the person is asked anything.
+3. It asks, naming the address the link names, or this Mac when the address is this Mac's own:
+   - another Mac: "Infinitary on the computer at 192.168.1.20 asks to add this computer, as the user sam." and "It runs only the projects you give it, with sign-ins of its own."
+   - another user here: "Infinitary on this computer asks the user builder to run its work.", "Builder only runs work and cannot control your first mate." and "Like every user on this computer, it can read files in your home folder, outside private folders such as Desktop and Documents."
+     Then "Type yes to agree:".
+     Only `yes` goes on; anything else, or nothing, is "Nothing changed on this computer." and the link stays good.
+     Piped in, the answer is printed after the question, so a transcript reads as a terminal does.
+4. It uses the link once as the link's kind - `mac` from the command for another Mac or an address, `work` from the command for another user - under this Mac's name (`computerName`; a development run may stand in another with `INFINITARY_DEVICE_NAME`) and the macOS user it runs as, by short name and number, with what it has here (`findTools`, `src/core/helper/found.ts`): git - the app's own when its copy carries one (below, "Running"), else git on the search path, where the stand-in macOS keeps at /usr/bin/git counts only once the developer tools are installed and is never run to find out - and Claude Code.
+   It installs and asks nothing.
+5. It keeps the grant, dials once to hear the home's name, with a hello that says it only hears the name, so the home counts that dial as nothing of this computer in reach (`docs/devices.md`, "Held on the local network"), lets the folder go, sets itself to run in the background (below), and says "Joined.
+   This computer runs work for MacBook Pro now, whenever sam is logged in.", with "Open Infinitary here any time to control it from this computer, with no new link." when it joined as a Mac, or "Joined.
+   Builder runs work for Infinitary on this computer now." and "It runs whenever Builder is logged in, even in the background.
+   You can switch back."
+
+Started with `--fetched` by the command for another Mac, it asks nothing - the command asked before it got Infinitary - and keeps the copy it got in `app/` (cloned where the disk can) before it uses the link; a refused link keeps nothing.
+A link that was used, expired, or closed, and a link from another home while the one kept still answers, each say what happened and that nothing changed ("That command was used already.
+Make a new one on the computer at 192.168.1.20.").
+A link from another home while the one kept does not answer asks to leave that one first (below, "Leaving a home that is gone").
+
+## Finding the home again
+
+The grant dials the address its link named, so once the home's address changes this computer is out of reach of it and keeps trying where it was ("MacBook Pro is out of reach.
+This computer keeps trying.").
+A home on this Mac is dialed at loopback, where it listens too and which no network change moves: the command for another user here names it, and each run dials loopback at the same port whenever the grant names one of this Mac's own network addresses, and keeps the grant so (`homeDialAddress`, `src/core/helper/join.ts`, from `startHelper`).
+Such a grant was kept before the command named loopback, or by a user here added at its address over Remote Login; a grant naming another Mac, a name, or loopback already dials where it did.
+A new command from the home, run once here as the same user, finds it where it is now, as the same computer (`docs/devices.md`, "Finding the home again"; design skill `components/devices/AddAMac`, "Finding this computer again").
+A computer added by its address needs nothing run here: the home reaches it over its own SSH connection wherever the home is, and Add it at its address reaches it over Remote Login and starts the join below with a new link on its input (below, "Started by the home").
+The join reads that the link names the home its grant does (the same key), and then (`findAgain`, `src/core/helper/join.ts`):
+
+1. It checks that home answers with its key at the link's address, sending nothing, before anything here stops; nothing answering, or something else answering, is refused as for a join.
+2. It asks nothing: this user agreed to that home's work when it joined, and the link changes only where it dials.
+   The command for another Mac still asks its own yes before it gets Infinitary.
+3. It stops the background's run, so the folder is free, and waits a moment for it to go, as an update does; a run someone started by hand keeps it, which is `busy`, and the background is loaded again as it was.
+   A turn running here is cut off, as when this computer restarts (below, "That computer restarts").
+4. It uses the link with the key it was paired with (`findHomeAgain`), and keeps the grant with the link's address (`JoinedHome.dialAt`); its place on the home's list, its sign-ins, conversations, clones and working copies all stay.
+   A link over the home's SSH connection, from the home's Add it at this Mac's address, keeps the grant with `via: "ssh"` too, so a computer a command joined reaches its home only through that connection from then on (below, "Through the home's SSH"); a grant already on it refuses a link that dials an address.
+5. A copy of Infinitary the command got is kept in place of the one kept here, as an update keeps one, so this computer runs the home's version again; then the background starts again, and it says "Found MacBook Pro at 192.168.1.30.
+   This computer runs its work as before, whenever sam is logged in." or "Found Infinitary on this computer again.
+   Builder runs its work as before.".
+
+A refusal from the home leaves everything as it was and loads the background again.
+When the home answers that it removed this computer while it was out of reach (`removed`), the join does what hearing that removal would have done (below, "Removed") - "MacBook Pro removed this computer earlier." and the removal's own lines, keeping a working copy that still holds unmerged work - then joins anew with the same link: it asks its yes unless a command fetched this copy, keeps the copy, uses the link with a new key and sets up the background.
+What that removal could not remove it names, "Infinitary could not remove all it set up here, in …", and joins all the same; joining anew clears the note, so nothing tries again on its own.
+
+## Leaving a home that is gone
+
+A home can be gone for good: Infinitary there was installed again, or its data was reset, so it holds a new key and no longer knows this computer.
+This computer then keeps trying it at every login, and only a new home lets it go: its command, or Add it at this computer's address on that home's captain's yes (`leaveFor`, `src/core/helper/join.ts`):
+
+1. It checks the home it runs work for at the address its grant dials, with that home's key, sending nothing.
+   While that home answers, the link is refused as before, "This user already runs work for MacBook Pro." and "Nothing changed on this computer.": that home brings its unmerged work home when its captain removes this computer there.
+2. It checks the new home answers with its key, sending nothing; nothing answering, or something else answering, is refused as for a join.
+3. It asks once, before anything here stops: "This user runs work for MacBook Pro, which does not answer.", "Joining leaves it: Infinitary removes what it set up here for MacBook Pro, with its sign-ins." and "Work that never merged stays on this computer.", then the join's own question unless a command fetched this copy, then "Type yes to agree:".
+   When the new link comes from the same place as the old home, as it does from an Infinitary installed there again, the old one is named "an earlier Infinitary on this computer" or "an earlier Infinitary at 192.168.1.20".
+   Anything but `yes` is "Nothing changed on this computer.", with its run going on as it was.
+   Started by the home over Remote Login nobody here is asked: the home's captain answered Add it's own question (`docs/devices.md`, "Another first mate's Mac"), and the join's line says so (`leave`, `sshJoinSchema`).
+   Without that, it is refused as `joined`.
+4. On the yes it stops the background's run, as finding the home again does, then leaves that home as a removal would (below, "Removed"): the grant goes, `left.json` notes "left" rather than "removed", and what Infinitary set up for that home goes with its sign-ins and its agent, keeping a working copy that still holds unmerged work.
+   Terminal says "This user left MacBook Pro." and the removal's own lines, naming what it could not remove without promising a second try.
+5. The same yes then joins the new home, as any join does, and sets up the background again.
+   Started by the home, its outcome line says it left (`left`: how many working copies it kept and what it could not remove), and the home says so.
+
+The old home is not told: nothing answers there.
+Were it only out of reach after all, its Settings -> Devices keeps this computer as out of reach until its captain removes it.
+A link the new home refuses after the yes leaves this computer joined to nothing, and `status` says "This user left MacBook Pro.".
+
+## Through the home's SSH
+
+A home may reach this computer only through its own SSH connection to it (`docs/devices.md`, "Through the home's SSH").
+Its grant then says `via: "ssh"`, and the run never dials the grant's address: it dials the private socket that connection forwards here now, which the connection keeps in `route.json` (`HomeRoute`, `src/core/helper/route.ts`).
+
+- **The route** holds the socket, the home's pin, this computer's id on that home's list, a generation and a lease, and never a key or a link.
+- **Read on every dial** (`homeDialOptions`), on getting Infinitary from the home to update (`updateHere`), and on checking whether that home answers before a link from another home may ask to leave it (`leaveFor`): a new route is taken as soon as it is there, and the run follows it without starting again, so nothing it holds lets go.
+- **Out of reach, never anything else.**
+  No route, one whose lease ran out, another home's or device's, one that cannot be read, or a socket that is not this user's in a folder only this user may enter, is out of reach: the run keeps trying, and never dials the grant's address, forgets the grant or removes anything.
+- **One writer at a time, by generation.**
+  Each connection takes a new generation (`begin`), which withdraws the route until it publishes its own; a connection whose generation is no longer the file's can neither publish nor withdraw, so an old one cannot write over or clean up a newer one.
+  Writes are one step under `route.lock`; a lock older than ten seconds was left by a writer that died holding it and is taken over, without reading a process number that may be another's now.
+  A finished removal deletes the route under the same lock (`remove`), so a renewal or withdrawal the connection began first writes before it goes, and none after finds a route of its generation to write back.
+- **A lease, not a process.**
+  A route lasts 75 seconds unless its connection renews it, which it does every 15, so one whose connection crashed or whose Mac restarted runs out by itself.
+- **A socket path a dial can reach.** macOS keeps a socket's path in 104 bytes, so a route's socket is absolute and at most 103 bytes, or it is not written.
+
+**The controller** is what keeps it: `work connect --from-home --home <pin> --device <id>` (`connectFromHome`, `src/core/helper/connect.ts`), which the home's own SSH session runs from the copy kept in `app/` (`docs/devices.md`, "Through the home's SSH").
+
+1. It checks the folder runs work for that home as that computer, and through the home's SSH; anything else is refused (`other-home`, `not-joined`, `not-ssh`) before anything is touched.
+2. It takes a new generation, makes a fresh folder only this user may enter under `/tmp` and says its socket's path to the home, one typed line on stdout (`controllerSaysSchema`, `src/shared/sshConnection.ts`).
+3. Told on stdin that the forward is in place, it checks the home answers through the socket with its own key, sending nothing, then publishes the route and says whether the background runs (`backgroundState`: `running`, `at-login`, `failed`), asking again on each beat until it runs; a loaded agent that leaves the folder with no live run on two beats in a row is `failed` (`agentProbe`), so Devices says the work could not start rather than "connecting".
+4. Each beat renews the route; a route a later connection took ends it (`superseded`), and so does its folder moving into a newer app's (`moved`), which the home tries again as any dropped connection.
+5. The end of its input, or 75 seconds with no beat, withdraws its generation's route, removes its own folder and nothing else, and ends it.
+
+It never starts or stops the work: the background's run follows the route on its next dial, within seconds.
+`update --from-home` and `remove --from-home` take the same `--home <pin> --device <id>`, and refuse another home's or computer's folder (`other-home`) before anything stops.
+
+## Started by the home
+
+A home that adds a Mac or a Linux computer by its address reaches it over SSH with its captain's own SSH, sends Infinitary for this computer's system there and starts that copy (`docs/devices.md`, "Adding a computer by its address"): on a Mac the home's own bundle, or the published one; on Linux the published AppImage, which this user keeps in its own folder and runs with no password.
+Its captain's click was the yes, so nothing is asked here and Terminal shows nothing: with `--from-home`, a command prints one outcome line on stdout for the home to read (`workOutcomeSchema`, `src/shared/remoteLogin.ts`) - `joined`, `updated` or `removed` with whether it runs in the background, or `refused` with the reason - and exits 0, or 1 refused.
+
+- **Join** (`join --fetched <app> --from-home`) reads its input's first line, one typed message with the link and the private socket the home's setup forwards here (`sshJoinSchema`), never its arguments, where this Mac's other users could read them, then joins as the command for another Mac's copy does, dialing the home through that socket alone: it keeps the copy and sets itself to run in the background.
+  When this user runs that home's work already, the same join finds the home again (above, "Finding the home again"), and the outcome is `joined`; the home tells the two apart by which computer used the link.
+  Over Remote Login, with nobody logged in at this Mac's screen as this user, the background starts at that user's next login (below), and the outcome says so for the home to say it; a background that failed is `failed`, never the next login.
+- **Update** (`update --fetched <app> --from-home`, `updateFromHome`, `src/core/helper/fromHome.ts`) stops the background's run so the folder is free, keeps the copy the home sent in place of the one kept here, and starts the background from it again.
+  A copy under the other name of the Infinitary rename moves the background to it (below, "In the background"), and the copy kept before goes only once the record names the new one; a background that would not move leaves the copy kept before running as it was, and the outcome is `not-kept`.
+- **Remove** (`remove --from-home`, `removeFromHome`) is a home removing this computer while it was out of reach of the connection: it stops the background's run, keeps one note of which home removed it (`left.json`), and removes what Infinitary set up here (below, "Removed"), keeping a working copy that still holds unmerged work.
+  A Claude login Infinitary made here is the work's own run's to sign out, so it starts the agent again for that.
+  What it could not remove yet rides the outcome as `unremoved`, and the home says so (`docs/devices.md`, "Removing it there").
+  On a folder whose removal has not finished, it finishes it, with the home already let go.
+- Both wait a moment for the stopped run to let the folder go; a run someone started by hand in Terminal keeps it, which is `busy`, and the background is loaded again as it was.
+- A folder that joined nothing, with no removal left to finish, is `not-joined`, and nothing changes.
+
+## In the background
+
+Once joined, the computer's own service manager starts `<app> work run` as that user whenever they are logged in, including while another user is at the screen (captain's pick on FI3-673): launchd on a Mac, that user's own systemd on Linux.
+One seam sets it up, stops and starts its run, says whether it runs and takes it away (`startInBackground`, `stopInBackground`, `pauseInBackground`, `resumeInBackground`, `backgroundState`; `src/core/helper/background.ts`), with an adapter for each manager; the app picks one by its system (`workContext`, `src/main/workContext.ts`).
+The program it starts is the one that started the join - this computer's own app for another user here, the kept copy in `app/` on another computer, a Mac's bundle or a Linux AppImage (`fetchedLauncher`) - as it starts again past its next update (`appLauncher`, `src/core/helper/launcher.ts`): a Mac's app or a Linux package's own program, the AppImage file rather than the folder its runtime mounted for one run, and on NixOS the command its profile puts on the search path rather than one version's place in the store.
+A removal that could not finish keeps the agent, which runs again and finishes it (below, "Removed").
+What it says goes to `service.log`.
+`installed.json` records the agent - its label and its file - and the kept copy, so a removal takes away exactly those.
+Nothing needs an administrator, and nothing runs as anyone but that user.
+
+**On a Mac** it is a LaunchAgent in that user's own `~/Library/LaunchAgents`, `com.getinfinitary.infinitary.work.plist` (`.dev.work` for the development flavor; Firstmate 3000's was `com.kunchenguid.firstmate3000.work.plist`, which the move hands over), started at load, and kept alive only while the grant (`home.json`) is in the data folder, so a removal is its last stop; a removal that could not finish runs once at the next login.
+Its run dials the home through macOS's own nc, as every dial of the join does (`docs/devices.md`, "Through macOS's own nc"); over a private network service's address, or to a home on the same network once that Mac has been granted local network access, it reaches the home with nobody at this Mac's screen, while on a local-network address alone, a launchd agent's dial is gated by local network privacy, which a headless Mac has no one to answer.
+A run whose home reaches it through the home's own SSH connection dials the route that connection keeps instead, a private socket on this Mac, with no nc and no network dial (below, "Through the home's SSH").
+The join loads it at once (`launchctl bootout`, then `bootstrap gui/<uid>`).
+When launchd refuses it, the join asks for that user's login session (`launchctl print gui/<uid>`), never reading launchctl's words.
+A Terminal that has no session to give it to (one reached over SSH while that user is not logged in at the screen) leaves it to start at the next login, and says so, as the home does for a Mac it added over Remote Login.
+A session that is there and refused it is `failed`, as is an agent that could not be written, since no login mends either: the join says it could not set itself to start in the background, and so does the home.
+
+**On Linux** it is a user service in that user's own `~/.config/systemd/user` (`$XDG_CONFIG_HOME` when the person moved it), `com.getinfinitary.infinitary.work.service` (`.dev.work.service` for the development flavor; Firstmate 3000's was `com.kunchenguid.firstmate3000.work.service`), wanted by the user's login (`default.target`), so it starts whenever that user's systemd does: at each login, again after the computer restarts and they log in, and never while nobody is logged in as them, as on a Mac.
+The join writes the unit and its link in `default.target.wants` itself, so the service starts at the next login even when that user's systemd cannot be asked now, then has systemd read it (`daemon-reload`) and start it (`restart`, so a run an earlier join started stops first). systemd starts the run again ten seconds after it ends, and never gives up, as launchd keeps an agent alive (`Restart=always`, `StartLimitIntervalSec=0`); before each start it checks the folder still holds the grant, or a removal it has yet to finish (`left.json`), so a finished removal is its last stop (`ExecCondition`, which systemd checks again before every restart, where a unit's `ConditionPathExists` is not).
+A stop reaches the run first and its display after it (`KillMode=mixed`), within launchd's own twenty seconds (`TimeoutStopSec`).
+When systemd cannot be asked (`daemon-reload` refused, or `show-environment` refused after a refused start), there is no session to start it in, so it starts at the next login; a session that is there and refused it is `failed`.
+Whether it runs is `ActiveState`, the property systemd answers, never its words.
+Taking it away removes the link first, so it never starts at another login, then the unit; then systemd reads the folder again, forgets a failed state, and stops it without waiting, since the run asking may be the service itself.
+The run draws on a display of its own (below, "No screen needed"), so the unit leaves out a Wayland session's display it might inherit (`UnsetEnvironment=WAYLAND_DISPLAY`).
+A computer whose search path holds no systemctl sets nothing up in the background: its work runs only while someone runs `work run`.
+
+A development run may stand in its own service manager with `INFINITARY_LAUNCHCTL` on a Mac or `INFINITARY_SYSTEMCTL` on Linux, and carries its stand-ins (`INFINITARY_HELPER_DATA_DIR`, `INFINITARY_FOLDER_SPELLING`, `INFINITARY_DEVICE_NAME`, `INFINITARY_LAUNCHCTL`, `INFINITARY_SYSTEMCTL`, `INFINITARY_CLAUDE_CLI`, `INFINITARY_SYSTEM_GIT`, `PI_OFFLINE`) into the agent; one whose data a test isolated with `INFINITARY_HELPER_DATA_DIR` and no stand-in sets up nothing in the background, so no test ever loads an agent.
+
+### Under the other name
+
+Infinitary's app keeps its work under its own label, `com.getinfinitary.infinitary.work` (`.dev.work` for the development flavor), its bundle id and then `.work` as this app's is (`workLabelOf`, `src/shared/codeNames.ts`).
+An agent `installed.json` records under the other app's label moves to this app's own in one step (`moveInBackground`, the Infinitary rename's FI3-1780 step 2): the new one is set up and started first, it is recorded only once the service manager took it, and the old one's files go and the service manager lets it go last.
+The two never run work at once, because each works only while it holds the folder (`running.lock`).
+A new one the service manager refuses is taken away again and the old one started again as it was, so a move that fails changes nothing.
+A join, the window and the home's update over Remote Login each start the background this way, under the label of the folder the work is in: this app's own once its work is in this app's folder (below).
+A run updated by its home over the connection is the old agent's own run, so its move hands back what it does last: the old copy and agent go once that run let the folder go, and letting the agent go ends that run (below, "Updated by its home").
+A run that holds the folder takes away what a move that stopped partway left (`retireStrays`): an agent of this flavor under the other label whose file names this folder, or the folder the one-time move brought it from, and a copy in `app/` other than the one recorded; another folder's agent stays.
+
+Infinitary keeps its work in its own data folder, so its work follows the one-time move of that folder (`docs/saved-data-compatibility.md`, "The one-time move"), and a computer that only runs work makes that move from its work run, since no window opens there:
+
+- **Where the work is now** (`workFolderNow`, `src/core/helper/place.ts`): in this app's own folder once it is there, or nothing is anywhere else; otherwise in the newest older spelling's folder that holds a grant or a removal to finish and has not moved.
+  Every command works from there, and Chromium's files, the notes and the display's key go there too, so nothing writes into the new folder before the move.
+  A folder that moved (its retired marker) is never opened: a Firstmate 3000 run there says it has joined nothing, and its controller and removal refuse as `not-joined`.
+  An older folder holding only a window's saved work is the window's to move.
+- **The label follows the folder.**
+  An agent set up while the work is in Firstmate 3000's folder - by Infinitary's update over Remote Login, its join, or the installed program a Linux package update starts - keeps Firstmate 3000's label, now starting Infinitary's copy, from a process that is not that agent's own run.
+- **The work run moves it** (`moveWork`, `src/core/helper/moveWork.ts`), before it starts: the whole data folder, with the move engine, window profile and all, then the background under Infinitary's label, set up anew in the new folder from the copy kept there (or this app itself); the agent before it goes last, which ends this run, and the new agent's run takes the work on.
+  A run whose older run or another move still holds the folders ends, and its background starts it again; any other refusal - the older app's window open, no room, newer saved work - leaves the work where it is for this run, and the next start tries again.
+  An agent already under Infinitary's label that names the older folder is the run's own, which could not be set up anew once the folder moved, so its work stays where it is.
+  Should the service manager refuse Infinitary's agent after the move, the agent before it runs on as it was loaded, and its file names the new folder from its next load (`rewriteInBackground`).
+- **Updated over the connection by Firstmate 3000** (`updateHere`), a run that keeps Infinitary's app moves the folder itself once its run let the folder go, then moves its background to that copy in the new folder, the agent's own run being the one process that could not set it up anew afterwards; a move it cannot make takes the kept copy away, and its background starts Firstmate 3000's run again as it was.
+- **The home's SSH connection** finds the copy and the grant in either folder (`docs/devices.md`, "Adding a computer by its address"), and its controller ends once its folder moved, so the home connects again to where the work runs (below, "Through the home's SSH").
+- A development run moves its own Firstmate 3000 folder the same way, and may stand in Firstmate 3000's folders instead with `INFINITARY_FOLDER_SPELLING=fm`, as the window's does, and carries it into its agent.
+
+## No screen needed
+
+On Linux the work mode needs a display for the hidden windows it draws - a card's demo recording played before the card goes home, a task's own browser - and a computer that runs work in the background has none: its systemd user service starts with no desktop session, and a computer reached over SSH may have no screen at all.
+Measured on GitHub's Ubuntu 24.04 with Electron 43: the work mode with no display stops at once ("Missing X server or $DISPLAY") the first time Chromium starts drawing; on Chromium's own windowless platform (`--ozone-platform=headless`) it idles as one process, but the first hidden window it opens crashes it; on a display in memory (Xvfb) every window draws, in a terminal and as a systemd user service alike.
+So the work mode on Linux draws on a display of its own, as Orca's windowless mode does (`startOwnDisplay`, `src/main/ownDisplay.ts`):
+
+- **Before Chromium opens one.**
+  The main entry awaits it before the work mode loads (`prepareWorkMode`, `src/main/work.ts`), for each command that lives past Chromium's start (`join`, `run`, `update`, `remove`, `connect`); `version` and `status` end before Chromium draws anything and need none.
+- **Xvfb, with a key of its own.**
+  It starts Xvfb on a display number Xvfb chooses (`-displayfd`), with no network listener, and a fresh MIT-MAGIC-COOKIE-1 in `display.auth`, which only this user may read and which `XAUTHORITY` names; Xvfb with no key lets any user on the computer look at what it draws, and a task's browser there may hold a sign-in.
+- **Gone when the work mode is.**
+  Xvfb runs under a small keeper in a session of its own, which ends it once the work mode's end of its input closes, so the display outlives every window Chromium closes on the way out, and Ctrl-C in a terminal reaches the work mode alone; under systemd the stop reaches the run first and the keeper after it (above).
+- **Its own over the person's.**
+  It draws on its own display even inside a desktop session, which can end while the work runs on; only in a Wayland session, where Chromium chose Wayland at its start, does it draw on the session's.
+- **No Xvfb.**
+  Each Linux package requires it (`docs/linux-packages.md`); an AppImage cannot, so with no Xvfb the work mode draws on an X session's display when it has one, and otherwise says "Infinitary needs Xvfb to run work on a computer with no screen." and "Install Xvfb with your system's software, then run this again." and exits 1.
+
+## A Mac that also controls
+
+A Mac (`mac`) is one device on its home's list with one key, and two halves: its work, which runs from this folder with no window, and Infinitary opened there with its window, which controls the home (`docs/view.md`, "A Mac that runs work").
+Each keeps the same grant - the window in `userData/joined/`, the work here - and each connection says which half it is (`as`, `docs/connection.md`), so the home holds both at once (`src/core/helper/fromWindow.ts`).
+Where both read this folder and how the background starts are one module, `workContext` (`src/main/workContext.ts`), which the work mode and the window share.
+
+- **Joined at its first launch** (`workFromWindow`): the window keeps its grant here too, under this folder's lock, and sets the work up in the background as a join does, from this app itself, with no copy kept in `app/`.
+  A folder that runs work for another home already is left as it is, and so is one in use or whose removal has not finished: that Mac then only controls until it is added again.
+- **Added by a command or its address** (`windowFromWork`): Infinitary opened there with no grant of its own controls the home this folder's grant names, a `mac`'s alone, with no new link; a grant for another user here only runs work, and stays this folder's.
+  Its window dials where the work's grant dials now, and through the route the home's SSH keeps here when the home reaches it that way.
+- **Leaving it** from its window is a removal of the whole Mac: the home brings its work home first (`docs/devices.md`, "Leave"), then cuts it, and the work here removes what Infinitary set up as any removal does (below, "Removed").
+  The window notes which device it left (`left.json`), so it never opens that home again with the grant the work keeps until then.
+- A test that isolates the app's data keeps this folder inside it and sets nothing up in the background, unless it stands in its own launchctl.
+
+## The home's side
+
+The pair request of a computer that runs work carries `user` (`{ name, uid }`, `pairRequestSchema`); one without it is `malformed`.
+The home reads where the device dialed from off its socket, never from what it says: loopback or one of this Mac's own addresses is this Mac (`isThisMachine`, `src/core/connection/addresses.ts`).
+
+- **The same user is refused.**
+  A computer that runs work dialing from this Mac as the macOS user the home itself runs as is refused as `same-user` (409), and the link is not spent: work run as the captain could read and change everything the captain can, so it runs as another user here.
+  It says "This is the user Infinitary already runs as.
+  Log in as another user on this computer, and run it there." and "Nothing changed."
+- **The list keeps who it is.**
+  Its entry keeps the device's name, `user` (the short name), and `onThisMac`, whether it joined from this Mac; every device's entry keeps `onThisMac` (`deviceViewSchema`).
+  These are what Settings -> Devices will name it by ("Running as Builder"), which piece 12 draws.
+
+## Running
+
+`startHelper` (`src/core/helper/run.ts`) is the whole composition: the data folder, the grant, and `HomeLink`, the device's side of the connection the app as a view also uses (`docs/view.md`, "Reaching the other Mac").
+Unlike `createServices` it has no first mate, task record, scheduler or sharing: the home keeps all of those.
+Beside the link it holds the crewmate conversations its home opens here (below); it is sent no push (`docs/connection.md`).
+Every child it starts - git, a crewmate's shell, Claude's client - carries the app's own git helper pointed at this computer's `forges/` (`configureComputerGit`, `src/core/helper/forges.ts`; `docs/forge.md`, "Git that never prompts"), so its git answers GitHub only with this computer's own sign-in and never prompts.
+Every git it starts - a clone, a crewmate's shell, a removal's look at a working copy - is the app's own, as the home's is: every command takes it before anything looks for git or runs it (`adoptBundledGit`, `src/core/workspace/bundledGit.ts`, from `runCli`; `docs/forge.md`, "The app's own git").
+So a Mac with no developer tools clones, commits and pushes, and its join tells the home it has git.
+
+It says each change of contact once: "MacBook Pro is in reach.", "MacBook Pro is out of reach.
+This computer keeps trying." and "Infinitary on MacBook Pro quit.
+This computer keeps trying."
+When the home removes it, it deletes its grant, keeps one note of which home, says "MacBook Pro removed this computer." and "A new command from MacBook Pro joins it again.", removes what Infinitary set up here (below, "Removed"), and exits 0.
+
+**Versions.**
+The welcome tells a computer that runs work whether it may take new work (`takesWork`): only on the home's own major, and only when it speaks `PLACED_WORK_SINCE` or later, so it can hold the conversations it is sent (`takesWork`, `src/shared/ipc.ts`).
+That is stricter than the version rule's window for a client, because the home sends it the work itself (`docs/contract.md`).
+On another major it still connects, says "MacBook Pro has another version of Infinitary, so this computer takes no new work." and "It takes work again once it is updated from MacBook Pro.", and takes none until it is replaced with the home's version.
+Its hello also says the version of Infinitary it runs (`appVersion`), so the home's Settings -> Devices says when it runs another (`docs/devices.md`, "Another version, and updating").
+
+## Updated by its home
+
+On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update order, `fm:firstmate:update`, whether or not it takes work (`updateHere`, `src/core/helper/update.ts`; `docs/devices.md`, "Updating over the connection"):
+
+1. Where a copy of Infinitary is kept here (`installed.json`'s `app`, what a command got), it gets the home's at `/firstmate` with this computer's own key and no code - naming this computer's system and chip to a home whose welcome said protocol 5.1 or later, which answers Infinitary for them (`docs/devices.md`, "Infinitary for another system") - unpacks it in a temporary folder inside the data folder (a gzipped tar with the Mac's own tar, a published zip with the Mac's own ditto, a Linux AppImage as it came), and keeps it in place of its own at the same path, which is the one the background starts (`keepApp`).
+   A copy that did not arrive whole, or another app than the one kept, changes nothing here, and the order is refused.
+   The same app under the other name of the Infinitary rename - `Infinitary.app` for a computer that keeps `Firstmate 3000.app`, or back, of the same flavor - is kept beside the one here instead, and the background moves to it under that app's own label before the answer goes (above, "Under the other name"); the old copy and agent go once the run let the folder go.
+   A background that will not move takes the new copy away again, changes nothing, and the order is refused.
+   Another user on the home's Mac runs that Mac's own app, which is the home's already, so nothing is got.
+2. It answers `{ restarts }`, whether a background is set up here (`installed.json`'s `service`), and says "MacBook Pro updated Infinitary on this computer to its version." and "It starts again now."
+   (or, with nothing set up, "Start it again to run its work.").
+3. Its run then ends as `updated`: every conversation lets go, as when it quits, and the command exits 0.
+   The background keeps the run alive while the grant is in the folder, so launchd starts it again at once, now from this version; a run started by hand is not started again.
+
+A turn running here is cut off, as when this computer restarts (below, "That computer restarts").
+The order's name and shape never change across majors, so a home on any later major can still ask it.
+
+## Resource observations
+
+The home can ask a work-enabled computer for current CPU and memory facts through the read-only `inf:computer:resources` order (`src/shared/resources.ts`), from protocol 6.3 on.
+`ComputerResources` (`src/core/placed/computerResources.ts`) reads the home through the same sampler and freshness policy, with `null` as its computer id.
+These observations do not choose a computer, change Runs on, start a conversation or reserve capacity.
+They are demand-only, kept in memory, and never load accounts or sign-ins just to answer a reading.
+
+- `ResourceSampler` measures CPU time deltas across a window of at least 250 milliseconds, no longer than five seconds, and reports the idle fraction and logical processor count.
+  A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
+- The desktop host supplies memory facts in bytes through `HostCapabilities.resourceMemory`; work mode supplies the same adapter (`src/main/host/resourceMemory.ts`).
+  Linux supplies `MemAvailable` separately from free memory.
+  On macOS, the adapter supplies free, purgeable and file-backed memory separately; the sampler does not add them or claim they are Linux's available-memory estimate.
+  Missing or invalid memory makes the whole observation unknown.
+- Every answer names the sampler's random lifetime epoch and an increasing sequence, not a remote timestamp or a permanent hardware identifier.
+  The home measures age on its own monotonic clock, from before the request, so network travel and sampling both consume the ten-second freshness allowance.
+  Negative age, an expired observation, malformed data and repeated or reversed sequences are unknown.
+- Every connection transition discards that computer's cached observation and sequence history and invalidates its pending read.
+  A late answer from an earlier connection cannot populate the new one, and an epoch change without reconnect is refused.
+- Concurrent readers share one request per computer.
+  A request that has not answered within five seconds returns unknown; it stays single-flight until it answers or disconnects, so an unresponsive computer cannot accumulate requests.
+  Disposal releases listeners, clears readings and invalidates pending answers.
+- A computer that is out of reach or speaks an older protocol is not asked.
+  It remains available for the existing manual placement paths; missing observations never change its task placement.
+
+The observations are physical-system facts, not process-enforced limits or a prediction of later build demand.
+They do not establish OS/tool/project compatibility, shared-physical-computer identity or pending-start reservations.
+The pure evaluation seam defines conservative admission allowances and typed requirements (`docs/routing.md`, "Read-only computer evaluation").
+Automatic starts combine these observations with fresh compatibility and atomic reservations, as described below.
+Screens, personal panels and Automatic placement share the `computers.resources` source; sampling itself persists no history.
+
+### Shared live readings
+
+`computers.resources` is the read-only catalog interface for screens and personal panels, served by `inf:computers:resources` and the same-named push.
+A panel must declare that read in its manifest; the frame controller and personal-panel binding refuse an undeclared subscription before making any request.
+An authenticated paired view may read it, but a work connection cannot ask it.
+Its `computers` array contains the home (`computerId: null`) and each paired work computer, with a label and the shared `ComputerResourceReading` shape from `src/shared/resources.ts`.
+Control-only devices are absent; an unreachable or older work computer stays present with an explicit unknown reason.
+A fresh reading carries receiver-owned `ageMs`, CPU idle fraction and logical CPU count, and the OS's separate memory observations.
+A failed refresh retains its refusal in memory, so a cached reader sees the same unknown reason as the reader that requested it.
+An expired refusal or observation reads stale; no raw history is kept.
+
+`ComputerResourceFeed` (`src/core/placed/computerResourceFeed.ts`) owns one demand-leased loop for all those consumers, over the existing `ComputerResources` receiver and sampler.
+It requests at most one sample per computer per two-second cadence, with the receiver's existing single-flight timeout boundary, and publishes completed readings as whole snapshots.
+A contact change immediately publishes the invalidated state; old pending replies cannot fill a new connection's cache.
+A slow computer cannot hold another computer's completed reading back.
+The renderer shares one upstream push subscription and freezes each pushed value before fanning it out to its local readers.
+Read-catalog subscribers renew demand every five seconds; those requests return the shared cache rather than starting their own loops.
+The last demand expires after fifteen seconds, after which no new samples begin until another read arrives; a read already in flight stays bounded by its timeout.
+Closing the core stops the loop and invalidates the receiver.
+Live refreshes write no database row, task event, activity line or panel-store value.
+These readings are observations only, never a scheduling commitment, a physical-sharing identity, or a stored placement snapshot.
+
+## Holding a conversation
+
+A home may open a crewmate's conversation here, while the crewmate's reports, cards and record stay at the home (`SessionHost`, `src/core/helper/sessionHost.ts`).
+No new kind of message carries it: both directions ride the connection's own `invoke` and `result` (`docs/connection.md`), with the shapes in `src/shared/work.ts`.
+A home opens one for a task whose record names this computer (`tasks.device_id`, below), which a project's Runs on sets (below, "Runs on").
+
+- **What runs here.**
+  The real Pi or Claude conversation, with the crewmate's file tools and shell in the task's own working copy here (below, "Its working copies"), and this Mac's own sign-ins: Claude on this macOS user's own client and login, and Pi with an agent folder of its own (`startConversations`, `src/core/helper/conversations.ts`).
+  A Pi conversation binds to one of this computer's own accounts for its provider (`bindHere`): the one the home named when it is this computer's, else the one preferred here, else the first that can serve; with none it is refused as having no sign-in here, and never borrows the home's.
+  A Claude conversation names this computer's own Claude account the same way, from the sign-ins it already keeps without loading them for it, and with none here it runs on this user's login under no account (`CLAUDE_LOGIN_HERE`), never under the home's.
+  The conversation's state names that account to the home (`PlacedState.accountId`), so what its turns spend and meet is that account's (below, "Its own sign-ins").
+  The crewmate's own tools run here too, so a card body file or a picture is read where the crewmate wrote it; only what a tool hands the host crosses.
+  A card's demo recording is played here before the card goes to the home, in the same hidden, isolated window the home uses (`src/main/mediaProbe.ts`, handed in by `src/main/work.ts`); that window closing never ends the work mode.
+  A task the home says has a browser has it here too, in hidden windows of this computer's own, which its crewmate drives through this computer's own task channel and the captain watches and takes from the home (`docs/task-browser.md`, "On another computer").
+  A long command in the crewmate's shell is a background job here, and its end crosses as a request.
+- **What the home asks** (orders): `inf:session:roster` lists what this Mac holds, the folder its tasks live under and the one its working copies do, which the home writes the crewmate's instructions with, and whether it keeps task browsers; `open`, `prompt`, `steer`, `abort`, `detach` and `close` drive a conversation; `copy` brings its record home, from where the home's copy of each file ends; `remove` deletes the folder of a task the home no longer records here (below, "Leftovers"); the `inf:working-copy:` orders make, read, keep and retire its working copy (below); the `inf:task-browser:` orders are the captain's side of a task's browser here, each answered live and never kept, since an answer may hold a sign-in.
+  `prompt` answers once its turn has started, and the turn's end is an event.
+  A steer that reaches a turn that already ended answers `delivered: false`, so the home puts its words back on the lane.
+- **What it asks the home** (work requests, `reach: "work"`): one per tool callback - a card, a refused completion card, closing a card, a follow-up, a progress note, a report, a reply, a look at the task list, a workflow log, a GitHub read or write, opening or checking its change, downloading an artifact, a read or write of the home's knowledge (`docs/knowledge.md`, "The tools") - plus a card picture's bytes before its card, a demo recording's after its poster in pieces of at most 1 MB (`inf:work:media`), a background job's end, the numbered events of what the conversation did, and what a task's browser here has the home do once (`inf:work:browser-event`).
+  A task browser's fact, and its pictures while the captain watches, are said once while the home is in reach, since the next one says it whole (`inf:work:browser`, `inf:work:browser-frame`).
+  Each callback asks after every event written before it, so the home hears them in the order they happened.
+- **Nothing is done twice.**
+  An order that acts carries an `orderId` from what the home saved; one already applied is answered as it was, from `tasks/<task>/orders.jsonl`, without acting again.
+  A prompt's answer is kept before its turn starts.
+  A callback asks under one `callId` and asks again under it after every drop until the home answers (`HomeLink.ask`); the home keeps each answer and answers a repeat from it.
+  Events are numbered per task, written to `tasks/<task>/outbox.jsonl` before they are sent, sent one request at a time from the number after the home's `through`, and forgotten up to the home's `kept`.
+  After every welcome the events after the home's `kept` go again, since a home that restarted within the link's grace holds only what it kept and this Mac saw no change of contact; a home that only lost the connection skips the ones it has.
+- **Lost contact.**
+  The turn goes on while the home is out of reach, and a tool waits for its callback however long it takes.
+  Claude's client would give up on an app tool after about 28 hours, so a conversation here runs it with `MCP_TOOL_TIMEOUT` at the longest a timer holds, about 24 days (`PLACED_CLAUDE_ENV`; `claudeToolWait.integration.test.ts` measures both).
+- **Quitting here** lets every conversation go: a running turn ends as `interrupted`, and is said to the home once it is back.
+  A turn a crash cut off ends the same way at the next start.
+  Asked again for the prompt that started it, this Mac answers that turn's number and starts nothing.
+- **Closed** is for good: a closed conversation opens no more.
+  A week after the task closes, the home asks `inf:session:clean-files` to remove its evidence and other leftovers here, unless live work holds them (`docs/task-retention.md`, "A closed task's leftover files").
+  When the task closes, the home asks `inf:session:clean-temp` to remove only the provisioned temporary folder, after this conversation is closed, and waits for the answer (`docs/task-retention.md`, "A task's temporary folder").
+  A computer older than protocol 7.1 is not reported as cleaned.
+  The conversation, card bodies and copies, and protocol state stay; an open conversation refuses cleanup.
+- **The record** is the conversation's own file under `tasks/<task>/sessions/`, and its state names it by its path there (`record`), which is the name the home's copy goes by.
+- **Loaded only with work.**
+  The conversations' code is its own chunk, loaded when a home opens one or one from an earlier run is still on disk, so a computer that is never given work never loads a model's code.
+  Measured on the built app on Apple silicon: 177 MB for the work mode with nothing open; with one Claude conversation open and idle, 180 MB for the work mode and 385 MB for the Claude client beside it.
+
+## The home's side
+
+`PlacedSessions` (`src/core/placed/placedSessions.ts`) is the home's half, composed in `createServices` as `services.placed`; it reaches the computers only through `WorkDevices`, which the shell attaches to the connection (`docs/devices.md`).
+
+- **Where a task runs.**
+  `tasks.device_id` (migration 63, written by `TaskService.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
+  The supervisor reads it where it used to name this Mac: that computer makes the task's working copy (below, "Its working copies"), and the session opens on that computer's factories, with that computer's folders in the crewmate's instructions and its working copy as the crewmate's own; this Mac makes no working copy for it.
+- **Factories.**
+  `factories(deviceId)` is one `SessionFactory` per backend for that computer, presenting the backend it runs there, so no third backend exists; each refuses another machine, another backend's binding, and anything but a crewmate's rolling coding conversation.
+  Its `PlacedSession` (`src/core/placed/placedSession.ts`) drives the conversation by orders and answers what a session answers at once - its model, its record, whether a turn runs - from the state the computer last sent.
+  It presents `backgroundWork: "client"`, since that computer's jobs are out of this Mac's sight: its background-work count stands in for the job list, as for Claude here.
+  For Pi, the computer's `JobManager.onChange` publishes each open conversation's own running job count through `background_work_changed`, on each count change and whenever the home opens that conversation, including zero when no job runs.
+  The home reads that count for the hover, Tasks dot and idle ladder's bounded job witness; Claude keeps reporting its client's own count, never the computer's Pi shell count.
+  A crewmate tool runs there; the session spec's `callbacks` are what the home answers each callback with.
+- **Orders, by what they deliver.**
+  A prompt or steer is named by the lane rows it delivers and this delivery of them (`rows:<ids>:<nonce>`); asked again after a drop it is the same order, which the computer answers without acting, and a later delivery of the same rows is a new one.
+  A prompt resolves when its turn ends there and the record's copy is home; it rejects only for a failure the computer reports, never for lost contact, which only makes it wait.
+  A steer that reaches a turn that already ended there is left over, and the turn's end gives it back to the lane.
+  Disposing lets go here only: a running turn goes on there, and an idle conversation lets its client go (`detach`).
+- **Work requests.**
+  The home refuses one about a task its record does not place on the computer that asks, or one closed here.
+  Each callback is done once, by the task's open session's callbacks, and its answer - or its refusal - is kept in `crewmates/<task>/placed/calls.jsonl` before it is returned, so one asked again is answered from there.
+  A card picture's bytes are kept where this Mac's cards show their pictures from, a demo recording's pieces are written into a partial file there that becomes the recording only with its last piece, and a job's end reaches the task's lane as a local job's does.
+  The events are taken once each and in order; the newest kept for good is saved at every model turn's end in `crewmates/<task>/placed/state.json`, so a restart here never counts a turn's usage twice.
+- **Out of reach.**
+  A task whose computer is out of reach, or back and not yet caught up, is held (`CrewSupervisor.outOfReach`): its lane is held as a cut-off holds one, a steer answers `recorded-held`, the quiet and two-hour checks skip it, and the idle ladder and the whose-turn sort read it as moving (`outOfReach`, `docs/report-sort.md`).
+  A start waits for it too, and never runs here instead.
+  After a minute without a computer that has work the feed says "Mac mini is out of reach.
+  Its work on website catches up here when it is back.", and once every task there caught up, "Mac mini is back.
+  Its work on website caught up.", in the design skill's words (`components/devices/RunsOn`).
+  One whose Infinitary runs work for another first mate now, as the home's SSH connection found (`other-home`), is never said to catch up: "Mac mini runs work for another first mate now.
+  Its work on website stops when you remove it here."
+- **Back in reach.**
+  The home reads the computer's roster first: a closed record's conversation is closed there, a conversation that computer lost to a restart is opened there again from its record, a turn this Mac does not follow is followed, and the orders it could not ask go now under their own ids.
+  A task is caught up once the home has every event its roster counted; its lane then goes on, with any row a restart here left in flight that no turn there took.
+- **This Mac restarts.**
+  A turn on another computer went on without it, so the boot neither marks its row interrupted (`interruptLeftRunning`) nor puts its in-flight rows back on the lane (`InboxStore.resetInFlight`).
+  The roster's running turn is followed as a continuation that delivers its rows, and a report it gave before the restart is given to that turn again from the kept answers.
+- **That computer restarts.**
+  A turn it cut off ends as `interrupted`, which the home reads as a failed turn in its own words; its rows go back for the honest retry, and the lane runs them again there in the conversation reopened from its record.
+- **The record's copy.**
+  The home copies the conversation's record into `crewmates/<task>/sessions/` at each turn's end, from where each file's copy ends, and once more when its session lets go; Observe reads that copy for a task on another computer.
+- **Closing.**
+  When the record closes the conversation is closed there for good, at once or at that computer's next roster.
+
+## Its working copies
+
+A task runs in a working copy of its own on the computer that runs it, made from where its project lives with the app's own git there, and its work comes to the home over the connection, never through where the project lives.
+
+**On the computer** (`WorkingCopies`, `src/core/helper/workingCopies.ts`, the one writer of `repos/`, `worktrees/`, `worktree-pool/`, `worktree-trash/`, `default-workspace/`, `bundles/` and `artifacts/`):
+
+- **The clone.**
+  A project is cloned here once, the first time the home gives this computer a task in it: a bare repository in `repos/`, named for its origin, that fetches only the default branch `origin` declares.
+  It is made under a temporary name and takes its own only once whole, so a failed clone leaves nothing behind.
+  Its git answers GitHub with this computer's own sign-in in `forges/` when it has one (above, "Running"); a GitHub refusal reads as GitHub's sign-in being needed (`forgeAuthRequired`), and git never waits on a terminal.
+- **The working copy.**
+  `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on `fm/task-<task>`, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
+  Asked again it answers the working copy that is there.
+  A task with no project gets one of this computer's own default workspace, started at the commit of the home's that it was sent first (below, "Seeding").
+  `inf:working-copy:install` installs its dependencies as the home installs a new one's.
+  A conversation opens only once its working copy is here.
+- **Pushing.**
+  The crewmate pushes from it in its own shell, with the app's own git there, which answers GitHub with this computer's own sign-in (`configureComputerGit`); nothing of the home's sign-in is here.
+- **What it holds.**
+  `inf:working-copy:status` says whether it holds edits or commits that never merged, as the home reads its own, and where the project it was cloned from lives (`origin`, null for one of this computer's own local workspace).
+  Both discard and `settle_task released` ask this computer to inspect its working copy; a missing copy or an unreachable computer is an unknown result, never a clean copy.
+  Released closure requires a present, clean copy with no unlanded commits and the first mate's explicit release evidence; it does not merge a branch or a pull request.
+- **Seeding.**
+  `inf:working-copy:seed` keeps the home's default workspace, which only a task with no project works in, in this computer's own: the commit is asked for first, answered `have` when this computer holds it, else `need` with the commits it holds that the bundle may leave out, and the bundle then arrives in pieces the way an artifact does.
+  Once whole and matching its digest it is fetched into `refs/infinitary/home-main` (`SEEDED_REF`), never this computer's checked-out branch, so a default workspace made here before shares no history with it and is left alone.
+  What a computer seeded before the Infinitary rename, under `refs/fm3000/home-main`, still counts as the commit it holds and as merged work.
+  `inf:working-copy:prepare` then names that commit as `seed`, and the working copy starts at it.
+  `SEEDED_REF` counts as merged work where this computer reads what a working copy holds that never merged, so only the task's own commits are kept and brought home.
+- **Its work, as a bundle.**
+  `inf:working-copy:bundle` writes the task's branch or its kept commit as a git bundle in `bundles/`, leaving out the commits the home says it has, or answers that the home has that commit already; `inf:working-copy:read` reads it to the home in pieces of `PLACED_COPY_CHUNK_BYTES`.
+- **Keeping and deleting.**
+  Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits and branch commits - as one commit on the task's kept ref, as the home saves its own, once.
+  `inf:working-copy:retire` deletes the working copy only when the commit it names is the one kept here, or, with none, when nothing is unmerged; the copy goes to the pool or the trash, and its branch, kept ref and bundles go with it.
+- **An artifact.**
+  `inf:working-copy:artifact` takes an artifact the home downloaded in pieces, outside the working copy, and once every byte is there and its digest matches writes it where the home writes one, with the same rules (`writeArtifact`, `src/core/workspace/artifacts.ts`): `.infinitary-artifacts/run-<run>/artifact-<id>.zip`, each folder refused when it is a link, never over a file already there.
+  A computer on a contract before 8.4 writes it under `.firstmate-artifacts/`, and the home names that path to its crewmate.
+
+**At the home** (`PlacedCopies`, `src/core/placed/placedCopies.ts`, held by `PlacedSessions` as `copies`):
+
+- **Starting.**
+  The supervisor asks for the working copy before it opens the session, records the task's branch and its working copy as present with no folder here (`DispatchInput.workspace.elsewhere`), and notes how that computer got it: "a new working copy was made on Mac mini, starting from the latest origin/main".
+  The first time a computer clones a project the feed says "Mac mini cloned website with its own GitHub sign-in.", or "Mac mini cloned website." when it holds no sign-in for where the project lives.
+  A task with no project first sends this Mac's default workspace there (`PlacedCopies.seed`): a bundle of only the commits that computer lacks, from this Mac's current commit, the timeline naming it, "a new working copy was made on Mac mini, starting from main (905ff75)".
+  The record's repository is this Mac's default workspace, where its branch comes home and merges.
+  A project without an origin runs on this Mac only; an origin's address crosses with any name or password in it taken out.
+- **Reading its branch here.**
+  Before this Mac's own git reads a placed task's branch - to open its change, to check a declared repair, to merge it, to merge it locally - the branch is brought home as a bundle of only the commits this Mac lacks, into `refs/heads/<branch>` of the task's repository here (`bringBranchHome`, called by `PrCiService` and `SettleService`).
+  Out of reach, this Mac reads what it brought last.
+- **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
+  An artifact is downloaded here and written into the working copy there before the tool answers, never into a folder here.
+  A workflow log is read through the project's own forge whatever computer the task runs on.
+- **Discarding.**
+  A discard asks that computer what the working copy holds; while it is out of reach nobody can tell, so the discard asks for confirmation.
+- **Closing.**
+  When the record closes, the conversation there closes for good, then that computer keeps the task's unmerged work, the kept commit comes home as a bundle and is fetched into the task's kept ref here, and only then is the working copy deleted there, with this Mac's copy of the branch.
+  The record's working copy is then removed, and its timeline says "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first".
+  While that computer is out of reach the working copy waits there, and the next time it is back each closed task's working copy goes the same way; a step that fails is tried again then.
+  Every placed task's work is kept, an answer task's included.
+
+**Leftovers** (`PlacedCopies.retireLeftover`).
+A computer can hold a working copy and a task folder for a task this Mac no longer records there: a fresh start that failed after that computer made the working copy, a purge, or a task set to run elsewhere after a start there failed and before it ran.
+What it left goes by the rule this Mac's own leftover working copies follow (`docs/task-record.md`, fleet hygiene):
+
+- **When.**
+  Each time the home reads that computer's roster - it comes back in reach, or this Mac starts - and, while it is in reach, as soon as a record goes here (a start that failed, a purge), so nothing waits for the next contact.
+- **In order.**
+  Its conversation there is closed for good.
+  What its working copy holds that never merged is kept there as one commit, comes home as a bundle and is fetched onto the task's kept ref, `refs/infinitary/kept/<task>`, in the project here whose origin the copy was cloned from, or this Mac's own local workspace for one of that computer's own.
+  A computer not yet updated past the Infinitary rename keeps it under `refs/fm3000/kept/<task>`, and the home takes the bundle's kept ref under either name.
+  Only then is the working copy deleted there, and then the task's folder under `tasks/` (`inf:session:remove`), which the computer removes only once the conversation is closed and the working copy is gone.
+  A working copy with nothing unmerged goes at once.
+- **When its work has nowhere to go here,** it stays there: no project here was cloned from where it came from, the task is one this Mac records elsewhere, whose own work owns its kept ref here, or the kept ref here already holds other work, which is never written over.
+  The feed says so once each time this Mac starts: "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: fm/task-a1b2c3d4."
+  The next time that computer is back the rule runs again, so a project added here again takes its work.
+- **This Mac's copy of the branch** stays: boot hygiene reports a `fm/task-*` branch no record explains and never deletes one.
+
+## Runs on
+
+A project's Runs on says where its next task starts: Automatic, this computer, or a computer that runs work (design skill `components/devices/RunsOn`).
+An explicit computer stays the captain's choice; Automatic chooses separately for each new task and never moves started work.
+
+- **The setting.**
+  `repos.runs_on` (migration 64) holds the computer's device id, or null for this Mac, written only by `RepoRegistry.setRunsOn`, and `RepoView.runsOn` carries it.
+  `inf:devices:runs-on` sets it to `automatic`, this computer (`null`), or a listed device that may run work (`mac` or `work`).
+  The personal workspace and a project with no origin run only here (`runsHereOnly`), since no other computer could clone them.
+- **In Settings and by talking.**
+  Settings -> Projects draws a fourth row, Runs on, for an eligible project or once a computer that runs work is on the list, with one select: Automatic, This computer, then "Your computers", then "As another user", each naming why it cannot take work now ("out of reach", "no sign-ins yet").
+  A project that runs only here shows "This computer" as text with its reason, and a collapsed project that runs elsewhere adds an accent badge, "runs on Mac mini" or "runs as Builder".
+  The first mate sets the same row with `app_change` `project-runs-on`, a line offered only where this build offers devices.
+  The feed says "website runs on Mac mini now.
+  Its next task starts there; the one running here finishes here." or "website runs on this computer now.
+  Its next task starts here."
+  (`repo_runs_on`).
+- **Where a task runs.**
+  A task takes its project's Runs on the first time the supervisor tries to start it, unless it has its own (below, "A task's own Runs on"), and `tasks.device_id` keeps it, so a task already started finishes where it started.
+  A task that has not started follows its project when the project moves, unless it has its own.
+  An independent review follows the computer its builder actually runs on, regardless of later changes to the project's Runs on (below, "Independent reviews").
+- **Waiting.**
+  A task whose computer is out of reach, or back and not yet caught up, waits as queued work, and a task commissioned then is queued the same way; it never runs on this Mac instead.
+  The ready sweep looks at it on every tick, and starts it once that computer is ready.
+  The feed says "api's next task waits for Mac mini.
+  It never runs on this computer instead." once, a day later "Mac mini has been out of reach for a day. api's next task still waits." and "To run it here instead, set api to run on this computer.", and "api's next task started on Mac mini." when it starts.
+  A computer connected on an older Infinitary that takes no new work (`Computers.takesNoWorkUntilUpdated`) is not out of reach: the wait says "api's next task waits for Mac mini.
+  It takes no new work until it is updated.", a day later "Mac mini has taken no new work for a day. api's next task still waits." and "To run it here instead, set api to run on this computer.", and Start now answers that the computer takes no new work until it is updated.
+  The start of that wait raises the computer's Update card again, even after Not now (`DeviceUpdateNudge.refresh`, forced); the card, not the wait, is where it is updated, and nothing here updates a computer.
+  Each is said once per wait, held in memory, so a wait still standing after this Mac restarts is said once more.
+  Start now answers that the task waits for that computer.
+  A task whose computer serves nothing now but a sign-in a cut-off withholds there waits the same way for that sign-in (below, "Its own sign-ins"): "api's next task waits for Mac mini's own Claude sign-in." once when the sign-in is lost or refused, and "api's next task waits for Mac mini's Claude plan's allowance, which resets 1:10pm." once when the allowance is spent, with no day's line either way, and "api's next task started on Mac mini." once that sign-in serves again; Start now answers with the same distinction.
+  A task whose computer has no sign-in at all waits the same way, as queued work with no gate: "Mac mini has no sign-ins yet. api's next task waits until it has one." once, nothing tried there, Start now refusing with the same words, and the task started by itself the moment that computer reports a sign-in (`CrewSupervisor.deviceSignInsChanged`), with "api's next task started on Mac mini."
+  (`docs/devices.md`, "Finishing its setup").
+  A task for a project that lives on GitHub, whose computer offers a GitHub sign-in from here and holds none, waits behind that sign-in's gate (`forge-sign-in:github.com@<device>`), with "api's next task waits for Mac mini's own GitHub sign-in." once and the host's GitHub card for that computer unless its setup card already asks; the gate lifts, and the task starts, the moment that computer reports the sign-in (`docs/forge.md`, "A computer's own sign-in").
+  A project whose computer was removed from the list keeps waiting, as "The other computer", until it is set to run elsewhere.
+- **A card from there.**
+  A crewmate card's head names where its task runs right after its meta line, the task's title, as "Fix the footer · on Mac mini" (`Card.place`, migration 67).
+  The place rides as its own field, never inside the meta text, so a long title gives way and the place reads whole.
+  A completion card's fact strip has a Runs cell after the project ("on Mac mini", `device`).
+- **The Tasks row, the summary and the status.**
+  A task another computer runs carries where on the board, in words (`TaskView.place`, `CrewSupervisor.taskPlace`): where it started, or where it would start now, and `outOfReach` while open or underway work's computer is out of reach, or back and not yet caught up.
+  Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
+  A part that does not fit leaves whole, the project's name first and then the place, so the narrow panel says "out of reach" alone, as it leaves out the project's name.
+  The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
+  The crew summary's Project row reads "website · on Mac mini", and the record names the computer in Details (below, "A task's own Runs on").
+  A computer going out of reach or catching up writes no record, so the placed sessions say so (`reachMoved`) and the board is published again at once (`TaskProtocol.refreshPresentation`).
+
+## Independent reviews
+
+An independent review runs on the same computer as its builder, in a separate working copy at the assigned builder commit.
+The captain's choice to put the work on another computer applies to its review too: review load and the builder's evidence stay there.
+The home still coordinates the task record and merge; it does not execute the review locally as a fallback.
+This placement applies in every build, without a development gate.
+
+- **The computer is the builder's.**
+  `CrewSupervisor.commissionReview` copies the builder's recorded placement, not the project's current setting.
+  Routing prefers another provider among that computer's subscriptions, never among the home's when the builder is elsewhere.
+  With no suitable subscription there, the review cannot start; it never borrows a home subscription.
+  A separate placement request for a review is refused because its builder owns the choice.
+- **Code to read.**
+  `reviewFacts` asks the builder's computer for its committed head and complete changed-file list (`inf:working-copy:revision`).
+  An in-flight pull request supplies its recorded head instead, which must exist on that computer.
+  An unavailable computer or missing commit refuses the review rather than using an older home copy.
+  The branch does not need to be pushed or brought home for review.
+- **A separate working copy.**
+  `inf:working-copy:prepare` accepts a generic `base`: a source task, exact commit and optional previously assigned commit.
+  `WorkingCopies` uses that source's repository without cloning or fetching, and `WorkspaceService.createTaskWorktree` makes a separate task branch and checkout at that commit.
+  The builder's working folder and uncommitted edits remain untouched.
+  The answer acknowledges the exact head; an older computer that ignores the base cannot silently provide a default-branch review.
+  The same exact-commit preparation applies to a home builder's review.
+- **Evidence and re-reviews.**
+  The brief names the builder's evidence folder on the computer both crewmates use.
+  A new review turn reads the builder's latest target and refreshes the reviewer's clean working copy before delivering the new assignment.
+  Edits or commits beyond its previously assigned base refuse the refresh, never disappear.
+  Mid-turn guidance waits for the next turn so no checkout changes under a running review; the computer also refuses a base change while its conversation is running.
+  The review task records its assigned commit in `delivery.headSha`; a verdict uses that assignment, never a newer builder head that arrived while it was reading.
+  A review from an older version with no assigned commit cannot pass until a new turn records one.
+  An already-running home review of a placed builder is not moved live: end that review and commission a new one on the builder's computer.
+  Missing evidence is still a finding, not permission to run the builder's tests (`docs/delivery-rigor.md`, "The reviewed sequence").
+- **Lifetime.**
+  Reviews use the existing placed conversation and working-copy lifecycle: resume stays there, disconnection holds delivery there, and task close retires its separate copy without touching the builder's.
+
+## Automatic starts
+
+`AutomaticPlacement` is the start-time owner beside the existing supervisor; there is no separate dispatch system.
+An eligible project has a cloneable origin and is not the personal workspace.
+New eligible projects default to `runs_on = automatic`; the additive migration changes every existing eligible project, preserving task overrides and every started task's recorded computer.
+The project select and `project-runs-on` accept `automatic`; `update_task runs_on` and `runs_on_ask` accept the same value for an unstarted task in an eligible project.
+Explicit task and parent choices, reviews following builders, origin-less projects and the personal workspace retain their existing owner.
+A task's first committed computer wins over every later project edit, including a committed home selection represented by null.
+When dynamic model routing is disabled, uncommitted Automatic tasks defer to the existing unrouted home start rather than inventing model availability; an existing commitment still stays on its computer.
+When routing is on but names no model for the home, deferring to the runtime default as it does with no allowance catalog or only an unplaced custom connection, the home still qualifies, as the same task in a This computer project starts there.
+It ranks after every computer whose routing names a model, and it needs room like any other.
+Chosen, it takes that existing unrouted home start without a commitment, since a commitment names its model, so it reserves no pending demand.
+A computer that runs work still needs a model its own sign-ins serve.
+
+`placementRequirements` on project configuration and `placement_requirements` on a task declare systems, execution architectures, exact executable names and an admission profile.
+The resolver intersects project and task platforms, combines tools and adds Git for a working copy, and never lets a task reduce project demand.
+Undeclared platforms conservatively inherit the home system and architecture; nobody infers portability or programs from the brief's words.
+
+`inf:computer:placement` collects fresh compatibility separately from resource sampling: execution system/architecture, executable identities, read-only access to the exact credential-stripped project origin, and that computer's actual served model list.
+Its facts expire after ten seconds, include request travel, and invalidate on every connection transition; a timeout or missing fact is unknown, never spare capacity.
+A computer's identity names the system whose CPU and memory its readings measure, the same for every user of it, never a username, pairing id, address or display name.
+A Mac's is its hashed platform UUID, and a Linux computer's its hashed hardware UUID from DMI, which its containers share too.
+Where only root may read that UUID, a Linux computer's is its hashed machine id, which every user of it reads; the app never runs as root.
+A virtual machine is a computer of its own: its readings measure what its host gave it, and every user inside it reads its identity, so a home in a virtual machine or on a hosted runner qualifies like any other.
+Two virtual machines on one host count separately, as their own readings do.
+An unreadable identity, such as a container that may not read DMI and has no machine id, excludes the computer from Automatic.
+Explicit selections still work.
+The home follows the same identity and resource rules as every other user or computer.
+`actualComputerPool` restricts `Router.preview` to actual served models and carries the account serving the selected model; a generic provider sign-in never expands into the home's model catalog.
+Its routing catalog names a provider by its allowance id (`claude`, `codex`, `grok`), so it is matched to the served list through `QUOTA_TO_PI_PROVIDER`.
+A project-access failure remains unknown; a generic forge sign-in cannot prove access to this project.
+
+Placement renews demand on the existing `ComputerResourceFeed`, shared with screens and permitted panels; it creates no sampler or second timer.
+A start awaits the shared in-flight resource round through `readCurrent`, so an initially empty cache cannot repeatedly miss the ready sweep.
+`TaskService.commitPlacement` evaluates all durable pending commitments and writes the choice and stable preparation order in one transaction before asynchronous preparation.
+Commitment records one bounded historical snapshot with the chosen computer, model, demand, candidate reading ages, pending capacity and typed rejection reasons.
+`preparationStarted` is written before work begins; a closed unsent commitment can be released without guessing.
+A missing preparation reply keeps the reservation and computer across retries and restarts, and reconciles the same preparation order.
+The helper journals `preparation-unknown` before starting preparation; it returns `preparation-failed` only when its first attempt has demonstrably ended.
+A failed replay after restart keeps the same order uncertain rather than treating a second failure as proof that the first attempt ended.
+A proven failed attempt may reserve a new order on the same computer, never choose another computer.
+The task owner releases pending demand only after proven failed or completed preparation, cleanup, or a sample begun after running was witnessed again.
+After restart or reconnect the running witness must be obtained again; historical readings never release demand.
+An observation containing running work is not charged that task's pending allowance again.
+
+Ordinary capacity waits are Activity lines, not cards or captain gates.
+A wait names the model as its reason when a computer that could otherwise take the task was refused only for its model and none waits only for room (`placementWait`); otherwise it waits for a compatible computer with room.
+A premium ask or escalation rung that no computer serves at its tier is held as a This computer task is: `AutomaticPlacement.choose` returns the held route (`floorHold`), and the supervisor gates the task on that tier's quota reset and wakes the first mate once (`holdForReasoning`), which may start it lower with `update_task start_now`.
+That gate's own check reads the home's quota only, while another computer may serve the tier first, so the gate sweep asks such a task's choice again on every pass (`heldOnItsLevel`); it starts wherever a computer serves its tier, and a repeated hold wakes nobody.
+Task Details show the chosen computer and a brief reason; the native “Compared computers at start” disclosure opens the past-tense candidate explanations by keyboard or pointer.
+`TaskDetail.placement` carries the bounded snapshot.
+`v_placements_v1` exposes the historical snapshot, omitting the private preparation origin, through the existing declared, granted, read-only SQL surface and follows the task row's retention.
+Live resource refreshes still write no task, database or panel-store history.
+No live migration, automatic sign-ins, enforcement, GPU admission or continuous history is introduced.
+
+## A task's own Runs on
+
+The captain can tell the first mate where one task runs, apart from its project's Runs on (FI3-1344's plan, direction A).
+The first mate sets it only from the captain's words, never by judging, and only before the task starts.
+
+- **The setting.**
+  `WorkShape.runs_on_ask` holds a computer that runs work by its device id, or `this-mac` (`RUNS_ON_THIS_MAC`); absent, the task follows its parent's, else its project's.
+  The first mate passes it as `spawn_crewmate`'s `shape.runs_on_ask`, or as `update_task`'s `runs_on` on a filed task, where `project` clears it.
+  `TaskService.updateFields` writes it, one timeline line and feed line ("updated: Runs on: Mac mini (This task)"), and `recordShape` keeps the record's own value, so an edit made while a queued task is classified is never lost.
+- **Which wins.**
+  A task's own Runs on wins; without one, a part takes its nearest parent's; without either, its project's (`CrewSupervisor.ownRunsOn`, `runsOnFor`).
+  It works in both directions: a task can run on Mac mini while its project runs here, or stay here while its project runs on Mac mini.
+  The personal workspace and a project kept on this Mac only always run here, and have none.
+  A review has no independent choice: it follows the computer its builder actually uses.
+  A task with no project runs here unless the captain asks, and has no project to follow: it runs on a computer only by its own Runs on, or its parent's.
+- **Kept until it starts.**
+  An edit re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
+  A started task finishes where it started.
+  Start again and a stronger-model retry carry the ask to the new task, as they carry `autonomy_ask` (`workShape`).
+- **Refusals, in plain words.**
+  `CrewSupervisor.runsOnRefusal` refuses a started task ("has started, so it finishes where it started, on Mac mini."), the personal workspace, a project kept on this Mac only, a review, and a device id that is not a computer that runs work on the list; `update_task` then changes nothing, and `spawn_crewmate` starts nothing ("Nothing was spawned.").
+- **A task with no project** (FI3-1496's plan, direction A) starts on the computer the captain named, in a working copy of this Mac's default workspace sent there first (above, "Its working copies").
+  Merging its change brings the branch home and merges it into this Mac's default workspace, as a task here merges, so the next task with no project, on either computer, starts from that merge.
+  A computer that speaks an older contract than `PLACED_SEED_SINCE` (3.1) takes none: the task waits as queued work, the feed says once "Mac mini needs an update to run "Find why the disk is full".
+  Update it in Settings → Devices.", Start now refuses with the same cause, and it starts by itself once that computer is updated.
+  Files the crewmate writes outside its working copy stay on that computer.
+- **Waiting.**
+  A task whose own Runs on, or its parent's, names a computer out of reach waits as a project's task does, and the feed names the task by its quoted title (`waitSubject`).
+  It says `"Fix the footer" waits for Mac mini. It never runs on this computer instead.` once, a day later `Mac mini has been out of reach for a day. "Fix the footer" still waits.` and `To run it here instead, ask Firstmate to run "Fix the footer" on this computer.`, and `"Fix the footer" started on Mac mini.` when it starts.
+  Removing that computer forgets each task's own Runs on that names it, as each project's moves home, so the task follows its parent's or its project's (`TaskService.forgetRunsOn`, called from `stopTasksOn`).
+- **Where the captain sees it.**
+  The task record's Details has a read-only Runs on row once a computer that runs work is on the list (for a task with no project, only once it or its parent has its own) (`TaskDetail.runsOn`, `CrewSupervisor.runsOnFact`): where it started, or where it would start now, then its source, "This task", "Parent task" or "Project setting" (design skill `components/cards/TaskRecord`).
+  A card from the task names where it runs as before ("Fix the footer · on Mac mini").
+
+## Its own sign-ins
+
+A computer that runs work signs in to its own subscriptions, and a task it runs uses only those (design skill `components/devices/SignInOnAMac`).
+A computer also signs in to GitHub for its own clones and pushes.
+Nothing of the home's sign-ins is sent here, and nothing of these goes to the home but the account rows, the allowance read here, and who GitHub says it is.
+
+- **The stores.**
+  `startComputerAccounts` (`src/core/helper/accounts.ts`) keeps an `AccountVault` over `work/accounts/`, with Pi's accounts and Claude on this macOS user's own login, and `startComputerForges` (`src/core/helper/forges.ts`) a `ForgeSignIns` over `work/forges/`.
+  They are loaded with the first order about sign-ins, the first conversation, or at start when either store already holds a sign-in, so a computer that signs in to nothing never loads them, and a short-lived GitHub sign-in keeps renewing with nobody asking.
+- **The flow runs here, and is drawn at the home.**
+  The home asks the orders in `src/shared/signIns.ts`: `inf:sign-ins:list`, `start`, `answer`, `cancel` and `remove`, and for GitHub `forge` and `forge-out`, and from `CUSTOM_API_SIGN_INS_SINCE` the `custom-*` orders (`SignInHost`, `src/core/helper/signIns.ts`).
+  A custom API connection is typed at the home and kept here: this computer reads the address, fetches the model list, checks each model and saves, so a localhost address is this computer.
+  The key and headers ride once inside `inf:sign-ins:custom-connect` and stay in this computer's store; the home keeps no copy in a file, a feed line, a card or a conversation.
+  What this computer says of its sign-ins includes its custom connections, with no key, and the models each account can serve, so a provider the home's catalog lacks can still take a task here.
+  A Claude account there lists Claude's shipped catalog (`claudeAvailableModels`), as the home's own does until its client's list is read, so an Automatic start can choose this computer for Claude work (above, "Automatic starts").
+  For a custom model, the home opens only the account-free control plane and names this computer's checked account; this computer builds the runtime on its own connection.
+  After the home restarts, it adopts the conversation with this computer's account again, without requiring a matching custom connection at the home.
+  If this computer no longer offers that custom account, reopening is refused rather than choosing another server.
+  Each account lists at most `SERVED_MODELS_MAX` models, the Models board's rows first (`servedForHome`, `src/shared/signIns.ts`): OpenRouter alone serves more than four hundred, and a list past the bound would leave the home reading none of this computer's sign-ins.
+  A computer older than that contract omits both, and the home shows the chip disabled.
+  A sign-in runs the provider's own flow into this computer's store, and each step - a prompt, a link or a code to read, its end - goes to the home once as `inf:work:sign-in`, asked while the home is in reach and never again.
+  Nothing opens a browser here: the link is the captain's to open, on the home's screen.
+  A browser sign-in whose link sends the browser back to the Mac it opens on (Codex's `localhost:1455`, OpenRouter's own; `returnsToLoopback`, `src/shared/signIns.ts`) waits for that return here, where the captain's browser on another Mac never comes: its page cannot be reached there, so the home asks for that page's address, which Pi's flow takes whole, never a code its page does not show.
+  Another user on the home's Mac shares its loopback, so the return reaches the sign-in here and it usually finishes by itself, with the address as the way back when it does not.
+  Codex's code to read (Pi's "Device code login") needs no paste, but only once the person turns on device code login in ChatGPT's security settings, so the choice stays the captain's.
+  What the captain types - a pasted code or address, a key - comes back once inside `inf:sign-ins:answer`; it is in this computer's store afterwards, as any sign-in's is, and the home keeps it nowhere.
+  A sign-in whose home goes out of reach, or whose computer stops, stops.
+- **Claude** adopts the login already on this computer; with none, it signs in with a code pasted back (`pasteCode`, `ClaudeAuthBackend`).
+  It looks for that login in its file and in this macOS user's saved passwords, where macOS keeps it, through the same reader as Claude's allowance below, and reads only whether the login is there, never asking.
+  Before a new sign-in over a login it cannot find, Claude Code itself must say it is not signed in: its word that it is adopts the login, and no word refuses the sign-in in a sentence, because the new sign-in would replace that user's login and sign out every Claude Code session running there.
+  A refresh token that has lapsed, and is not sitting beside a newer saved password, still starts that sign-in when Claude Code does not say it is signed in.
+  The vendor's own `claude auth login --claudeai` runs here with `BROWSER` naming a program that does nothing (`NO_BROWSER`), so no browser opens on this computer.
+  The link it prints whose page shows a code (`pasteCodeLink`, the one that does not send the browser back to this computer's loopback) goes to the home as a notice, the captain signs in there and pastes the code the page shows, and it comes back once inside `inf:sign-ins:answer` onto the client's stdin; the client finishes the exchange and keeps the login in this macOS user's own store.
+  A sign-in that does not finish ends in Claude's own reason; when it gives none, as its client's bare "Login failed: " when it cannot reach Claude, the home reads that the sign-in there did not finish and to check the internet connection there (`CLAUDE_LOGIN_UNFINISHED_THERE_TEXT`).
+  Stopping the sign-in, or the home going out of reach, stops the client.
+- **Claude's login, signed out only when Infinitary made it** (captain's pick on FI3-887).
+  A login made from a pasted code is recorded in the Claude account's own folder (`made-login.json`, `MADE_LOGIN_FILE`): which login it was, as the stamp's digest of its account and organisation, never a token.
+  An adopted login has no record.
+  Disconnect at the home (`inf:sign-ins:remove`) signs a recorded login out with the vendor's own `claude auth logout`, and only while the login here is still the one it made (`signOutMadeLogin`); the client's own status read afterwards says whether it went.
+  A login it adopted, or one that took its place, stays, and so does one whose account it cannot read.
+  The answer carries what happened (`login`: `signed-out`, `kept`, or `not-signed-out` when Infinitary made the login and did not sign it out), and the home's feed says it (`device_signed_out`): "Infinitary signed Mac mini out of the Claude login it made.", "Infinitary stopped using Mac mini's Claude login.
+  It stays, since Infinitary did not make it.", or the warning "Infinitary stopped using Mac mini's Claude login, but could not sign it out."
+  The home's Disconnect of any other account says "Mac mini is signed out of Codex."
+- **GitHub** (`src/core/helper/forges.ts`; `docs/forge.md`, "A computer's own sign-in"): this computer's own sign-in for its clones and pushes, kept in `forges/` by its own `ForgeSignIns`.
+  GitHub's device flow runs here, its code to read goes home as a notice, the captain enters it on GitHub's page there, and this computer asks GitHub until it says yes and keeps the sign-in.
+  `inf:sign-ins:cancel` stops it, and so does a newer one, since only one code is on screen at a time.
+  The code running out ends it as "The code expired.", GitHub out of reach as "Could not reach GitHub - try again.", and a no on GitHub's page quietly.
+  Its health and a short-lived sign-in's renewal run on this computer's own minute tick, as the home's own do on its; the home holds no store for it, so it can neither read nor renew it.
+  This computer's sign-ins whole carry the host it is signed in to, who GitHub says it is and its health, and every host it offers (`forges`), never the sign-in itself.
+- **Allowance and renewal, here alone.**
+  This computer reads each account's allowance with its own store every five minutes and after a sign-in, and tells the home its sign-ins whole as `inf:work:sign-ins` after any change.
+  A 401 is renewed here, and proactive renewal runs on this computer's own clock (`CredentialHealthService`); the home holds no store for these accounts, so it cannot renew one.
+- **A turn's facts are this computer's.**
+  A typed cut-off a conversation here meets - a lost sign-in, a refusal, a spent allowance - is recorded on the account it is bound to, in this computer's own store (`AccountVault.noteCutOff`, through `ownAccounts` in `src/core/helper/conversations.ts`), where its own health reads clear it as the home's clear its own: its minute's read sees a login signed in again here, a good allowance reading or a turn that succeeded on it clears a sign-out, and a spent allowance ends at its reset.
+  The home records none of it on its own accounts, so its first mate and crew keep serving from its own subscriptions, and no cut-off on the home's accounts holds a task that runs here either.
+- **A cut-off here holds its task there, as the home holds its own** (captain's pick on FI3-1001: "skip that sign-in, hold the task, and go on by itself once you sign in there").
+  Each account row this computer tells the home carries the cut-off standing on it (`AccountView.cutOff`: its class, when it was seen, and a spent allowance's reset), and this computer tells the home its sign-ins whole as soon as one is recorded or cleared (`AccountVault.onCutOffChange`).
+  The home skips that sign-in when it routes a task here (below, "A task's model"), and holds the lane of a task whose conversation here is bound to it, on the one predicate the home's own accounts use (`docs/inbox.md`, "A lane on a withheld account"): no turn is attempted, nothing is set aside, the idle ladder neither nudges it nor calls it stuck, a steer is kept (`recorded-held`), and the card thread's waiting line names where to sign in again ("Claude needs you to sign in again on Mac mini.").
+  Only the turn that met it raises the sign-in card, and the first mate hears the cut-off once for the account and its end once ("Claude on Mac mini").
+  Once it is gone the lane's kept guidance goes out as one turn, the sign-in card comes down, and a task that waited for that sign-in starts here at the next ready sweep.
+  The home books each turn's usage on the account the conversation's state names (`CrewMachines.servingAccount`), or on none when it names none, and its sign-in card for that task says to sign in again on this computer ("on Mac mini").
+  A task an earlier build started here may still name one of the home's accounts on its record, and the home reads nothing of that account for it.
+- **Claude's allowance, never asking.**
+  Claude's is read with this macOS user's own login, the way the home reads its own (`docs/quota.md`): its file, else the saved passwords through the app's own reader (`src/main/host/darwinKeychain.ts`), which the work mode loads with the first read (`savedPasswords`, `src/main/work.ts`).
+  Nothing here ever lets macOS ask: nobody may be at this screen to answer, and the read would wait on the dialog.
+  So a sign-in asks nothing, every read here passes `allowPrompt: false`, and the work mode offers no unlock.
+  A read macOS would have to ask about - no permission given here yet, or the saved passwords locked - comes home as the row's reason with words for a computer (`KEYCHAIN_VALUE_FAILURE_THERE`, `src/shared/quota.ts`), and the row offers no Retry.
+  Nothing here holds a refusal, so the next read tries again and a permission given here later shows the allowance.
+  A run whose data a test isolated with `INFINITARY_HELPER_DATA_DIR` reads no saved passwords, so no test reads the Claude login of the person running it.
+- **The home's side** is `DeviceSignIns` (`src/core/devices/deviceSignIns.ts`): it reaches the computer through the connection's own `ask` (`WorkDevices`, `src/core/placed/workDevices.ts`, which the shell attaches once it starts the connection), keeps in memory only what each computer said of itself, and pushes `inf:devices:sign-ins` and each step as `inf:devices:sign-in` to the window.
+  Settings -> Intelligence draws it (`docs/subscriptions-tab.md`, "A computer's own sign-ins"), Settings -> Projects draws its GitHub row (`docs/forge.md`, "A computer's own sign-in"), and the feed says "Mac mini is signed in to Codex."
+  (`device_signed_in`).
+- **A task's model.**
+  A task that runs here takes its model at the home among the subscriptions this computer is signed in to, never the home's (`PlacedSessions.served`, `computerPool` in `src/core/routing/computerPool.ts`).
+  The pool is every model of the home's provider-wide catalog whose provider this computer holds an account that can serve - enabled, signed in, needing no new sign-in, withheld by nothing here and with no cut-off standing on it - with the allowance as read here, so a subscription spent here is skipped.
+  A provider that catalog does not list, OpenRouter, joins with the models this computer said that account serves, and a custom connection with its checked models.
+  Automatic selection takes those only by the slot record, as it takes the home's own custom models: the captain's placements on the Models board, where they are tagged with this computer, or, when nothing this computer serves is placed, the record's fallback (`ModelSlots.routable`), which for a computer signed in only to OpenRouter takes OpenRouter's listed rows at medium.
+  It is cut from what this computer last said of its sign-ins, and the home asks `inf:sign-ins:list` once when it has said nothing yet.
+  The home's routing decision records it ("routed among Mac mini's own sign-ins (anthropic-claude): 4 models"), the home selects no account of its own for the task, and its binding names this computer's own account for that provider - its pin, else the first that serves - which `bindHere` binds here.
+  A task whose computer lists no account at all waits as queued work until it reports one (above, "Runs on"); one whose computer lists accounts but none that can take it does not start, and nothing is made here for it: "Mac mini has no subscription of its own that can take this task now.
+  Sign it in to one in Settings → Intelligence."
+  When a cut-off alone withholds the sign-in that would serve it (`heldThere`, `PlacedSessions.signInWait`), the task waits as queued work instead, and starts once that sign-in serves again (above, "Runs on").
+  A task waiting for its computer chooses its model once that computer is back, and a task reopened after a restart binds this computer's own account for the provider it was routed to.
+- **The first mate's card.**
+  Asked to sign a computer in, the first mate calls `app_change` `device-sign-in { deviceId, provider }`, and the host files one card from the computer's own entry: "Sign in to Codex on Mac mini", with Sign in beside Not now.
+  Its button opens Intelligence with that sign-in started there (`signInOn` on the open effect); the first mate starts nothing and never sees what is typed.
+
+**Claude from the home, measured.**
+Claude Code 2.1.288, run as this computer would run it - piped stdio, no terminal, its browser openers stubbed, and a stand-in proxy in place of the vendor - prints a sign-in link whose page shows a code to copy, waits on "Paste code here if prompted >", reads a pasted code from stdin, and tries to exchange it at `platform.claude.com`.
+With both a stand-in `open` on its search path and a stand-in `BROWSER`, it hands its loopback link to the `BROWSER` one alone and still prints the code page's link, which is why `NO_BROWSER` keeps a browser from opening here.
+The client's side of the paste-a-code path works with no terminal; a real code's exchange and the login it stores on that Mac were not run, because only a real sign-in can make one.
+
+## Removed
+
+Once its home removed it - at once, when it is next in reach of a home that removed it while it was out of reach (`docs/devices.md`, "Remove"), or when a new command from that home says so (above, "Finding the home again") - or once it leaves a home that is gone (above, "Leaving a home that is gone"), it lets every conversation and sign-in go, then removes what Infinitary set up here (`cleanUp`, `src/core/helper/cleanUp.ts`): its sign-ins (`accounts/`, `forges/`), the conversations (`tasks/`, `pi-agent/`, `pi-base/`) and their tasks' command keys (`task-channel/`), its clones and working copies, the pieces in flight (`bundles/`, `artifacts/`, the pool and the trash), the copy of Infinitary in `app/`, and last the background agent, which ends this process when it is the agent's.
+It touches nothing the person put on this Mac: only `installed.json`'s agent and copy, the data folder's own folders, and the Claude login Infinitary made here.
+
+**The Claude login Infinitary made here** (above, "Its own sign-ins") is signed out with the vendor's own client before its account's folder goes, and a login that was here before Infinitary stays.
+Claude's client keeps that login in this user's login session, where the saved passwords are, so only the work's own run, which launchd starts in that session, signs it out (`signOutClaude`).
+A removal begun outside it - `remove --from-home` over Remote Login, or a join that leaves a home - keeps the record at the folder's root (`claude-login.json`) and notes the removal unfinished, so the agent stays.
+`remove --from-home` starts the agent again at once: its run signs the login out and finishes the removal, or does at the next login.
+A join clears the note, so the run after it signs the login out before it loads a sign-in or a conversation.
+Terminal says which: "Infinitary signed this user out of the Claude login it made.", "This user's own Claude login stays, since Infinitary did not make it.", or "Infinitary could not sign this user out of the Claude login it made." and "To end it, sign out in Claude Code."
+A removal that leaves it to the run says "Infinitary signs this user out of the Claude login it made the next time it runs as this user.", and so does `status` while it waits.
+A home brings a computer's unmerged work home before it removes one in reach, so nothing is left to lose; one removed while out of reach could not, so a working copy that still holds edits or commits that never merged stays, with its clone, and Terminal says where: "Unmerged work it could not bring home stays here, in …".
+Otherwise it says "Infinitary removed what it set up here, with its sign-ins."
+An existing working-copy folder whose history cannot be read stays with its clone, even when Infinitary cannot tell whether it holds unmerged work.
+A working-copies folder that cannot be listed stays whole, with every clone, and the rest is removed all the same.
+Status, keep, bundle and retire refuse unreadable existing work rather than answer that it is absent or empty.
+Removal reports the unreadable folders separately: Terminal says why each stays, and `remove --from-home` includes an optional `unreadable` list alongside `kept` in its outcome.
+A failed connected removal leaves the computer on the list and its task's working copy present; after its history is repaired, retry brings its work home before retiring the copy.
+Once nothing is kept and the removal has finished, the route, the logs, Electron's own files and `left.json` go too, and `status` says this user has joined nothing.
+The route goes under its write lock (`HomeRoute.remove`), since the home's SSH connection may still be renewing or withdrawing it from its own process.
+A file the person put in the folder stays.
+While unmerged work is kept, or the removal has not finished, `left.json` stays so `status` can say which home and what is left.
+
+**A removal that cannot finish at once.**
+Nothing it cannot remove stops the rest: each piece goes on its own, so its sign-ins and conversations go even when a folder beside them cannot.
+A folder a build left read-only, inside what Infinitary made, is made writable to its owner and removed.
+A route whose lock another writer holds past the two-second wait stays for the next try.
+What still stays is noted in `left.json` (`unfinished`, `JoinedHome.setUnfinished`), which the note holds from the moment the removal begins, so a removal cut off part-way is noted too.
+The agent, the copy of Infinitary it starts and `installed.json` stay while anything else does: the agent's file goes first, in one step, then the copy, then launchd lets the agent go.
+Terminal says "Infinitary could not remove all it set up here yet, in …" and "It tries again the next time this user logs in.", and `status` says the same after which home removed it; `remove --from-home` puts the paths in its outcome's `unremoved`.
+The next run finishes it, whichever starts first: the agent at the next login (`work run`, `finishRemoval` in `src/core/helper/run.ts`), or the home's `remove --from-home`.
+A working copy an earlier try began to remove is removed without being read again, since a copy half removed no longer reads as one.
+Once nothing is left, the note keeps only which home removed it.
+A new join clears the note, and nothing tries again on its own; a join that finds the home removed it says what stays (above, "Finding the home again").
+
+## The checks
+
+- `scripts/check-helper.sh <app>` starts a built app as `<app> work version` and `<app> work status` with an empty environment under a throwaway macOS home, and requires its version and that it has joined nothing.
+  It starts the runner's own architecture, and Intel through Rosetta when an Apple silicon runner has it; the summary names the ones it started.
+  `verify.yml`'s package smoke runs it on the dev bundle, and `release.yml` on the signed app (`work-mode`).
+- `tests/e2e/run-work.spec.ts` starts the built app the same way as its own process, against the real pairing and connection.
+
+## Tests
+
+- `src/core/helper/helper.test.ts`: joining and running against the real connection and pairing - refusals before anything is asked, a yes and a no, the same user refused with the link kept, a used or expired link, a busy folder, in reach and out of reach and back, another major, Remove, and `status`; and finding the home again at its new address as the same computer with its run stopped first and everything kept, a link from another home refused while the one kept answers, and a home that removed it while out of reach heard, its setup removed and the link joining it anew; and a home that is gone left on a yes as a removal would, with one question, only the leaving asked after a command fetched the copy, nothing changed without a yes or when the new home does not answer, and `status` saying it left when the new link is refused after the yes.
+- `src/core/helper/helper.test.ts`, "a home on this Mac while this Mac's network address changes": joined by the command for another user at loopback, and in reach again with no new link once the address changed and the home listened anew; a grant naming this Mac's own network address dialing loopback from its next run and kept so; and a grant naming another Mac, a name or loopback left as it was.
+- `src/core/helper/sessionHost.test.ts`: a conversation held here, through the helper as the work mode composes it, the real pairing and connection, and real Pi against a stub of the model's API, with a stand-in home that keeps every answer - a prompt run and each callback done once with every event once and in order, an order applied once, a drop mid-turn caught up exactly with the waiting callback asked again under its id, two callbacks waiting at once, a card's picture before its card and a demo's recording in pieces after its poster, a quit mid-turn ended as `interrupted`, the record copied from where the home's copy ends, close for good, a task's folder removed only once its conversation is closed and its working copy gone, a job's end, and malformed or unknown orders refused.
+- `src/core/devices/homeLink.test.ts`: a work request asked again on each new connection until the home answers, the home's own requests answered, and a work request ended only when the device stops.
+- `src/core/helper/route.test.ts`: the route on its own - the socket answered for its home and device until its lease runs out, no earlier generation writing over or withdrawing a later one, out of reach when it cannot be read or its socket is not private, refused when its path is too long, a lock a writer died holding taken over, and a removed route that no earlier generation's renewal or withdrawal writes back.
+- `src/core/helper/helper.test.ts`, "a home that reaches this computer through its own SSH connection": a run that dials nothing without a route - not even the loopback its grant names, where the home answers - reaches the home through a published route, refuses another home's link while that home answers through it, follows a new route as the old connection drops without starting again, and is out of reach, still joined, once its lease runs out; a computer a command joined, found again by the home through its SSH after the home moved, keeps its id and sign-ins and dials only the route from then on; and a computer on that connection refuses a command's link.
+- `src/core/devices/computerUpdate.test.ts`, "a computer that reaches its home through the home's SSH connection": Infinitary got through the route, and nothing got or changed without one.
+- `tests/e2e/run-work.spec.ts`, "a computer whose home reaches it over the home's own SSH connection": the built app's run dials only the route on disk, out of reach until it is there.
+- `src/core/placed/placedPi.contract.test.ts` and `placedClaude.contract.test.ts`: the shared session suite's crewmate cases (`tests/helpers/sessionContract.ts`, the machine from its world) on real Pi and on the scripted Claude client held on a computer, driven by `PlacedSessions` over the real connection (`tests/helpers/placedContractWorld.ts`).
+- `src/core/placed/placedSessions.test.ts`: the home's side with the real supervisor and record over a real database (`tests/helpers/placedHome.ts`) and real Pi there - a task started there with each callback done once and its record copied home, a drop held out of reach and caught up exactly, a computer that runs work for another first mate now never said to catch up, an idle task out of reach never nudged, a home restart following the turn with no second prompt and keeping the report it already gave, a computer restart failing the cut-off turn and running its words again, a closed record closed there now or at the next roster, a request about another computer's task refused, and a task whose computer takes no work never started; and, on a project with an origin, its working copy cloned there, `open_change` sending the branch up from here once it is home, an artifact written there, its kept work home before the working copy is deleted there, now or once that computer is back, and a discard that asks that computer first.
+- `src/core/placed/placedCutOff.test.ts`: a task there while that computer's own sign-in is cut off, through a real `Router`, `PlacedSessions`, `DeviceSignIns` and the computer's real `SignInHost` on one manual clock - signed out there, held with one sign-in card and one wake for the account, a second task waiting with nothing tried, no turn, nothing set aside and no card back after hours and a closed card, a steer kept, and both going on by themselves once its minute's read sees the login signed in again, even when what it tells unasked comes late; a restart here keeping the hold and calling nothing over before that computer says so, with its sign-in card coming down once it is signed in there; and a spent allowance there held until its reset.
+- `src/core/placed/placedAccounts.test.ts`: whose a placed turn's facts are, through the real supervisor, `PlacedSessions`, connection and pairing, this Mac's own account vault, selector and binder, and the helper binding with `bindHere` and `ownAccounts` over a store of its own - Claude signed out or out of allowance there recorded on that computer's own Claude account and on none of this Mac's, whose account, models and first mate seat still serve; the sign-in card naming that computer; the turn's usage booked on the account that computer bound, for Claude and for Pi; and a cut-off on this Mac's own account holding no task that runs there and naming none in the first mate's wakes.
+- `src/core/helper/workingCopies.test.ts`: the working copies on a real project - one clone for every task, a working copy from the origin's newest commit, a clone refused with nothing left behind, a push from the working copy, a branch bundled with only what the home lacks, unmerged work kept and the copy deleted only once the home holds it, the origin a working copy came from, a clean copy parked warm, a task with no project, and an artifact written once whole and never over another.
+- `src/core/helper/signIns.test.ts`: this computer's own sign-ins, through the helper as the work mode composes it, the real pairing and connection, the home's real `DeviceSignIns`, and Pi's own flows against stand-in providers - nothing loaded until the home asks, a key typed at the home, Grok's code read there and finished here, Codex's link sending the browser back to loopback and the address it ends on pasted back, with its allowance read here and shown there, a placed conversation bound to this computer's account and no other, Disconnect, Claude adopted or signed in with its code pasted back (and refused), Disconnect signing out the Claude login Infinitary made and leaving one that was there before, with the home's feed event saying which, Claude's login found in this computer's saved passwords and adopted without asking, or adopted on Claude Code's own word when nothing it reads shows one, Claude's allowance read with this computer's own login and never a read that lets macOS ask, the reason said at the home when macOS would have to ask and the reading once it no longer would, GitHub's device flow against a stand-in GitHub with its sign-in in `forges/`, the git environment pointed there, its health read here and signed out from the home, a GitHub sign-in stopped or run out, a sign-in stopped by the home or by lost contact, and nothing typed or issued in what the home pushed or saved.
+- `src/core/claude/claudeAuth.test.ts` ("on a computer that runs work: a code pasted back") and `claudeCli.test.ts` (`pasteCodeLink`): the code page's link sent, the code onto stdin, no browser, a login already there adopted, a login only Claude Code can see adopted on its word, no sign-in when it gives none, a refused code in Claude's own words, a sign-in Claude gives no reason for in a sentence that says what to try, and a stopped sign-in stopping the client; and ("signing out the login it made") the login made from a pasted code signed out, and an adopted login, one that took its place and one whose account cannot be read left signed in, a client that could not sign it out said, and a login signed out by its record alone.
+- `tests/e2e/device-sign-ins.spec.ts`: the built app as the home and this computer in the test's own process, signing in from Settings -> Intelligence and from the first mate's card, Codex with the address its opened link sends the browser back to pasted back, Claude with its code pasted back and its allowance read here shown in its row, its login already there used with no code asked, or the row saying why with no Retry when macOS here would have to ask, Disconnect signing out the Claude login Infinitary made or leaving the one it adopted with the feed saying which, and GitHub from Settings -> Projects against the local GitHub stand-in, whose answer to git's helper is this computer's own sign-in - with nothing typed or issued in the home's saved data.
+- `src/core/claude/claudeToolWait.integration.test.ts`: how long the Claude client lets an app tool wait.
+- `src/core/helper/place.test.ts`, `lock.test.ts` and `words.test.ts`: where the data lives, the lock, and the words for another Mac; `src/main/workCommand.test.ts`: which starts are the work mode.
+- `src/core/helper/helper.test.ts` also holds the background set up once joined and out of the folder's lock, what it found told to the home, and a join from a fetched copy that asks nothing and keeps the copy; `found.test.ts` git found as the app's own when its copy carries one and the search path holds none, else on the search path; `background.test.ts` the agent and its file, and a refused start told apart: the next login with no session, failed with one; `cleanUp.test.ts` what a removal takes away on a real project, keeping a working copy with unmerged work, a working-copies folder that cannot be listed, a read-only folder a build left, a removal that cannot remove a copy going on with the rest and finished by its next try, the route removed after a renewal that held its lock in another thread wrote, never before, and a route whose lock is held past the wait left for the next try; and the Claude login Infinitary made signed out by the work's own run, one that was there before left, and one a removal outside the run left to that run with the agent kept.
+- `src/core/helper/fromHome.test.ts` also holds a removal over Remote Login that leaves the Claude login Infinitary made to the agent, starts the agent again, and the agent's run signing it out and finishing; `helper.test.ts` a join that leaves it to the run after it, which signs it out before it loads a sign-in.
+- `src/core/devices/pairing.test.ts` and `src/core/connection/connection.test.ts`: the home's side - the user required, `same-user`, `onThisMac`, an older list read as it was, and `takesWork` in the welcome.
+- `tests/e2e/run-work.spec.ts`, on a Mac and on Linux: the built app from Terminal joins with a typed yes and not without one, sets itself to run in the background (a stand-in launchctl, or systemctl on Linux, writes down what it was asked), stays in reach as one process, refuses a second run, stops on a signal and lets the next one take the folder, ends when the home removes it and removes what was set up, and will not run as the home's own user; the command for another user, which names loopback and stays in reach, with no new command, once this Mac's network address changed and the home listened anew, and the command for another Mac getting Infinitary from the home and joining from the copy it got; and a crewmate's turn runs there on Claude's boxed client while the home's record and crew hold it, out of reach and back with each callback once, and, its own sign-ins loaded there, through a stop that exits 0 and a restart of the app with nothing run twice; and a task in a project working in a working copy the app cloned there, its unmerged work home before that copy is deleted; on a search path that holds no git, as on a Mac with no developer tools, the join telling the home it has git, the clone, a crewmate's shell and the work brought home all running the app's own git; and a removal, from the home or in reach, that cannot remove a copy, which removes the rest, keeps its agent, says what stays, and is finished by the agent's next run.
+- `src/core/placed/placedSessions.test.ts`, "leftovers on a computer that runs work": a fresh start that failed after the working copy was made leaving nothing there, a purged task's unmerged work home on its kept ref in its project before its working copy and folder go, a leftover whose project is gone here kept there and said once until its project is back, and a failed start's working copy removed at the next contact once its task is set to run here.
+- `src/core/placed/placedSessions.test.ts`, "a project that runs on a computer that runs work": a task waiting for its project's computer out of reach, said once and again after a day, started there once it is back with its card naming where it runs, a task commissioned while it is out of reach queued, a task moved back here before it starts run here, and a project kept on this Mac only refused.
+- `tests/e2e/runs-on.spec.ts`: Settings -> Projects choosing the computer, the collapsed row and the feed saying so, the first mate setting the same row back by `project-runs-on`, a project kept on this Mac only offering nothing to choose, and a filed task with no project moved to the computer, and back, by asking the first mate.
+- `tests/e2e/card-place.spec.ts`: a card from a task on another Mac, at the narrowest window and a roomy one, with a task title longer than its head has room for, naming where it runs whole, clear of the model and close, while the title gives way.
+- `tests/release-contract.test.ts`: both workflows start the built app this way.
+- `src/core/helper/fromHome.test.ts`: started by the home - updated to the copy it sent, with its run stopped first and the background started from the new copy, or failed when the agent could not be written; removed with the note of which home; a removal that could not remove the agent's file finished when asked again, not refused; and refused for a folder that joined nothing, or one someone runs work from by hand, with the run started again as it was.
+- `tests/e2e/run-work.spec.ts`, "the home's address changes": the built app, stranded when the home answers at another address, finds it with a new command as the same computer with its background stopped and started again, and, once the home removed it while out of reach, a new command removes what was set up there and joins it anew.
+- `tests/e2e/run-work.spec.ts`, "its home gone for good": the built app, its home quit for good, asked by a new home's command to leave it - a no changes nothing and its run keeps trying, and a yes stops its run, removes its sign-ins and agent, keeps a working copy holding uncommitted work, joins the new home and is in reach of it.
+- `tests/e2e/run-work.spec.ts`, "an installed build runs the work mode": the built app with the installed flag answers its version and that it has joined nothing.
+- `tests/e2e/run-work.spec.ts`, "a Mac a command joined, stranded when the home's address changes": the built app, joined by the command for another Mac and stranded once the home moved, is found by the home's Add it at its address as the same computer with its sign-in kept, its stranded run stopped, and from then on reaches the home only through the home's SSH connection, which connects, and comes back by itself when the home moves again.
+- `tests/e2e/run-work.spec.ts`, "a Mac added by its address over Remote Login": the built app on the other side of a throwaway SSH server on loopback joins with the link on its input, keeps the copy, sets up its background and runs in reach of the home, then is updated; once the home's address changes, it comes back by itself over the home's new connection with nothing run there; then it is removed over SSH.
+- `src/core/devices/computerUpdate.test.ts`: updated by its home over the connection - the home's copy got with its own key and kept, nothing got as another user on the home's Mac, the run ending for its background, and a copy that could not be got changing nothing; `tests/e2e/run-work.spec.ts`, "updated over the connection": the same with the built app.
+
+## Not yet
+
+- A Linux computer's work while nobody is logged in as its user, except an Ubuntu 24.04 or 26.04 computer added by its address: that setup turns linger on for the account (`docs/devices.md`, "The Ubuntu package").
+  Anywhere else the service runs only while they are logged in, and linger stays theirs to turn on.
+- The real check of a Linux computer joined by a link to the captain's own Mac, and of a Mac to a Linux home, on two computers of his: the journeys run both ends on one computer, and GitHub's machines cannot reach each other.
+
+- Claude's allowance where macOS here would have to ask first: Infinitary reads it only with its own permission here, which only someone at this screen can give.
+- The real check of running as another macOS user, on a spare Mac or a virtual one with two real users, which needs the captain's permission: the tests run every user as the one running them.
+- The real check of a Mac added over Remote Login on a spare Mac, which needs the captain's permission: whether a session reached over SSH, with that user logged in at the screen, loads the background at once, and that one with nobody logged in starts it at the next login.
+  The tests reach this Mac's own throwaway SSH server, as the user running them.
+
+## Starting from a source task
+
+The home copies the chosen source card whole, including its script and style, and its pictures and recordings into the destination task's `source-cards/` folder before its first turn.
+The brief and the card name the verified copies on that computer, never the home's paths.
+The card's choice, submitted answers and thread remain inline in the brief.
+A live source branch on another computer is brought home at its current commit first.
+Starting branches and kept work cross to the destination as verified git bundles over the paired connection, into private `refs/infinitary/sources/<destination>-<source>` refs in the destination repository.
+A destination computer on a contract before 8.4 (`INFINITARY_NAMES_SINCE`) takes only Firstmate 3000's names, so the home names `refs/fm3000/sources/` to it and bundles kept work under a stand-in `refs/fm3000/kept/for-older/` ref it removes after.
+The new working copy is not preloaded: its brief names the imported ref to recover from.
+The work computer removes these private refs when it retires the destination working copy.
+Missing files, unavailable source computers and refused transfers fail dispatch rather than handing the crewmate paths or refs it cannot read.
+A computer that does not support the source-file and source-ref orders must be updated before taking work that needs them.
+
+## Crew speed on the executing computer
+
+The placed spec’s optional `speed` opt-in makes that computer ask `inf:work:speed` before each crew request and summary.
+The home returns the task override or shared model default; no sign-in or entitlement crosses with it.
+The executing computer reads its own account’s speed capabilities and explains Standard fallback through the task timeline.
+Its account catalogs refresh without holding up work, and its sign-in model rows advertise only fresh speed metadata with its original expiry, so a later sign-in update cannot extend old eligibility.
+A computer with a contract older than 5.2 keeps Standard and the home explains that it cannot use the faster choice.

@@ -1,0 +1,130 @@
+{
+  "tasks": [
+    {
+      "id": "7d1e2f30",
+      "key": "FI3-20",
+      "title": "Stabilize flaky quota tests",
+      "status": "active",
+      "activity": "idle",
+      "closed_reason": null,
+      "workspace_state": "present",
+      "repo_id": "repo-fm3000",
+      "created_at": 1788544800000,
+      "closed_at": null,
+      "outcome": null
+    },
+    {
+      "id": "8e2f3a41",
+      "key": "FI3-21",
+      "title": "Fix card overflow",
+      "status": "active",
+      "activity": "idle",
+      "closed_reason": null,
+      "workspace_state": "present",
+      "repo_id": "repo-fm3000",
+      "created_at": 1788544800000,
+      "closed_at": null,
+      "outcome": null
+    },
+    {
+      "id": "9f3a4b52",
+      "key": "FI3-22",
+      "title": "Instant feedback on card clicks",
+      "status": "active",
+      "activity": "idle",
+      "closed_reason": null,
+      "workspace_state": "present",
+      "repo_id": "repo-fm3000",
+      "created_at": 1788544800000,
+      "closed_at": null,
+      "outcome": null
+    },
+    {
+      "id": "5c0a7e11",
+      "key": "FI3-50",
+      "title": "Find why merge buttons do nothing",
+      "status": "delivered",
+      "activity": null,
+      "closed_reason": "finished",
+      "workspace_state": "present",
+      "repo_id": "repo-fm3000",
+      "created_at": 1788566200000,
+      "closed_at": null,
+      "outcome": null
+    }
+  ],
+  "cards": [
+    {
+      "id": "card-fm-1",
+      "task_id": "7d1e2f30",
+      "kind": "decision",
+      "title": "Merge PR 55: stabilize flaky quota tests",
+      "body": "<p>CI is green on https://github.com/kunchenguid/firstmate-3000/pull/55.</p>",
+      "actions_json": "[{\"id\":\"merge-pr55\",\"label\":\"Merge PR 55\"},{\"id\":\"later\",\"label\":\"Later\"}]",
+      "status": "resolved",
+      "created_at": 1788552603000,
+      "resolved_at": 1788552640000,
+      "chosen_action": "merge-pr55"
+    },
+    {
+      "id": "card-fm-2",
+      "task_id": "8e2f3a41",
+      "kind": "decision",
+      "title": "Merge PR 56: fix card overflow",
+      "body": "<p>CI is green on https://github.com/kunchenguid/firstmate-3000/pull/56.</p>",
+      "actions_json": "[{\"id\":\"merge-pr56\",\"label\":\"Merge PR 56\"},{\"id\":\"later\",\"label\":\"Later\"}]",
+      "status": "resolved",
+      "created_at": 1788554403000,
+      "resolved_at": 1788554460000,
+      "chosen_action": "merge-pr56"
+    },
+    {
+      "id": "card-fm-3",
+      "task_id": "9f3a4b52",
+      "kind": "decision",
+      "title": "Merge PR 57: instant feedback on card clicks",
+      "body": "<p>CI is green on https://github.com/kunchenguid/firstmate-3000/pull/57.</p>",
+      "actions_json": "[{\"id\":\"merge-pr57\",\"label\":\"Merge PR 57\"},{\"id\":\"later\",\"label\":\"Later\"}]",
+      "status": "resolved",
+      "created_at": 1788556503000,
+      "resolved_at": 1788556530000,
+      "chosen_action": "merge-pr57"
+    },
+    {
+      "id": "card-5c0a7e11-1",
+      "task_id": "5c0a7e11",
+      "kind": "note",
+      "title": "Merge buttons with per-PR ids do nothing",
+      "body": "<p><code>act()</code> dispatches only the literal <code>merge-pr</code> id; the cards used <code>merge-pr55</code>, so each click became a steer and nothing merged.</p>",
+      "actions_json": "[]",
+      "status": "ready",
+      "created_at": 1788566641000,
+      "resolved_at": null,
+      "chosen_action": null
+    },
+    {
+      "id": "card-fm-4",
+      "task_id": "5c0a7e11",
+      "kind": "note",
+      "title": "Why merge buttons do nothing",
+      "body": "<p><code>act()</code> dispatches only the literal <code>merge-pr</code> id; the cards used <code>merge-pr55</code>, so each click became a steer and nothing merged.</p>",
+      "actions_json": "[]",
+      "status": "resolved",
+      "created_at": 1788566693000,
+      "resolved_at": 1788566731000,
+      "chosen_action": "close"
+    },
+    {
+      "id": "card-fm-5",
+      "task_id": "q-sep05-01",
+      "kind": "note",
+      "title": "A click retires the card before the merge runs",
+      "body": "<p>The card leaves the stack the moment you click; the merge runs after, with no feedback until it finishes or fails.</p>",
+      "actions_json": "[]",
+      "status": "resolved",
+      "created_at": 1788567003000,
+      "resolved_at": 1788567021000,
+      "chosen_action": "close"
+    }
+  ]
+}

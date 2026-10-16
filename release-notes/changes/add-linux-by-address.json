@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "add-linux-by-address",
+      "kind": "feature",
+      "title": "Add a Linux computer by its address",
+      "body": "Settings → Devices now adds a Linux computer with an x64 chip by the address you reach it at with SSH, the way it adds a Mac, and Firstmate on Linux adds a Mac or a Linux computer the same way. Firstmate checks which system the other computer runs and sends it the matching copy of your version, after checking it is exactly the published one. If that computer is missing something Firstmate needs, it tells you what to install. Updating and removing it work the same way. On Linux, the list under the address field shows the computers on your network that accept SSH.",
+      "area": "devices",
+      "picture": {
+        "dark": "add-linux-by-address-dark.webp",
+        "light": "add-linux-by-address-light.webp",
+        "alt": "Settings, Devices, listing this computer and a computer named Studio, added by its address and connected using SSH"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

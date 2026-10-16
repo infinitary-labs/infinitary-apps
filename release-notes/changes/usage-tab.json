@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "usage-tab",
+      "kind": "feature",
+      "title": "See your model usage in Settings",
+      "body": "A new Usage tab shows the tokens Firstmate and your crew used, per model and per day, where they went, and how many tasks finished. One switch shows every amount in estimated dollars instead; these are approximate and never your bill. Quiet milestones mark your 1st, 10th, 25th and 50th finished task. Claude usage is now kept model by model.",
+      "highlight": 1,
+      "area": "settings",
+      "picture": {
+        "dark": "usage-tab-dark.webp",
+        "light": "usage-tab-light.webp",
+        "alt": "Settings, Usage tab: the Tokens and Estimated $ switch, three readouts and a bar for each day"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

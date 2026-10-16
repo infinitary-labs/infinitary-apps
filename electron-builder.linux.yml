@@ -1,0 +1,134 @@
+# The Linux packages (docs/linux-packages.md): an Ubuntu package, a Fedora
+# package and an AppImage for x64, from the same app the Mac packages ship.
+# The Arch recipe and the Nix package are built from the Ubuntu package
+# (packaging/linux/). Nothing here publishes: `publish` stays null, and
+# linux-packages.yml keeps the files on its run.
+extends: ./electron-builder.yml
+# The install folder is /opt/<productName>. Chromium's sandbox helper lives
+# there, and Chromium splits a helper path that contains a space, so the
+# folder takes the package's name. People read "Infinitary": the
+# desktop entry's Name below.
+productName: infinitary
+artifactName: infinitary-${version}-linux-${arch}.${ext}
+# Electron names its window after the desktop entry, so the desktop's top
+# bar and switcher put the running window under the app's own icon.
+extraMetadata:
+  desktopName: infinitary.desktop
+
+linux:
+  target:
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
+    - target: AppImage
+      arch:
+        - x64
+  executableName: infinitary
+  syncDesktopName: true
+  # koffi's Linux addon, beside the shared list's (electron-builder adds a
+  # system's own list to it; a top-level list here would replace it).
+  asarUnpack:
+    - node_modules/@koromix/koffi-linux-*/**
+  icon: packaging/build/icon.png
+  category: Development
+  maintainer: Kun Chen <3233006+kunchenguid@users.noreply.github.com>
+  vendor: Kun Chen
+  synopsis: A calm first mate for your AI subscriptions
+  description: Infinitary routes your tasks to crewmates running on your own AI subscriptions, on this computer.
+  # Never --no-sandbox: Chromium's sandbox stays on (docs/linux-packages.md,
+  # "The sandbox"). An empty list also replaces the AppImage's default one,
+  # which is --no-sandbox.
+  executableArgs: []
+  desktop:
+    entry:
+      Name: Infinitary
+      Comment: A calm first mate for your AI subscriptions
+      StartupWMClass: infinitary
+  files:
+    # Only Linux x64's own native code (glibc, never musl or Arm): the speech
+    # library (docs/architecture.md section 8), koffi's addon, the SQLite
+    # prebuilds and the terminal helper.
+    - "!node_modules/onnxruntime-node/bin/napi-v6/{darwin,win32}/**"
+    - "!node_modules/onnxruntime-node/bin/napi-v6/linux/arm64/**"
+    - "!node_modules/@koromix/koffi-linux-arm64/**"
+    - "!node_modules/@koromix/koffi-linux-x64/musl_x64/**"
+    - "!node_modules/better-sqlite3/prebuilds/{linuxmusl-*,*-arm64}.node"
+    - "!node_modules/@earendil-works/pi-tui/native/linux/prebuilds/linux-arm64/**"
+
+# Each package requires the system's git: Linux ships no git of its own
+# (src/core/workspace/bundledGit.ts). It requires Xvfb too: running work for
+# another computer, the app draws its hidden windows on a display of its own
+# (src/main/ownDisplay.ts). The rest is electron-builder's own list for each
+# format, which naming `depends` replaces.
+#
+# Each package also names itself in the app's resources folder, which the
+# update notice reads to know how this installation updates
+# (src/core/update/linuxInstall.ts; electron-builder writes no such file
+# without a publish target). The AppImage is told by its runtime instead.
+#
+# Each package is infinitary, and replaces, conflicts with and provides
+# firstmate-3000, Firstmate 3000's package, so installing it takes that
+# package's place (fpm writes --replaces as the Ubuntu package's Replaces
+# and the Fedora package's Obsoletes). Its install script, electron-builder's
+# own with one step added (packaging/linux/scripts/), leaves Firstmate
+# 3000's program path, /opt/firstmate-3000/firstmate-3000 and
+# /usr/bin/firstmate-3000, as links to its own program, so an older app
+# that installed it as an update starts again from where it started; its
+# removal script takes them away on a removal, never on an upgrade. rpm
+# runs that script before it takes the replaced package away, which deletes
+# that path, so the Fedora package makes the links again once its whole
+# transaction is done (--rpm-posttrans). docs/linux-packages.md, "The old
+# program path".
+deb:
+  packageName: infinitary
+  afterInstall: packaging/linux/scripts/after-install.tpl
+  afterRemove: packaging/linux/scripts/after-remove.tpl
+  fpm:
+    - --replaces=firstmate-3000
+    - --conflicts=firstmate-3000
+    - --provides=firstmate-3000
+    - packaging/linux/package-type/deb=/opt/infinitary/resources/package-type
+  depends:
+    - git
+    - xvfb
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+    - libasound2t64 | libasound2
+    - libgbm1
+rpm:
+  packageName: infinitary
+  afterInstall: packaging/linux/scripts/after-install.tpl
+  afterRemove: packaging/linux/scripts/after-remove.tpl
+  fpm:
+    - --replaces=firstmate-3000
+    - --conflicts=firstmate-3000
+    - --provides=firstmate-3000
+    - --rpm-posttrans=packaging/linux/scripts/rpm-posttrans.sh
+    - packaging/linux/package-type/rpm=/opt/infinitary/resources/package-type
+  depends:
+    - git
+    - xorg-x11-server-Xvfb
+    - gtk3
+    - libnotify
+    - nss
+    - libXScrnSaver
+    - (libXtst or libXtst6)
+    - xdg-utils
+    - at-spi2-core
+    - (libuuid or libuuid1)
+    - alsa-lib
+    - mesa-libgbm
+appImage:
+  # An AppImage cannot require git; the app asks when the system has none
+  # (src/main/linuxStartup.ts).
+  executableArgs: []

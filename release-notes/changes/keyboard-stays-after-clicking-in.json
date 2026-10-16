@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-stays-after-clicking-in",
+      "kind": "fix",
+      "title": "The keyboard stays where you clicked",
+      "body": "When you click into the task board, a card or a panel and then switch back to the app, the keyboard is still on what you clicked. Before, if a new card had arrived behind it while you were away, the keyboard could jump to the message box or go nowhere.",
+      "area": "cards",
+      "noPicture": "The fix is where the keyboard's focus goes when the window comes forward, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

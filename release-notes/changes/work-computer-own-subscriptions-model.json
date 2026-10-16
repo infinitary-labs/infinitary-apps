@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-own-subscriptions-model",
+      "reason": "A task that runs on a computer that runs work takes its model among the subscriptions that computer is signed in to, on its own account there, and does not start when none of them can take it; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

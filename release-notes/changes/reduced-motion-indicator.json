@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reduced-motion-indicator",
+      "kind": "improvement",
+      "title": "See when your Mac's Reduce motion setting is holding Firstmate still",
+      "body": "When Reduce motion is on in your Mac's settings, a Reduced motion badge now shows next to the settings button. Hover over it to read what holds still and what appears at once, and where to change it.",
+      "area": "firstmate",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

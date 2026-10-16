@@ -1,0 +1,188 @@
+import { type CardAction, opensSettings, takesTaskBrowser } from "@shared/cards";
+import type { ComposerNotice } from "@shared/composer";
+import type { JoinOutcome, ThisMac } from "@shared/devices";
+import { COMPUTER, HERE } from "../../../shared/deviceNames";
+
+/**
+ * The words an app controlling Firstmate on another Mac says (design skill
+ * `components/devices/RemoteControl` and `JoinAnotherMac`; docs/view.md).
+ * The other Mac is named by its own name, never as a home or a server, and
+ * an address stays the thing itself.
+ */
+
+export type ViewMac = Extract<ThisMac, { role: "view" }>;
+
+/** This app controls another Mac. */
+export function isView(thisMac: ThisMac | null): thisMac is ViewMac {
+  return thisMac?.role === "view";
+}
+
+/**
+ * Whether this Mac may change anything on the other one right now: only
+ * while it is in reach and the two Firstmates are close enough. Changes
+ * are refused at once otherwise, and never sent later.
+ */
+export function changesOff(thisMac: ThisMac | null): boolean {
+  return isView(thisMac) && (thisMac.contact !== "in-reach" || thisMac.readOnly !== null);
+}
+
+/** "14:32": the clock the app's other lines use. */
+export function clockTime(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/** What to do while the other Mac has a newer Firstmate: the tooltip, and the pill after its name. */
+export const UPDATE_THIS_MAC = `Update Infinitary on ${HERE.this} to make changes`;
+
+/** Why a card's button is off: its tooltip. */
+export function changesOffWords(mac: ViewMac): string {
+  if (mac.readOnly === "newer-there") return UPDATE_THIS_MAC;
+  if (mac.readOnly === "older-there") return `Update Infinitary on ${mac.name} to make changes`;
+  return `Changes are off until ${mac.name} is back`;
+}
+
+/**
+ * What a card's button that opens one of the other Mac's Settings sections
+ * says, as its tooltip and once clicked: nothing is sent, and the card
+ * stays on both Macs.
+ */
+export function settingsThereWords(mac: ViewMac): string {
+  return `Do this on ${mac.name}. Its settings and sign-ins stay there.`;
+}
+
+/**
+ * What a crewmate's request card's button that hands the captain its task's
+ * browser says, as its tooltip and once clicked: the page shows only on the
+ * other Mac, so nothing is sent, and the card stays on both Macs.
+ */
+export function browserThereWords(mac: ViewMac): string {
+  return `Do this on ${mac.name}. This task's browser shows only there.`;
+}
+
+/**
+ * What a card's button says when it is done only on the other Mac, so this
+ * one never sends it: one that opens one of its Settings sections, or one
+ * that hands the captain a task's browser. Null for every other button.
+ */
+export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">): string | null {
+  if (opensSettings(action)) return settingsThereWords(mac);
+  if (takesTaskBrowser(action)) return browserThereWords(mac);
+  return null;
+}
+
+/** What a task's browser view shows in place of its page, which shows only on the other Mac. */
+export function browserShownThereWords(mac: ViewMac): { lead: string; detail: string } {
+  return {
+    lead: `This task's browser shows only on ${mac.name}.`,
+    detail: "Watch it and take control of it there.",
+  };
+}
+
+/** What the input says when sending was refused; the words stay in it. */
+export function notSentWords(mac: ViewMac): string {
+  if (mac.readOnly === "newer-there")
+    return `Not sent. Update Infinitary on ${HERE.this} to send it.`;
+  if (mac.readOnly === "older-there")
+    return `Not sent. Update Infinitary on ${mac.name} to send it.`;
+  return `Not sent. Your words stay here until ${mac.name} is back.`;
+}
+
+/** What the input says when a file that is neither a picture nor text was not added. */
+export function fileOtherMacWords(mac: ViewMac): string {
+  return `Only pictures and text files can go to ${mac.name}. Other files were not added.`;
+}
+
+/** A composer notice's words that name the other Mac; null for the rest, which read the same on any Mac. */
+export function namedNoticeWords(notice: ComposerNotice, mac: ViewMac): string | null {
+  if (notice === "away") return notSentWords(mac);
+  if (notice === "file-other-mac") return fileOtherMacWords(mac);
+  return null;
+}
+
+/**
+ * The top line's parts: the dot, the words before the name, the name, and
+ * what follows it - "· as of 14:32" while out of reach, "· read only" while
+ * the Firstmates are too far apart.
+ */
+export function topLine(mac: ViewMac): {
+  tone: "ok" | "warn" | "ring";
+  lead: string;
+  name: string;
+  tail: string | null;
+} {
+  if (mac.contact === "lost" || mac.contact === "closed")
+    return {
+      tone: "warn",
+      lead: "",
+      name: mac.name,
+      tail: mac.heardAt === null ? "is out of reach" : "is out of reach · as of",
+    };
+  return {
+    tone: mac.contact === "reaching" ? "ring" : mac.readOnly ? "warn" : "ok",
+    lead: "Controlling your first mate on",
+    name: mac.name,
+    tail: mac.readOnly ? "· read only" : null,
+  };
+}
+
+/** The one line under the top bar that says why changes are off, or null while they are on. */
+export function pillWords(mac: ViewMac): string | null {
+  if (mac.contact === "lost")
+    return `Changes are off until ${mac.name} is back. It may be asleep, or on another network.`;
+  if (mac.contact === "closed")
+    return `Infinitary is closed on ${mac.name}. Changes are off until it opens again.`;
+  if (mac.contact !== "in-reach") return null;
+  if (mac.readOnly === "newer-there")
+    return `${mac.name} has a newer Infinitary. ${UPDATE_THIS_MAC}.`;
+  if (mac.readOnly === "older-there")
+    return `${mac.name} has an older Infinitary. Update Infinitary there to make changes.`;
+  return null;
+}
+
+/** Said once when contact returns, then it fades. */
+export function backWords(mac: ViewMac): string {
+  return `${mac.name} is back. ${HERE.This} caught up.`;
+}
+
+/** The line under the first launch's chips after this app stopped controlling a Mac. */
+export function leftLine(left: NonNullable<Extract<ThisMac, { role: "home" }>["left"]>): string {
+  return left.reason === "left"
+    ? `${HERE.This} left ${left.name}.`
+    : `${left.name} removed ${HERE.this}. Paste a new link to come back.`;
+}
+
+/** The question before joining, either side of the address the link names. */
+export const JOIN_CONFIRM_WORDS = {
+  before: `Your first mate stays on the ${COMPUTER.one} at`,
+  after: ". Control it from here?",
+  orPrivate: ", or on your private network",
+};
+
+/** The confirm question's line for a link that adds a Mac that also runs work. */
+export const JOIN_RUNS_WORK = "It can also run work you give it, with sign-ins of its own.";
+
+/** The sentence a refused join says, with the address the link names. */
+export function joinRefusalWords(
+  refused: Exclude<JoinOutcome, { ok: true }>["refused"],
+  address: string | null,
+): string {
+  const at = address ?? "that address";
+  switch (refused) {
+    case "not-a-link":
+      return `That is not a link from Infinitary. Copy it again on your other ${COMPUTER.one}.`;
+    case "kind":
+      return `That link is for another user on your other ${COMPUTER.one}. Make a link for ${HERE.this} there.`;
+    case "used":
+      return `That link was used already. Make a new one on your other ${COMPUTER.one}.`;
+    case "expired":
+      return `That link expired. A link lasts ten minutes; make a new one on your other ${COMPUTER.one}.`;
+    case "unknown":
+      return `That link no longer works. Make a new one on your other ${COMPUTER.one}.`;
+    case "unreachable":
+      return `Could not reach ${at}. Both ${COMPUTER.many} need the same network, or the same private network.`;
+    case "not-that-mac":
+      return `Something answered at ${at}, but not the ${COMPUTER.one} that made this link. Nothing was sent to it.`;
+    default:
+      return `${HERE.This} could not join. Make a new link on your other ${COMPUTER.one} and try again.`;
+  }
+}

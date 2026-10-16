@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "devices-tab",
+      "reason": "Builds Settings -> Devices and Firstmate's device cards, hidden from released builds until another Mac can join (multi-machine piece 6). A released app shows nothing new."
+    }
+  ]
+}

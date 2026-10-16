@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-place",
+      "reason": "Internal, behind the development-only multi-machine gate: a card from a task that runs on another Mac keeps \"on Mac mini\" in view however long its task's title. An installed app runs no task on another Mac, so no card there names one."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-words-from-their-owner",
+      "reason": "Test-only change: end-to-end tests read the words they expect from the module that owns them, and a new test lint refuses words typed into a test. Product words some tests read moved into exported constants with the same text, so nothing a person sees changes."
+    }
+  ]
+}

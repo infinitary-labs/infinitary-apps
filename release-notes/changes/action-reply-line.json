@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "action-reply-line",
+      "kind": "fix",
+      "title": "Firstmate's reply says what it did",
+      "body": "When Firstmate starts work, its reply says Started before the task title. When it files a task, the reply says Filed and includes the task key and title. Task edits, links, drops and reminders also say what happened. Firstmate's own words take priority over these automatic replies, whichever comes first.",
+      "area": "message-box",
+      "picture": {
+        "dark": "action-reply-line-dark.webp",
+        "light": "action-reply-line-light.webp",
+        "alt": "Firstmate's reply identifies the task it filed below the captain's message"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-screenshots",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates on a custom connection keep working after a screenshot",
+      "body": "A crewmate on a custom connection no longer stops with an error when a tool hands back a screenshot. The picture is replaced by a short note and the work carries on.",
+      "noPicture": "A crewmate's turn that used to stop now continues; there is no screen to show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

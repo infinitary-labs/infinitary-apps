@@ -1,0 +1,121 @@
+{
+  "entries": [
+    {
+      "id": "bf-d3aec2ede",
+      "kind": "feature",
+      "title": "Add a consistent code completion outline",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d3aec2edea05d4996a34b1825265d80fab272144"
+        ]
+      }
+    },
+    {
+      "id": "bf-a54c07854",
+      "kind": "feature",
+      "title": "Drop never-started charted work from the record",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a54c07854a4a4c4e61210629db6107c5d2f934c2"
+        ]
+      }
+    },
+    {
+      "id": "bf-ffba431c2",
+      "kind": "fix",
+      "title": "Stabilize scrollbar width to stop resize feedback",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ffba431c241dbe0d93200cb1ff08b0433d49e069"
+        ]
+      }
+    },
+    {
+      "id": "bf-d46d381c7",
+      "kind": "fix",
+      "title": "Diagnose failures and count unsuccessful own repairs",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d46d381c7a66f21f545108dd51b32536c02404e8"
+        ]
+      }
+    },
+    {
+      "id": "bf-1a0a1d5ba",
+      "kind": "fix",
+      "title": "Run Linux checks on release proposals",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1a0a1d5babb62afc3097230775e257b86816f660"
+        ]
+      }
+    },
+    {
+      "id": "bf-b83f1f861",
+      "kind": "fix",
+      "title": "Raise the key hint to the secondary type size",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b83f1f86148686bff77ccc4ff78acf654b004360"
+        ]
+      }
+    },
+    {
+      "id": "bf-c2e0d456a",
+      "kind": "fix",
+      "title": "Expand Models by default in Intelligence",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c2e0d456a175a75f32e56584f9bbb95ee3e9b02c"
+        ]
+      }
+    },
+    {
+      "id": "bf-13e534b7c",
+      "kind": "fix",
+      "title": "Hide closed blockers in task records",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "13e534b7cea0aa2a9060beaf00dac045f9cd6caa"
+        ]
+      }
+    },
+    {
+      "id": "bf-25a6e8d02",
+      "kind": "fix",
+      "title": "Restore the outside words the captain adopted",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "25a6e8d027afb6c04a1409a035e2dc6688ccee98"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-24-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.24: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "235a273263902413538a23282dbcaa4d0a020931",
+        "fa69dc4fe48869d2b31d7dae5c5b035700aa0d82",
+        "1962f8f25ba8c58e321aa617e5a0454f45950dc4",
+        "f028dd55fc0f948c09bf86088afa3efba661158d",
+        "8c56ecd1a6a5e425ac281de72b84e2e66273a9db",
+        "d83b508f3202309dfffbc9838491306383b77ab0",
+        "c7de1cfb36300ecee2fcc997ded000650e08bc24",
+        "7cc254aea7ab4defda7d559020904a21494fe4ab",
+        "9799907ee049311d51317b24e843b1cef0068c1c",
+        "182f8ba3c2b725af7f0092bc98f2a17b4789b8f0"
+      ]
+    }
+  ]
+}

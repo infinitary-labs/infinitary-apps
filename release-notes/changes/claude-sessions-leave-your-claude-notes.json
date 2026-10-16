@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-sessions-leave-your-claude-notes",
+      "kind": "fix",
+      "title": "Claude crewmates leave your own Claude notes alone",
+      "body": "Claude keeps notes about each project in your own Claude folder. A Claude crewmate, and Firstmate on Claude, no longer read those notes or add to them. They work from your project's own instructions, as every other crewmate does, and your notes stay where they are.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a Claude crewmate is given.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

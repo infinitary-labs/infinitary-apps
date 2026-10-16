@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "find-github-repo-by-name",
+      "kind": "fix",
+      "title": "Firstmate finds your GitHub repository by name",
+      "body": "Firstmate now searches all of your GitHub repositories, not only the 50 most recently changed. It also takes a name written loosely, such as meter lab, or a pasted address. When it cannot find one, a crewmate searches GitHub for it before you are asked for a link.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: Firstmate finds the repository in conversation.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

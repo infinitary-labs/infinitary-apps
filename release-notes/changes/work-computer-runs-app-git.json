@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-runs-app-git",
+      "reason": "A computer that runs work clones, commits and pushes with the app's own git and tells its home it has git, so a Mac with no developer tools can run work; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

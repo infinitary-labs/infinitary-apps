@@ -1,0 +1,79 @@
+{
+  "entries": [
+    {
+      "id": "bf-fb6a85647",
+      "kind": "feature",
+      "title": "Draw each crewmate as the solid of its intelligence slot",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "fb6a85647407f0b43589f5f35472c875143a33f0"
+        ]
+      }
+    },
+    {
+      "id": "bf-a6d3224b0",
+      "kind": "feature",
+      "title": "Grok 4.7 medium, Composer low, Decisions alignment",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a6d3224b01deb5a402b3c43d0dc27c2de11bc016"
+        ]
+      }
+    },
+    {
+      "id": "bf-b3ed1a2c6",
+      "kind": "feature",
+      "title": "Keep model lists lean, read each account's catalog at runtime",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b3ed1a2c6abfa529c9be95dc081faf51b883cda7"
+        ]
+      }
+    },
+    {
+      "id": "bf-be4123ab3",
+      "kind": "fix",
+      "title": "Isolate Electron profiles and skip Whisper when the weights are absent",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "be4123ab3fb88739147a38bc04f6daff911447bf"
+        ]
+      }
+    },
+    {
+      "id": "bf-8eac157fb",
+      "kind": "fix",
+      "title": "Photograph panel themes off the live window",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "8eac157fbfb9fd4ff6ef838bced5194e41c2e367"
+        ]
+      }
+    },
+    {
+      "id": "bf-d4a10cfe7",
+      "kind": "fix",
+      "title": "Show reading… for sensed accounts until first allowance read",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d4a10cfe79b6a651c0c1cb0438f6bc31fc8c9188"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-6-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.6: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "bac0a4bf31faea5fe57f69f2a86df5581895180f"
+      ]
+    }
+  ]
+}

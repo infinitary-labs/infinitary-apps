@@ -1,0 +1,24 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core" subtitle="Button · IconButton · Input · Switch · Badge · KeyCap" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="../../vendor/react.development.js"></script><script src="../../vendor/react-dom.development.js"></script><script src="../../vendor/babel.min.js"></script><script src="../../_ds_bundle.js"></script></head><body style="margin:0;padding:20px;background:var(--bg-0)"><div id="root"></div><script type="text/babel">
+const NS=window.InfinitaryDesignSystem_94f559;
+const {Button,IconButton,Input,Switch,Badge,KeyCap}=NS;
+const ico=<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M5 12h14M12 5v14"/></svg>;
+function Demo(){
+  const [on,setOn]=React.useState(true);
+  return <div style={{display:"flex",flexDirection:"column",gap:18}}>
+    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+      <Button>Submit</Button><Button variant="secondary">Add subscription</Button><Button variant="ghost">Not now</Button><Button variant="danger">Abandon</Button><Button disabled>Submit</Button><Button size="sm" variant="secondary">Small</Button>
+      <IconButton label="Add">{ico}</IconButton><IconButton label="Add" tone="accent">{ico}</IconButton>
+    </div>
+    <div style={{display:"flex",gap:16,alignItems:"center"}}>
+      <div style={{width:240}}><Input placeholder="user@host" mono/></div>
+      <Switch checked={on} onChange={setOn} label="Track quota pace"/>
+    </div>
+    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+      <Badge tone="ok" dot>live</Badge><Badge tone="accent" mono>on pace</Badge><Badge tone="warn" dot>stale</Badge><Badge tone="danger">auth required</Badge><Badge tone="outline">weekly</Badge><Badge>idle</Badge>
+      <span style={{color:"var(--fg-3)",fontSize:13,fontFamily:"var(--font-ui)"}}>press/hold</span><KeyCap>⌥</KeyCap><KeyCap>space</KeyCap>
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script></body></html>

@@ -1,0 +1,8 @@
+{
+  "name": "Fractional drawing",
+  "version": "1.0.0",
+  "title": "Fractional drawing",
+  "placement": { "x": "right", "y": "top" },
+  "size": "content",
+  "order": 10
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ssh-connection",
+      "reason": "Internal, behind the development-only multi-machine gate: a Mac added by its address is set up, kept in reach, updated, moved to another address and removed over this Mac's own SSH connection, with its state, Try again and Change address in Settings -> Devices. An installed app offers none of it."
+    }
+  ]
+}

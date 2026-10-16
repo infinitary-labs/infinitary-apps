@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gif-demos-on-cards",
+      "kind": "improvement",
+      "title": "A demo can be a short GIF when a video cannot be made",
+      "body": "When a crewmate cannot make a video of how a change works, its card can show the demo as a short GIF instead. It looks the same on the card, a still with a Play button; in the large viewer it plays once when you press Play, Stop takes it back to the still, and Replay plays it again. Nothing plays on its own or loops.",
+      "area": "cards",
+      "picture": {
+        "dark": "gif-demos-on-cards-dark.webp",
+        "light": "gif-demos-on-cards-light.webp",
+        "alt": "The large viewer playing a GIF demo of a box sliding right, with a Stop button and the time at one second of three"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

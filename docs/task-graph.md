@@ -7,6 +7,10 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
 
 - **Hierarchy**: `tasks.parent_id`, one parent per task, and it means *containment* - the child is part of the parent's work.
   A child inherits its parent's project (and its repo unless bound to one of its own); the ancestor walk refuses a cycle at write time (`TaskService.setParent`).
+  Only open work that has not started moves to another project, by `update_task`'s `project` or a parent there, and its parts move with it (`TaskService.moveWithin`).
+  The moved task takes the repository it lands in - the new parent's on a re-parent, as a new child does, else the project's - so its working copy, pull request, checks and GitHub writes are there; where there is none to take (Scratch, or a parent with none) it keeps its own.
+  Each part takes what its parent takes, as a new child does, unless it is bound to a repository of its own, which it keeps.
+  The move is refused into a removed project, and into a project whose repository has no remote when a task it would take asks to ship as a pull request.
   A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
 - **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and `to` does not *close* while `from` is still live work; `related` - informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `from` was dropped for `to`, which does its work, with no effect on readiness or closing either.

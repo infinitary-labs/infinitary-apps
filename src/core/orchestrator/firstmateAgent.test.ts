@@ -11,6 +11,7 @@ import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { plainProblem } from "@shared/plainProblem";
 import { type DecisionRecord, decisionRecordSchema } from "@shared/provenance";
 import type { ModelsCatalogView, Slot } from "@shared/quota";
+import { runsHereOnly } from "@shared/repos";
 import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
 import { DEFAULT_SHARING } from "@shared/sharing";
 import { decode } from "@toon-format/toon";
@@ -345,11 +346,11 @@ function setup(
     sessions: { pi: crew },
     bind: async (accountId) => fakeBinding(accountId),
     workspace: {
-      createTaskWorktree: vi.fn(async (taskId: string) => ({
+      createTaskWorktree: vi.fn(async (taskId: string, repoDir?: string) => ({
         taskId,
         cwd: join(paths.worktreesDir, taskId),
         branch: `fm/task-${taskId}`,
-        repoDir: paths.defaultWorkspaceDir,
+        repoDir: repoDir ?? paths.defaultWorkspaceDir,
       })),
       removeTaskWorktree: vi.fn(async () => {}),
       retireTaskWorktree: vi.fn(async () => ({ outcome: "removed" as const, kept: null })),
@@ -6301,6 +6302,110 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(answer).toBe(
       `Commissioned crewmate 1 on task ${started?.id}; it runs with no model recorded, so claude-fable-5-1 is not confirmed.`,
     );
+  });
+
+  // INF-8: INF-3, moved from firstmate-3000's project into Infinitary's,
+  // still worked in the old repository and would have opened its pull
+  // request there.
+  it("moves a planned task with update_task's project into that project's repository, where it starts", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    const folder = (name: string, origin: string) => {
+      const dir = scratchDir(`infinitary-move-${name}-`);
+      execFileSync("git", ["init", "--initial-branch=main", dir], { stdio: "pipe" });
+      execFileSync("git", ["-C", dir, "remote", "add", "origin", origin], { stdio: "pipe" });
+      return dir;
+    };
+    const archive = await repos.setup({
+      kind: "adopt",
+      path: folder("archive", "https://github.com/infinitary-labs/firstmate-3000-archive.git"),
+      name: "firstmate-3000-archive",
+      key: "FI3",
+    });
+    const infinitary = await repos.setup({
+      kind: "adopt",
+      path: folder("infinitary", "https://github.com/infinitary-labs/infinitary.git"),
+      name: "infinitary",
+      key: "INF",
+    });
+    await agent.converse("open infinitary's first pull request");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", {
+      title: "Open the first pull request",
+      goal: "infinitary-labs/infinitary's first pull request passes every check",
+      user_words: "open infinitary's first pull request",
+      repo_id: archive.repo.id,
+    });
+    const step = tasks.byKey("FI3-1");
+    expect(step?.repoId).toBe(archive.repo.id);
+    // Where firstmate-3000-archive ran, as its Runs on placed the task before it started.
+    tasks.setDevice(step?.id as string, "mini-mac");
+
+    expect(await text("update_task", { task: "FI3-1", project: "INF" })).toBe(
+      "Updated INF-1: moved to infinitary as INF-1.",
+    );
+    const read = await text("tasks", { key: "INF-1" });
+    expect(JSON.parse(read.slice(read.indexOf("[")))[0]).toMatchObject({
+      project: "INF",
+      repo: "infinitary",
+    });
+    // infinitary runs on this Mac, so the task goes there before it starts.
+    expect(tasks.get(step?.id as string)?.deviceId ?? null).toBeNull();
+    expect(await text("update_task", { task: "INF-1", start_now: true })).toContain("Started");
+    expect(tasks.get(step?.id as string)).toMatchObject({
+      status: "active",
+      repoId: infinitary.repo.id,
+      repoDir: infinitary.repo.path,
+    });
+  });
+
+  // INF-61's F2: runs_on was judged in the project a task was leaving.
+  it("judges where a task runs in the project the same update_task moves it to", async () => {
+    const { agent, specs, tasks, repos } = setup();
+    const notes = await repos.setup({ kind: "init", name: "notes", key: "NOTE" });
+    const dir = scratchDir("infinitary-move-infinitary-");
+    execFileSync("git", ["init", "--initial-branch=main", dir], { stdio: "pipe" });
+    execFileSync(
+      "git",
+      ["-C", dir, "remote", "add", "origin", "https://github.com/infinitary-labs/infinitary.git"],
+      { stdio: "pipe" },
+    );
+    await repos.setup({ kind: "adopt", path: dir, name: "infinitary", key: "INF" });
+    await agent.converse("write the release checklist and run it on this Mac");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", {
+      title: "Write the release checklist",
+      goal: "The release checklist is written",
+      user_words: "write the release checklist",
+      repo_id: notes.repo.id,
+    });
+    const id = tasks.byKey("NOTE-1")?.id as string;
+    const keptHere = runsHereOnly(notes.repo) as string;
+    expect(await text("update_task", { task: "NOTE-1", runs_on: "this-mac" })).toContain(keptHere);
+
+    const moved = await text("update_task", {
+      task: "NOTE-1",
+      project: "INF",
+      runs_on: "this-mac",
+    });
+    expect(moved).toMatch(/^Updated INF-1: moved to infinitary as INF-1, Runs on: /);
+    expect(tasks.get(id)).toMatchObject({ key: "INF-1", shape: { runs_on_ask: "this-mac" } });
+
+    // Back to a project that keeps its tasks here: refused there, and nothing moves.
+    const before = tasks.get(id);
+    expect(
+      await text("update_task", { task: "INF-1", project: "NOTE", runs_on: "this-mac" }),
+    ).toContain(keptHere);
+    expect(tasks.get(id)).toEqual(before);
   });
 
   it("plans, edits, links and queries records, attaching the turn's ask to each task it acts on", async () => {

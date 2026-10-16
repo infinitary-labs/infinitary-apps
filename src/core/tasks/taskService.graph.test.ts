@@ -9,6 +9,7 @@ import {
 } from "@shared/taskQueue";
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedTask } from "./seedTask";
 import { TaskGraphRefusal, TaskService } from "./taskService";
 
@@ -153,6 +154,153 @@ describe("the task graph (task-system P2)", () => {
       // A key is retired, never reused.
       expect(tasks.byKey("SCR-1")).toBeUndefined();
       expect(work("next").key).toBe("SCR-3");
+    });
+
+    // INF-8: INF-3 moved from firstmate-3000's project into Infinitary's
+    // kept firstmate-3000, so its pull request would have opened there. A
+    // part bound to a repository of its own keeps it (the captain's answer
+    // to INF-61's F1).
+    it("a moved task and the parts that followed its project take the new repository; a part bound to its own keeps it", () => {
+      const { db, tasks, work } = setup();
+      const repo = db.prepare(
+        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
+      );
+      repo.run(
+        "r2",
+        "/fleet/infinitary",
+        "infinitary",
+        2,
+        "https://github.com/infinitary-labs/infinitary",
+      );
+      repo.run("r3", "/fleet/website", "website", 3, "https://github.com/infinitary-labs/website");
+      tasks.projects.ensureForRepo({ id: "r2", name: "infinitary" }, "INF");
+      work("step", { repoId: "r1" });
+      work("part", { parentId: "step" });
+      work("own", { parentId: "step", repoId: "r3" });
+      const where = (...ids: string[]) =>
+        ids.map((id) => [tasks.get(id)?.key, tasks.get(id)?.repoId]);
+
+      // update_task's project, as the Firstmate sends it.
+      expect(tasks.updateFields("step", { project: "INF" }, "firstmate")).toEqual([
+        "moved to infinitary as INF-1",
+      ]);
+      expect(where("step", "part", "own")).toEqual([
+        ["INF-1", "r2"],
+        ["INF-2", "r2"],
+        ["INF-3", "r3"],
+      ]);
+      expect(tasks.timeline("step").find((event) => event.kind === "moved")?.data).toMatchObject({
+        fromRepoId: "r1",
+        toRepoId: "r2",
+      });
+
+      // A re-parent takes the new parent's repository, as a new child does,
+      // whatever repository the task had.
+      work("loose");
+      work("bound", { repoId: "r3" });
+      tasks.updateFields("loose", { parent: "INF-3" }, "firstmate");
+      tasks.updateFields("bound", { parent: "INF-1" }, "firstmate");
+      expect(where("loose", "bound")).toEqual([
+        ["INF-4", "r3"],
+        ["INF-5", "r2"],
+      ]);
+
+      // Scratch has no repository: each task keeps the one it works in.
+      tasks.updateFields("step", { project: "SCR" }, "firstmate");
+      const subtree = [tasks.get("step"), ...tasks.descendants("step")];
+      expect(
+        Object.fromEntries(subtree.map((row) => [row?.id, [row?.projectId, row?.repoId]])),
+      ).toEqual({
+        step: ["scratch", "r2"],
+        part: ["scratch", "r2"],
+        own: ["scratch", "r3"],
+        loose: ["scratch", "r3"],
+        bound: ["scratch", "r2"],
+      });
+
+      // A removed project takes no task, and the refusal writes nothing.
+      tasks.projects.archiveForRepo("r2");
+      const before = tasks.get("step");
+      expect(() => tasks.updateFields("step", { project: "INF" }, "firstmate")).toThrow(
+        `Refused: infinitary was removed, so ${before?.key} cannot move there.`,
+      );
+      expect(tasks.get("step")).toEqual(before);
+    });
+
+    // INF-61's R1: INF-5, moved to Scratch and then to notes, still opened
+    // its pull request in infinitary.
+    it("a task moved through Scratch into another project takes that project's repository, and the parts that followed it", () => {
+      const { db, tasks, work } = setup();
+      const repo = db.prepare(
+        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
+      );
+      repo.run("r2", "/fleet/notes", "notes", 2, "https://github.com/infinitary-labs/notes");
+      repo.run("r3", "/fleet/website", "website", 3, "https://github.com/infinitary-labs/website");
+      tasks.projects.ensureForRepo({ id: "r2", name: "notes" }, "NOTE");
+      work("step", { repoId: "r1" });
+      work("part", { parentId: "step" });
+      work("own", { parentId: "step", repoId: "r3" });
+      const where = (...ids: string[]) =>
+        ids.map((id) => [tasks.get(id)?.key, tasks.get(id)?.repoId]);
+
+      tasks.updateFields("step", { project: "SCR" }, "firstmate");
+      expect(where("step", "part", "own")).toEqual([
+        ["SCR-1", "r1"],
+        ["SCR-2", "r1"],
+        ["SCR-3", "r3"],
+      ]);
+      expect(tasks.updateFields("step", { project: "NOTE" }, "firstmate")).toEqual([
+        "moved to notes as NOTE-1",
+      ]);
+      expect(where("step", "part", "own")).toEqual([
+        ["NOTE-1", "r2"],
+        ["NOTE-2", "r2"],
+        ["NOTE-3", "r3"],
+      ]);
+    });
+
+    // INF-61's F3: the captain's answer was to refuse, as a plan is refused.
+    it("refuses to move a task asked to ship as a pull request into a project whose repository has no remote", () => {
+      const db = openInMemoryDatabase();
+      const repo = db.prepare(
+        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
+      );
+      repo.run(
+        "r1",
+        "/fleet/infinitary",
+        "infinitary",
+        1,
+        "clone",
+        "https://github.com/infinitary-labs/infinitary.git",
+        "direct-pr",
+      );
+      repo.run("r2", "/fleet/notes", "notes", 2, "init", null, "local-only");
+      const tasks = new TaskService({ db, repos: new RepoRegistry(db, "/fleet"), strict: true });
+      tasks.projects.ensureForRepo({ id: "r1", name: "infinitary" }, "INF");
+      tasks.projects.ensureForRepo({ id: "r2", name: "notes" }, "NOTE");
+      tasks.create({ id: "site", title: "Site", prompt: "p", repoId: "r1" });
+      tasks.create({
+        id: "ship",
+        title: "Ship the checklist",
+        prompt: "p",
+        repoId: "r1",
+        parentId: "site",
+        shape: { kind: "implement", delivery_ask: "direct-pr" },
+      });
+
+      const before = [tasks.get("site"), tasks.get("ship")];
+      expect(() => tasks.updateFields("site", { project: "NOTE" }, "firstmate")).toThrow(
+        "Refused: INF-2 asks to ship as a pull request (direct-pr), and notes has no remote to open one on, so INF-2 cannot move there. Configure a remote for notes, or set INF-2's delivery to local-only first.",
+      );
+      expect([tasks.get("site"), tasks.get("ship")]).toEqual(before);
+      expect(tasks.timeline("ship").map((event) => event.kind)).toEqual(["created"]);
+
+      // Once its delivery is local-only, the subtree moves.
+      tasks.updateFields("ship", { policies: { delivery: "local-only" } }, "firstmate");
+      expect(tasks.updateFields("site", { project: "NOTE" }, "firstmate")).toEqual([
+        "moved to notes as NOTE-1",
+      ]);
+      expect(tasks.get("ship")).toMatchObject({ key: "NOTE-2", repoId: "r2" });
     });
 
     it("refuses to move started work or a subtree with started work", () => {

@@ -699,11 +699,12 @@ The first mate sets it only from the captain's words, never by judging, and only
   A review has no independent choice: it follows the computer its builder actually uses.
   A task with no project runs here unless the captain asks, and has no project to follow: it runs on a computer only by its own Runs on, or its parent's.
 - **Kept until it starts.**
-  An edit re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
+  An edit, or a move under another parent or into another project, re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
   A started task finishes where it started.
   Start again and a stronger-model retry carry the ask to the new task, as they carry `autonomy_ask` (`workShape`).
 - **Refusals, in plain words.**
   `CrewSupervisor.runsOnRefusal` refuses a started task ("has started, so it finishes where it started, on Mac mini."), the personal workspace, a project kept on this Mac only, a review, and a device id that is not a computer that runs work on the list; `update_task` then changes nothing, and `spawn_crewmate` starts nothing ("Nothing was spawned.").
+  A move to another project or under another parent in the same `update_task` lands first, in the same transaction, so the ask is judged, and its words written, where the task lands.
 - **A task with no project** (FI3-1496's plan, direction A) starts on the computer the captain named, in a working copy of this Mac's default workspace sent there first (above, "Its working copies").
   Merging its change brings the branch home and merges it into this Mac's default workspace, as a task here merges, so the next task with no project, on either computer, starts from that merge.
   A computer that speaks an older contract than `PLACED_SEED_SINCE` (3.1) takes none: the task waits as queued work, the feed says once "Mac mini needs an update to run "Find why the disk is full".

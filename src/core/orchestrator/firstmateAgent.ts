@@ -2755,37 +2755,52 @@ export class FirstmateAgent {
           const text = (() => {
             const record = resolve(input.task);
             this.asks.attach(record.id, "update_task");
-            // Where it runs is checked first, so a refusal changes nothing.
             const runsOn = input.runsOn;
-            const refused =
-              runsOn !== undefined ? supervisor.runsOnRefusal(record.id, runsOn) : undefined;
-            if (refused) throw new TaskGraphRefusal(refused);
-            const changes = tasks.updateFields(
-              record.id,
-              {
-                ...(input.correctRequiredAction ? { correctRequiredAction: true } : {}),
-                ...(input.title !== undefined ? { title: input.title.trim().slice(0, 64) } : {}),
-                ...(input.basis !== undefined ? { basis: input.basis } : {}),
-                ...(input.speed !== undefined ? { speed: input.speed } : {}),
-                ...(input.model !== undefined ? { model: input.model } : {}),
-                ...(input.placementRequirements !== undefined
-                  ? { placementRequirements: input.placementRequirements }
-                  : {}),
-                ...(runsOn !== undefined
-                  ? { runsOn: { ask: runsOn, words: supervisor.runsOnWords(record.id, runsOn) } }
-                  : {}),
-                ...(input.policies ? { policies: input.policies } : {}),
-                ...(input.direction ? { direction: input.direction } : {}),
-                ...(input.project !== undefined ? { project: input.project } : {}),
-                ...(input.parent !== undefined ? { parent: input.parent } : {}),
-                ...(input.goal !== undefined ? { goal: input.goal.trim() || null } : {}),
-                ...(input.priority !== undefined ? { priority: input.priority } : {}),
-                ...(input.startPolicy ? { startPolicy: input.startPolicy } : {}),
-                ...(input.verdict !== undefined
-                  ? { verdict: input.verdict?.trim().slice(0, 280) || null }
-                  : {}),
+            // What updateFields applies first - a reopening, a move to another
+            // project or under another parent - lands before where it runs is
+            // judged, in one transaction: it is judged, and its words written,
+            // where the task lands, and a refusal changes nothing.
+            const moves = {
+              ...(input.correctRequiredAction ? { correctRequiredAction: true } : {}),
+              ...(input.project !== undefined ? { project: input.project } : {}),
+              ...(input.parent !== undefined ? { parent: input.parent } : {}),
+            };
+            const rest = {
+              ...(input.title !== undefined ? { title: input.title.trim().slice(0, 64) } : {}),
+              ...(input.basis !== undefined ? { basis: input.basis } : {}),
+              ...(input.speed !== undefined ? { speed: input.speed } : {}),
+              ...(input.model !== undefined ? { model: input.model } : {}),
+              ...(input.placementRequirements !== undefined
+                ? { placementRequirements: input.placementRequirements }
+                : {}),
+              ...(input.policies ? { policies: input.policies } : {}),
+              ...(input.direction ? { direction: input.direction } : {}),
+              ...(input.goal !== undefined ? { goal: input.goal.trim() || null } : {}),
+              ...(input.priority !== undefined ? { priority: input.priority } : {}),
+              ...(input.startPolicy ? { startPolicy: input.startPolicy } : {}),
+              ...(input.verdict !== undefined
+                ? { verdict: input.verdict?.trim().slice(0, 280) || null }
+                : {}),
+            };
+            const changes = tasks.atomic(
+              () => {
+                const moved =
+                  Object.keys(moves).length > 0
+                    ? tasks.updateFields(record.id, moves, "firstmate")
+                    : [];
+                const refused =
+                  runsOn !== undefined ? supervisor.runsOnRefusal(record.id, runsOn) : undefined;
+                if (refused) throw new TaskGraphRefusal(refused);
+                const where =
+                  runsOn !== undefined
+                    ? { runsOn: { ask: runsOn, words: supervisor.runsOnWords(record.id, runsOn) } }
+                    : {};
+                return [
+                  ...moved,
+                  ...tasks.updateFields(record.id, { ...rest, ...where }, "firstmate"),
+                ];
               },
-              "firstmate",
+              () => {},
             );
             if (changes.length === 0) return `${record.key || record.id} is unchanged.`;
             const updated = tasks.get(record.id) ?? record;
@@ -2800,8 +2815,9 @@ export class FirstmateAgent {
             const policyNote = input.policies
               ? supervisor.policiesChanged(record.id, input.policies)
               : "";
-            // A task under another parent, or told where it runs, goes there.
-            if (runsOn !== undefined || input.parent !== undefined)
+            // A task under another parent or in another project, or told
+            // where it runs, goes there.
+            if (runsOn !== undefined || input.parent !== undefined || input.project !== undefined)
               supervisor.runsOnChanged(record.id);
             // Policy edits alone never dispatch a queued row.
             if (

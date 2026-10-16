@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "moved-task-works-in-its-new-project",
+      "kind": "fix",
+      "title": "A task moved to another project works in that project",
+      "body": "When your first mate moves a task that has not started to another project, the task now works there: its pull request and checks are in that project. Before, it kept working in the project it came from.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes: the moved task's pull request now opens in its new project.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

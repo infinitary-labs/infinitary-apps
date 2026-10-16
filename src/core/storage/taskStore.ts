@@ -635,6 +635,7 @@ const PATCH_COLUMNS = {
   title: "title",
   goal: "goal",
   prompt: "prompt",
+  repoId: "repo_id",
   repoDir: "repo_dir",
   worktreeDir: "worktree_dir",
   branch: "branch",

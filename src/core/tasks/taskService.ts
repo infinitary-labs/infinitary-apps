@@ -38,7 +38,7 @@ import {
   NO_LONGER_WANTED,
   sameDropReview,
 } from "@shared/recordDrop";
-import { deliveryForRecord } from "@shared/repos";
+import { deliveryForRecord, type RepoView } from "@shared/repos";
 import {
   type CaptainAction,
   captainActionResult,
@@ -584,7 +584,9 @@ export type FileDecisionInput = {
 export type TaskServiceOptions = {
   db: AppDatabase;
   /** Delivery posture lookup for delivery facts; absent means local-only. */
-  repos?: { get(id: string): PolicyRepo | undefined };
+  repos?: {
+    get(id: string): (PolicyRepo & Partial<Pick<RepoView, "name" | "origin">>) | undefined;
+  };
   now?: () => number;
   /**
    * Dev boot assertion (design section 5): the migrated record columns
@@ -1847,7 +1849,7 @@ export class TaskService {
         );
       }
       if (parent.projectId !== record.projectId) {
-        this.moveWithin(record, parent.projectId, actor, at);
+        this.moveWithin(record, parent.projectId, actor, at, parent.repoId);
       }
       this.patch(id, { parentId, updatedAt: at });
       this.addEvent({
@@ -1868,7 +1870,8 @@ export class TaskService {
    * Move an open, workspace-less task to another project: a new key is
    * minted there (the old one is retired, never reused) and a `moved`
    * event carries both. Children follow their parent's project, so the
-   * subtree moves with it.
+   * subtree moves with it, into this project's repository when it has one,
+   * except a part bound to a repository of its own (`moveWithin`).
    */
   moveToProject(id: string, projectId: string, actor: TaskEventActor): TaskRecord {
     const at = this.now();
@@ -4414,30 +4417,71 @@ export class TaskService {
    * Only an open row with no workspace may move: a worktree is bound to a
    * repo, and a crewmate's brief already names the project it works in.
    * The subtree follows, so children never end up in a foreign project.
+   * The moved task takes `repoId`, so its working copy, pull request and
+   * checks are where it lands (INF-8): the new parent's on a re-parent, as
+   * `create` gives a child, else the project's; where that is none
+   * (Scratch, or a parent with none) it keeps its own. Each part takes what
+   * its parent takes, as `create` gives a child, unless it is bound to a
+   * repository of its own, which it keeps. A removed project takes no task,
+   * and a repository with no remote takes no row the captain asked to ship
+   * as a pull request.
    */
   private moveWithin(
     record: TaskRecord,
     projectId: string,
     actor: TaskEventActor,
     at: number,
+    repoId?: string | null,
   ): void {
     const project = this.projects.get(projectId);
     if (!project) throw new Error(`Unknown project "${projectId}".`);
+    if (project.archivedAt !== null) {
+      throw new TaskGraphRefusal(
+        `Refused: ${project.name} was removed, so ${record.key || record.id} cannot move there.`,
+      );
+    }
     if (record.status !== "open" || record.worktreeDir || record.placement) {
       throw new TaskGraphRefusal(
         `Refused: ${record.key || record.id} is ${record.placement ? "committed to a computer" : record.status === "open" ? "bound to a workspace" : record.status} and cannot move to another project; only open work that has not started can.`,
       );
     }
-    for (const descendant of this.descendants(record.id)) {
+    const descendants = this.descendants(record.id);
+    for (const descendant of descendants) {
       if (descendant.status !== "open" || descendant.worktreeDir || descendant.placement) {
         throw new TaskGraphRefusal(
           `Refused: its child ${descendant.key || descendant.id} is ${descendant.placement ? "committed to a computer" : descendant.status === "open" ? "bound to a workspace" : descendant.status}, so the subtree cannot move to another project.`,
         );
       }
     }
-    const rekey = (row: TaskRecord) => {
+    const target = repoId === undefined ? project.repoId : repoId;
+    const rows = [record, ...descendants];
+    const before = new Map(rows.map((row) => [row.id, row.repoId]));
+    const after = new Map<string, string | null>();
+    const moves = rows.map((row) => {
+      let to = row.repoId;
+      if (row.id === record.id) to = target ?? row.repoId;
+      // A part that had its parent's repository, or none, followed it there.
+      else if (row.parentId && (row.repoId === null || row.repoId === before.get(row.parentId)))
+        to = after.get(row.parentId) ?? null;
+      after.set(row.id, to);
+      return { row, repoId: to };
+    });
+    // As a plan is refused a direct-pr ask with no remote to open it on
+    // (CrewSupervisor.resolveSpawnDelivery), before anything is written.
+    for (const { row, repoId: to } of moves) {
+      if (!to || to === row.repoId || !this.options.repos) continue;
+      const repo = this.options.repos.get(to);
+      if (repo?.kind === "personal" || repo?.origin) continue;
+      if (deliveryForRecord(row, "local-only") !== "direct-pr") continue;
+      const name = repo?.name ?? project.name;
+      const handle = row.key || row.id;
+      throw new TaskGraphRefusal(
+        `Refused: ${handle} asks to ship as a pull request (direct-pr), and ${name} has no remote to open one on, so ${handle} cannot move there. Configure a remote for ${name}, or set ${handle}'s delivery to local-only first.`,
+      );
+    }
+    for (const { row, repoId: to } of moves) {
       const { seq, key } = this.projects.allocateSeq(project.id);
-      this.patch(row.id, { projectId: project.id, key, seq, updatedAt: at });
+      this.patch(row.id, { projectId: project.id, key, seq, repoId: to, updatedAt: at });
       this.addEvent({
         taskId: row.id,
         at,
@@ -4449,12 +4493,11 @@ export class TaskService {
           toProjectId: project.id,
           fromKey: row.key,
           toKey: key,
+          ...(to !== row.repoId ? { fromRepoId: row.repoId, toRepoId: to } : {}),
         },
         feed: false,
       });
-    };
-    rekey(record);
-    for (const descendant of this.descendants(record.id)) rekey(descendant);
+    }
   }
 
   /**

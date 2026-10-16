@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-1-findings",
+      "reason": "Applies review INF-43 to the release review of Infinitary's first alpha: its lead note now names Firstmate 3000 0.4.1 and later, drops the welcome a moved person never sees, and shows the window that brings saved work over. Nothing in the app changes."
+    }
+  ]
+}

@@ -3,13 +3,14 @@
     {
       "id": "now-infinitary",
       "kind": "improvement",
+      "highlight": 1,
       "title": "Firstmate 3000 is now Infinitary",
-      "body": "The app is called Infinitary, and the one you talk to is your first mate. Its welcome reads \"Welcome to Infinitary, captain. I'm your first mate.\" The first time Infinitary opens, it brings your saved work over from Firstmate 3000. The older copy stays where it was, untouched.",
+      "body": "The app is called Infinitary, and the one you talk to is your first mate. The first time Infinitary opens, it brings your saved work over from Firstmate 3000. Firstmate 3000's copy stays where it was, and Firstmate 3000 0.4.1 and later points you to Infinitary instead of opening it.",
       "area": "firstmate",
       "picture": {
         "dark": "now-infinitary-dark.webp",
         "light": "now-infinitary-light.webp",
-        "alt": "The welcome note, titled Welcome to Infinitary, captain. I'm your first mate."
+        "alt": "The window that brings your saved work over, saying Your saved work is in Infinitary, with Opening Infinitary under it and a full progress bar."
       },
       "provenance": { "origin": "change" }
     }

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-1",
+      "reason": "Release review for Infinitary's first alpha, after stable 0.4.1: ranks Firstmate 3000 becoming Infinitary as the lead highlight; its note no longer says the older copy stays untouched or quotes a welcome a moved person never sees, and its hero pair is now the window that brings saved work over. Nothing in the app changes."
+    }
+  ]
+}

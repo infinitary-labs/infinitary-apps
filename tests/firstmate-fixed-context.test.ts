@@ -103,6 +103,10 @@ function conversation(tokens: number): Parameters<typeof localInputFits>[0]["mes
 // "the first mate" where the words said Firstmate, and the development
 // signer's new folder beside its old one in spawn_crewmate measured 19,741;
 // the budget rises to 19,745, inside the 19,772 hard boundary.
+// INF-19, the captain's step titles (recreated from FI3-1819), puts one title rule,
+// with its example, on create_task's title, and paid for it by saying
+// spawn_crewmate's and update_task's title, and create_task's goal and
+// user_words, once where they already live: 19,736. The budget is untouched.
 const FIXED_CONTEXT_BUDGET = 19_745;
 
 describe("the Firstmate's fixed context (contract v4.59)", () => {
@@ -307,6 +311,22 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     rule: "lessons and the captain's panels use personal_ui",
     home: { tool: "spawn_crewmate" },
     says: "Lessons and the user's own panels on the rails use personal_ui true",
+  },
+  // The captain's step titles: each task field is said once, where it lives.
+  {
+    rule: "a task's title says what it does, not its place in a plan",
+    home: { tool: "create_task", parameter: "title" },
+    says: 'Sentence-case title saying what it does (max 64 chars), e.g. "Ship the bridge to alpha", not its place in a plan',
+  },
+  {
+    rule: "a planned task's goal is one sentence of what done looks like",
+    home: { tool: "spawn_crewmate", parameter: "goal" },
+    says: "One sentence: what done looks like, in plain language",
+  },
+  {
+    rule: "a planned task carries the user's words verbatim",
+    home: { tool: "spawn_crewmate", parameter: "user_words" },
+    says: "The user's request verbatim; outranks every elaboration downstream",
   },
   {
     rule: "a created task waits on request until it is started",

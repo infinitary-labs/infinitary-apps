@@ -342,7 +342,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     ].join(" "),
     parameters: Type.Object({
-      title: Type.String({ description: "Short sentence-case task title (max 64 chars)" }),
+      title: Type.String({ description: "As create_task's title." }),
       goal: Type.String({
         description: "One sentence: what done looks like, in plain language",
       }),

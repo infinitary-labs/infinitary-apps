@@ -88,11 +88,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "A basis may still run; host checks it at start. Returns key/id and start state; one feed line.",
     ].join(" "),
     parameters: Type.Object({
-      title: Type.String({ description: "Short sentence-case task title (max 64 chars)" }),
-      goal: Type.String({ description: "One sentence: what done looks like, in plain language" }),
-      user_words: Type.String({
-        description: "The user's request verbatim; outranks every elaboration downstream",
+      title: Type.String({
+        description:
+          'Sentence-case title saying what it does (max 64 chars), e.g. "Ship the bridge to alpha", not its place in a plan',
       }),
+      goal: Type.String({ description: "As spawn_crewmate's goal." }),
+      user_words: Type.String({ description: "As spawn_crewmate's user_words." }),
       constraints: Type.Optional({
         ...CONSTRAINTS_PARAM,
         description: "As spawn_crewmate's constraints.",
@@ -183,7 +184,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     ].join(" "),
     parameters: Type.Object({
       task: Type.String({ description: "The task id or key" }),
-      title: Type.Optional(Type.String({ description: "New sentence-case title" })),
+      title: Type.Optional(Type.String({ description: "As create_task's title." })),
       goal: Type.Optional(Type.String({ description: "New one-sentence goal" })),
       priority: PRIORITY,
       // What each policy means is said once, on create_task's start_policy.

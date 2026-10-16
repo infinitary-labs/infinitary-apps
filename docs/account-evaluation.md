@@ -167,3 +167,18 @@ The run opens no teacher session, so it says nothing about how a model follows t
 The runner still requires an explicit builder selection for the shared sheet format, but this module opens no builder session.
 Score with `node scripts/evals/lessons-score.ts --out /tmp/lesson-score --responses /tmp/lesson-eval/responses.json`.
 Use the same approval, account, isolation and foreground-Claude boundaries as above.
+
+## Step titles
+
+The INF-19 module is `scripts/evals/stepTitles.ts`, selected with `--module scripts/evals/stepTitles.ts` on `pnpm eval:accounts`.
+Its two first mate cases check how a plan's steps are titled when the first mate files them.
+The first is shaped like FI3-1780's rename plan, whose steps were filed as "Rename step N of 16": sixteen steps in six phases with long step bodies, the captain's answers, and his choice "File these steps, start none".
+Its context asks for every step in one response and every link in the next, so sixteen fit within a case's request allowance.
+The second is a three-piece feature plan the captain closed with "Approve and build", whose prefiled build becomes the first piece and is the only one ready to start.
+The trace score reads the executed calls: every step filed once under the plan's parent, nothing started on "File these steps, start none", the reused build retitled and started alone, and no titles or goals that differ from a sibling's only by their numbers ("Rename step 5 of 16", "Step 5 of the 16-step ... plan").
+Whether each title says what its step does is an independent reviewer's judgment, never a match on the words.
+`node scripts/evals/step-titles.ts --out /tmp/step-title-score --responses /tmp/step-title-eval/responses.json` writes the trace score and `step-titles-filed.json`, every title and goal as the first mate passed it beside the plan's step names, for that reviewer.
+The reviewer writes one JSON file keyed by case id, with `titlesSayWhatEachStepDoes` and `quotations` holding each title as the host stored it (its first 64 characters) beside the plan step it files, and scores again with `--reviews` naming it.
+A run passes only when both cases end normally and the executed effects, the trace score and the review pass.
+The runner still requires an explicit builder selection for its shared sheet format, but this module opens no builder session.
+Use the same approval, account, isolation and foreground-Claude boundaries as above.

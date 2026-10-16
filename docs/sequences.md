@@ -29,8 +29,10 @@ A serious project names a framework, engine or build step, hosting or a store, a
 Plan skipping stays governed by the existing skip rule, and the full project line reaches the crewmate as a constraint.
 A casual web project's crewmate play-tests and photographs it in its task browser through a local server, then puts up a note beside its completion decision with that picture and `browser_button` Open with `browser_page` index.html, and never waits on that note (`docs/task-browser.md`, "A page from the project").
 
-Steps are named by the task kinds the classifier already speaks (plan, retrieval, research, reproduce, implement, fix), so a step's name, the kind the host records and the tier it routes to agree.
-The host never reads the name - the classifier still sorts the step's goal.
+Each step is one of the task kinds the classifier already speaks (plan, retrieval, research, reproduce, implement, fix), so the document's line for a step, the kind the host records and the tier it routes to agree.
+The host never reads a kind from a title - the classifier still sorts the step's goal.
+A step's title says what that step does, not its place in the plan: `create_task`'s `title` gives "Ship the bridge to alpha" as its example, and `spawn_crewmate` and `update_task` point to it (INF-19).
+The host stores whatever title the first mate passes and never judges it.
 Validation is not a step: it is the project's rigor inside the implement or fix step, and at reviewed rigor the reviewer is that step's child exactly as before (`docs/delivery-rigor.md`).
 
 ## The document

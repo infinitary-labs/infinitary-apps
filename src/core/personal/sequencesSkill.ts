@@ -96,7 +96,7 @@ export const SEQUENCES_SEED = `# Sequences
 How I want work of each kind approached. An ask that takes one step is that step alone,
 spawned with no parent. Open an ask that takes more than one step as a parent task, left on
 request, and its steps as child tasks: spawn the step that runs now under it, and file the
-next step on request in the same turn; name each step by its kind (plan, retrieval, research,
+next step on request in the same turn; each step is one kind (plan, retrieval, research,
 reproduce, implement, fix); start each later step when its turn comes. Validation is the
 project's rigor and happens inside the implement or fix step; it is never a step of its
 own. Each step you add yourself is an internal step: say so when you create it

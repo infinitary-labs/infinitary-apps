@@ -84,11 +84,13 @@ import { locateClaudeTranscript } from "./claudeTranscript";
  * (`settingSources: []`, `strictMcpConfig: true`, and the client's auto
  * memory off: `CLAUDE_SESSION_ENV`), no built-in tool unless the spec asks
  * for the coding set - which also brings its working copy's own instruction
- * file and skills (`claudeProjectResources.ts`) - and the spec's tools
- * served always-load by the app's own in-process server, spoken by their
- * bare names. Nothing here is emulated: Claude's streaming-input mode gives
- * native mid-turn steer, a turn-granular `interrupt()`, live deltas and
- * resume by id. The shapes differ in what the spec asks for:
+ * file and skills (`claudeProjectResources.ts`) and turns the client's
+ * commit and pull request attribution off (`CLAUDE_CODING_SETTINGS`) - and
+ * the spec's tools served always-load by the app's own in-process server,
+ * spoken by their bare names. Nothing here is emulated: Claude's
+ * streaming-input mode gives native mid-turn steer, a turn-granular
+ * `interrupt()`, live deltas and resume by id. The shapes differ in what the
+ * spec asks for:
  *
  * - A one-shot is ONE query: the spec's base instruction as the only system
  *   prompt the app supplies (the client adds its own identity line, and a
@@ -253,6 +255,18 @@ const CLAUDE_THINKING_FLOOR_TOKENS = 1024;
  */
 export const CLAUDE_SESSION_ENV = { CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" } as const;
 
+/**
+ * The client's documented attribution setting, handed to every coding
+ * session as flag settings (the captain, 2026-10-15: "disable commit and PR
+ * author attribution for all claude crewmates in infinitary (it's a claude
+ * setting)"). Left to its default the client has the model end each commit
+ * message with a `Co-Authored-By` trailer and each pull request description
+ * with a "Generated with Claude Code" line; empty text hides both
+ * (`claudeAttribution.integration.test.ts`). Flag settings are the app's
+ * own layer, so the person's own Claude settings stay unread.
+ */
+export const CLAUDE_CODING_SETTINGS = { attribution: { commit: "", pr: "" } } as const;
+
 /** Where a coding session stages its working copy's skills, inside its record dir. */
 export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
 
@@ -327,6 +341,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     if (!attachment) throw new Error("A rolling Claude session attaches with a session.");
     const coding = spec.builtins === "coding";
     const project = attachment.project;
+    const staged = coding && Boolean(project?.skillsPlugin || project?.personalSkillsPlugin);
     return {
       cwd: spec.cwd,
       // The machine's default login and nothing ambient, none of the
@@ -378,12 +393,21 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       strictMcpConfig: true,
       // The working copy's skills, listed as `project:<skill>`, and no hook
       // a skill declares: the app's session runs no project code of its own.
-      ...(coding && (project?.skillsPlugin || project?.personalSkillsPlugin)
+      ...(staged
         ? {
             plugins: [project?.skillsPlugin, project?.personalSkillsPlugin].flatMap((path) =>
               path ? [{ type: "local" as const, path }] : [],
             ),
-            settings: { disableAllHooks: true },
+          }
+        : {}),
+      // A coding session's commits and pull requests carry no attribution,
+      // and with a skill staged no hook runs.
+      ...(coding
+        ? {
+            settings: {
+              ...CLAUDE_CODING_SETTINGS,
+              ...(staged ? { disableAllHooks: true } : {}),
+            },
           }
         : {}),
       // The app's tools are its own and typed, and a coding session works

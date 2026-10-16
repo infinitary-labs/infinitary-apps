@@ -12,7 +12,7 @@ import {
 import { APP_FRAME_SCHEME } from "@shared/csp";
 import { CARD_MOUNT_HOST_PREFIX, PANEL_MOUNT_HOST_PREFIX } from "@shared/plugins/frameDocument";
 import { FRAME_LIB_HOST, type FrameLibPins, isFrameLibPath } from "@shared/plugins/frameLib";
-import { type CustomScheme, protocol } from "electron";
+import { protocol } from "electron";
 import { bytesHash, type FrameMountRegistry, type ServedFrameDocument } from "./frameMounts";
 import { mediaResponse, requestedRange } from "./mediaResponse";
 
@@ -47,22 +47,12 @@ import { mediaResponse, requestedRange } from "./mediaResponse";
  *   from the bundle only while each file's bytes match the pin this build
  *   baked into main. No other file under the host exists.
  *
- * `standard` gives normal URL parsing, `secure` makes the origin
- * trustworthy, `corsEnabled` is for the fonts, `stream` lets a `<video>`
- * play a recording while it loads and seek by range. No `supportFetchAPI`: a
- * frame never fetches from here (its CSP forbids it); the browser's own
- * document, font and media loaders are the only clients.
- */
-
-/**
- * The scheme's privileges, registered before `app.ready` by
- * `registerPrivilegedSchemes` (../schemes.ts). Pair with
+ * Its privileges (`standard`, `secure`, `corsEnabled`, `stream`) live in
+ * `./frameScheme`, so the work mode can register them without loading this
+ * handler. The window registers them with the shell's other schemes before
+ * `app.ready` (`registerPrivilegedSchemes`, ../schemes.ts). Pair with
  * `handleFrameProtocol` after ready.
  */
-export const frameScheme: CustomScheme = {
-  scheme: APP_FRAME_SCHEME,
-  privileges: { standard: true, secure: true, corsEnabled: true, stream: true },
-};
 
 export type FrameFontFiles = Readonly<Record<string, string>>;
 

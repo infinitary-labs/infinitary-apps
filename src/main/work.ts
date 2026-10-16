@@ -7,12 +7,22 @@ import type { HostKeychain } from "@core/host";
 import { settingFrom } from "@shared/envSettings";
 import { app } from "electron";
 import { hostPlatform } from "../core/platform";
+import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { readResourceMemory } from "./host/resourceMemory";
 import { createTaskBrowserHost } from "./host/taskBrowser";
 import { createMediaProbe } from "./mediaProbe";
 import { startOwnDisplay } from "./ownDisplay";
 import { workContext } from "./workContext";
+
+/**
+ * Before `app.ready`. The entry awaits this module's load, and Electron is
+ * ready once that entry has finished, so this runs before `prepareWorkMode`
+ * can await a display and before `runWorkMode` opens the media probe.
+ * Without these privileges Chromium refuses the probe's `app-frame:`
+ * recording (`./frames/frameScheme.ts`).
+ */
+registerFrameScheme();
 
 /**
  * The app started as `<app> work <command> ...` (docs/helper.md): it runs

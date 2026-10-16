@@ -169,6 +169,8 @@ export function startApp(mainDir: string): void {
 
   // Privileged schemes must be registered before the app is ready, all in
   // one call: the voice model's and the plugin frames' (./schemes.ts).
+  // The work mode registers the frame scheme alone (./work.ts); a process
+  // calls this once.
   registerPrivilegedSchemes();
 
   // A card's or a panel's frame takes focus only from the captain's own

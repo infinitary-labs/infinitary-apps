@@ -1,13 +1,15 @@
 import { protocol } from "electron";
-import { frameScheme } from "./frames/frameProtocol";
+import { frameScheme } from "./frames/frameScheme";
 import { pluginScheme } from "./plugins/pluginProtocol";
 import { voiceModelScheme } from "./voice/voiceProtocol";
 
 /**
  * Every privileged scheme the shell serves, registered in the one call
  * Electron allows (`registerSchemesAsPrivileged` may run once, before
- * `app.ready`). Each protocol module owns its own privileges and handler;
- * this is only the gathering point.
+ * `app.ready`). Each scheme owns its privileges; its protocol module owns
+ * the handler. This is only the gathering point. The work mode never loads
+ * this module; it registers the frame scheme alone when its own module loads
+ * (`./work.ts`).
  *
  * - `app-model:` lets the renderer's Whisper worker fetch the on-disk voice
  *   model on an Intel Mac, where the voice helper cannot run

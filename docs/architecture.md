@@ -760,6 +760,9 @@ The fence is mechanical: `biome.json` restricts `electron` (static *and* dynamic
 **`src/main/` is the host** - and only the host: the window, the security lockdown (CSP, navigation, permissions, sender-frame checks), the voice plumbing (the voice helper process and `app-model://`), the Electron IPC adapter, `createElectronHost`, and the shell that says whether this app holds the first mate or views another Mac's.
 Its entry (`src/main/index.ts`) only decides which app this process is and loads that one: the window and the core (`src/main/app.ts`), or the work mode (`src/main/work.ts`, `docs/helper.md`), each a chunk of its own.
 The entry awaits that load at its top level, because Electron is ready once the entry has finished evaluating, and each mode sets what Chromium reads only before then: the privileged schemes, userData, its switches.
+The window registers every privileged scheme in that one call (`src/main/schemes.ts`).
+The work mode registers the frame scheme alone when its module loads (`src/main/frames/frameScheme.ts`, called from `src/main/work.ts`), which is the scheme its media probe plays a demo from, and it never loads the shell's other protocols.
+A process calls the registration once.
 
 The two seams between them:
 

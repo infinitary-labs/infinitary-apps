@@ -66,6 +66,7 @@ const isolatedUnit = [
   "src/core/placed/placedClaude.contract.test.ts",
   "src/main/voice/voiceHelper.test.ts",
   "src/main/voice/voiceProtocol.test.ts",
+  "src/main/work.test.ts",
   "src/renderer/src/app/store.test.ts",
   "src/renderer/src/cards/taskLinks.test.ts",
   "src/renderer/src/plugins/panelCards.test.ts",

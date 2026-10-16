@@ -9,6 +9,7 @@ Its words in Terminal are the design skill's `components/devices/AddAMac`; a per
 - **The app's own executable, started as `<app> work <command> ...`.**
   The main entry (`src/main/index.ts`) reads the words after `work` before anything of the app loads (`workCommand`, `src/main/workCommand.ts`) and loads `runWorkMode` (`src/main/work.ts`) instead of the app (`src/main/app.ts`).
   Each is a chunk of its own, so none of the app's modules are evaluated: no window, no core, no single-instance lock.
+  When that module loads, before the app is ready, it registers the frame scheme's privileges alone (`src/main/frames/frameScheme.ts`), the same ones the window registers with the shell's other schemes, so a demo recording can play in the hidden window that checks it.
   It sets its activation policy to `prohibited`, so macOS lists it as background-only, with no Dock icon or menu bar.
   On Linux it draws on a display of its own (below, "No screen needed").
 - **One process.**

@@ -19,6 +19,12 @@ import { mediaResponse } from "./frames/mediaResponse";
  *
  * Probes run one at a time, each in a window of its own that is destroyed
  * when it ends, however it ends.
+ *
+ * The process must have registered the frame scheme's privileges before
+ * `app.ready` (`./frames/frameScheme.ts`): the window does that with the
+ * shell's other schemes, and the work mode does it when its module loads.
+ * Without `standard`, `secure` and `stream`, Chromium rejects the recording
+ * and the probe reports that this player cannot play its format.
  */
 
 const PARTITION = "fm-media-probe";

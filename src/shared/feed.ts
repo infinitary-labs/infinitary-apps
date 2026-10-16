@@ -66,7 +66,35 @@ export function reportSummary(text: string, limit = FEED_REPORT_LIMIT): string {
   return sentence.length <= limit ? sentence : sentence.slice(0, limit).trimEnd();
 }
 
+/** Event types that can change Activity; also generates the native reader's refresh filter. */
+export const FEED_EVENT_TYPES = [
+  "task_event",
+  "firstmate_note",
+  "memory_noted",
+  "personalized",
+  "user_turn",
+  "repo_setup",
+  "repo_configured",
+  "repo_runs_on",
+  "repo_unregistered",
+  "device_joined",
+  "device_setup",
+  "device_update",
+  "device_connection",
+  "device_left",
+  "device_signed_in",
+  "device_signed_out",
+  "turn_failed",
+] as const satisfies readonly FmEvent["type"][];
+
+type FeedEvent = Extract<FmEvent, { type: (typeof FEED_EVENT_TYPES)[number] }>;
+const feedTypes: ReadonlySet<string> = new Set(FEED_EVENT_TYPES);
+function isFeedEvent(event: FmEvent): event is FeedEvent {
+  return feedTypes.has(event.type);
+}
+
 export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
+  if (!isFeedEvent(event)) return null;
   switch (event.type) {
     case "task_event":
       // Already authored by the core from the record; the line is in
@@ -146,8 +174,11 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       if (event.paused) return null;
       return { kind: "danger", text: `First mate · problem: ${plainProblem(event.error)}` };
     }
-    default:
-      return null;
+    default: {
+      // Adding a listed type without its author, or an author without its type, fails typecheck.
+      const unhandled: never = event;
+      return unhandled;
+    }
   }
 }
 

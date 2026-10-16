@@ -117,6 +117,32 @@ const claimWith = (
   );
 
 describe("device pairing", () => {
+  // INF-64 piece 2: first-phone discovery must track the actual invitation's lifetime.
+  it("offers phone discovery only for unspent direct invitations, until Stop or expiry", () => {
+    const { pairing, clock } = pairingAt();
+    const seen: boolean[] = [];
+    const off = pairing.subscribe(() => seen.push(pairing.phoneMayJoin()));
+    expect(pairing.phoneMayJoin()).toBe(false);
+    const work = pairing.invite({ kind: "work" });
+    expect(pairing.phoneMayJoin()).toBe(false);
+    pairing.stop(work.id);
+    const remote = pairing.invite({ kind: "mac" }, { via: "ssh", remoteLogin: "test-mac.local" });
+    expect(pairing.phoneMayJoin()).toBe(false);
+    pairing.stop(remote.id);
+    const direct = pairing.invite({ kind: "mac" });
+    expect(seen.at(-1)).toBe(true);
+    pairing.stop(direct.id);
+    expect(seen.at(-1)).toBe(false);
+    const view = pairing.invite({ kind: "view" });
+    expect(seen.at(-1)).toBe(true);
+    claimWith(pairing, view.link);
+    expect(seen.at(-1)).toBe(false);
+    pairing.invite({ kind: "mac" });
+    clock.advance(10 * 60 * 1000);
+    expect(seen.at(-1)).toBe(false);
+    off();
+  });
+
   it("makes a link that names this home's key, loopback by default, good for ten minutes", () => {
     const { pairing, clock } = pairingAt();
     expect(pairing.any()).toBe(false);

@@ -2,11 +2,11 @@ import { type DeviceView, isPhone } from "@shared/devices";
 import type { DnsSdRun } from "./dnsSd";
 
 /**
- * How this Mac announces itself to a phone on its list (docs/devices.md,
- * "Announcing to a phone"): Bonjour's `_infinitary._tcp` in the local
- * domain, at the port the connection listens on, so the phone can find this
- * Mac again after its address moved. It carries no key and no secret: the
- * phone still proves this Mac by the pin it was paired with.
+ * How this Mac announces itself for a phone to join or reconnect (docs/devices.md,
+ * "Announcing to a phone"): Bonjour's `_infinitary._tcp` in the local domain,
+ * at the port the connection listens on, so the phone can find this Mac before
+ * joining or after its address moved. It carries no key and no secret: the
+ * phone proves this Mac by the invitation's or its saved public-key pin.
  */
 export const ANNOUNCE_SERVICE = "_infinitary._tcp";
 
@@ -26,17 +26,16 @@ const RETRY_FIRST_MS = 5_000;
 const RETRY_MOST_MS = 60_000;
 
 /**
- * Announces this Mac while a phone is on the list, with macOS's own
- * `dns-sd -R`, held by this app's pipe (`runDnsSdHeld`) so it ends with the
- * app however that went. With no phone left it stops, so a Mac that never had
- * a phone announces nothing, and one that ends by itself while a phone is
- * listed starts again.
+ * Announces this Mac while a phone is on the list or a usable direct invitation is open,
+ * with macOS's own `dns-sd -R`, held by this app's pipe (`runDnsSdHeld`) so it ends
+ * with the app however that went. It stops when neither condition holds, and a run
+ * that ends by itself restarts only while either condition still holds.
  */
 export class MacAnnouncement {
   private readonly options: MacAnnouncementOptions;
   private readonly later: (ms: number, fire: () => void) => () => void;
   private running: { stop: () => void } | null = null;
-  /** Whether a phone is on the list now. */
+  /** Whether a phone is listed or a usable direct invitation is open now. */
   private wanted = false;
   private disposed = false;
   private retry: (() => void) | null = null;
@@ -60,10 +59,10 @@ export class MacAnnouncement {
     return this.running !== null;
   }
 
-  /** The list changed: announce while a phone is on it, and stop once none is. */
-  devicesChanged(devices: readonly DeviceView[]): void {
+  /** Announce while a phone is listed or a usable direct invitation is open. */
+  devicesChanged(devices: readonly DeviceView[], phoneMayJoin = false): void {
     if (this.disposed) return;
-    this.wanted = devices.some(isPhone) && this.options.run !== null;
+    this.wanted = (devices.some(isPhone) || phoneMayJoin) && this.options.run !== null;
     if (this.wanted && !this.running && !this.retry) this.start();
     if (!this.wanted) this.stop();
   }
@@ -109,7 +108,7 @@ export class MacAnnouncement {
     );
   }
 
-  /** The run ended by itself (as when mDNSResponder restarted) while a phone is listed: start another, later each time. */
+  /** The run ended by itself (as when mDNSResponder restarted) while still wanted: start another, later each time. */
   private again(): void {
     if (!this.wanted || this.disposed) return;
     const wait = this.retryMs;

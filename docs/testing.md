@@ -90,6 +90,27 @@ Every alpha's own verification runs the full suite; no local full run precedes a
 The full-suite workload measurement (`scripts/test-workload.ts`) must also run in CI.
 Unit tests are unchanged.
 
+## Native phone checks on the pull request
+
+`phone.yml` selects the iPhone and iPad gate for `ios/`, `docs/contract.json`, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts` and the command-lease helper `scripts/with-mac-check.py`.
+Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
+Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
+The `native-phone` job runs the same disposable `scripts/test-phone.ts` gate for both devices on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
+It keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
+Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
+Unlike the desktop journey workflow, a newer push waits for a running native check to finish its simulator cleanup, replacing only an older pending run for that pull request.
+Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
+Desktop journey jobs from different pull requests remain parallel.
+The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; each native device gate takes an exclusive lease against the same runner-account cache file.
+A waiting phone holds the entry lock while active desktops finish, so new desktops cannot continually pass it; after admission, command exit or cancellation releases the kernel lease.
+The runner slots must share one account; the helper uses stock Python and `fcntl`, never signing material.
+The native job's 120-minute limit allows 45 minutes for both device gates, 60 across admission waits and 15 for setup, cleanup and evidence upload, without changing any test deadline.
+Desktop work may run between the two device gates.
+Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
+`tests/mac-check-lock.test.ts` runs the actual workflow command strings with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure and cancellation.
+The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
+
 ## Journeys on the pull request
 
 A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which selects the journey files without installing packages and writes the reasons in its summary.

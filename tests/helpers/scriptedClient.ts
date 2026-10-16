@@ -2,6 +2,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
 import type { DeviceGrant } from "@shared/devices";
 import { scratchDir } from "./scratchDirs";
 
@@ -13,7 +14,7 @@ import { scratchDir } from "./scratchDirs";
  * helper only matches lines.
  */
 
-const SCRIPT = join(__dirname, "..", "..", "scripts", "contract-client.ts");
+const SCRIPT = fileURLToPath(new URL("../../scripts/contract-client.ts", import.meta.url));
 
 export type ClientLine = { t: string; [field: string]: unknown };
 

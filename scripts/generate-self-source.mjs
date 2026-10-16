@@ -123,8 +123,15 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
 
   rmSync(selfSourceDir, { recursive: true, force: true });
   mkdirSync(selfSourceDir, { recursive: true });
-  const archive = git(["archive", "HEAD"], "buffer");
-  execFileSync("tar", ["-x", "-C", selfSourceDir], { input: archive, maxBuffer: 64 * 1024 * 1024 });
+  // The complete tree can exceed execFileSync's output buffer (INF-79).
+  // Let git write the archive directly, and retain only the extracted copy.
+  const archivePath = resolve(dest, "self-source.tar");
+  try {
+    git(["archive", `--output=${archivePath}`, "HEAD"]);
+    execFileSync("tar", ["-xf", archivePath, "-C", selfSourceDir]);
+  } finally {
+    rmSync(archivePath, { force: true });
+  }
 
   mkdirSync(dest, { recursive: true });
   writeFileSync(mapPath, mapJson);

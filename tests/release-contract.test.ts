@@ -533,7 +533,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const release = loadYamlFile("electron-builder.yml").mac as Record<string, unknown>;
     const info = release.extendInfo as Record<string, unknown>;
     expect(info.NSLocalNetworkUsageDescription).toBe(
-      "Infinitary lists the computers on your network that have Remote Login on, so you can add one, and reaches the computers you added.",
+      "Infinitary lists the computers on your network that have Remote Login on, so you can add one, reaches the computers you added, and lets your phone find this Mac.",
     );
     expect(info).not.toHaveProperty("NSBonjourServices");
     expect(mac.extendInfo as Record<string, unknown>).not.toHaveProperty(

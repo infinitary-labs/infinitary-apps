@@ -43,10 +43,12 @@ import { thisDesktop } from "../design/core/desktop";
 import { focusWithRing } from "../design/focus";
 import { isView } from "../devices/viewWords";
 import { ControllingTab } from "./ControllingTab";
+import { PhoneCode } from "./PhoneCode";
 import "./devices.css";
 import {
   awayWord,
   CONTROLLING_NOW,
+  type DevicePanelMake,
   NO_NEW_WORK,
   PANEL_WORDS,
   RUNS_NO_PROJECT,
@@ -98,7 +100,7 @@ import { SECTION_GAP, SectionLabel, SettingError, SettingRow } from "./settingRo
 
 /** The open link's or command's panel: shown, used by a device, or gone unused. */
 export type LinkPanel =
-  | { state: "open"; invite: DeviceInvite; make: DeviceMake; copied?: boolean }
+  | { state: "open"; invite: DeviceInvite; make: DevicePanelMake; copied?: boolean }
   | {
       state: "joined";
       line: string;
@@ -108,7 +110,7 @@ export type LinkPanel =
       /** The line says it has no sign-ins yet: it goes once one arrives. */
       awaitingSignIn?: boolean;
     }
-  | { state: "expired"; make: DeviceMake };
+  | { state: "expired"; make: DevicePanelMake };
 
 /** Whether the joined note claims no sign-ins, and that device now has one. */
 export function joinedNoticeClears(
@@ -124,7 +126,7 @@ export function joinedNoticeClears(
 type PanelStore = {
   panel: LinkPanel | null;
   stopListening: (() => void) | null;
-  show: (invite: DeviceInvite, make: DeviceMake, copied?: boolean) => void;
+  show: (invite: DeviceInvite, make: DevicePanelMake, copied?: boolean) => void;
   clear: () => void;
 };
 
@@ -576,7 +578,7 @@ function HomeDevicesTab() {
   }, [panel]);
 
   const make = useCallback(
-    async (what: DeviceMake, copy = false) => {
+    async (what: DevicePanelMake, copy = false) => {
       setProblem(null);
       setChoosing(false);
       setBusy("link");
@@ -585,7 +587,7 @@ function HomeDevicesTab() {
         const open = usePanel.getState().panel;
         if (open?.state === "open") await window.infinitary.devices.stop(open.invite.id);
         const invite = await window.infinitary.devices.invite(
-          what === "link"
+          what === "link" || what === "phone"
             ? { kind: "mac" }
             : what === "command"
               ? { kind: "mac", command: "another-mac" }
@@ -961,7 +963,7 @@ export type DevicesTabViewProps = {
   /** The captain's yes: add the Mac, leaving the other Firstmate should it not answer. */
   onLeaveAndAdd: (address: string) => void;
   onCancelLeave: () => void;
-  onMake: (what: DeviceMake) => void;
+  onMake: (what: DevicePanelMake) => void;
   onStop: () => void;
   onDone: () => void;
   onAskRemove: (deviceId: string | null) => void;
@@ -1030,6 +1032,16 @@ export function DevicesTabView(props: DevicesTabViewProps) {
           >
             {plusIcon}
             <span>A {COMPUTER.one}</span>
+          </button>
+          <button
+            type="button"
+            className="fm-connect-chip"
+            data-device-add="phone"
+            disabled={busy === "link"}
+            onClick={() => props.onMake("phone")}
+          >
+            {plusIcon}
+            <span>A phone</span>
           </button>
           <button
             type="button"
@@ -2012,10 +2024,12 @@ function LinkPanelView({
       <div className="fm-devices-panel" data-panel-state="expired" role="status">
         <div style={{ flex: 1 }}>
           <div style={{ color: "var(--fg-1)" }}>
-            The {PANEL_WORDS[panel.make].thing} expired before any {COMPUTER.one} used it.
+            The {PANEL_WORDS[panel.make].thing} expired before any{" "}
+            {panel.make === "phone" ? "phone" : COMPUTER.one} used it.
           </div>
           <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-            Make a new one when the other {COMPUTER.one} is ready.
+            Make a new one when the {panel.make === "phone" ? "phone" : `other ${COMPUTER.one}`} is
+            ready.
           </div>
         </div>
         <Button
@@ -2051,7 +2065,7 @@ function OpenLink({
   onStop,
 }: {
   invite: DeviceInvite;
-  make: DeviceMake;
+  make: DevicePanelMake;
   now: number;
   /** A Linux home's firewall that may keep the other computer out. */
   firewall: DeviceFirewall | undefined;
@@ -2079,6 +2093,7 @@ function OpenLink({
     <div className="fm-devices-panel" data-panel-state="open" data-panel-holds={words.thing}>
       <SectionLabel>{words.label}</SectionLabel>
       <div className="fm-devices-panel-say">{words.say.join(" ")}</div>
+      {make === "phone" && <PhoneCode link={invite.link} />}
       {firewall && <FirewallLine firewall={firewall} />}
       <div className="fm-devices-panel-line">
         <code className="fm-devices-link" data-device-link="">

@@ -347,3 +347,12 @@ select.fm-runs-on {
   padding: 6px 8px;
   max-width: 100%;
 }
+
+/* A scanner needs a quiet white margin in either theme. The code is never cached. */
+.inf-phone-code {
+  display: block;
+  width: calc(var(--space-8) * 4);
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--space-3);
+}

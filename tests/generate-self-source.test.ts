@@ -33,12 +33,15 @@ describe("generate-self-source", () => {
 
   it("archives the tracked tree and indexes live behavior onto source", async () => {
     outDir = scratchDir("infinitary-self-source-");
-    const result = spawnSync(process.execPath, [scriptPath, "--out", outDir], {
-      cwd: repoRoot,
+    const result = spawnSync(process.execPath, [scriptPath, "--out", "."], {
+      cwd: outDir,
       encoding: "utf8",
     });
     expect(result.status, result.stderr || result.stdout).toBe(0);
 
+    // INF-79 pushes the real tracked archive beyond the former 64 MiB buffer.
+    // The bundle still contains the complete tree, never its temporary archive too.
+    expect(existsSync(join(outDir, "self-source.tar"))).toBe(false);
     const selfSource = join(outDir, "self-source");
     expect(existsSync(join(selfSource, "AGENTS.md"))).toBe(true);
     expect(existsSync(join(selfSource, "package.json"))).toBe(true);

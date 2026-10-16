@@ -14,7 +14,7 @@ Running as another user on this computer only runs work, with sign-ins of its ow
 Like every user on the computer, it can read files in the person's home folder outside private folders such as Desktop and Documents, and the tab says so (`AddAMac.prompt.md`).
 Adding a computer changes nothing by itself.
 Every computer on the list can act as the person, the same as this computer, so the person adds only their own computers.
-The iPhone app, when it exists, joins the same list and only controls.
+The iPhone and iPad app joins the same list as a phone, never runs work, and initially reads only (`PhoneView.prompt.md`).
 A computer added before every computer could do both keeps what it could do - only controlling, or only running work - until it is added again; its row reads as a computer that controls or as a computer that runs work.
 
 **Your devices.**
@@ -33,8 +33,8 @@ It leads with "Controlling your first mate now" while Infinitary is open on that
 On the right a mono state - "1 task" in `--accent`, "idle", "connecting" while its SSH connection is being made, or "out of reach" in `--warn` - then a small secondary Button "Remove".
 The dot is `ok` while the device answers, `idle` while its connection is being made (its state on the right reads "connecting"), and `warn` while it is out of reach.
 Out of reach, the mono line ends "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
-The box's foot is the `ConnectChips` row shape: the micro label `ADD` and two chips, "+ A computer" and "+ Running as another user".
-A phone chip joins them only when the iPhone app exists.
+The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three chips, "+ A computer", "+ A phone" and "+ Running as another user".
+A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current Xcode-only availability.
 
 **Bringing a computer back.**
 A computer that runs work looks for this computer where its link or command said, so after this computer's address changes it stays out of reach until it hears where this computer is now (`AddAMac.prompt.md`, "Finding this computer again").

@@ -214,12 +214,15 @@ A development run may stand in its own program with `INFINITARY_DNS_SD`; a packa
 
 ### Announcing to a phone
 
-While a phone (a device whose system is `ios`) is on Your devices, this Mac announces itself over Bonjour as `_infinitary._tcp` in the local domain, under its own name in System Settings, at the port the connection listens on (`MacAnnouncement`, `src/core/devices/announce.ts`).
+While a phone (a device whose system is `ios`) is on Your devices, or an unspent direct computer invitation is open, this Mac announces itself over Bonjour as `_infinitary._tcp` in the local domain, under its own name in System Settings, at the port the connection listens on (`MacAnnouncement`, `src/core/devices/announce.ts`).
+An open invitation lets the first phone find this Mac before it has joined; invitations through SSH and commands for another user do not announce.
 The phone browses for that to find this Mac again after its address moved, and then dials it and checks the key it was paired with (above, "Joining"), so the announcement carries no key and no secret.
 It runs macOS's own `dns-sd -R` (or a development run's `INFINITARY_DNS_SD` stand-in), which has no end of its own, so a shell holds it with the app's pipe (`runDnsSdHeld`, `src/core/devices/dnsSd.ts`): dns-sd is killed once the pipe closes, when the announcement stops or the app is gone however it went, so a quit or a crash leaves no announcement.
-It starts when the list gains a phone, and stops once the last phone is removed or the app quits, for good: a change on the list during quit starts nothing.
-One that ends by itself, as when mDNSResponder restarts, starts again while a phone is listed, five seconds later and doubling up to a minute.
-A Mac with no phone on its list announces nothing.
+It starts when the list gains a phone or a direct invitation opens, and stops once neither remains or the app quits, for good: a change during quit starts nothing.
+Stop, expiry and spending the last invitation stop its announcement unless a phone is now on the list.
+One that ends by itself, as when mDNSResponder restarts, starts again while either condition holds, five seconds later and doubling up to a minute.
+A Mac with no phone and no open direct invitation announces nothing.
+The native phone reader, its scan-code panel and its isolated tests are described in `docs/ios.md`.
 A computer with no dns-sd, as a Linux home, announces nothing yet.
 
 Bonjour browsing is a local network operation (Apple's TN3179).
@@ -227,7 +230,7 @@ When macOS does not let the app use the local network, dns-sd says so with Bonjo
 You can still type an address."; a Mac that answers once it is allowed is listed.
 The list says so only on that answer, never on a guess: while no Mac answered it reads "Looking for computers on this network with Remote Login on…", and when dns-sd stopped some other way, "Could not look for computers on this network.
 You can still type an address."
-The app's `NSLocalNetworkUsageDescription` is the sentence macOS shows if it asks (`electron-builder.yml`): "Infinitary lists the computers on your network that have Remote Login on, so you can add one, and reaches the computers you added."
+The app's `NSLocalNetworkUsageDescription` is the sentence macOS shows if it asks (`electron-builder.yml`): "Infinitary lists the computers on your network that have Remote Login on, so you can add one, reaches the computers you added, and lets your phone find this Mac."
 Listing asks for no entitlement and no `NSBonjourServices` list, which macOS does not require for it.
 
 ### The captain's own SSH
@@ -885,8 +888,8 @@ A link that expires with nothing paired stops the listener.
 | A machine answers in the home's place: another macOS user holding the port, a spoofed address on the network, or a wrong address in a link | The device checks the pin before it sends a request or a code, and its key signs only that handshake, so an impostor learns at most which device dialed, nothing it can use. A port someone else holds can keep the home from listening, said in its log, or take connections on another address: they can deny the connection, never join it. |
 | Another macOS user on this Mac | Loopback gets no shortcut: it takes the same TLS and a key the home paired. The devices folder is 0700 and its files 0600. The window's own IPC is not reachable from another user. |
 | A web page in a browser on either Mac | A request with an `Origin` is refused on `/connection` and `/pair`. The home sends no CORS headers, and a browser trusts neither key. |
-| A page or a document opens a link | Nothing answers the scheme. A device joins only on its person's paste and confirmation of the kind and the address, so a stranger's link cannot make this Mac a computer that runs work for their home. |
-| Someone on the same network sees the announcement | While a phone is on the list, any network this Mac is on, public Wi-Fi included, learns that Infinitary runs here, this Mac's name and the connection's port. It carries no key and no secret, and learning it joins nothing: a device still needs an open link and the home's pin. |
+| A page or a document opens a link | The Mac does not handle the join scheme. The phone treats an opened link as a proposal and requires confirmation before sending it; it always joins as a view, never a computer that runs work. |
+| Someone on the same network sees the announcement | While a phone is on the list or a direct computer invitation is open, any network this Mac is on, public Wi-Fi included, learns that Infinitary runs here, this Mac's name and the connection's port. It carries no key and no secret, and learning it joins nothing: a device still needs an open link and the home's pin. |
 | A device says `system` to change what it becomes | The word can only narrow a link for a Mac to a `view`; it never widens, and a link for another user refuses it. |
 | Work run as another macOS user on this Mac reads the captain's files | Nothing in the app: macOS opens every home folder to every user on the Mac, outside private folders such as Desktop, Documents and Library, so that user reads the rest of the captain's home folder. The card, the Terminal question and Devices say so, and the app changes no permission (the captain's pick on FI3-862, words only). |
 | Work run as the captain on the home Mac | A computer that runs work dialing from this Mac as the home's own macOS user is refused (`same-user`): its work would read and change everything the captain can. Where it dialed from is read off the socket; the user is its own word, so this guards a mistake, and code already running as the captain is out of pairing's reach (below). |
@@ -964,7 +967,7 @@ A link that expires with nothing paired stops the listener.
   Its pairing folder has a space in its path, as Application Support does.
 - `src/core/devices/nearby.test.ts`: Macs nearby against dns-sd's own lines in memory - each Mac asked its name once, four at a time, this Mac left out and nothing listed before its names are read, a Mac gone from every interface taken off, macOS's policy-denied answer said and a Mac that answers after listed, another error or an ended run said as could not look, a browse that ran its time followed by another with no blink, and nothing running once stopped or a minute after the last ask; `src/core/devices/dnsSd.test.ts` the same through a stand-in program, every run gone once stopped.
   `src/shared/nearbyMacs.test.ts`: the address a Mac fills in and which Macs read as on your list; `src/renderer/src/settings/DevicesTab.test.tsx`: the list, its states and its keys.
-- `src/core/devices/announce.test.ts`: this Mac announces itself over Bonjour only while a phone is on the list, once, under its own name at the connection's port, stops with the last phone, starts again after a run that ended by itself, and starts nothing once disposed; `src/core/devices/dnsSd.test.ts` the held run ending dns-sd when stopped.
+- `src/core/devices/announce.test.ts`: this Mac announces itself over Bonjour while a phone is on the list or a direct invitation is open, once, under its own name at the connection's port, stops when neither remains, starts again after a run that ended by itself, and starts nothing once disposed; `src/core/devices/dnsSd.test.ts` the held run ending dns-sd when stopped.
   `src/core/devices/pairing.test.ts`: a phone joins as a `view` by a link for a Mac or an older `view`, is refused a link for another user here, finds the home again, and is never a computer that runs work.
 - `tests/e2e/devices.spec.ts`, "lists Macs nearby but this one": with a stand-in dns-sd, this Mac is not a row, ↓ and Enter fill the field with the user name selected, a changed user name is typed, the Mac is added over a throwaway SSH server and marked on the list when the aside opens again, and closing it leaves no run of dns-sd; "has not allowed the local network": the list says so and a private network's name still goes in.
 - `src/core/devices/remoteLogin.test.ts`, "how far the copy has gone": a copy of incompressible bytes over a throwaway SSH server, its count said at every piece, each more than the last, its last count the archive's own size, one run of lines in the feed's words between preparing and starting, no total and no percentage; said at most once a second, a second copy says fewer counts and the same last one.

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "phone-reads-your-mac",
+      "kind": "feature",
+      "title": "A code to connect your phone",
+      "body": "Devices has A phone with a code to scan using the early phone app. You can read your Mac’s cards and Activity there; answers stay on your Mac. The phone app is not in the App Store yet.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-reads-your-mac-dark.webp",
+        "light": "phone-reads-your-mac-light.webp",
+        "alt": "The A phone panel in Devices shows a code to scan, Copy link, a time limit and Stop it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

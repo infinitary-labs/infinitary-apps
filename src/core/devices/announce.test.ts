@@ -38,6 +38,24 @@ function announcer() {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("announcing to a phone", () => {
+  // INF-64 piece 2: Nearby must find the first phone's Mac before that phone is paired.
+  it("announces while a direct invitation is open, then stops unless a phone joined", async () => {
+    const { announcement, started, stopped } = announcer();
+    announcement.devicesChanged([], true);
+    await settle();
+    expect(started).toHaveLength(1);
+    announcement.devicesChanged([], false);
+    expect(stopped).toEqual([0]);
+    announcement.devicesChanged([], true);
+    await settle();
+    announcement.devicesChanged([device("view", "ios")], false);
+    expect(started).toHaveLength(2);
+    expect(stopped).toEqual([0]);
+    announcement.devicesChanged([], false);
+    expect(stopped).toEqual([0, 1]);
+    announcement.dispose();
+  });
+
   it("announces under this Mac's name at the connection's port while a phone is on the list, and once", async () => {
     const { announcement, started } = announcer();
     announcement.devicesChanged([device("mac", "macos")]);

@@ -39,9 +39,12 @@ export function wayCount(count: number): string {
   return count === 1 ? "1 computer" : `${count} computers`;
 }
 
+/** The phone panel uses the same Mac link; its presentation stays local to Settings. */
+export type DevicePanelMake = DeviceMake | "phone";
+
 /** What each panel says, by what it holds. */
 export const PANEL_WORDS: Record<
-  DeviceMake,
+  DevicePanelMake,
   { label: string; say: [string, ...string[]]; copy: string; thing: "link" | "command" }
 > = {
   link: {
@@ -49,6 +52,16 @@ export const PANEL_WORDS: Record<
     say: [
       `Your first mate stays on ${HERE.this}. Your other ${COMPUTER.one} will show it and can run work for it.`,
       `Paste this link into Infinitary on your other ${COMPUTER.one}, at its first launch.`,
+    ],
+    copy: "Copy link",
+    thing: "link",
+  },
+  phone: {
+    label: "New link · a phone",
+    say: [
+      "Your first mate stays on this computer. Your phone shows its cards and Activity.",
+      "Scan the code inside Infinitary on your phone, or paste this link there.",
+      "The phone app is installed from Xcode for now; it is not in the App Store yet.",
     ],
     copy: "Copy link",
     thing: "link",

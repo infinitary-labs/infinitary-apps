@@ -137,7 +137,7 @@ mac:
     # The sentence macOS shows if it asks about the local network
     # (docs/devices.md, "Macs nearby"). It adds no permission: listing Macs
     # nearby needs no entitlement and no Bonjour service list on macOS.
-    NSLocalNetworkUsageDescription: Infinitary lists the computers on your network that have Remote Login on, so you can add one, and reaches the computers you added.
+    NSLocalNetworkUsageDescription: Infinitary lists the computers on your network that have Remote Login on, so you can add one, reaches the computers you added, and lets your phone find this Mac.
   # Per-arch native trees the universal merge must take as-is instead of
   # lipo-ing. @electron/universal lipo-s Mach-O files that differ across
   # slices; identical copies of a single-arch binary (same path, same SHA

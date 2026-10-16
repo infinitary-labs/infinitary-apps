@@ -110,10 +110,14 @@ jobs:
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a
         # teardown project ignores the file filter (docs/testing.md).
+        # Shared command leases allow journeys from different PRs to overlap.
+        # An exclusive phone command waits for active journeys, then runs alone.
         run: |
-          test -n "$FILES"
-          pnpm build
-          pnpm exec playwright test --no-deps $FILES
+          python3 scripts/with-mac-check.py shared "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash --noprofile --norc -e -o pipefail -c '
+            test -n "$FILES"
+            pnpm build
+            pnpm exec playwright test --no-deps $FILES
+          '
         env:
           FILES: ${{ needs.choose-journeys.outputs.files }}
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/journeys-results.json

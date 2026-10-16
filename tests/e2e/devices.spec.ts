@@ -257,10 +257,10 @@ test("a device says what it is when it connects, and Devices names a phone a pho
 /**
  * INF-64 piece 1 (docs/devices.md, "Joining" and "Announcing to a phone"):
  * a stand-in phone joins with a link for a Mac and is a view, not a
- * computer that runs work; this Mac announces itself over Bonjour while the
- * phone is on the list, and stops once it is removed. Never macOS's dns-sd.
+ * computer that runs work; this Mac announces itself over Bonjour while a phone
+ * can join or is listed, and stops once neither holds. Never macOS's dns-sd.
  */
-test("a phone joins as a view whichever link it used, and this Mac announces itself only while it is listed", async () => {
+test("a phone joins as a view whichever link it used, and this Mac announces while it can join or is listed", async () => {
   const dnsSd = standInDnsSd([]);
   const app = await launchApp({ env: { INFINITARY_DNS_SD: dnsSd } });
   const asked = () =>
@@ -274,6 +274,8 @@ test("a phone joins as a view whichever link it used, and this Mac announces its
     // Nothing is announced with no phone on the list.
     expect(asked().filter((line) => line.startsWith("-R"))).toEqual([]);
     const { link } = await page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
+    // INF-64 piece 2: the first phone can find the Mac before it is on the list.
+    await expect.poll(() => asked().filter((line) => line.startsWith("-R"))).toHaveLength(1);
     // A phone says no macOS user and no window: only that it runs iOS.
     const phone = await claimLink(link, { kind: "mac", name: "Kun's iPhone", system: "ios" });
     expect(phone.kind).toBe("view");
@@ -310,6 +312,35 @@ test("a phone joins as a view whichever link it used, and this Mac announces its
         }
       })
       .toBe(false);
+  } finally {
+    await app.close();
+  }
+});
+
+/** INF-64's accepted piece-2 scan-code choice: the phone panel works by keyboard and joins a view. */
+test("A phone opens its code by keyboard, joins read-only and can stop an unused link", async () => {
+  const app = await launchApp();
+  try {
+    const { page } = app;
+    await openDevices(page);
+    await pressKey(page.locator('[data-device-add="phone"]'), "Enter");
+    const panel = page.locator('[data-panel-state="open"]');
+    await expect(panel).toContainText(PANEL_WORDS.phone.say.join(" "));
+    await expect(panel.locator("[data-phone-code]")).toBeVisible();
+    const link = await panel.locator("[data-device-link]").innerText();
+    const phone = await claimLink(link, { kind: "mac", name: "Test iPhone", system: "ios" });
+    expect(phone.kind).toBe("view");
+    await expect(page.locator('[data-panel-state="joined"]')).toContainText("Test iPhone");
+    await pressKey(
+      page
+        .locator('[data-panel-state="joined"]')
+        .getByRole("button", { name: "Done", exact: true }),
+      "Enter",
+    );
+    await pressKey(page.locator('[data-device-add="phone"]'), "Enter");
+    await expect(panel.locator("[data-phone-code]")).toBeVisible();
+    await pressKey(panel.getByRole("button", { name: "Stop it", exact: true }), "Enter");
+    await expect(page.locator("[data-phone-code]")).toHaveCount(0);
   } finally {
     await app.close();
   }

@@ -1469,8 +1469,8 @@ export async function createServices(
     name: () => ownComputerName({ packaged: host.app.packaged, env: process.env }),
     port: devices.port,
   });
-  macAnnouncement.devicesChanged(devices.list());
-  devices.subscribe(() => macAnnouncement.devicesChanged(devices.list()));
+  macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin());
+  devices.subscribe(() => macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
   // Each computer that runs work signing in to its own subscriptions: what
   // Settings -> Intelligence draws, and what a task there is routed among.
   // A computer's word on its sign-ins reaches the crew once it exists: a

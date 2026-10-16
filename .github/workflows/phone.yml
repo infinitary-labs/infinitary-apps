@@ -1,0 +1,102 @@
+name: phone
+
+# INF-79 / INF-136: the captain's Mac mini checks native changes and their shared contract.
+# Keep an explicit skipped job on unrelated PRs instead of a path-filtered missing check.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Let the running native gate clean up its own simulators. A newer version waits;
+# GitHub replaces only the older pending run for this same pull request.
+concurrency:
+  group: phone-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  choose-phone:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.select.outputs.run }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: select
+        name: Check the phone gate's inputs
+        run: node scripts/affected-phone.ts --base "$BASE_REF" --head HEAD >> "$GITHUB_OUTPUT"
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+  native-phone:
+    needs: choose-phone
+    if: needs.choose-phone.outputs.run == 'true'
+    # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
+    runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
+    # The command leases below let a phone take its turn after active journeys.
+    concurrency:
+      group: mac-mini-phone
+      queue: max
+      cancel-in-progress: false
+    # Allow 45 minutes for both native gates, 60 across admission waits,
+    # and 15 for setup, cleanup and upload. Test deadlines remain unchanged.
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - name: Install without reading this Mac's signing material
+        run: |
+          store="$(pnpm store path --silent)"
+          install_home="$RUNNER_TEMP/phone-install-home"
+          mkdir -p "$install_home"
+          HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
+            INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
+            pnpm install --frozen-lockfile --store-dir "$store"
+      # test-phone owns a fresh HOME, real fixture and simulator, and disables signing.
+      # It checks generated files, Swift trust, native recovery and the published client.
+      - id: iphone
+        name: Read and recover on iPhone
+        run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
+      - id: ipad
+        name: Read and recover on iPad
+        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
+        run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
+      - name: Keep native results and connection readings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-results
+          path: ${{ runner.temp }}/phone/
+          if-no-files-found: ignore
+          retention-days: 14

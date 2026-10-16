@@ -1082,6 +1082,13 @@ export class DevicePairing implements PairedDevices {
     return false;
   }
 
+  /** A phone may use a direct computer link; no code or identity leaves this owner. */
+  phoneMayJoin(): boolean {
+    return [...this.links.values()].some(
+      (link) => link.kind !== "work" && !link.via && !link.spent && link.expiresAt > this.now(),
+    );
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

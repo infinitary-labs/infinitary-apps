@@ -37,6 +37,7 @@ import {
   type Session,
   type WebContents,
 } from "electron";
+import { wheelScroll } from "./wheelScroll";
 
 /**
  * The task browser's pages (docs/task-browser.md; docs/architecture.md
@@ -749,13 +750,10 @@ async function drivePage(
         });
         return;
       }
-      await send("Input.dispatchMouseEvent", {
-        type: "mouseWheel",
-        x: size.width / 2,
-        y: size.height / 2,
-        deltaX: 0,
-        deltaY: (direction === "down" ? 1 : -1) * Math.round(size.height * 0.8),
-      });
+      // The wheel lands on a later frame than this call returns, later
+      // still on a busy computer. Wait for that scroll before the answer
+      // reads the page (wheelScroll).
+      await wheelScroll(send, direction, size);
     },
     choose: async (target, option) => {
       const objectId = await objectOf(target);

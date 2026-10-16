@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "scroll-waits-until-the-page-moves",
+      "reason": "A scroll up or down waits until the page has moved before the answer is read, so a busy computer does not report the old position. Nothing new is shown."
+    }
+  ]
+}

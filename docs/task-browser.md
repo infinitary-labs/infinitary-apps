@@ -169,6 +169,8 @@ A field's new text is marked as the crewmate's own in its current ref book, as o
 
 A scroll without a ref accepts `top` or `bottom` as well as `up` and `down`.
 Top and bottom scroll the document to its edge, and answer with the lines on screen, as other scrolls do.
+Up and down send a real wheel, and the host does not return until that scroll has ended, or until a one-second bound when the page never says so, so the answer is not read at the old position.
+A wheel that cannot move the page, because it is already at that edge, is still sent and does not wait the bound.
 An element photograph accepts its page-named ref (`--uid`), or a whole-page photograph `--full-page`, never both.
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.
 All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text anywhere on the page refuses the picture.

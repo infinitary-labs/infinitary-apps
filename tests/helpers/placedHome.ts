@@ -5,7 +5,7 @@ import { DeviceSignIns } from "../../src/core/devices/deviceSignIns";
 import type { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
-import type { Forge, ForgeRepo } from "../../src/core/forge";
+import type { Forge, ForgeRepo, ReadWorkflowInput } from "../../src/core/forge";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
 import { PrCiService } from "../../src/core/orchestrator/prCi";
@@ -51,10 +51,10 @@ import { type CatalogModelView, QUOTA_TO_PI_PROVIDER } from "../../src/shared/qu
  * task itself, and every task runs on a computer. Routing only when a test
  * names this Mac's own subscriptions, over the slot record as
  * `createServices` keeps it; otherwise every task binds `binding`.
- * Given a forge, the crew's open_change, check_change and download_artifact
- * are the home's own (`PrCiService`, `WorkflowEvidenceService`), composed
- * as `createServices` composes them. A restart is a new one over the same
- * folder and port.
+ * Given a forge, the crew's open_change, check_change, read_workflow and
+ * download_artifact, and the run watch, are the home's own (`PrCiService`,
+ * `WorkflowEvidenceService`), composed as `createServices` composes them.
+ * A restart is a new one over the same folder and port.
  */
 
 export type PlacedHome = {
@@ -248,6 +248,7 @@ export function startPlacedHome(options: {
         forgeFor,
         writeElsewhere: (taskId, deviceId, artifact) =>
           placed.copies.writeArtifact(taskId, deviceId, artifact),
+        now,
       })
     : undefined;
   const supervisor = new CrewSupervisor({
@@ -270,8 +271,10 @@ export function startPlacedHome(options: {
       : {}),
     ...(evidence
       ? {
+          readWorkflow: (taskId: string, input: ReadWorkflowInput) => evidence.read(taskId, input),
           downloadArtifact: (taskId: string, input: { runId: number; artifactId: number }) =>
             evidence.download(taskId, input),
+          readRunWatch: (taskId: string, runId: number) => evidence.readWatched(taskId, runId),
         }
       : {}),
     tasks,

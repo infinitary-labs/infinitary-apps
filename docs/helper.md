@@ -519,7 +519,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   Out of reach, this Mac reads what it brought last.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   An artifact is downloaded here and written into the working copy there before the tool answers, never into a folder here.
-  A workflow log is read through the project's own forge whatever computer the task runs on.
+  A crewmate there calls `read_workflow` as one here does (`inf:work:read-workflow`), and the home reads the run through the project's own forge: with `runId` alone the short read, whose run watch wakes the crewmate there (`docs/forge.md`, "The run watch"), and with `jobId` that job's log.
 - **Discarding.**
   A discard asks that computer what the working copy holds; while it is out of reach nobody can tell, so the discard asks for confirmation.
 - **Closing.**

@@ -542,7 +542,8 @@ export const workRequests = {
     request: asked({
       input: z.object({
         runId: z.number().int().positive(),
-        jobId: z.number().int().positive(),
+        // Omitted for the run's short read, which saves the home's run watch (since 8.5).
+        jobId: z.number().int().positive().optional(),
         offset: z.number().int().positive().optional(),
         limit: z.number().int().min(1).max(500).optional(),
       }),

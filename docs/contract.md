@@ -91,6 +91,9 @@ Protocol 8.4 lets `inf:working-copy:source-ref` name the Infinitary rename's git
 A computer on 8.4 also gives its crewmates the browser command as `infinitary-browser-axi`.
 A computer on an older minor knows only the older names, so the home names those to it, in the refs and in a placed crewmate's instructions (`INFINITARY_NAMES_SINCE`).
 
+Protocol 8.5 lets a placed crewmate's `inf:work:read-workflow` leave out `jobId`: the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
+A home on an older minor refuses that read as a malformed request; a read that names a job is the same on both.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

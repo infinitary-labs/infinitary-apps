@@ -841,6 +841,86 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
+  // INF-45: read_workflow's description promises a short read and a run
+  // watch for runId alone, and the release crewmate on the Mac mini was
+  // refused it ("Rejected inf:work:read-workflow: malformed request").
+  it("reads a run there by its number alone, watches it here, and wakes the crewmate there when it ends (INF-45)", async () => {
+    const project = await gitProject();
+    // Infinitary's first alpha release run and two of its jobs, as GitHub
+    // listed them while its checks still ran and once it passed.
+    const runId = 38849548350;
+    let finished = false;
+    const release = {
+      run: async (id: number) => ({
+        id,
+        name: "release",
+        headSha: project.main,
+        branch: "main",
+        attempt: 1,
+        status: finished ? "completed" : "in_progress",
+        conclusion: finished ? "success" : null,
+        url: `https://github.com/infinitary-labs/infinitary/actions/runs/${id}`,
+      }),
+      jobs: async () => ({
+        jobs: [
+          {
+            id: 116807503003,
+            name: "Resolve the source commit and version",
+            status: "completed",
+            conclusion: "success",
+            failedAt: null,
+          },
+          {
+            id: 116807634269,
+            name: "verify / linux-checks",
+            status: finished ? "completed" : "in_progress",
+            conclusion: finished ? "success" : null,
+            failedAt: null,
+          },
+        ],
+        total: 2,
+        complete: true,
+      }),
+      jobLog: async () => {
+        throw new Error("No job log was asked for.");
+      },
+      download: async () => {
+        throw new Error("No artifact was asked for.");
+      },
+    };
+    const at = await world(() =>
+      Object.assign(project.forge(Buffer.alloc(0)), { workflows: release }),
+    );
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([
+      { tools: [{ name: "read_workflow", args: { runId } }] },
+      { text: "Waiting for the release run." },
+      { text: "The release passed." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-run", "Watch the release.", repo.id);
+    await expect.poll(() => api.requests.length - requests).toBe(2);
+    await expect.poll(() => home.tasks.get("t-run")?.activity).toBe("idle");
+
+    // The home read the run with its own forge, and its short read reached the crewmate there.
+    const read = said(api.requests.at(-1));
+    expect(read).toContain("state: in_progress");
+    expect(read).toContain("116807634269 verify / linux-checks — in_progress");
+    expect(read).toContain("The app watches this run every minute");
+    expect(home.tasks.get("t-run")?.delivery?.runWatches).toEqual([
+      expect.objectContaining({ runId, name: "release", failureSeen: false }),
+    ]);
+
+    // The run ends; the home's next minute reads it and wakes the crewmate there once.
+    finished = true;
+    await home.supervisor.pollCheckWatches(now() + 61_000);
+    await expect.poll(() => api.requests.length - requests).toBe(3);
+    expect(said(api.requests.at(-1))).toContain("release (run 38849548350, attempt 1) passed.");
+    await expect.poll(() => home.tasks.get("t-run")?.activity).toBe("idle");
+    expect(home.tasks.get("t-run")?.delivery?.runWatches).toEqual([]);
+  });
+
   it("keeps a closed task's working copy there while that computer is out of reach, and brings its work home once it is back", async () => {
     const project = await gitProject();
     const at = await world(() => project.forge(Buffer.alloc(0)));

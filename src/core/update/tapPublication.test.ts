@@ -15,6 +15,7 @@ import {
   type Publication,
   renderCask,
   republishCasks,
+  TAP,
   TapPublicationRefusal,
   tapFilesFor,
 } from "./tapPublication";
@@ -22,6 +23,7 @@ import {
   buildUpdateTarget,
   FIRSTMATE_TAP,
   parseUpdateTargets,
+  type UpdateTarget,
   type UpdateTargets,
   updateChannelMarkerSchema,
 } from "./updateChannels";
@@ -456,6 +458,53 @@ describe("the tap files of one publication", () => {
       tapFilesFor(alpha.targets, publication("alpha", "0.1.26-alpha.43"), NOTICE).files,
     ).toEqual({});
   });
+
+  // INF-42: Infinitary's tap carries no stable cask from its first alpha
+  // (rename step 12) until its first stable (step 14), so until then no
+  // caveat may tell a person to uninstall the alpha for a stable cask.
+  it("names in every cask's caveats only a cask the tap carries, and the other channel once it does", () => {
+    const tap: Record<string, string> = {};
+    let current: unknown;
+    for (const next of [
+      publication("alpha", "0.4.2-alpha.2"),
+      publication("alpha", "0.4.3-alpha.5"),
+      // Promoted from the first alpha while the newer alpha keeps its target.
+      publication("stable", "0.4.2"),
+      publication("alpha", "0.4.4-alpha.9"),
+      publication("stable", "0.4.4"),
+    ]) {
+      const written = tapFilesFor(current, next, NOTICE);
+      Object.assign(tap, written.files);
+      current = JSON.parse(tap[TAP.targetsFile] ?? "");
+      const targets = parseUpdateTargets(current)?.targets;
+      for (const channel of ["stable", "alpha"] as const) {
+        // A cask written though its target stayed says why in the summary.
+        const rewritten = `${channel} cask rewritten at ${targets?.[channel]?.version} so its caveats name the stable cask`;
+        expect(written.notes.includes(rewritten), `${next.version}: ${channel}`).toBe(
+          caskPathFor(channel) in written.files && !written.changed.includes(channel),
+        );
+        const cask = tap[caskPathFor(channel)];
+        expect(cask === undefined, `${next.version}: ${channel}`).toBe(!targets?.[channel]);
+        if (cask === undefined) continue;
+        // A cask rewritten for its caveats still installs exactly its target.
+        expect(readCask(cask)).toMatchObject({
+          version: targets?.[channel]?.version,
+          sha256: targets?.[channel]?.sha256,
+          url: targets?.[channel]?.downloadUrl,
+        });
+        const other = channel === "stable" ? "alpha" : "stable";
+        const commands = readCask(cask).caveats.filter((line) => line.startsWith("  brew "));
+        expect(commands, `${next.version}: ${channel}`).toEqual(
+          tap[caskPathFor(other)] === undefined
+            ? []
+            : [
+                `  brew uninstall --cask ${TAP.caskTokens[channel]}`,
+                `  brew install --cask ${TAP.tap}/${TAP.caskTokens[other]}`,
+              ],
+        );
+      }
+    }
+  });
 });
 
 describe("the transition from the single stable cask", () => {
@@ -510,9 +559,14 @@ describe("republishing the casks", () => {
   /** Each channel's cask for its target, as `write` turns this generator's rendering. */
   const casksFor = (current: unknown, write: (cask: string) => string = (cask) => cask) => {
     const casks: Partial<Record<"stable" | "alpha", string>> = {};
+    const targets = parseUpdateTargets(current)?.targets;
     for (const channel of ["stable", "alpha"] as const) {
-      const target = parseUpdateTargets(current)?.targets[channel];
-      if (target) casks[channel] = write(renderCask(channel, target, NOTICE));
+      const target = targets?.[channel];
+      if (target) {
+        casks[channel] = write(
+          renderCask(channel, target, NOTICE, TAP, targets?.stable !== undefined),
+        );
+      }
     }
     return casks;
   };
@@ -557,6 +611,23 @@ describe("republishing the casks", () => {
       ],
       files: {},
     });
+  });
+
+  // INF-42: an alpha cask published while the tap named no stable target,
+  // by a generator that always named the stable cask, loses that way back
+  // at its next republication.
+  it("drops the stable switch from an alpha cask while the tap names no stable target", () => {
+    const current = tapAfter(publication("alpha", "0.4.2-alpha.2"));
+    const target = parseUpdateTargets(current)?.targets.alpha as UpdateTarget;
+    const published = renderCask("alpha", target, NOTICE, TAP, true);
+    const result = republishCasks(current, { alpha: published }, NOTICE);
+    expect(result.changed).toEqual(["alpha"]);
+    const cask = result.files[caskPathFor("alpha")] ?? "";
+    expect(caskArtifact(cask)).toEqual(caskArtifact(published));
+    expect(readCask(cask).caveats.filter((line) => line.startsWith("  brew "))).toEqual([]);
+    expect(readCask(published).caveats).toContain(
+      `  brew install --cask ${TAP.tap}/${TAP.caskTokens.stable}`,
+    );
   });
 
   it("carries a reviewed notice to both casks at their targets", () => {
@@ -660,7 +731,7 @@ describe("activating the alpha channel", () => {
 
   // Infinitary's own tap starts empty after Firstmate 3000's stables (the
   // Infinitary rename, FI3-1780 steps 7 and 12): the record of past releases
-  // names the protected stable someone leaving the alpha channel returns to.
+  // names the protected stable every stable the tap will carry numbers above.
   it("lets Infinitary's first alpha publish when the archived stable is protected", () => {
     expect(alphaActivationProblem(undefined, { archivedStable: "0.4.1" })).toBeNull();
     expect(

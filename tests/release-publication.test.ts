@@ -255,7 +255,7 @@ describe("the tap step of a release", () => {
 
   // Infinitary's own tap starts empty after Firstmate 3000's stables (FI3-1780
   // steps 7 and 12): the record of past releases names the protected stable
-  // someone leaving the alpha channel returns to, so its first alpha publishes.
+  // every stable the tap will carry numbers above, so its first alpha publishes.
   it("publishes Infinitary's first alpha onto an empty tap when the archived stable is protected", () => {
     const tap = standInTap();
     const archive = join(tap.dir, "archive.json");

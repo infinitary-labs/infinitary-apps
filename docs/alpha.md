@@ -146,6 +146,8 @@ It publishes nothing itself; "The signed channel workflow" writes its output to 
 - **Caveats.**
   The alpha notice, then the channel's own paragraph: which channel this is and how to switch with an ordinary uninstall and install, keeping saved work, never `--zap`.
   The alpha paragraph also says that a stable version which cannot open work saved by a newer alpha refuses without changing it (`docs/saved-data-compatibility.md`).
+  The tap carries a stable cask only once it names a stable target, so until then the alpha paragraph names no stable cask: it says there is no stable channel to switch to yet, and never to add `--zap` when uninstalling.
+  On Infinitary's own tap that holds from its first alpha to its first stable.
 - **Typed inputs.**
   A cask takes a channel (stable when unset), a version the channel carries (stable `X.Y.Z`; alpha `X.Y.Z-alpha.N` or the stable version handed to it), a lowercase SHA-256 and the download, which must be a `.zip` asset of that version's release on the tap.
   The URL is written with Homebrew's `#{version}` interpolation, which `brew audit` requires, and reads back as the exact download.
@@ -159,7 +161,7 @@ It publishes nothing itself; "The signed channel workflow" writes its output to 
   - on a tap with no targets file yet, the stable cask the single-channel workflow wrote is the floor (`caskVersion`): nothing publishes behind its version.
 - **One tap commit.**
   `tapFilesFor` returns every file one publication writes: the targets file and the cask of each channel whose target moved, carrying exactly that target.
-  A channel that did not move keeps its cask untouched; an identical retry writes nothing.
+  A channel that did not move keeps its cask untouched, except that stable's first target also writes the alpha cask again at alpha's own target, so its caveats name the stable cask from then on; an identical retry writes nothing.
   From the command line:
 
   ```sh
@@ -174,7 +176,8 @@ It publishes nothing itself; "The signed channel workflow" writes its output to 
 - **Activation.**
   A live alpha is refused until stable's target is a protected stable: newer than `LAST_UNPROTECTED_STABLE` (0.1.24, the last stable published before the saved-data guard and the channel-aware reader), so whoever leaves the alpha channel always has a stable to return to that refuses work it cannot open (`alphaActivationProblem`; "Activating the channels").
   The minimum protected stable is **0.1.25**, the bootstrap stable, live on both channels since 2026-10-01; from then on the check passes.
-  Infinitary's own tap starts with no targets file after Firstmate 3000's stables, so there the newest stable the record of past releases names (`release-notes/archive.json`, 0.4.1) stands in for stable's target while the tap carries none: someone who leaves Infinitary's alpha channel has that Firstmate 3000 stable to return to, and it refuses the folder Infinitary moved.
+  Infinitary's own tap starts with no targets file after Firstmate 3000's stables, so there the newest stable the record of past releases names (`release-notes/archive.json`, 0.4.1) stands in for stable's target while the tap carries none: every stable the tap will carry numbers above it, so when it is protected a live alpha may publish before Infinitary's first stable.
+  Until that stable (rename step 14) the alpha cask's caveats say there is no stable channel to switch to yet ("Caveats" above), and the switch appears with it.
   `advance --rehearsal` writes an alpha anyway and notes what a live one would meet.
 
 ## The signed channel workflow

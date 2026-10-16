@@ -103,10 +103,26 @@ export function markerContent(channel: UpdateChannel, tap: TapNames = TAP): stri
 
 /**
  * The channel paragraph each cask's caveats add after the alpha notice: which
- * channel this is and how to switch without losing saved work.
+ * channel this is and how to switch without losing saved work. The tap
+ * carries a stable cask only once it names a stable target (`stableTarget`);
+ * until then the alpha paragraph names no stable cask to switch to - on
+ * Infinitary's own tap, from its first alpha to its first stable.
  */
-export function channelCaveats(channel: UpdateChannel, tap: TapNames = TAP): string[] {
+export function channelCaveats(
+  channel: UpdateChannel,
+  tap: TapNames = TAP,
+  stableTarget = true,
+): string[] {
   const { stable, alpha } = tap.caskTokens;
+  if (channel === "alpha" && !stableTarget) {
+    return [
+      "This is the alpha channel: new versions sooner, with lighter checks,",
+      "and every newer stable version too. There is no stable channel to",
+      "switch to yet.",
+      "",
+      "Never add --zap when uninstalling: it deletes your saved work.",
+    ];
+  }
   return channel === "stable"
     ? [
         "This is the stable channel. To get new versions sooner, with lighter",
@@ -131,7 +147,7 @@ export function channelCaveats(channel: UpdateChannel, tap: TapNames = TAP): str
       ];
 }
 
-/** Each channel's paragraph on this build's own tap. */
+/** Each channel's paragraph on this build's own tap, once it names a stable target. */
 export const CHANNEL_CAVEATS: Record<UpdateChannel, string[]> = {
   stable: channelCaveats("stable"),
   alpha: channelCaveats("alpha"),
@@ -180,7 +196,8 @@ function heredocLine(line: string): string {
  * marker into the release data root, overwriting the other channel's - a stable install switches an
  * alpha installation to stable even when both casks carry the same
  * artifact, and an alpha cask carrying a stable version still writes alpha.
- * The caveats are the alpha notice, then the channel paragraph.
+ * The caveats are the alpha notice, then the channel paragraph, which names
+ * the stable cask only when the tap names a stable target (`stableTarget`).
  *
  * On Firstmate 3000's tap (`FIRSTMATE_TAP`) the same cask, under its old
  * token, installs Infinitary for the people who installed Firstmate 3000:
@@ -192,6 +209,7 @@ export function renderCask(
   artifact: CaskArtifact,
   notice: string,
   tap: TapNames = TAP,
+  stableTarget = true,
 ): string {
   const token = tap.caskTokens[channel];
   const problem = caskArtifactProblem(channel, artifact, tap);
@@ -200,7 +218,7 @@ export function renderCask(
   // always carries it, and the template reads back as the exact download.
   const urlTemplate = artifact.downloadUrl.split(artifact.version).join("#{version}");
   const other: UpdateChannel = channel === "stable" ? "alpha" : "stable";
-  const caveats = [...fold(notice, 76), "", ...channelCaveats(channel, tap)];
+  const caveats = [...fold(notice, 76), "", ...channelCaveats(channel, tap, stableTarget)];
   const marker = markerContent(channel, tap);
   return [
     `cask ${rubyString(token)} do`,
@@ -569,7 +587,9 @@ export function advanceBuilds(
  * Every tap file one publication writes, for one tap commit: the targets
  * file and the cask of each channel whose target moved, carrying exactly
  * that target, and - for a publication with Linux builds - the builds file.
- * A channel that did not move keeps its cask untouched.
+ * A channel that did not move keeps its cask untouched, except that
+ * stable's first target writes the alpha cask again at alpha's own target,
+ * because its caveats name the stable cask only from then on.
  */
 export function tapFilesFor(
   current: unknown | undefined,
@@ -580,16 +600,27 @@ export function tapFilesFor(
   const tap = options.tap ?? TAP;
   const advance = advanceUpdateTargets(current, publication, options);
   const builds = advanceBuilds(options.currentBuilds, advance, publication, tap);
+  const stableTarget = advance.targets.targets.stable !== undefined;
   const files: Record<string, string> = {};
   for (const channel of advance.changed) {
     const target = advance.targets.targets[channel] as UpdateTarget;
-    files[caskPathFor(channel, tap)] = renderCask(channel, target, notice, tap);
+    files[caskPathFor(channel, tap)] = renderCask(channel, target, notice, tap, stableTarget);
+  }
+  // advanceUpdateTargets refused a current file that does not parse, and a
+  // stable publication always leaves alpha a target.
+  const hadStable =
+    current !== undefined && parseUpdateTargets(current, tap)?.targets.stable !== undefined;
+  const notes = [...advance.notes];
+  if (publication.channel === "stable" && !hadStable && !advance.changed.includes("alpha")) {
+    const alpha = advance.targets.targets.alpha as UpdateTarget;
+    files[caskPathFor("alpha", tap)] = renderCask("alpha", alpha, notice, tap, stableTarget);
+    notes.push(`alpha cask rewritten at ${alpha.version} so its caveats name the stable cask`);
   }
   if (advance.changed.length > 0) {
     files[tap.targetsFile] = formatUpdateTargets(advance.targets);
     if (builds) files[tap.buildsFile] = `${JSON.stringify(builds, null, 2)}\n`;
   }
-  return { ...advance, files };
+  return { ...advance, notes, files };
 }
 
 // --- Republishing the casks --------------------------------------------------
@@ -620,7 +651,8 @@ export type Republication = {
  * The casks this generator writes for the targets the tap already carries
  * (docs/alpha.md "Republishing the casks"). After a change to how a cask is
  * written - support for an older Homebrew, a new notice - each channel's
- * cask is rendered again at exactly its current target. Nothing moves: the
+ * cask is rendered again at exactly its current target, its caveats naming
+ * the stable cask only when the tap names a stable target. Nothing moves: the
  * targets file is never written, and a cask that installs anything but its
  * channel's target is refused rather than replaced, because republishing
  * never changes which bytes a person installs. A cask that is already
@@ -668,7 +700,7 @@ export function republishCasks(
         `the ${token} cask installs ${installs ? `${installs.version} from ${installs.downloadUrl} (${installs.sha256})` : "something unreadable"}, not ${channel}'s target ${target.version}; republishing never changes what a cask installs`,
       );
     }
-    const next = renderCask(channel, target, notice, tap);
+    const next = renderCask(channel, target, notice, tap, targets.targets.stable !== undefined);
     if (next === cask) {
       notes.push(`${channel} cask is already current at ${target.version}`);
       continue;
@@ -703,9 +735,10 @@ export const LAST_UNPROTECTED_STABLE = "0.1.24";
  * Infinitary's own tap starts with no targets file, after Firstmate 3000's
  * stables on the older tap (the Infinitary rename). `archivedStable`, the
  * newest stable the record of past releases names
- * (`release-notes/archive.json`), stands in for its stable there: when it is
- * a protected stable, someone who leaves the alpha channel has it to return
- * to, and it refuses the folder Infinitary moved (`retired-profile.json`).
+ * (`release-notes/archive.json`), stands in for its stable there: every
+ * stable the tap will carry numbers above it, so when it is a protected
+ * stable a live alpha may publish before Infinitary's first stable. Until
+ * then the alpha cask names no stable channel to switch to (`channelCaveats`).
  */
 export function alphaActivationProblem(
   current: unknown | undefined,

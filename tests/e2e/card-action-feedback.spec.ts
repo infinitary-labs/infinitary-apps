@@ -202,7 +202,7 @@ for (const theme of ["dark", "light"] as const) {
       await reply(app, true);
       const quotaFeedback = settingsFeedback(page, "subscriptions");
       await assertReadableSettingsFeedback(quotaFeedback, REQUEST_REASON);
-      await page.screenshot({ path: `lab/settings-errors/quota-${theme}.png` });
+      await page.screenshot({ path: test.info().outputPath(`quota-${theme}.png`) });
       const quotaMessage = await quotaFeedback.textContent();
       await expect(refresh).toBeEnabled();
       await refresh.click();
@@ -247,7 +247,7 @@ for (const theme of ["dark", "light"] as const) {
       await reply(app, true);
       const purgeFeedback = settingsFeedback(page, "purge");
       await assertReadableSettingsFeedback(purgeFeedback, REQUEST_REASON);
-      await page.screenshot({ path: `lab/settings-errors/purge-${theme}.png` });
+      await page.screenshot({ path: test.info().outputPath(`purge-${theme}.png`) });
       const purgeMessage = await purgeFeedback.textContent();
       await page.getByRole("button", { name: "Purge", exact: true }).click();
       await page.getByRole("button", { name: "Confirm purge", exact: true }).click();
@@ -260,7 +260,7 @@ for (const theme of ["dark", "light"] as const) {
       ).toBeVisible();
       await expect(page.getByRole("button", { name: "Purge", exact: true })).toBeEnabled();
       writeFileSync(
-        `lab/settings-errors/refresh-purge-${theme}.json`,
+        test.info().outputPath(`refresh-purge-${theme}.json`),
         JSON.stringify(
           { quotaMessage, modelsMessage, purgeMessage, retry: await purgeFeedback.textContent() },
           null,
@@ -320,7 +320,7 @@ test("account connection and sign-in failures keep readable reasons and retryabl
       await assertReadableSettingsFeedback(feedback, REQUEST_REASON);
       messages[name] = await feedback.textContent();
       await expect(control).toBeEnabled();
-      await page.screenshot({ path: `lab/settings-errors/account-${name}.png` });
+      await page.screenshot({ path: test.info().outputPath(`account-${name}.png`) });
       // The first refusal did not strand the sign-in control.
       await control.click();
       await expect.poll(() => calls(app)).toBe(2);
@@ -336,9 +336,12 @@ test("account connection and sign-in failures keep readable reasons and retryabl
       await assertReadableSettingsFeedback(feedback, REQUEST_COPY[channel].fallback);
       messages[`${name}-fallback`] = await feedback.textContent();
       await expect(control).toBeEnabled();
-      await page.screenshot({ path: `lab/settings-errors/account-${name}-fallback.png` });
+      await page.screenshot({ path: test.info().outputPath(`account-${name}-fallback.png`) });
     }
-    writeFileSync("lab/settings-errors/account-messages.json", JSON.stringify(messages, null, 2));
+    writeFileSync(
+      test.info().outputPath("account-messages.json"),
+      JSON.stringify(messages, null, 2),
+    );
   } finally {
     await launched.close();
   }

@@ -34,10 +34,6 @@ import { pressKey } from "./windowKeys";
  * on the button, and the two clicks finish or continue their tasks.
  */
 
-const EVIDENCE = join(
-  process.env.HOME ?? "",
-  "Library/Application Support/firstmate-3000/crewmates/ce5be786/evidence",
-);
 const MERGE = MERGE_WORDS["merge-pr"];
 const ADOPTED_HEAD = "4fc9140d92b3a9d25937dec0ff4f9754fdc8c8e4";
 const ADOPTED_BRANCH = "release-please--branches--main";
@@ -149,7 +145,7 @@ test("a request_merge of the task's own pull request merges that pull request an
     const { page } = launched;
     await expect(shownCard(page, title)).toBeVisible();
     expect(github.merges()).toEqual([]);
-    await regionShot(shownCard(page, title), join(EVIDENCE, "own-review.png"));
+    await regionShot(shownCard(page, title), test.info().outputPath("own-review.png"));
     const button = page.getByRole("button", { name: MERGE, exact: true });
     await pressKey(button, "Enter");
     await expectNoCard(page, title);
@@ -241,11 +237,12 @@ test("a request_merge of an adopted pull request merges that pull request and le
     await expect(card).toBeVisible();
     expect(github.merges()).toEqual([]);
     expect(github.requests().some((request) => request.startsWith("PUT "))).toBe(false);
-    await regionShot(card, join(EVIDENCE, "adopted-review.png"));
+    await regionShot(card, test.info().outputPath("adopted-review.png"));
     await heroShot(page, {
       region: card,
       anchors: [page.getByRole("button", { name: MERGE, exact: true })],
       name: "merge-a-pull-request-you-did-not-open",
+      dir: test.info().outputPath("hero"),
     });
     const button = page.getByRole("button", { name: MERGE, exact: true });
     await pressKey(button, "Enter");
@@ -269,7 +266,7 @@ test("a request_merge of an adopted pull request merges that pull request and le
     await expandDock(page, "activity");
     await regionShot(
       page.locator("[data-side-panel='activity']"),
-      join(EVIDENCE, "adopted-task-stays.png"),
+      test.info().outputPath("adopted-task-stays.png"),
     );
   } finally {
     await launched.close();

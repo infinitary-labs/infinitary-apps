@@ -227,11 +227,11 @@ export type SettleServiceHost = {
    * A task whose working copy is on a computer that runs work
    * (docs/helper.md, "Its working copies"): what it holds unmerged there,
    * null while nobody can tell, and its branch brought here before this
-   * Mac's own git reads it.
+   * Mac's own git reads it, in the repository it answers.
    */
   placed?: {
     workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
-    bringBranchHome(taskId: string): Promise<void>;
+    bringBranchHome(taskId: string): Promise<string | undefined>;
   };
   /** The personal workspace's running dot ends with the task. */
   endLiveTask(taskId: string): void;
@@ -489,14 +489,15 @@ export class SettleService {
     // The close gate (children, blockers) is settleTaskOnce's single check,
     // which honors proceed_with_open before it reaches here (WI-12).
     try {
-      // A branch on a computer that runs work merges from here once it is home.
-      if (record.deviceId) await this.host.placed?.bringBranchHome(taskId);
+      // A branch on a computer that runs work merges from here once it is
+      // home, in the repository it came home to.
+      const home = record.deviceId ? await this.host.placed?.bringBranchHome(taskId) : undefined;
       const { mode } = await this.host.workspace.landTaskWork(
         {
           taskId,
           cwd: record.worktreeDir,
           branch: record.branch,
-          repoDir: record.repoDir,
+          repoDir: home ?? record.repoDir,
         },
         beforeDispatch,
       );

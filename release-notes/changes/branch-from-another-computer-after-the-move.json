@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "branch-from-another-computer-after-the-move",
+      "kind": "fix",
+      "title": "Tasks on another computer open and merge their work after the move to Infinitary",
+      "body": "A task that started on another computer before Infinitary moved your saved work out of Firstmate 3000's folder can now open its pull request and merge. Before, the app looked for the task's work in the old folder and stopped with an error.",
+      "area": "crewmates",
+      "noPicture": "What changes is that a crewmate's pull request opens and a merge goes through; no screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

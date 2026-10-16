@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { AccountView } from "@shared/accounts";
@@ -28,6 +28,8 @@ import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedH
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
+import { pathsOf } from "../folderMove/due";
+import { rewriteDatabases } from "../folderMove/rewrite";
 import { createForgeResolver, type Forge } from "../forge";
 import type { ComputerAccounts } from "../helper/accounts";
 import { cleanUp } from "../helper/cleanUp";
@@ -156,12 +158,15 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 
+/** Where each project lives, as the home finds it for the project's folder. */
+type ForgeFor = NonNullable<Parameters<typeof startPlacedHome>[0]["forgeFor"]>;
+
 /** The home over its folder, with this file's clock, on real Pi's control plane. */
 function startHome(
   userData: string,
   port: number,
   pairing: () => DevicePairing,
-  forgeFor?: () => Forge,
+  forgeFor?: ForgeFor,
   extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> = {},
 ): PlacedHome {
   const home = startPlacedHome({
@@ -227,7 +232,7 @@ function signedInTo(
 
 /** A home and a computer joined to it as another user, running work with real Pi. */
 async function world(
-  forgeFor?: () => Forge,
+  forgeFor?: ForgeFor,
   options: {
     remoteLogin?: string;
     /** This Mac's own subscriptions, for a home that routes. */
@@ -352,11 +357,15 @@ async function world(
       await home.supervisor.dispatchQueuedTask(id);
       expect(home.tasks.get(id)?.status).toBe("active");
     },
-    /** Firstmate on the home quits and starts again over the same folder and port. */
-    restartHome: async () => {
+    /**
+     * Firstmate on the home quits and starts again over the same folder and
+     * port, after `whileStopped` runs on what it left.
+     */
+    restartHome: async (whileStopped?: () => void | Promise<void>) => {
       await home.quit();
       pairing?.dispose();
       pairing = undefined;
+      await whileStopped?.();
       home = startHome(userData, port, pairingNow, forgeFor, options);
       await home.listen();
     },
@@ -839,6 +848,77 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.timeline("t-copy").at(-1)?.text).toBe(
       "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first",
     );
+  });
+
+  // INF-97: INF-40 started on the Mac mini before its home moved Firstmate
+  // 3000's folder into Infinitary's. The move re-pointed the project but
+  // kept the record of a task on another computer as it was, and its
+  // reviewed open_change read the branch in the older folder's copy of the
+  // project, which never received it: "git -C .../firstmate-3000/fleet/
+  // infinitary rev-parse fm/task-68b12f57 ... unknown revision".
+  it("opens a reviewed change from the project's folder once the home's folder has moved, never from the older copy its record names (INF-97)", async () => {
+    const project = await gitProject();
+    const at = await world((repo) => project.forge(Buffer.alloc(0), repo?.path));
+    const { repo } = await adoptHere(at.home().repos, project.home);
+    at.home().repos.configure(repo.id, { delivery: "direct-pr", rigor: "reviewed" });
+    model([
+      { text: "Started on the footer." },
+      { tools: [{ name: "open_change", args: { title: "feat: a blue footer", body: "Intent" } }] },
+      { text: "Opened." },
+    ]);
+    await at.start("t-moved", "Make the footer blue.", repo.id);
+    await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
+    const work = at.folders("t-moved").work;
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+    at.home().tasks.recordDelivery("t-moved", { reviewVerdict: "pass", reviewSha: tip });
+
+    const moved = await moveProjectFolder(at, repo.path);
+    const home = at.home();
+    // As the move leaves them: the project in its new folder, the task's record naming the older one.
+    expect(home.repos.get(repo.id)?.path).toBe(moved);
+    expect(home.tasks.get("t-moved")?.repoDir).toBe(repo.path);
+    const requests = api.requests.length;
+    await home.supervisor.steerCrewmate("t-moved", "Open the change.");
+    // This turn: open_change, then its answer.
+    await expect.poll(() => api.requests.length - requests).toBe(2);
+    await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
+
+    expect(said(api.requests.at(-1))).toContain("Opened the pushed branch fm/task-t-moved");
+    // The branch came home into the project's folder and went up from there.
+    expect(await git(moved, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
+    expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
+    // The older copy stays as the move left it.
+    expect(await git(repo.path, ["branch", "--list", "fm/task-t-moved"])).toBe("");
+  });
+
+  it("merges a task's branch from that computer into the project's folder once the home's folder has moved (INF-97)", async () => {
+    const project = await gitProject();
+    const at = await world();
+    const { repo } = await adoptHere(at.home().repos, project.home);
+    at.home().repos.configure(repo.id, { delivery: "local-only" });
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-land", "Make the footer blue.", repo.id);
+    await expect.poll(() => at.home().tasks.get("t-land")?.activity).toBe("idle");
+    const work = at.folders("t-land").work;
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+
+    const moved = await moveProjectFolder(at, repo.path);
+    const home = at.home();
+    expect(home.tasks.get("t-land")?.repoDir).toBe(repo.path);
+    await at.inReach("t-land");
+    const landed = await home.supervisor.settleTaskDetailed(
+      "t-land",
+      "land",
+      undefined,
+      undefined,
+      "captain",
+    );
+
+    expect(landed.text).toBe('Merged "website" into main.');
+    expect(await git(moved, ["rev-parse", "main"])).toBe(tip);
+    expect(await git(repo.path, ["rev-parse", "main"])).toBe(project.main);
   });
 
   // INF-45: read_workflow's description promises a short read and a run
@@ -1385,6 +1465,25 @@ function recordOf(home: PlacedHome, taskId: string) {
   const record = home.tasks.get(taskId);
   if (!record) throw new Error(`No task ${taskId}`);
   return record;
+}
+
+/**
+ * The home's one-time move into Infinitary's folder (docs/saved-data-compatibility.md,
+ * "The one-time move"), for a project's folder: with the home stopped, the
+ * folder is copied to a new one, the older one staying as it was, and the
+ * move's own rewrite re-points the home's records. Answers the new folder.
+ */
+async function moveProjectFolder(
+  at: Awaited<ReturnType<typeof world>>,
+  from: string,
+): Promise<string> {
+  const to = join(scratchDir("infinitary-placed-moved-"), "home");
+  const { userData } = at.home().paths;
+  await at.restartHome(() => {
+    cpSync(from, to, { recursive: true, verbatimSymlinks: true });
+    rewriteDatabases(userData, pathsOf(from), to);
+  });
+  return to;
 }
 
 /** Manual-placement journeys name their starting computer instead of borrowing a default. */
@@ -2037,7 +2136,8 @@ async function commit(dir: string, message: string): Promise<string> {
 /**
  * A project where it lives - a bare repository on disk with one commit on
  * `main` - and the home's own clone of it, named `home`. Its forge is a plain
- * Git host over that origin, whose workflow evidence answers one artifact.
+ * Git host over that origin, sending from `home` unless named another clone,
+ * whose workflow evidence answers one artifact.
  */
 async function gitProject() {
   const root = scratchDir("infinitary-placed-project-");
@@ -2050,7 +2150,7 @@ async function gitProject() {
   await git(seed, ["push", "--quiet", "origin", "HEAD:main"]);
   const home = join(root, "home");
   await git(root, ["clone", "--quiet", origin, home]);
-  const forge = (bytes: Buffer): Forge =>
+  const forge = (bytes: Buffer, path = home): Forge =>
     Object.assign(
       // A plain Git host: open_change sends the branch up from this Mac's own repository.
       createForgeResolver({
@@ -2058,7 +2158,7 @@ async function gitProject() {
           throw new Error("This project does not live on GitHub.");
         },
       })({
-        path: home,
+        path,
         origin: "https://git.example.com/me/website.git",
         host: { kind: "git", name: "git.example.com" },
       }),

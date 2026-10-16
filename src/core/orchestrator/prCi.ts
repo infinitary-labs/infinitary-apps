@@ -243,9 +243,10 @@ export class PrCiService {
       /**
        * A task whose working copy is on a computer that runs work: its
        * branch is brought here from there before this Mac's own git reads
-       * it (docs/helper.md, "Its working copies"). Never throws.
+       * it, into the project's folder (docs/helper.md, "Its working
+       * copies"). Never throws.
        */
-      bringBranchHome?: (taskId: string) => Promise<void>;
+      bringBranchHome?: (taskId: string) => Promise<string | undefined>;
     },
   ) {}
 
@@ -1255,7 +1256,7 @@ export class PrCiService {
     try {
       requireConventional(input.title, "pull request title");
       await this.branchHome(record);
-      await this.validateRange(record.repoId, record.repoDir, branch, forge);
+      const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
         requireConventional(existing.title ?? "", "existing pull request title");
@@ -1269,7 +1270,9 @@ export class PrCiService {
       if (!current || !policy || policy.delivery.value !== "direct-pr")
         return "Cannot open the change: its delivery policy changed. Read the current task record.";
       if (policy.rigor.value === "reviewed") {
-        const head = existing?.headSha ?? (await git(record.repoDir || "", ["rev-parse", branch]));
+        // Read where the range was checked: the project's folder, where a
+        // branch from another computer came home.
+        const head = existing?.headSha ?? (await git(dir, ["rev-parse", branch]));
         if (!(current.delivery?.reviewVerdict === "pass" && current.delivery.reviewSha === head))
           return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
       }
@@ -1306,17 +1309,21 @@ export class PrCiService {
     if (record.deviceId) await this.options.bringBranchHome?.(record.id);
   }
 
+  /** Checks the branch's own commit names in the project's folder, and answers that folder. */
   private async validateRange(
     repoId: string | null | undefined,
     repoDir: string | null | undefined,
     branch: string,
     forge: Forge,
     head = branch,
-  ): Promise<void> {
+  ): Promise<string> {
     const repo = repoId ? this.options.repos.get(repoId) : undefined;
     const dir = repo?.path ?? repoDir;
     if (!dir) throw new Error("The project folder is unavailable.");
-    if (this.options.validateRange) return this.options.validateRange(dir, branch, forge, head);
+    if (this.options.validateRange) {
+      await this.options.validateRange(dir, branch, forge, head);
+      return dir;
+    }
     // Measure from the fetched default branch: the task branch starts there
     // (dispatchBase), and the local one lags whenever this Mac has not
     // pulled, which would count merged commits as the branch's own.
@@ -1332,6 +1339,7 @@ export class PrCiService {
       : name;
     const base = await git(dir, ["merge-base", head, target]);
     await requireConventionalRange(dir, base, head);
+    return dir;
   }
 
   private signInFact(forge: Forge, repoId: string | null | undefined): SignInFact {

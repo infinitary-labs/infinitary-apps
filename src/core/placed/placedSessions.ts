@@ -171,8 +171,11 @@ export type CrewMachines = {
   install(machine: string, taskId: string): Promise<DependencyInstall>;
   /** What the task's working copy there holds unmerged; null while nobody can tell. */
   workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
-  /** The task's branch, brought here from there before this Mac's own git reads it. */
-  bringBranchHome(taskId: string, strict?: boolean): Promise<void>;
+  /**
+   * The task's branch, brought here from there before this Mac's own git
+   * reads it; answers the repository here it reads it in.
+   */
+  bringBranchHome(taskId: string, strict?: boolean): Promise<string | undefined>;
   /** The computers that run work on the list, by device id. */
   computers(): readonly string[];
   /** The computer's name, as Devices lists it. */
@@ -503,7 +506,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.status(taskId);
   }
 
-  bringBranchHome(taskId: string, strict?: boolean): Promise<void> {
+  bringBranchHome(taskId: string, strict?: boolean): Promise<string | undefined> {
     return this.copies.bringBranchHome(taskId, strict);
   }
 

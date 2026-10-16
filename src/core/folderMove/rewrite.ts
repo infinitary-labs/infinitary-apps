@@ -96,7 +96,11 @@ export class DatabaseCheckError extends Error {
  * The whole-path columns of the main database (docs/saved-data-compatibility.md,
  * "The one-time move"): a project's folder, a task's project and working
  * copy and a Pi crewmate's session file. A task held on another computer
- * names that computer's files, so its row stays as it is.
+ * keeps its row as it is, for its session file names that computer's file;
+ * its project folder names this Mac's, which the row is left naming in the
+ * older folder, so this Mac reads such a task's branch in its project's
+ * folder, never in the one its row names (`PlacedCopies.bringBranchHome`,
+ * docs/helper.md "Reading its branch here").
  */
 function rewriteMainDatabase(db: Database.Database, froms: Froms, to: string): void {
   const update = (table: string, column: string, where = "1") => {

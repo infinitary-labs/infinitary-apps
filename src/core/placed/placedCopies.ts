@@ -312,24 +312,30 @@ export class PlacedCopies {
    * Brings the task's branch here from the computer it runs on, before this
    * Mac's own git reads it - to open, check or merge its change: only the
    * commits this Mac lacks cross, as a bundle, into `refs/heads/<branch>`
-   * of the task's repository here. Out of reach, this Mac reads what it
-   * brought last. Ordinary reads log failures; a source handoff passes
-   * `strict` to refuse a stale or missing branch before briefing its successor.
+   * of the task's repository here. Answers that repository, where this
+   * Mac's git reads the branch: the project's folder now, or this Mac's
+   * default workspace for a task with no project, never the folder the
+   * record named when the task started, which the one-time folder move
+   * leaves behind for a task on another computer. Out of reach, this Mac
+   * reads what it brought last. Ordinary reads log failures; a source
+   * handoff passes `strict` to refuse a stale or missing branch before
+   * briefing its successor.
    */
-  bringBranchHome(taskId: string, strict = false): Promise<void> {
+  bringBranchHome(taskId: string, strict = false): Promise<string | undefined> {
     return this.serial(taskId, async () => {
       const record = this.options.tasks.get(taskId);
       const deviceId = record?.deviceId;
       if (!record || !deviceId || !record.branch) {
         if (strict) throw new Error("The source task has no live branch.");
-        return;
+        return undefined;
       }
       if (!this.options.devices.inReach(deviceId)) {
         if (strict) throw new Error("The source computer is out of reach.");
-        return;
+        return this.options.homeRepo(record.repoId ?? null).catch(() => undefined);
       }
+      let repoDir: string | undefined;
       try {
-        const repoDir = await this.options.homeRepo(record.repoId ?? null);
+        repoDir = await this.options.homeRepo(record.repoId ?? null);
         if (!repoDir) throw new Error("The source task has no repository here.");
         const ref = `refs/heads/${record.branch}`;
         const sha = await this.take(deviceId, taskId, repoDir, "branch", ref);
@@ -339,6 +345,7 @@ export class PlacedCopies {
         if (strict) throw caught;
         this.options.log(`could not bring ${taskId}'s branch home: ${messageOf(caught)}`);
       }
+      return repoDir;
     });
   }
 

@@ -91,14 +91,15 @@ export type PlacedHome = {
 
 /**
  * A workspace that is asked for nothing but this Mac's default workspace,
- * where a task with no project merges: a placed task keeps no working copy here.
+ * where a task with no project merges, and a merge of a branch brought
+ * here: a placed task keeps no working copy here.
  */
 export function homeWorkspace(paths: AppPaths): WorkspaceService {
   const real = new WorkspaceService(paths, { pool: false });
   return new Proxy({} as WorkspaceService, {
     get: (_target, name) =>
-      name === "ensureDefaultRepo"
-        ? () => real.ensureDefaultRepo()
+      name === "ensureDefaultRepo" || name === "landTaskWork"
+        ? real[name].bind(real)
         : () => {
             throw new Error(`A placed task asked this Mac's workspace for ${String(name)}.`);
           },

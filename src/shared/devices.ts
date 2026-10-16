@@ -54,6 +54,11 @@ export function deviceMayBe(kind: DeviceKind, role: DeviceRole): boolean {
 export const deviceSystemSchema = z.enum(["macos", "linux", "windows", "ios"]);
 export type DeviceSystem = z.infer<typeof deviceSystemSchema>;
 
+/** Whether a device is a phone: its system is `ios` (docs/devices.md, "What a device is"). */
+export function isPhone(device: { system?: DeviceSystem | undefined }): boolean {
+  return device.system === "ios";
+}
+
 /** The chip a device runs on, as its system names it: Apple silicon and Arm are `arm64`. */
 export const deviceChipSchema = z.enum(["arm64", "x64"]);
 export type DeviceChip = z.infer<typeof deviceChipSchema>;
@@ -665,6 +670,9 @@ export function deviceJoinedLine(joined: {
       : joined.reachedOn === "local"
         ? ` It reached ${HERE.this} on this network.`
         : "";
+  // A view finds this computer again as a view: it never runs work.
+  if (joined.again && joined.kind === "view")
+    return `${deviceLabel(joined)} found ${HERE.this} again. It can control your first mate.${way}`;
   if (joined.again)
     return `${deviceLabel(joined)} found ${HERE.this} again. It runs work as before.${way}`;
   if (joined.kind === "view")

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-joins-as-a-view",
+      "reason": "Internal: the Mac now accepts a phone's join request and announces itself on Wi-Fi while a phone is on the list; the phone app does not exist yet, so nobody notices this change."
+    }
+  ]
+}

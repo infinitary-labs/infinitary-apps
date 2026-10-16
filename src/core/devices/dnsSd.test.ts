@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import type { NearbyMacsView } from "@shared/nearbyMacs";
 import { describe, expect, it, vi } from "vitest";
 import { standInDnsSd } from "../../../tests/helpers/dnsSdStandIn";
-import { runDnsSd } from "./dnsSd";
+import { runDnsSd, runDnsSdHeld } from "./dnsSd";
 import { NearbyMacs } from "./nearby";
 
 /**
@@ -14,8 +14,9 @@ import { NearbyMacs } from "./nearby";
  */
 
 // Integration budget (docs/test-cohorts.md): a shell script per run, the
-// slowest case 0.31 s at its fastest of three runs on an Apple silicon Mac,
-// so vitest's 5 s default; a poll waits up to 3 s for a run to end.
+// slowest case 1.40 s at its fastest of three runs on an Apple silicon Mac
+// (the held run, which waits out a one-second `-t`), so vitest's 5 s
+// default; a poll waits up to 3 s for a run to end.
 vi.setConfig({ expect: { poll: { timeout: 3_000 } } });
 
 /** Every run the stand-in started, by its process id. */
@@ -78,5 +79,33 @@ describe("Macs nearby through dns-sd", () => {
     nearby.ask(true);
     await expect.poll(() => seen?.state).toBe("failed");
     nearby.dispose();
+  });
+});
+
+/**
+ * INF-64 piece 1: an announcement (`dns-sd -R`) has no end of its own, so it
+ * is held by the app's pipe and ends with it (docs/devices.md, "Announcing to
+ * a phone"). Through the same stand-in program; never macOS's own dns-sd.
+ */
+describe("a held run of dns-sd", () => {
+  it("ends dns-sd itself when stopped, and says when dns-sd ends by itself", async () => {
+    const program = standInDnsSd([]);
+    const ended: boolean[] = [];
+    const held = runDnsSdHeld(program)(["-R", "Mini", "_infinitary._tcp", "local.", "1"], {
+      line: () => {},
+      ended: (finished) => ended.push(finished),
+    });
+    await expect.poll(() => runs(program)).toHaveLength(1);
+    const [pid] = runs(program);
+    expect(alive(pid ?? 0)).toBe(true);
+    held.stop();
+    await expect.poll(() => alive(pid ?? 0)).toBe(false);
+
+    const byItself: boolean[] = [];
+    runDnsSdHeld(program)(["-t", "1", "-R", "Mini", "_infinitary._tcp", "local.", "1"], {
+      line: () => {},
+      ended: (finished) => byItself.push(finished),
+    });
+    await expect.poll(() => byItself, { timeout: 4_000 }).toEqual([true]);
   });
 });

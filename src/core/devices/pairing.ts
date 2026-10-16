@@ -27,6 +27,7 @@ import {
   deviceRunsWork,
   deviceSystemSchema,
   deviceViewSchema,
+  isPhone,
   KEY_TEXT_PATTERN,
   PAIRING_LINK_TTL_MS,
   splitDialAddress,
@@ -271,7 +272,14 @@ const REASONS: Record<PairRefusal, string> = {
  * as another user here, which only runs work, or as a second app, which
  * only controls.
  */
-export function joinedKind(link: DeviceKind, onThisMac: boolean, window: boolean): DeviceKind {
+export function joinedKind(
+  link: DeviceKind,
+  onThisMac: boolean,
+  window: boolean,
+  system?: DeviceSystem,
+): DeviceKind {
+  // A phone only controls, whichever link it used.
+  if (isPhone({ system })) return "view";
   if (link !== "mac" || !onThisMac) return link;
   return window ? "view" : "work";
 }
@@ -671,18 +679,26 @@ export class DevicePairing implements PairedDevices {
    * something new, and Devices hears of it.
    */
   noteSystem(deviceId: string, said: { system?: DeviceSystem; chip?: DeviceChip }): void {
-    if (this.unreadable || this.systemsUnreadable) return;
-    if (!this.entries.some((entry) => entry.id === deviceId)) return;
+    if (this.keepSystem(deviceId, said)) this.changed();
+  }
+
+  /** Keeps what a device said it is; true when that changed what is kept. */
+  private keepSystem(
+    deviceId: string,
+    said: { system?: DeviceSystem; chip?: DeviceChip },
+  ): boolean {
+    if (this.unreadable || this.systemsUnreadable) return false;
+    if (!this.entries.some((entry) => entry.id === deviceId)) return false;
     const kept = this.systems.get(deviceId);
     const next: SystemRecord = { ...kept, ...said };
-    if (kept?.system === next.system && kept?.chip === next.chip) return;
+    if (kept?.system === next.system && kept?.chip === next.chip) return false;
     this.systems.set(deviceId, next);
     try {
       this.saveSystems();
     } catch (error) {
       this.onProblem(`could not keep what a device is: ${(error as Error).message}`);
     }
-    this.changed();
+    return true;
   }
 
   /** When the device was last in reach, if this Mac ever saw it. */
@@ -922,10 +938,13 @@ export class DevicePairing implements PairedDevices {
     if (link.kind !== request.data.kind) return refuse("kind");
     // Firstmate open at its first launch takes no link made for another user here.
     if (request.data.window && link.kind === "work") return refuse("kind");
+    // A phone controls and runs nothing, so a link made for another user here is not for it.
+    const { system } = request.data;
+    if (isPhone({ system }) && link.kind === "work") return refuse("kind");
     if (this.unreadable) return refuse("unknown");
     const { user } = request.data;
     // A device that may run work says which macOS user it runs as.
-    if (deviceRunsWork(link.kind) && !user) return refuse("malformed");
+    if (deviceRunsWork(link.kind) && !isPhone({ system }) && !user) return refuse("malformed");
     // Where it joins from, as this Mac found it - over SSH before the link
     // existed, or where its socket dialed from - never what the device says.
     const onThisMac = this.joinsFromAnotherMac
@@ -933,7 +952,7 @@ export class DevicePairing implements PairedDevices {
       : link.locality
         ? link.locality === "this-mac"
         : isThisMachine(on.socket.remoteAddress, this.interfaces());
-    const kind = joinedKind(link.kind, onThisMac, request.data.window === true);
+    const kind = joinedKind(link.kind, onThisMac, request.data.window === true, system);
     // Work run as the home's own user on this Mac could read and change
     // everything the captain can: it must run as another user here.
     if (deviceRunsWork(kind) && onThisMac && user?.uid === this.ownUid) return refuse("same-user");
@@ -942,7 +961,7 @@ export class DevicePairing implements PairedDevices {
     const listed = this.entries.find((entry) => entry.keyPin === devicePin);
     const reached = reachedOn(on.socket);
     if (request.data.again)
-      return this.foundAgain(link, listed, devicePin, request.data.found, reached);
+      return this.foundAgain(link, listed, devicePin, request.data.found, reached, system);
     // One entry per key, so Remove always cuts the key off.
     if (listed) return refuse("paired");
     const entry: Entry = {
@@ -964,6 +983,8 @@ export class DevicePairing implements PairedDevices {
     link.deviceId = entry.id;
     this.noteReached(entry.id, reached);
     this.keepSshRecord(entry.id, link);
+    // What it said it runs is kept now, so a phone is known to be one before its first hello.
+    if (system) this.keepSystem(entry.id, { system });
     this.changed();
     const view = this.viewOf(entry);
     try {
@@ -985,6 +1006,7 @@ export class DevicePairing implements PairedDevices {
     devicePin: string,
     found: FoundTools | undefined,
     reached: string | undefined,
+    system: DeviceSystem | undefined,
   ): PairOutcome {
     if (!listed) {
       if (this.farewells.delete(devicePin)) {
@@ -995,7 +1017,13 @@ export class DevicePairing implements PairedDevices {
     }
     // A computer keeps its kind when it finds this Mac again: one that runs
     // work may use any link that adds one, and gains nothing by it.
-    if (listed.kind !== link.kind && !(deviceRunsWork(listed.kind) && deviceRunsWork(link.kind)))
+    // A phone, a view, finds it again with the link for a Mac it joined by.
+    const phone = isPhone({ system }) && listed.kind === "view" && link.kind !== "work";
+    if (
+      listed.kind !== link.kind &&
+      !phone &&
+      !(deviceRunsWork(listed.kind) && deviceRunsWork(link.kind))
+    )
       return { ok: false, refused: "kind", reason: REASONS.kind };
     link.spent = true;
     link.deviceId = listed.id;

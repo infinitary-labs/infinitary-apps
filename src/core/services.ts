@@ -65,12 +65,13 @@ import { AdaptedDecisionModel, DecisionModels } from "./decisions/decisionModel"
 import { JevDecisionModel } from "./decisions/jev/jevClient";
 import { DecisionKeyStore } from "./decisions/jev/jevKeyStore";
 import { OpenRouterDecisionModel } from "./decisions/openRouterDecisionModel";
+import { MacAnnouncement } from "./devices/announce";
 import { ownComputerName, ownNetworkNames } from "./devices/computerName";
 import { Computers } from "./devices/computers";
 import { DeviceSetup } from "./devices/deviceSetup";
 import { DeviceSignIns } from "./devices/deviceSignIns";
 import { DeviceUpdateNudge } from "./devices/deviceUpdateNudge";
-import { runDnsSd, SYSTEM_DNS_SD } from "./devices/dnsSd";
+import { runDnsSd, runDnsSdHeld, SYSTEM_DNS_SD } from "./devices/dnsSd";
 import { type FarBuild, FarBuilds } from "./devices/farBuilds";
 import { farSystemNamed } from "./devices/farSystems";
 import { firewallKeepsOut } from "./devices/firewall";
@@ -334,6 +335,8 @@ export type CoreServices = {
    * a minute after the last ask.
    */
   nearbyMacs: NearbyMacs;
+  /** This Mac's Bonjour announcement to a phone on its list; stopped at dispose. */
+  macAnnouncement: MacAnnouncement;
   /**
    * This Mac's own SSH connection to each computer it added by its address
    * (docs/devices.md, "Through the home's SSH"): the shell starts it once it
@@ -1500,6 +1503,15 @@ export async function createServices(
     user: thisUser(),
     changed: (view) => emit("inf:devices:nearby", view),
   });
+  // While a phone is on the list this Mac announces itself over Bonjour so
+  // the phone can find it again (docs/devices.md, "Announcing to a phone").
+  const macAnnouncement = new MacAnnouncement({
+    run: dnsSd ? runDnsSdHeld(dnsSd) : null,
+    name: () => ownComputerName({ packaged: host.app.packaged, env: process.env }),
+    port: devices.port,
+  });
+  macAnnouncement.devicesChanged(devices.list());
+  devices.subscribe(() => macAnnouncement.devicesChanged(devices.list()));
   // Each computer that runs work signing in to its own subscriptions: what
   // Settings -> Intelligence draws, and what a task there is routed among.
   // A computer's word on its sign-ins reaches the crew once it exists: a
@@ -2807,6 +2819,7 @@ export async function createServices(
     farBuild,
     remoteLogin,
     nearbyMacs,
+    macAnnouncement,
     sshConnections,
     workDevices,
     computerResources,

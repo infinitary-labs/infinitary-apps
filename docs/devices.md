@@ -85,17 +85,20 @@ A device never joins because a page or a document opened a link.
    A device that may run work adds `"user": { "name", "uid" }`, the macOS user it runs as; the work mode adds `"found": { "git", "claudeCode" }`, what it has there (`docs/helper.md`, "Joining"); and Infinitary at its first launch adds `"window": true`.
    `name` is the device's own label, such as its computer name.
    The home pairs it as the link's kind, but for a link for a Mac used from this Mac itself (`joinedKind`): Infinitary at a second app's first launch joins as a `view`, and the work mode as another user here as `work`, refused as `same-user` when it runs as the home's own user.
+   A phone adds `"system": "ios"` and no `user`: it joins as a `view` whichever link it used, a link for a Mac or an older home's `view`, so it is never a computer a project can run on and Settings -> Devices' "Runs on" never lists it.
+   A link made for another user here is not for a phone (409 `kind`).
+   The home keeps the system when the device joins, before its first hello says it again.
    The grant answers the kind it was paired as.
 4. The home answers:
 
 | Answer | When |
 | --- | --- |
-| 201 `{ "deviceId", "kind" }` | The code is open, its kind matches, and the device showed a key not yet on the list. The link is spent before the answer is written, and the device is on the list with its key's pin. |
-| 400 `malformed` | The body is not the shape above |
+| 201 `{ "deviceId", "kind" }` | The code is open, its kind matches (a phone is paired as a `view` whichever link it used), and the device showed a key not yet on the list. The link is spent before the answer is written, and the device is on the list with its key's pin. |
+| 400 `malformed` | The body is not the shape above, or a computer that runs work sent no user. An older home also answers it to a phone's `system`. |
 | 401 `unknown` | No open link has that code |
 | 401 `unproven` | The device showed no key of its own |
-| 409 `kind` | The link was made for another kind, or Infinitary at its first launch used a link for another user |
-| 201 `{ "deviceId", "kind" }`, with `again` | A device finding its home again showed a key on the list (below, "Finding the home again"). The link is spent and the entry stays as it was, kind and all: a computer that runs work finds its home with any link that adds one. |
+| 409 `kind` | The link was made for another kind, or Infinitary at its first launch, or a phone, used a link for another user |
+| 201 `{ "deviceId", "kind" }`, with `again` | A device finding its home again showed a key on the list (below, "Finding the home again"). The link is spent and the entry stays as it was, kind and all: a computer that runs work finds its home with any link that adds one, and a phone, a view, with a link for a Mac. |
 | 409 `paired` | That key is on the list already, and the device did not ask `again`. One entry per key keeps Remove whole. |
 | 409 `same-user` | A computer that runs work dialed from this Mac as the macOS user the home runs as (`docs/helper.md`, "The home's side") |
 | 410 `used` | The link was used already |
@@ -207,6 +210,16 @@ Every run of dns-sd also ends by itself (`-t`): a browse after 75 seconds, when 
 A Mac the last browse announced stays two seconds for the next one to announce it again, so the list does not blink.
 So an Infinitary that stopped without a word leaves nothing listening for long.
 A development run may stand in its own program with `INFINITARY_DNS_SD`; a packaged app ignores it, and every end-to-end launch sets one that finds nothing, so a test never listens on the Mac's own network.
+
+### Announcing to a phone
+
+While a phone (a device whose system is `ios`) is on Your devices, this Mac announces itself over Bonjour as `_infinitary._tcp` in the local domain, under its own name in System Settings, at the port the connection listens on (`MacAnnouncement`, `src/core/devices/announce.ts`).
+The phone browses for that to find this Mac again after its address moved, and then dials it and checks the key it was paired with (above, "Joining"), so the announcement carries no key and no secret.
+It runs macOS's own `dns-sd -R` (or a development run's `INFINITARY_DNS_SD` stand-in), which has no end of its own, so a shell holds it with the app's pipe (`runDnsSdHeld`, `src/core/devices/dnsSd.ts`): dns-sd is killed once the pipe closes, when the announcement stops or the app is gone however it went, so a quit or a crash leaves no announcement.
+It starts when the list gains a phone, and stops once the last phone is removed or the app quits, for good: a change on the list during quit starts nothing.
+One that ends by itself, as when mDNSResponder restarts, starts again while a phone is listed, five seconds later and doubling up to a minute.
+A Mac with no phone on its list announces nothing.
+A computer with no dns-sd, as a Linux home, announces nothing yet.
 
 Bonjour browsing is a local network operation (Apple's TN3179).
 When macOS does not let the app use the local network, dns-sd says so with Bonjour's policy-denied answer (-65570), and the list says "macOS has not let Infinitary look for computers on this network." and "Allow it in System Settings, under Privacy & Security, Local Network.
@@ -867,6 +880,8 @@ A link that expires with nothing paired stops the listener.
 | Another macOS user on this Mac | Loopback gets no shortcut: it takes the same TLS and a key the home paired. The devices folder is 0700 and its files 0600. The window's own IPC is not reachable from another user. |
 | A web page in a browser on either Mac | A request with an `Origin` is refused on `/connection` and `/pair`. The home sends no CORS headers, and a browser trusts neither key. |
 | A page or a document opens a link | Nothing answers the scheme. A device joins only on its person's paste and confirmation of the kind and the address, so a stranger's link cannot make this Mac a computer that runs work for their home. |
+| Someone on the same network sees the announcement | While a phone is on the list, any network this Mac is on, public Wi-Fi included, learns that Infinitary runs here, this Mac's name and the connection's port. It carries no key and no secret, and learning it joins nothing: a device still needs an open link and the home's pin. |
+| A device says `system` to change what it becomes | The word can only narrow a link for a Mac to a `view`; it never widens, and a link for another user refuses it. |
 | Work run as another macOS user on this Mac reads the captain's files | Nothing in the app: macOS opens every home folder to every user on the Mac, outside private folders such as Desktop, Documents and Library, so that user reads the rest of the captain's home folder. The card, the Terminal question and Devices say so, and the app changes no permission (the captain's pick on FI3-862, words only). |
 | Work run as the captain on the home Mac | A computer that runs work dialing from this Mac as the home's own macOS user is refused (`same-user`): its work would read and change everything the captain can. Where it dialed from is read off the socket; the user is its own word, so this guards a mistake, and code already running as the captain is out of pairing's reach (below). |
 | Someone else sees a link: on the clipboard, in a message, in a screen share, or pasted into a conversation | It works once, for ten minutes, for the kind set at home; that bound is the guard. If someone else uses it first, the device it was meant for is refused as `used`, and the other one is on the list to Remove. |
@@ -943,6 +958,8 @@ A link that expires with nothing paired stops the listener.
   Its pairing folder has a space in its path, as Application Support does.
 - `src/core/devices/nearby.test.ts`: Macs nearby against dns-sd's own lines in memory - each Mac asked its name once, four at a time, this Mac left out and nothing listed before its names are read, a Mac gone from every interface taken off, macOS's policy-denied answer said and a Mac that answers after listed, another error or an ended run said as could not look, a browse that ran its time followed by another with no blink, and nothing running once stopped or a minute after the last ask; `src/core/devices/dnsSd.test.ts` the same through a stand-in program, every run gone once stopped.
   `src/shared/nearbyMacs.test.ts`: the address a Mac fills in and which Macs read as on your list; `src/renderer/src/settings/DevicesTab.test.tsx`: the list, its states and its keys.
+- `src/core/devices/announce.test.ts`: this Mac announces itself over Bonjour only while a phone is on the list, once, under its own name at the connection's port, stops with the last phone, starts again after a run that ended by itself, and starts nothing once disposed; `src/core/devices/dnsSd.test.ts` the held run ending dns-sd when stopped.
+  `src/core/devices/pairing.test.ts`: a phone joins as a `view` by a link for a Mac or an older `view`, is refused a link for another user here, finds the home again, and is never a computer that runs work.
 - `tests/e2e/devices.spec.ts`, "lists Macs nearby but this one": with a stand-in dns-sd, this Mac is not a row, ↓ and Enter fill the field with the user name selected, a changed user name is typed, the Mac is added over a throwaway SSH server and marked on the list when the aside opens again, and closing it leaves no run of dns-sd; "has not allowed the local network": the list says so and a private network's name still goes in.
 - `src/core/devices/remoteLogin.test.ts`, "how far the copy has gone": a copy of incompressible bytes over a throwaway SSH server, its count said at every piece, each more than the last, its last count the archive's own size, one run of lines in the feed's words between preparing and starting, no total and no percentage; said at most once a second, a second copy says fewer counts and the same last one.
   `src/core/devices/appArchive.test.ts`: the count's rule, its first bytes at once and its end once; `src/core/core.test.ts`: a count rewrites its line in place while it is Activity's newest, and one after another line writes its own; `src/renderer/src/settings/DevicesTab.test.tsx`: the row preparing, sending with its count and starting, on a new row and on a computer found again.

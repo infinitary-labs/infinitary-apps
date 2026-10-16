@@ -94,6 +94,10 @@ A computer on an older minor knows only the older names, so the home names those
 Protocol 8.5 lets a placed crewmate's `inf:work:read-workflow` leave out `jobId`: the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
 A home on an older minor refuses that read as a malformed request; a read that names a job is the same on both.
 
+Protocol 8.6 adds the optional `system` to the pair request (`POST /pair`, `docs/devices.md`, "Joining"): a phone says `ios` and joins as a view whichever link it used.
+A phone always sends `system`: a first join can read no version, since the welcome comes after pairing and `/pair` exposes none.
+A home on an older minor reads the request strictly, so its `malformed` answer to a well-formed request from a phone means the Mac needs updating, and the phone says so.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

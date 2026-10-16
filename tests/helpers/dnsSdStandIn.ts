@@ -12,7 +12,8 @@ import { scratchDir } from "./scratchDirs";
  * their `-t` seconds run out. With
  * `denied`, the browse answers what dns-sd says when macOS has not let the
  * app use the local network, and announces nothing. Each run adds its
- * process id to `pids` beside the script before it prints anything.
+ * process id to `pids` and its arguments to `args` beside the script before it
+ * prints anything; `-R` (this Mac announcing itself to a phone) prints nothing and waits.
  */
 export function standInDnsSd(
   macs: readonly { name: string; at: string }[],
@@ -43,6 +44,8 @@ export function standInDnsSd(
       // Each run says who it is beside the script, so a test can tell it ended,
       // before it prints anything: the app may stop a run once it has heard it.
       `echo $$ >> ${shellWord(join(dirname(path), "pids"))}`,
+      // The arguments it was started with, one run to a line, so a test can see what was asked.
+      `echo "$@" >> ${shellWord(join(dirname(path), "args"))}`,
       // `-t <seconds>` ends a run cleanly after that long, as dns-sd's does.
       "t=120",
       'if [ "$1" = "-t" ]; then t="$2"; shift 2; fi',

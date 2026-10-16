@@ -4,7 +4,7 @@ import type { IncomingMessage } from "node:http";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
 import { CONNECTION_PORT } from "@shared/connection";
-import { parsePairingLink } from "@shared/devices";
+import { deviceRunsWork, parsePairingLink } from "@shared/devices";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { createKeyIdentity, type KeyIdentity } from "./identity";
@@ -282,6 +282,92 @@ describe("device pairing", () => {
       claimWith(pairing, pairing.invite({ kind: "work" }).link, "work", "X", undefined, {
         window: true,
       }),
+    ).toMatchObject({ ok: false, refused: "kind" });
+  });
+
+  // INF-64 piece 1: a phone joins as a view whichever link it used, so it is never under Runs on.
+  it("joins a phone as a view by a link for a Mac or an older view, never as a computer that runs work", () => {
+    const { pairing } = pairingAt();
+    const phoneClaim = (
+      link: string,
+      kind: string,
+      name: string,
+      device = createKeyIdentity("Phone"),
+    ) =>
+      pairing.claim(
+        { code: parsePairingLink(link).code, kind, name, system: "ios" },
+        shown(device),
+      );
+    // Dialing from another address, as a phone on Wi-Fi does, and no user to say.
+    expect(phoneClaim(pairing.invite({ kind: "mac" }).link, "mac", "Kun's iPhone")).toMatchObject({
+      ok: true,
+      grant: { kind: "view" },
+    });
+    // An older home's link for a view joins it the same way.
+    expect(phoneClaim(pairing.invite({ kind: "view" }).link, "view", "iPad")).toMatchObject({
+      ok: true,
+      grant: { kind: "view" },
+    });
+    // The link for another user here is not for a phone, and stays open.
+    const work = pairing.invite({ kind: "work" }).link;
+    expect(phoneClaim(work, "work", "Nope")).toMatchObject({ ok: false, refused: "kind" });
+    const listed = pairing.list();
+    expect(listed.map(({ name, kind, system }) => ({ name, kind, system }))).toEqual([
+      { name: "Kun's iPhone", kind: "view", system: "ios" },
+      { name: "iPad", kind: "view", system: "ios" },
+    ]);
+    // So nothing a project could run on is on the list.
+    expect(listed.some((device) => deviceRunsWork(device.kind))).toBe(false);
+    // The same key joining twice is one entry, as for any device.
+    const phone = createKeyIdentity("Phone");
+    expect(phoneClaim(pairing.invite({ kind: "mac" }).link, "mac", "A", phone)).toMatchObject({
+      ok: true,
+    });
+    expect(phoneClaim(pairing.invite({ kind: "mac" }).link, "mac", "A", phone)).toMatchObject({
+      ok: false,
+      refused: "paired",
+    });
+  });
+
+  it("lets a phone find this Mac again with a link for a Mac, keeping it a view", () => {
+    const { pairing } = pairingAt();
+    const phone = createKeyIdentity("Phone");
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "iPhone",
+        system: "ios",
+      },
+      shown(phone),
+    );
+    expect(joined).toMatchObject({ ok: true, grant: { kind: "view" } });
+    const again = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "iPhone",
+        system: "ios",
+        again: true,
+      },
+      shown(phone),
+    );
+    expect(again).toMatchObject({ ok: true, grant: { kind: "view" } });
+    expect(pairing.list()).toEqual([expect.objectContaining({ kind: "view", system: "ios" })]);
+    // A view that never said it is a phone still cannot use a link for a Mac to find it again.
+    const air = createKeyIdentity("Infinitary device");
+    claimWith(pairing, pairing.invite({ kind: "view" }).link, "view", "Air", air);
+    expect(
+      pairing.claim(
+        {
+          code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+          kind: "mac",
+          name: "Air",
+          user: BUILDER,
+          again: true,
+        },
+        shown(air),
+      ),
     ).toMatchObject({ ok: false, refused: "kind" });
   });
 

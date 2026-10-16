@@ -254,6 +254,67 @@ test("a device says what it is when it connects, and Devices names a phone a pho
   }
 });
 
+/**
+ * INF-64 piece 1 (docs/devices.md, "Joining" and "Announcing to a phone"):
+ * a stand-in phone joins with a link for a Mac and is a view, not a
+ * computer that runs work; this Mac announces itself over Bonjour while the
+ * phone is on the list, and stops once it is removed. Never macOS's dns-sd.
+ */
+test("a phone joins as a view whichever link it used, and this Mac announces itself only while it is listed", async () => {
+  const dnsSd = standInDnsSd([]);
+  const app = await launchApp({ env: { INFINITARY_DNS_SD: dnsSd } });
+  const asked = () =>
+    existsSync(join(dirname(dnsSd), "args"))
+      ? readFileSync(join(dirname(dnsSd), "args"), "utf8")
+          .split("\n")
+          .filter(Boolean)
+      : [];
+  try {
+    const { page } = app;
+    // Nothing is announced with no phone on the list.
+    expect(asked().filter((line) => line.startsWith("-R"))).toEqual([]);
+    const { link } = await page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
+    // A phone says no macOS user and no window: only that it runs iOS.
+    const phone = await claimLink(link, { kind: "mac", name: "Kun's iPhone", system: "ios" });
+    expect(phone.kind).toBe("view");
+    const listed = (await page.evaluate(() => window.infinitary.devices.list())).find(
+      (device) => device.id === phone.deviceId,
+    );
+    expect(listed).toMatchObject({ kind: "view", system: "ios" });
+    await expect.poll(() => asked().filter((line) => line.startsWith("-R"))).toHaveLength(1);
+    expect(asked().find((line) => line.startsWith("-R"))).toMatch(
+      / _infinitary\._tcp local\. \d+$/,
+    );
+
+    await openDevices(page);
+    const row = page.locator(`[data-device-row="${phone.deviceId}"]`);
+    await expect(row).toContainText(aDevice({ system: "ios" }));
+    await page.getByRole("button", { name: "Remove Kun's iPhone", exact: true }).click();
+    await page
+      .locator(`[data-device-removing="${phone.deviceId}"]`)
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await expect(row).toHaveCount(0);
+    // The announcement ended with the last phone: the -R run is gone.
+    const announcer = readFileSync(join(dirname(dnsSd), "pids"), "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map(Number)[asked().findIndex((line) => line.startsWith("-R"))];
+    await expect
+      .poll(() => {
+        try {
+          process.kill(announcer ?? 0, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(false);
+  } finally {
+    await app.close();
+  }
+});
+
 /** Settings -> Devices, opened from the window's own Settings. */
 async function openDevices(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();

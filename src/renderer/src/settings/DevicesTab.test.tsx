@@ -1036,5 +1036,16 @@ describe("Settings -> Devices", () => {
         again: true,
       })?.text,
     ).toBe("Running as Builder found this computer again. It runs work as before.");
+    // A phone, a view, never runs work (INF-64 piece 1).
+    expect(
+      feedLineFrom({
+        type: "device_joined",
+        deviceId: "pocket",
+        name: "Kun's iPhone",
+        kind: "view",
+        onThisMac: false,
+        again: true,
+      })?.text,
+    ).toBe("Kun's iPhone found this computer again. It can control your first mate.");
   });
 });

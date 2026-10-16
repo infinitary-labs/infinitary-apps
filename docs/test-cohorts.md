@@ -160,7 +160,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/main/host/claudeKeychainAccess.integration.test.ts` | isolated `security` on a throwaway keychain (darwin only) | 5 s default |
 | `src/core/devices/remoteLogin.test.ts` | the Mac's own `sshd` on loopback (`tests/helpers/sshServer.ts`, macOS only, skipped without it), ssh, ssh-keygen, tar, curl, openssl | 10 s, 30 s on the check-line and password tests |
 | `src/core/devices/relay.test.ts` | a stand-in relay on Node, and on macOS `/usr/bin/nc`, carrying the real connection on loopback | 5 s default |
-| `src/core/devices/dnsSd.test.ts` | a stand-in for macOS's dns-sd, a shell script per run (`tests/helpers/dnsSdStandIn.ts`) | 5 s default |
+| `src/core/devices/dnsSd.test.ts` | a stand-in for macOS's dns-sd, a shell script per run (`tests/helpers/dnsSdStandIn.ts`); the held run (`runDnsSdHeld`) waits out a one-second `-t`, 1.4 s the slowest | 5 s default |
 | `src/core/helper/fromHome.test.ts` | a folder held by a live process, waited for on the real clock | 5 s default |
 | `src/core/devices/computerUpdate.test.ts` | real TLS on loopback and the Mac's own tar, a computer's run started again on the real clock | 10 s |
 | `src/core/devices/farSystems.test.ts` | `/bin/sh` running the look, the removal and the controller a home sends, with the system's own tools the look asks | 30 s |

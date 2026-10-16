@@ -57,3 +57,54 @@ export function runDnsSd(program: string): DnsSdRun {
     };
   };
 }
+
+/**
+ * A run of dns-sd that lasts until stopped, such as `-R` announcing this
+ * Mac, which has no `-t` of its own: a shell holds it with this app's pipe,
+ * and kills it once the pipe closes - when the run is stopped, or when the
+ * app is gone, however it went - so a quit or a crash leaves no announcement.
+ * It ends by itself, as `runDnsSd`'s do, when dns-sd does.
+ */
+export function runDnsSdHeld(program: string): DnsSdRun {
+  const script = [
+    // The trap is set before dns-sd starts, so an early stop cannot leave it running.
+    "d=",
+    "trap 'kill $d 2>/dev/null' TERM",
+    'p=$0; "$p" "$@" <&- & d=$!',
+    "exec 3<&0",
+    "{ cat <&3 >/dev/null 2>&1; kill $d 2>/dev/null; } 2>/dev/null & c=$!",
+    "wait $d; r=$?; kill $c 2>/dev/null; exit $r",
+  ].join("\n");
+  return (args, heard) => {
+    let ended = false;
+    const end = (finished: boolean) => {
+      if (ended) return;
+      ended = true;
+      heard.ended(finished);
+    };
+    const child = spawn("/bin/sh", ["-c", script, program, ...args], {
+      env: hostEnv(),
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    for (const stream of [child.stdout, child.stderr]) {
+      let rest = "";
+      stream.setEncoding("utf8");
+      stream.on("data", (chunk: string) => {
+        if (ended) return;
+        const lines = (rest + chunk).split("\n");
+        rest = lines.pop() ?? "";
+        for (const line of lines) heard.line(line);
+      });
+    }
+    child.stdin.on("error", () => {});
+    child.on("error", () => end(false));
+    child.on("close", (code) => end(code === 0));
+    return {
+      stop: () => {
+        ended = true;
+        child.stdin.end();
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+      },
+    };
+  };
+}

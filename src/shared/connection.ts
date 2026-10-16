@@ -121,6 +121,12 @@ export const pairRequestSchema = z.strictObject({
    * as a second app that only controls, never as work run as anyone here.
    */
   window: z.literal(true).optional(),
+  /**
+   * The system the device runs (docs/devices.md, "What a device is").
+   * A phone (`ios`) joins as a `view` whichever link it used, so it is never
+   * a computer that runs work (docs/devices.md, "Joining").
+   */
+  system: deviceSystemSchema.optional(),
 });
 export type PairRequest = z.infer<typeof pairRequestSchema>;
 

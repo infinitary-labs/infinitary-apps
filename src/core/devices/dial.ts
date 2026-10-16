@@ -22,6 +22,7 @@ import {
   deviceGrantSchema,
   deviceRunsWork,
   type HomeVia,
+  isPhone,
   linkAddresses,
   parsePairingLink,
   splitDialAddress,
@@ -258,6 +259,8 @@ type PairingDevice = {
   found?: FoundTools;
   /** Firstmate at its own first launch, with its window, rather than its work mode. */
   window?: true;
+  /** The system it runs; a phone (`ios`) joins as a view whichever link it used (docs/devices.md, "Joining"). */
+  system?: DeviceSystem;
 };
 
 /**
@@ -320,7 +323,13 @@ export async function findHomeAgain(
   const link = parsePairingLink(text);
   if (link.key !== grant.homeKey) throw new HomeKeyMismatchError();
   // A computer that runs work keeps its kind: any link that adds one finds its home again.
-  if (link.kind !== grant.kind && !(deviceRunsWork(link.kind) && deviceRunsWork(grant.kind)))
+  // A phone is a view and finds it again with a link for a Mac.
+  const phone = isPhone(device) && grant.kind === "view" && link.kind !== "work";
+  if (
+    link.kind !== grant.kind &&
+    !phone &&
+    !(deviceRunsWork(link.kind) && deviceRunsWork(grant.kind))
+  )
     throw new PairRefusedError("kind", "This link is for another kind of device.");
   if (grant.via === "ssh" && link.via !== "ssh")
     throw new PairRefusedError("via", "This link reaches the home another way than this device.");
@@ -356,6 +365,7 @@ async function pair(
     ...(device.found ? { found: device.found } : {}),
     ...(again ? { again: true } : {}),
     ...(device.window ? { window: true } : {}),
+    ...(device.system ? { system: device.system } : {}),
   });
   const answer = await new Promise<{ status: number; text: string }>((resolve, reject) => {
     const asked = request(
@@ -416,10 +426,12 @@ async function pair(
  * Whether the home may pair a device as `kind` (docs/devices.md,
  * "Joining"): as it asked; a link for a Mac used from the home's own Mac as
  * a second app (`window`) or as another user there; and one that finds its
- * home again as the kind it keeps.
+ * home again as the kind it keeps; and a phone as a view.
  */
 function pairedAs(device: PairingDevice, kind: DeviceKind, again: boolean): boolean {
   if (kind === device.kind) return true;
+  // A phone is paired as a view whichever link it used.
+  if (isPhone(device)) return kind === "view";
   if (again) return deviceRunsWork(kind) && deviceRunsWork(device.kind);
   return device.kind === "mac" && kind === (device.window ? "view" : "work");
 }

@@ -2,7 +2,7 @@ import { expect, type FrameLocator, type Locator, type Page } from "@playwright/
 import { SETTLE_FACT_VALUE_CLASS, SETTLE_FACTS, type SettleFact } from "../../src/shared/cards";
 import type { ComposerNotice } from "../../src/shared/composer";
 import type { RiskDimension } from "../../src/shared/risk";
-import { drawnFrame, frameSelectorIn } from "./frames";
+import { drawnFrame } from "./frames";
 import { takeTurn } from "./inputQueue";
 
 /**
@@ -104,9 +104,6 @@ export async function expectNoCard(
 const readyEntry = (page: Page) => page.locator(`${SHOWN_ENTRY}:not([aria-hidden])`);
 
 /** The shown card's body frame, whatever its title. */
-/** The facts strip under a card draws in a frame of its own; a script that resolves it itself names it here. */
-export const FACTS_FRAME_SELECTOR = frameSelectorIn("[data-card-facts]");
-
 export const shownCardFrame = (page: Page) => drawnFrame(page, `${SHOWN_ENTRY} iframe`);
 
 /**

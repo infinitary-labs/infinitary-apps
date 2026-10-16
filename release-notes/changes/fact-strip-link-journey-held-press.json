@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fact-strip-link-journey-held-press",
+      "reason": "Internal test fix: card-facts-link.spec.ts holds its press down until the strip's refresh has landed and then lets go, instead of timing a 900 ms hold that Chromium's synthetic mouse stretched to several seconds. No user-facing behavior changes."
+    }
+  ]
+}

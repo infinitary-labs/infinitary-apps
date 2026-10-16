@@ -7,10 +7,10 @@ import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
-import { atRest, pressPointer } from "./layout";
+import { atRest, holdPointer } from "./layout";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { FACTS_FRAME_SELECTOR, factsStrip, showCard } from "./stack";
+import { factsStrip, showCard } from "./stack";
 import { focusOn } from "./windowKeys";
 
 /**
@@ -21,16 +21,13 @@ import { focusOn } from "./windowKeys";
  * when that happens still opens the pull request when he lets go.
  *
  * The host's refresh is the card list it pushes, with the strip's checks
- * reading a minute older; the press is Chromium's own pointer, held as a
- * person holds a click (`pressPointer`).
+ * reading a minute older; the press is Chromium's own pointer, held down
+ * while the refresh lands and let go after it (`holdPointer`).
  */
 
 const PR = "https://github.com/octo/meterlab/pull/58";
 const TITLE = "The meter fix is ready to merge";
 const TASK = "task-meter-fix";
-/** How long the press holds the button, and when within it the strip refreshes. */
-const HOLD_MS = 900;
-const REFRESH_AFTER_MS = 300;
 
 function mergeCard(): Card {
   return {
@@ -105,25 +102,32 @@ test("a press on the fact strip's pull request link opens it though the strip re
     await atRest(page.locator("[data-card-facts]"));
 
     // A press with nothing refreshing opens the pull request.
-    await pressPointer(page, link, HOLD_MS);
+    const release = await holdPointer(page, link);
+    await release();
     await expect.poll(opened).toEqual([PR]);
 
     // The captain's focus is back in the main message, as it is when he
-    // reaches for the link. The window's own clock orders the refresh and
-    // the click the press made.
+    // reaches for the link. The strip's own document notes, in order, the
+    // button going down, the refresh reaching its checks cell and the click
+    // the release makes.
     await focusOn(promptInput(page));
-    await page.evaluate((stripSelector) => {
-      const strip = document.querySelector<HTMLIFrameElement>(stripSelector);
-      const seen = { refreshed: 0, clicked: 0 };
-      (window as unknown as { __fmPress: typeof seen }).__fmPress = seen;
-      window.infinitary.cards.onCards(() => {
-        if (!seen.refreshed) seen.refreshed = performance.now();
-      });
-      window.addEventListener("message", (event) => {
-        if (event.source !== strip?.contentWindow) return;
-        if ((event.data as { type?: string })?.type === "link") seen.clicked = performance.now();
-      });
-    }, FACTS_FRAME_SELECTOR);
+    await link.evaluate((anchor) => {
+      const strip = anchor.ownerDocument;
+      const seen: string[] = [];
+      (strip.defaultView as unknown as { __fmPress: string[] }).__fmPress = seen;
+      strip.addEventListener("pointerdown", () => seen.push("down"), true);
+      strip.addEventListener("click", () => seen.push("click"), true);
+      new MutationObserver(() => {
+        const checks = strip.querySelector('[data-fact="checks"]');
+        if (checks?.getAttribute("title") === "read 3 min ago" && !seen.includes("refreshed"))
+          seen.push("refreshed");
+      }).observe(strip.body, { subtree: true, childList: true, attributes: true });
+    });
+    const noted = () =>
+      link.evaluate(
+        (anchor) =>
+          (anchor.ownerDocument.defaultView as unknown as { __fmPress?: string[] }).__fmPress,
+      );
     // The host's refresh: the card list with the strip's checks read a
     // minute later, pushed while the button is down.
     const cards = await page.evaluate(() => window.infinitary.cards.list());
@@ -133,24 +137,19 @@ test("a press on the fact strip's pull request link opens it though the strip re
         : card,
     );
     expect(refreshed).not.toEqual(cards);
-    await app.evaluate(
-      ({ BrowserWindow }, { refreshed, after }) => {
-        const contents = BrowserWindow.getAllWindows()[0]?.webContents;
-        setTimeout(() => contents?.send("inf:cards", refreshed), after);
-      },
-      { refreshed, after: REFRESH_AFTER_MS },
-    );
-    await pressPointer(page, link, HOLD_MS);
+    const letGo = await holdPointer(page, link);
+    // The strip has the button down before the refresh is pushed.
+    await expect.poll(noted).toEqual(["down"]);
+    await app.evaluate(({ BrowserWindow }, refreshed) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send("inf:cards", refreshed);
+    }, refreshed);
     await expect(facts.cell("checks")).toHaveAttribute("title", "read 3 min ago");
+    await letGo();
     await expect.poll(opened).toEqual([PR, PR]);
-    // The strip refreshed while the button was down: after it went down -
-    // the click comes HOLD_MS after that at the earliest - and before the
-    // click.
-    const order = await page.evaluate(
-      () => (window as unknown as { __fmPress: { refreshed: number; clicked: number } }).__fmPress,
-    );
-    expect(order.refreshed).toBeGreaterThan(order.clicked - HOLD_MS);
-    expect(order.clicked).toBeGreaterThan(order.refreshed);
+    // The strip refreshed while the button was down: after it went down and
+    // before the click its release made, all in the one document the strip
+    // keeps.
+    expect(await noted()).toEqual(["down", "refreshed", "click"]);
   } finally {
     await launched.close();
   }

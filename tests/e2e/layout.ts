@@ -229,10 +229,8 @@ export async function resizeWindow(
 /** A point in the window, px. */
 export type Point = { x: number; y: number };
 
-/** One action of Chromium's own synthetic mouse, at a window point, or a pause between two. */
-type PointerAction =
-  | ({ name: "pointerMove" | "pointerDown" | "pointerUp"; button?: 0 } & Point)
-  | { name: "pause"; duration: number };
+/** One action of Chromium's own synthetic mouse, at a window point. */
+type PointerAction = { name: "pointerMove" | "pointerDown" | "pointerUp"; button?: 0 } & Point;
 
 /**
  * Plays `actions` with Chromium's own synthetic mouse
@@ -282,20 +280,44 @@ export async function slidePointer(
   );
 }
 
+/** The window point at the centre of `target`, where a press on it goes. */
+async function pressPoint(target: Locator): Promise<Point> {
+  const box = await target.boundingBox();
+  if (!box) throw new Error("The press target is not on screen");
+  return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+}
+
 /**
  * The captain's own press on `target`, at its centre (`playPointer`): inside
  * a card's frame it focuses the frame and clicks there, as a real mouse
- * does, which no click a script dispatches does. `holdMs` keeps the button
- * down that long before the release, as a person's press does.
+ * does, which no click a script dispatches does.
  */
-export async function pressPointer(page: Page, target: Locator, holdMs = 0): Promise<void> {
-  const box = await target.boundingBox();
-  if (!box) throw new Error("The press target is not on screen");
-  const at = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+export async function pressPointer(page: Page, target: Locator): Promise<void> {
+  const at = await pressPoint(target);
   await playPointer(page, [
     { name: "pointerMove", ...at },
     { name: "pointerDown", ...at, button: 0 },
-    ...(holdMs > 0 ? [{ name: "pause" as const, duration: holdMs }] : []),
     { name: "pointerUp", ...at, button: 0 },
   ]);
+}
+
+/**
+ * The captain's own press on `target` (`pressPointer`), held: the button
+ * stays down until the returned release lets it go at the same point, so a
+ * test changes what is under a held press in order, never by timing a hold.
+ * Chromium's synthetic mouse starts each play at the window's corner with no
+ * button down, so the release moves back to the point first - a move
+ * Chromium hands to the frame the press went down in - and then lets go.
+ */
+export async function holdPointer(page: Page, target: Locator): Promise<() => Promise<void>> {
+  const at = await pressPoint(target);
+  await playPointer(page, [
+    { name: "pointerMove", ...at },
+    { name: "pointerDown", ...at, button: 0 },
+  ]);
+  return () =>
+    playPointer(page, [
+      { name: "pointerMove", ...at },
+      { name: "pointerUp", ...at, button: 0 },
+    ]);
 }

@@ -122,7 +122,7 @@ export type MergeWait =
   | "evidence"
   /** The checks on the candidate head have not all passed. */
   | "checks"
-  /** A reviewed task's review has not passed at the candidate head. */
+  /** A reviewed task's review has not passed for this change. */
   | "review"
   /** A round cap on the task holds it until the captain answers. */
   | "cap"
@@ -248,6 +248,14 @@ export type TaskDelivery = {
    */
   reviewVerdict?: ReviewVerdict;
   reviewSha?: string;
+  /**
+   * The change reading the review was assigned, sha256 of the
+   * position-stripped diff (INF-148). Absent when that commit could not
+   * be read, including a computer on an older app.
+   */
+  reviewChange?: string;
+  /** A later head the pass covers because its change reading matched. */
+  reviewCarrySha?: string;
   reviewRisk?: ReviewRisk;
   reviewRiskNote?: string;
   reviewedAt?: number;

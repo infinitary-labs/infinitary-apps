@@ -269,6 +269,103 @@ describe("WorkspaceService", () => {
     ]);
   });
 
+  it("keeps one change reading across a pure update, and not across an edited conflict or an indentation change", async () => {
+    // INF-148, the captain's words: a passed review should not start over
+    // only because main moved, when the change itself is the same.
+    const { workspace } = await service();
+    const repo = await workspace.ensureDefaultRepo();
+    const commit = async (file: string, body: string, message: string) => {
+      writeFileSync(join(repo, file), body);
+      await git(repo, ["add", file]);
+      await git(repo, ["commit", "-m", message]);
+      return git(repo, ["rev-parse", "HEAD"]);
+    };
+    const lines = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
+    const base = `${lines.join("\n")}\n`;
+    const changed = `${lines.map((line) => (line === "line 20" ? "line 20 changed" : line)).join("\n")}\n`;
+    await commit("a.txt", base, "chore: base lines");
+    await git(repo, ["checkout", "-b", "work"]);
+    const reviewed = await commit("a.txt", changed, "feat: change line 20");
+    const reviewedReading = await workspace.reviewChangeReading(repo, reviewed);
+    expect(reviewedReading).toMatch(/^[0-9a-f]{64}$/);
+    expect(await workspace.reviewChangeReading(repo, "1".repeat(40))).toBeNull();
+
+    // Newer main edits a line away from the change. The change lines are the same.
+    await git(repo, ["checkout", "main"]);
+    await commit(
+      "a.txt",
+      `${base.replace("line 1\n", "line 1 main\n")}`,
+      "chore: main edits a nearby line",
+    );
+    await git(repo, ["checkout", "work"]);
+    await git(repo, ["rebase", "main"]);
+    const updated = await git(repo, ["rev-parse", "HEAD"]);
+    expect(updated).not.toBe(reviewed);
+    expect(await workspace.reviewChangeReading(repo, updated)).toBe(reviewedReading);
+
+    // An indentation change of the change itself does not keep the reading.
+    const indented = await commit(
+      "a.txt",
+      `${base.replace("line 1\n", "line 1 main\n").replace("line 20\n", "  line 20 changed\n")}`,
+      "style: indent the changed line",
+    );
+    expect(await workspace.reviewChangeReading(repo, indented)).not.toBe(reviewedReading);
+
+    // A conflict resolved by editing the change does not keep the reading.
+    await git(repo, ["checkout", "main"]);
+    await commit(
+      "a.txt",
+      `${base.replace("line 1\n", "line 1 main\n").replace("line 20\n", "line 20 from main\n")}`,
+      "chore: main edits the same line",
+    );
+    await git(repo, ["checkout", "-B", "conflict", reviewed]);
+    await expect(git(repo, ["rebase", "main"])).rejects.toThrow();
+    writeFileSync(
+      join(repo, "a.txt"),
+      `${base.replace("line 1\n", "line 1 main\n").replace("line 20\n", "line 20 changed and main\n")}`,
+    );
+    await git(repo, ["add", "a.txt"]);
+    await git(repo, ["-c", "core.editor=true", "rebase", "--continue"]);
+    const edited = await git(repo, ["rev-parse", "HEAD"]);
+    expect(await workspace.reviewChangeReading(repo, edited)).not.toBe(reviewedReading);
+  });
+
+  it("treats a moved guard as a different change once the file is already on main", async () => {
+    // Review finding R1. Both functions are on main first, so the change is
+    // only the inserted guard. With no context the two placements read the
+    // same; one neighboring line makes a move an edit.
+    const { workspace } = await service();
+    const repo = await workspace.ensureDefaultRepo();
+    const source = [
+      "function a() {",
+      "  return 1;",
+      "}",
+      "function b() {",
+      "  return 2;",
+      "}",
+      "",
+    ].join("\n");
+    writeFileSync(join(repo, "guard.ts"), source);
+    await git(repo, ["add", "guard.ts"]);
+    await git(repo, ["commit", "-m", "chore: two functions"]);
+    await git(repo, ["checkout", "-b", "moved"]);
+    const place = async (fn: "a" | "b", message: string) => {
+      const body = source.replace(
+        `function ${fn}() {\n`,
+        `function ${fn}() {\n  if (!ok) return;\n`,
+      );
+      writeFileSync(join(repo, "guard.ts"), body);
+      await git(repo, ["add", "guard.ts"]);
+      await git(repo, ["commit", "-m", message]);
+      return git(repo, ["rev-parse", "HEAD"]);
+    };
+    const inserted = await place("a", "feat: guard function a");
+    const moved = await place("b", "fix: move the guard to function b");
+    expect(await workspace.reviewChangeReading(repo, moved)).not.toBe(
+      await workspace.reviewChangeReading(repo, inserted),
+    );
+  });
+
   it("reuses an existing matching worktree on a second create", async () => {
     const { workspace } = await service();
     const first = await workspace.createTaskWorktree("dddd4444");

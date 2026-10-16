@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-holds-across-updates",
+      "kind": "improvement",
+      "title": "A passed review holds when only main moved",
+      "body": "A careful task keeps its passed review when an update onto newer main does not edit the change. A change on main to the line right beside yours asks for a fresh review. A line moved beside the same neighbors still counts as the same change. The checks still have to pass.",
+      "area": "tasks",
+      "noPicture": "Nothing new on screen: the review named on the task stays the one that passed, and the merge goes on.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

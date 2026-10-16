@@ -1061,7 +1061,18 @@ export const workOrders = {
   "inf:working-copy:revision": {
     effect: "read",
     request: z.tuple([z.object({ task: placedTaskIdSchema, headSha: commitSchema.optional() })]),
-    response: z.object({ headSha: commitSchema, changedFiles: z.array(z.string()) }),
+    response: z.object({
+      headSha: commitSchema,
+      changedFiles: z.array(z.string()),
+      /**
+       * The change reading at that commit (INF-148). Absent from a computer
+       * on an older contract, which then cannot carry a passed review.
+       */
+      changeReading: z
+        .string()
+        .regex(/^[0-9a-f]{64}$/)
+        .optional(),
+    }),
   },
   /** Whether the working copy holds edits or commits that never merged. */
   "inf:working-copy:status": {

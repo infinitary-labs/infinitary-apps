@@ -172,7 +172,7 @@ Each accepted edit advances a revision; asynchronous merge attempts compare it a
 GitHub unattended merges also check draft, conflicts, head and review readiness at that boundary.
 Once a merge has been sent it cannot be recalled; the first mate says so, and any retry reads the new policy.
 Changing delivery keeps commits, published work and the original pull request linked; switching back reuses that identity when possible and never silently closes it or falls back on missing access.
-Higher care requires missing validation or review before the next push or merge, including a pull request already opened; the reviewed gate requires a pass for the exact current head.
+Higher care requires missing validation or review before the next push or merge, including a pull request already opened; the reviewed gate requires a pass for this change.
 Lower care removes only a host review's policy-owned blocking edge; review history, failed checks, repair counts and other holds stay.
 Queued or waiting work does not start merely because a policy changed, and active crews receive the notice through the existing inbox rather than restarting.
 `tests/e2e/task-policies.spec.ts` exercises keyboard edits, sources, Activity, reset/restart and an already-ready result under passing and failed checks; the supervisor and workspace tests cover the asynchronous cancellation boundaries.
@@ -218,10 +218,11 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
 2. **The first mate spawns the reviewer** - `spawn_crewmate` with `review_of` naming the builder and the user's original words; no new tool, the count stays 24.
    The host refuses it as text before anything exists when the builder is not reviewed, has not reported, has no commits on its branch (`WorkspaceService.branchHead`), or already has a review open.
    A builder with a PR already on record (an in-flight task) is reviewed at its recorded PR head instead.
-3. **The host briefs the reviewer** (`renderReviewBrief`, byte-stable like the escalation brief, its instruction text aligned to the no-mistakes review prompt): the fixed review instruction around the captain's verbatim words, the builder's branch at its head (worktrees share refs, so the diff against the default branch is the change), and the builder's last report and the complete changed-file checklist at that head.
+3. **The host briefs the reviewer** (`renderReviewBrief`, byte-stable like the escalation brief, its instruction text aligned to the no-mistakes review prompt): the fixed review instruction around the captain's verbatim words, the builder's branch at the assigned commit (worktrees share refs, so the diff of that commit against the default branch is the change, never the live branch), and the builder's last report and the complete changed-file checklist at that head.
    The reviewer runs on its builder's recorded computer, in a separate working copy at the assigned commit, with the evidence folder on that computer (`docs/helper.md`, "Independent reviews").
    Its provider is selected from that computer's own subscriptions, preferring a different provider than the builder's when one can serve.
-   The builder's computer supplies the committed head and checklist; an unavailable computer refuses the review rather than falling back to a stale home branch.
+   The builder's computer supplies the committed head, the checklist and the change reading; an unavailable computer refuses the review rather than falling back to a stale home branch.
+   A computer on an older contract supplies no reading, so a pass from it does not carry.
    Before a re-review turn, the host refreshes the clean review copy to the new assigned commit; edits or unexpected commits refuse the refresh without losing work.
    Guidance during a review waits for the next turn, and the verdict records the commit assigned to that turn, not a later builder head.
    The reviewer checks every listed path, does not call an omitted path clean, and recomputes the checklist at a new head.
@@ -235,7 +236,15 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    The host reads the verdict line, the finding lines and the risk line (`parseReviewReport`, `parseReviewFindings`).
    A report with NO verdict line records nothing and spends no round - a reviewer's acknowledgment ("standing by") is not a verdict, and the hold stands regardless, so it still fails toward the human.
    A stated findings verdict whose findings are all info/no-op derives a `pass`: info never blocks (`findingsBlock` - blocking is an error or warning severity, or an ask-user action at any severity).
-   The verdict, the head read and the risk land on the builder's delivery facts (`reviewVerdict`, `reviewSha`, `reviewRisk`, `reviewRiskNote`, `reviewedAt`) as a `review` timeline event whose data also names the review task; which review a builder's verdict came from is otherwise read off the parent edge (`TaskService.verdictReviewOf`).
+   The verdict, the head read, the change reading taken at assignment and the risk land on the builder's delivery facts (`reviewVerdict`, `reviewSha`, `reviewChange`, `reviewRisk`, `reviewRiskNote`, `reviewedAt`) as a `review` timeline event whose data also names the review task; which review a builder's verdict came from is otherwise read off the parent edge (`TaskService.verdictReviewOf`).
+   A pass holds for a later version whose change lines match that reading: opening the pull request, the captain's merge click and the kept merge all carry it, and a quiet timeline line on the builder records each carry.
+   The reading keeps one neighboring line and drops where the lines sit.
+   A main edit right next to the change asks for a fresh review, because that neighbor is part of the reading.
+   A line moved beside the same neighbors still counts as the same change, and the pass carries.
+   A move that changes those neighbors asks for a fresh review, and so does any edited line, added change, dropped line, spacing change, or a version the app cannot read.
+   A main edit farther from the change does not.
+   The checks still run on every version and must pass before a merge.
+   A pass recorded before the reading was stored carries the same way when its reviewed commit is still on this Mac and the task is not placed.
 5. **Findings and blocked leave the reviewer idle and steerable.**
    The findings wake names the first mate's next steps (`reviewFindingsNext`), and so does a blocked one; the findings wake the review cap rides names only the cap's way out.
    The first mate steers the builder with every auto-fix finding verbatim; the builder's reviewed brief carries the ported fixer preamble - double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
@@ -369,7 +378,8 @@ The captain's merge click on a completion card is an approval of that change, an
   The crewmate declares the newest mark it read with `check_change captainGuidance` (`mark`, `impact`, `evidence`): `none` lifts the hold through that mark, and a later mark still holds; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card.
   A mark no message named is refused.
 - **The gates.**
-  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, and boot) first checks the task and pull request are still the approved ones, no new completion card is up, no round cap holds, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed at the exact candidate head.
+  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, and boot) first checks the task and pull request are still the approved ones, no new completion card is up, no round cap holds, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed for this change (the candidate head, or a recorded carry of the same change lines).
+  The kept-merge line on a checks reading asks the crewmate to bring the branch up to date only when the merge waits on a conflict or a moved version.
   Then every page of the checks (`GitHubForge.checks`; a suite past the pages it reads keeps a pending item), and GitHub's own readiness for the pinned pull request (`GitHubForge.pull`): only `clean` merges, so a sign-in that could bypass a required review or another branch rule never does.
   The captain's own click keeps today's single attempt and reads readiness only to classify a refusal.
   Right before the last look, the guard's `held` reads the approval again, so guidance that arrives while the gates are read - or while his own click waits for the crewmate's turn to end - stops the merge as a `guidance` wait and the approval stands.

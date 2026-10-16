@@ -375,7 +375,7 @@ export function renderRigorSection(rigor: Rigor): string {
     case "standard":
       return "Rigor: standard - the fixed pre-PR procedure, the five headings on the report and the PR body, three CI rounds then a blocker report.";
     case "reviewed":
-      return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card.`;
+      return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card. A passed review holds when a later version is the same change; any edit asks a fresh review.`;
   }
 }
 
@@ -712,6 +712,8 @@ export type ReviewBriefFacts = {
   evidenceDir?: string;
   /** Committed paths at this head, or null when a recorded PR head is not local. */
   changedFiles: string[] | null;
+  /** The change reading at the assigned commit, when it could be read. */
+  changeReading?: string;
 };
 
 /** How the review instruction opens; a scripted stand-in recognizes the reviewer by it. */
@@ -808,7 +810,7 @@ export function renderReviewBrief(
   }
   const target = facts.prUrl
     ? `Review PR ${facts.prUrl} at head ${facts.headSha}`
-    : `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff against the default branch yourself (git diff <default>...${facts.branch})`;
+    : `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against the default branch yourself (git diff <default>...${facts.headSha})`;
   return [
     `Goal: review the change for "${facts.builderTitle}" and report findings.`,
     "The verdict report is the whole deliverable of this internal review; emit no outcome card.",

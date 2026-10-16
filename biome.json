@@ -361,6 +361,7 @@
         "!src/core/orchestrator/crewSupervisor.test.ts",
         "!src/core/orchestrator/firstmateAgent.test.ts",
         "!src/core/orchestrator/prCi.test.ts",
+        "!src/core/orchestrator/settleService.test.ts",
         "!src/core/placed/placedSessions.test.ts",
         "!src/core/placed/placedAccounts.test.ts",
         "!src/core/placed/placedCutOff.test.ts",

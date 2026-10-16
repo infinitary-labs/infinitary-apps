@@ -1519,6 +1519,7 @@ export class CrewSupervisor {
     const device = builder.deviceId;
     let headSha: string | null;
     let changedFiles: string[] | null;
+    let changeReading: string | undefined;
     let evidenceDir: string;
     if (device) {
       const folders = machines?.folders(device, builder.id);
@@ -1526,7 +1527,11 @@ export class CrewSupervisor {
         throw new Error(
           "The builder's computer is out of reach; the review must wait for it, not run here instead.",
         );
-      ({ headSha, changedFiles } = await machines.revision(device, builder.id, recordedHead));
+      ({ headSha, changedFiles, changeReading } = await machines.revision(
+        device,
+        builder.id,
+        recordedHead,
+      ));
       evidenceDir = folders.evidence;
     } else {
       headSha =
@@ -1537,6 +1542,10 @@ export class CrewSupervisor {
       changedFiles = headSha
         ? await this.options.workspace.reviewChangedFiles(builder.repoDir, headSha)
         : null;
+      changeReading = headSha
+        ? ((await this.options.workspace.reviewChangeReading(builder.repoDir, headSha)) ??
+          undefined)
+        : undefined;
       evidenceDir = crewmateEvidenceDir(this.options.paths, builder.id);
     }
     if (!headSha)
@@ -1551,6 +1560,7 @@ export class CrewSupervisor {
       builderReport: builder.outcome ?? "",
       evidenceDir,
       changedFiles,
+      ...(changeReading ? { changeReading } : {}),
     };
   }
 
@@ -2920,7 +2930,10 @@ export class CrewSupervisor {
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
     });
     this.options.tasks.setDevice(taskId, builder.deviceId ?? null);
-    this.options.tasks.recordDelivery(taskId, { headSha });
+    this.options.tasks.recordDelivery(taskId, {
+      headSha,
+      ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
+    });
     // The hold: the review blocks the builder's close until it is done.
     // The parent edge deliberately does not carry it - a child out of the
     // close gate holds nothing, and the blocks rule has no
@@ -3017,7 +3030,12 @@ export class CrewSupervisor {
       }
       this.options.tasks.recordDelivery(
         review.id,
-        { headSha: facts.headSha },
+        {
+          headSha: facts.headSha,
+          ...(facts.changeReading
+            ? { reviewChange: facts.changeReading }
+            : { reviewChange: undefined }),
+        },
         {
           kind: "review",
           text: `review assigned at ${facts.headSha.slice(0, 7)}`,
@@ -5713,6 +5731,8 @@ export class CrewSupervisor {
     const facts = {
       reviewVerdict: parsed.verdict,
       ...(sha ? { reviewSha: sha } : {}),
+      reviewChange: review.delivery?.reviewChange,
+      reviewCarrySha: undefined,
       ...(parsed.risk ? { reviewRisk: parsed.risk } : {}),
       ...(parsed.riskNote ? { reviewRiskNote: parsed.riskNote } : {}),
       reviewedAt: at,

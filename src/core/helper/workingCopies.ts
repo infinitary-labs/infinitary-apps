@@ -357,7 +357,8 @@ export class WorkingCopies {
     if (!head) throw new Error("The task has no committed revision here.");
     const changedFiles = await this.workspace.reviewChangedFiles(workspace.repoDir, head);
     if (!changedFiles) throw new Error("The requested commit is not on this computer.");
-    return { headSha: head, changedFiles };
+    const changeReading = await this.workspace.reviewChangeReading(workspace.repoDir, head);
+    return { headSha: head, changedFiles, ...(changeReading ? { changeReading } : {}) };
   }
 
   /**

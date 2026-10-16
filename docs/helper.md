@@ -614,7 +614,8 @@ This placement applies in every build, without a development gate.
   With no suitable subscription there, the review cannot start; it never borrows a home subscription.
   A separate placement request for a review is refused because its builder owns the choice.
 - **Code to read.**
-  `reviewFacts` asks the builder's computer for its committed head and complete changed-file list (`inf:working-copy:revision`).
+  `reviewFacts` asks the builder's computer for its committed head, complete changed-file list and change reading (`inf:working-copy:revision`).
+  The reading is optional: a computer on an older contract omits it, and a pass from that computer does not carry.
   An in-flight pull request supplies its recorded head instead, which must exist on that computer.
   An unavailable computer or missing commit refuses the review rather than using an older home copy.
   The branch does not need to be pushed or brought home for review.

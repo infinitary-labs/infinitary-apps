@@ -231,6 +231,10 @@ describe("renderRigorSection (delivery rigor phase 2)", () => {
     expect(reviewed).toContain(
       "After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card.",
     );
+    // INF-148: a passed review holds across a pure update onto newer main.
+    expect(reviewed).toContain(
+      "A passed review holds when a later version is the same change; any edit asks a fresh review.",
+    );
     // How to fix a relayed finding is the builder's own rule (FI3-566 cut
     // C), so the Firstmate relays findings verbatim without restating it.
     expect(reviewed).toContain(
@@ -281,7 +285,11 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "You are reviewing, not building: change nothing, commit nothing, push nothing. Review branch fm/task-abc12345 at head 0123456789abcdef0123456789abcdef01234567",
     );
-    expect(brief).toContain("read the diff against the default branch yourself");
+    expect(brief).toContain(
+      "read the diff of the assigned commit against the default branch yourself",
+    );
+    expect(brief).toContain("git diff <default>...0123456789abcdef0123456789abcdef01234567");
+    expect(brief).not.toContain("git diff <default>...fm/task-abc12345");
     expect(brief).toContain(
       "The verdict report is the whole deliverable of this internal review; emit no outcome card.",
     );

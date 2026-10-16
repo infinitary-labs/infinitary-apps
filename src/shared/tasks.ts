@@ -126,6 +126,10 @@ export const taskDeliveryViewSchema = z.object({
   reviewVerdict: reviewVerdictSchema.optional(),
   /** The head the reviewer read. */
   reviewSha: z.string().optional(),
+  /** The change reading taken when that review was assigned. */
+  reviewChange: z.string().optional(),
+  /** A later head that pass covers, because the change lines matched. */
+  reviewCarrySha: z.string().optional(),
   reviewRisk: reviewRiskSchema.optional(),
   reviewRiskNote: z.string().optional(),
   reviewedAt: z.number().optional(),

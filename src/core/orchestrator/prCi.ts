@@ -47,6 +47,7 @@ import {
   outstandingGuidance,
   standingAuthorization,
 } from "./mergeAuthorization";
+import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 
 /**
  * check_pr_ci's host side (contract v1, spec section 1.4): the standing
@@ -362,8 +363,9 @@ export class PrCiService {
     // repair starts from is never a guess.
     const kept = standingAuthorization(this.options.tasks.get(taskId.trim())?.delivery);
     const mark = kept ? outstandingGuidance(kept) : undefined;
+    const needsUpdate = kept?.waiting?.on === "conflict" || kept?.waiting?.on === "repair";
     const keptLine = kept
-      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}. Declare a repair that brings the change up to date with conflictRepair from that head.${mark === undefined ? "" : ` His guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
+      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${needsUpdate ? " Declare a repair that brings the change up to date with conflictRepair from that head." : ""}${mark === undefined ? "" : ` His guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
       : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
   }
@@ -1273,7 +1275,15 @@ export class PrCiService {
         // Read where the range was checked: the project's folder, where a
         // branch from another computer came home.
         const head = existing?.headSha ?? (await git(dir, ["rev-parse", branch]));
-        if (!(current.delivery?.reviewVerdict === "pass" && current.delivery.reviewSha === head))
+        await carryPassedReview({
+          tasks: this.options.tasks,
+          taskId,
+          record: current,
+          repoDir: dir,
+          head,
+        });
+        const covered = this.options.tasks.get(taskId);
+        if (!reviewCoversHead(covered?.delivery, head))
           return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
       }
       const change = existing ?? (await forge.openChange({ branch, ...input }));
@@ -1567,7 +1577,7 @@ export class PrCiService {
     try {
       const record = this.options.tasks.get(taskId);
       if (record) await this.branchHome(record);
-      await this.validateRange(
+      const dir = await this.validateRange(
         record?.repoId,
         record?.repoDir,
         change.branch,
@@ -1576,9 +1586,27 @@ export class PrCiService {
       );
       if (hasChangeRequests(forge.kind))
         requireConventional(change.title ?? "", "pull request title");
+      const fresh = this.options.tasks.get(taskId) ?? record;
+      const policy = fresh
+        ? effectiveTaskPolicies(
+            fresh,
+            fresh.repoId ? this.options.repos.get(fresh.repoId) : undefined,
+          )
+        : null;
+      if (fresh && policy?.rigor.value === "reviewed") {
+        await carryPassedReview({
+          tasks: this.options.tasks,
+          taskId,
+          record: fresh,
+          repoDir: dir,
+          head: change.headSha,
+        });
+      }
       // A merge the host runs on the captain's kept approval goes only where
       // the host itself says the change may merge now: the app never leans on
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
+      // Guidance is read after the carry, so a newer word during that wait
+      // still stops the merge.
       if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
@@ -291,14 +291,23 @@ export class WorkspaceService {
     // checkout. The reviewer must enumerate its remote diff instead of
     // receiving a misleading checklist from another commit.
     if (!(await resolveCommit(repoDir, headSha))) return null;
-    const name = await defaultBranchName(repoDir);
-    const base = (await resolveCommit(repoDir, `refs/remotes/origin/${name}`))
-      ? `refs/remotes/origin/${name}`
-      : `refs/heads/${name}`;
-    const out = await git(repoDir, ["diff", "--name-only", "-z", `${base}...${headSha}`], {
-      trim: false,
-    });
+    const base = await reviewDiffBase(repoDir);
+    const out = await git(
+      repoDir,
+      ["diff", "--ignore-submodules=none", "--name-only", "-z", `${base}...${headSha}`],
+      { trim: false },
+    );
     return out.split("\0").filter(Boolean);
+  }
+
+  /**
+   * The change's own lines at a commit, as a sha256.
+   * Same base as `reviewChangedFiles`. Null when the commit is not here.
+   * A pure update onto newer main keeps the reading; an edited line,
+   * dropped line, added change or spacing change does not (INF-148).
+   */
+  async reviewChangeReading(repoDir: string, headSha: string): Promise<string | null> {
+    return readChangeReading(repoDir, headSha);
   }
 
   /** Lazily creates the default local-only repo with an initial commit. */
@@ -568,11 +577,12 @@ export class WorkspaceService {
    */
   async landTaskWork(
     workspace: TaskWorkspace,
-    beforeDispatch?: () => string | undefined,
+    beforeDispatch?: (head?: string) => string | undefined,
   ): Promise<{ mode: "fast-forward" | "merge" }> {
     const { repoDir, branch } = workspace;
-    const base = await git(repoDir, ["merge-base", "HEAD", branch]);
-    await requireConventionalRange(repoDir, base, branch);
+    const head = await git(repoDir, ["rev-parse", `${branch}^{commit}`]);
+    const base = await git(repoDir, ["merge-base", "HEAD", head]);
+    await requireConventionalRange(repoDir, base, head);
     const dirty = await git(repoDir, ["status", "--porcelain"]);
     if (dirty) {
       throw new Error("The repository has uncommitted changes; commit or stash them first.");
@@ -584,19 +594,19 @@ export class WorkspaceService {
       throw new Error("The repository is on a detached HEAD; check out a branch first.");
     }
     const check = () => {
-      const refusal = beforeDispatch?.();
+      const refusal = beforeDispatch?.(head);
       if (refusal) throw new Error(refusal);
     };
     check();
     try {
-      await git(repoDir, ["merge", "--ff-only", branch]);
+      await git(repoDir, ["merge", "--ff-only", head]);
       return { mode: "fast-forward" };
     } catch {
       // Fall through to a real merge commit.
     }
     check();
     try {
-      await git(repoDir, ["merge", "--no-ff", "-m", "chore: integrate task work", branch]);
+      await git(repoDir, ["merge", "--no-ff", "-m", "chore: integrate task work", head]);
       return { mode: "merge" };
     } catch (caught) {
       await git(repoDir, ["merge", "--abort"]).catch(() => {});
@@ -987,6 +997,60 @@ async function assertCheckoutRoot(cwd: string): Promise<void> {
   if (realpathSync(top) !== realpathSync(cwd)) {
     throw new Error(`${cwd} is not a checkout of its own`);
   }
+}
+
+/** The ref a review diff is measured from: fetched default branch, else the local one. */
+async function reviewDiffBase(repoDir: string): Promise<string> {
+  const name = await defaultBranchName(repoDir);
+  const remote = `refs/remotes/origin/${name}`;
+  return (await resolveCommit(repoDir, remote)) ? remote : `refs/heads/${name}`;
+}
+
+/**
+ * The change reading (INF-148, the captain's words: a passed review should
+ * not start over only because main moved). The three-dot diff of the
+ * commit against the review base, with one line of context, hunk positions
+ * and blob ids removed, and spaces kept exact. A line moved beside the
+ * same neighbors still counts as the same change. A main edit right next
+ * to the change asks for a fresh review. Spawned through `git()`, which
+ * uses hostEnv.
+ */
+export async function readChangeReading(repoDir: string, headSha: string): Promise<string | null> {
+  if (!(await resolveCommit(repoDir, headSha))) return null;
+  const base = await reviewDiffBase(repoDir);
+  let diff: string;
+  try {
+    diff = await git(
+      repoDir,
+      [
+        "diff",
+        "-U1",
+        "--ignore-submodules=none",
+        "--no-color",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--binary",
+        "--diff-algorithm=myers",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        `${base}...${headSha}`,
+      ],
+      { trim: false },
+    );
+  } catch {
+    return null;
+  }
+  return createHash("sha256").update(normalizeChangeDiff(diff)).digest("hex");
+}
+
+/** Drop blob-id lines and reduce each hunk header to `@@`, leaving every other byte. */
+export function normalizeChangeDiff(diff: string): string {
+  return diff
+    .split("\n")
+    .filter((line) => !/^index [0-9a-f]+\.\.[0-9a-f]+/.test(line))
+    .map((line) => (line.startsWith("@@ ") ? "@@" : line))
+    .join("\n");
 }
 
 /**

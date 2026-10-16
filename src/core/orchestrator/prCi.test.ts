@@ -19,6 +19,7 @@ import { seedTask, type TaskSeed } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
+import { readChangeReading } from "../workspace/workspaceService";
 import { type MergeGuard, PrCiService } from "./prCi";
 
 // Integration budget (docs/test-cohorts.md): real git plus the product's
@@ -1728,5 +1729,162 @@ describe("a merge request on GitLab", () => {
     expect(merged.ok).toBe(false);
     expect(merged.text).toContain('"Ship it"');
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+});
+
+/**
+ * INF-148, the captain's words: a passed review should not start over only
+ * because main moved. The three gates read a typed carry; these cover
+ * open_change and the merge that runs before its boundary.
+ */
+describe("a passed review covers the same change", () => {
+  it("opens at the exact reviewed head without reading git", async () => {
+    const { tasks, repos, service } = setup();
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
+    tasks.recordDelivery("ab12cd34", { reviewVerdict: "pass", reviewSha: "feedbeef" });
+    const opened = await service.open("ab12cd34", { title: "fix: ship it", body: "Why" });
+    expect(opened).toContain("already open");
+    expect(opened).not.toContain("needs an independent review");
+  });
+
+  it("refuses a different head the app cannot read", async () => {
+    const { tasks, repos, service } = setup();
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
+    tasks.recordDelivery("ab12cd34", { reviewVerdict: "pass", reviewSha: "older" });
+    expect(await service.open("ab12cd34", { title: "fix: ship it", body: "Why" })).toContain(
+      "the current version needs an independent review",
+    );
+  });
+
+  it("opens and merges a pure update, and refuses an edited line", async () => {
+    const forge = new FakeForge();
+    forge.change = null;
+    const { tasks, repos, service } = setup({ forge, realRange: true });
+    await insertDirectPrTask(tasks, repos);
+    const repoId = tasks.get("ab12cd34")?.repoId as string;
+    repos.configure(repoId, { rigor: "reviewed" });
+    const dir = tasks.get("ab12cd34")?.repoDir as string;
+    const run = (...args: string[]) =>
+      execFileSync("git", ["-C", dir, "-c", "user.name=T", "-c", "user.email=t@l", ...args])
+        .toString()
+        .trim();
+    const commit = (file: string, body: string, subject: string) => {
+      writeFileSync(join(dir, file), body);
+      run("add", file);
+      run("commit", "-m", subject);
+      return run("rev-parse", "HEAD");
+    };
+    const lines = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
+    const base = `${lines.join("\n")}\n`;
+    commit("a.txt", base, "chore: base lines");
+    run("checkout", "-b", "fm/task-ab12cd34");
+    const reviewed = commit(
+      "a.txt",
+      `${lines.map((line) => (line === "line 20" ? "line 20 changed" : line)).join("\n")}\n`,
+      "feat: change line 20",
+    );
+    const reading = await readChangeReading(dir, reviewed);
+    if (!reading) throw new Error("the reviewed commit has no change reading");
+    tasks.recordDelivery("ab12cd34", {
+      reviewVerdict: "pass",
+      reviewSha: reviewed,
+      reviewChange: reading,
+    });
+    run("checkout", "main");
+    commit("a.txt", base.replace("line 1\n", "line 1 main\n"), "chore: main edits a nearby line");
+    run("checkout", "fm/task-ab12cd34");
+    run("rebase", "main");
+    const updated = run("rev-parse", "HEAD");
+    expect(
+      await service.open("ab12cd34", { title: "feat: change line 20", body: "Why" }),
+    ).toContain("Opened pull request #42");
+    expect(tasks.get("ab12cd34")?.delivery?.reviewSha).toBe(reviewed);
+    expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBe(updated);
+    expect(tasks.timeline("ab12cd34").some((event) => event.text.includes("the same change"))).toBe(
+      true,
+    );
+
+    forge.change = {
+      ...forge.opened,
+      branch: "fm/task-ab12cd34",
+      headSha: updated,
+      title: "feat: change line 20",
+    };
+    const merged = await service.merge("ab12cd34", undefined, {
+      unattended: false,
+      beforeDispatch: (head) => {
+        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBe(head);
+        return undefined;
+      },
+    });
+    expect(merged.ok).toBe(true);
+
+    const edited = commit(
+      "a.txt",
+      base.replace("line 1\n", "line 1 main\n").replace("line 20\n", "  line 20 changed\n"),
+      "fix: indent the changed line",
+    );
+    forge.change = {
+      ...forge.opened,
+      branch: "fm/task-ab12cd34",
+      headSha: edited,
+      title: "feat: change line 20",
+    };
+    const refused = await service.merge("ab12cd34", undefined, {
+      unattended: false,
+      beforeDispatch: () => {
+        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).not.toBe(edited);
+        return "the current version needs an independent review";
+      },
+    });
+    expect(refused.ok).toBe(false);
+    expect(refused.text).toContain("needs an independent review");
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+  });
+
+  it("asks for an update only when the kept merge waits on a conflict or a moved version", async () => {
+    const { tasks, repos, service } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const authorization: MergeAuthorization = {
+      version: 1,
+      id: "auth-1",
+      generation: 1,
+      issuer: "captain",
+      at: 1,
+      card: { id: "card-1", offerId: "offer-1", actionId: "merge" },
+      target: {
+        repoId: tasks.get("ab12cd34")?.repoId as string,
+        host: "github.com",
+        owner: "x",
+        name: "y",
+        prNumber: 23,
+        branch: "fm/task-ab12cd34",
+        delivery: "direct-pr",
+        method: "squash",
+      },
+      approvedHead: "feedbeef",
+      lineage: [],
+      proceedWithOpen: false,
+      status: "standing",
+    };
+    const reading = async (on?: "checks" | "conflict" | "repair") => {
+      tasks.recordDelivery("ab12cd34", {
+        mergeAuthorization: {
+          ...authorization,
+          ...(on ? { waiting: { on, head: "feedbeef", at: 1 } } : { waiting: undefined }),
+        },
+      });
+      return service.checkForCrew("ab12cd34");
+    };
+    expect(await reading("checks")).not.toContain("Declare a repair");
+    expect(await reading()).not.toContain("Declare a repair");
+    expect(await reading("conflict")).toContain(
+      "Declare a repair that brings the change up to date with conflictRepair from that head.",
+    );
+    expect(await reading("repair")).toContain(
+      "Declare a repair that brings the change up to date with conflictRepair from that head.",
+    );
   });
 });

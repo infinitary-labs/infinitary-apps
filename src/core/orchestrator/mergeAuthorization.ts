@@ -592,7 +592,7 @@ export function keptFeedLine(
         ? `Your merge of "${title}" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
         : `Your merge of "${title}" waits for the checks: it runs by itself once they all pass.`;
     case "review":
-      return `Cannot merge "${title}" yet: its review has not passed on the newest version. ${kept} and runs once it does.`;
+      return `Cannot merge "${title}" yet: its review has not passed on this change. ${kept} and runs once it does.`;
     case "cap":
       return `Cannot merge "${title}" yet: it is waiting for your answer about its repair attempts. ${kept} for after that.`;
     case "protected":
@@ -630,7 +630,7 @@ export function keptNote(wait: MergeWait, head: string, place: string): string {
     case "checks":
       return `${kept} The checks on ${head} have not all passed: the crewmate diagnoses and repairs under its usual rules, and a fix that changes the head is declared as a repair. ${declare}`;
     case "review":
-      return `${kept} This task ships at the reviewed tier and its review has not passed at ${head}: commission the review of that version; the host merges once it passes.`;
+      return `${kept} This task ships at the reviewed tier and its review has not passed for this change (${head}): commission the review; the host merges once it passes.`;
     case "cap":
       return `${kept} A round cap holds the task: the captain's answer to the cap comes first, then the host merges.`;
     case "protected":

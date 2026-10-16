@@ -40,6 +40,7 @@ import {
   wakesFirstmate,
 } from "./mergeAuthorization";
 import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
+import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 import { cannotMergeText, discardedText, unlandedWorkText } from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
 
@@ -370,7 +371,7 @@ export class SettleService {
       }
       if (
         this.policiesOf(record)?.rigor.value === "reviewed" &&
-        !(record.delivery?.reviewVerdict === "pass" && head && record.delivery.reviewSha === head)
+        !reviewCoversHead(record.delivery, head)
       )
         return "the current version needs an independent review";
       this.sentMerges.add(taskId);
@@ -1668,7 +1669,7 @@ export class SettleService {
    * (FI3-304 section 4): the task and pull request are still the approved
    * ones, no new completion card replaced the approval, no round cap holds
    * the task, a declared repair is not still undecided, and a reviewed
-   * task's review passed at the exact head to merge. A failed identity
+   * task's review passed for this change. A failed identity
    * check ends the approval; the others are waits.
    */
   private preflight(
@@ -1711,7 +1712,7 @@ export class SettleService {
     const head = candidateHead(authorization);
     if (
       this.policiesOf(record)?.rigor.value === "reviewed" &&
-      !(record.delivery?.reviewVerdict === "pass" && record.delivery.reviewSha === head)
+      !reviewCoversHead(record.delivery, head)
     ) {
       return { wait: "review" };
     }
@@ -1737,7 +1738,41 @@ export class SettleService {
       return;
     }
     const title = record.title;
-    const checked = this.preflight(record, authorization);
+    let current = authorization;
+    if (this.policiesOf(record)?.rigor.value === "reviewed") {
+      const covered = reviewCoversHead(record.delivery, candidateHead(authorization));
+      if (!covered && record.deviceId) await this.host.placed?.bringBranchHome(taskId);
+      const fresh = this.host.tasks.get(taskId) ?? record;
+      const repo = fresh.repoId ? this.host.repos.get(fresh.repoId) : undefined;
+      await carryPassedReview({
+        tasks: this.host.tasks,
+        taskId,
+        record: fresh,
+        repoDir: repo?.path ?? fresh.repoDir,
+        head: candidateHead(authorization),
+      });
+      // A repair, guidance or a new click during that wait replaces the
+      // approval. Return and let the next run read it, rather than ending
+      // this one as withdrawn against the approval we started with.
+      const after = this.host.tasks.get(taskId);
+      const now = standingAuthorization(after?.delivery);
+      if (
+        !after ||
+        TaskService.isClosed(after) ||
+        this.settlingTasks.has(taskId) ||
+        after.pendingSettle ||
+        this.working(taskId) ||
+        !now ||
+        now.id !== authorization.id ||
+        now.generation !== authorization.generation ||
+        candidateHead(now) !== candidateHead(authorization) ||
+        now.attempt
+      ) {
+        return;
+      }
+      current = now;
+    }
+    const checked = this.preflight(this.host.tasks.get(taskId) ?? record, current);
     if (checked && "ended" in checked) {
       this.reportEnded(taskId, title);
       return;
@@ -1770,8 +1805,8 @@ export class SettleService {
         "merge-pr",
         undefined,
         "captain",
-        authorization.proceedWithOpen,
-        this.guardOf(taskId, authorization, true),
+        current.proceedWithOpen,
+        this.guardOf(taskId, current, true),
       );
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -1786,7 +1821,7 @@ export class SettleService {
       this.reportOutcome(taskId, title, "merge-pr", undefined, result, undefined);
       return;
     }
-    const kept = this.afterAttempt(taskId, authorization, result);
+    const kept = this.afterAttempt(taskId, current, result);
     if (!kept) {
       if (result.stop !== "withdrawn") this.reportEnded(taskId, title, result);
       return;

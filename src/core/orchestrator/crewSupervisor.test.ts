@@ -334,6 +334,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     listTaskBranches: vi.fn(async () => [] as { branch: string; taskId: string }[]),
     branchHead: vi.fn(async () => null as string | null),
     reviewChangedFiles: vi.fn(async () => ["src/meter.ts", "tests/meter.test.ts"]),
+    reviewChangeReading: vi.fn(async () => "a".repeat(64)),
   } as unknown as WorkspaceService;
   const realWorkspace = extras.realWorkspace ? new RealWorkspaceService(paths) : undefined;
   const specs: CrewmateSpec[] = [];
@@ -14740,6 +14741,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         "You are reviewing, not building: change nothing, commit nothing, push nothing.",
       );
       expect(brief).toContain(`Review branch fm/task-${builderId} at head ${HEAD}`);
+      // INF-29: the brief names the assigned commit, not the live branch.
+      expect(brief).toContain(`git diff <default>...${HEAD}`);
+      expect(brief).not.toContain(`git diff <default>...fm/task-${builderId}`);
       expect(brief).toContain(
         `Changed-file checklist at ${HEAD} (committed paths against the default branch):\n- "src/meter.ts"\n- "tests/meter.test.ts"`,
       );
@@ -14822,6 +14826,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(builderId)?.delivery).toMatchObject({
         reviewVerdict: "pass",
         reviewSha: HEAD,
+        reviewChange: "a".repeat(64),
         reviewRisk: "low",
         reviewRiskNote: "one test file changed.",
       });

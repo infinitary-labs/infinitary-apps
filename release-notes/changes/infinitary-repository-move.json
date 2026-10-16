@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "infinitary-repository-move",
+      "reason": "Internal: the code now lives in infinitary-labs/infinitary and Firstmate 3000's history in infinitary-labs/firstmate-3000-archive; the docs and the record of past releases name both. Nothing in the app changes."
+    }
+  ]
+}

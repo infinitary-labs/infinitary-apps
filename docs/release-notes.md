@@ -72,7 +72,7 @@ The release crewmate pins each published manifest after publication, with `node 
 
 ### A fresh history
 
-The Infinitary rename (step 7 of FI3-1780's plan) starts a new repository from one parentless commit of the old one's tree, so the commits every published manifest names, and the tags the versions number from, stay with the archived history.
+The Infinitary rename (step 7 of FI3-1780's plan) starts a new repository from one parentless commit of the old one's tree, so the commits every published manifest names, and the tags the versions number from, stay with the archived history, `infinitary-labs/firstmate-3000-archive`.
 `archive.json` is the record that carries them across.
 
 - **What it pins.**

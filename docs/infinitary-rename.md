@@ -51,12 +51,19 @@ Code names built on `firstmate` - identifiers, files, stored values such as a ca
 `scripts/old-names.ts` is the ledger: it finds every old name in the files git sees, tracked or new - a name with 3000 in it, and Firstmate 3000's code names above - and classifies each by rule as a reader, an identity, words or history.
 `pnpm check` runs it, and it refuses an old name no rule classifies, so new code writes Infinitary's names.
 A **reader** is code that reads an old name, and the test that holds it.
-An **identity** is a name a system outside the code holds: Firstmate 3000's bundle id, data folders, packages, casks, tags and development signer, which step 10 renamed and the move, the old-cask switch and the Linux packages still name; the repository, which step 11 moves; and names another program or a saved hash keeps, such as the Ollama alias, the placement salts and the Diagnostics series.
+An **identity** is a name a system outside the code holds: Firstmate 3000's bundle id, data folders, packages, casks, tags and development signer, which step 10 renamed and the move, the old-cask switch and the Linux packages still name; Firstmate 3000's repository, which step 11 moved to the archive ("The repository" below); and names another program or a saved hash keeps, such as the Ollama alias, the placement salts and the Diagnostics series.
 **Words** are the product's old name kept on purpose in prose: the vocabulary's never-say column; step 9 renamed the rest.
 **History** is what was published or recorded: the changelog, release notes, contract revisions, recorded fixtures and cited design records.
 
 `node scripts/old-names.ts --counts` counts them by family and class, and `--list` names each with its file and line.
 A step that renames an identity or words removes its rules once nothing matches them; an old name kept on purpose gets a rule that says why.
+
+## The repository
+
+The code lives in `infinitary-labs/infinitary`, whose history starts at one parentless commit of the tree Firstmate 3000's main held once every check had passed on it (step 11).
+Firstmate 3000's repository is `infinitary-labs/firstmate-3000-archive`: its commits, tags, releases and pull requests stay there, and GitHub forwards `kunchenguid/firstmate-3000` to it.
+The archive stays open to pull requests, so a Firstmate 3000 task (key FI3) still delivers there; new work starts in the Infinitary project (key INF).
+A pull request, issue or commit number from before step 11 belongs to the archive, not to `infinitary-labs/infinitary`.
 
 ## A fresh history
 

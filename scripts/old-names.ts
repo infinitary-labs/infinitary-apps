@@ -11,7 +11,8 @@
  *   identity  a name a system outside the code holds - Firstmate 3000's
  *             bundle id, data folders, packages, casks, tags and signer, which
  *             step 10 renamed and the move, the old-cask switch and the Linux
- *             packages still name; the repository, which step 11 moves; and
+ *             packages still name; Firstmate 3000's repository, which step 11
+ *             moved to the archive; and
  *             names other programs keep (an Ollama alias, a Diagnostics series);
  *   words     the product's old name kept on purpose in words: the
  *             vocabulary's never-say column (step 9 renamed the rest);
@@ -160,7 +161,7 @@ export const RULES: readonly Rule[] = [
   },
   {
     class: "identity",
-    why: "the repository on GitHub (step 11 moves it to the archive)",
+    why: "Firstmate 3000's repository, which step 11 moved to infinitary-labs/firstmate-3000-archive and GitHub forwards there",
     line: /kunchenguid\/firstmate-3000|kunchenguid%2Ffirstmate-3000|work\/firstmate-3000\/firstmate-3000|FI3 \(firstmate-3000\)/,
   },
   {

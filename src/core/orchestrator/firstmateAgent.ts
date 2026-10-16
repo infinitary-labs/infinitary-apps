@@ -31,9 +31,10 @@ import {
 import {
   type ModelsCatalogView,
   PREMIUM_SLOT,
-  QUOTA_TO_PI_PROVIDER,
   SLOTS,
   type Slot,
+  servedModelKey,
+  servedProviderOf,
 } from "@shared/quota";
 import type { RepoView } from "@shared/repos";
 import {
@@ -1996,9 +1997,7 @@ export class FirstmateAgent {
     const catalog = this.options.quotaModels()?.models;
     return this.options.availableModels().some((model) => {
       if (!this.isPremium(model)) return false;
-      const reading = catalog?.find(
-        (entry) => QUOTA_TO_PI_PROVIDER[entry.provider] === model.provider && entry.id === model.id,
-      );
+      const reading = catalog?.find((entry) => servedModelKey(entry) === servedModelKey(model));
       // No quota reading is unknown, never zero; a measured exhausted
       // premium offering is not a way this captain can take right now.
       return (
@@ -2072,15 +2071,13 @@ export class FirstmateAgent {
     const availableKeys = new Set(available.map((m) => `${m.provider}/${m.id}`));
     const catalog = this.options.quotaModels()?.models ?? [];
     const listed = this.listed(available).filter((model) => {
-      const reading = catalog.find(
-        (entry) => QUOTA_TO_PI_PROVIDER[entry.provider] === model.provider && entry.id === model.id,
-      );
+      const reading = catalog.find((entry) => servedModelKey(entry) === servedModelKey(model));
       return reading?.effectivePercentRemaining !== 0;
     });
     for (const bucket of ["high", "medium", "premium", "low"] as const) {
       for (const model of catalog) {
-        const provider = QUOTA_TO_PI_PROVIDER[model.provider];
-        if (!provider || !availableKeys.has(`${provider}/${model.id}`)) continue;
+        const provider = servedProviderOf(model.provider);
+        if (!availableKeys.has(servedModelKey(model))) continue;
         if (model.effectivePercentRemaining === 0) continue;
         if (this.slotsOf({ provider, id: model.id }).includes(bucket)) {
           return { provider, id: model.id };
@@ -3110,9 +3107,8 @@ export class FirstmateAgent {
     const availableKeys = new Set(available.map((model) => `${model.provider}/${model.id}`));
     const byBucket = new Map<Slot, string[]>();
     for (const model of this.options.quotaModels()?.models ?? []) {
-      const piProvider = QUOTA_TO_PI_PROVIDER[model.provider];
-      if (!piProvider) continue;
-      const key = `${piProvider}/${model.id}`;
+      const piProvider = servedProviderOf(model.provider);
+      const key = servedModelKey(model);
       if (!availableKeys.has(key)) continue;
       const memberSlots = this.options.slotsOf?.({ provider: piProvider, id: model.id }) ?? [];
       if (memberSlots.length === 0) continue; // off: not placed in any bucket

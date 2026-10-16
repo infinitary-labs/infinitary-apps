@@ -1,11 +1,7 @@
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
-import { QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { allowanceProviderOf } from "@shared/quota";
 import { providerScopes, type ScopeSignals } from "@shared/quotaSignals";
 import type { QuotaCatalogModel } from "./auth";
-
-const PI_TO_QUOTA: Record<string, string> = Object.fromEntries(
-  Object.entries(QUOTA_TO_PI_PROVIDER).map(([quotaId, piId]) => [piId, quotaId]),
-);
 
 type EffectiveView = {
   effectivePercentRemaining?: number;
@@ -137,7 +133,7 @@ export function buildModelsCatalog(
     byQuotaId.set(provider.provider, rows);
   }
   const catalog: CatalogModelView[] = models.flatMap((model) => {
-    const quotaId = PI_TO_QUOTA[model.provider];
+    const quotaId = allowanceProviderOf(model.provider);
     if (!quotaId) return [];
     const effective = effectiveAcrossAccounts(byQuotaId.get(quotaId) ?? [], at, model.id);
     return [

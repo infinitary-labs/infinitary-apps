@@ -98,6 +98,9 @@ Protocol 8.6 adds the optional `system` to the pair request (`POST /pair`, `docs
 A phone always sends `system`: a first join can read no version, since the welcome comes after pairing and `/pair` exposes none.
 A home on an older minor reads the request strictly, so its `malformed` answer to a well-formed request from a phone means the Mac needs updating, and the phone says so.
 
+Protocol 8.7 adds the optional `accountList` to each account a computer's sign-ins serve: the ids a Codex or Grok account's own model list named there, beside Pi's catalog for it, which the home narrows behind its own rail (`docs/helper.md`, "Its own sign-ins").
+A home on an older minor ignores it and routes among Pi's catalog for that account; a computer on an older minor sends none, and the home narrows nothing.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

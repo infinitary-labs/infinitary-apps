@@ -31,7 +31,7 @@ import {
   catalogEntry,
   type ProviderView,
 } from "@shared/providers";
-import { QUOTA_TO_PI_PROVIDER, type QuotaSnapshotView } from "@shared/quota";
+import { type QuotaSnapshotView, servedProviderOf } from "@shared/quota";
 import { devicePlace } from "@shared/signIns";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
@@ -52,7 +52,7 @@ import { WebSignIns } from "./browser/webSignIns";
 import { ClaudeAuthBackend } from "./claude/claudeAuth";
 import { primeClaudeExecutable } from "./claude/claudeCli";
 import type { ClaudeRateLimit } from "./claude/claudeEvents";
-import { CLAUDE_MODELS, claudeAvailableModels } from "./claude/claudeModels";
+import { CLAUDE_MODELS } from "./claude/claudeModels";
 import { defaultClaudeConfigDir, resolveClaudeQuotaAuthResult } from "./claude/claudeQuota";
 import { claudeReasoningCapabilities } from "./claude/reasoning";
 import { createClaudeSessionFactory } from "./claude/session";
@@ -108,9 +108,8 @@ import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { workingCopyFacts } from "./knowledge/gitFacts";
 import { KnowledgeService } from "./knowledge/knowledgeService";
-import { claudeListReader } from "./models/clientLists";
-import { codexListReader, grokListReader, railVerdict } from "./models/piAccountLists";
-import { type CatalogReader, ServedModels } from "./models/servedModels";
+import { createAccountStore } from "./models/accountStore";
+import type { ServedModels } from "./models/servedModels";
 import { CardNotifier } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
@@ -138,7 +137,7 @@ import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
 import { PersonalExtensions } from "./personal/personalExtensions";
 import { PersonalStore } from "./personal/personalStore";
 import { LaunchWatch } from "./personal/safeMode";
-import { AccountVault } from "./pi/accountVault";
+import type { AccountVault } from "./pi/accountVault";
 import { keepPictureFile } from "./pi/cardImages";
 import { CREWMATE_TOOLS } from "./pi/crewmateTaskTools";
 import { openRouterDecisionModels } from "./pi/decisionModels";
@@ -419,27 +418,25 @@ export async function createServices(
   // and the first health read never wait on it.
   void loginPath.then(() => primeClaudeExecutable());
   const claudeBackend = new ClaudeAuthBackend({ keychain: host.keychain });
-  // The runtime catalog reads (docs/model-lists.md), created once the slot
-  // record exists below. Until an account's read succeeds - and whenever
-  // one fails - its models are the shipped catalog.
-  let servedModels: ServedModels | undefined;
   // A sign-in or sign-out first holds the Firstmate's seat off the account
   // it rewrites (W1 S9); late-bound because the agent is built below.
   let holdSeat: ((accountId: string) => Promise<() => void>) | undefined;
-  const vault = AccountVault.create(paths, {
+  // Settled reads move the lists and the news; wired once the feed exists.
+  let onCatalogSettled: () => void = () => {};
+  // The store and the runtime catalog reads (docs/model-lists.md), built as
+  // every computer that runs work builds its own. The rail protects the
+  // slot record's starter and kept ids, read once a read lands, long after
+  // the record exists below.
+  const { vault, served } = createAccountStore(paths, {
     pi: piBackend,
     backends: [claudeBackend],
     holdSeat: async (accountId) => (await holdSeat?.(accountId)) ?? (() => {}),
-    modelsForAccount: ({ accountId, providerId }) => {
-      const read = servedModels?.read(accountId);
-      if (read) return read.models.map((model) => ({ provider: providerId, id: model.id }));
-      if (providerId === CLAUDE_PROVIDER_ID) return claudeAvailableModels();
-      return [];
-    },
-    piModelFilter: (accountId) => {
-      const read = servedModels?.read(accountId);
-      return read ? new Set(read.models.map((model) => model.id)) : undefined;
-    },
+    packaged: host.app.packaged,
+    claudeConfigDir: () => defaultClaudeConfigDir(),
+    rail: { protectedIds: (providerId) => slots.protectedIds(providerId) },
+    onSettled: () => onCatalogSettled(),
+    log: (line) => console.warn(`[models] ${line}`),
+    info: (line) => console.info(`[models] ${line}`),
   });
   await vault.warm();
   await loginPath;
@@ -891,7 +888,7 @@ export async function createServices(
     const byId = new Map(shipped.map((model) => [model.id, model.name]));
     for (const account of vault.list()) {
       if (account.providerId !== providerId || !account.enabled) continue;
-      for (const model of servedModels?.read(account.id)?.models ?? []) {
+      for (const model of served.read(account.id)?.models ?? []) {
         if (!byId.has(model.id)) byId.set(model.id, model.name ?? model.id);
       }
     }
@@ -1056,35 +1053,37 @@ export async function createServices(
   const computerSignIns: { view?: () => ReturnType<DeviceSignIns["view"]> } = {};
   const slots = new ModelSlots({
     settings,
-    speeds: (accountId, ref) => {
-      const here = servedModels?.speeds(accountId, ref.id);
-      const there = (computerSignIns.view?.() ?? [])
+    speeds: () => {
+      // Each computer's word is read, and narrowed, once for the whole board.
+      const now = Date.now();
+      const servedThere = (computerSignIns.view?.() ?? [])
         .filter(
           (device) =>
-            device.inReach &&
-            device.asOf !== undefined &&
-            Date.now() - device.asOf < 24 * 60 * 60 * 1000,
+            device.inReach && device.asOf !== undefined && now - device.asOf < 24 * 60 * 60 * 1000,
         )
         .flatMap(
           (device) =>
-            device.signIns?.served?.flatMap((row) => {
-              const account = device.signIns?.accounts.find(
+            device.signIns?.served?.flatMap((row) =>
+              device.signIns?.accounts.some(
                 (account) => account.id === row.accountId && account.enabled && account.connected,
-              );
-              return account
+              )
                 ? row.models
-                    .filter(
-                      (model) =>
-                        model.provider === ref.provider &&
-                        model.id === ref.id &&
-                        model.speedsUntil !== undefined &&
-                        model.speedsUntil > Date.now(),
-                    )
-                    .flatMap((model) => model.speeds ?? [])
-                : [];
-            }) ?? [],
+                : [],
+            ) ?? [],
         );
-      return here || there.length ? [...new Set([...(here ?? []), ...there])] : undefined;
+      return (accountId, ref) => {
+        const here = served.speeds(accountId, ref.id);
+        const there = servedThere
+          .filter(
+            (model) =>
+              model.provider === ref.provider &&
+              model.id === ref.id &&
+              model.speedsUntil !== undefined &&
+              model.speedsUntil > now,
+          )
+          .flatMap((model) => model.speeds ?? []);
+        return here || there.length ? [...new Set([...(here ?? []), ...there])] : undefined;
+      };
     },
     reasoningCapabilities: (ref) => {
       if (ref.provider === CLAUDE_PROVIDER_ID) return claudeReasoningCapabilities(ref.id);
@@ -1102,9 +1101,7 @@ export async function createServices(
         models: row.models,
       }));
       const catalogProviders = new Set(
-        (quota.latestModels()?.models ?? []).map(
-          (model) => QUOTA_TO_PI_PROVIDER[model.provider] ?? model.provider,
-        ),
+        (quota.latestModels()?.models ?? []).map((model) => servedProviderOf(model.provider)),
       );
       return [...home, ...computerBoardModels(computerSignIns.view?.() ?? [], catalogProviders)];
     },
@@ -1112,7 +1109,7 @@ export async function createServices(
     // Pins and the Firstmate model keep a model listed like a slot does.
     kept: () => {
       const refs = settings.getRoutingSettings().pins.map((pin) => ({
-        provider: QUOTA_TO_PI_PROVIDER[pin.provider] ?? pin.provider,
+        provider: servedProviderOf(pin.provider),
         id: pin.id,
       }));
       const firstmateModel = settings.getFirstmateModel();
@@ -1123,54 +1120,9 @@ export async function createServices(
     canAnnounce: (accountId) => {
       const account = vault.get(accountId);
       if (!account || backendForProvider(account.providerId) === "pi") return true;
-      return servedModels?.read(accountId) !== undefined;
+      return served.read(accountId) !== undefined;
     },
   });
-  const catalogReaders: Record<string, CatalogReader> = {
-    [CLAUDE_PROVIDER_ID]: claudeListReader({ configDir: () => defaultClaudeConfigDir() }),
-    // The Pi filters honour Pi's own offline switch (e2e sets it) and take
-    // a dev/e2e endpoint the way the quota meters do; a packaged app never
-    // reads the override.
-    "openai-codex": codexListReader({
-      resolveAuth: (id) => vault.resolveForQuota(id),
-      offline: process.env.PI_OFFLINE !== undefined,
-      ...devEndpoint("CODEX_MODELS_URL"),
-    }),
-    xai: grokListReader({
-      resolveAuth: (id) => vault.resolveForQuota(id),
-      offline: process.env.PI_OFFLINE !== undefined,
-      ...devEndpoint("GROK_MODELS_URL"),
-    }),
-  };
-  function devEndpoint(name: string): { url?: string } {
-    const value = host.app.packaged ? undefined : settingFrom(process.env, name)?.trim();
-    return value ? { url: value } : {};
-  }
-  // Settled reads move the lists and the news; wired once the feed exists.
-  let onCatalogSettled: () => void = () => {};
-  const served = new ServedModels({
-    readers: catalogReaders,
-    accounts: () =>
-      vault
-        .list()
-        .filter((account) => account.enabled)
-        .map((account) => ({ accountId: account.id, providerId: account.providerId })),
-    // The Pi filters' safety rail (captain's decision A): an answer that
-    // leaves out a starter or kept id Pi can serve is not trusted to remove
-    // it - it is an unrecognised answer, so no filter at all.
-    accept: (account, models) =>
-      backendForProvider(account.providerId) !== "pi"
-        ? { ok: true }
-        : railVerdict({
-            answer: models,
-            protectedIds: slots.protectedIds(account.providerId),
-            piIds: vault.piCatalogIds(account.accountId),
-          }),
-    onSettled: () => onCatalogSettled(),
-    log: (line) => console.warn(`[models] ${line}`),
-    info: (line) => console.info(`[models] ${line}`),
-  });
-  servedModels = served;
   /**
    * The routing boundary: the sign-in gate, then the slot record, with the
    * starter-map fallback behind it. Every automatic selection reads THIS;
@@ -1248,7 +1200,7 @@ export async function createServices(
         agentDir: paths.piAgentDir,
         runBash: (input) => jobs.run(input),
         speedCapabilities: (accountId, id) =>
-          accountId ? servedModels?.speeds(accountId, id) : undefined,
+          accountId ? served.speeds(accountId, id) : undefined,
       }),
     ),
     claude: bounds.factory(
@@ -1523,6 +1475,8 @@ export async function createServices(
     emit,
     broadcastEvent,
     changed: (deviceId) => onDeviceSignIns(deviceId),
+    // A computer's Codex and Grok lists are judged by this Mac's rail.
+    protectedIds: (providerId) => slots.protectedIds(providerId),
   });
   computerSignIns.view = () => deviceSignIns.view();
   // Each computer's setup card, made once the supervisor holds the stack.
@@ -1870,6 +1824,7 @@ export async function createServices(
     router,
     repo: (id) => repos.get(id),
     catalog: quotaCatalogModels,
+    protectedIds: (providerId) => slots.protectedIds(providerId),
     running: (record): boolean => supervisor.placementRunning(record),
     eligible: (record): boolean => supervisor.automaticFor(record),
   });
@@ -2515,7 +2470,7 @@ export async function createServices(
     // a client-served or Pi-filtered account counts only once its own read
     // has succeeded; an unfiltered Pi account's catalog is Pi's own answer.
     const snapshots = vault.availableModelsByAccount().flatMap((row) => {
-      if (catalogReaders[row.providerId] && served.read(row.accountId) === undefined) return [];
+      if (served.reads(row.providerId) && served.read(row.accountId) === undefined) return [];
       const ids = row.models
         .filter((model) => model.provider === row.providerId)
         .map((model) => model.id);

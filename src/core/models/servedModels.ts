@@ -48,6 +48,9 @@ export type CatalogAccount = { accountId: string; providerId: string };
 
 export type CatalogReader = (account: CatalogAccount) => Promise<CatalogReadResult>;
 
+/** How one read settled: a deferred read could not start while its store was busy. */
+export type CatalogReadSettled = CatalogReadResult["status"];
+
 export type ServedModelsOptions = {
   /** One reader per provider id; a provider without one is never read. */
   readers: Readonly<Record<string, CatalogReader>>;
@@ -81,7 +84,7 @@ export const CATALOG_READ_CEILING_MS = 120_000;
 export class ServedModels {
   private readonly latest = new Map<string, { models: ServedModel[]; at: number }>();
   private readonly speedMetadata = new Map<string, { models: ServedModel[]; at: number }>();
-  private readonly inFlight = new Map<string, Promise<void>>();
+  private readonly inFlight = new Map<string, Promise<CatalogReadSettled>>();
   private readonly logged = new Map<string, string>();
   private readonly announced = new Map<string, string>();
 
@@ -89,12 +92,13 @@ export class ServedModels {
 
   /**
    * Start a read for one account. Returns at once; the promise it hands
-   * back settles when the read does and never rejects - it exists for
-   * tests and for the launch pass, never for a user path to await.
+   * back settles when the read does, with how it settled, and never rejects
+   * - it exists for tests and for a caller that keeps its own schedule of
+   * reads, never for a user path to await. Undefined: nothing to read.
    */
-  refresh(accountId: string): Promise<void> {
+  refresh(accountId: string): Promise<CatalogReadSettled | undefined> {
     const account = this.options.accounts().find((entry) => entry.accountId === accountId);
-    if (!account) return Promise.resolve();
+    if (!account) return Promise.resolve(undefined);
     return this.start(account);
   }
 
@@ -103,6 +107,11 @@ export class ServedModels {
     return Promise.all(this.options.accounts().map((account) => this.start(account))).then(
       () => undefined,
     );
+  }
+
+  /** Whether this provider's accounts have a list of their own to read. */
+  reads(providerId: string): boolean {
+    return Object.hasOwn(this.options.readers, providerId);
   }
 
   /** The account's last successful read this session, if one is in hand. */
@@ -131,9 +140,9 @@ export class ServedModels {
     this.announced.delete(accountId);
   }
 
-  private start(account: CatalogAccount): Promise<void> {
+  private start(account: CatalogAccount): Promise<CatalogReadSettled | undefined> {
     const reader = this.options.readers[account.providerId];
-    if (!reader) return Promise.resolve();
+    if (!reader) return Promise.resolve(undefined);
     const running = this.inFlight.get(account.accountId);
     if (running) return running;
     const promise = this.run(account, reader).finally(() => {
@@ -143,26 +152,26 @@ export class ServedModels {
     return promise;
   }
 
-  private async run(account: CatalogAccount, reader: CatalogReader): Promise<void> {
+  private async run(account: CatalogAccount, reader: CatalogReader): Promise<CatalogReadSettled> {
     const result = await this.bounded(reader, account);
     if (result.status === "deferred" || result.status === "skipped") {
       this.options.onSettled?.(account);
-      return;
+      return result.status;
     }
     if (result.status === "failed") {
       this.fail(account, result.reason, result.detail);
-      return;
+      return "failed";
     }
     const models = dedupe(result.models);
     if (models.length === 0) {
       this.fail(account, "empty");
-      return;
+      return "failed";
     }
     this.speedMetadata.set(account.accountId, { models, at: this.now() });
     const verdict = this.options.accept?.(account, models) ?? { ok: true };
     if (!verdict.ok) {
       this.fail(account, "unrecognised", verdict.detail, true);
-      return;
+      return "failed";
     }
     this.latest.set(account.accountId, { models, at: this.now() });
     this.logged.delete(account.accountId);
@@ -173,6 +182,7 @@ export class ServedModels {
       this.options.info?.(line);
     }
     this.options.onSettled?.(account);
+    return "ok";
   }
 
   private async bounded(

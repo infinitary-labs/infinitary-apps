@@ -117,7 +117,7 @@ describe("ServedModels - a failed read falls back to the shipped catalog", () =>
     const { served, log } = build(async () => {
       throw new Error("spawn EACCES");
     });
-    await expect(served.refresh("acct-claude")).resolves.toBeUndefined();
+    await expect(served.refresh("acct-claude")).resolves.toBe("failed");
     expect(served.read("acct-claude")).toBeUndefined();
     expect(log).toEqual([
       "anthropic-claude model list unavailable (error): spawn EACCES; using the shipped catalog",

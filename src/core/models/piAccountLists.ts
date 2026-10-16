@@ -1,4 +1,6 @@
 import type { CrewSpeed } from "@shared/crewSpeed";
+import { backendForProvider } from "@shared/providers";
+import type { ComputerSignIns } from "@shared/signIns";
 import type { ManagedAuth } from "../quota/auth";
 import {
   createQuotaHttp,
@@ -74,6 +76,49 @@ export function railVerdict(input: {
   const pi = new Set(input.piIds);
   const missing = input.protectedIds.filter((id) => pi.has(id) && !named.has(id));
   return missing.length > 0 ? { ok: false, detail: `omits ${missing.join(", ")}` } : { ok: true };
+}
+
+/**
+ * What a computer that runs work serves, narrowed as this Mac narrows its
+ * own (docs/helper.md, "Its own sign-ins"): that computer reports Pi's
+ * catalog for each Codex or Grok account with the ids the account's own
+ * list named there (`accountList`), and this Mac, which holds the models
+ * the captain kept, judges the list with the same rail and the same
+ * protected ids before it narrows anything.
+ */
+export function narrowServedThere(
+  signIns: ComputerSignIns | null,
+  protectedIds: (providerId: string) => readonly string[],
+): ComputerSignIns | null {
+  if (!signIns?.served?.some((row) => row.accountList)) return signIns;
+  // The kept record is read once per provider in a narrowing, however many accounts there are.
+  const kept = new Map<string, readonly string[]>();
+  const protectedOf = (providerId: string): readonly string[] => {
+    const ids = kept.get(providerId) ?? protectedIds(providerId);
+    kept.set(providerId, ids);
+    return ids;
+  };
+  return {
+    ...signIns,
+    served: signIns.served.map((row) => {
+      const providerId = signIns.accounts.find(
+        (account) => account.id === row.accountId,
+      )?.providerId;
+      if (!row.accountList || !providerId || backendForProvider(providerId) !== "pi") return row;
+      const verdict = railVerdict({
+        answer: row.accountList.map((id) => ({ id })),
+        protectedIds: protectedOf(providerId),
+        piIds: row.models.filter((model) => model.provider === providerId).map((model) => model.id),
+      });
+      if (!verdict.ok) return row;
+      // The account's own list narrows only its own provider's models, as here.
+      const named = new Set(row.accountList);
+      return {
+        ...row,
+        models: row.models.filter((model) => model.provider !== providerId || named.has(model.id)),
+      };
+    }),
+  };
 }
 
 /** Codex: `{ models: [{ slug }] }`, hidden rows included - they are still served. */

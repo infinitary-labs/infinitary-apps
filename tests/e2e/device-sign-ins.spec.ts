@@ -17,6 +17,7 @@ import {
   DEVICE_FORGE_ROLE,
   THIS_MAC_FORGE_ROLE,
 } from "../../src/renderer/src/settings/deviceForgeWords";
+import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
 import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -335,6 +336,13 @@ async function homeAndComputer(
             clock: false,
             // No Claude Code on that computer, unless the test puts its script there.
             claude: options.claude ?? { available: () => false },
+            // Its model list is never this Mac's own client's: the script answers
+            // none, so a Claude account there lists Claude's shipped catalog.
+            claudeList: {
+              read: async () => {
+                throw new Error(CLAUDE_CLIENT_MISSING_TEXT);
+              },
+            },
           }),
       }),
   });

@@ -1,7 +1,7 @@
 import { type AccountView, standingCutOff } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import type { ReasoningCapabilities } from "@shared/modelSlots";
-import { QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { servedModelKey } from "@shared/quota";
 import { type ComputerSignIns, type DeviceSignIns, signInPlace } from "@shared/signIns";
 import type { QuotaCatalogModel } from "../quota/auth";
 import { buildModelsCatalog } from "../quota/catalog";
@@ -243,8 +243,6 @@ export function actualComputerPool(
     modelAccounts,
     available: pool.available.filter((model) => actual.has(`${model.provider}/${model.id}`)),
     // The catalog names a provider by its allowance id (claude, codex, grok), as routing reads it.
-    catalog: pool.catalog.filter((model) =>
-      actual.has(`${QUOTA_TO_PI_PROVIDER[model.provider] ?? model.provider}/${model.id}`),
-    ),
+    catalog: pool.catalog.filter((model) => actual.has(servedModelKey(model))),
   };
 }

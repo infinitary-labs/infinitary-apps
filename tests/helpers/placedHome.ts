@@ -38,7 +38,7 @@ import {
   PROTOCOL_VERSION,
   parseInvokeRequest,
 } from "../../src/shared/ipc";
-import { type CatalogModelView, QUOTA_TO_PI_PROVIDER } from "../../src/shared/quota";
+import { type CatalogModelView, servedProviderOf } from "../../src/shared/quota";
 
 /**
  * A home whose crew runs on a computer that runs work (docs/helper.md,
@@ -171,11 +171,7 @@ export function startPlacedHome(options: {
           ...homeAccounts(routing.available),
           ...computerBoardModels(
             signIns.view(),
-            new Set(
-              routing.catalog.map(
-                (model) => QUOTA_TO_PI_PROVIDER[model.provider] ?? model.provider,
-              ),
-            ),
+            new Set(routing.catalog.map((model) => servedProviderOf(model.provider))),
           ),
         ],
         quotaModels: latestModels,

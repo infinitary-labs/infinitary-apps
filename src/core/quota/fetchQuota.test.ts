@@ -1,4 +1,4 @@
-import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
+import { KEYCHAIN_VALUE_FAILURE_DETAIL, QUOTA_TO_PI_PROVIDER, servedModelKey } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { clearKeychainLock, resolveClaudeQuotaAuthResult } from "../claude/claudeQuota";
@@ -417,6 +417,21 @@ describe("createQuotaFetcher (per-account sensor)", () => {
 });
 
 describe("buildModelsCatalog across accounts", () => {
+  // FI3-1806: a row names its provider by allowance id (claude, codex, grok),
+  // and every comparison with a served model goes through servedModelKey.
+  it("names each row so it matches the served model it was built from", () => {
+    const served = [
+      { provider: "anthropic-claude", id: "claude-opus-5-5", name: "Claude Opus 5.5" },
+      { provider: "openai-codex", id: "gpt-6.1-sol", name: "GPT-6.1 Sol" },
+      { provider: "xai", id: "grok-4.7", name: "Grok 4.7" },
+    ];
+    const catalog = buildModelsCatalog(served, [], "2026-10-15T12:00:00Z");
+    expect(catalog.models.map((row) => row.provider).sort()).toEqual(
+      Object.keys(QUOTA_TO_PI_PROVIDER).sort(),
+    );
+    expect(catalog.models.map(servedModelKey).sort()).toEqual(served.map(servedModelKey).sort());
+  });
+
   it("takes the best account's headroom as a model's effective remaining", () => {
     const catalog = buildModelsCatalog(
       [{ provider: "openai-codex", id: "gpt-5.5", name: "GPT-5.5" }],

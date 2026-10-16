@@ -1,5 +1,5 @@
 import type { CatalogModelView } from "@shared/quota";
-import { isAutoRoutableSlot, QUOTA_TO_PI_PROVIDER, type Slot } from "@shared/quota";
+import { isAutoRoutableSlot, type Slot, servedModelKey, servedProviderOf } from "@shared/quota";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 import type { PiModelRef } from "./routingEngine";
 
@@ -69,13 +69,11 @@ export function orderCandidates(input: {
   for (const bucket of input.buckets) {
     if (!isAutoRoutableSlot(bucket)) continue;
     for (const model of input.catalog) {
-      const piProvider = QUOTA_TO_PI_PROVIDER[model.provider];
-      if (!piProvider) continue;
-      const key = `${piProvider}/${model.id}`;
+      const key = servedModelKey(model);
       if (!availableKeys.has(key)) continue;
       const memberSlots = slotByKey.get(key);
       if (!memberSlots?.includes(bucket)) continue;
-      consider({ provider: piProvider, id: model.id }, bucket);
+      consider({ provider: servedProviderOf(model.provider), id: model.id }, bucket);
     }
   }
   // The tail: an available model the quota catalog has no row for, or whose

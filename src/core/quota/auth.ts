@@ -1,3 +1,4 @@
+import { servedProviderOf } from "@shared/quota";
 import type { ProviderOutcome } from "./outcome";
 
 /**
@@ -83,11 +84,13 @@ export type QuotaCatalogModel = {
  * credential (src/main/claude/claudeQuota.ts), and session pushes
  * (pushedQuota.ts) merely freshen the same picture mid-turn.
  */
-export const QUOTA_PROVIDERS = [
-  { quotaId: "codex", piId: "openai-codex", label: "Codex", sensed: true },
-  { quotaId: "grok", piId: "xai", label: "Grok", sensed: true },
-  { quotaId: "claude", piId: "anthropic-claude", label: "Claude", sensed: true },
-] as const;
+export const QUOTA_PROVIDERS = (
+  [
+    { quotaId: "codex", label: "Codex", sensed: true },
+    { quotaId: "grok", label: "Grok", sensed: true },
+    { quotaId: "claude", label: "Claude", sensed: true },
+  ] as const
+).map((entry) => ({ ...entry, piId: servedProviderOf(entry.quotaId) }));
 
 export type QuotaProviderId = (typeof QUOTA_PROVIDERS)[number]["quotaId"];
 /** Quota ids the HTTP sensor can actually fetch. */

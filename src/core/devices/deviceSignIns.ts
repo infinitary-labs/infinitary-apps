@@ -17,6 +17,7 @@ import {
 } from "@shared/signIns";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import type { CoreEventSink } from "../events";
+import { narrowServedThere } from "../models/piAccountLists";
 import type { WorkDevices } from "../placed/workDevices";
 
 /**
@@ -59,6 +60,13 @@ export type DeviceSignInsOptions = {
    * cut-off it names, and goes on once it no longer does.
    */
   changed?: (deviceId: string) => void;
+  /**
+   * The ids of one provider a computer's account list may never be trusted
+   * to take away: the rail this Mac narrows its own accounts behind, read
+   * whenever a computer's list is (`narrowServedThere`). Absent, a
+   * computer's Codex and Grok lists stay as Pi's catalog serves them.
+   */
+  protectedIds?: (providerId: string) => readonly string[];
   now?: () => number;
 };
 
@@ -85,7 +93,7 @@ export class DeviceSignIns {
         onThisMac: device.onThisMac === true,
         inReach: this.options.work.inReach(device.id),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
-        signIns: said?.signIns ?? null,
+        signIns: this.narrowed(said?.signIns ?? null),
         ...(said?.asOf !== undefined ? { asOf: said.asOf } : {}),
         ...(said?.unanswered ? { unanswered: true } : {}),
       };
@@ -113,7 +121,7 @@ export class DeviceSignIns {
   async signInsOf(deviceId: string): Promise<ComputerSignIns | null> {
     if (!this.said.get(deviceId)?.signIns && this.options.work.inReach(deviceId))
       await this.ask(deviceId);
-    return this.said.get(deviceId)?.signIns ?? null;
+    return this.narrowed(this.said.get(deviceId)?.signIns ?? null);
   }
 
   /**
@@ -121,7 +129,7 @@ export class DeviceSignIns {
    * null when it has said nothing since this Mac started, or could not.
    */
   lastSaid(deviceId: string): ComputerSignIns | null {
-    return this.said.get(deviceId)?.signIns ?? null;
+    return this.narrowed(this.said.get(deviceId)?.signIns ?? null);
   }
 
   /**
@@ -306,6 +314,12 @@ export class DeviceSignIns {
 
   dispose(): void {
     this.unsubscribe();
+  }
+
+  /** What a computer said, its Codex and Grok lists narrowed behind this Mac's rail. */
+  private narrowed(signIns: ComputerSignIns | null): ComputerSignIns | null {
+    const protectedIds = this.options.protectedIds;
+    return protectedIds ? narrowServedThere(signIns, protectedIds) : signIns;
   }
 
   private contact(contact: WorkDeviceContact): void {

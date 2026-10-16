@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.6.0",
+  "protocolVersion": "8.7.0",
   "versionRule": {
     "majorsBehind": 1,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -4788,6 +4788,15 @@
                                 "provider",
                                 "id"
                               ]
+                            }
+                          },
+                          "accountList": {
+                            "maxItems": 2000,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
                             }
                           }
                         },
@@ -40141,6 +40150,15 @@
                           "id"
                         ]
                       }
+                    },
+                    "accountList": {
+                      "maxItems": 2000,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
                     }
                   },
                   "required": [
@@ -48352,6 +48370,15 @@
                                 "id"
                               ]
                             }
+                          },
+                          "accountList": {
+                            "maxItems": 2000,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            }
                           }
                         },
                         "required": [
@@ -49297,6 +49324,15 @@
                                 "provider",
                                 "id"
                               ]
+                            }
+                          },
+                          "accountList": {
+                            "maxItems": 2000,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
                             }
                           }
                         },
@@ -51908,6 +51944,15 @@
                         "provider",
                         "id"
                       ]
+                    }
+                  },
+                  "accountList": {
+                    "maxItems": 2000,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
                     }
                   }
                 },

@@ -1,8 +1,9 @@
 import { SLOTS, type Slot } from "@shared/modelSlots";
 import {
+  isAllowanceProvider,
   type ModelsCatalogView,
-  QUOTA_TO_PI_PROVIDER,
   type QuotaSnapshotView,
+  servedModelKey,
 } from "@shared/quota";
 import type { PiModelRef } from "./routingEngine";
 
@@ -25,7 +26,7 @@ export type QuotaGateReads = {
 export function quotaGateRefValid(ref: string): boolean {
   return ref.startsWith("bucket:")
     ? SLOTS.includes(ref.slice("bucket:".length) as Slot)
-    : ref in QUOTA_TO_PI_PROVIDER;
+    : isAllowanceProvider(ref);
 }
 
 /**
@@ -41,9 +42,7 @@ export function quotaGateCleared(ref: string, reads: QuotaGateReads): boolean {
     const catalog = reads.quota.latestModels()?.models ?? [];
     return reads.availableModels().some((model) => {
       if (!reads.slotsOf(model).includes(bucket)) return false;
-      const row = catalog.find(
-        (entry) => QUOTA_TO_PI_PROVIDER[entry.provider] === model.provider && entry.id === model.id,
-      );
+      const row = catalog.find((entry) => servedModelKey(entry) === servedModelKey(model));
       return !(
         typeof row?.effectivePercentRemaining === "number" && row.effectivePercentRemaining <= 0
       );

@@ -661,7 +661,7 @@ An unreadable identity, such as a container that may not read DMI and has no mac
 Explicit selections still work.
 The home follows the same identity and resource rules as every other user or computer.
 `actualComputerPool` restricts `Router.preview` to actual served models and carries the account serving the selected model; a generic provider sign-in never expands into the home's model catalog.
-Its routing catalog names a provider by its allowance id (`claude`, `codex`, `grok`), so it is matched to the served list through `QUOTA_TO_PI_PROVIDER`.
+Its routing catalog names a provider by its allowance id (`claude`, `codex`, `grok`), so it is matched to the served list through `servedModelKey` (`src/shared/quota.ts`), the one comparison between the two names.
 A project-access failure remains unknown; a generic forge sign-in cannot prove access to this project.
 
 Placement renews demand on the existing `ComputerResourceFeed`, shared with screens and permitted panels; it creates no sampler or second timer.
@@ -747,7 +747,13 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   A custom API connection is typed at the home and kept here: this computer reads the address, fetches the model list, checks each model and saves, so a localhost address is this computer.
   The key and headers ride once inside `inf:sign-ins:custom-connect` and stay in this computer's store; the home keeps no copy in a file, a feed line, a card or a conversation.
   What this computer says of its sign-ins includes its custom connections, with no key, and the models each account can serve, so a provider the home's catalog lacks can still take a task here.
-  A Claude account there lists Claude's shipped catalog (`claudeAvailableModels`), as the home's own does until its client's list is read, so an Automatic start can choose this computer for Claude work (above, "Automatic starts").
+  Its model lists are built as the home builds its own (`createAccountStore`, `docs/model-lists.md`, "Where "served" comes from"), so an Automatic start routes among what this computer actually serves (above, "Automatic starts").
+  A Claude account there lists what this computer's own Claude Code answers, else Claude's shipped catalog (`claudeAvailableModels`), and a Codex or Grok account lists Pi's catalog narrowed by the account's own list.
+  The safety rail protects the models the captain kept, which only the home's record holds, so the home judges a Codex or Grok account's own list there: this computer reports Pi's catalog for the account with the ids its own list named (`accountList`), and the home narrows that catalog by the same rail and protected ids as its own accounts (`narrowServedThere`, `src/core/models/piAccountLists.ts`), wherever it reads what this computer serves.
+  A model the captain pins or places in a level stays listed there whenever the account's own list leaves it out, as it does here.
+  Each account's own list is read when this computer first holds the account, after a sign-in, and once a day after its last try, whether that try succeeded or failed, as the home reads its own.
+  An allowance read starts a list read only when the account has never been tried or its last try is a day old, since Claude's read starts its client and holds the login's store.
+  A read that could not start while a session held that store is not a try, so the next allowance read starts it again.
   For a custom model, the home opens only the account-free control plane and names this computer's checked account; this computer builds the runtime on its own connection.
   After the home restarts, it adopts the conversation with this computer's account again, without requiring a matching custom connection at the home.
   If this computer no longer offers that custom account, reopening is refused rather than choosing another server.

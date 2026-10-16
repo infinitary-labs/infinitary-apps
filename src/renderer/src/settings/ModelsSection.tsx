@@ -15,7 +15,7 @@ import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { offeringKey, SLOTS } from "@shared/modelSlots";
 import type { RoutingSettings } from "@shared/quota";
-import { QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { allowanceProviderOf, servedModelKey } from "@shared/quota";
 import { useEffect, useState } from "react";
 import { Button, Input, RowMenu, type RowMenuItem, StatusDot, type StatusDotTone } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
@@ -45,10 +45,6 @@ import { NOT_IN_USE, STARTING_LEVELS_SUMMARY, USE_OPENROUTER_DECISION_MODEL } fr
  * option reaches its own endpoint only after the captain pastes their own
  * key and turns it on.
  */
-
-const PI_TO_QUOTA: Record<string, string> = Object.fromEntries(
-  Object.entries(QUOTA_TO_PI_PROVIDER).map(([quotaId, piId]) => [piId, quotaId]),
-);
 
 const CARD_MAX_ROWS_HEIGHT = 232;
 
@@ -144,23 +140,20 @@ export function ModelsSection({
   if (models.length === 0) return null;
 
   const pinRefFor = (model: { provider: string; id: string }) => ({
-    provider: PI_TO_QUOTA[model.provider] ?? model.provider,
+    provider: allowanceProviderOf(model.provider) ?? model.provider,
     id: model.id,
   });
 
-  const isPinned = (model: { provider: string; id: string }): boolean => {
-    const ref = pinRefFor(model);
-    return routing?.pins.some((pin) => pin.provider === ref.provider && pin.id === ref.id) ?? false;
-  };
+  const isPinned = (model: { provider: string; id: string }): boolean =>
+    routing?.pins.some((pin) => servedModelKey(pin) === servedModelKey(model)) ?? false;
 
   const togglePin = (model: { provider: string; id: string }) => {
     if (!routing) return;
-    const ref = pinRefFor(model);
     onSaveRouting({
       ...routing,
       pins: isPinned(model)
-        ? routing.pins.filter((pin) => !(pin.provider === ref.provider && pin.id === ref.id))
-        : [...routing.pins, ref],
+        ? routing.pins.filter((pin) => servedModelKey(pin) !== servedModelKey(model))
+        : [...routing.pins, pinRefFor(model)],
     });
   };
 
@@ -168,10 +161,7 @@ export function ModelsSection({
   const notInUse = models.filter((model) => model.slots.length === 0).length;
   // In the order routing tries them: the first that can take the work wins.
   const alwaysUse = (routing?.pins ?? []).flatMap((pin) => {
-    const model = models.find((row) => {
-      const ref = pinRefFor(row);
-      return ref.provider === pin.provider && ref.id === pin.id;
-    });
+    const model = models.find((row) => servedModelKey(row) === servedModelKey(pin));
     return model ? [model] : [];
   });
   const newCount = models.filter((model) => model.isNew).length;

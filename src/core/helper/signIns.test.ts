@@ -2,14 +2,21 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
 import { parseInvokeRequest } from "@shared/ipc";
+import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
-import { KEYCHAIN_VALUE_FAILURE_THERE } from "@shared/quota";
+import { KEYCHAIN_VALUE_FAILURE_THERE, servedProviderOf } from "@shared/quota";
 import { type DeviceSignInEvent, returnsToLoopback, type SignInStep } from "@shared/signIns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { freePort } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { NO_BROWSER } from "../claude/claudeCli";
+import {
+  CLAUDE_HAIKU_CATALOG_VERSION,
+  type ClaudeModelRow,
+  claudeServedModels,
+} from "../claude/claudeModelCatalog";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
+import { acquireSessionLease } from "../claude/claudeStoreLease";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import { DeviceSignIns } from "../devices/deviceSignIns";
 import { DevicePairing } from "../devices/pairing";
@@ -18,11 +25,15 @@ import { CoreEventBus } from "../events";
 import { ForgeSignInStore } from "../forge";
 import { absentKeychain, type HostKeychain, type HostKeychainQuery } from "../host";
 import { configureGitSignIn, hostEnv } from "../hostEnv";
+import { CODEX_MODELS_URL } from "../models/piAccountLists";
 import { catalogRefreshesSettled } from "../pi/modelRuntime";
 import { WorkDevices } from "../placed/workDevices";
 import type { QuotaHttp } from "../quota/http";
 import { actualComputerPool } from "../routing/computerPool";
+import { ModelSlots } from "../routing/modelSlots";
 import { route } from "../routing/routingEngine";
+import { openInMemoryDatabase } from "../storage/db";
+import { SettingsStore } from "../storage/settingsStore";
 import { startComputerAccounts } from "./accounts";
 import { bindHere, noSignInHere } from "./conversations";
 import { joinHome } from "./join";
@@ -61,6 +72,19 @@ function token(claims: Record<string, unknown>): string {
 const CODEX_ACCESS = token({
   "https://api.openai.com/auth": { chatgpt_account_id: "acct-standin" },
 });
+
+/**
+ * What a current Claude Code there answers for its model picker
+ * (claudeModelCatalog.test.ts): the computer reads its own client's list,
+ * as the home reads its own, and never this Mac's client.
+ */
+const CLAUDE_CLIENT_ROWS: ClaudeModelRow[] = [
+  { value: "default", resolvedModel: "claude-opus-5-5", displayName: "Default (recommended)" },
+  { value: "opus", resolvedModel: "claude-opus-5-5", displayName: "Opus 5.5" },
+  { value: "claude-fable-5-1", resolvedModel: "claude-fable-5-1", displayName: "Fable 5.1" },
+  { value: "sonnet", resolvedModel: "claude-sonnet-5-5", displayName: "Sonnet 5.5" },
+  { value: "haiku", resolvedModel: "claude-haiku-5-5", displayName: "Haiku 5.5" },
+];
 
 /** Grok's and Codex's sign-in endpoints as Pi asks them, answered here. */
 function standInProviders() {
@@ -185,7 +209,10 @@ function standInSavedPasswords(options: { allows: boolean }) {
 }
 
 /** The allowance's requests, answered here: a Codex reading for the computer's own account. */
-function standInAllowance(): { http: QuotaHttp; asked: { url: string; auth?: string }[] } {
+function standInAllowance(codexModels?: readonly string[]): {
+  http: QuotaHttp;
+  asked: { url: string; auth?: string }[];
+} {
   const asked: { url: string; auth?: string }[] = [];
   return {
     asked,
@@ -194,6 +221,9 @@ function standInAllowance(): { http: QuotaHttp; asked: { url: string; auth?: str
         url,
         ...(init.headers?.Authorization ? { auth: init.headers.Authorization } : {}),
       });
+      // The Codex account's own model list, in Codex's shape, when the test names one.
+      if (codexModels && new URL(url).pathname === "/backend-api/codex/models")
+        return { status: 200, json: { models: codexModels.map((slug) => ({ slug })) } };
       if (url === "https://chatgpt.com/backend-api/wham/usage")
         return {
           status: 200,
@@ -269,9 +299,28 @@ afterEach(async () => {
  * rather than said by the test.
  */
 async function joined(
-  options: { claudeLogin?: "live" | "absent"; gitAskpass?: string; keychain?: HostKeychain } = {},
+  options: {
+    claudeLogin?: "live" | "absent";
+    gitAskpass?: string;
+    keychain?: HostKeychain;
+    /** What Claude's client there answers for its model list; a current client's by default. */
+    claudeModels?: ClaudeModelRow[] | "no answer";
+    /** What the Codex account's own model list answers there; unread unless named. */
+    codexModels?: readonly string[];
+  } = {},
 ) {
   const homeDir = scratchDir("infinitary-signins-home-");
+  // The home's slot record and pins, which its rail protects, as the app keeps them.
+  const settings = new SettingsStore(openInMemoryDatabase());
+  const slots = new ModelSlots({
+    settings,
+    accounts: () => [],
+    quotaModels: () => undefined,
+    kept: () =>
+      settings
+        .getRoutingSettings()
+        .pins.map((pin) => ({ provider: servedProviderOf(pin.provider), id: pin.id })),
+  });
   const pairing = new DevicePairing({
     dir: join(homeDir, "devices"),
     onProblem: () => {},
@@ -291,6 +340,7 @@ async function joined(
       if (channel === "inf:devices:sign-in") pushes.push(payload as DeviceSignInEvent);
     },
     broadcastEvent: (event) => events.push(event),
+    protectedIds: (providerId) => slots.protectedIds(providerId),
   });
   homes.push(signIns);
   // The home's core as far as a computer's sign-ins reach it.
@@ -324,7 +374,7 @@ async function joined(
   });
   if (!done.ok) throw new Error(done.reason);
   const deviceId = done.grant.deviceId;
-  const allowance = standInAllowance();
+  const allowance = standInAllowance(options.codexModels);
   const claudeDir = scratchDir("infinitary-signins-claude-");
   // Who the login there is, where Claude Code keeps it beside the login.
   writeFileSync(
@@ -337,13 +387,17 @@ async function joined(
     browser: [] as unknown[],
     pasted: [] as unknown[],
     logouts: 0,
+    /** How many times something asked it for its model list. */
+    listReads: 0,
   };
   let held: Promise<HeldSignIns> | undefined;
+  // What the computer wrote to its own log.
+  const logs: string[] = [];
   const started = startHelper({
     dataDir,
     say: () => {},
     retryMs: [20],
-    log: () => {},
+    log: (line) => logs.push(line),
     ...(options.gitAskpass ? { gitAskpass: options.gitAskpass } : {}),
     ...(options.keychain ? { keychain: options.keychain } : {}),
     signIns: (start) => {
@@ -354,6 +408,16 @@ async function joined(
             ...accountsOptions,
             http: allowance.http,
             clock: false,
+            claudeList: {
+              read: async () => {
+                claude.listReads += 1;
+                // The client's own words when its list does not come back.
+                if (options.claudeModels === "no answer")
+                  throw new Error("Claude did not list its models in time.");
+                return options.claudeModels ?? CLAUDE_CLIENT_ROWS;
+              },
+              clientVersion: async () => CLAUDE_HAIKU_CATALOG_VERSION,
+            },
             claude: {
               available: () => true,
               configDir: () => claudeDir,
@@ -423,6 +487,9 @@ async function joined(
     homeDir,
     dataDir,
     deviceId,
+    settings,
+    logs,
+    claudeDir,
     signIns,
     connection,
     work,
@@ -440,6 +507,40 @@ async function joined(
     },
     stop: () => started.run.stop(),
   };
+}
+
+/** Signs the computer in to Codex, the address its browser ends on pasted back at home. */
+async function signInToCodex(world: Awaited<ReturnType<typeof joined>>): Promise<void> {
+  const { signInId } = await world.signIns.start(world.deviceId, "openai-codex", "oauth");
+  const method = await world.prompt(signInId);
+  await world.signIns.answer(signInId, method.promptId, "browser");
+  await expect
+    .poll(() => world.steps(signInId).some((step) => step.kind === "notice" && step.notice.url))
+    .toBe(true);
+  const link = world
+    .steps(signInId)
+    .flatMap((step) => (step.kind === "notice" && step.notice.url ? [step.notice.url] : []))[0];
+  const opened = new URL(link ?? "");
+  const endsOn = new URL(opened.searchParams.get("redirect_uri") ?? "");
+  endsOn.search = new URLSearchParams({
+    code: PASTED_CODE,
+    scope: "openid profile email offline_access",
+    state: opened.searchParams.get("state") ?? "",
+  }).toString();
+  const paste = await world.prompt(signInId);
+  await world.signIns.answer(signInId, paste.promptId, endsOn.toString());
+  expect(await world.ended(signInId)).toMatchObject({ outcome: "signed-in" });
+}
+
+/** The model ids of one provider the home last heard that computer's account of it serve. */
+function servedThere(world: Awaited<ReturnType<typeof joined>>, providerId: string) {
+  const signIns = world.group()?.signIns;
+  const account = signIns?.accounts.find((row) => row.providerId === providerId);
+  return signIns?.served
+    ?.find((row) => row.accountId === account?.id)
+    ?.models.filter((model) => model.provider === providerId)
+    .map((model) => model.id)
+    .sort();
 }
 
 describe("a computer that runs work signs in to its own subscriptions from its home", () => {
@@ -673,6 +774,96 @@ describe("a computer that runs work signs in to its own subscriptions from its h
       .group()
       ?.signIns?.accounts.find((row) => row.providerId === CLAUDE_PROVIDER_ID);
     expect(chosen?.modelAccounts.get(`${choice?.provider}/${choice?.id}`)).toBe(account?.id);
+  });
+
+  // FI3-1806: a computer that runs work builds its model lists as the home
+  // does, so an Automatic start routes among what it actually serves.
+  it("lists the Claude models that computer's own client answers, as the home lists its own", async () => {
+    // A plan whose client there serves no Fable, and still lists an earlier Opus.
+    const rows: ClaudeModelRow[] = [
+      ...CLAUDE_CLIENT_ROWS.filter((row) => row.resolvedModel !== "claude-fable-5-1"),
+      { value: "claude-opus-4-8", resolvedModel: "claude-opus-4-8", displayName: "Opus 4.8" },
+    ];
+    const world = await joined({ claudeLogin: "live", claudeModels: rows });
+    const { signInId } = await world.signIns.start(world.deviceId, CLAUDE_PROVIDER_ID, "oauth");
+    expect(await world.ended(signInId)).toMatchObject({ outcome: "signed-in" });
+    await expect
+      .poll(() => servedThere(world, CLAUDE_PROVIDER_ID))
+      .toEqual(
+        claudeServedModels(rows)
+          .map((model) => model.id)
+          .sort(),
+      );
+  });
+
+  it("serves only the Codex models the account's own list names there, behind the home's rail", async () => {
+    // Pi stays offline; the list is read at Codex's own address, which the stand-in answers.
+    vi.stubEnv("INFINITARY_CODEX_MODELS_URL", CODEX_MODELS_URL);
+    standInProviders();
+    // The account's list names every starter row, and a model Pi has no definition for.
+    const starters = Object.keys(STARTER_SLOTS["openai-codex"] ?? {});
+    const world = await joined({ codexModels: [...starters, "gpt-7-preview"] });
+    await signInToCodex(world);
+    await expect.poll(() => servedThere(world, "openai-codex")).toEqual([...starters].sort());
+  });
+
+  // INF-84's review of FI3-1806: the rail protects what the captain kept, there as here.
+  it("keeps a Codex model the captain pinned listed there when the account's own list leaves it out", async () => {
+    vi.stubEnv("INFINITARY_CODEX_MODELS_URL", CODEX_MODELS_URL);
+    standInProviders();
+    const starters = Object.keys(STARTER_SLOTS["openai-codex"] ?? {});
+    const world = await joined({ codexModels: starters });
+    await signInToCodex(world);
+    // The list there names only the starter rows, so it narrows every other model away.
+    await expect.poll(() => servedThere(world, "openai-codex")).toEqual([...starters].sort());
+    // The captain pins a model Pi serves that account, the way Models settings saves a pin.
+    const { accounts } = await world.held();
+    const account = accounts.vault.list().find((row) => row.providerId === "openai-codex");
+    const pinned = accounts.vault
+      .piCatalogIds(account?.id ?? "")
+      ?.find((id) => !starters.includes(id));
+    if (!pinned) throw new Error("Pi serves that account no model beyond its starter rows.");
+    world.settings.setRoutingSettings({
+      ...world.settings.getRoutingSettings(),
+      pins: [{ provider: "codex", id: pinned }],
+    });
+    // A list that leaves out a kept model is not trusted to narrow anything, as here.
+    expect(servedThere(world, "openai-codex")).toContain(pinned);
+  });
+
+  // INF-84's review of FI3-1806: a list read is tried again once a day, as here.
+  it("asks Claude's client there for its model list at a sign-in, and not again with each allowance reading", async () => {
+    const world = await joined({ claudeLogin: "live", claudeModels: "no answer" });
+    const { signInId } = await world.signIns.start(world.deviceId, CLAUDE_PROVIDER_ID, "oauth");
+    expect(await world.ended(signInId)).toMatchObject({ outcome: "signed-in" });
+    // The read settled as a failure, and the shipped catalog serves.
+    await expect
+      .poll(() =>
+        world.logs.some((line) => line.startsWith(`${CLAUDE_PROVIDER_ID} model list unavailable`)),
+      )
+      .toBe(true);
+    const { accounts } = await world.held();
+    await accounts.readAllowance("interval");
+    await accounts.readAllowance("interval");
+    expect(world.claude.listReads).toBe(1);
+  });
+
+  // INF-142's review of FI3-1806: a read that waited on the store is no try.
+  it("reads Claude's model list there once a session there lets go of the login's store", async () => {
+    const world = await joined({ claudeLogin: "live" });
+    // A crewmate's Claude session there holds the login's store, so a list read there waits.
+    const release = await acquireSessionLease(world.claudeDir);
+    const { signInId } = await world.signIns.start(world.deviceId, CLAUDE_PROVIDER_ID, "oauth");
+    expect(await world.ended(signInId)).toMatchObject({ outcome: "signed-in" });
+    const { accounts } = await world.held();
+    const account = accounts.vault.list().find((row) => row.providerId === CLAUDE_PROVIDER_ID);
+    if (!account) throw new Error("The computer kept no Claude account.");
+    await accounts.readModels?.(account.id);
+    expect(world.claude.listReads).toBe(0);
+    // The session ends; the next allowance reading asks Claude's client for its list.
+    release();
+    await accounts.readAllowance("interval");
+    await expect.poll(() => world.claude.listReads).toBe(1);
   });
 
   it("adopts the Claude login kept in that computer's saved passwords, and starts no sign-in over it", async () => {

@@ -68,6 +68,8 @@ Saved slot choices, including GPT-6 Sol, are preserved rather than silently reas
 The session adapter discards `AgentSession.steer()`'s queue disposition after awaiting the call.
 
 `ServedModels` (`src/core/models/servedModels.ts`) owns the reads.
+`createAccountStore` (`src/core/models/accountStore.ts`) builds an account store with its readers, the rail and the filter, the same way on this Mac and on every computer that runs work (`docs/helper.md`, "Its own sign-ins").
+The rail needs the models the captain kept, which only this Mac's record holds, so a computer that runs work reports a Codex or Grok account's own list beside Pi's catalog and this Mac narrows it by the same rail (`narrowServedThere`).
 The captain's two rules:
 
 - **Nothing waits on a read.**

@@ -1,7 +1,9 @@
 import type { AuthPromptView } from "@shared/providers";
 import {
+  ACCOUNT_LIST_ID_MAX,
   type ComputerSignIns,
   isSignInOrderChannel,
+  SERVED_MODELS_MAX,
   type SignInOrderChannel,
   type SignInOrderRequest,
   type SignInStep,
@@ -87,6 +89,7 @@ export class SignInHost {
       custom: accounts.vault.customViews(),
       served: accounts.vault.availableModelsByAccount().map((row) => ({
         accountId: row.accountId,
+        ...accountListOf(accounts, row.accountId),
         models: servedForHome(
           row.providerId,
           row.models.map((model) => {
@@ -282,8 +285,9 @@ export class SignInHost {
       }
       await this.step(signInId, ended);
       if (ended.outcome !== "signed-in") return;
-      // The new row at once; its allowance once the reading lands.
+      // The new row at once; its own model list and allowance once each lands.
       await this.report();
+      if (ended.accountId) void this.options.accounts.readModels?.(ended.accountId);
       await this.options.accounts.readAllowance("sign-in");
     })();
     this.ending.add(run);
@@ -322,6 +326,19 @@ export class SignInHost {
   }
 }
 
+/**
+ * A Codex or Grok account's own list, for the home's rail; nothing for any
+ * other account. An id the home's reading would refuse (`accountList`'s
+ * bounds in src/shared/signIns.ts) is left out here, so one odd id never
+ * makes the whole answer unreadable at the home.
+ */
+function accountListOf(accounts: ComputerAccounts, accountId: string): { accountList?: string[] } {
+  const list = accounts.accountList?.(accountId);
+  if (!list) return {};
+  const ids = list.filter((id) => id.length >= 1 && id.length <= ACCOUNT_LIST_ID_MAX);
+  return { accountList: ids.slice(0, SERVED_MODELS_MAX) };
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -354,6 +371,7 @@ export async function startSignIns(options: {
   let host: SignInHost | undefined;
   const accounts = await (options.accounts ?? startComputerAccounts)({
     dataDir: options.dataDir,
+    packaged: options.packaged,
     // A new reading is news to the home.
     onAllowance: () => void host?.report(),
     // A settled model list is news too: OpenRouter's models arrive with it.

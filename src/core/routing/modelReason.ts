@@ -1,5 +1,5 @@
 import { type ModelReason, modelReasonSchema } from "@shared/modelReason";
-import { type ModelPin, QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { type ModelPin, servedModelKey } from "@shared/quota";
 import type { DecisionStore, RoutingDecision } from "../storage/decisionStore";
 import type { TaskRecord } from "../storage/taskStore";
 
@@ -63,15 +63,7 @@ export function modelReasonOf(
     (override.includes("/") ? override === served : override === decision.model)
       ? { named: true }
       : {}),
-    ...(sources
-      .pins()
-      .some(
-        (pin) =>
-          pin.id === decision.model &&
-          (QUOTA_TO_PI_PROVIDER[pin.provider] ?? pin.provider) === decision.provider,
-      )
-      ? { pinned: true }
-      : {}),
+    ...(sources.pins().some((pin) => servedModelKey(pin) === served) ? { pinned: true } : {}),
   });
   return reason.success ? reason.data : undefined;
 }

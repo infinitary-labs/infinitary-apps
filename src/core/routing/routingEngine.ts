@@ -4,8 +4,9 @@ import {
   type CatalogModelView,
   type IntelligenceBucket,
   type ModelPin,
-  QUOTA_TO_PI_PROVIDER,
   type Slot,
+  servedModelKey,
+  servedProviderOf,
 } from "@shared/quota";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 
@@ -201,11 +202,10 @@ export function route(input: RoutingInput): RoutingDecision {
   const slots = slotMap(input.slotted);
   // The slot record bounds automatic selection only; pins read availableKeys.
   if (input.slotNote) reasons.push(input.slotNote);
-  const toPiRef = (model: CatalogModelView): PiModelRef | undefined => {
-    const piProvider = QUOTA_TO_PI_PROVIDER[model.provider];
-    if (!piProvider) return undefined;
-    return { provider: piProvider, id: model.id };
-  };
+  const toPiRef = (model: CatalogModelView): PiModelRef => ({
+    provider: servedProviderOf(model.provider),
+    id: model.id,
+  });
   const slotsOf = (ref: PiModelRef): Slot[] | undefined => {
     if (!slots) return ["medium"];
     return slots.get(`${ref.provider}/${ref.id}`);
@@ -213,9 +213,9 @@ export function route(input: RoutingInput): RoutingDecision {
 
   // Pins always win, if Pi can serve them and the provider is offered.
   for (const pin of input.pins) {
-    const piProvider = QUOTA_TO_PI_PROVIDER[pin.provider] ?? pin.provider;
+    const piProvider = servedProviderOf(pin.provider);
     if (!isOfferedProvider(piProvider) && !isCustomApiProvider(piProvider)) continue;
-    if (availableKeys.has(`${piProvider}/${pin.id}`)) {
+    if (availableKeys.has(servedModelKey(pin))) {
       reasons.push(`pinned ${pin.provider}/${pin.id}`);
       return { bucket, choice: { provider: piProvider, id: pin.id }, reasons };
     }
@@ -235,7 +235,7 @@ export function route(input: RoutingInput): RoutingDecision {
       slot: Slot;
     }[] = input.catalog.flatMap((model) => {
       const ref = toPiRef(model);
-      if (!ref || !availableKeys.has(`${ref.provider}/${ref.id}`)) return [];
+      if (!availableKeys.has(servedModelKey(model))) return [];
       const memberSlots = slotsOf(ref);
       if (memberSlots === undefined) {
         skipped.push(`skipped ${ref.provider}/${ref.id}: not in a slot`);

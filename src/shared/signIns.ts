@@ -96,10 +96,24 @@ export type ComputerServedModel = z.infer<typeof computerServedModelSchema>;
  */
 export const SERVED_MODELS_MAX = 2_000;
 
+/** The longest model id an account's own list may name for the home (`accountList`). */
+export const ACCOUNT_LIST_ID_MAX = 256;
+
 /** The models one account there can serve. */
 export const computerServedAccountSchema = z.object({
   accountId: z.string().min(1).max(256),
   models: z.array(computerServedModelSchema).max(SERVED_MODELS_MAX),
+  /**
+   * The ids a Codex or Grok account's own model list named in its last
+   * successful read there; `models` is Pi's catalog for it, unnarrowed. The
+   * home narrows `models` by it behind its own rail, which protects the
+   * models the captain kept (`narrowServedThere`). Absent before a read,
+   * after a failed one, and from a computer older than protocol 8.7.
+   */
+  accountList: z
+    .array(z.string().min(1).max(ACCOUNT_LIST_ID_MAX))
+    .max(SERVED_MODELS_MAX)
+    .optional(),
 });
 
 /**

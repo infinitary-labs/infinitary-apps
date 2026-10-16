@@ -2,8 +2,8 @@ import { type Slot, slotSchema } from "@shared/modelSlots";
 import {
   type CatalogModelView,
   type IntelligenceBucket,
-  QUOTA_TO_PI_PROVIDER,
   SLOTS,
+  servedModelKey,
 } from "@shared/quota";
 import type { RuleId, WorkShape } from "@shared/routingPolicy";
 import type { QuotaService } from "../quota/quotaService";
@@ -236,8 +236,7 @@ export class Router {
     // A named model first, then saved pins in their order, then the existing
     // slot ladder. Do not infer quality by parsing the reasons or model name.
     const matches = (pin: { provider: string; id: string }) =>
-      decision.choice?.provider === (QUOTA_TO_PI_PROVIDER[pin.provider] ?? pin.provider) &&
-      decision.choice?.id === pin.id;
+      decision.choice !== undefined && servedModelKey(decision.choice) === servedModelKey(pin);
     const pinned = settings.pins.findIndex(matches);
     const offset = modelId ? 1 : 0;
     const preferenceRank =

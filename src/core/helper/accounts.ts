@@ -1,21 +1,19 @@
 import { join } from "node:path";
 import type { CrewSpeed } from "@shared/crewSpeed";
-import { CLAUDE_PROVIDER_ID, type ProviderView } from "@shared/providers";
+import { backendForProvider, CLAUDE_PROVIDER_ID, type ProviderView } from "@shared/providers";
 import { KEYCHAIN_VALUE_FAILURE_THERE, type QuotaSnapshotView } from "@shared/quota";
 import type { AccountBackend } from "../accounts/accountBackend";
 import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { buildProviderViews } from "../accounts/providerViews";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
-import { claudeAvailableModels } from "../claude/claudeModels";
 import {
   clearKeychainLock,
   defaultClaudeConfigDir,
   resolveClaudeQuotaAuthResult,
 } from "../claude/claudeQuota";
 import { absentKeychain, type HostKeychain } from "../host";
-import { codexListReader } from "../models/piAccountLists";
-import { ServedModels } from "../models/servedModels";
-import { AccountVault } from "../pi/accountVault";
+import { type AccountStoreOptions, createAccountStore } from "../models/accountStore";
+import type { AccountVault } from "../pi/accountVault";
 import { PiAccountBackend } from "../pi/piAccountBackend";
 import { PiAuthService } from "../pi/piAuth";
 import { type ManagedAuth, quotaEntryForPiProvider } from "../quota/auth";
@@ -49,6 +47,13 @@ import { mergeStaleProviders } from "../quota/quotaService";
 /** How often the allowance is read while nothing asks for it. */
 const ALLOWANCE_EVERY_MS = 5 * 60 * 1000;
 
+/**
+ * How often an account's own model list is read again, failed or not: once a
+ * day, as this Mac's own pass. Claude's read starts its client and holds the
+ * login's store while it runs, so it never rides each allowance read.
+ */
+const MODEL_LISTS_EVERY_MS = 24 * 60 * 60 * 1000;
+
 export type ComputerAccounts = {
   vault: AccountVault;
   speedCapabilities?: (accountId: string, id: string) => readonly CrewSpeed[] | undefined;
@@ -59,6 +64,17 @@ export type ComputerAccounts = {
   allowance: () => QuotaSnapshotView | null;
   /** Reads the allowance now; one read at a time. */
   readAllowance: (reason: string) => Promise<QuotaSnapshotView | null>;
+  /**
+   * Reads one account's own model list now, as after a sign-in. Settles when
+   * the read does and never rejects; nothing waits on it but a test.
+   */
+  readModels?: (accountId: string) => Promise<void>;
+  /**
+   * The ids a Codex or Grok account's own list named at its last successful
+   * read here, which the home narrows this computer's list by behind its own
+   * rail (`narrowServedThere`); undefined for any other account, or with none.
+   */
+  accountList?: (accountId: string) => readonly string[] | undefined;
   /** Stops the clock that reads the allowance and renews what is expiring. */
   close: () => void;
 };
@@ -71,6 +87,10 @@ export type ComputerAccountsOptions = {
   http?: QuotaHttp;
   /** A stand-in Claude client check, for tests; production looks at this Mac. */
   claude?: ConstructorParameters<typeof ClaudeAuthBackend>[0];
+  /** A stand-in for the model list Claude's client here answers, for tests (`AccountStoreOptions.claudeList`). */
+  claudeList?: AccountStoreOptions["claudeList"];
+  /** Whether it runs from a packaged app; the dev and test list addresses are read only off one. */
+  packaged?: boolean;
   /**
    * This Mac's saved passwords, where Claude Code keeps its login: the work
    * mode passes the app's own reader, and only ever reads without asking.
@@ -112,17 +132,24 @@ export async function startComputerAccounts(
     modelsPath: join(baseDir, "models.json"),
     ...(options.onModels ? { onCatalogRefreshed: options.onModels } : {}),
   });
-  const vault = AccountVault.create(
+  // The model lists are built as the home builds its own (docs/model-lists.md),
+  // so the home's Automatic start routes among what each account here serves
+  // (docs/helper.md, "Automatic starts"): Claude's client's own list, else
+  // its shipped one. Codex's and Grok's own lists are judged at the home,
+  // which holds the models the captain kept that the rail protects.
+  const { vault, served } = createAccountStore(
     { accountsDir },
     {
       pi,
       backends: [claude],
       now,
-      // Claude serves its shipped catalog here, as it does at the home until
-      // its client's own list is read (docs/model-lists.md), so the home's
-      // Automatic start can route among it (docs/helper.md, "Automatic starts").
-      modelsForAccount: ({ providerId }) =>
-        providerId === CLAUDE_PROVIDER_ID ? claudeAvailableModels() : [],
+      packaged: options.packaged ?? false,
+      claudeConfigDir: claudeDir,
+      ...(options.claudeList ? { claudeList: options.claudeList } : {}),
+      http: options.http,
+      rail: "home",
+      ...(options.onModels ? { onSettled: options.onModels } : {}),
+      ...(options.log ? { log: options.log } : {}),
     },
   );
   const providers = () =>
@@ -162,24 +189,6 @@ export async function startComputerAccounts(
   const resolve = (accountId: string): Promise<ManagedAuth | undefined> =>
     isClaude(accountId) ? resolveClaude(accountId) : vault.resolveForQuota(accountId);
 
-  const served = new ServedModels({
-    readers: {
-      "openai-codex": codexListReader({
-        resolveAuth: (id) => vault.resolveForQuota(id),
-        http: options.http,
-        offline: process.env.PI_OFFLINE !== undefined,
-      }),
-    },
-    accounts: () =>
-      vault
-        .list()
-        .filter((row) => row.enabled)
-        .map((row) => ({ accountId: row.id, providerId: row.providerId })),
-    onSettled: options.onModels,
-    log: options.log,
-    now,
-  });
-
   // The allowance, read here with each account's own store.
   const fetch = createQuotaFetcher({
     auth: {
@@ -213,12 +222,25 @@ export async function startComputerAccounts(
     onAccepted: (accountId) => vault.noteAccepted(accountId),
     now,
   });
+  // Each account's own model list is read as this Mac reads its own: when it
+  // is first seen here, after a sign-in, and once a day after its last try,
+  // whether that try succeeded or failed. A read that could not start while
+  // a session held the login's store is no try, so the next allowance read
+  // starts it again.
+  const listTried = new Map<string, number>();
+  const readModels = (accountId: string): Promise<void> => {
+    listTried.set(accountId, now());
+    return served.refresh(accountId).then((settled) => {
+      if (settled === "deferred") listTried.delete(accountId);
+    });
+  };
   let latest: QuotaSnapshotView | null = null;
   let reading: Promise<QuotaSnapshotView | null> | undefined;
   const readAllowance = (reason: string): Promise<QuotaSnapshotView | null> => {
     for (const account of vault.list()) {
-      const read = served.read(account.id);
-      if (!read || now() - read.at >= 24 * 60 * 60 * 1000) void served.refresh(account.id);
+      const tried = listTried.get(account.id);
+      if (account.enabled && (tried === undefined || now() - tried >= MODEL_LISTS_EVERY_MS))
+        void readModels(account.id);
     }
     reading ??= fetch(reason)
       .then(({ snapshot }) => {
@@ -258,6 +280,12 @@ export async function startComputerAccounts(
   if (vault.list().length > 0) void readAllowance("startup");
   return {
     vault,
+    readModels,
+    accountList: (accountId) => {
+      const account = vault.get(accountId);
+      if (!account || backendForProvider(account.providerId) !== "pi") return undefined;
+      return served.read(accountId)?.models.map((model) => model.id);
+    },
     speedCapabilities: (accountId, id) => served.speeds(accountId, id),
     speedExpiresAt: (accountId, id) => served.speedExpiresAt(accountId, id),
     providers,

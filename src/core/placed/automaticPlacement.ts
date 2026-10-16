@@ -17,6 +17,7 @@ import {
 import type { RepoView } from "@shared/repos";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import type { WorkShape } from "@shared/routingPolicy";
+import { narrowServedThere } from "../models/piAccountLists";
 import { thisDeviceSystem } from "../platform";
 import type { QuotaCatalogModel } from "../quota/auth";
 import { actualComputerPool } from "../routing/computerPool";
@@ -76,6 +77,8 @@ export class AutomaticPlacement {
       router: Router;
       repo: (id: string) => RepoView | undefined;
       catalog: () => readonly QuotaCatalogModel[];
+      /** This Mac's rail, which narrows a computer's Codex and Grok lists (`narrowServedThere`). */
+      protectedIds?: (providerId: string) => readonly string[];
       /** The resource receiver's clock: a witness is compared with when its samples began. */
       now?: () => number;
       /** Evidence that the conversation is running, including one reconciled after restart. */
@@ -445,7 +448,14 @@ export class AutomaticPlacement {
           const answer = placementFactsAnswerSchema.parse(raw);
           return {
             facts: answer,
-            pool: actualComputerPool(id, answer.signIns, this.options.catalog(), Date.now()),
+            pool: actualComputerPool(
+              id,
+              this.options.protectedIds
+                ? narrowServedThere(answer.signIns, this.options.protectedIds)
+                : answer.signIns,
+              this.options.catalog(),
+              Date.now(),
+            ),
             started,
             generation,
           };

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "other-computer-lists-its-own-models",
+      "kind": "fix",
+      "title": "Automatic offers your other computer only the models it can run",
+      "body": "A computer that runs work now lists the Claude models its own Claude Code offers, and only the Codex and Grok models its own accounts serve, the same way this computer lists its own. Before, it listed the app's whole list for each of them, so Automatic could send that computer a task on a model its sign-in there does not serve.",
+      "area": "projects",
+      "noPicture": "No screen changes: Task Details already say which computer and model Automatic chose.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

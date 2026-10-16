@@ -19,7 +19,7 @@ import {
 } from "@shared/modelSlots";
 import { catalogEntry } from "@shared/providers";
 import type { ModelsCatalogView } from "@shared/quota";
-import { QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { servedModelKey } from "@shared/quota";
 import { levelDefaultReasoning } from "@shared/routingPolicy";
 import { openingReasoning } from "../session/session";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -87,7 +87,11 @@ export type ServedSnapshot = { accountId: string; providerId: string; ids: reado
 
 export type ModelSlotsOptions = {
   settings: SettingsStore;
-  speeds?: (accountId: string, ref: PiModelRef) => readonly CrewSpeed[] | undefined;
+  /**
+   * The faster speeds each account's model offers, read once per board view:
+   * it answers a lookup the view then asks for every model it lists.
+   */
+  speeds?: () => (accountId: string, ref: PiModelRef) => readonly CrewSpeed[] | undefined;
   reasoningCapabilities?: (ref: PiModelRef) => ReasoningCapabilities | undefined;
   accounts: () => AccountModels[];
   quotaModels: () => ModelsCatalogView | undefined;
@@ -390,11 +394,12 @@ export class ModelSlots {
     const catalog = this.catalogByKey();
     const accounts = this.options.accounts();
     const listed = this.listedKeysOf(accounts, state);
+    const speedsOf = this.options.speeds?.();
     const byKey = new Map<string, SlotModelView>();
     for (const account of accounts) {
       for (const model of account.models) {
         const key = offeringKey(model);
-        const speeds = model.speeds ?? this.options.speeds?.(account.accountId, model);
+        const speeds = model.speeds ?? speedsOf?.(account.accountId, model);
         const previous = byKey.get(key);
         if (previous) {
           if (speeds) previous.speeds = [...new Set([...(previous.speeds ?? []), ...speeds])];
@@ -541,9 +546,7 @@ export class ModelSlots {
   private catalogByKey(): Map<string, { label: string }> {
     const byKey = new Map<string, { label: string }>();
     for (const model of this.options.quotaModels()?.models ?? []) {
-      const piProvider = QUOTA_TO_PI_PROVIDER[model.provider];
-      if (!piProvider) continue;
-      byKey.set(`${piProvider}/${model.id}`, { label: model.label });
+      byKey.set(servedModelKey(model), { label: model.label });
     }
     return byKey;
   }

@@ -271,7 +271,8 @@ export type RoutingSettings = z.infer<typeof routingSettingsSchema>;
  * Quota provider ids to provider ids: routing needs both worlds (slots and
  * runway come from quota fetches, availability and sessions from the account's
  * own backend). Claude is here too - a broker-managed subscription with its
- * own backend, even though Pi never serves it.
+ * own backend, even though Pi never serves it. Read it only through the
+ * functions below.
  */
 export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
   codex: "openai-codex",
@@ -280,11 +281,45 @@ export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
 };
 
 /**
+ * The provider id a served model carries for one the allowance catalog or a
+ * pin names (`claude` is `anthropic-claude`, `codex` is `openai-codex`,
+ * `grok` is `xai`); any other id, a served one included, is its own. A place
+ * that forgets this drops every Claude, Codex and Grok model without a word
+ * (FI3-1783), so the translation lives here alone.
+ */
+export function servedProviderOf(provider: string): string {
+  return isAllowanceProvider(provider) ? (QUOTA_TO_PI_PROVIDER[provider] ?? provider) : provider;
+}
+
+/** Whether the allowance catalog names a provider by this id (`claude`, `codex`, `grok`). */
+export function isAllowanceProvider(provider: string): boolean {
+  return Object.hasOwn(QUOTA_TO_PI_PROVIDER, provider);
+}
+
+/**
+ * The allowance catalog's provider id for a served one (`anthropic-claude`
+ * is `claude`); undefined for a provider whose allowance nobody reads
+ * (OpenRouter).
+ */
+export function allowanceProviderOf(provider: string): string | undefined {
+  return Object.keys(QUOTA_TO_PI_PROVIDER).find((id) => QUOTA_TO_PI_PROVIDER[id] === provider);
+}
+
+/**
+ * The `provider/id` key a model is compared by, in served names whichever
+ * name it arrives in: every comparison between an allowance catalog row or
+ * a pin and a served model goes through this, on both sides.
+ */
+export function servedModelKey(model: { provider: string; id: string }): `${string}/${string}` {
+  return `${servedProviderOf(model.provider)}/${model.id}`;
+}
+
+/**
  * Whether Infinitary reads an allowance for this provider id. Sensed providers
  * (Codex, Grok, Claude) get a pending "reading…" row until the first
  * sensor pass lands; everyone else (OpenRouter today) keeps the no-reader
  * sentence. Matches the sensor's own catalog (`QUOTA_PROVIDERS` in core).
  */
 export function isSensedProvider(providerId: string): boolean {
-  return Object.values(QUOTA_TO_PI_PROVIDER).includes(providerId);
+  return allowanceProviderOf(providerId) !== undefined;
 }

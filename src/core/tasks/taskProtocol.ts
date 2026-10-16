@@ -10,7 +10,7 @@ import type { FmEvent } from "@shared/events";
 import type { ModelReason } from "@shared/modelReason";
 import { providerLabel, type Slot, slotSchema } from "@shared/modelSlots";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
-import { QUOTA_TO_PI_PROVIDER } from "@shared/quota";
+import { isAllowanceProvider, servedProviderOf } from "@shared/quota";
 import { type Reasoning, reasoningSchema } from "@shared/reasoning";
 import type { RepoDelivery } from "@shared/repos";
 import { captainActionResult } from "@shared/requiredActions";
@@ -995,8 +995,9 @@ function holdOf(record: TaskRecord): TaskHold | undefined {
     return gate.until !== undefined ? { kind: "time", until: gate.until } : undefined;
   if (gate.kind !== "quota-reset" || !gate.ref) return undefined;
   if (!gate.ref.startsWith("bucket:")) {
-    const provider = QUOTA_TO_PI_PROVIDER[gate.ref];
-    return provider ? { kind: "plan", provider: providerLabel(provider) } : undefined;
+    return isAllowanceProvider(gate.ref)
+      ? { kind: "plan", provider: providerLabel(servedProviderOf(gate.ref)) }
+      : undefined;
   }
   const level = slotSchema.safeParse(gate.ref.slice("bucket:".length));
   if (!level.success) return undefined;

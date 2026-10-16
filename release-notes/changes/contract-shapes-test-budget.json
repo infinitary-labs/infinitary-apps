@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "contract-shapes-test-budget",
+      "reason": "Compiles each distinct published contract shape in a test of its own, with the same strict validator, so the check stops timing out on a loaded Mac and names a shape that does not compile. No shipped behavior changed."
+    }
+  ]
+}

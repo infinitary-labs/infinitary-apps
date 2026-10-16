@@ -45,6 +45,43 @@ const validator = (schema: unknown) => {
   return { safeParse: (value: unknown) => ({ success: validate(value) }) };
 };
 
+// Every shape the file publishes, by where it sits in the file.
+const pairsOf = (
+  section: string,
+  requests: Record<string, { request: unknown; response: unknown }>,
+) =>
+  Object.entries(requests).flatMap(([channel, shape]): [string, unknown][] => [
+    [`${section}["${channel}"].request`, shape.request],
+    [`${section}["${channel}"].response`, shape.response],
+  ]);
+const shapes: [string, unknown][] = [
+  ...pairsOf("requests", published.requests),
+  ...Object.entries(published.pushes).map(([channel, shape]): [string, unknown] => [
+    `pushes["${channel}"].payload`,
+    shape.payload,
+  ]),
+  ...pairsOf("orders.requests", published.orders.requests),
+  ...pairsOf("signInOrders.requests", published.signInOrders.requests),
+  ...pairsOf("updateOrders.requests", published.updateOrders.requests),
+  ...pairsOf("browserOrders.requests", published.browserOrders.requests),
+  ...pairsOf("resourceOrders.requests", published.resourceOrders.requests),
+  ["connection.clientFrame", published.connection.clientFrame],
+  ["connection.homeFrame", published.connection.homeFrame],
+  ["connection.pair.request", published.connection.pair.request],
+  ["connection.pair.grant", published.connection.pair.grant],
+  ["connection.pair.refusal", published.connection.pair.refusal],
+];
+// Shapes written alike compile alike, so each one is compiled once, in a test
+// of its own: one compile is what that test's budget holds, and a shape that
+// does not compile is named.
+const distinctShapes = new Map<string, { at: string[]; shape: unknown }>();
+for (const [at, shape] of shapes) {
+  const key = JSON.stringify(shape);
+  const alike = distinctShapes.get(key);
+  if (alike) alike.at.push(at);
+  else distinctShapes.set(key, { at: [at], shape });
+}
+
 describe("the published contract", () => {
   it("is what the contract renders today", () => {
     expect(
@@ -77,47 +114,26 @@ describe("the published contract", () => {
     expect(published.updateOrders.since).toBe(WORK_UPDATE_SINCE);
   });
 
-  it("gives a standard validator a schema for every shape, on its own", () => {
-    const shapes = [
-      ...Object.values(published.requests).flatMap((shape) => [shape.request, shape.response]),
-      ...Object.values(published.pushes).map((shape) => shape.payload),
-      ...Object.values(published.orders.requests).flatMap((shape) => [
-        shape.request,
-        shape.response,
-      ]),
-      ...Object.values(published.signInOrders.requests).flatMap((shape) => [
-        shape.request,
-        shape.response,
-      ]),
-      ...Object.values(published.updateOrders.requests).flatMap((shape) => [
-        shape.request,
-        shape.response,
-      ]),
-      ...Object.values(published.browserOrders.requests).flatMap((shape) => [
-        shape.request,
-        shape.response,
-      ]),
-      ...Object.values(published.resourceOrders.requests).flatMap((shape) => [
-        shape.request,
-        shape.response,
-      ]),
-      published.connection.clientFrame,
-      published.connection.homeFrame,
-      published.connection.pair.request,
-      published.connection.pair.grant,
-      published.connection.pair.refusal,
-    ];
-    expect(shapes).toHaveLength(
-      2 * CORE_INVOKE_CHANNELS.length +
-        CORE_PUSH_CHANNELS.length +
-        2 * WORK_ORDER_CHANNELS.length +
-        2 * SIGN_IN_ORDER_CHANNELS.length +
-        2 * UPDATE_ORDER_CHANNELS.length +
-        2 * BROWSER_ORDER_CHANNELS.length +
-        2 * Object.keys(resourceOrders).length +
-        5,
-    );
-    for (const shape of shapes) expect(() => validator(shape)).not.toThrow();
+  describe("gives a standard validator a schema for every shape, on its own", () => {
+    it("reads a shape from every request, push, order and frame", () => {
+      expect(shapes).toHaveLength(
+        2 * CORE_INVOKE_CHANNELS.length +
+          CORE_PUSH_CHANNELS.length +
+          2 * WORK_ORDER_CHANNELS.length +
+          2 * SIGN_IN_ORDER_CHANNELS.length +
+          2 * UPDATE_ORDER_CHANNELS.length +
+          2 * BROWSER_ORDER_CHANNELS.length +
+          2 * Object.keys(resourceOrders).length +
+          5,
+      );
+    });
+
+    for (const { at, shape } of distinctShapes.values()) {
+      const alike = at.length > 1 ? ` and ${at.length - 1} alike` : "";
+      it(`compiles ${at[0]}${alike}`, () => {
+        expect(() => validator(shape)).not.toThrow();
+      });
+    }
   });
 
   it("admits a request as the home does", () => {

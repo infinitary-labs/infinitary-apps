@@ -10,6 +10,8 @@ import {
   noSignInsWaitLine,
 } from "@shared/deviceSetup";
 import type { DeviceView } from "@shared/devices";
+import { STARTER_SLOTS } from "@shared/modelSlots";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { ComputerForges } from "@shared/signIns";
 import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -27,6 +29,7 @@ import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
@@ -209,13 +212,14 @@ function signedInTo(
       swept: async () => {},
       onCutOffChange: () => () => true,
       customViews: () => [],
+      // Only an account it holds serves anything there, as its vault lists them.
       availableModelsByAccount: () =>
-        served.map((row) => ({
-          ...row,
-          accountLabel: row.accountId,
-          providerId:
-            accounts.find((account) => account.id === row.accountId)?.providerId ?? "unknown",
-        })),
+        served.flatMap((row) => {
+          const account = accounts.find((entry) => entry.id === row.accountId);
+          return account
+            ? [{ ...row, accountLabel: row.accountId, providerId: account.providerId }]
+            : [];
+        }),
     } as unknown as AccountVault,
     providers: () => [],
     allowance: () => null,
@@ -413,6 +417,75 @@ const THIS_MAC_ON_CODEX = {
 
 /** The models one account on a computer serves, as that computer's own runtime lists them. */
 type ServedThere = { accountId: string; models: { provider: string; id: string; name?: string }[] };
+
+/** What the computer's Grok account serves there: the one model its runtime defines. */
+const GROK_THERE: ServedThere[] = [
+  {
+    accountId: "acct_grok_there",
+    models: [{ provider: "xai", id: "grok-stub", name: "Grok stub" }],
+  },
+];
+
+/** The Codex model the starter map places at medium, which routing takes first. */
+const CODEX_MEDIUM_STARTER = Object.entries(STARTER_SLOTS["openai-codex"] ?? {}).find(([, slots]) =>
+  slots.includes("medium"),
+)?.[0] as string;
+
+/** The Claude models this build's provider-wide catalog lists, as `createServices` hands `catalogModels`. */
+const CLAUDE_CATALOG = CLAUDE_MODELS.map((model) => ({
+  provider: CLAUDE_PROVIDER_ID,
+  id: model.id,
+  name: model.name,
+}));
+
+/**
+ * This Mac signed in to Codex, whose catalog lists the starter map's medium
+ * model beside GPT-6 Sol, a Codex model the starter map places nowhere.
+ */
+const THIS_MAC_ON_NEWER_CODEX = {
+  available: [
+    { provider: "openai-codex", id: CODEX_MEDIUM_STARTER },
+    { provider: "openai-codex", id: "gpt-6-sol" },
+  ],
+  catalog: [
+    {
+      provider: "codex",
+      id: CODEX_MEDIUM_STARTER,
+      label: CODEX_MEDIUM_STARTER,
+      effectivePercentRemaining: 90,
+    },
+    { provider: "codex", id: "gpt-6-sol", label: "GPT-6 Sol", effectivePercentRemaining: 90 },
+  ],
+  catalogModels: [
+    { provider: "openai-codex", id: CODEX_MEDIUM_STARTER, name: CODEX_MEDIUM_STARTER },
+    { provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" },
+  ],
+};
+
+/**
+ * A computer with two Codex accounts: the pinned one serves GPT-6 Sol alone,
+ * and only the other serves the starter map's medium model that routing takes.
+ */
+const TWO_CODEX_THERE = {
+  routing: THIS_MAC_ON_NEWER_CODEX,
+  signedInTo: [
+    computerAccount("acct_codex_pinned", "openai-codex", { pinned: true }),
+    computerAccount("acct_codex_other", "openai-codex"),
+  ],
+  served: [
+    {
+      accountId: "acct_codex_pinned",
+      models: [{ provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" }],
+    },
+    {
+      accountId: "acct_codex_other",
+      models: [
+        { provider: "openai-codex", id: CODEX_MEDIUM_STARTER, name: CODEX_MEDIUM_STARTER },
+        { provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" },
+      ],
+    },
+  ],
+};
 
 /**
  * OpenRouter's list as Pi reads it on a computer signed in to it: more than
@@ -1121,6 +1194,7 @@ describe("a task that runs on a computer that runs work", () => {
         computerAccount("acct_codex_off", "openai-codex", { enabled: false }),
         computerAccount("acct_grok_there", "xai"),
       ],
+      served: GROK_THERE,
       runtime: grok,
     });
     const home = at.home();
@@ -1144,6 +1218,112 @@ describe("a task that runs on a computer that runs work", () => {
     ).toContain("xai/grok-stub");
     // Its brief reached the model there.
     expect(said(api.requests[requests])).toContain("Fix the footer.");
+  });
+
+  it("takes only a model that computer's own sign-in serves there, never one only this Mac's catalog lists (INF-146)", async () => {
+    // This Mac's catalog lists the starter map's medium Codex model; the
+    // computer's Codex account serves GPT-6 Sol alone, as Automatic reads it.
+    const sol = await piStubRuntime(api.url, { provider: "openai-codex", id: "gpt-6-sol" });
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_NEWER_CODEX,
+      signedInTo: [computerAccount("acct_codex_there", "openai-codex")],
+      served: [
+        {
+          accountId: "acct_codex_there",
+          models: [{ provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" }],
+        },
+      ],
+      runtime: sol,
+    });
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-served",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
+    await home.supervisor.dispatchQueuedTask("t-served");
+    const [routed] = home.decisions.routing({ taskIds: ["t-served"], chosen: true });
+    expect(routed).toMatchObject({ provider: "openai-codex", model: "gpt-6-sol" });
+    const who = home.placed.placeOf(at.deviceId).who;
+    expect(routingReasons(home, "t-served")).toContain(
+      `routed among ${who}'s own sign-ins (openai-codex): 1 model`,
+    );
+    await expect.poll(() => home.tasks.get("t-served")?.outcome).toBe("The footer is fixed.");
+    expect(at.bound).toEqual([
+      { backend: "pi", provider: "openai-codex", accountId: "acct_codex_there" },
+    ]);
+  });
+
+  it("binds the account there that serves its model, not the provider's pinned one that does not (INF-146)", async () => {
+    const starter = await piStubRuntime(api.url, {
+      provider: "openai-codex",
+      id: CODEX_MEDIUM_STARTER,
+    });
+    const at = await world(undefined, { ...TWO_CODEX_THERE, runtime: starter });
+    const home = at.home();
+    model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
+    await at.start("t-account");
+    await expect.poll(() => home.tasks.get("t-account")?.outcome).toBe("The footer is fixed.");
+    const [routed] = home.decisions.routing({ taskIds: ["t-account"], chosen: true });
+    expect(routed).toMatchObject({ provider: "openai-codex", model: CODEX_MEDIUM_STARTER });
+    expect(at.bound).toEqual([
+      { backend: "pi", provider: "openai-codex", accountId: "acct_codex_other" },
+    ]);
+  });
+
+  it("binds the same account there again when it resumes after both computers restart, not the provider's pinned one (INF-146)", async () => {
+    const starter = await piStubRuntime(api.url, {
+      provider: "openai-codex",
+      id: CODEX_MEDIUM_STARTER,
+    });
+    const at = await world(undefined, { ...TWO_CODEX_THERE, runtime: starter });
+    // One turn before the restarts, and the steered one after them.
+    model([
+      { text: "Started on the footer." },
+      { tools: [{ name: "report", args: { text: "The header is fixed too." } }] },
+    ]);
+    await at.start("t-resumed");
+    await expect.poll(() => at.home().tasks.get("t-resumed")?.activity).toBe("idle");
+    expect(at.bound).toEqual([
+      { backend: "pi", provider: "openai-codex", accountId: "acct_codex_other" },
+    ]);
+
+    // Neither side holds the conversation any more: this Mac resumes it from
+    // its record, and the computer opens it again with the binding it names.
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach("t-resumed");
+    await at.home().supervisor.steerCrewmate("t-resumed", "Fix the header too.");
+    await expect
+      .poll(() => at.home().tasks.get("t-resumed")?.outcome)
+      .toBe("The header is fixed too.");
+    // A resumed conversation names no model, only the account it is bound to.
+    expect(at.bound.map((binding) => binding.accountId)).toEqual([
+      "acct_codex_other",
+      "acct_codex_other",
+    ]);
+  });
+
+  it("takes this Mac's Claude catalog for a Claude account there that lists no models, as a computer on protocol 2.6.0 through 8.1.0 says (INF-146)", async () => {
+    const at = await world(undefined, {
+      routing: {
+        ...THIS_MAC_ON_CODEX,
+        catalogModels: [...THIS_MAC_ON_CODEX.catalogModels, ...CLAUDE_CATALOG],
+      },
+      signedInTo: [computerAccount("acct_claude_there", CLAUDE_PROVIDER_ID)],
+      // Its vault lists the signed-in Claude account with no models at all.
+      served: [{ accountId: "acct_claude_there", models: [] }],
+    });
+    // What a task set to run there routes among, and the account each model binds.
+    const pool = await at.home().placed.served(at.deviceId);
+    expect(pool.available).toEqual(CLAUDE_CATALOG.map(({ provider, id }) => ({ provider, id })));
+    expect(
+      CLAUDE_CATALOG.map((model) => pool.modelAccounts?.get(`${model.provider}/${model.id}`)),
+    ).toEqual(CLAUDE_CATALOG.map(() => "acct_claude_there"));
   });
 
   it("starts a task on a computer signed in only to OpenRouter, on one of that account's OpenRouter models there (FI3-1355)", async () => {
@@ -1210,7 +1390,11 @@ describe("a task that runs on a computer that runs work", () => {
   it("waits for a computer with no sign-ins yet, says so once, and starts by itself once it has one (FI3-1350)", async () => {
     // The computer lists no account at all; one appears once the captain signs it in there.
     const accounts: AccountView[] = [];
-    const at = await world(undefined, { routing: THIS_MAC_ON_CODEX, signedInTo: accounts });
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: accounts,
+      served: GROK_THERE,
+    });
     const home = at.home();
     seedTask(home.tasks, {
       id: "t-none",
@@ -1254,6 +1438,7 @@ describe("a task that runs on a computer that runs work", () => {
     const at = await world(undefined, {
       routing: THIS_MAC_ON_CODEX,
       signedInTo: [computerAccount("acct_grok_there", "xai")],
+      served: GROK_THERE,
       forges: () => forges,
     });
     const home = at.home();
@@ -1324,6 +1509,7 @@ describe("a task that runs on a computer that runs work", () => {
     const at = await world(undefined, {
       routing: THIS_MAC_ON_CODEX,
       signedInTo: [computerAccount("acct_grok_there", "xai")],
+      served: GROK_THERE,
       // It offers no GitHub sign-in from here, so nothing holds it before the clone.
       refuseClone: () => refuse,
     });

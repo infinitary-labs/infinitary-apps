@@ -40,6 +40,7 @@ import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
 import { jobExitWake } from "../jobs/jobManager";
+import { createAccountStore } from "../models/accountStore";
 import { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import type { TypedWake } from "../orchestrator/wakes";
 import { appPathsFor } from "../paths";
@@ -458,11 +459,19 @@ async function world() {
   });
   if (!joined.ok) throw new Error(joined.reason);
   const deviceId = joined.grant.deviceId;
-  // The Mac mini's own Claude sign-in, on the shared clock, before its helper starts.
+  // The Mac mini's own Claude sign-in, on the shared clock, before its helper
+  // starts, in the store `startComputerAccounts` builds: until its Claude
+  // Code's list is read, the account serves Claude's shipped list.
   const credential = claudeCredential("mac-mini-login");
-  const computerVault = AccountVault.create(
+  const { vault: computerVault } = createAccountStore(
     { accountsDir: join(dataDir, "accounts") },
-    { backends: [credential.backend], now: clock.now },
+    {
+      backends: [credential.backend],
+      now: clock.now,
+      packaged: false,
+      claudeConfigDir: () => join(dataDir, "claude-config"),
+      rail: "home",
+    },
   );
   const account = await computerVault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
   await computerVault.status(account.id, { refresh: true });

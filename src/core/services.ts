@@ -1514,7 +1514,7 @@ export async function createServices(
       repoId ? repos.get(repoId)?.path : await workspace.ensureDefaultRepo(),
     projects: () => repos.list().map((repo) => repo.id),
     // A task there is routed among that computer's own sign-ins, with the
-    // models this Mac's catalog lists for each provider.
+    // models they say they serve, as this Mac's catalog describes them.
     signIns: (deviceId) => deviceSignIns.signInsOf(deviceId),
     // A cut-off that computer names on a task's account there holds the
     // task, as one on this Mac's own holds a task here.

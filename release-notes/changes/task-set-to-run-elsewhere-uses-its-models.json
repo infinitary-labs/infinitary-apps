@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-set-to-run-elsewhere-uses-its-models",
+      "kind": "fix",
+      "title": "A task set to run on your other computer uses only the models it can run",
+      "body": "A task you set to run on a computer that runs work, and a review that follows its task there, now takes only a model that computer's own sign-ins serve, as Automatic already does, and runs on the sign-in there that serves it. Before, it could be given a model only this computer lists, which the sign-in there does not serve.",
+      "area": "projects",
+      "noPicture": "No screen changes: Task Details already say which computer and model the task runs on.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

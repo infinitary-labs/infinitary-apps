@@ -73,6 +73,7 @@ import { reportSummary } from "@shared/feed";
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
+import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
   AUTOMATIC_WORD,
@@ -1584,20 +1585,24 @@ export class CrewSupervisor {
 
   /**
    * A placed task's binding (docs/helper.md, "Its own sign-ins"): its
-   * model's own backend, naming that computer's own account for the
-   * provider, which it binds there. This Mac's accounts never serve it, so
-   * the runtime is this Mac's account-less one, which only presents the
-   * session's control plane. With no model routed, it binds as a task with
-   * none does.
+   * model's own backend, naming that computer's own account that serves the
+   * model, else one for the provider, which it binds there. This Mac's
+   * accounts never serve it, so the runtime is this Mac's account-less one,
+   * which only presents the session's control plane. With no model routed,
+   * it binds as a task with none does.
    */
   private async placedBinding(
     machine: string,
     provider: string | undefined,
     selectedAccount?: string,
+    model?: { provider: string; id: string },
   ): Promise<SessionBinding> {
     if (!provider) return this.options.bind(undefined, undefined);
+    const pool = selectedAccount ? undefined : await this.options.machines?.served(machine);
     const there =
-      selectedAccount ?? (await this.options.machines?.served(machine))?.accounts.get(provider);
+      selectedAccount ??
+      (model?.provider === provider ? pool?.modelAccounts?.get(offeringKey(model)) : undefined) ??
+      pool?.accounts.get(provider);
     if (isCustomApiProvider(provider) && !there)
       throw new Error(
         "This task’s custom connection is not available on the computer it runs on. It cannot use another server automatically.",
@@ -4408,12 +4413,15 @@ export class CrewSupervisor {
    * Open a crewmate's session: its account's binding, the crewmate preset on
    * it, and the factory of that binding's backend. A recorded conversation
    * its backend cannot reopen (a token of another backend's shape) starts
-   * fresh, and the task's timeline says so.
+   * fresh, and the task's timeline says so. `servedModel` is the model a
+   * resumed conversation's record names ("provider/id"), so a task on
+   * another computer binds the account there that served it at its start.
    */
   private async openCrewmate(
     task: TaskRuntime,
     crewmate: CrewmateSpec,
     accountId: string | undefined,
+    servedModel?: string,
   ): Promise<ModelSession> {
     const binding =
       crewmate.machineId === LOCAL_MACHINE_ID
@@ -4422,6 +4430,7 @@ export class CrewSupervisor {
             crewmate.machineId,
             crewmate.model?.provider ?? this.options.router?.servedProvider(task.id),
             accountId,
+            crewmate.model ?? (servedModel ? parseOfferingKey(servedModel) : undefined),
           );
     const factories =
       crewmate.machineId === LOCAL_MACHINE_ID
@@ -6250,6 +6259,7 @@ export class CrewSupervisor {
           ...this.crewmateHooks(task, livePersonal),
         },
         attachment.accountId,
+        record.model ?? undefined,
       );
     } catch (caught) {
       if (this.tasks.get(record.id) === task) this.tasks.delete(record.id);

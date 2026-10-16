@@ -16,6 +16,11 @@ import type { RoutingPool } from "./router";
 export type ComputerPool = RoutingPool & {
   /** The account there that serves each provider, by provider id: its pin, else the first. */
   accounts: ReadonlyMap<string, string>;
+  /**
+   * The account there that serves each model, by provider/id: its pin, else
+   * the first that lists it. Absent for a computer too old to list what it serves.
+   */
+  modelAccounts?: ReadonlyMap<string, string>;
 };
 
 /**
@@ -206,6 +211,30 @@ export function computerPool(
     unowned: extra
       .filter((model) => !isCustomApiProvider(model.provider))
       .map(({ provider, id }) => ({ provider, id })),
+  };
+}
+
+/**
+ * What a computer says each account serves, with this Mac's catalog for the
+ * provider of an account that lists no models: one on protocol 2.6.0
+ * through 8.1.0 lists none for its Claude account, so a task set to run
+ * there takes that provider's catalog for it, as it did before it routed
+ * among the computer's own lists. Automatic placement never fills one in.
+ */
+export function catalogWhereUnlisted(
+  signIns: ComputerSignIns | null,
+  models: readonly QuotaCatalogModel[],
+): ComputerSignIns | null {
+  if (!signIns?.served?.some((row) => row.models.length === 0)) return signIns;
+  return {
+    ...signIns,
+    served: signIns.served.map((row) => {
+      if (row.models.length > 0) return row;
+      const providerId = signIns.accounts.find(
+        (account) => account.id === row.accountId,
+      )?.providerId;
+      return { ...row, models: models.filter((model) => model.provider === providerId) };
+    }),
   };
 }
 

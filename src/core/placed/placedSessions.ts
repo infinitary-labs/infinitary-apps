@@ -53,7 +53,13 @@ import {
 import { keepContentFile } from "../pi/cardImages";
 import { CREWMATE_BROWSER_LINE, crewmateBrowserLine } from "../pi/piResources";
 import type { QuotaCatalogModel } from "../quota/auth";
-import { type ComputerPool, computerPool, heldThere } from "../routing/computerPool";
+import {
+  actualComputerPool,
+  type ComputerPool,
+  catalogWhereUnlisted,
+  computerPool,
+  heldThere,
+} from "../routing/computerPool";
 import type {
   ControlProfile,
   ModelSession,
@@ -187,8 +193,8 @@ export type CrewMachines = {
   /**
    * What the computer's own sign-ins serve, as it last said of them: the
    * models a task that runs there is routed among, and the account there
-   * for each provider (docs/helper.md, "Its own sign-ins"). Never this
-   * Mac's sign-ins.
+   * for each model and each provider (docs/helper.md, "Its own sign-ins").
+   * Never this Mac's sign-ins.
    */
   served(machine: string): Promise<ComputerPool>;
   /**
@@ -524,11 +530,15 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   async served(machine: string): Promise<ComputerPool> {
     const signIns = (await this.options.signIns?.(machine)) ?? null;
-    return computerPool(
-      this.placeOf(machine).who,
-      signIns,
-      this.options.catalogModels?.() ?? [],
-      this.options.now(),
+    const who = this.placeOf(machine).who;
+    const models = this.options.catalogModels?.() ?? [];
+    const now = this.options.now();
+    // Only the models its sign-ins say they serve, as an Automatic start
+    // routes among; an account that lists none, and every account of a
+    // computer too old to say, takes this Mac's catalog for its provider.
+    return (
+      actualComputerPool(who, catalogWhereUnlisted(signIns, models), models, now) ??
+      computerPool(who, signIns, models, now)
     );
   }
 

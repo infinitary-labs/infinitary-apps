@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reviewer-orbits-reviewee",
+      "kind": "improvement",
+      "title": "A reviewer circles the work it is reviewing",
+      "body": "During a careful review, the crewmate doing the review now circles the crewmate whose work it is checking, instead of two glowing dots spinning around the reviewed one. It circles until the review closes, then leaves like any finished crewmate. Its summary says which task it is reviewing.",
+      "area": "crewmates",
+      "noPicture": "The change is a crewmate's motion around another on the stage, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

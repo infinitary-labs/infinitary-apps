@@ -122,19 +122,24 @@ All clusters and their controls hide with the character frame under cards.
 
 A host-commissioned review task identifies the builder through its fixed parent edge and its `shape.kind = review`.
 The task board and `task_changed` stream carry that typed `reviewOf` id; an ordinary child cannot trigger the cue.
-While the review task remains active (including an idle reviewer awaiting a re-review), the builder's existing solid gets two glowing electrons on crossed orbits, with ember trails and no drawn rings.
-The electrons disappear as soon as the review closes or the builder departs.
-Restart seeds the same relationship from the live board, and two reviews of one builder do not cancel each other when one ends.
+While the review task remains active (including an idle reviewer awaiting a re-review), the reviewer crewmate itself circles the builder it reviews, on the same circle a waiting crewmate uses ("Waiting on another crewmate" below): 64 scene pixels, 24 degrees per second, spanned by the builder's radial spoke and its main plane's normal.
+Nothing else is drawn around the builder; the review has no electrons.
+The reviewer keeps its own solid, label and working/idle color, and its original slot stays reserved.
+The circle ends as soon as the review closes or the builder departs.
+Closing the review closes the reviewer's task, so the reviewer takes its existing departure.
+Its offset eases out on the springs over the fall, so it leaves from the seat it was drawn at and glides to its normal path; reduced motion settles at once.
+Restart seeds the same relationship from the live board, and two reviews of one builder do not cancel each other when one ends: the other keeps circling.
+`CrewOrbit.withReviewCues` turns each live review into a satellite cue beside the recorded waits.
+The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits or tethers to its own reviewer (the Tasks list and its gutter still show the wait).
+A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
+More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a circle that would crowd or leave the scene keeps the reviewer on its slot with a tether to the builder.
+A reviewer and builder on different computers stay where they are and draw no line, because each computer's orbit holds only its own crew.
+The reviewer's summary names the relation in every placement: a Reviewing row with the builder's key, opening its record, beside any Blocked by row.
+Packets and a steer's send-off aim at where the reviewer is drawn, circle included.
+The circle is always 64 scene pixels, even when it crosses the first mate; the captain chose that overlap, so no clearance rule keeps it off the first mate (INF-51).
+Reduced motion paints one settled frame.
 
-The electrons and their 39° ember trails use the working wire token, including in the light theme.
-Their base path radii are 70% of the original: 36.4 × 17.5 px for a 30 px crewmate; this scales with the glyph, not the crew's orbital planes.
-At 8× the prototype's base orbital periods (5.4 and 6.2 seconds), both paths gently wander in tilt and radius and their timing drifts smoothly.
-This is a visual metaphor, not a physics simulation.
-It changes **none** of the crewmate's spin, position, working/idle color, solid, or lifecycle.
-The far halves paint behind its wires, the near halves in front; reduced motion renders one settled, unmoving frame.
-Nothing new is drawn around the first mate.
-
-`crewSignal.test.ts` checks the live review start/close, unrelated children, multiple reviews, unchanged crewmate spin and position, and boot.
+`crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the tether fallback, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer, two reviews, mixed companions and a crowded stage.
 
 ## Tier solids
 
@@ -162,7 +167,7 @@ A chain, more than one blocker, a larger group, a crowd against unrelated crew, 
 A missing or remote blocker is named in the summary.
 No crewmate is invented, and no one is moved onto another computer.
 Continuing, paused and unknown work keep their slots.
-The original slot, solid, label, review cue and computer stay reserved.
+The original slot, solid, label and computer stay reserved.
 Clearing the wait removes the cue, and the offset returns on the existing springs.
 Reduced motion paints one settled frame.
 Inspecting a Tasks row does not pause the stage.
@@ -356,7 +361,7 @@ A rush still settling when the next black hole begins carries on from its level.
 Only travel speeds up.
 The extra travel is a lead on the orbit's own clock, and every angle spring moves with its target, so the crew race rigidly on their evenly spaced slots instead of trailing them.
 Every orbit keeps its direction and relative pace, so the inner (+8°/s) and middle (−20°/s) orbits race in opposite directions.
-Spawns, departures, packets, nudges, flickers, tiers and the review electrons keep their own pace, and the lead stays where the rush left it, so nothing jumps when it ends.
+Spawns, departures, packets, nudges, flickers and tiers keep their own pace, and the lead stays where the rush left it, so nothing jumps when it ends.
 An orbiting crewmate trails a streak of its own light, lifted a quarter toward white-hot, along its own projected path, thinning and fading away from it (`drawCrewmate`).
 The first mate's own black hole is untouched.
 So are the other computers' clusters: their orbits receive a rush level of zero, since each orbits its own center out of the first mate's pull ("Multiple work computers" above).

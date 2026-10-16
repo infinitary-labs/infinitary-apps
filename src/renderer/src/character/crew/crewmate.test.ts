@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  type CrewColors,
-  crewmateLight,
-  drawCrewmate,
-  drawReviewElectrons,
-  REVIEW_ORBIT_RADII,
-  solidFor,
-  TIER_SOLIDS,
-} from "./crewmate";
+import { type CrewColors, crewmateLight, drawCrewmate, solidFor, TIER_SOLIDS } from "./crewmate";
 import type { CrewmateFrame } from "./orbit";
 
 const colors: CrewColors = { accent: [127, 220, 255], hot: [255, 162, 87], boost: 1 };
@@ -82,55 +74,6 @@ const whiteHot = (style: string) => {
   const [r = 0, g = 0, b = 0] = channels(style);
   return r >= 250 && g >= 238 && b >= 218;
 };
-
-describe("review electrons", () => {
-  it("uses the chosen 70% radii at the reference glyph size, on both paths", () => {
-    expect(REVIEW_ORBIT_RADII.x).toBeCloseTo(36.4);
-    expect(REVIEW_ORBIT_RADII.y).toBeCloseTo(17.5);
-    const frame = { ...settled, reviewActive: true };
-    const draw = (half: "near" | "far", reducedMotion: boolean) => {
-      const rec = recordingContext();
-      drawReviewElectrons(rec.ctx, frame, 0, 0, colors, 0, half, reducedMotion);
-      return rec.log
-        .filter((line) => line.startsWith("A"))
-        .map((line) => {
-          const [x, y] = line.slice(1).split(",").map(Number);
-          return Math.hypot((x ?? 0) - frame.x, (y ?? 0) - frame.y);
-        });
-    };
-    // Wandering and tilted ellipses fit within the selected major radius;
-    // both occlusion halves and the still frame use the same geometry.
-    for (const reducedMotion of [false, true]) {
-      const distances = [...draw("near", reducedMotion), ...draw("far", reducedMotion)];
-      expect(distances.length).toBeGreaterThan(2);
-      expect(Math.max(...distances)).toBeLessThan(REVIEW_ORBIT_RADII.x * 1.14);
-    }
-  });
-
-  it("paints only a reviewed builder, in the working token, without changing its spin", () => {
-    const plain = recordingContext();
-    drawReviewElectrons(plain.ctx, settled, 0, 0, colors, 1500, "near");
-    expect(plain.log).toEqual([]);
-    const reviewed = { ...settled, reviewActive: true };
-    const originalSpin = reviewed.spin;
-    const lit = recordingContext();
-    drawReviewElectrons(lit.ctx, reviewed, 0, 0, colors, 1500, "near");
-    drawReviewElectrons(lit.ctx, reviewed, 0, 0, colors, 1500, "far");
-    expect(lit.fills.length).toBeGreaterThan(2);
-    expect(lit.fills.every((f) => f.style === "rgba(255,162,87,1)")).toBe(true);
-    expect(lit.strokes).toEqual([]);
-    expect(reviewed.spin).toBe(originalSpin);
-  });
-
-  it("keeps one settled frame under reduced motion", () => {
-    const frame = { ...settled, reviewActive: true };
-    const first = recordingContext();
-    drawReviewElectrons(first.ctx, frame, 0, 0, colors, 1000, "near", true);
-    const later = recordingContext();
-    drawReviewElectrons(later.ctx, frame, 0, 0, colors, 8000, "near", true);
-    expect(later.log).toEqual(first.log);
-  });
-});
 
 describe("drawCrewmate's speed streak", () => {
   // The arc a racing crewmate just swept: from its own position, backwards.

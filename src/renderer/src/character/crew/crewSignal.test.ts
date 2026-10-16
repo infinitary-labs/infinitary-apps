@@ -211,56 +211,193 @@ describe("crew orbit wiring", () => {
     expect(m.takeCues()).toEqual([]);
   });
 
-  it("marks only the builder of a live adversarial review, and clears it when review ends", () => {
-    const m = new CrewOrbit(0);
-    seedCrew(
-      m,
-      [
-        view({ id: "builder", activity: "idle" }),
-        view({ id: "ordinary-child", parentId: "builder" }),
-        view({ id: "reviewer", parentId: "builder", reviewOf: "builder", activity: "idle" }),
-      ],
-      0,
-    );
-    const marked = () =>
-      m
-        .update(1000)
-        .crew.filter((c) => c.reviewActive)
-        .map((c) => c.id);
-    expect(marked()).toEqual(["builder"]);
-    // A second live reviewer does not replace the first or put electrons on itself.
-    applyCrewEvent(m, changed({ taskId: "reviewer-2", reviewOf: "builder" }), 1010);
-    expect(marked()).toEqual(["builder"]);
-    applyCrewEvent(
-      m,
-      changed({ taskId: "reviewer", reviewOf: "builder", status: "done", from: "active" }),
-      1020,
-    );
-    expect(marked()).toEqual(["builder"]);
-    applyCrewEvent(
-      m,
-      changed({ taskId: "reviewer-2", reviewOf: "builder", status: "done", from: "active" }),
-      1030,
-    );
-    expect(marked()).toEqual([]);
-    // An ordinary child changing activity cannot trigger the review cue.
-    applyCrewEvent(m, changed({ taskId: "ordinary-child", activity: "running" }), 1040);
-    expect(marked()).toEqual([]);
-  });
+  // Captain's INF-51 choice: the reviewer circles its builder in place of electrons.
+  describe("a live review", () => {
+    const adaptive = () => new CrewOrbit(0, undefined, () => 0.5, "adaptive");
+    const rows = [
+      view({ id: "builder", key: "SCR-1", activity: "idle" }),
+      view({ id: "ordinary-child", key: "SCR-3", parentId: "builder" }),
+      view({
+        id: "reviewer",
+        key: "SCR-2",
+        parentId: "builder",
+        reviewOf: "builder",
+        activity: "idle",
+      }),
+      view({ id: "other", key: "SCR-4", activity: "idle" }),
+    ];
+    const gap = (m: CrewOrbit, t: number, a: string, b: string) => {
+      const crew = m.update(t, true).crew;
+      const p = crew.find((c) => c.id === a);
+      const q = crew.find((c) => c.id === b);
+      return Math.hypot((p?.x ?? 0) - (q?.x ?? 0), (p?.y ?? 0) - (q?.y ?? 0));
+    };
+    const base = (reviewOf: string | undefined) => {
+      const m = adaptive();
+      seedCrew(
+        m,
+        rows.map((r) => (r.id === "reviewer" && !reviewOf ? { ...r, reviewOf: undefined } : r)),
+        0,
+      );
+      return m;
+    };
 
-  it("leaves crewmate spin and position byte-for-byte unchanged by the review cue", () => {
-    const plain = new CrewOrbit(0, undefined, () => 0.5);
-    const reviewed = new CrewOrbit(0, undefined, () => 0.5);
-    for (const model of [plain, reviewed]) model.spawn("builder", "working", 0, true);
-    reviewed.setReview("reviewer", "builder");
-    for (const t of [0, 16, 200, 1000, 2300, 3600]) {
-      const a = plain.update(t).crew[0];
-      const b = reviewed.update(t).crew[0];
-      expect(b?.spin).toBe(a?.spin);
-      expect(b?.x).toBe(a?.x);
-      expect(b?.y).toBe(a?.y);
-      expect(b?.work).toBe(a?.work);
-    }
+    it("moves only the reviewer onto a circle about its builder, and back when the review closes", () => {
+      const plain = base(undefined);
+      const m = base("builder");
+      const a = plain.update(0, true).crew;
+      const b = m.update(0, true).crew;
+      for (const id of ["builder", "ordinary-child", "other"]) {
+        expect(b.find((c) => c.id === id)).toEqual(a.find((c) => c.id === id));
+      }
+      // Within the circle's reach (64 scene px, projected) and off its own slot.
+      expect(gap(m, 0, "reviewer", "builder")).toBeLessThan(80);
+      expect(gap(m, 0, "reviewer", "builder")).toBeGreaterThan(8);
+      m.setReview("reviewer", null);
+      expect(m.update(200, true).crew.find((c) => c.id === "reviewer")).toEqual(
+        plain.update(200, true).crew.find((c) => c.id === "reviewer"),
+      );
+    });
+
+    it("has no electrons and follows an idle re-review through the task record", () => {
+      const m = base(undefined);
+      applyCrewEvent(m, changed({ taskId: "reviewer", reviewOf: "builder", activity: "idle" }), 10);
+      expect(m.update(20, true).crew.every((c) => !("reviewActive" in c))).toBe(true);
+      expect(gap(m, 20, "reviewer", "builder")).toBeLessThan(80);
+    });
+
+    it("travels around its builder on the stage clock and holds still when settled", () => {
+      const m = base("builder");
+      const angle = (frame: OrbitFrame) => {
+        const r = frame.crew.find((c) => c.id === "reviewer");
+        const b = frame.crew.find((c) => c.id === "builder");
+        return Math.atan2((r?.y ?? 0) - (b?.y ?? 0), (r?.x ?? 0) - (b?.x ?? 0));
+      };
+      const first = angle(run(m, 0, 3000));
+      const turned = Math.abs(first - angle(run(m, 3016, 6000)));
+      expect(Math.min(turned, 2 * Math.PI - turned)).toBeGreaterThan(0.1);
+      const still = angle(m.update(3000, true));
+      expect(angle(m.update(9000, true))).toBeCloseTo(still, 5);
+    });
+
+    it("circles its builder, not the other way, when the board holds the builder on the review", () => {
+      // The real board: the host blocks the builder on its review and shows it idle on a dependency.
+      const m = adaptive();
+      seedCrew(
+        m,
+        [
+          view({
+            id: "builder",
+            key: "SCR-1",
+            activity: "idle",
+            blockedBy: ["SCR-2"],
+            workPosture: { state: "idle", reason: "dependency" },
+          }),
+          view({ id: "reviewer", key: "SCR-2", reviewOf: "builder", activity: "running" }),
+        ],
+        0,
+      );
+      const plain = adaptive();
+      seedCrew(
+        plain,
+        [view({ id: "builder", key: "SCR-1" }), view({ id: "reviewer", key: "SCR-2" })],
+        0,
+      );
+      const frame = m.update(0, true);
+      const slots = plain.update(0, true).crew;
+      expect(frame.links).toEqual([]);
+      expect(frame.crew.find((c) => c.id === "builder")?.x).toBe(
+        slots.find((c) => c.id === "builder")?.x,
+      );
+      expect(frame.crew.find((c) => c.id === "reviewer")?.x).not.toBe(
+        slots.find((c) => c.id === "reviewer")?.x,
+      );
+    });
+
+    it("leaves from the seat it was drawn at when its review task closes, then glides to its path", () => {
+      const m = base("builder");
+      run(m, 0, 3000);
+      const seat = m.update(3016).crew.find((c) => c.id === "reviewer");
+      applyCrewEvent(
+        m,
+        changed({ taskId: "reviewer", reviewOf: "builder", status: "done", from: "active" }),
+        3016,
+      );
+      const first = m.update(3032).crew.find((c) => c.id === "reviewer");
+      // No jump: one frame later it is still near the drawn seat, not at its reserved slot.
+      expect(
+        Math.hypot((first?.x ?? 0) - (seat?.x ?? 0), (first?.y ?? 0) - (seat?.y ?? 0)),
+      ).toBeLessThan(10);
+      expect(first?.phase).toBe("leaving");
+      // The offset eases out over the fall: well on its way to the plain path before it ends.
+      const plain = base(undefined);
+      run(plain, 0, 3000);
+      applyCrewEvent(plain, changed({ taskId: "reviewer", status: "done", from: "active" }), 3016);
+      const reviewerAt = (model: CrewOrbit, from: number, to: number) => {
+        const frame = run(model, from, to).crew.find((c) => c.id === "reviewer");
+        expect(frame).toBeDefined();
+        return frame;
+      };
+      const gap = (a?: { x: number; y: number }, b?: { x: number; y: number }) =>
+        Math.hypot((a?.x ?? 0) - (b?.x ?? 0), (a?.y ?? 0) - (b?.y ?? 0));
+      const early = gap(reviewerAt(m, 3048, 3100), reviewerAt(plain, 3048, 3100));
+      const later = gap(reviewerAt(m, 3116, 3500), reviewerAt(plain, 3116, 3500));
+      expect(later).toBeLessThan(early);
+    });
+
+    it("aims a steer's send-off and its packets at where the reviewer is drawn", () => {
+      const m = base("builder");
+      m.update(0, true);
+      m.signal("reviewer", "report", 0);
+      const frame = m.update(100);
+      const drawn = frame.crew.find((c) => c.id === "reviewer");
+      const packet = frame.packets[0];
+      // A report packet starts at the crewmate itself.
+      expect(packet?.direction).toBe("report");
+      expect(
+        Math.hypot((packet?.x ?? 0) - (drawn?.x ?? 0), (packet?.y ?? 0) - (drawn?.y ?? 0)),
+      ).toBeLessThan(Math.hypot(drawn?.x ?? 0, drawn?.y ?? 0));
+      m.takeCues();
+      m.signal("reviewer", "steer", 200);
+      const cue = m.takeCues().find((c) => c.kind === "sendoff");
+      const len = Math.hypot(drawn?.x ?? 0, drawn?.y ?? 0);
+      expect(cue).toMatchObject({
+        dx: expect.closeTo((drawn?.x ?? 0) / len, 1),
+        dy: expect.closeTo((drawn?.y ?? 0) / len, 1),
+      });
+    });
+
+    it("keeps an ordinary child and a reviewer of someone absent on their slots", () => {
+      const m = adaptive();
+      seedCrew(m, [view({ id: "a" }), view({ id: "r", reviewOf: "gone" })], 0);
+      const plain = adaptive();
+      seedCrew(plain, [view({ id: "a" }), view({ id: "r" })], 0);
+      expect(m.update(0, true).crew).toEqual(plain.update(0, true).crew);
+    });
+
+    it("shares three seats and falls back to tethers beyond them", () => {
+      const m = adaptive();
+      const ids = ["r1", "r2", "r3", "r4"];
+      seedCrew(
+        m,
+        [
+          view({ id: "builder", activity: "idle" }),
+          ...ids.map((id) => view({ id, reviewOf: "builder", activity: "idle" })),
+        ],
+        0,
+      );
+      expect(m.update(0, true).links).toHaveLength(4);
+      const three = adaptive();
+      seedCrew(
+        three,
+        [
+          view({ id: "builder", activity: "idle" }),
+          ...ids.slice(0, 3).map((id) => view({ id, reviewOf: "builder", activity: "idle" })),
+        ],
+        0,
+      );
+      expect(three.update(0, true).links).toEqual([]);
+    });
   });
 
   it("paints each crewmate's solid from the slot it is served on", () => {

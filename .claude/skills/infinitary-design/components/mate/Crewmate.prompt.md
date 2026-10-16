@@ -35,8 +35,7 @@ A crewmate's own spin takes a quarter of the boost, so its solid still reads.
 While racing, an orbiting crewmate trails a speed streak along its own path: its own light lifted a quarter toward white-hot, thinning and fading over the arc swept in the last 0.06s (at most 1.5rad).
 Arrivals, departures, packets and every other cue keep their pace; the pointer's slowdown and pause apply to the rush; reduced motion plays none of it.
 
-A live adversarial review adds two ember electrons on crossed, invisible paths around the builder's solid.
-At a 30 px glyph their base path radii are 36.4 × 17.5 px (70% of the original 52 × 25); the paths wander gently, and reduced motion holds a still frame.
+During a live adversarial review the reviewer crewmate circles the builder on the waiting crewmate's circle, 64 px at 24° per second; the builder's own solid is unchanged.
 This cue does not resize the crew's orbital planes or change the other shape states.
 
 Naming the colors (captain, FI3-436, 2026-10-01; docs/first-launch.md "The crewmate's state words"): for someone new, a crewmate on the home stage says what its color means once.

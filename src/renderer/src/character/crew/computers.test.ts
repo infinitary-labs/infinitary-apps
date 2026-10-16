@@ -204,18 +204,115 @@ describe("computer constellations", () => {
     expect(model.update(2, true).crew).toEqual([]);
   });
 
-  it("carries review cues and corrected placements without duplicate crew", () => {
+  it("carries review edges and corrected placements without duplicate crew", () => {
     const model = new ComputerOrbits(0);
     model.setReview("review", "builder");
     seed(model, "builder", "a");
+    seed(model, "review", "a");
     model.configure([device("a"), device("b")]);
     model.settleBootRoster(0);
-    expect(model.update(0, true).crew[0]?.reviewActive).toBe(true);
+    const slots = (m: ComputerOrbits) => m.update(0, true).crew.map((c) => [c.id, c.x, c.y]);
+    const plain = new ComputerOrbits(0);
+    seed(plain, "builder", "a");
+    seed(plain, "review", "a");
+    plain.configure([device("a"), device("b")]);
+    plain.settleBootRoster(0);
+    // The reviewer on the same remote computer circles its builder; the builder stays.
+    const circled = new Map(slots(model).map(([id, x]) => [id, x]));
+    const resting = new Map(slots(plain).map(([id, x]) => [id, x]));
+    expect(circled.get("builder")).toBe(resting.get("builder"));
+    expect(circled.get("review")).not.toBe(resting.get("review"));
     model.setPlacement("builder", "b");
     const frame = model.update(0, true);
-    expect(frame.crew).toHaveLength(1);
-    expect(frame.crew[0]?.computerId).toBe("b");
-    expect(frame.crew[0]?.tier).toBe("high");
+    expect(frame.crew).toHaveLength(2);
+    expect(frame.crew.find((c) => c.id === "builder")?.computerId).toBe("b");
+    expect(frame.crew.find((c) => c.id === "builder")?.tier).toBe("high");
+  });
+
+  describe("reviews on the stage (INF-51)", () => {
+    const stage = (placements: Record<string, string | null>, reviews: [string, string][]) => {
+      const model = new ComputerOrbits(0);
+      model.configure([device("a"), device("b")]);
+      for (const [id, computer] of Object.entries(placements)) seed(model, id, computer);
+      for (const [reviewer, builder] of reviews) model.setReview(reviewer, builder);
+      model.settleBootRoster(0);
+      return model;
+    };
+    const xs = (model: ComputerOrbits) =>
+      new Map(model.update(0, true).crew.map((c) => [c.id, c.x] as const));
+
+    it("keeps a reviewer on another computer than its builder on its own slot", () => {
+      const placements = { builder: "a", review: "b" };
+      const apart = xs(stage(placements, [["review", "builder"]]));
+      const plain = xs(stage(placements, []));
+      expect(apart.get("review")).toBe(plain.get("review"));
+      expect(apart.get("builder")).toBe(plain.get("builder"));
+    });
+
+    it("flies a reviewer on another computer to the first mate when its review closes", () => {
+      const model = stage({ builder: "a", review: "a" }, [["review", "builder"]]);
+      let now = 0;
+      const frame = () => model.update(now).crew.find((c) => c.id === "review");
+      for (; now < 3000; now += 16) frame();
+      const start = frame();
+      model.leave("review", "home", now);
+      let last = start;
+      // The trip to the first mate takes longer the farther it flies; read its last frame.
+      for (let t = 0; t < 3000; t += 16) {
+        now += 16;
+        const next = frame();
+        if (!next) break;
+        last = next;
+      }
+      const reach = (c?: { x: number; y: number }) => Math.hypot(c?.x ?? 0, c?.y ?? 0);
+      // It falls toward the center, not toward the cluster seat beside it.
+      expect(reach(last)).toBeLessThan(reach(start) * 0.25);
+    });
+
+    it("keeps the other reviewer circling when one of two reviews closes", () => {
+      const placements = { builder: "a", r1: "a", r2: "a" };
+      const both = stage(placements, [
+        ["r1", "builder"],
+        ["r2", "builder"],
+      ]);
+      const plain = xs(stage(placements, []));
+      both.setReview("r1", null);
+      const after = xs(both);
+      expect(after.get("r2")).not.toBe(plain.get("r2"));
+      expect(after.get("r1")).toBe(plain.get("r1"));
+    });
+
+    it("shares seats with a waiting crewmate without tethers", () => {
+      const model = stage({ builder: "a", waiter: "a", review: "a" }, [["review", "builder"]]);
+      model.setDependencies([
+        {
+          waiterId: "waiter",
+          mode: "satellite",
+          blockerId: "builder",
+          index: 0,
+          count: 1,
+          arrows: [],
+        },
+      ]);
+      const plain = xs(stage({ builder: "a", waiter: "a", review: "a" }, []));
+      const frame = model.update(0, true);
+      expect(frame.links).toEqual([]);
+      for (const id of ["waiter", "review"])
+        expect(frame.crew.find((c) => c.id === id)?.x).not.toBe(plain.get(id));
+    });
+
+    it("never crowds an unrelated crewmate: it circles clear or keeps its slot with a tether", () => {
+      const placements: Record<string, string | null> = { builder: null, review: null };
+      for (let i = 0; i < 46; i++) placements[`other${i}`] = null;
+      const frame = stage(placements, [["review", "builder"]]).update(0, true);
+      const mine = frame.crew.find((c) => c.id === "review");
+      const clear = frame.crew
+        .filter((c) => c.id !== "review" && c.id !== "builder")
+        .every((c) => Math.hypot(c.x - (mine?.x ?? 0), c.y - (mine?.y ?? 0)) >= 38);
+      expect(clear || frame.links.some((l) => l.fromId === "review" && l.toId === "builder")).toBe(
+        true,
+      );
+    });
   });
 });
 

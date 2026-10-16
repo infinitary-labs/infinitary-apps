@@ -514,7 +514,6 @@ export class ComputerOrbits extends CrewOrbit {
                 activityUnknown: true,
                 status: "idle" as const,
                 alpha: c.alpha * 0.45,
-                reviewActive: false,
                 flicker: 0,
                 flash: 0,
                 nudge: 0,

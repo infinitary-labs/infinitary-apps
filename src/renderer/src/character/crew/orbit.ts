@@ -34,7 +34,7 @@
 // (REMOTE_TRIP); its cues carry a unit direction so the Firstmate glances
 // toward the cluster.
 
-import type { CenterCue } from "@shared/dependencyVisual";
+import { type CenterCue, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { Slot } from "@shared/modelSlots";
 import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
@@ -217,8 +217,6 @@ export type CrewmateFrame = {
   flash: number;
   /** Token-flicker strength (0 = none): a completed request's usage, wavering out (../flicker). */
   flicker: number;
-  /** A live independent review is reading this crewmate's work. */
-  reviewActive?: boolean;
   /** The slot the crewmate is served on, which picks its solid (./crewmate.ts); absent when unknown. */
   tier?: Slot;
   seed: number;
@@ -301,6 +299,8 @@ type Crewmate = {
   companionX: Spring;
   companionY: Spring;
   companionZ: Spring;
+  /** Where it was last drawn, companion offset included; a send-off aims here. */
+  drawn?: Point;
 };
 
 const easeIn = (t: number): number => t * t;
@@ -320,7 +320,7 @@ export function glyphScaleFor(count: number): number {
 
 export class CrewOrbit {
   private crew = new Map<string, Crewmate>();
-  /** Reviewer task -> builder task; one review ending cannot hide another. */
+  /** Reviewer task -> builder task; the reviewer circles its builder while the review is live. */
   private reviews = new Map<string, string>();
   /** Recorded waits. The slot stays reserved; only the painted offset moves. */
   private dependencies = new Map<string, CenterCue>();
@@ -512,11 +512,12 @@ export class CrewOrbit {
     c.packets.push({ direction, at: now });
     if (direction === "steer") {
       const a = c.angle.x;
+      const circling = Math.hypot(c.companionX.x, c.companionY.x, c.companionZ.x) > 0.5;
       const point =
         this.planeBlend.x === 0 && !this.projection
           ? { x: Math.cos(a), y: Math.sin(a) }
           : this.position(c, a, this.projection ? c.radius.x : 1);
-      const dir = this.projection ? unit(point) : point;
+      const dir = circling && c.drawn ? unit(c.drawn) : this.projection ? unit(point) : point;
       this.cues.push({ kind: "sendoff", dx: dir.x, dy: dir.y, strength: 0.5 });
     }
     this.bump();
@@ -558,6 +559,7 @@ export class CrewOrbit {
     c.leaveAt = now;
     c.leaveFromR = c.radius.x;
     c.packets = [];
+    delete c.drawn;
     delete c.path;
     delete c.tripMs;
     if (this.projection && mode === "home") {
@@ -779,8 +781,8 @@ export class CrewOrbit {
       string,
       { x: number; y: number; z: number; depth: number; radius: number }
     >();
-    const reviewedBuilders = new Set(this.reviews.values());
     const packets: PacketFrame[] = [];
+    const anchors = new Map<string, { c: Crewmate; wobble: number }>();
     const gone: string[] = [];
     let working = 0;
     let idle = 0;
@@ -973,50 +975,21 @@ export class CrewOrbit {
         flash,
         flicker,
         ...(c.tier ? { tier: c.tier } : {}),
-        ...(c.phase === "orbiting" && reviewedBuilders.has(c.id) ? { reviewActive: true } : {}),
         seed: c.seed,
       });
 
-      // Packets ride the live line between the crewmate and the core.
-      const keep: Packet[] = [];
-      // A remote crewmate's packet takes longer the farther it flies (REMOTE_TRIP).
-      const packetMs = this.projection
-        ? remoteTripMs(tuning.packetMs, Math.hypot(position.x, position.y))
-        : tuning.packetMs;
-      for (const p of c.packets) {
-        const t = settled ? 1 : clamp01((now - p.at) / packetMs);
-        if (t >= 1) {
-          if (p.direction === "report") this.cues.push({ kind: "receive" });
-          else c.flashAt = now;
-          continue;
-        }
-        keep.push(p);
-        const cx = position.x;
-        const cy = position.y;
-        const from = p.direction === "report" ? { x: cx, y: cy } : { x: 0, y: 0 };
-        const to = p.direction === "report" ? { x: 0, y: 0 } : { x: cx, y: cy };
-        // A gentle arc: the control point bulges 12% of the distance to one side.
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const mx = (from.x + to.x) / 2 - dy * 0.12;
-        const my = (from.y + to.y) / 2 + dx * 0.12;
-        const u = easeInOut(t);
-        const w0 = (1 - u) * (1 - u);
-        const w1 = 2 * (1 - u) * u;
-        const w2 = u * u;
-        packets.push({
-          direction: p.direction,
-          x: w0 * from.x + w1 * mx + w2 * to.x,
-          y: w0 * from.y + w1 * my + w2 * to.y,
-          t,
-          alpha: Math.sin(t * Math.PI) ** 0.5,
-        });
-      }
-      c.packets = keep;
+      anchors.set(c.id, { c, wobble });
     }
     for (const id of gone) this.crew.delete(id);
     if (gone.length > 0) this.bump();
     const links = this.applyCompanions(crewFrames, scenes, now, settled, dt);
+    // Packets ride the line to where the crewmate is drawn, circle included.
+    for (const frame of crewFrames) {
+      const anchor = anchors.get(frame.id);
+      if (!anchor) continue;
+      anchor.c.drawn = { x: frame.x, y: frame.y - anchor.wobble };
+      this.ridePackets(anchor.c, anchor.c.drawn, now, settled, packets);
+    }
 
     return {
       crew: mix > 0 ? crewFrames.sort((a, b) => a.depth - b.depth) : crewFrames,
@@ -1033,6 +1006,103 @@ export class CrewOrbit {
     };
   }
 
+  /** Advance one crewmate's packets along the live line between it and the core. */
+  private ridePackets(
+    c: Crewmate,
+    position: Point,
+    now: number,
+    settled: boolean,
+    packets: PacketFrame[],
+  ): void {
+    const keep: Packet[] = [];
+    // A remote crewmate's packet takes longer the farther it flies (REMOTE_TRIP).
+    const packetMs = this.projection
+      ? remoteTripMs(this.tuning.packetMs, Math.hypot(position.x, position.y))
+      : this.tuning.packetMs;
+    for (const p of c.packets) {
+      const t = settled ? 1 : clamp01((now - p.at) / packetMs);
+      if (t >= 1) {
+        if (p.direction === "report") this.cues.push({ kind: "receive" });
+        else c.flashAt = now;
+        continue;
+      }
+      keep.push(p);
+      const cx = position.x;
+      const cy = position.y;
+      const from = p.direction === "report" ? { x: cx, y: cy } : { x: 0, y: 0 };
+      const to = p.direction === "report" ? { x: 0, y: 0 } : { x: cx, y: cy };
+      // A gentle arc: the control point bulges 12% of the distance to one side.
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const mx = (from.x + to.x) / 2 - dy * 0.12;
+      const my = (from.y + to.y) / 2 + dx * 0.12;
+      const u = easeInOut(t);
+      const w0 = (1 - u) * (1 - u);
+      const w1 = 2 * (1 - u) * u;
+      const w2 = u * u;
+      packets.push({
+        direction: p.direction,
+        x: w0 * from.x + w1 * mx + w2 * to.x,
+        y: w0 * from.y + w1 * my + w2 * to.y,
+        t,
+        alpha: Math.sin(t * Math.PI) ** 0.5,
+      });
+    }
+    c.packets = keep;
+  }
+
+  /**
+   * The recorded waits plus each live review: a reviewer circles its builder
+   * like a satellite does. A real dependency keeps its place; the reviewers
+   * and satellites of one builder share up to three seats, and more than that
+   * (or a builder that is itself a satellite) leaves reviewers on their slots
+   * with a tether. A builder or reviewer off this orbit draws nothing.
+   */
+  private withReviewCues(): Map<string, CenterCue> {
+    const cues = new Map(this.dependencies);
+    const live = (id: string) => this.crew.get(id)?.phase === "orbiting";
+    // The review's own merge hold on the builder is the reviewer's circle seen
+    // from the other side: the builder never orbits or tethers to its reviewer.
+    for (const [reviewer, builder] of this.reviews) {
+      const hold = cues.get(builder);
+      if (hold?.blockerId !== reviewer && !hold?.arrows.includes(reviewer)) continue;
+      const arrows = hold.arrows.filter((id) => id !== reviewer);
+      if (hold.mode === "tether" && arrows.length > 0) cues.set(builder, { ...hold, arrows });
+      else cues.delete(builder);
+    }
+    const byBuilder = new Map<string, string[]>();
+    for (const [reviewer, builder] of this.reviews) {
+      if (cues.has(reviewer) || reviewer === builder || !live(reviewer) || !live(builder)) continue;
+      const list = byBuilder.get(builder) ?? [];
+      list.push(reviewer);
+      byBuilder.set(builder, list);
+    }
+    for (const [builder, reviewers] of byBuilder) {
+      reviewers.sort();
+      const seated = [...cues.values()]
+        .filter((cue) => cue.mode === "satellite" && cue.blockerId === builder)
+        .sort((a, b) => a.index - b.index);
+      const count = seated.length + reviewers.length;
+      const nested = cues.get(builder)?.mode === "satellite";
+      const satellite = !nested && count <= DEPENDENCY_VISUAL.maxCompanions;
+      if (satellite) {
+        for (const [index, cue] of seated.entries())
+          cues.set(cue.waiterId, { ...cue, index, count });
+      }
+      reviewers.forEach((reviewer, i) => {
+        cues.set(reviewer, {
+          waiterId: reviewer,
+          mode: satellite ? "satellite" : "tether",
+          blockerId: builder,
+          index: seated.length + i,
+          count: satellite ? count : 1,
+          arrows: satellite ? [] : [builder],
+        });
+      });
+    }
+    return cues;
+  }
+
   /**
    * Move eligible idle waits onto their blocker's perpendicular circle, and
    * name the tethers for everyone who keeps a slot. The angle and radius
@@ -1046,11 +1116,16 @@ export class CrewOrbit {
     dt: number,
   ): DependencyLink[] {
     const links: DependencyLink[] = [];
-    if (this.dependencies.size === 0) return links;
+    const cues = this.withReviewCues();
+    if (
+      cues.size === 0 &&
+      ![...this.crew.values()].some((c) => c.companionX.x || c.companionY.x || c.companionZ.x)
+    )
+      return links;
     const byId = new Map(frames.map((frame) => [frame.id, frame]));
     const wanted = new Map<string, { x: number; y: number; z: number; arrows: string[] }>();
     const groups = new Map<string, string[]>();
-    for (const [id, cue] of this.dependencies) {
+    for (const [id, cue] of cues) {
       if (cue.mode !== "satellite" || this.planeBlend.x < 0.999) {
         wanted.set(id, { x: 0, y: 0, z: 0, arrows: cue.arrows });
         continue;
@@ -1067,7 +1142,7 @@ export class CrewOrbit {
         continue;
       }
       const placed = ids.flatMap((id) => {
-        const cue = this.dependencies.get(id);
+        const cue = cues.get(id);
         const mate = this.crew.get(id);
         if (!cue || !mate || mate.phase !== "orbiting") return [];
         const offset = satelliteOffset(
@@ -1102,9 +1177,14 @@ export class CrewOrbit {
       const mate = this.crew.get(frame.id);
       const scene = scenes.get(frame.id);
       if (!mate || !scene) continue;
-      const target = wanted.get(frame.id) ?? { x: 0, y: 0, z: 0, arrows: [] };
-      if (mate.phase !== "orbiting") {
-        // A departure keeps the offset it had. A spark still aims at its slot.
+      // A departing crewmate has no circle: its offset eases out on the springs
+      // as it falls, so it leaves from the seat it was drawn at.
+      const target =
+        mate.phase === "leaving"
+          ? { x: 0, y: 0, z: 0, arrows: [] }
+          : (wanted.get(frame.id) ?? { x: 0, y: 0, z: 0, arrows: [] });
+      if (mate.phase === "spawning") {
+        // A spark still aims at its slot.
       } else if (settled) {
         mate.companionX.x = target.x;
         mate.companionY.x = target.y;
@@ -1116,6 +1196,18 @@ export class CrewOrbit {
         mate.companionX.step(target.x, dt);
         mate.companionY.step(target.y, dt);
         mate.companionZ.step(target.z, dt);
+        // Close to home with nothing to circle: land exactly on the slot.
+        if (
+          !target.x &&
+          !target.y &&
+          !target.z &&
+          Math.hypot(mate.companionX.x, mate.companionY.x, mate.companionZ.x) < 0.05
+        ) {
+          for (const spring of [mate.companionX, mate.companionY, mate.companionZ]) {
+            spring.x = 0;
+            spring.v = 0;
+          }
+        }
       }
       const moved = Math.hypot(mate.companionX.x, mate.companionY.x, mate.companionZ.x) > 0.5;
       if (moved && frame.phase !== "spawning") {
@@ -1129,9 +1221,20 @@ export class CrewOrbit {
           scene.radius,
         );
         // The frame's y already includes the idle wobble. Keep it.
-        const wobble = frame.y - slot.y;
-        frame.x = next.x;
-        frame.y = next.y + wobble;
+        // Add the offset as a delta to wherever the frame already is, so a
+        // departing crewmate's screen-space arc is kept. The delta fades out
+        // over the fall, so it lands on the Firstmate's center.
+        const fade =
+          mate.phase === "leaving" && !settled
+            ? 1 -
+              clamp01(
+                (now - mate.leaveAt) /
+                  (mate.tripMs ??
+                    (mate.leaveMode === "home" ? this.tuning.homeMs : this.tuning.awayMs)),
+              )
+            : 1;
+        frame.x += (next.x - slot.x) * fade;
+        frame.y += (next.y - slot.y) * fade;
         frame.size *= (0.84 + 0.32 * next.depth) / (0.84 + 0.32 * frame.depth);
         frame.depth = next.depth;
         delete frame.streak;

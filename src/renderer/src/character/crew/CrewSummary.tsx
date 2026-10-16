@@ -37,6 +37,7 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
           {taskStatusLabel(shown.status)}
         </span>
       </div>
+      {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
       {(facts.task.blockedBy?.length ?? 0) > 0 && <BlockedBy keys={facts.task.blockedBy} />}
       <TaskFactRows
         facts={shown}
@@ -47,6 +48,25 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
           shown.status.mark === "done" || shown.status.mark === "dropped" ? undefined : "dots"
         }
       />
+    </div>
+  );
+}
+
+/** The task a reviewer is reading, named whether or not the stage can draw its circle. */
+function Reviewing({ builderId }: { builderId: string }) {
+  const builder = useBoardTasks().find((row) => row.id === builderId);
+  return (
+    <div className="blocked" data-crew-reviewing="">
+      <span className="label">Reviewing</span>
+      {builder ? (
+        <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(builder)}>
+          {builder.key}
+        </TaskKey>
+      ) : (
+        <span className="key" data-crew-reviewing-key="">
+          another task
+        </span>
+      )}
     </div>
   );
 }

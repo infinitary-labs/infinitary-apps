@@ -3,10 +3,16 @@ import { TASK_FACTS, taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { ElementType, parseDocument } from "htmlparser2";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RecordPaneChrome } from "../../cards/RecordPaneChrome";
 import { CrewSummary } from "../../character/crew/CrewSummary";
 import { TaskFactRows, TaskFactStrip } from "./TaskFacts";
+
+let boardRows: readonly unknown[] = [];
+vi.mock("../../character/crew/useCrewBoard", async (original) => ({
+  ...(await original<typeof import("../../character/crew/useCrewBoard")>()),
+  useBoardTasks: () => boardRows,
+}));
 
 type Node = {
   type: string;
@@ -210,5 +216,36 @@ describe("one task's facts on the crew summary and the task record", () => {
       <CrewSummary taskId={browsing.id} facts={{ task: browsing, modelName }} />,
     );
     expect(summary).not.toContain('data-task-fact="browser"');
+  });
+});
+
+// INF-51: a reviewer's summary names what it reviews in every placement.
+describe("the crew summary of a reviewer", () => {
+  const reviewer = { ...task, id: "r1", key: "SCR-4", reviewOf: "t1" };
+  const render = () =>
+    renderToStaticMarkup(
+      <CrewSummary taskId={reviewer.id} facts={{ task: reviewer, modelName }} />,
+    );
+
+  it("names its builder by key once the board answers", () => {
+    boardRows = [task, reviewer];
+    const html = render();
+    expect(html).toContain("data-crew-reviewing");
+    expect(html).toContain("Reviewing");
+    expect(html).toContain("SCR-3");
+  });
+
+  it("still names the relation before the board answers or when the builder is gone", () => {
+    boardRows = [];
+    const html = render();
+    expect(html).toContain("Reviewing");
+    expect(html).toContain("another task");
+  });
+
+  it("shows no Reviewing row for a task that reviews nothing", () => {
+    boardRows = [task];
+    expect(
+      renderToStaticMarkup(<CrewSummary taskId={task.id} facts={{ task, modelName }} />),
+    ).not.toContain("data-crew-reviewing");
   });
 });

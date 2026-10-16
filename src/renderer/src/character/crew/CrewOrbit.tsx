@@ -23,7 +23,6 @@ import {
   drawCrewmate,
   drawDependencyLink,
   drawPacket,
-  drawReviewElectrons,
   type Rgb,
 } from "./crewmate";
 import {
@@ -156,7 +155,6 @@ function paintFrame(
   frame: OrbitFrame,
   colors: CrewColors,
   now: number,
-  reducedMotion: boolean,
   inspected: string | null,
 ): void {
   near.ctx.clearRect(0, 0, box.width, box.height);
@@ -183,9 +181,7 @@ function paintFrame(
     // core (early travel) stays in front, where the eyes' light lives.
     const inFront = cm.depth >= 0.5 || cm.spark > 0.7;
     const ctx = inFront ? near.ctx : far.ctx;
-    drawReviewElectrons(ctx, cm, cx, cy, colors, now, "far", reducedMotion);
     drawCrewmate(ctx, cm, cx, cy, colors, now);
-    drawReviewElectrons(ctx, cm, cx, cy, colors, now, "near", reducedMotion);
   }
   for (const p of frame.packets) drawPacket(near.ctx, p, cx, cy, colors);
 }
@@ -796,7 +792,7 @@ export function CrewOrbit({
       };
       lastRead.current = real;
     }
-    paintFrame(near, far, box, frame, colorsRef.current, now, reducedMotion, inspectingRef.current);
+    paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current);
   }, `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}`);
 
   // A move to another display, or the size control's zoom, changes the pixel
@@ -822,7 +818,6 @@ export function CrewOrbit({
           view.frame,
           colorsRef.current,
           view.now,
-          true,
           inspectingRef.current,
         );
       });

@@ -206,6 +206,7 @@ Picking one fills the field with the user name selected, to change before Add it
 Typing an address still works, including a private network's name, such as Tailscale's.
 
 The list is looked for only while the aside is open: the window asks `inf:devices:nearby` with `true` when it opens and every twenty seconds after, and with `false` when it closes, and the look stops by itself a minute after the last ask.
+The window applies that ask's answer only when no push of the list has arrived since the ask was sent, so an older answer never covers a newer push.
 Every run of dns-sd also ends by itself (`-t`): a browse after 75 seconds, when another starts if the list is still looked for, and a name lookup after five, when that Mac is left off.
 A Mac the last browse announced stays two seconds for the next one to announce it again, so the list does not blink.
 So an Infinitary that stopped without a word leaves nothing listening for long.

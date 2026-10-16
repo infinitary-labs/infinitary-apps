@@ -499,6 +499,8 @@ function HomeDevicesTab() {
   const addressTry = useRef(0);
   /** Macs nearby with Remote Login on, looked for while By its address is open. */
   const [nearby, setNearby] = useState<NearbyMacsView>(NEARBY_OFF);
+  /** How many pushes of Macs nearby this tab has heard, so an ask's older answer never covers a newer push. */
+  const nearbyPushes = useRef(0);
   const [leaving, setLeaving] = useState<RemoteLoginLeaveQuestion | null>(null);
   /** The check line, shown before anything is sent. */
   const [confirming, setConfirming] = useState<RemoteLoginConfirmQuestion | null>(null);
@@ -528,7 +530,10 @@ function HomeDevicesTab() {
     // This Mac's network moves while the tab is open, and the row follows.
     const offAddresses = window.infinitary.devices.onAddresses(setAddresses);
     const offSignIns = window.infinitary.devices.onSignIns(setSignIns);
-    const offNearby = window.infinitary.devices.onNearby(setNearby);
+    const offNearby = window.infinitary.devices.onNearby((view) => {
+      nearbyPushes.current += 1;
+      setNearby(view);
+    });
     return () => {
       offDevices();
       offAddresses();
@@ -543,13 +548,16 @@ function HomeDevicesTab() {
   useEffect(() => {
     if (!askingAddress) return;
     let open = true;
-    const ask = () =>
+    const ask = () => {
+      const pushes = nearbyPushes.current;
       void window.infinitary.devices.nearby(true).then(
         (view) => {
-          if (open) setNearby(view);
+          // Every change is pushed in order, so once a push arrives after asking, the pushes carry this answer or newer.
+          if (open && nearbyPushes.current === pushes) setNearby(view);
         },
         () => undefined,
       );
+    };
     ask();
     const renew = setInterval(ask, NEARBY_RENEW_MS);
     return () => {

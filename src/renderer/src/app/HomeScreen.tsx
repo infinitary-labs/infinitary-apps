@@ -1798,13 +1798,13 @@ function StackedCard({
   const pending = useShellStore((s) => s.pendingCardActions[card.id]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is
-  // out of reach (docs/view.md); the tooltip says until when.
+  // out of reach (docs/view.md): still Tab stops, whose note says until when.
   const offWords = useShellStore((s) =>
     changesOff(s.thisMac) && isView(s.thisMac) ? changesOffWords(s.thisMac) : null,
   );
   // A button done only on that Mac - one that opens one of its Settings
-  // sections, or hands the captain a task's browser - says so before the
-  // click; the click sends nothing (`actOnCard`).
+  // sections, or hands the captain a task's browser - says so on rest,
+  // before the click; the click sends nothing (`actOnCard`).
   const thisMac = useShellStore((s) => s.thisMac);
   const thereWords = (action: CardAction) =>
     isView(thisMac) ? doneThereWords(thisMac, action) : null;
@@ -1937,8 +1937,12 @@ function StackedCard({
                       : {}),
                   }}
                   pending={pending?.actionId === action.id}
-                  disabled={Boolean(pending) || offWords !== null}
-                  title={noticeCovers ? undefined : (offWords ?? thereWords(action) ?? undefined)}
+                  disabled={Boolean(pending)}
+                  off={offWords !== null}
+                  note={noticeCovers ? undefined : (offWords ?? thereWords(action) ?? undefined)}
+                  // The notice shows the reason in place of the label; a
+                  // screen reader on the button still hears it.
+                  aria-description={offWords ?? undefined}
                   aria-disabled={unanswered && action.default ? true : undefined}
                   // The offer this footer belongs to rides the click, read now.
                   onClick={() => {

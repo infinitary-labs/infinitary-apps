@@ -96,6 +96,13 @@
   .facts dd { margin: 0; color: var(--fg-2); overflow-wrap: anywhere; }
   .facts dd.code { font-family: var(--font-mono); font-size: var(--text-xs); align-self: center; }
   [data-record-note] { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
+  /* The exact time behind an age, on rest: the app's own label (the design skill's IconButton),
+     drawn in this page. A keyboard stop of its own, an age rings like the rest of the page. */
+  [data-record-age] { justify-self: start; }
+  [data-record-age]:focus-visible { border-radius: var(--radius-s); }
+  [data-record-label] { position: fixed; left: 0; top: 0; z-index: 2000; box-sizing: border-box; width: max-content; max-width: min(360px, calc(100vw - 16px)); padding: 2px 8px; border: 1px solid var(--line-2); border-radius: var(--radius-s); background: var(--bg-3); color: var(--fg-1); font-family: var(--font-ui); font-size: var(--text-sm); line-height: 1.4; overflow-wrap: anywhere; pointer-events: none; box-shadow: var(--shadow-1); animation: record-label-in var(--dur-fast) var(--ease-out); }
+  [data-record-label][hidden] { display: none; }
+  @keyframes record-label-in { from { opacity: 0; transform: translateY(-2px); } }
 </style>
 <div data-record data-task-id="__TASK_ID__" data-knowledge="__KNOWLEDGE__">
   <!-- Stay zero-height until the first detail read; the host reveals the

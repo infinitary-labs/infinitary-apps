@@ -563,9 +563,10 @@ test("the captain opens a task's browser from its record and watches the crewmat
       expect(green).toBeGreaterThan(110);
       expect(red).toBeLessThan(80);
       expect(blue).toBeLessThan(100);
-      // Watching sends nothing: Back, Forward and Reload are the controller's.
+      // Watching sends nothing: Back, Forward and Reload are the controller's,
+      // marked off and still reachable, their labels saying who drives.
       await expect(
-        view(page, task.id).locator("[data-browser-chrome] button:disabled"),
+        view(page, task.id).locator('[data-browser-chrome] button[aria-disabled="true"]'),
       ).toHaveCount(3);
       await shoot(view(page, task.id), "view-watching-dark.png");
     });
@@ -954,7 +955,9 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
         await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
         // Back, Forward and Reload are his now.
         await expect(
-          view(page, task.id).locator("[data-browser-chrome] button:disabled"),
+          view(page, task.id).locator(
+            '[data-browser-chrome] button:is(:disabled, [aria-disabled="true"])',
+          ),
         ).toHaveCount(0);
         await shoot(view(page, task.id), "view-captain-dark.png");
         return crewmateCalls().length;

@@ -279,6 +279,39 @@ describe("compact task record frame", () => {
     expect((progress as Node).text()).toBe("2m Waiting on the checks.");
   });
 
+  // INF-27 (FI3-1540): the exact time behind each age reaches the keyboard
+  // and assistive technology, not the native title alone.
+  it("makes an age a stop named by its exact time, and an opening line's age part of its line's name", () => {
+    const frame = mount();
+    const reportAt = now - 28 * 60_000;
+    const progressAt = now - 2 * 60_000;
+    const exact = (at: number) => new Date(at).toLocaleString();
+    frame.push(
+      task({
+        events: [event("report", "Added the toggle.\n\nVerified\nTests pass.", reportAt)],
+        activityLog: [
+          row("report", "Added the toggle.", reportAt),
+          row("progress", "Waiting on the checks.", progressAt),
+        ],
+      }),
+    );
+    const [opening, plain] = frame.node("timeline").children as [Node, Node];
+    const age = plain.children[0] as Node;
+    expect(age.getAttribute("tabindex")).toBe("0");
+    expect(age.getAttribute("aria-label")).toBe(`2m · ${exact(progressAt)}`);
+    expect(age.getAttribute("title")).toBeNull();
+    // The line that opens is the control: its age is no stop of its own,
+    // and its name carries the exact time into the line's.
+    const inside = (opening.children[0] as Node).children[0] as Node;
+    expect(inside.getAttribute("tabindex")).toBeNull();
+    expect(inside.getAttribute("aria-label")).toBe(`28m · ${exact(reportAt)}`);
+    expect(inside.getAttribute("title")).toBeNull();
+    // The minute's repaint keeps the name in step with the words.
+    vi.setSystemTime(now + 60_000);
+    frame.tick();
+    expect(age.getAttribute("aria-label")).toBe(`3m · ${exact(progressAt)}`);
+  });
+
   it("opens a line to the events folded under it, the ones before the line ahead of its whole text", () => {
     const frame = mount();
     const at = (minutes: number) => now - minutes * 60_000;

@@ -17,9 +17,10 @@
  * disclosures stay mounted across pushes, preserving open state and focus; an Activity line that opens to its whole text is rebuilt with
  * each push and keeps its open state by its event, and a control a push
  * rebuilds keeps the keyboard's focus (FI3-1279). Times read relative,
- * absolute on hover. A pull request a line names links to its page, where
- * the host says which words name it. All task-authored strings use
- * textContent, never HTML.
+ * the exact time on rest, the pointer's or the keyboard's focus, in the
+ * app's label drawn in this page (`restLabel`). A pull request a line
+ * names links to its page, where the host says which words name it. All
+ * task-authored strings use textContent, never HTML.
  */
 (function record(/** @type {import("@shared/plugins/bridge").FrameBridgeApi} */ bridge) {
   /** @typedef {import("@shared/tasks").TaskDetail} Detail */
@@ -163,15 +164,180 @@
   }
 
   /**
-   * A node whose text is a relative time, with the absolute time on hover.
+   * The label the app draws for a fact on rest (the design skill's
+   * IconButton label; docs/keyboard.md, "Facts shown on rest"), drawn in this
+   * page, which the window's own label cannot reach: the exact time behind a
+   * short age. The pointer's rest or the keyboard's focus shows it after
+   * `--delay-label`, or at once while one shows or just went; leaving, a
+   * press or any key lets it go, and Esc while it shows lets it go and
+   * nothing else. It is decoration, hidden from assistive technology: the
+   * age's own name carries the same words.
+   */
+  const restLabel = (() => {
+    /** How soon after a label went the next one still shows at once, ms (`LABEL_RECENT_MS`). */
+    const RECENT_MS = 400;
+    /** @type {HTMLElement | null} */
+    let el = null;
+    /** @type {Element | null} */
+    let on = null;
+    /** The age waiting for its first label (`wait`), as the window's label keeps it. @type {Element | null} */
+    let pending = null;
+    let wait = 0;
+    let goneAt = Number.NEGATIVE_INFINITY;
+    /**
+     * The key press that last took a label away, and the age it showed for:
+     * the Esc that lets it go does nothing else.
+     * @type {{ event: Event, from: Element } | null}
+     */
+    let took = null;
+
+    /** @param {string} name */
+    function token(name) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const amount = Number.parseFloat(value);
+      if (!Number.isFinite(amount)) return 0;
+      return value.endsWith("ms") ? amount : amount * 1000;
+    }
+
+    function hide() {
+      window.clearTimeout(wait);
+      pending = null;
+      if (on) goneAt = performance.now();
+      on = null;
+      if (el) el.hidden = true;
+    }
+
+    /** The page's one label, made on its first showing with what takes it away. */
+    function label() {
+      if (el) return el;
+      el = document.createElement("div");
+      el.setAttribute("data-record-label", "");
+      el.setAttribute("aria-hidden", "true");
+      el.hidden = true;
+      document.body.appendChild(el);
+      document.addEventListener("pointerdown", hide, true);
+      document.addEventListener(
+        "keydown",
+        (event) => {
+          took = on && el && !el.hidden ? { event, from: on } : null;
+          hide();
+        },
+        true,
+      );
+      window.addEventListener("blur", hide);
+      return el;
+    }
+
+    /**
+     * Centred under the anchor, or over it near the page's bottom, inside the page.
+     * @param {Element} anchor
+     * @param {string} words
+     */
+    function show(anchor, words) {
+      if (!anchor.isConnected) return;
+      const node = label();
+      node.textContent = words;
+      node.hidden = false;
+      const box = anchor.getBoundingClientRect();
+      const edge = 8;
+      const gap = 6;
+      const x = Math.max(
+        edge,
+        Math.min(
+          window.innerWidth - edge - node.offsetWidth,
+          (box.left + box.right) / 2 - node.offsetWidth / 2,
+        ),
+      );
+      const below = box.bottom + gap;
+      const y =
+        below + node.offsetHeight <= window.innerHeight - edge
+          ? below
+          : box.top - gap - node.offsetHeight;
+      node.style.left = `${Math.round(x)}px`;
+      node.style.top = `${Math.round(Math.max(edge, y))}px`;
+      on = anchor;
+    }
+
+    /**
+     * Leaving an age takes its own label, or its own wait for one, and
+     * nothing another age shows or waits for (`labelLeave`).
+     * @param {Element} anchor
+     */
+    function leave(anchor) {
+      if (pending === anchor) {
+        window.clearTimeout(wait);
+        pending = null;
+      }
+      if (on === anchor) hide();
+    }
+
+    /** @param {Element} anchor @param {string} words */
+    function enter(anchor, words) {
+      window.clearTimeout(wait);
+      pending = null;
+      if ((on && el && !el.hidden) || performance.now() - goneAt < RECENT_MS) {
+        show(anchor, words);
+        return;
+      }
+      pending = anchor;
+      wait = window.setTimeout(() => {
+        pending = null;
+        show(anchor, words);
+      }, token("--delay-label"));
+    }
+
+    return {
+      /**
+       * Shows `words()` for `anchor` on the pointer's rest over `anchor`
+       * and the keyboard's focus on `holder`: the age itself, or the
+       * control the age sits in, which carries it.
+       * @param {Element} anchor
+       * @param {Element} holder
+       * @param {() => string} words
+       */
+      hold(anchor, holder, words) {
+        anchor.addEventListener("pointerenter", (event) => {
+          if (/** @type {PointerEvent} */ (event).pointerType === "mouse") enter(anchor, words());
+        });
+        anchor.addEventListener("pointerleave", () => leave(anchor));
+        // The keyboard rests on it as the pointer does; a click's focus shows no label of its own.
+        holder.addEventListener("focus", () => {
+          if (holder.matches(":focus-visible")) enter(anchor, words());
+        });
+        holder.addEventListener("blur", () => leave(anchor));
+        holder.addEventListener("keydown", (event) => {
+          const key = /** @type {KeyboardEvent} */ (event).key;
+          if (key !== "Escape" || took?.event !== event || took.from !== anchor) return;
+          event.preventDefault();
+          event.stopPropagation();
+        });
+      },
+      /** A drawing took the anchor away: its label goes with it. */
+      drop() {
+        if (on && !on.isConnected) hide();
+      },
+    };
+  })();
+
+  /**
+   * A node whose text is a relative time, with its exact time on rest, the
+   * pointer's or the keyboard's focus (`restLabel`). The age is a Tab stop
+   * named by both, unless it sits in a control (`holder`, an Activity line
+   * that opens), which then takes the keyboard's focus and reads the age's
+   * name in its own (docs/keyboard.md, "Facts shown on rest").
    * @param {Element} node
    * @param {number} at
    * @param {(at: number) => string} text
+   * @param {Element} [holder]
    */
-  function aged(node, at, text) {
+  function aged(node, at, text, holder) {
+    const exact = new Date(at).toLocaleString();
     node.textContent = text(at);
     node.setAttribute("data-record-age", "");
-    node.setAttribute("title", new Date(at).toLocaleString());
+    node.setAttribute("role", "img");
+    node.setAttribute("aria-label", `${node.textContent} · ${exact}`);
+    if (!holder) node.setAttribute("tabindex", "0");
+    restLabel.hold(node, holder ?? node, () => exact);
     ages.push({ node, at, text });
     return node;
   }
@@ -200,7 +366,13 @@
 
   function paintAges() {
     if (!readable) return;
-    for (const entry of ages) entry.node.textContent = entry.text(entry.at);
+    for (const entry of ages) {
+      entry.node.textContent = entry.text(entry.at);
+      entry.node.setAttribute(
+        "aria-label",
+        `${entry.node.textContent} · ${new Date(entry.at).toLocaleString()}`,
+      );
+    }
   }
 
   /** The change by the label the forge gave it (`#N`, or a pushed branch's name). */
@@ -494,7 +666,11 @@
         end.append(count);
       }
       end.append(caretEl.cloneNode(true));
-      summary.append(aged(span("mono", ""), row.at, short), words(row.text, row.change), end);
+      summary.append(
+        aged(span("mono", ""), row.at, short, summary),
+        words(row.text, row.change),
+        end,
+      );
       /** @param {typeof folded} lines */
       const foldedLines = (lines) =>
         lines.map((event) => {
@@ -809,6 +985,7 @@
     section("timeline", rows.length > 0);
 
     paintFacts(current);
+    restLabel.drop();
     keepKeyboard(place);
   }
 

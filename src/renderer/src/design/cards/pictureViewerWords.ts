@@ -1,6 +1,9 @@
 /** What the picture viewer's player reads in place of its time when a recording cannot play (`PictureViewer.tsx`). */
 export const RECORDING_UNPLAYABLE = "This recording could not be played.";
 
+/** Why a picture that fits at its own size has no Actual size to go to (`PictureViewer.tsx`). */
+export const SHOWN_AT_OWN_SIZE = "Shown at its own size";
+
 /** A picture's own size, "1600 × 400". */
 export function pictureSize(size: { width: number; height: number }): string {
   return `${size.width} × ${size.height}`;

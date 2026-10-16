@@ -711,7 +711,8 @@ export function TaskBrowserView({
         {glyph}
       </IconButton>
     ) : (
-      <IconButton label={`${label} · ${who}`} disabled style={{ flexShrink: 0 }}>
+      // Marked off, so the keyboard reaches who has control as the pointer does.
+      <IconButton label={`${label} · ${who}`} off style={{ flexShrink: 0 }}>
         {glyph}
       </IconButton>
     );

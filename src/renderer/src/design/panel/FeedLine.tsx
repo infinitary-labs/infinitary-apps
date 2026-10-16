@@ -54,10 +54,10 @@ export function FeedLine({
         ...style,
       }}
     >
+      {/* The line's words say what its color does: no stop, nothing on rest. */}
       <span
         role="img"
         aria-label={kind}
-        title={kind}
         style={{
           width: 5,
           height: 5,

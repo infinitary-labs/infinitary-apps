@@ -116,7 +116,7 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
 - **The top line**, at the top bar's left: "Controlling your first mate on MacBook Pro", or "MacBook Pro is out of reach · as of 14:32" with the time in mono (`RemoteControlLine`).
 - **One pill** under the top bar says why changes are off: asleep or on another network, Infinitary closed there, or a newer or older Infinitary there; when contact returns it reads "MacBook Pro is back.
   This computer caught up." and fades (`ViewPill`).
-- **Changes are off** (`changesOff`, `src/renderer/src/devices/viewWords.ts`) while the other Mac is not in reach or too far apart: card buttons are disabled with the reason as their tooltip, a close says why it did not happen, and sending from the input or a reply refuses at once with "Not sent.
+- **Changes are off** (`changesOff`, `src/renderer/src/devices/viewWords.ts`) while the other Mac is not in reach or too far apart: card buttons are marked off, still Tab stops whose reason is their description and shows on rest, the pointer's or the keyboard's focus, unless the notice already shows it whole (`docs/keyboard.md`, "Facts shown on rest"), a close says why it did not happen, and sending from the input or a reply refuses at once with "Not sent.
   Your words stay here until MacBook Pro is back." under it.
   The words stay; nothing is queued, and nothing is sent later.
   The notice goes when changes are on again.
@@ -133,10 +133,10 @@ Its Notifications switch governs this Mac's notifications too ("Notifications", 
 A card's button whose click opens one of the other Mac's Settings sections is never sent from a view (`opensSettings`, `src/shared/cards.ts`): an `open` effect on any section but a task's browser, or the host's `restore-account` op, which the core answers with Subscriptions.
 That covers Sign in again, a project's sign-in, Make a link or the command, Add it, Update it, Remove, and Open settings.
 Sent, the other Mac would retire the card before this Mac opened a tab that cannot do it.
-Instead `actOnCard` sends nothing, and the card says where to do it (`settingsThereWords`, through `doneThereWords`), as the button's tooltip and, once clicked, as its inline line: "Do this on MacBook Pro.
+Instead `actOnCard` sends nothing, and the card says where to do it (`settingsThereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "Do this on MacBook Pro.
 Its settings and sign-ins stay there."
 The card stays on both Macs, so its button is still there on the other Mac.
-The card's other buttons, such as Move to Grok beside Sign in, are sent as before, and while changes are off every button is disabled.
+The card's other buttons, such as Move to Grok beside Sign in, are sent as before, and while changes are off every button is marked off.
 
 ## A task's browser on a view
 
@@ -145,7 +145,7 @@ A task's browser shows its page only in the window of the Mac where the first ma
 - **Taking it over.**
   A crewmate's request card's open-browser action - Open browser and sign in, Sign in myself, Open browser and pay - is never sent from a view (`takesTaskBrowser`, `src/shared/cards.ts`).
   Sent, the other Mac would answer the card on both Macs and pause the browser for the captain there, while this Mac opened a view with no page.
-  Instead `actOnCard` sends nothing, and the card says where to do it (`browserThereWords`, through `doneThereWords`), as the button's tooltip and, once clicked, as its inline line: "Do this on MacBook Pro.
+  Instead `actOnCard` sends nothing, and the card says where to do it (`browserThereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "Do this on MacBook Pro.
   This task's browser shows only there."
   The card stays on both Macs, and the browser stays paused for the captain's help on the other Mac.
 - **A saved sign-in.**

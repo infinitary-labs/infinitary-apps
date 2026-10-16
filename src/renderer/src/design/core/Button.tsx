@@ -1,5 +1,6 @@
 import type React from "react";
 import { useState } from "react";
+import { useRestLabelWith } from "./restLabel";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -23,6 +24,20 @@ export type ButtonProps = {
    * six pixels for the air the key needs, or by what a longer key needs.
    */
   keys?: string;
+  /**
+   * Marked off: the button cannot be pressed right now, for the reason its
+   * `note` gives. It stays a Tab stop, `aria-disabled` rather than disabled,
+   * dimmed as a disabled one is, and a press does nothing, so the keyboard
+   * reaches the reason as the pointer does (docs/keyboard.md, "Facts shown on
+   * rest").
+   */
+  off?: boolean;
+  /**
+   * A fact the button only hints at - why it is off, or where its press is
+   * done: shown in the app's label on rest, the pointer's or the keyboard's
+   * focus (./restLabel), and its accessible description.
+   */
+  note?: string | undefined;
   /** The button itself, for a popover that hangs from it. */
   ref?: React.Ref<HTMLButtonElement>;
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "style">;
@@ -108,10 +123,27 @@ export function Button({
   children,
   style,
   keys,
+  off = false,
+  note,
+  ref,
+  onClick,
+  onPointerEnter,
+  onPointerLeave,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  "aria-disabled": ariaDisabled,
+  "aria-description": ariaDescription,
   ...rest
 }: ButtonProps) {
   const [hover, setHover] = useState(false);
   const unavailable = disabled || pending;
+  // The note on rest, the pointer's or the keyboard's focus (./restLabel).
+  const restLabel = useRestLabelWith(
+    note,
+    { fact: true },
+    { ref, onPointerEnter, onPointerLeave, onFocus, onBlur, onKeyDown },
+  );
   const { padY, padX, fontSize } = sizes[size];
   const sized: React.CSSProperties = {
     ...(fontSize ? { fontSize } : {}),
@@ -120,7 +152,7 @@ export function Button({
       : { padding: `${padY}px ${padX}px` }),
   };
   const hoverStyle: React.CSSProperties =
-    hover && !unavailable
+    hover && !unavailable && !off
       ? variant === "primary"
         ? { background: "var(--accent-strong)" }
         : variant === "danger"
@@ -129,16 +161,24 @@ export function Button({
       : {};
   return (
     <button
+      {...restLabel}
       type="button"
       disabled={unavailable}
       aria-busy={pending || undefined}
+      aria-disabled={off || ariaDisabled || undefined}
+      aria-description={note ?? ariaDescription}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={(event) => {
+        // An off button's press does nothing, a form's submit included.
+        if (off) event.preventDefault();
+        else onClick?.(event);
+      }}
       style={{
         ...base,
         ...variants[variant],
         ...sized,
-        ...(unavailable ? { opacity: 0.4, cursor: "default" } : {}),
+        ...(unavailable || off ? { opacity: 0.4, cursor: "default" } : {}),
         ...hoverStyle,
         ...style,
         ...(pending ? { transition: "none" } : {}),

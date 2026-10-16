@@ -107,7 +107,8 @@ On the record that is the strip's PULL REQUEST cell, the words of Now that name 
 The host says which words of a line name a pull request (`TaskActivityLine.change`); the window reads nothing out of the text, and a number in a crewmate's words that is not one of the task's pull requests stays text.
 The merge card's PULL REQUEST cell is the same link, and so is a pull request number a card's author writes in its body (`ResponseCard.prompt.md`, "Pull request numbers in a body").
 The crew summary never takes the pointer, so its pull request stays plain text; a click on what opened it opens this record.
-Every time reads relative, the absolute time on hover; the ages of Now, Progress, each finished item and Checks are Tab stops of their own, and the keyboard's focus shows the absolute time as the pointer's rest does (readme, "Facts shown on rest").
+Every time reads relative, the absolute time on rest; the ages of Now, Progress, each finished item and Checks are Tab stops of their own, and the keyboard's focus shows the absolute time as the pointer's rest does (readme, "Facts shown on rest").
+So are the body's ages - an Activity or ask line's, a closed task's, a card's - each named by its short age and absolute time, in the same label the body draws in its own page; an Activity line that opens is the stop for its age, and its name reads the age's.
 No row nests another row: inside a row, only Activity's `Show earlier · N` link and the Activity lines that open (below) open further.
 
 **The Cards row** (FI3-579 direction A, the captain's 3 "a Cards row on the task's record").

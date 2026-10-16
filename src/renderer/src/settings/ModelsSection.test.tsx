@@ -6,6 +6,7 @@ import { reasoningWord } from "@shared/reasoning";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ModelsSection } from "./ModelsSection";
+import { NEW_MODEL_NOTE, removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { USE_LEVEL_DEFAULT } from "./reasoningWords";
 
@@ -378,5 +379,71 @@ describe("inline reasoning capability states", () => {
     expect(html).not.toContain("<select");
     expect(html).toContain(USE_LEVEL_DEFAULT);
     expect(html).not.toContain("Saved High · choices unavailable");
+  });
+});
+
+// INF-27 (FI3-1540): a fact that sits inside a pill reaches the keyboard and
+// assistive technology through the control that holds it, not a native title.
+describe("ModelsSection - facts a pill holds", () => {
+  const slots: ModelSlotsView = {
+    models: [
+      {
+        provider: "xai",
+        providerLabel: "Grok",
+        id: "grok-4.7",
+        label: "Grok 4.7",
+        slots: ["medium"],
+        isNew: true,
+      },
+    ],
+    byName: [],
+    usingDefaults: false,
+  };
+  const pillOf = (html: string) =>
+    html.match(/data-model-row="xai\/grok-4.7"[\s\S]*?×<\/button><\/span>/)?.[0] ?? "";
+
+  /** The words a pill's name is described by, ahead of the board's instruction, in order. */
+  const describedBy = (html: string, key: string) => {
+    const pill =
+      html.match(new RegExp(`data-model-row="${key}"[\\s\\S]*?<\\/span><\\/span>`))?.[0] ?? "";
+    const ids = pill.match(/fm-models-chip-name"[^>]*aria-describedby="([^"]+)"/)?.[1] ?? "";
+    return ids
+      .split(" ")
+      .map((id) =>
+        id === "models-board-hint"
+          ? "hint"
+          : (html.match(new RegExp(`id="${id}" hidden="">([^<]*)</span>`))?.[1] ?? "?"),
+      );
+  };
+
+  it("reads a new model's provider, its new mark and its note first in its pill's description", () => {
+    const html = render(slots);
+    expect(describedBy(html, "xai/grok-4.7")).toEqual([`Grok, new. ${NEW_MODEL_NOTE}`, "hint"]);
+    // A description by reference leaves aria-description unread, so none is set.
+    expect(pillOf(html)).not.toContain('aria-description="Grok');
+    expect(pillOf(html)).not.toContain("title=");
+  });
+
+  it("reads a placed model's provider in its pill's description", () => {
+    const html = render({
+      models: [
+        {
+          provider: "xai",
+          providerLabel: "Grok",
+          id: "grok-4.7",
+          label: "Grok 4.7",
+          slots: ["medium"],
+        },
+      ],
+      byName: [],
+      usingDefaults: false,
+    });
+    expect(describedBy(html, "xai/grok-4.7")).toEqual(["Grok", "hint"]);
+  });
+
+  it("says the × takes the model from that level only in its description", () => {
+    const pill = pillOf(render(slots));
+    expect(pill).toContain('aria-label="Remove Grok 4.7 from medium"');
+    expect(pill).toContain(`aria-description="${removeFromLevelOnly("medium")}"`);
   });
 });

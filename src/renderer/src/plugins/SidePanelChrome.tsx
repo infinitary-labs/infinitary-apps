@@ -13,7 +13,10 @@ export type SidePanelChromeProps = {
   placementY: "top" | "bottom";
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  /** Work in flight on this panel: a busy dot beside the title. */
+  /**
+   * Work in flight on this panel: a busy dot beside the title, a Tab stop
+   * whose words show on rest (docs/keyboard.md, "Facts shown on rest").
+   */
   running?: boolean;
   /** Header-inline summary, shown only while collapsed. */
   compact?: React.ReactNode;
@@ -109,7 +112,7 @@ export function SidePanelChrome({
         {!collapsed && headerAction}
         {running && (
           <span data-side-panel-running="" style={{ display: "inline-flex", flexShrink: 0 }}>
-            <StatusDot tone="busy" label="Still working on this" />
+            <StatusDot tone="busy" label="Still working on this" focusable />
           </span>
         )}
         {attribution !== null && (

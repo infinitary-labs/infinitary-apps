@@ -219,7 +219,7 @@ Stopped, it names why (the captain, the crewmate, half an hour unused, the page 
 Every command, page move and stop emits a `task_browser` event, which re-reads that task's detail; nothing about it is stored, so a restart forgets a stopped browser.
 
 Who is driving is read off the task's work posture, the same typed fact as the record's pill (`browserDriverOf`): the crewmate drives while its turn runs, and once the turn ends nobody does and the page stays as it was left.
-Back, Forward and Reload are shown and disabled while the captain watches, since navigation belongs to whoever has control and watching is not control ("Taking control" below).
+Back, Forward and Reload are shown and marked off while the captain watches, since navigation belongs to whoever has control and watching is not control ("Taking control" below): each stays a Tab stop whose label says who drives (`docs/keyboard.md`, "Facts shown on rest").
 
 The page reaches the view as pictures, never as itself.
 While a view watches (`inf:browser:watch`, a shell channel), the host streams the hidden page's own pictures over the browser's protocol - one when watching starts and one each time the page changes - and sends each to that window alone on `inf:browser:frame`; the view draws the newest on a canvas, fitted to its width or at the page's own size.

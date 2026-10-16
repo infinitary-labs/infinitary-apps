@@ -51,6 +51,11 @@ describe("Rail", () => {
     );
     expect(html).toContain('data-side-panel-running=""');
     expect(html).toContain('aria-label="Still working on this"');
+    // INF-27 (FI3-1540): the dot alone says it, so it is a keyboard stop
+    // whose words show on rest, never a native title.
+    const dot = html.match(/<span[^>]*aria-label="Still working on this"[^>]*>/)?.[0] ?? "";
+    expect(dot).toContain('tabindex="0"');
+    expect(dot).not.toContain("title=");
     const idle = renderToStaticMarkup(
       <Rail side="right" panels={[panel("mine", "x")]} theme="dark" />,
     );

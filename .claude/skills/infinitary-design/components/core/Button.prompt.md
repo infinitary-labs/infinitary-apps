@@ -16,6 +16,10 @@ Other buttons stay bare.
 The key reads the installed map, in this computer's key words.
 A pending button shows its pending label alone.
 
+A button that cannot be pressed for a reason is marked `off` rather than `disabled`: dimmed the same way, it stays a Tab stop (`aria-disabled`), and a press does nothing.
+Its `note` says why on rest, the pointer's or the keyboard's focus, in the icon button's label, and is its accessible description; a `note` on a button that can be pressed says a fact the button only hints at, such as where its press is done (readme, "Facts shown on rest").
+`disabled` stays for a button nothing explains, and for a pending one.
+
 Action feedback: acknowledge a click before the next paint.
 Close/commit the surface immediately when possible.
 If it must remain while waiting, set `pending` synchronously before starting the request, disable competing actions, and clear it on completion.

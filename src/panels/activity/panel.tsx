@@ -86,14 +86,11 @@ const Row = memo(function Row({
       data-feed-event={line.event}
       title={lineFit.title}
     >
-      {/* Type is a semantic color dot at the far left; age stays at the right. */}
-      <span
-        className={`dot ${kind}`}
-        data-feed-dot={kind}
-        role="img"
-        aria-label={kind}
-        title={kind}
-      />
+      {/* Type is a semantic color dot at the far left; age stays at the right.
+          The line's words say what its color does, so it is no stop of its
+          own and shows nothing on rest (docs/keyboard.md, "Facts shown on
+          rest"). */}
+      <span className={`dot ${kind}`} data-feed-dot={kind} role="img" aria-label={kind} />
       {/* The line's cell: an optional key prefix, then the text itself, so
           `.text` is always exactly the core's line. */}
       <span className="line" data-feed-line="" ref={lineFit.ref}>

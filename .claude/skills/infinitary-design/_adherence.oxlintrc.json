@@ -68,8 +68,8 @@
         "message": "<SlotBadge> slot must be one of 'premium' | 'high' | 'medium' | 'low'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|pending|pendingLabel|icon|children|onClick|aria-haspopup|aria-expanded|autoFocus|tabIndex|style|key|ref|className|style|children)$/]",
-        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, pending, pendingLabel, icon, children, onClick, aria-haspopup, aria-expanded, autoFocus, tabIndex, style."
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|pending|pendingLabel|off|note|aria-description|icon|children|onClick|aria-haspopup|aria-expanded|autoFocus|tabIndex|style|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, pending, pendingLabel, off, note, aria-description, icon, children, onClick, aria-haspopup, aria-expanded, autoFocus, tabIndex, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|ghost|danger)$/]",
@@ -104,8 +104,8 @@
         "message": "<Firstmate> state must be one of 'idle' | 'listening' | 'working' | 'thinking'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|keys|size|tone|disabled|children|onClick|onFocus|aria-haspopup|aria-expanded|aria-disabled|aria-keyshortcuts|tabIndex|style|key|ref|className|style|children)$/]",
-        "message": "<IconButton> doesn't accept that prop. Declared props: label, keys, size, tone, disabled, children, onClick, onFocus, aria-haspopup, aria-expanded, aria-disabled, aria-keyshortcuts, tabIndex, style."
+        "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|keys|size|tone|disabled|off|children|onClick|onFocus|aria-haspopup|aria-expanded|aria-disabled|aria-keyshortcuts|tabIndex|style|key|ref|className|style|children)$/]",
+        "message": "<IconButton> doesn't accept that prop. Declared props: label, keys, size, tone, disabled, off, children, onClick, onFocus, aria-haspopup, aria-expanded, aria-disabled, aria-keyshortcuts, tabIndex, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:neutral|accent|danger|ok)$/]",

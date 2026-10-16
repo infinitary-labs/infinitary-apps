@@ -338,19 +338,29 @@ An icon button the keyboard rests on shows its words and key as the pointer's re
 
 ### Facts shown on rest
 
-A fact the app shows only on rest - a mark's meaning, a quota's reset time, the exact time behind a short age, why a chip or an account cannot be used yet, a page's title and address, words cut short - is reachable from the keyboard and readable by assistive technology too (FI3-864).
+A fact the app shows only on rest - a mark's meaning, a quota's reset time, the exact time behind a short age, why a chip, a button or an account cannot be used yet, a page's title and address, words cut short - is reachable from the keyboard and readable by assistive technology too (FI3-864, INF-27).
 The element that holds it is a Tab stop of its own, and the keyboard's focus on it shows the label the pointer's rest shows: the one the app draws for an icon button (`useRestLabel`, `src/renderer/src/design/core/restLabel.ts`), never the native title.
 Leaving the element or any key lets the label go; Esc while it shows lets it go and nothing else, as a summary's Esc does (`fact`), and with nothing showing Esc means what it always meant, such as closing Settings or the record.
 The label is decoration hidden from assistive technology, so the element's accessible name or description carries the same words.
 Words cut short are a stop only while they are cut (`useCutWords`, `overflowTitle.ts`); assistive technology reads them whole from the page.
+A control that cannot be pressed for a reason is marked off rather than disabled: it stays a Tab stop, `aria-disabled` and dimmed as a disabled one is, its reason on rest and as its description, and a press does nothing (`Button`'s `off` and `note`, `IconButton`'s `off`, whose label says why).
+A fact that sits inside another control rides that control: the control's focus shows it, and its description carries it.
+The task record's body is a page of its own, which the window's label cannot reach, so it draws the same label in its own page, on the same rest, with the same keys (`restLabel` in `record.frame.js`).
 
 - Settings -> Intelligence, an account's row: its status dot (`StatusDot`'s `focusable`), the ✱ crew work prefers and the first mate tag, each named by its meaning, and each quota meter that has a reset time, named by its window, what is left and the reset (`quotaMeterName`).
 - Settings -> Intelligence and the first-launch gate: a provider chip that cannot be pressed stays a stop, marked `aria-disabled` rather than disabled, with its reason on rest and in its description; an account the gate shows in a chip's place says why it cannot answer yet the same way.
 - Settings -> Projects: the projects folder's path while it is cut, and a forge row's status dot; a custom API's model rows' dots in its form.
 - The task record: the ages of Now, Progress, each finished item and Checks, each named by the short age and the exact time; the crew summary, which takes neither pointer nor keyboard, names them for assistive technology alone.
 - The record's key and a past card's strip while they are cut, and a task browser's status line with the page's title and address.
+- The task record's body: every age, on an Activity or ask line, a closed task's line and a card's line, named by the short age and the exact time; an Activity line that opens is itself the stop, and its age's name reads in the line's.
+- A card's buttons on a computer that controls another (`docs/view.md`): while changes are off each is marked off with the reason as its description, and on rest too unless the notice under the top bar already shows that sentence whole; a button done only on the other computer says so on rest.
+- Settings -> Intelligence, a custom API connection: Resume while its models are unchecked, and a model's First mate choice while it cannot be used, each with why.
+- The models board: a new model's note, which its pill carries in a level, and a pill's ×, whose label says it removes the model from that level only.
+- A task's browser: Back, Forward and Reload while someone else drives, their labels saying who.
+- The picture viewer: Actual size on a picture shown at its own size.
+- A side panel's busy dot, while its work runs.
 
-A dot inside a control, or one whose words are already written beside it, stays out of the Tab order.
+A dot inside a control, or one whose words are already written beside it, stays out of the Tab order: an Activity line's kind dot is such a dot, because the line's own words say what its color does, so it shows nothing on rest.
 
 ## Cards and frames
 

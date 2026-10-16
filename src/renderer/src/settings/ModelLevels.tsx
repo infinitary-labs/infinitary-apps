@@ -4,9 +4,9 @@ import { offeringKey, SLOTS } from "@shared/modelSlots";
 import { reasoningWord } from "@shared/reasoning";
 import { levelDefaultReasoning } from "@shared/routingPolicy";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button, IconButton, Input, SlotBadge, Switch } from "../design";
+import { Button, IconButton, Input, SlotBadge, Switch, useRestLabel } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import {
   ALWAYS_USE_LEAD,
@@ -18,6 +18,7 @@ import {
   removeAllLine,
   usedLine,
 } from "./levelDrops";
+import { NEW_MODEL_NOTE, removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { SpeedControl } from "./SpeedControl";
 import "./models.css";
@@ -103,6 +104,52 @@ type Press = {
 
 /** What the board draws while a pill is in the air. */
 type DragView = { key: string; from: LevelTarget; over: LevelTarget | null; keepBoth: boolean };
+
+/** The board's own instruction, which every pill's name points at. */
+const BOARD_HINT_ID = "models-board-hint";
+
+/**
+ * A pill's name, the button that opens its model's panel. Its description
+ * is its own words - the provider, "new" on a new model, and the note a
+ * new model's "new" carries in a level - then the board's instruction, all
+ * by reference, since a description by reference leaves `aria-description`
+ * unread. The note also shows on rest, the pointer's or the keyboard's
+ * focus: the "new" sits inside the button, so the button carries what it
+ * says (docs/keyboard.md, "Facts shown on rest").
+ */
+function PillName({
+  words,
+  note,
+  ...props
+}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-describedby" | "aria-description"> & {
+  /** The pill's own words: its provider, and "new" on a new model. */
+  words: string;
+  note: string | undefined;
+}) {
+  const wordsId = useId();
+  const rest = useRestLabel(note, { fact: true });
+  return (
+    <>
+      <button type="button" {...props} aria-describedby={`${wordsId} ${BOARD_HINT_ID}`} {...rest} />
+      <span id={wordsId} hidden>
+        {note ? `${words}. ${note}` : words}
+      </span>
+    </>
+  );
+}
+
+/**
+ * A pill's ×, which takes the model out of this one level: "only" shows on
+ * rest, the pointer's or the keyboard's focus, as an icon button's name
+ * does, and is its description.
+ */
+function PillRemove({
+  words,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { words: string }) {
+  const rest = useRestLabel(words);
+  return <button type="button" {...props} aria-description={words} {...rest} />;
+}
 
 function levelAt(x: number, y: number): LevelTarget | null {
   const level = document
@@ -276,7 +323,7 @@ export function ModelLevels({
       ? dropPlan(dragged, drag.from, target, drag.keepBoth)
       : null;
 
-  const face = (model: SlotModelView, level: LevelTarget) => {
+  const face = (model: SlotModelView) => {
     const prefix = providerPrefix(model);
     return (
       <>
@@ -286,16 +333,7 @@ export function ModelLevels({
           {isPinned(model) ? " ✱" : ""}
         </span>
         {model.place && <span className="fm-models-place">{model.place}</span>}
-        {model.isNew && (
-          <span
-            className="fm-models-new"
-            title={
-              level === "off" ? undefined : "New here - it is not in use until you give it a level."
-            }
-          >
-            new
-          </span>
-        )}
+        {model.isNew && <span className="fm-models-new">new</span>}
       </>
     );
   };
@@ -312,13 +350,13 @@ export function ModelLevels({
         data-pinned={pinned ? "" : undefined}
         data-picked={drag?.key === key && drag.from === level ? "" : undefined}
       >
-        <button
-          type="button"
+        <PillName
           className="fm-models-chip-name"
           aria-label={pinned ? `${model.label} ✱` : model.label}
-          aria-description={model.isNew ? `${model.providerLabel}, new` : model.providerLabel}
+          words={model.isNew ? `${model.providerLabel}, new` : model.providerLabel}
           aria-pressed={selectedKey === key}
-          aria-describedby="models-board-hint"
+          // Not in use says it already, so its lane's "new" needs no note.
+          note={model.isNew && level !== "off" ? NEW_MODEL_NOTE : undefined}
           onPointerDown={(event) => beginPress(event, key, level)}
           onClick={(event) => {
             if (suppressClick.current) return;
@@ -329,18 +367,17 @@ export function ModelLevels({
             setSelectedKey(opening ? key : null);
           }}
         >
-          {face(model, level)}
-        </button>
+          {face(model)}
+        </PillName>
         {level !== "off" && (
-          <button
-            type="button"
+          <PillRemove
             className="fm-models-chip-x"
             aria-label={`Remove ${model.label} from ${level}`}
-            title={`Remove from ${level} only`}
+            words={removeFromLevelOnly(level)}
             onClick={() => void onSetSlotMembership(key, level, false)}
           >
             ×
-          </button>
+          </PillRemove>
         )}
       </span>
     );
@@ -629,7 +666,7 @@ export function ModelLevels({
         data-dragging={drag ? "" : undefined}
       >
         <div className="fm-models-lanes">
-          <span className="fm-models-hint" id="models-board-hint">
+          <span className="fm-models-hint" id={BOARD_HINT_ID}>
             Drag a model to another level to move it. Hold {thisDesktop().mac ? "⌥" : "Alt"} as you
             drop to use it at both. Or choose it to pick its levels.
           </span>
@@ -676,7 +713,7 @@ export function ModelLevels({
               width: press.current?.width,
             }}
           >
-            <span className="fm-models-chip-name">{face(dragged, drag.from)}</span>
+            <span className="fm-models-chip-name">{face(dragged)}</span>
             {drag.from !== "off" && <span className="fm-models-chip-x">×</span>}
           </span>,
           document.body,

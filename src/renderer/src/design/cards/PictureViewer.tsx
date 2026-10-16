@@ -3,7 +3,13 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { thisDesktop, WINDOW_CONTROLS_CLEARANCE } from "../core/desktop";
 import { IconButton } from "../core/IconButton";
-import { pictureHint, pictureSize, RECORDING_UNPLAYABLE } from "./pictureViewerWords";
+import { useRestLabel } from "../core/restLabel";
+import {
+  pictureHint,
+  pictureSize,
+  RECORDING_UNPLAYABLE,
+  SHOWN_AT_OWN_SIZE,
+} from "./pictureViewerWords";
 
 /**
  * Where a card's picture is read (card pictures, phase 3 of the locked
@@ -160,6 +166,11 @@ export function PictureViewer({
     size !== null && box !== null && size.width <= box.width && size.height <= box.height;
   const zoomable = !demo && size !== null && box !== null && !fitsAtOne;
   const atOne = zoomed && zoomable;
+  // Why Actual size does nothing, on rest, the pointer's or the keyboard's
+  // focus, and in its description (docs/keyboard.md, "Facts shown on rest").
+  // Esc stays the viewer's own, which closes it and the label with it.
+  const ownSizeId = useId();
+  const ownSize = useRestLabel(zoomable ? undefined : SHOWN_AT_OWN_SIZE);
 
   const clearGif = useCallback(() => {
     window.clearTimeout(gifEnd.current);
@@ -602,8 +613,8 @@ export function PictureViewer({
             aria-label="Actual size"
             aria-pressed={atOne}
             aria-disabled={!zoomable}
-            aria-describedby={captionId}
-            title={zoomable ? undefined : "Shown at its own size"}
+            aria-describedby={zoomable ? captionId : `${ownSizeId} ${captionId}`}
+            {...ownSize}
             onClick={() => {
               if (dragged.current) {
                 dragged.current = false;
@@ -746,6 +757,9 @@ export function PictureViewer({
         >
           {demo?.caption || picture.alt}
         </p>
+        <span id={ownSizeId} hidden>
+          {SHOWN_AT_OWN_SIZE}
+        </span>
         {demo ? (
           <div
             data-demo-player=""

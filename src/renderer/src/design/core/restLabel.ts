@@ -92,3 +92,61 @@ export function useRestLabel(
     },
   };
 }
+
+/** The handlers of an element's own that its rest label runs beside. */
+export type OwnRestHandlers<T extends HTMLElement> = {
+  ref?: React.Ref<T> | undefined;
+  onPointerEnter?: React.PointerEventHandler<T> | undefined;
+  onPointerLeave?: React.PointerEventHandler<T> | undefined;
+  onFocus?: React.FocusEventHandler<T> | undefined;
+  onBlur?: React.FocusEventHandler<T> | undefined;
+  onKeyDown?: React.KeyboardEventHandler<T> | undefined;
+};
+
+/**
+ * `useRestLabel` for an element that has a ref and handlers of its own (a
+ * button's, ./Button and ./IconButton): one ref that reaches both, and each
+ * handler running the label's first, then the element's own.
+ */
+export function useRestLabelWith<T extends HTMLElement>(
+  words: string | undefined,
+  options: RestLabelOptions,
+  own: OwnRestHandlers<T>,
+): Required<{ [K in keyof OwnRestHandlers<T>]: NonNullable<OwnRestHandlers<T>[K]> }> & {
+  ref: (node: T | null) => void;
+} {
+  const rest = useRestLabel(words, options);
+  const restRef = rest.ref;
+  const { ref } = own;
+  const setRef = useCallback(
+    (node: T | null) => {
+      restRef(node);
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref, restRef],
+  );
+  return {
+    ref: setRef,
+    onPointerEnter: (event) => {
+      rest.onPointerEnter(event);
+      own.onPointerEnter?.(event);
+    },
+    onPointerLeave: (event) => {
+      rest.onPointerLeave(event);
+      own.onPointerLeave?.(event);
+    },
+    onFocus: (event) => {
+      rest.onFocus(event);
+      own.onFocus?.(event);
+    },
+    onBlur: (event) => {
+      rest.onBlur(event);
+      own.onBlur?.(event);
+    },
+    onKeyDown: (event) => {
+      rest.onKeyDown(event);
+      own.onKeyDown?.(event);
+    },
+  };
+}

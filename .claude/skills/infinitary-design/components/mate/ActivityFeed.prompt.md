@@ -3,6 +3,7 @@ Quiet log of major crewmate events (spawned, reported back, decommissioned) show
 On the home shell the feed is the `Activity` panel of the left side rail: it docks to the bottom and hugs its content, with the feed body capped at 320px (plus the host header and padding), at the rail's width (`--rail-width`), inside the host's panel chrome (title and collapse are the host's; the feed styles only the body).
 Rows fill the column; overflow-y auto when there are more than fit.
 Every row stays on one line: the colored type dot is at the far left, overflowing text ellipsizes, and the relative timestamp aligns at the right.
+The dot shows nothing on rest and is no Tab stop: the line's own words say what its color does.
 Newest stays at the bottom; pin to the bottom as events arrive unless the user has scrolled up, and re-pin when the column itself resizes.
 With no events there is no panel and no rail.
 The list is one stop for the keyboard (Tab, or F6 to the panel): the arrows and the page keys scroll it, the focus ring draws inside its edge (`--focus-ring-inset`), since the list fills the frame that would cut it, and while it has the keyboard's focus every line wraps to read in full, as resting the pointer on one shows it.

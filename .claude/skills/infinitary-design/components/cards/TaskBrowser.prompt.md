@@ -30,7 +30,7 @@ It works on a task that has closed, so a game's note can play it after its task 
 **One row of chrome**, `--space-2` padding, a `--line-1` hairline under it, nothing above it:
 
 - Back, Forward and Reload, 28 px icon buttons (Lucide `chevron-left`, `chevron-right`, `rotate-cw`).
-  Navigation belongs to whoever has control, and watching is not control, so while the captain watches all three are disabled at `--fg-3`; their labels say why (`Back · the crewmate is driving`).
+  Navigation belongs to whoever has control, and watching is not control, so while the captain watches all three are marked off (`../core/IconButton.prompt.md`): dimmed, still Tab stops, their labels saying why (`Back · the crewmate is driving`).
   While he has control they are enabled and move his page.
 - The status line takes the rest of the row: a `StatusDot`, the site in mono `--fg-1` (the page's host and port, `localhost:5173`), then who is driving in `--fg-2`, then, while the crewmate drives, what it just did in `--fg-3` - each part after `·`; while the browser is paused for the captain, the crewmate's reason takes that place.
   It is one line and never wraps: the action gives way first with an ellipsis, then who is driving; the site never does.

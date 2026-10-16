@@ -11,4 +11,6 @@ A button that does what a window command does (Settings, the card pager's arrows
 On Linux the top bar's window controls (Minimize, Maximize or Restore, Close window) are neutral icon buttons too (readme, "Linux desktop conventions").
 Icons: Lucide, 16px, currentColor.
 
+An icon button that cannot be pressed for a reason is marked `off` rather than `disabled`: dimmed the same way, it stays a Tab stop (`aria-disabled`), a press does nothing, and its label says why (`Back · the crewmate is driving`; readme, "Facts shown on rest").
+
 The host may pass `ref` and `onFocus` to retain usable keyboard focus when a paged control becomes disabled or disappears.

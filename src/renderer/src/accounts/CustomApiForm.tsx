@@ -25,6 +25,7 @@ import {
   type InputProps,
   StatusDot,
   type StatusDotTone,
+  useRestLabel,
 } from "../design";
 import { focusWithRing } from "../design/focus";
 import {
@@ -1432,6 +1433,48 @@ export function RemoteCustomConnection({
   );
 }
 
+/**
+ * A connection's model chosen to run the first mate. One that cannot run it
+ * yet stays a stop of its own, marked off (`aria-disabled`) rather than
+ * disabled, with its reason on rest, the pointer's or the keyboard's focus,
+ * and as its description; choosing it does nothing (docs/keyboard.md, "Facts
+ * shown on rest").
+ */
+function FirstmateRadio({
+  model,
+  chosen,
+  off,
+  onChoose,
+}: {
+  model: string;
+  chosen: boolean;
+  /** Why it cannot be chosen yet; absent while it can. */
+  off: string | undefined;
+  onChoose: () => void;
+}) {
+  const rest = useRestLabel(off, { fact: true });
+  return (
+    <label className="fm-custom-choice">
+      <input
+        type="radio"
+        name="custom-api-firstmate"
+        aria-label={`Use ${model} for your first mate`}
+        aria-description={off}
+        aria-disabled={off === undefined ? undefined : "true"}
+        checked={chosen}
+        {...rest}
+        onClick={(event) => {
+          if (off !== undefined) event.preventDefault();
+        }}
+        onChange={() => {
+          if (off === undefined) onChoose();
+        }}
+      />
+      First mate
+    </label>
+  );
+}
+
 /** The Settings list: one block per connection, one line per model. */
 export function CustomApiAccountsSection() {
   const [views, setViews] = useState<CustomApiView[]>([]);
@@ -1497,8 +1540,8 @@ export function CustomApiAccountsSection() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!view.enabled && !checked}
-                  title={
+                  off={!view.enabled && !checked}
+                  note={
                     !view.enabled && !checked
                       ? "Edit and Save to check these models before resuming."
                       : undefined
@@ -1537,40 +1580,32 @@ export function CustomApiAccountsSection() {
                     {model.checked ? (view.enabled ? "Ready" : "Checked") : "Not checked"}
                     {model.readsPictures && <Badge tone="accent">{CUSTOM_READS_PICTURES}</Badge>}
                   </span>
-                  <label
-                    className="fm-custom-choice"
-                    title={
+                  <FirstmateRadio
+                    model={model.id}
+                    chosen={isChosen}
+                    off={
                       usable
                         ? undefined
                         : model.checked
                           ? "Resume this connection to use it."
                           : "Edit and Save to check this model first."
                     }
-                  >
-                    <input
-                      type="radio"
-                      name="custom-api-firstmate"
-                      aria-label={`Use ${model.id} for your first mate`}
-                      checked={isChosen}
-                      disabled={!usable}
-                      onChange={() => {
-                        const before = chosen;
-                        choosing.current = true;
-                        setChosen({ provider, id: model.id });
-                        void window.infinitary.settings
-                          .setFirstmateModel({ provider, id: model.id })
-                          .then(setChosen, (caught: unknown) => {
-                            setChosen(before);
-                            failed("Could not choose this model.")(caught);
-                          })
-                          .finally(() => {
-                            choosing.current = false;
-                            refresh();
-                          });
-                      }}
-                    />
-                    First mate
-                  </label>
+                    onChoose={() => {
+                      const before = chosen;
+                      choosing.current = true;
+                      setChosen({ provider, id: model.id });
+                      void window.infinitary.settings
+                        .setFirstmateModel({ provider, id: model.id })
+                        .then(setChosen, (caught: unknown) => {
+                          setChosen(before);
+                          failed("Could not choose this model.")(caught);
+                        })
+                        .finally(() => {
+                          choosing.current = false;
+                          refresh();
+                        });
+                    }}
+                  />
                 </div>
               );
             })}

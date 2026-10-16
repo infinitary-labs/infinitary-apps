@@ -350,9 +350,13 @@
 .fm-custom-lrow .fm-custom-choice input {
   margin: 0;
 }
-.fm-custom-lrow .fm-custom-choice:has(input:disabled) {
+/* A choice off for a reason stays a Tab stop (aria-disabled) and looks as a disabled one does. */
+.fm-custom-lrow .fm-custom-choice:has(input:disabled, input[aria-disabled="true"]) {
   color: var(--fg-3);
   cursor: not-allowed;
+}
+.fm-custom-lrow .fm-custom-choice input[aria-disabled="true"] {
+  opacity: 0.4;
 }
 .fm-custom-lock {
   color: var(--fg-3);

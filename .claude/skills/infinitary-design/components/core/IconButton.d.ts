@@ -12,6 +12,8 @@ export interface IconButtonProps {
   size?: number;
   tone?: "neutral" | "accent" | "danger" | "ok";
   disabled?: boolean;
+  /** Cannot be pressed for the reason its label gives: dimmed, still a Tab stop (aria-disabled), a press does nothing. */
+  off?: boolean;
   /** The icon element (Lucide, currentColor). */
   children?: React.ReactNode;
   onClick?: () => void;

@@ -25,15 +25,15 @@ Its settings, sign-ins and voice stay there.", and one row in the Devices list's
 
 **A card button that opens Settings there.**
 A card's button whose click opens one of MacBook Pro's Settings sections - Sign in, a project's Sign in again, Make a link, Make the command, Add it, Update it, Remove, Open settings - stays enabled and in its place, and its click sends nothing.
-Its tooltip says before the click, and the card's concise inline line (`../core/Button.prompt.md`) says after it: "Do this on MacBook Pro.
+Its `note` says before the click, on rest, the pointer's or the keyboard's focus, and the card's concise inline line (`../core/Button.prompt.md`) says after it: "Do this on MacBook Pro.
 Its settings and sign-ins stay there."
 The card stays on both computers, so its button is still there on MacBook Pro, and no Settings tab opens here.
 The card's other buttons, such as "Move to Grok" beside "Sign in", work from here as before.
-While changes are off, this button is disabled like the rest.
+While changes are off, this button is marked off like the rest.
 
 **A crewmate's request to take over its browser.**
 A task's browser shows its page only on MacBook Pro, so a request card's button that hands it to the captain - `Open browser and sign in`, `Sign in myself`, `Open browser and pay` - stays enabled and in its place, and its click sends nothing.
-Its tooltip says before the click, and the card's inline line says after it: "Do this on MacBook Pro.
+Its `note` says before the click, on rest, and the card's inline line says after it: "Do this on MacBook Pro.
 This task's browser shows only there."
 The card stays on both computers and the browser stays paused for the captain's help on MacBook Pro.
 `Use my saved aurora.example sign-in` needs no one at the page, so it works from here: the browser on MacBook Pro signs in and goes back to its crewmate, the card is answered on both computers, and no browser view opens here.
@@ -57,7 +57,7 @@ One line stands centered under the top bar, a pill (`--bg-1`, `--line-2`, `--rad
   This computer's update notice, when its channel offers a newer version, is the way to act on it.
 
 Everything stays readable as it was.
-Card buttons are disabled, their tooltip "Changes are off until MacBook Pro is back".
+Card buttons are marked off (`../core/Button.prompt.md`): still Tab stops, dimmed, whose description is "Changes are off until MacBook Pro is back", shown on rest as their `note` unless the pill already shows that sentence whole.
 The input keeps taking words; sending refuses at once with one `--text-sm --fg-2` line above it, "Not sent.
 Your words stay here until MacBook Pro is back.", and nothing is queued or sent later.
 When contact returns the dot turns `ok`, this computer catches up, and the pill reads "MacBook Pro is back.

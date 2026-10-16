@@ -10,6 +10,12 @@ export interface ButtonProps {
   pending?: boolean;
   /** Static pending copy, default "Working...". No spinner or delayed paint. */
   pendingLabel?: string;
+  /** Cannot be pressed for the reason `note` gives: dimmed, still a Tab stop (aria-disabled), a press does nothing. */
+  off?: boolean;
+  /** Why it is off, or a fact it only hints at: shown on rest, pointer or keyboard, and its accessible description. */
+  note?: string;
+  /** The reason alone, where another place already shows it: read by assistive technology, never drawn on rest. */
+  "aria-description"?: string;
   /** Optional leading icon element (Lucide, 16px, currentColor). */
   icon?: React.ReactNode;
   children?: React.ReactNode;

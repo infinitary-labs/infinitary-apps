@@ -204,6 +204,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Never write `inset var(--focus-ring)`: `inset` turns only the first shadow, the hairline, inward, and the edge still cuts the glow.
   **Facts shown on rest:** a fact the app shows on rest - a mark's meaning, a reset time, the exact time behind a short age, why a chip cannot be pressed, words cut short - is drawn in the icon button's label, never the native title, for the pointer's rest and the keyboard's focus alike.
   The element that holds it is a Tab stop of its own (words cut short only while cut), and its accessible name or description carries the same words, because the label is hidden from assistive technology (`docs/keyboard.md`, "Facts shown on rest").
+  A control that cannot be pressed for a reason is marked off rather than disabled - dimmed, still a Tab stop, its reason on rest and as its description - and a fact that sits inside a control rides that control's focus and description.
 - **Transparency/blur:** overlays use `--blur-overlay` over `--bg-0` at ~80% opacity — used only for modal-level surfaces.
 - **Data viz:** thin 2–3px bars, mono numerals, semantic pace colors; no chart junk.
 

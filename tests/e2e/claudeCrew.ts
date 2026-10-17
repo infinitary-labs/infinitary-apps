@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { mainProcessSettled } from "./mainProcess";
 import {
@@ -17,6 +18,13 @@ import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockProv
  * seat it too since W1 S12; tests/e2e/claudeSeat.ts is that app) - with the
  * Firstmate's model slotted and pinned, and turn-mode Claude sessions
  * against the mock provider (tests/e2e/mockClaudeClient.ts).
+ *
+ * Hermetic for the person's own Claude login, as the seat's app is: the
+ * app runs as NO_CLAUDE_LOGIN_USER, so its own Keychain lookups find
+ * nothing, and the store keeps its credential in the plain file. While a
+ * crewmate's client holds the store, the app's status read cannot ask the
+ * client and reads that file instead (docs/e2e-contracts.md), so this
+ * store alone says the crew's account is signed in, never the machine's.
  */
 
 export const CLAUDE_CREW_ACCOUNT = "acct_claude_crew";
@@ -153,14 +161,19 @@ export async function launchClaudeCrew(
     ...(options.homeDir ? { homeDir: options.homeDir } : {}),
     prepareHome: (homeDir) => {
       seedSignedInClaudeStore(claudeDefaultStore(homeDir));
-      // Where no Keychain serves the login (Linux), the client keeps it in
-      // the store's credentials file, and the app's status read falls back
-      // to that file while a turn holds the store. The allowance fixture
-      // keeps the quota sensor from using its fake tokens.
-      if (process.platform !== "darwin") seedClaudeCredentialFile(claudeDefaultStore(homeDir));
+      // Signed in, as the client and the store both say, on every platform:
+      // the app's status read falls back to the store's credentials file
+      // while a crewmate's client holds the store, and the Keychain holds
+      // nothing for this run's user. The allowance fixture keeps the quota
+      // sensor from using its fake tokens.
+      seedClaudeCredentialFile(claudeDefaultStore(homeDir));
       options.prepareHome?.(homeDir);
     },
-    env: { ...options.env, INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now()) },
+    env: {
+      USER: NO_CLAUDE_LOGIN_USER,
+      ...options.env,
+      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now()),
+    },
   });
   if (relaunch) {
     await mainProcessSettled(launched.app);

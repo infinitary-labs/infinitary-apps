@@ -233,6 +233,9 @@ A session runs turns when it names a session (`--session-id=`, `--resume=`) or a
   A crewmate runs on Claude when its commission pins the Claude crew model, as a title carrying `CLAUDE_CREW_PROMPT_MARKER` or `CLAUDE_CREWMATE_MARKER` makes the mock first mate do (`tests/e2e/mockProvider.ts`); the latter leaves the rest of the title to pick the crewmate's script, so one journey runs on Pi and on Claude alike.
   The window re-reads the first-run gate only on a quota push, so the helper asks for one after the slot change.
   A userData without accounts is a first launch, so a spec may seed a project row there before calling the helper.
+  The crew's app also runs as `NO_CLAUDE_LOGIN_USER`, and its store is signed in with the plain-file credential on every platform.
+  A crewmate's client holds the store between prompts, so the app's minute status read cannot ask the client then and reads the store's own files instead.
+  Without that file the read falls through to the Keychain, and where it finds no login the crew's account reads as signed out: the next Claude crewmate opens on Pi's default model and fails with "No API key found", which reads as "sign in again".
 - **The first mate on Claude** (W1 S12, `tests/e2e/claudeSeat.ts`): the captain pins a Claude model, and every first mate turn runs on the boxed client with a dummy subscription token (so the client reads the plan-window headers a person's login would) and no retries.
   The app itself runs as `NO_CLAUDE_LOGIN_USER`: the macOS Keychain names the machine's Claude login by service and `$USER`, so under a user no login was saved for, every sign-in and allowance lookup of the app's own finds nothing - no value is read, no permission asked - and a spec may press Connect or Sign in for Claude.
   The store is signed in with the plain-file credential.

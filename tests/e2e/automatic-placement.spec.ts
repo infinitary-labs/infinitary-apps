@@ -4,7 +4,14 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
-import { AUTOMATIC_COMPUTER } from "../../src/shared/placement";
+import { HERE } from "../../src/shared/deviceNames";
+import {
+  AUTOMATIC_COMPUTER,
+  PLACEMENT_DEMANDS,
+  PLACEMENT_WAIT,
+  placementWait,
+} from "../../src/shared/placement";
+import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
@@ -39,6 +46,75 @@ import { pressWindowKey, typeInto } from "./windowKeys";
  */
 
 const PROJECT = "ledger";
+
+/**
+ * The words a task waits with while this computer's own reading has too
+ * little spare processing capacity for it, from their owner.
+ */
+const BUSY_WAIT = placementWait(
+  [{ name: HERE.This, rejections: ["cpu-busy"], capacity: null }],
+  PLACEMENT_DEMANDS.standard,
+).words;
+
+/**
+ * How long a task may wait for this computer's spare processing capacity.
+ * The Mac mini that runs the Mac lane also runs the crew's own work, and its
+ * processor has stayed too busy to start a task for minutes at a time
+ * (INF-183); a task rightly waits through that, on its real readings.
+ */
+const BUSY_MS = 6 * 60_000;
+
+/**
+ * How long a task may go uncompared: one sweep, a minute on, with room. A
+ * start that has not compared computers yet reads no wait words, or the
+ * wait for room (PLACEMENT_WAIT).
+ */
+const SWEEP_MS = 90_000;
+
+/** The longest `startsOnceThereIsRoom` waits: a sweep either side of a busy spell. */
+const STARTS_MS = BUSY_MS + 2 * SWEEP_MS;
+
+/**
+ * Wait until `started` reads the task started, through up to BUSY_MS of
+ * waits for this computer's spare processing capacity and a sweep at a time
+ * uncompared. A wait for anything else - its memory (FI3-1733), its identity
+ * (FI3-1738), a model (FI3-1739) - fails at once, and an allowance that runs
+ * out fails, each in the task's own words.
+ */
+async function startsOnceThereIsRoom(
+  detail: () => Promise<TaskDetail>,
+  started: (task: TaskDetail) => boolean,
+): Promise<void> {
+  let state = "";
+  let busySince: number | undefined;
+  let uncomparedSince: number | undefined;
+  await expect
+    .poll(
+      async () => {
+        const task = await detail();
+        state = started(task)
+          ? "started"
+          : (task.runsOn?.reason ??
+            `no wait words: ${JSON.stringify({ status: task.status, runsOn: task.runsOn })}`);
+        if (state === "started") return state;
+        const words = task.startPolicy === "when-ready" ? task.runsOn?.reason : undefined;
+        const now = Date.now();
+        if (words === BUSY_WAIT) {
+          uncomparedSince = undefined;
+          busySince ??= now;
+          return now - busySince < BUSY_MS ? "waiting" : state;
+        }
+        if (words === undefined || words === PLACEMENT_WAIT) {
+          uncomparedSince ??= now;
+          return now - uncomparedSince < SWEEP_MS ? "waiting" : state;
+        }
+        return state;
+      },
+      { message: "the task started, or waited for something else", timeout: STARTS_MS },
+    )
+    .not.toBe("waiting");
+  expect(state).toBe("started");
+}
 
 /**
  * The crew's model is a real routing choice, as a person's is: an isolated
@@ -134,7 +210,7 @@ function ranOnItsBranch(app: LaunchedApp, key: string) {
 }
 
 test("a new task in an Automatic project starts on this computer from its own readings", async () => {
-  test.setTimeout(180_000);
+  test.setTimeout(STARTS_MS + 180_000);
   const userDataDir = scratchDir("infinitary-automatic-placement-");
   seedAutomaticProject(userDataDir);
   const app = await launchApp({
@@ -153,9 +229,7 @@ test("a new task in an Automatic project starts on this computer from its own re
     // Automatic committed this computer (null names the home), not a wait.
     // A start that read a busy processor, as a two-processor virtual machine
     // can while the app itself starts, waits for the next sweep, a minute on.
-    await expect
-      .poll(async () => (await detail()).placement?.computerId, { timeout: 90_000 })
-      .toBeNull();
+    await startsOnceThereIsRoom(detail, (task) => task.placement?.computerId === null);
     const here = (await detail()).placement?.candidates.find(
       (candidate) => candidate.computerId === null,
     );
@@ -180,7 +254,7 @@ test("a new task in an Automatic project starts on this computer from its own re
 });
 
 test("a new task in an Automatic project whose routing names no model starts on this computer's own default", async () => {
-  test.setTimeout(180_000);
+  test.setTimeout(STARTS_MS + 180_000);
   const userDataDir = scratchDir("infinitary-automatic-default-");
   seedAutomaticProject(userDataDir);
   // No allowance catalog: routing names no model and defers to the runtime
@@ -195,7 +269,8 @@ test("a new task in an Automatic project whose routing names no model starts on 
     const asked = await askForTask(app);
     id = asked.id;
     // As above, a busy first reading starts on the next sweep, a minute on.
-    await expect(ranOnItsBranch(app, asked.key)).toBeVisible({ timeout: 120_000 });
+    await startsOnceThereIsRoom(detail, (task) => task.startedAt !== null);
+    await expect(ranOnItsBranch(app, asked.key)).toBeVisible({ timeout: 45_000 });
     // It ran on the default: no routing decision chose a model for it.
     expect((await detail()).tier).toBeNull();
   } finally {

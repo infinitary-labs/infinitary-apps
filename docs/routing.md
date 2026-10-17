@@ -132,7 +132,10 @@ At warning or critical pressure, a Mac has no memory room, and a waiting task st
 A reading without those facts, from an older computer or a failed read, keeps the free, purgeable and file-backed sum.
 A Mac in ordinary use keeps almost no page free, so free bytes alone would read a Mac with room as full.
 The observation still carries the Mac figures separately, and neither sum claims to be Linux's MemAvailable.
-`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, from that computer's own readings, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request, and the hosted Linux virtual machines in the full suite.
+`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, from that computer's own readings, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request and in the full suite's Mac lane, and the hosted Linux virtual machines in the full suite.
+The Mac mini also runs the crew's own work, so its processor can stay too busy to start a task for minutes.
+The journey waits up to six minutes while the task waits for that computer's spare processing capacity, and one sweep while the task has not compared computers yet.
+A wait for anything else fails it at once, and an allowance that runs out fails it, each in the task's own words.
 It also holds a premium ask that computer cannot serve on the premium reset, and checks that the first mate hears once.
 
 ### Filtering, sharing and order

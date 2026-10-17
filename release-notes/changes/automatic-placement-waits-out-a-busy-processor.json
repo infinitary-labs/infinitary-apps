@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "automatic-placement-waits-out-a-busy-processor",
+      "reason": "The automatic placement journey waits up to six minutes while the computer running it reads too little spare processing capacity, and one sweep while the task has not compared computers yet; any other wait fails it at once. Nothing in the app changed."
+    }
+  ]
+}

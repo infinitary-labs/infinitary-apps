@@ -1,3 +1,4 @@
+import type { Readable } from "node:stream";
 import { ForgeError } from "./forge";
 
 /**
@@ -26,7 +27,21 @@ export type ApiReadMethod = "GET" | "HEAD";
 export type ApiWriteMethod = "POST" | "PATCH" | "PUT" | "DELETE";
 
 export type GithubReadInput = { path: string; method?: ApiReadMethod };
-export type GithubWriteInput = { method: ApiWriteMethod; path: string; body?: string };
+export type GithubWriteInput = {
+  method: ApiWriteMethod;
+  path: string;
+  body?: string;
+  /** A regular file in the task's working copy, relative to it. Never a link. */
+  file?: string;
+};
+
+/** A release file the gateway streams. The caller owns the stream until `upload` reads it. */
+export type ReleaseUpload = {
+  stream: Readable;
+  size: number;
+  contentType: string;
+  filename: string;
+};
 
 export type ForgeApiResponse = {
   status: number;
@@ -56,6 +71,14 @@ export interface ForgeApi {
     path: string,
     body?: string,
   ): Promise<ForgeApiResponse>;
+  /**
+   * Place a release-file upload: a relative assets path, or the release's
+   * own upload address. Throws `ForgeError("refused")` unless it is this
+   * host's upload address. Absent where the host takes no release file.
+   */
+  releaseUpload?(rawPath: string, filename: string): ApiRoute;
+  /** Stream a release file to the route `releaseUpload` returned. */
+  upload?(route: ApiRoute, file: ReleaseUpload): Promise<ForgeApiResponse>;
 }
 
 export type ApiRoute = {

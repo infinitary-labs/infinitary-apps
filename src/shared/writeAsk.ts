@@ -21,6 +21,8 @@ export type WriteAsk = {
   path: string;
   /** The request's JSON text, as the crewmate gave it. */
   body?: string;
+  /** A release file in the working copy, relative to it. The bytes are read when the click sends it. */
+  file?: string;
   at: number;
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;

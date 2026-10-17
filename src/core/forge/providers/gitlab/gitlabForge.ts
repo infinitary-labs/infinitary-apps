@@ -13,7 +13,7 @@ import {
   type ForgeReadiness,
   overallOfChecks,
 } from "../../forge";
-import { nextGitLabPagePath, parseGitLabApiRequest } from "./api";
+import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
 import { GitLabProjects } from "./projects";
 import { GitLabWorkflows } from "./workflows";
@@ -110,6 +110,8 @@ export class GitLabForge implements Forge {
       route: (method, raw, bodyBytes) => parseGitLabApiRequest(method, raw, project, bodyBytes),
       nextPath: (link) => nextGitLabPagePath(link, options.apiBaseUrl, project),
       call: (method, path, body) => this.client.call(method, path, body),
+      releaseUpload: (raw) => gitLabReleaseUpload(raw, project),
+      upload: (route, file) => this.client.upload(route.path, file),
     };
   }
 

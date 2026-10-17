@@ -64,6 +64,62 @@ export function parseGitLabApiRequest(
   };
 }
 
+/**
+ * A release file is attached to a release, never sent to an absolute address.
+ * The path names the release: `/projects/{id}/releases/{tag}`.
+ */
+export function gitLabReleaseUpload(raw: string, project: string | null): ApiRoute {
+  if (/^https?:\/\//i.test(raw)) {
+    refuse("A release file goes to the project's release, not another address.");
+  }
+  const route = parseGitLabApiRequest("POST", raw, project, 0);
+  const rest = route.rest
+    .split("/")
+    .map((part) => decodeURIComponent(part))
+    .join("/")
+    .replace(/\/+$/, "");
+  const tag = rest.startsWith("releases/") ? rest.slice("releases/".length) : "";
+  if (!tag || tag === "." || tag === "..") {
+    refuse(
+      "Give the release as /projects/{id}/releases/{tag}. The file is attached to that release.",
+    );
+  }
+  return route;
+}
+
+/** The file name a release upload stores, after quotes and separators are stripped. */
+export function gitlabReleaseFileName(file: string): string {
+  return (file.split("/").pop() ?? "file").replace(/["\r\n\\/]/g, "") || "file";
+}
+
+/**
+ * The release read, the package put, and the release link a GitLab file uses.
+ * The card and the upload share this, so the names cannot drift.
+ */
+export function gitlabReleaseFileCalls(
+  path: string,
+  file: string,
+): { release: string; put: string; link: string; filename: string } | undefined {
+  const match = path.split("?")[0]?.match(/^\/projects\/([^/]+)\/releases\/(.+)$/);
+  if (!match?.[1] || !match[2]) return undefined;
+  let tag: string;
+  try {
+    tag = decodeURIComponent(match[2]);
+  } catch {
+    return undefined;
+  }
+  if (!tag || tag === "." || tag === "..") return undefined;
+  const version = encodeURIComponent(tag);
+  const filename = gitlabReleaseFileName(file);
+  const project = match[1];
+  return {
+    release: `/projects/${project}/releases/${version}`,
+    put: `/projects/${project}/packages/generic/release/${version}/${encodeURIComponent(filename)}`,
+    link: `/projects/${project}/releases/${version}/assets/links`,
+    filename,
+  };
+}
+
 /** GitLab's next page, under its policy for the task's project. */
 export function nextGitLabPagePath(
   link: string | null,

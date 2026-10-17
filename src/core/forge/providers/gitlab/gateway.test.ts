@@ -1,9 +1,11 @@
+import { writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
+import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
 import { openInMemoryDatabase } from "../../../storage/db";
@@ -39,6 +41,8 @@ async function fixture(
     /** What GitLab answers a write to the project's notes. */
     notesStatus?: number;
     keyRefused?: boolean;
+    /** What the package registry answers a release file. */
+    registryStatus?: number;
   } = {},
 ) {
   const seen: Seen[] = [];
@@ -84,6 +88,14 @@ async function fixture(
       else json({ id: 7 }, 201);
     } else if (path === `${OWN}/jobs/20/retry` && req.method === "POST") {
       json({ id: 21, status: "pending" }, 201);
+    } else if (path === `${OWN}/releases/v1` && req.method === "GET") {
+      json({ tag_name: "v1" });
+    } else if (path === `${OWN}/packages/generic/release/v1/app.dmg` && req.method === "PUT") {
+      if (options.registryStatus)
+        json({ message: "Packages are disabled" }, options.registryStatus);
+      else json({ file_name: "app.dmg", size: body.length }, 201);
+    } else if (path === `${OWN}/releases/v1/assets/links` && req.method === "POST") {
+      json({ name: "app.dmg", url: JSON.parse(body).url }, 201);
     } else if (path === `${OWN}/redirect`) {
       res.writeHead(302, { location: "https://elsewhere.example/" });
       res.end();
@@ -141,6 +153,7 @@ async function fixture(
   const read = bindTool(GITHUB_READ_TOOL, { onGithubRead: (i) => service.read("task-1", i) });
   const write = bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write("task-1", i) });
   return {
+    dir,
     read,
     write,
     seen,
@@ -289,5 +302,65 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     expect(seen).toHaveLength(200);
     expect((await read.run({ path: "/projects" })).text).toContain("200 GitLab calls");
     expect(seen).toHaveLength(200);
+  });
+
+  it("attaches a release file through the package registry and refuses a registry that is not available", async () => {
+    const { write, seen, dir } = await fixture();
+    writeFileSync(join(dir, "app.dmg"), "gitlab-bytes");
+    const sent = JSON.parse(
+      (await write.run({ method: "POST", path: `${OWN}/releases/v1`, file: "app.dmg" })).text,
+    );
+    expect(sent).toMatchObject({ status: 201, ok: true, body: { name: "app.dmg" } });
+    expect(seen[0]).toMatchObject({ method: "GET", path: `/api/v4${OWN}/releases/v1` });
+    expect(seen[1]).toMatchObject({
+      method: "PUT",
+      path: `/api/v4${OWN}/packages/generic/release/v1/app.dmg`,
+      body: "gitlab-bytes",
+      key: KEY,
+    });
+    expect(seen[2]?.path).toBe(`/api/v4${OWN}/releases/v1/assets/links`);
+    expect(JSON.parse(seen[2]?.body ?? "{}").url).toContain(
+      `${OWN}/packages/generic/release/v1/app.dmg`,
+    );
+    expect(
+      (await write.run({ method: "POST", path: `${OWN}/uploads`, file: "app.dmg" })).text,
+    ).toContain("Give the release");
+    expect(seen).toHaveLength(3);
+
+    const unavailable = await fixture({ registryStatus: 403 });
+    writeFileSync(join(unavailable.dir, "app.dmg"), "gitlab-bytes");
+    const refused = (
+      await unavailable.write.run({
+        method: "POST",
+        path: `${OWN}/releases/v1`,
+        file: "app.dmg",
+      })
+    ).text;
+    expect(refused).toContain("package registry is not available");
+    expect(refused).toContain("answered 403: Packages are disabled");
+    expect(unavailable.seen.map((request) => request.path)).toEqual([
+      `/api/v4${OWN}/releases/v1`,
+      `/api/v4${OWN}/packages/generic/release/v1/app.dmg`,
+    ]);
+    const missing = await fixture();
+    writeFileSync(join(missing.dir, "app.dmg"), "gitlab-bytes");
+    const notFound = (
+      await missing.write.run({ method: "POST", path: `${OWN}/releases/missing`, file: "app.dmg" })
+    ).text;
+    expect(notFound).toContain("not found");
+    expect(missing.seen.map((request) => request.method)).toEqual(["GET"]);
+    const strip = writeAskStrip({
+      id: "wa1",
+      kind: "gitlab",
+      host: "gitlab.com",
+      place: "GitLab",
+      via: "project",
+      method: "POST",
+      path: `${OWN}/releases/v1`,
+      file: "dist/app.dmg",
+      at: 1,
+    });
+    expect(strip).toContain(`PUT ${OWN}/packages/generic/release/v1/app.dmg`);
+    expect(strip).toContain(`POST ${OWN}/releases/v1/assets/links`);
   });
 });

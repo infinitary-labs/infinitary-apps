@@ -5,10 +5,12 @@ import { requireConventional } from "../../../workspace/conventional";
 import {
   API_RESPONSE_MAX_BYTES,
   type ApiProject,
+  type ApiRoute,
   type ForgeApi,
   type ForgeApiResponse,
   nextPagePath,
   parseApiRequest,
+  type ReleaseUpload,
 } from "../../api";
 import {
   type Forge,
@@ -26,6 +28,7 @@ import {
   isTransientForgeFailure,
   overallOfChecks,
 } from "../../forge";
+import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -87,6 +90,20 @@ export function githubApiBaseFor(
   if (!options.packaged && override) return override.replace(/\/+$/, "");
   return isGitHubEnterpriseCloud(host) ? `https://api.${host}` : `https://${host}/api/v3`;
 }
+
+/**
+ * Where a release file goes (`docs/forge.md`, "Release files"): github.com's
+ * `uploads.github.com`, a GitHub Enterprise Cloud host's `uploads.<name>.ghe.com`,
+ * or a GitHub Enterprise Server's `/api/uploads`. An unpackaged API stand-in
+ * is not this address; the forge sends the file to the stand-in instead.
+ */
+export function githubUploadOrigin(host: string): string {
+  if (host === GITHUB_COM) return "https://uploads.github.com";
+  if (isGitHubEnterpriseCloud(host)) return `https://uploads.${host}`;
+  return `https://${host}/api/uploads`;
+}
+
+const RELEASE_ASSET = /^releases\/\d+\/assets$/;
 
 /** GitHub's GraphQL address beside a REST API base: `/api/graphql` on a GitHub Enterprise Server. */
 export function githubGraphqlUrl(apiBase: string): string {
@@ -184,6 +201,8 @@ export class GitHubForge implements Forge {
       route: (method, raw, bodyBytes) => parseApiRequest(method, raw, this.apiProject(), bodyBytes),
       nextPath: (link) => nextPagePath(link, this.base, this.apiProject()),
       call: (method, path, body) => this.apiCall(method, path, body),
+      releaseUpload: (raw, filename) => this.releaseUploadRoute(raw, filename),
+      upload: (route, file) => this.uploadRelease(route, file),
     };
     this.base = (options.apiBaseUrl ?? GITHUB_API_URL).replace(/\/+$/, "");
     this.fetcher = options.fetch ?? fetch;
@@ -707,6 +726,131 @@ export class GitHubForge implements Forge {
     }
   }
 
+  /**
+   * The release's own upload address, or a relative assets path, accepted
+   * only on this host's upload origin. A stand-in's origin is the API base
+   * the test pointed here, never uploads.github.com.
+   */
+  private releaseUploadRoute(raw: string, filename: string): ApiRoute {
+    const relative = this.releaseAssetPath(raw, filename);
+    const route = parseApiRequest("POST", relative, this.apiProject(), 0);
+    const rest = route.rest
+      .split("/")
+      .map((part) => decodeURIComponent(part))
+      .join("/")
+      .replace(/\/+$/, "");
+    if (!RELEASE_ASSET.test(rest)) {
+      throw new ForgeError(
+        "refused",
+        "A release file goes to the release's upload address, /repos/{owner}/{repo}/releases/{id}/assets, not this path.",
+      );
+    }
+    return route;
+  }
+
+  private releaseAssetPath(raw: string, filename: string): string {
+    const relative = /^https?:\/\//i.test(raw) ? this.uploadPath(raw) : raw;
+    const queryAt = relative.indexOf("?");
+    const base = queryAt === -1 ? relative : relative.slice(0, queryAt);
+    const params = new URLSearchParams(queryAt === -1 ? "" : relative.slice(queryAt + 1));
+    if (!params.get("name")) params.set("name", filename);
+    const kept = new URLSearchParams();
+    const name = params.get("name");
+    const label = params.get("label");
+    if (name) kept.set("name", name);
+    if (label) kept.set("label", label);
+    const query = kept.toString();
+    return query ? `${base}?${query}` : base;
+  }
+
+  private uploadPath(raw: string): string {
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      throw new ForgeError("refused", "The upload address could not be read.");
+    }
+    if (url.username || url.password || url.origin !== new URL(this.uploadOrigin()).origin) {
+      throw new ForgeError(
+        "refused",
+        "A release file is accepted only on GitHub's upload address.",
+      );
+    }
+    if (/[{}]|%7[Bb]|%7[Dd]/.test(`${url.pathname}${url.search}`)) {
+      throw new ForgeError(
+        "refused",
+        "Replace {?name,label} in the release's upload address with ?name= and the file's name.",
+      );
+    }
+    const prefix = this.uploadPrefix();
+    if (prefix && url.pathname !== prefix && !url.pathname.startsWith(`${prefix}/`)) {
+      throw new ForgeError(
+        "refused",
+        "A release file is accepted only on GitHub's upload address.",
+      );
+    }
+    const pathname = prefix ? url.pathname.slice(prefix.length) || "/" : url.pathname;
+    if (!pathname.startsWith("/")) {
+      throw new ForgeError(
+        "refused",
+        "A release file is accepted only on GitHub's upload address.",
+      );
+    }
+    return `${pathname}${url.search}`;
+  }
+
+  /** The path under the upload origin, such as `/api/uploads` on GitHub Enterprise Server. */
+  private uploadPrefix(): string {
+    const pathname = new URL(this.uploadOrigin()).pathname.replace(/\/+$/, "");
+    return pathname === "" || pathname === "/" ? "" : pathname;
+  }
+
+  /** github.com's upload host, or the stand-in when this forge was pointed at one. */
+  private uploadOrigin(): string {
+    const canonical = githubApiBaseFor(this.host ?? GITHUB_COM, { packaged: true });
+    if (this.base !== canonical) return this.base;
+    return githubUploadOrigin(this.host ?? GITHUB_COM);
+  }
+
+  /** Stream the file to the upload origin. Redirects are never followed; the answer stays bounded. */
+  private async uploadRelease(route: ApiRoute, file: ReleaseUpload): Promise<ForgeApiResponse> {
+    const token = await this.options.token();
+    if (!token) {
+      throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
+    }
+    const origin = this.uploadOrigin().replace(/\/+$/, "");
+    const url = `${origin}${route.path}`;
+    if (new URL(url).origin !== new URL(origin).origin) {
+      throw new ForgeError(
+        "refused",
+        "A release file is accepted only on GitHub's upload address.",
+        true,
+      );
+    }
+    let response: Response;
+    try {
+      response = await this.fetcher(url, {
+        method: "POST",
+        redirect: "manual",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": API_VERSION,
+          "Content-Type": file.contentType,
+          "Content-Length": String(file.size),
+        },
+        // Node's fetch reads a stream and requires duplex; the DOM types name neither.
+        body: file.stream,
+        duplex: "half",
+        signal: AbortSignal.timeout(RELEASE_UPLOAD_TIMEOUT_MS),
+      } as unknown as RequestInit);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
+    }
+    return this.readAnswer(response);
+  }
+
   /** The gateway's raw call: every status answers, redirects are never followed, the body is bounded. */
   private async apiCall(method: string, path: string, body?: string): Promise<ForgeApiResponse> {
     const token = await this.options.token();
@@ -731,6 +875,11 @@ export class GitHubForge implements Forge {
       const message = caught instanceof Error ? caught.message : String(caught);
       throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
     }
+    return this.readAnswer(response);
+  }
+
+  /** Every status answers. A redirect is refused, and the answer stays within the JSON cap. */
+  private async readAnswer(response: Response): Promise<ForgeApiResponse> {
     if (response.status === 401) this.options.onSignInRejected?.();
     if (response.status >= 300 && response.status < 400) {
       await response.body?.cancel();

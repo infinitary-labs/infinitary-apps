@@ -25,6 +25,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import type { JobExit } from "../jobs/jobManager";
 import {
   crewmateContractStamp,
@@ -886,7 +887,10 @@ export class SessionHost {
       },
       onReadWorkflow: (input) => text("inf:work:read-workflow", { input }),
       onGithubRead: (input) => text("inf:work:github-read", { input }),
-      onGithubWrite: (input) => text("inf:work:github-write", { input }),
+      onGithubWrite: (input) => {
+        if (input.file !== undefined) return Promise.resolve(PLACED_RELEASE_FILE_REFUSAL);
+        return text("inf:work:github-write", { input });
+      },
       // The home opens, checks and merges with its own sign-in, once it has
       // brought the branch home; an artifact is written here before it answers.
       onOpenChange: (input) => text("inf:work:open-change", { input }),

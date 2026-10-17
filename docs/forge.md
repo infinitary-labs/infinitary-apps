@@ -244,7 +244,8 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub for its own clon
 
 ## Workflow logs and artifacts
 
-Crewmates can collect CI diagnosis and measurement evidence without reading credentials or using another program's GitHub or GitLab account.
+Crewmates collect CI diagnosis and measurement evidence through the app's own sign-in.
+A program the captain asks a crewmate to run still runs; these tools do not read another program's sign-in.
 `read_workflow` and `download_artifact` are entries of the same runtime-neutral tool spec as `open_change`; both Pi and Claude receive them, including project answer tasks, never personal-workspace tasks.
 The supervisor binds the task id, `WorkflowEvidenceService` resolves its registered project and working copy, and the optional `Forge.workflows` capability reads only that project's GitHub Actions API, or its GitLab pipelines, using the existing app-owned sign-in.
 Reads do not record a CI reading, classify a failure, reserve a rerun, spend a repair, or modify a workflow.
@@ -294,7 +295,9 @@ Evidence: `src/core/forge/providers/github/workflows.test.ts` drives the actual 
 
 ## The gateway (`github_read`, `github_write`)
 
-The captain's plan (FI3-70, locked 25 Sep): crewmates reach the rest of a project's GitHub REST API through the app's own sign-in, not the Mac's `gh`.
+The captain's plan (FI3-70, locked 25 Sep): crewmates reach the rest of a project's GitHub REST API through the app's own sign-in.
+Use this connection for the crewmate's own GitHub work.
+When the captain's own words ask a crewmate to run a program, that rule is in the crewmate prompt.
 Two entries of the runtime-neutral tool spec, both Pi and Claude, served by `GithubGatewayService` (`src/core/orchestrator/githubGateway.ts`) over the optional `Forge.api` (`src/core/forge/api.ts`): each host's raw call, its own policy (`route`) and its next page (`nextPath`).
 On a GitLab project the same two tools reach GitLab's API (below); they keep their names, because GitLab's paths are not GitHub's and a crewmate names the one where its project lives either way, and a renamed tool would break every crewmate session that already holds them.
 `github_read` (GET/HEAD) and `github_write` (POST/PATCH/PUT/DELETE) go to any non-personal task; every write of a task that only answers asks the captain (below).
@@ -306,7 +309,8 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A write to `/repos/{owner}/{repo}/...` of the task's registered project, from a task that ships a change, is sent at once; the policy routes it as `own`.
   Every other write is kept for the captain's click ("A write that asks", below).
   A task with no project, or whose project lives where the app has no JSON API - kept on this computer, or on a plain Git host - reads and asks through the github.com sign-in (`accountForge`).
-  No GraphQL (`/graphql` is refused for reads and writes alike, and never becomes an ask) and no uploads.
+  No GraphQL (`/graphql` is refused for reads and writes alike, and never becomes an ask).
+  A release file is not this JSON body: it goes through `github_write`'s `file` field ("Release files", below).
   Private content from any repository the sign-in sees can reach the crewmate; an organization that has not approved the app still hides its private repositories.
   The captain chose this on FI3-1309 for repositories and on FI3-1571 for everything else the sign-in may read.
   Traversal, encoded separators or dots, empty segments, fragments, repeated query keys and `per_page` over 100 are refused.
@@ -320,13 +324,29 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A write to account or organization administration (keys, emails, members, settings, billing, `/enterprises/...`) is never the task's own, so it asks like any other.
   This is not a workflow-specific exception or a filename allowlist.
 - **Caps.**
-  Request body 256 KiB, one answer 256 KiB (refused, never cut), 30 s timeout, 200 calls per task per app run.
+  A JSON request body is 256 KiB, one answer 256 KiB (refused, never cut), a JSON call times out at 30 s, and a task may make 200 calls per app run.
+  A release file has its own 2 GB cap and a 30-minute send ("Release files", below).
   Redirects are never followed.
   The answer carries the status, request id, rate limit or retry-after, and `nextPath` whenever GitHub's next page stays on the API origin and under its own path - including a repository listing's `/repositories/{id}/...` pages (FI3-1546).
   An absolute link in the answer's body loses a `token` or `access_token` query parameter before the crewmate or any saved file sees it; the file's content stays, and the answer says the download tokens were removed.
   Tokens already saved are left where they are.
   A GitHub refusal (422, 404, 403) is a status in the answer; a 401 asks the health service to look again.
   Nothing is retried for the crewmate.
+- **Release files.**
+  `github_write` takes an optional `file`: a regular file in the task's working copy, relative to it, never a link anywhere on the way.
+  With `file` set, the method is POST and `body` stays out.
+  The gateway streams the bytes through `ForgeApi.upload`.
+  On GitHub the path is the release's own `upload_url`, or `/repos/{owner}/{repo}/releases/{id}/assets`, and it is accepted only on that host's upload origin: `uploads.github.com`, `uploads.<name>.ghe.com`, or a GitHub Enterprise Server's `/api/uploads`.
+  A GitHub Enterprise Server address is accepted only under that `/api/uploads` prefix, which is removed before the path is checked.
+  An unpackaged stand-in sends to the API base the test pointed at, never to GitHub.
+  The file's type comes from its name, and a file over 2 GB is refused before anything is sent.
+  A missing `name` query is filled from the file's name.
+  On GitLab the path names the release, `/projects/{id}/releases/{tag}`.
+  The bytes go to that project's generic package registry, under the package `release` at that tag, and a link on the release points at that package file.
+  A server whose package registry is not available is refused in plain words, and no release link is created.
+  The file stays within the same 2 GB cap.
+  The own-project and ask rules stay: a file for another project is kept, and the click reads the file then, so the ask stores the path and not the bytes.
+  A task running on another computer is refused, because the file is in that computer's working copy and the call is sent from here.
 - **Reading a project's pull request history.**
   A `/pulls` page carries two repository objects and the whole description of each pull request, so on this project even 15 to a page passes the 256 KiB cap and is refused.
   `/repos/{owner}/{repo}/issues?state=all&sort=created&direction=desc` lists pull requests too, each with `pull_request.merged_at`, and 30 to a page fits here; a refused page asks for a smaller `per_page`.
@@ -354,7 +374,8 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
 FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes; GitLab follows the same rule.
 `github_write` keeps, instead of sending, a write outside the task's own project, any write of a task that only answers, and any write through the github.com sign-in.
 The merge guard runs first: a merge or default-branch move on the task's own project is refused with its pointer to the merge card, asked or not, and so is deleting a GitLab project or a GraphQL call.
-The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path and the JSON body - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).
+The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path, the JSON body, and for a release file the path of that file in the working copy - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).
+A release file's bytes are read when the click sends it, not when the ask is kept.
 The answer names the ask's id and tells the crewmate to put it on a card.
 `emit_card` takes an action whose effect is `{ kind: "request_write", ask }`, beside the crewmate's own Not now and its words on why.
 The emit refuses an ask that is not the task's or was already taken, two asks on one card, and an ask beside a merge or discard; only a crewmate's card on its own task may carry one.
@@ -569,7 +590,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - The forge seam (git integration PRs 1.1-1.3; `docs/forge.md` is the one home): everything the app asks of where a project lives - a branch's open change, its checks, put it in, close it, what it is called - goes through `src/core/forge/index.ts`; the provider files under `src/core/forge/providers/` are Biome-fenced to the seam and `services.ts`.
   A repo's `host` (`RepoView.host`, migration 40) is stamped from its `origin` by `forgeOf`.
-  GitHub is the REST `GitHubForge` with the app's OWN GitHub sign-in (PR 1.2: OAuth device flow, `userData/forges/<host>/` 0700/0600 beside - never inside - the account vault, health on the supervisor's tick where GitHub's 401 is the proof, one `card-forge-<host>` card; the app never runs `gh` or reads another program's sign-in), and GitLab the REST `GitLabForge` with the person's browser or key sign-in; every "Not signed in" answer is a refusal whose ways are the sign-in and keeping the project on this Mac, and crewmates open and check changes with `open_change`/`check_change`; a plain host (and Bitbucket until its file exists) has the working copy sent up as a branch, reads green with zero checks, and is put in by a never-forced fast-forward push; a project kept on this Mac has no host.
+  GitHub is the REST `GitHubForge` with the app's OWN GitHub sign-in (PR 1.2: OAuth device flow, `userData/forges/<host>/` 0700/0600 beside - never inside - the account vault, health on the supervisor's tick where GitHub's 401 is the proof, one `card-forge-<host>` card; the app's own code never runs `gh` or reads another program's sign-in; a crewmate the captain asks to run a program runs it), and GitLab the REST `GitLabForge` with the person's browser or key sign-in; every "Not signed in" answer is a refusal whose ways are the sign-in and keeping the project on this Mac, and crewmates open and check changes with `open_change`/`check_change`; a plain host (and Bitbucket until its file exists) has the working copy sent up as a branch, reads green with zero checks, and is put in by a never-forced fast-forward push; a project kept on this Mac has no host.
   Surfaces name a change by the recorded `changeLabel`, never by parsing a URL, and name a host only on a project whose changes go there - a forge is never required.
   The first mate reads the same (PR 1.3): the context's `lives` fact carries the app's sign-in only where a project's changes go to that host, and `crew_status` names it as `goesIn`.
 

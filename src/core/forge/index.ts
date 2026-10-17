@@ -30,6 +30,7 @@ export type {
   ForgeApiResponse,
   GithubReadInput,
   GithubWriteInput,
+  ReleaseUpload,
 } from "./api";
 export { API_CALLS_PER_TASK, API_RESPONSE_MAX_BYTES, nextPagePath, parseApiRequest } from "./api";
 export type {
@@ -59,6 +60,9 @@ export {
 } from "./forge";
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";
+export { gitlabReleaseFileCalls } from "./providers/gitlab/api";
+export type { LocatedReleaseFile } from "./releaseFile";
+export { PLACED_RELEASE_FILE_REFUSAL, releaseFileIn } from "./releaseFile";
 export type { SignInRefusal, SignInWay } from "./signInRefusal";
 export {
   renderSignInRefusal,

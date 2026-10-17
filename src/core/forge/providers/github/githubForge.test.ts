@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { readOpenChanges } from "./changes";
 import {
@@ -8,6 +9,7 @@ import {
   githubApiBaseFor,
   githubApiBaseUrl,
   githubGraphqlUrl,
+  githubUploadOrigin,
 } from "./githubForge";
 
 /**
@@ -655,6 +657,11 @@ describe("a GitHub Enterprise host", () => {
     expect(githubApiBaseFor("github.corp.example", { packaged: false, env })).toBe(
       "http://127.0.0.1:7777/api/v3",
     );
+    expect(githubUploadOrigin("github.com")).toBe("https://uploads.github.com");
+    expect(githubUploadOrigin("octo.ghe.com")).toBe("https://uploads.octo.ghe.com");
+    expect(githubUploadOrigin("github.corp.example")).toBe(
+      "https://github.corp.example/api/uploads",
+    );
     expect(githubApiBaseFor("github.corp.example", { packaged: true, env })).toBe(
       "https://github.corp.example/api/v3",
     );
@@ -713,5 +720,116 @@ describe("githubApiBaseUrl", () => {
     const env = { ...older, INFINITARY_GITHUB_API_URL: "http://127.0.0.1:8888/" };
     expect(githubApiBaseUrl({ packaged: false, env })).toBe("http://127.0.0.1:8888");
     expect(githubApiBaseUrl({ packaged: true, env })).toBe(GITHUB_API_URL);
+  });
+});
+
+describe("a release file's upload address (INF-205)", () => {
+  const forge = new GitHubForge(
+    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+    { token: async () => "gho_test" },
+  );
+
+  it("accepts the release's upload address only on GitHub's upload origin", () => {
+    const placed = forge.api.releaseUpload?.(
+      "https://uploads.github.com/repos/octo/meter/releases/9/assets?name=App.dmg",
+      "app.dmg",
+    );
+    expect(placed).toMatchObject({
+      own: true,
+      path: "/repos/octo/meter/releases/9/assets?name=App.dmg",
+    });
+    const named = forge.api.releaseUpload?.("/repos/octo/meter/releases/9/assets", "app.dmg");
+    expect(named?.path).toBe("/repos/octo/meter/releases/9/assets?name=app.dmg");
+    expect(() =>
+      forge.api.releaseUpload?.(
+        "https://uploads.github.com/repos/octo/meter/releases/9/assets{?name,label}",
+        "app.dmg",
+      ),
+    ).toThrow("Replace {?name,label}");
+    expect(() =>
+      forge.api.releaseUpload?.(
+        "https://evil.example/repos/octo/meter/releases/9/assets?name=app.dmg",
+        "app.dmg",
+      ),
+    ).toThrow("accepted only on GitHub's upload address");
+    expect(() => forge.api.releaseUpload?.("/repos/octo/meter/issues", "app.dmg")).toThrow(
+      "not this path",
+    );
+  });
+
+  it("accepts a GitHub Enterprise Server upload address only under /api/uploads", () => {
+    const server = new GitHubForge(
+      {
+        kind: "github",
+        host: "github.corp.example",
+        owner: "acme",
+        name: "meter",
+        dir: "/unused",
+      },
+      { token: async () => "gho_test", apiBaseUrl: "https://github.corp.example/api/v3" },
+    );
+    expect(
+      server.api.releaseUpload?.(
+        "https://github.corp.example/api/uploads/repos/acme/meter/releases/9/assets?name=app.dmg",
+        "app.dmg",
+      ),
+    ).toMatchObject({
+      own: true,
+      path: "/repos/acme/meter/releases/9/assets?name=app.dmg",
+    });
+    expect(() =>
+      server.api.releaseUpload?.(
+        "https://github.corp.example/repos/acme/meter/releases/9/assets?name=app.dmg",
+        "app.dmg",
+      ),
+    ).toThrow("accepted only on GitHub's upload address");
+  });
+
+  it("sends the bytes to the production upload address, including GitHub Enterprise Server", async () => {
+    const sent: string[] = [];
+    const fetch = (async (input: RequestInfo | URL) => {
+      sent.push(String(input));
+      return new Response("{}", { status: 201, headers: { "content-type": "application/json" } });
+    }) as typeof globalThis.fetch;
+    const file = {
+      stream: Readable.from(["bytes"]),
+      size: 5,
+      contentType: "application/octet-stream",
+      filename: "app.dmg",
+    };
+    const github = new GitHubForge(
+      { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+      { token: async () => "gho_test", apiBaseUrl: "https://api.github.com", fetch },
+    );
+    const githubRoute = github.api.releaseUpload?.(
+      "/repos/octo/meter/releases/9/assets",
+      "app.dmg",
+    );
+    if (!githubRoute || !github.api.upload) throw new Error("upload is missing");
+    await github.api.upload(githubRoute, file);
+    const server = new GitHubForge(
+      {
+        kind: "github",
+        host: "github.corp.example",
+        owner: "acme",
+        name: "meter",
+        dir: "/unused",
+      },
+      {
+        token: async () => "gho_test",
+        apiBaseUrl: "https://github.corp.example/api/v3",
+        fetch,
+      },
+    );
+    const serverRoute = server.api.releaseUpload?.(
+      "https://github.corp.example/api/uploads/repos/acme/meter/releases/9/assets?name=app.dmg",
+      "app.dmg",
+    );
+    if (!serverRoute || !server.api.upload) throw new Error("upload is missing");
+    await server.api.upload(serverRoute, { ...file, stream: Readable.from(["bytes"]) });
+    expect(sent).toEqual([
+      "https://uploads.github.com/repos/octo/meter/releases/9/assets?name=app.dmg",
+      "https://github.corp.example/api/uploads/repos/acme/meter/releases/9/assets?name=app.dmg",
+    ]);
   });
 });

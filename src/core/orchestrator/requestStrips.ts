@@ -1,5 +1,6 @@
 import type { MergeReview } from "@shared/mergeReview";
 import type { WriteAsk } from "@shared/writeAsk";
+import { gitlabReleaseFileCalls } from "../forge";
 import { escapeCardText } from "./cardText";
 
 /**
@@ -49,11 +50,23 @@ export function writeAskStrip(ask: WriteAsk): string {
     }
   }
   const through = ask.via === "account" ? "It goes through your github.com sign-in." : "";
+  const file =
+    ask.file !== undefined
+      ? `<p>A file from this task's working copy. It is read only when you click.</p><pre data-inf-call-body>${escapeCardText(ask.file)}</pre>`
+      : "";
+  const calls =
+    ask.kind === "gitlab" && ask.file !== undefined
+      ? gitlabReleaseFileCalls(ask.path, ask.file)
+      : undefined;
+  const steps = calls ? [`PUT ${calls.put}`, `POST ${calls.link}`] : undefined;
+  const callLine = (steps ?? [`${ask.method} ${ask.path}`])
+    .map((step) => `<div class="inf-call-line" data-inf-call-line>${escapeCardText(step)}</div>`)
+    .join("");
   return [
     '<div class="inf-call" data-inf-call="write">',
     `<div class="inf-call-k">Your click sends this to ${escapeCardText(ask.place)}, once</div>`,
-    `<div class="inf-call-line" data-inf-call-line>${escapeCardText(ask.method)} ${escapeCardText(ask.path)}</div>`,
-    body !== undefined ? `<pre data-inf-call-body>${escapeCardText(body)}</pre>` : "",
+    callLine,
+    body !== undefined ? `<pre data-inf-call-body>${escapeCardText(body)}</pre>` : file,
     `<p class="inf-muted">Nothing is sent before your click.${through ? ` ${through}` : ""}</p>`,
     "</div>",
   ].join("");

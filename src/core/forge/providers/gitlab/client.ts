@@ -1,8 +1,25 @@
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
-import { API_RESPONSE_MAX_BYTES, type ForgeApiResponse } from "../../api";
-import { ForgeError, type ForgeFailure } from "../../forge";
+import { API_RESPONSE_MAX_BYTES, type ForgeApiResponse, type ReleaseUpload } from "../../api";
+import { ForgeError, type ForgeFailure, isSignInForgeFailure } from "../../forge";
+import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
+import { gitlabReleaseFileCalls } from "./api";
+
+/** The host's status and its own message, for a refusal that must not hide them. */
+function hostSaid(place: string, response: ForgeApiResponse): string {
+  let said = "";
+  try {
+    const parsed = JSON.parse(response.body) as { message?: unknown; error?: unknown };
+    if (typeof parsed.message === "string") said = parsed.message;
+    else if (typeof parsed.error === "string") said = parsed.error;
+  } catch {
+    said = response.body.trim().slice(0, 200);
+  }
+  return said
+    ? ` ${place} answered ${response.status}: ${said}`
+    : ` ${place} answered ${response.status}.`;
+}
 
 /** A host's GitLab API; the override is only for unpackaged test/development runs. */
 export function gitlabApiBaseFor(
@@ -143,6 +160,110 @@ export class GitLabClient {
       const message = caught instanceof Error ? caught.message : String(caught);
       throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
     }
+    return this.gatewayAnswer(token, response);
+  }
+
+  /**
+   * Attach a release file (`docs/forge.md`, "Release files"): put the bytes
+   * in the project's generic package registry, then add a link on the release.
+   * A registry this server does not offer is refused, and the link is not created.
+   */
+  async upload(path: string, file: ReleaseUpload): Promise<ForgeApiResponse> {
+    const token = await this.options.token();
+    if (!token) throw new ForgeError("sign-in", notSignedInText(this.place, this.host));
+    const calls = gitlabReleaseFileCalls(path, file.filename);
+    if (!calls) {
+      throw new ForgeError(
+        "refused",
+        "Give the release as /projects/{id}/releases/{tag}. The file is attached to that release.",
+        true,
+      );
+    }
+    const found = await this.call("GET", calls.release);
+    if (found.status >= 300) {
+      const why =
+        found.status === 404
+          ? "The release was not found, so the file was not sent."
+          : "The release could not be read, so the file was not sent.";
+      throw new ForgeError("refused", `${why}${hostSaid(this.place, found)}`, true);
+    }
+    const packagePath = calls.put;
+    const filename = calls.filename;
+    const uploaded = await this.sendBytes(token, "PUT", packagePath, file);
+    if (uploaded.status === 403 || uploaded.status === 404) {
+      throw new ForgeError(
+        "refused",
+        `This server's package registry is not available, so the file was not attached to the release.${hostSaid(this.place, uploaded)}`,
+      );
+    }
+    if (uploaded.status >= 300) return uploaded;
+    const download = `${this.options.apiBaseUrl}${packagePath}`;
+    if (new URL(download).origin !== new URL(this.options.apiBaseUrl).origin) {
+      throw new ForgeError("refused", "A release file is accepted only on this server's address.");
+    }
+    let linked: ForgeApiResponse;
+    try {
+      linked = await this.call(
+        "POST",
+        calls.link,
+        JSON.stringify({ name: filename, url: download, link_type: "package" }),
+      );
+    } catch (caught) {
+      if (isSignInForgeFailure(caught)) throw caught;
+      throw new ForgeError(
+        "refused",
+        "The file is in the project's package registry, but it was not attached to the release.",
+      );
+    }
+    if (linked.status >= 300) {
+      throw new ForgeError(
+        "refused",
+        "The file is in the project's package registry, but it was not attached to the release.",
+      );
+    }
+    return linked;
+  }
+
+  /** Stream the file to this API. Redirects are never followed. */
+  private async sendBytes(
+    token: string,
+    method: string,
+    path: string,
+    file: ReleaseUpload,
+  ): Promise<ForgeApiResponse> {
+    const url = `${this.options.apiBaseUrl}${path}`;
+    if (new URL(url).origin !== new URL(this.options.apiBaseUrl).origin) {
+      throw new ForgeError(
+        "refused",
+        "A release file is accepted only on this server's address.",
+        true,
+      );
+    }
+    let response: Response;
+    try {
+      response = await this.fetcher(url, {
+        method,
+        redirect: "manual",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": file.contentType,
+          "Content-Length": String(file.size),
+        },
+        // Node's fetch reads a stream and requires duplex; the DOM types name neither.
+        body: file.stream,
+        duplex: "half",
+        signal: AbortSignal.timeout(RELEASE_UPLOAD_TIMEOUT_MS),
+      } as unknown as RequestInit);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
+    }
+    return this.gatewayAnswer(token, response);
+  }
+
+  /** Every status answers. A redirect is refused, and the answer stays within the JSON cap. */
+  private async gatewayAnswer(token: string, response: Response): Promise<ForgeApiResponse> {
     if (response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
       throw new ForgeError(

@@ -148,6 +148,22 @@ describe("the crewmate tool spec", () => {
     );
   });
 
+  it("keeps the GitHub tools within Claude's description limit (INF-205)", () => {
+    for (const name of ["github_read", "github_write", "read_workflow"]) {
+      const described = CREWMATE_TOOLS.find((entry) => entry.name === name);
+      expect(described?.description.length, name).toBeLessThan(2048);
+      expect(described?.description, name).not.toContain("not another program");
+      expect(described?.description, name).not.toContain("When the captain's own words ask");
+    }
+    const write = CREWMATE_TOOLS.find((entry) => entry.name === "github_write");
+    expect(write?.description).toContain(
+      'Send "return_run_details":true yourself in a GitHub workflow dispatch; the app adds nothing',
+    );
+    expect(write?.description).toContain("confirm the run's head_sha");
+    expect(JSON.stringify(write?.parameters)).toContain("accepted only on GitHub's upload address");
+    expect(JSON.stringify(write?.parameters)).toContain("/projects/{id}/releases/{tag}");
+  });
+
   it("serves every entry on Pi and on Claude, in the spec's order", () => {
     const delegate = crewmateToolDelegate();
     const names = CREWMATE_TOOLS.map((tool) => tool.name);

@@ -1,9 +1,11 @@
+import { symlinkSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { DOWNLOAD_TOKEN_NOTE, GithubGatewayService } from "../../../orchestrator/githubGateway";
+import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
 import { openInMemoryDatabase } from "../../../storage/db";
@@ -61,6 +63,7 @@ async function fixture(
   options: { oversize?: boolean; signedOut?: boolean; dispatchStatus?: number } = {},
 ) {
   const seen: Seen[] = [];
+  const types: (string | undefined)[] = [];
   let base = "";
   const server = createServer(async (req: IncomingMessage, res) => {
     let body = "";
@@ -71,6 +74,7 @@ async function fixture(
       auth: req.headers.authorization,
       body,
     });
+    types.push(req.headers["content-type"]);
     const url = new URL(req.url ?? "/", base);
     const json = (value: unknown, status = 200, headers: Record<string, string> = {}) => {
       res.writeHead(status, {
@@ -121,6 +125,12 @@ async function fixture(
       json({ accepted: true });
     } else if (url.pathname === "/repos/octo/meter/actions/runs/9/rerun-failed-jobs") {
       json({}, 201);
+    } else if (
+      (url.pathname === "/repos/octo/meter/releases/9/assets" ||
+        url.pathname === "/repos/acme/site/releases/3/assets") &&
+      req.method === "POST"
+    ) {
+      json({ id: 9, name: url.searchParams.get("name"), state: "uploaded" }, 201);
     } else if (url.pathname === "/repos/octo/meter/redirect") {
       res.writeHead(302, { location: "https://elsewhere.example/" });
       res.end();
@@ -204,8 +214,11 @@ async function fixture(
     readWithoutProject,
     writeWithoutProject,
     seen,
+    types,
     onSignInRejected,
     tasks,
+    dir,
+    service,
     read,
     write,
     readChecks,
@@ -571,5 +584,104 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       "200 GitHub calls",
     );
     expect(seen).toHaveLength(200);
+  });
+
+  it("streams a release file to GitHub's upload address and keeps another project's file for the captain", async () => {
+    const { write, writeWithoutProject, seen, types, dir, service, tasks } = await fixture();
+    writeFileSync(join(dir, "app.dmg"), "release-bytes");
+    const before = seen.length;
+    const sent = JSON.parse(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/releases/9/assets",
+          file: "app.dmg",
+        })
+      ).text,
+    );
+    expect(sent).toMatchObject({
+      status: 201,
+      ok: true,
+      body: { id: 9, name: "app.dmg", state: "uploaded" },
+    });
+    expect(seen[before]).toMatchObject({
+      method: "POST",
+      path: "/repos/octo/meter/releases/9/assets?name=app.dmg",
+      auth: "Bearer gho_fixture_owned_by_app",
+      body: "release-bytes",
+    });
+    expect(types[before]).toBe("application/x-apple-diskimage");
+    expect(JSON.stringify(sent)).not.toContain("gho_");
+
+    const foreign = (
+      await write.run({
+        method: "POST",
+        path: "https://evil.example/repos/octo/meter/releases/9/assets?name=app.dmg",
+        file: "app.dmg",
+      })
+    ).text;
+    expect(foreign).toContain("accepted only on GitHub's upload address");
+    expect(seen).toHaveLength(before + 1);
+
+    const kept = (
+      await write.run({
+        method: "POST",
+        path: "/repos/acme/site/releases/3/assets?name=app.dmg",
+        file: "app.dmg",
+      })
+    ).text;
+    expect(kept).toContain("Not sent: it goes outside this task's own project");
+    expect(seen).toHaveLength(before + 1);
+    const askId = kept.match(/ask (wa[a-z0-9]+)/)?.[1];
+    expect(askId).toBeTruthy();
+    const click = await service.sendAsk("task-1", askId ?? "");
+    expect(click.ok).toBe(true);
+    expect(click.answer).toContain("uploaded");
+    expect(seen.at(-1)).toMatchObject({
+      path: "/repos/acme/site/releases/3/assets?name=app.dmg",
+      body: "release-bytes",
+    });
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
+    expect(ask?.file).toBe("app.dmg");
+    expect(ask && writeAskStrip(ask)).toContain(
+      "A file from this task's working copy. It is read only when you click.",
+    );
+
+    expect(
+      (
+        await writeWithoutProject.run({
+          method: "POST",
+          path: "/repos/octo/meter/releases/9/assets",
+          file: "app.dmg",
+        })
+      ).text,
+    ).toContain("no working copy");
+  });
+
+  it("refuses a link, a path outside the working copy, and a missing release file", async () => {
+    const { write, seen, dir } = await fixture();
+    symlinkSync(join(dir, "app.dmg"), join(dir, "linked.dmg"));
+    writeFileSync(join(dir, "app.dmg"), "release-bytes");
+    const refused = (file: string, body?: string) =>
+      write.run({
+        method: "POST",
+        path: "/repos/octo/meter/releases/9/assets",
+        file,
+        ...(body !== undefined ? { body } : {}),
+      });
+    expect((await refused("linked.dmg")).text).toContain("is a link");
+    expect((await refused("../secret")).text).toContain("never a link");
+    expect((await refused("missing.dmg")).text).toContain("There is no missing.dmg");
+    expect(
+      (
+        await write.run({
+          method: "POST",
+          path: "/repos/octo/meter/issues",
+          file: "app.dmg",
+          body: "{}",
+        })
+      ).text,
+    ).toContain("leave body out");
+    expect(seen).toHaveLength(0);
   });
 });

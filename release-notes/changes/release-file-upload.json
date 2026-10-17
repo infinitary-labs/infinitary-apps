@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "release-file-upload",
+      "kind": "improvement",
+      "title": "A crewmate can attach a release file, and runs a program you ask for",
+      "body": "A crewmate can now attach a file from its work to a release through your GitHub or GitLab sign-in. When you ask a crewmate to run a program, it runs that program.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a crewmate can send and which programs it will run when you ask.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

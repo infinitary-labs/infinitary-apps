@@ -173,6 +173,8 @@ export class ForgeError extends Error {
   constructor(
     readonly failure: ForgeFailure,
     message: string,
+    /** True when nothing was sent: the ask records refused, not unknown. */
+    readonly beforeSend = false,
   ) {
     super(message);
     this.name = "ForgeError";

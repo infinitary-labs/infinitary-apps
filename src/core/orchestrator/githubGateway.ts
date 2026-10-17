@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { createReadStream, lstatSync } from "node:fs";
+import { Readable } from "node:stream";
 import type { WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import {
   API_CALLS_PER_TASK,
@@ -11,10 +13,17 @@ import {
   type GithubReadInput,
   type GithubWriteInput,
   isSignInForgeFailure,
+  type LocatedReleaseFile,
+  PLACED_RELEASE_FILE_REFUSAL,
+  type ReleaseUpload,
+  releaseFileIn,
 } from "../forge";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+
+/** Thrown before a release file is sent, so an ask records it as nothing sent. */
+const FILE_CHANGED_BEFORE_SEND = "The file changed before it was sent.";
 
 /** The reading after a rerun may race GitHub queuing the job, so it tries a few times. */
 const REREAD_ATTEMPTS = 3;
@@ -22,7 +31,7 @@ const REREAD_DELAY_MS = 2000;
 
 /**
  * The crewmate's two API tools over the app's own sign-in (`github_read`,
- * `github_write`, `docs/forge.md`): JSON REST only, to the host where the
+ * `github_write`, `docs/forge.md`): JSON REST, plus a release file, to the host where the
  * task's project lives - GitHub, or GitLab with the key made there, and
  * the github.com sign-in for a task with no project or none the app has an
  * API for. A read reaches whatever the sign-in may read, past the host
@@ -87,6 +96,9 @@ export class GithubGatewayService {
   write(taskId: string, input: GithubWriteInput): Promise<string> {
     return this.answer(taskId, async (target) => {
       const { api, forge } = target;
+      if (input.file !== undefined) {
+        return this.writeFile(taskId, target, input);
+      }
       const body = input.body;
       let parsed: unknown;
       if (body !== undefined) {
@@ -116,6 +128,37 @@ export class GithubGatewayService {
   }
 
   /**
+   * A release file (`docs/forge.md`, "Release files"): a regular file in the
+   * working copy, streamed to the host's upload address. The own-project and
+   * ask rules are the same as a JSON write. An ask keeps the path, not the bytes.
+   */
+  private async writeFile(
+    taskId: string,
+    target: Target,
+    input: GithubWriteInput,
+  ): Promise<string> {
+    const { api, forge } = target;
+    if (input.body !== undefined) {
+      throw new ForgeError("refused", "A release file is the request; leave body out.");
+    }
+    if (input.method !== "POST") {
+      throw new ForgeError("refused", "A release file is sent with POST.");
+    }
+    if (this.options.tasks.get(taskId)?.deviceId) {
+      throw new ForgeError("refused", PLACED_RELEASE_FILE_REFUSAL);
+    }
+    const located = this.locateFile(taskId, input.file ?? "");
+    const route = this.releaseRoute(api, input.path, located.filename);
+    if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
+      await guardApiWrite(forge.kind, route, undefined, () => forge.defaultBranch());
+    }
+    const why = this.askReason(taskId, route, target);
+    if (why) return this.keepAsk(taskId, target, route, undefined, why, located.rel);
+    const response = await this.sendFile(taskId, api, route, located);
+    return `${render(response, api)}${await this.afterWrite(taskId, target, route, response)}`;
+  }
+
+  /**
    * The captain's click on a `request_write` card (FI3-1571 piece 4): take
    * the kept write once - marked taken before anything is sent - and send
    * exactly what was kept, through the sign-in it was asked through. A call
@@ -142,6 +185,7 @@ export class GithubGatewayService {
     };
     let target: Target;
     let route: ApiRoute;
+    let located: LocatedReleaseFile | undefined;
     try {
       target = this.targetOf(taskId);
       if (
@@ -154,11 +198,19 @@ export class GithubGatewayService {
           why: `where it goes changed since it was asked (now ${target.api.place}), so it was not sent`,
         });
       }
-      route = target.api.route(
-        ask.method,
-        ask.path,
-        ask.body === undefined ? 0 : Buffer.byteLength(ask.body),
-      );
+      if (ask.file !== undefined) {
+        if (this.options.tasks.get(taskId)?.deviceId) {
+          throw new ForgeError("refused", PLACED_RELEASE_FILE_REFUSAL);
+        }
+        located = this.locateFile(taskId, ask.file);
+        route = this.releaseRoute(target.api, ask.path, located.filename);
+      } else {
+        route = target.api.route(
+          ask.method,
+          ask.path,
+          ask.body === undefined ? 0 : Buffer.byteLength(ask.body),
+        );
+      }
       if (!route.write) throw new ForgeError("refused", "only a write is asked for.");
       const { forge } = target;
       if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
@@ -175,10 +227,13 @@ export class GithubGatewayService {
     }
     let response: ForgeApiResponse;
     try {
-      response = await target.api.call(route.method, route.path, ask.body);
+      response = located
+        ? await this.sendFile(taskId, target.api, route, located, { spent: true })
+        : await target.api.call(route.method, route.path, ask.body);
     } catch (caught) {
-      // A missing or refused sign-in sent nothing; anything else may have reached the host.
-      return isSignInForgeFailure(caught)
+      // beforeSend is set only when nothing was sent. A later refusal may already have reached the host.
+      const beforeSend = caught instanceof ForgeError && caught.beforeSend;
+      return isSignInForgeFailure(caught) || beforeSend
         ? done({ kind: "refused", why: messageOf(caught) })
         : done({ kind: "unknown", why: messageOf(caught) });
     }
@@ -213,6 +268,7 @@ export class GithubGatewayService {
     route: ApiRoute,
     body: string | undefined,
     why: string,
+    file?: string,
   ): string {
     const ask: WriteAsk = {
       id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -223,6 +279,7 @@ export class GithubGatewayService {
       method: route.method as WriteAsk["method"],
       path: route.path,
       ...(body !== undefined ? { body } : {}),
+      ...(file !== undefined ? { file } : {}),
       at: this.options.now(),
     };
     this.options.tasks.keepWriteAsk(taskId, ask);
@@ -255,6 +312,54 @@ export class GithubGatewayService {
     const account = this.options.accountForge?.();
     if (account?.api) return { api: account.api, forge: account, via: "account" };
     throw new ForgeError("unsupported", "This project's host has no JSON API the app can reach.");
+  }
+
+  private locateFile(taskId: string, file: string): LocatedReleaseFile {
+    const located = releaseFileIn(this.options.tasks.get(taskId)?.worktreeDir, file);
+    if ("refusal" in located) throw new ForgeError("refused", located.refusal);
+    return located;
+  }
+
+  private releaseRoute(api: ForgeApi, rawPath: string, filename: string): ApiRoute {
+    if (!api.releaseUpload || !api.upload) {
+      throw new ForgeError("refused", "This host does not take a release file.");
+    }
+    return api.releaseUpload(rawPath, filename);
+  }
+
+  /** A file replaced after it was checked is not sent. This runs before the request. */
+  private fileUnchanged(located: LocatedReleaseFile): void {
+    const stat = lstatSync(located.path, { throwIfNoEntry: false });
+    if (!stat || stat.isSymbolicLink() || !stat.isFile() || stat.size !== located.size) {
+      throw new ForgeError("refused", FILE_CHANGED_BEFORE_SEND, true);
+    }
+  }
+
+  /** Stream the file. The size is read again so a replaced file is not sent. */
+  private async sendFile(
+    taskId: string,
+    api: ForgeApi,
+    route: ApiRoute,
+    located: LocatedReleaseFile,
+    options: { spent?: boolean } = {},
+  ): Promise<ForgeApiResponse> {
+    if (!api.upload) throw new ForgeError("refused", "This host does not take a release file.");
+    this.fileUnchanged(located);
+    if (!options.spent) this.spend(taskId, api);
+    const file: ReleaseUpload = {
+      stream:
+        located.size === 0
+          ? Readable.from([])
+          : createReadStream(located.path, { start: 0, end: located.size - 1 }),
+      size: located.size,
+      contentType: located.contentType,
+      filename: located.filename,
+    };
+    try {
+      return await api.upload(route, file);
+    } finally {
+      file.stream.destroy();
+    }
   }
 
   private async send(

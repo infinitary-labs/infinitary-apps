@@ -190,7 +190,7 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
   name: "read_workflow",
   label: "Read workflow evidence",
   description: [
-    "Read CI evidence in your project through the app's own sign-in where it lives, never another program or credentials.",
+    "Read CI evidence in your project through the app's own sign-in where it lives. Use this connection for your own GitHub work.",
     "With runId alone, answers a short read: the run's name, state, version, link and attempt, then one line per job of the latest attempt (number, name, state, and where a failed job failed).",
     "A short read of a running run saves an app watch: reads every minute, up to 3 hours and 5 runs per task. It wakes you once on the first failed job and once when the run ends; if it has ended at the first failure read, only the end wake goes. End your turn; never sleep or loop on reads. A failure or outcome you read yourself sends no matching wake.",
     "More than 100 jobs are read to the end; if any are left out, the answer says how many.",
@@ -235,7 +235,7 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
 });
 
 const GITHUB_GATEWAY_RULES =
-  "Through the app's own sign-in where your project lives, never another program or credentials. path is relative; give no host, token or header. JSON REST only: no GraphQL or uploads. Requests and answers are capped at 256 KiB, per_page at 100, calls per task at 200; an oversized answer is refused, not cut. nextPath, when given, is the next page's path. If not signed in, report a blocker: the captain signs in, never you.";
+  "Use this connection for your own GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page at 100, calls per task at 200; an oversized answer is refused, not cut. nextPath, when given, is the next page's path. If not signed in, report a blocker: the captain signs in, never you.";
 
 const GITHUB_READ_SCOPE =
   "A read reaches whatever the sign-in may read - any repository (/repos/{owner}/{repo}/..., including issues, pull requests, contents and Actions), your account, organizations, notifications and search - and the host's own answer comes back. A task with no project, or whose project lives where the app has no API (on this computer, a plain Git host), reads through the github.com sign-in.";
@@ -264,11 +264,17 @@ export const GITHUB_READ_TOOL = crewmateTool({
 export const GITHUB_WRITE_TOOL = crewmateTool({
   name: "github_write",
   label: "Write where the project lives",
-  description: `Change data where your project lives (GitHub, or GitLab) with POST, PATCH, PUT or DELETE, and never act beyond your task. ${GITHUB_WRITE_SCOPE} ${GITHUB_GATEWAY_RULES} body is JSON text. For GitHub dispatches send "return_run_details":true yourself; the app adds nothing for older servers. An accepted dispatch with workflow_run_id, or a run/job rerun, starts the minute run watch; so do GitLab pipeline starts/retries. If no run number returns, find it with github_read and call read_workflow with runId alone. End your turn when watched; no sleep or read loops. Acceptance is not passing checks: confirm the run's head_sha. Use check_change separately for PR checks. For a flaky check reserve its rerun with check_change first; an accepted rerun records that reservation and reads PR checks. An unclear write is never replayed.`,
+  description: `Change data where your project lives (GitHub, or GitLab) with POST, PATCH, PUT or DELETE, and never act beyond your task. ${GITHUB_WRITE_SCOPE} ${GITHUB_GATEWAY_RULES} body is JSON text; file sends a release file. Send "return_run_details":true yourself in a GitHub workflow dispatch; the app adds nothing. An accepted dispatch or rerun starts the run watch; if it returns no run number, find the run with github_read and call read_workflow. Acceptance is not passing checks: confirm the run's head_sha. Reserve a flake rerun with check_change first. An unclear write is never replayed.`,
   parameters: Type.Object({
     method: stringEnum(["POST", "PATCH", "PUT", "DELETE"]),
     path: Type.String(),
     body: Type.Optional(Type.String({ description: "The request's JSON text" })),
+    file: Type.Optional(
+      Type.String({
+        description:
+          "A regular file in your working copy, relative to it, never a link. With file set, POST sends that file and body stays out. On GitHub, path is the release's upload_url, or /repos/{owner}/{repo}/releases/{id}/assets, accepted only on GitHub's upload address, with the file's type and a 2 GB cap. On GitLab, path is /projects/{id}/releases/{tag}: the file is put in the package registry and linked on that release. Your own project sends at once; any other waits for the captain's click.",
+      }),
+    ),
   }),
   bind: ({ onGithubWrite }) =>
     onGithubWrite && (async (params) => ({ text: await onGithubWrite(params) })),

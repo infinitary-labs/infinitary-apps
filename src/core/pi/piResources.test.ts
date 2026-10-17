@@ -1196,6 +1196,14 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
 });
 
 describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per backend)", () => {
+  it("runs a program the captain asks for, and keeps a named rule on the crewmate's own choices (INF-205)", () => {
+    const prompt = buildCrewmateSystemPrompt();
+    expect(prompt).toContain(
+      "When the captain's own words ask you to run a program (his verbatim words in the brief, a reply under your card, a line in the task's Crewmate tab, or a written-in card answer), run it. A rule here that names a program, a sign-in or the keychain governs your own choices, never those words.",
+    );
+    expect(prompt).toContain("Keep any secret off the command line and out of what you print.");
+  });
+
   it("briefs itself on the record, not in message text (ruling D5)", () => {
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain("Your task arrives as a structured intent");

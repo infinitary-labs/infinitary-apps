@@ -388,7 +388,7 @@ import { workRequests } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.11.0";
+export const PROTOCOL_VERSION = "8.12.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -939,13 +939,15 @@ export const invokeContract = {
     response: deviceViewSchema,
   },
   // Whether Settings -> Devices and Firstmate's device cards are offered
-  // here: every build's home answers yes (docs/devices.md).
+  // here: every build's home answers yes (docs/devices.md). `phone` is
+  // whether Devices offers + A phone: only a development build, until the
+  // phone app is on TestFlight (docs/devices.md, "Settings -> Devices").
   "inf:devices:shown": {
     effect: "read",
     surface: "core",
     reach: "home",
     request: z.tuple([]),
-    response: z.object({ shown: z.boolean() }),
+    response: z.object({ shown: z.boolean(), phone: z.boolean() }),
   },
   // Stop it: closes an open link by its handle before it expires.
   "inf:devices:stop": {
@@ -2865,8 +2867,11 @@ export type FirstmateApi = {
   };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {
-    /** Whether this build offers the Devices tab and Firstmate's device cards. */
-    shown: () => Promise<{ shown: boolean }>;
+    /**
+     * Whether this build offers the Devices tab and Firstmate's device cards,
+     * and whether the tab offers + A phone (not a packaged build, until TestFlight).
+     */
+    shown: () => Promise<{ shown: boolean; phone: boolean }>;
     list: () => Promise<DeviceView[]>;
     /** A one-use ten-minute link, for this window alone. */
     invite: (request: DeviceInviteRequest) => Promise<DeviceInvite>;

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-chip-waits-for-testflight",
+      "reason": "An installed build leaves + A phone out of Settings -> Devices until the phone app is on TestFlight; a development build still offers it. The button came after 0.4.2-alpha.2, so no published release ever showed it and nobody on a release notices it going."
+    }
+  ]
+}

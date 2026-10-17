@@ -10,6 +10,7 @@ The visual rules live in the design skill's `components/devices/PhoneView.prompt
 ## Joining and trust
 
 Settings → Devices → **A phone** on the Mac opens a locally generated QR code, the same one-use computer link, Copy link and Stop it.
+A packaged build leaves **A phone** out until the phone app is on TestFlight, so only a development build of the Mac app offers it (`docs/devices.md`, "Settings -> Devices").
 The panel explains that the phone app is installed from Xcode for now.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
@@ -70,7 +71,7 @@ Neither reconnection nor discovery queues or retries a mutation.
 
 The captain opens `ios/Infinitary/Infinitary.xcodeproj`, chooses the Infinitary scheme and their iPhone or iPad, and runs it with their own development sign-in.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
-Open **A phone** in the Mac's Devices settings, scan or paste its link in the phone app, and confirm that Mac.
+Open **A phone** in the Devices settings of a development build of the Mac app (an installed build leaves it out until TestFlight), scan or paste its link in the phone app, and confirm that Mac.
 The phone should name the Mac and show In reach, its Cards and Activity.
 Physical-device signing, installation, camera scanning and the real Local Network prompt are the captain's checks, never unattended signing work.
 

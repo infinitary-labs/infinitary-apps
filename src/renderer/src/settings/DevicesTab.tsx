@@ -519,6 +519,7 @@ function HomeDevicesTab() {
   }, [panel, signIns, clear]);
   const { adding, updating, moving } = useSetups();
   const arrival = useShellStore((s) => s.pendingDeviceArrival);
+  const phone = useShellStore((s) => s.phoneShown);
 
   const refresh = useCallback(() => {
     void window.infinitary.devices.list().then(setDevices, () => undefined);
@@ -824,6 +825,7 @@ function HomeDevicesTab() {
   return (
     <DevicesTabView
       devices={devices}
+      phone={phone}
       signIns={signIns}
       addresses={addresses}
       panel={shown}
@@ -910,6 +912,8 @@ function HomeDevicesTab() {
 
 export type DevicesTabViewProps = {
   devices: DeviceView[];
+  /** Whether + A phone is offered: a development build only, until the phone app is on TestFlight. */
+  phone: boolean;
   /** What each computer that runs work last said of its sign-ins. */
   signIns: DeviceSignIns[];
   addresses: DeviceAddresses | null;
@@ -1033,16 +1037,18 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             {plusIcon}
             <span>A {COMPUTER.one}</span>
           </button>
-          <button
-            type="button"
-            className="fm-connect-chip"
-            data-device-add="phone"
-            disabled={busy === "link"}
-            onClick={() => props.onMake("phone")}
-          >
-            {plusIcon}
-            <span>A phone</span>
-          </button>
+          {props.phone && (
+            <button
+              type="button"
+              className="fm-connect-chip"
+              data-device-add="phone"
+              disabled={busy === "link"}
+              onClick={() => props.onMake("phone")}
+            >
+              {plusIcon}
+              <span>A phone</span>
+            </button>
+          )}
           <button
             type="button"
             className="fm-connect-chip"

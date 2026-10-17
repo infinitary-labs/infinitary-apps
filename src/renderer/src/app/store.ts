@@ -770,6 +770,12 @@ export type ShellState = {
    */
   devicesShown: boolean;
   /**
+   * Whether Devices offers + A phone (`phone` on `inf:devices:shown`): a
+   * development build only, until the phone app is on TestFlight. False
+   * until read.
+   */
+  phoneShown: boolean;
+  /**
    * Reads the stage again from the Mac this one controls, after a gap it
    * could not replay (that Mac restarted, or this one was away too long).
    */
@@ -1180,6 +1186,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingDeviceForgeSignIn: null,
   thisMac: null,
   devicesShown: false,
+  phoneShown: false,
   applyThisMac: (thisMac) => {
     const before = get().thisMac;
     set({ thisMac });
@@ -1246,7 +1253,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // Asked once: a build offers Devices or not for as long as it runs.
     void window.infinitary.devices
       .shown()
-      .then(({ shown }) => set({ devicesShown: shown }))
+      .then(({ shown, phone }) => set({ devicesShown: shown, phoneShown: phone }))
       .catch(() => {});
     window.infinitary.cards.onCards((cards) => get().applyCards(cards));
     window.infinitary.cards.onThread((thread) => get().applyThread(thread.cardId, thread.messages));

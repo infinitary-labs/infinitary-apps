@@ -4,7 +4,8 @@
 
 Every build offers multi-machine support, stable, alpha and development alike.
 Settings → Devices, the first mate's device cards, first-launch joining, a Mac controlling another, windowless work, a project's Runs on and a computer's own sign-ins are on in an installed build as they are in a checkout.
-`tests/e2e/installed-devices.spec.ts` holds that an installed build offers them, and `src/core/core.test.ts`, "every build offers every device channel and card", holds the same for a packaged core.
+The one exception is **+ A phone**, which only a development build offers until the phone app is on TestFlight (below, "Settings -> Devices").
+`tests/e2e/installed-devices.spec.ts` holds that an installed build offers them and leaves out + A phone, and `src/core/core.test.ts`, "every build offers every device channel and card", holds the same for a packaged core.
 
 How a device joins the home and how the home keeps the list of what joined: the link, the keys each side proves itself with, the saved list, Remove, and the threat each rule meets.
 The connection that carries a paired device's requests and pushes is `docs/connection.md`; this page is pairing's.
@@ -769,7 +770,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:change-address` | home | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |
 | `inf:devices:add` | home | none: the captain's click adds the Mac at an address over Remote Login; `device-invite` with `how: "address"`, tier `hands`, only offers the card |
 | `inf:devices:update` | home | none: the captain's click updates Infinitary on a computer that runs work, over Remote Login or the connection; `device-update`, tier `hands`, only offers the card |
-| `inf:devices:shown` | home | none: whether Devices is offered here; every build's home answers yes, and a Mac that controls another is not answered |
+| `inf:devices:shown` | home | none: whether Devices is offered here, and whether it offers + A phone; every build's home answers yes, `phone` only off a packaged build, and a Mac that controls another is not answered |
 | `inf:devices:stop` | home | none: it closes the captain's own open link and sets nothing |
 | `inf:devices:addresses` | home | none |
 | `inf:devices:address:set` | home | `device-address`, tier `hands` |
@@ -793,6 +794,7 @@ A lost view can therefore ask for those until the captain removes it here.
 ## Settings -> Devices
 
 Every build offers the tab and the first mate's device cards: `inf:devices:shown` answers yes on every home, stable, alpha and development alike.
+Its `phone` is false on a packaged build, which leaves **+ A phone** out of the tab until the phone app is on TestFlight; a development build, and so every end-to-end run, offers it.
 On an app that controls another Mac the tab is that Mac's row with Leave instead, and that Mac is not asked `inf:devices:shown`.
 
 The tab after Usage, built to the agreed design in the design skill's `components/devices/DevicesTab` (`src/renderer/src/settings/DevicesTab.tsx`):
@@ -844,6 +846,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   A Mac whose user runs another first mate's work asks once under the foot, with Cancel focused, before anything is sent there (above, "Another first mate's Mac").
   A computer whose Infinitary is updating reads "Updating Infinitary on Mac mini…" in place of what it runs, with no Update or Remove.
   **+ Running as another user** makes the command for another user on this Mac at once.
+  **+ A phone**, offered only where `phone` says so (above), opens the scan-code panel (`docs/ios.md`).
   The link or command stands in a panel at the top of the tab with Copy link or Copy command, "works once · 9:41 left" and Stop it, then reads what joined (`deviceJoinedLine`), and for a computer that runs work "Give it a project in Projects when you want it to run work.", with Done; once that computer has a sign-in the panel goes, and Done dismisses it before then; or "The link expired before any computer used it."
   (or "The command expired…") with Make a new one.
   Making a new one stops the one it replaces.

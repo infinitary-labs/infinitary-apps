@@ -112,6 +112,9 @@ A computer that runs work sends that request only to a home on 8.9 or later (`CA
 Protocol 8.11 adds optional inactive memory, speculative memory and macOS pressure to a computer's memory reading (`docs/routing.md`).
 A computer on an older minor sends none of them, and a home on an older minor ignores them, so that reading keeps the free, purgeable and file-backed sum.
 
+Protocol 8.12 adds `phone` to `inf:devices:shown`: whether Settings -> Devices offers + A phone, false on a packaged build until the phone app is on TestFlight (`docs/devices.md`, "Settings -> Devices").
+Only this Mac's own window asks that request, and a client on an older minor ignores the field.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

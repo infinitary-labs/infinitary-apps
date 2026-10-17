@@ -75,6 +75,7 @@ function render(overrides: Partial<DevicesTabViewProps> = {}) {
   return renderToStaticMarkup(
     <DevicesTabView
       devices={[AIR]}
+      phone={false}
       addresses={{
         addresses: [{ address: "192.168.1.20", network: "local" }],
         chosen: null,
@@ -141,6 +142,18 @@ describe("Settings -> Devices", () => {
     expect(html).toContain("Running as another user");
     expect(html).not.toContain("data-panel-state");
     expect(html).not.toContain("data-device-chooser");
+  });
+
+  it("offers + A phone only when the build does, so an installed build hides it until the phone app is on TestFlight", () => {
+    // The captain's choice on INF-171's phone card: "Hide it until TestFlight".
+    const hidden = render({ phone: false });
+    expect(hidden).toContain('data-device-add="mac"');
+    expect(hidden).toContain('data-device-add="user"');
+    expect(hidden).not.toContain('data-device-add="phone"');
+    expect(hidden).not.toContain("A phone");
+    const offered = render({ phone: true });
+    expect(offered).toContain('data-device-add="phone"');
+    expect(offered).toContain("A phone");
   });
 
   it("names each device by what it said it is: a Mac or a Linux computer is a computer, a phone a phone", () => {

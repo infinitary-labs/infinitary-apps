@@ -35,6 +35,7 @@ The dot is `ok` while the device answers, `idle` while its connection is being m
 Out of reach, the mono line ends "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
 The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three chips, "+ A computer", "+ A phone" and "+ Running as another user".
 A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current Xcode-only availability.
+An installed build leaves "+ A phone" out until the phone app is on TestFlight, so its foot has two chips; a development build shows all three.
 
 **Bringing a computer back.**
 A computer that runs work looks for this computer where its link or command said, so after this computer's address changes it stays out of reach until it hears where this computer is now (`AddAMac.prompt.md`, "Finding this computer again").

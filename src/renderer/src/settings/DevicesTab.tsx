@@ -912,7 +912,7 @@ function HomeDevicesTab() {
 
 export type DevicesTabViewProps = {
   devices: DeviceView[];
-  /** Whether + A phone is offered: a development build only, until the phone app is on TestFlight. */
+  /** Whether + A phone is offered (`phone` on `inf:devices:shown`; every build offers it). */
   phone: boolean;
   /** What each computer that runs work last said of its sign-ins. */
   signIns: DeviceSignIns[];

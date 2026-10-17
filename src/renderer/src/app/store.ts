@@ -770,9 +770,8 @@ export type ShellState = {
    */
   devicesShown: boolean;
   /**
-   * Whether Devices offers + A phone (`phone` on `inf:devices:shown`): a
-   * development build only, until the phone app is on TestFlight. False
-   * until read.
+   * Whether Devices offers + A phone (`phone` on `inf:devices:shown`),
+   * which every build does. False until read.
    */
   phoneShown: boolean;
   /**

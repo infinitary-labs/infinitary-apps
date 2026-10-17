@@ -3,9 +3,8 @@
 ## Who has it
 
 Every build offers multi-machine support, stable, alpha and development alike.
-Settings → Devices, the first mate's device cards, first-launch joining, a Mac controlling another, windowless work, a project's Runs on and a computer's own sign-ins are on in an installed build as they are in a checkout.
-The one exception is **+ A phone**, which only a development build offers until the phone app is on TestFlight (below, "Settings -> Devices").
-`tests/e2e/installed-devices.spec.ts` holds that an installed build offers them and leaves out + A phone, and `src/core/core.test.ts`, "every build offers every device channel and card", holds the same for a packaged core.
+Settings → Devices with **+ A phone**, the first mate's device cards, first-launch joining, a Mac controlling another, windowless work, a project's Runs on and a computer's own sign-ins are on in an installed build as they are in a checkout.
+`tests/e2e/installed-devices.spec.ts` holds that an installed build offers them, + A phone included, and `src/core/core.test.ts`, "every build offers every device channel and card", holds the same for a packaged core.
 
 How a device joins the home and how the home keeps the list of what joined: the link, the keys each side proves itself with, the saved list, Remove, and the threat each rule meets.
 The connection that carries a paired device's requests and pushes is `docs/connection.md`; this page is pairing's.
@@ -770,7 +769,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:change-address` | home | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |
 | `inf:devices:add` | home | none: the captain's click adds the Mac at an address over Remote Login; `device-invite` with `how: "address"`, tier `hands`, only offers the card |
 | `inf:devices:update` | home | none: the captain's click updates Infinitary on a computer that runs work, over Remote Login or the connection; `device-update`, tier `hands`, only offers the card |
-| `inf:devices:shown` | home | none: whether Devices is offered here, and whether it offers + A phone; every build's home answers yes, `phone` only off a packaged build, and a Mac that controls another is not answered |
+| `inf:devices:shown` | home | none: whether Devices is offered here, and whether it offers + A phone; every build's home answers yes to both, and a Mac that controls another is not answered |
 | `inf:devices:stop` | home | none: it closes the captain's own open link and sets nothing |
 | `inf:devices:addresses` | home | none |
 | `inf:devices:address:set` | home | `device-address`, tier `hands` |
@@ -794,7 +793,7 @@ A lost view can therefore ask for those until the captain removes it here.
 ## Settings -> Devices
 
 Every build offers the tab and the first mate's device cards: `inf:devices:shown` answers yes on every home, stable, alpha and development alike.
-Its `phone` is false on a packaged build, which leaves **+ A phone** out of the tab until the phone app is on TestFlight; a development build, and so every end-to-end run, offers it.
+Its `phone`, whether the tab offers **+ A phone**, is yes on every build too.
 On an app that controls another Mac the tab is that Mac's row with Leave instead, and that Mac is not asked `inf:devices:shown`.
 
 The tab after Usage, built to the agreed design in the design skill's `components/devices/DevicesTab` (`src/renderer/src/settings/DevicesTab.tsx`):

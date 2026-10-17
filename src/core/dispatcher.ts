@@ -317,10 +317,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     }),
     "inf:devices:change-address": (deviceId, address) =>
       services.remoteLogin.changeAddress(deviceId, address),
-    // Every build offers them on the Mac where Firstmate lives, and + A phone
-    // only off a packaged build until the phone app is on TestFlight
-    // (docs/devices.md, "Settings -> Devices").
-    "inf:devices:shown": () => ({ shown: true, phone: !host.app.packaged }),
+    // Every build offers them on the Mac where Firstmate lives, + A phone
+    // included (docs/devices.md, "Settings -> Devices").
+    "inf:devices:shown": () => ({ shown: true, phone: true }),
     "inf:devices:stop": (linkId) => {
       services.devices.stop(linkId);
       return { ok: true as const };

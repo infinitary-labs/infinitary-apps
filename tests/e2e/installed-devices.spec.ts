@@ -7,12 +7,11 @@ import { commandSearch, pressWindowKey } from "./windowKeys";
 
 /**
  * Multi-machine support in an installed build (docs/devices.md): the same
- * Devices, first-launch joining and device cards a development run offers,
- * except + A phone until the phone app is on TestFlight, through the real
- * core, shell, preload and renderer with the installed flag. No link is
- * made here: an installed build listens on this Mac's own network, which a
- * test never does (devices.spec.ts and view.spec.ts make and use links on
- * loopback).
+ * Devices, + A phone included, first-launch joining and device cards a
+ * development run offers, through the real core, shell, preload and renderer
+ * with the installed flag. No link is made here: an installed build listens
+ * on this Mac's own network, which a test never does (devices.spec.ts and
+ * view.spec.ts make and use links on loopback).
  */
 
 test("an installed build offers joining at its first launch, Settings -> Devices and its command", async () => {
@@ -31,9 +30,10 @@ test("an installed build offers joining at its first launch, Settings -> Devices
     await expect(search.row("devices.try-again")).toHaveCount(1);
     await page.keyboard.press("Escape");
     // The listed command means the build's answer has arrived, with + A phone
-    // left out until TestFlight (the captain's "Hide it until TestFlight", INF-171).
+    // offered now the phone app is on TestFlight (the captain's "Show it now,
+    // as you chose for TestFlight", INF-279).
     await expect(page.locator('[data-device-add="user"]')).toBeVisible();
-    await expect(page.locator('[data-device-add="phone"]')).toHaveCount(0);
+    await expect(page.locator('[data-device-add="phone"]')).toBeVisible();
   } finally {
     await app.close();
   }

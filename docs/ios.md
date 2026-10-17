@@ -10,8 +10,8 @@ The visual rules live in the design skill's `components/devices/PhoneView.prompt
 ## Joining and trust
 
 Settings → Devices → **A phone** on the Mac opens a locally generated QR code, the same one-use computer link, Copy link and Stop it.
-A packaged build leaves **A phone** out until the phone app is on TestFlight, so only a development build of the Mac app offers it (`docs/devices.md`, "Settings -> Devices").
-The panel explains that the phone app comes from TestFlight for now.
+Every build of the Mac app offers **A phone**, installed and development alike (`docs/devices.md`, "Settings -> Devices").
+The panel explains that the phone app comes from TestFlight for now, only to the people asked to test it, and is not in the App Store yet.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
 The Mac announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works.
@@ -73,7 +73,7 @@ The captain installs Infinitary through TestFlight, not Xcode.
 Once a build is in internal testing, Apple emails each tester in the app's internal group an invitation.
 On the phone, the tester opens Apple's TestFlight app with the Apple Account in that group, accepts the invitation and installs Infinitary; automatic distribution offers each later build there too.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
-Open **A phone** in the Devices settings of a development build of the Mac app (an installed build leaves it out until TestFlight), scan or paste its link in the phone app, and confirm that Mac.
+Open **A phone** in the Mac app's Devices settings, scan or paste its link in the phone app, and confirm that Mac.
 The phone should name the Mac and show In reach, its Cards and Activity.
 TestFlight installation, camera scanning and the real Local Network prompt are the captain's checks on a physical phone.
 Someone working on the phone app can still run it on their own iPhone or iPad from `ios/Infinitary/Infinitary.xcodeproj` with the Infinitary scheme and their own development sign-in.

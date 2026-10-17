@@ -2461,11 +2461,11 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
   it("every build offers every device channel and card, packaged or not", async () => {
     for (const packaged of [true, false]) {
       const booted = await boot(packaged, false);
-      // + A phone waits for TestFlight in a packaged build (the captain's
-      // "Hide it until TestFlight", INF-171); a development build offers it.
+      // + A phone too, now the phone app is on TestFlight (the captain's
+      // "Show it now, as you chose for TestFlight", INF-279).
       expect(await booted.dispatch("inf:devices:shown", [])).toEqual({
         shown: true,
-        phone: !packaged,
+        phone: true,
       });
       // Joining by a command: another user on this Mac runs this one.
       await expect(

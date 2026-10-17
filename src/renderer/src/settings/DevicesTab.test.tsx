@@ -144,8 +144,9 @@ describe("Settings -> Devices", () => {
     expect(html).not.toContain("data-device-chooser");
   });
 
-  it("offers + A phone only when the build does, so an installed build hides it until the phone app is on TestFlight", () => {
-    // The captain's choice on INF-171's phone card: "Hide it until TestFlight".
+  it("offers + A phone only when the build does", () => {
+    // The captain's choice on INF-171's phone card, "Hide it until TestFlight",
+    // made the build's answer decide; every build now answers yes (INF-279).
     const hidden = render({ phone: false });
     expect(hidden).toContain('data-device-add="mac"');
     expect(hidden).toContain('data-device-add="user"');

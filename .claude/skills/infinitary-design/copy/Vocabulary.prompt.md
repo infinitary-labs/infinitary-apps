@@ -46,7 +46,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | SSH key, Remote Login | allowed: the key is the person's own, and Remote Login is what macOS calls the setting. An address such as `sam@mini.local` stays in mono |
 | socket, port, TLS, certificate, key, pin, fingerprint, handshake, tailnet, IP, interface, listener | never named; say what happened: "Could not reach 192.168.1.20", "not the computer that made this link". An address stays in mono where it is the thing itself |
 | pairing link, join URL, invite code, deep link, join command, install script | the link, the command; "works once", "ten minutes", "Copy link", "Copy command", "Stop it" |
-| QR code | a code to scan. None is shown until the iPhone app exists; until then the link alone |
+| QR code | a code to scan; the A phone panel shows one beside its link |
 | protocol version, contract, major version, read access | "MacBook Pro has a newer Infinitary", "Update Infinitary on this computer to make changes", "read only" |
 | session, session file, transcript, JSONL | the conversation; a crewmate's "notes" |
 | SHA, hash, head, in the sentence | the version; "at the latest version", "the checks failed on 3 versions" (the SHA itself stays in mono where it is the thing) |

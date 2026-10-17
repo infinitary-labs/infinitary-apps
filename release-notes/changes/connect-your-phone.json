@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "connect-your-phone",
+      "kind": "feature",
+      "title": "A code to connect your phone",
+      "body": "Settings → Devices has + A phone, with a code to scan in the Infinitary phone app. On your phone you can read your Mac’s cards and Activity, and you still answer them on your Mac. The phone app is not publicly available yet: only people asked to test it can install it.",
+      "area": "devices",
+      "picture": {
+        "dark": "connect-your-phone-dark.webp",
+        "light": "connect-your-phone-light.webp",
+        "alt": "The A phone panel in Devices shows a code to scan, its link with Copy link, a ten-minute limit and Stop it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

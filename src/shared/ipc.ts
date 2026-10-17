@@ -940,8 +940,8 @@ export const invokeContract = {
   },
   // Whether Settings -> Devices and Firstmate's device cards are offered
   // here: every build's home answers yes (docs/devices.md). `phone` is
-  // whether Devices offers + A phone: only a development build, until the
-  // phone app is on TestFlight (docs/devices.md, "Settings -> Devices").
+  // whether Devices offers + A phone, which every build answers yes too
+  // (docs/devices.md, "Settings -> Devices").
   "inf:devices:shown": {
     effect: "read",
     surface: "core",
@@ -2869,7 +2869,7 @@ export type FirstmateApi = {
   devices: {
     /**
      * Whether this build offers the Devices tab and Firstmate's device cards,
-     * and whether the tab offers + A phone (not a packaged build, until TestFlight).
+     * and whether the tab offers + A phone (every build does).
      */
     shown: () => Promise<{ shown: boolean; phone: boolean }>;
     list: () => Promise<DeviceView[]>;

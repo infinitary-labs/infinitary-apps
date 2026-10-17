@@ -79,7 +79,7 @@ import {
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
-import { expandDock, hideRecord, pressRow, recordCard, taskFact } from "./rails";
+import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
 import { SHOWN_ENTRY, showCard, shownCard } from "./stack";
 import {
   canvasReading,
@@ -518,6 +518,7 @@ test("the captain opens a task's browser from its record and watches the crewmat
       await expandDock(page, "now");
       await pressRow(page, task.key);
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+      await expectRecordBody(page);
       const line = taskFact(recordCard(page), "browser");
       await expect(line).toHaveAttribute("data-browser-driver", "crewmate");
       await expect(line).toContainText(new URL(watchedUrl).host);
@@ -930,6 +931,7 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await view(page, task.id).locator("[data-browser-foot] [data-browser-record]").click();
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
       await expect(recordCard(page)).toHaveCSS("opacity", "1");
+      await expectRecordBody(page);
       // The view it came from has left the stage.
       await expect(page.locator(`[data-task-browser="${task.id}"]`)).toBeHidden();
       const line = taskFact(recordCard(page), "browser");
@@ -995,6 +997,8 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       expect(crewmateCalls()).toHaveLength(calls);
       await expandDock(page, "now");
       await pressRow(page, task.key);
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+      await expectRecordBody(page);
       const line = taskFact(recordCard(page), "browser");
       await expect(line).toContainText(DRIVER_WORDS.captain);
       await line.locator("[data-browser-open]").click();
@@ -1116,6 +1120,7 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
     await expandDock(page, "now");
     await pressRow(page, task.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+    await expectRecordBody(page);
     await taskFact(recordCard(page), "browser").locator("[data-browser-open]").click();
   };
   try {
@@ -1485,6 +1490,7 @@ test("a page's second page opens inside the task's browser, named by its own sit
       await expandDock(page, "now");
       await pressRow(page, task.key);
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+      await expectRecordBody(page);
       await taskFact(recordCard(page), "browser").locator("[data-browser-open]").click();
       const shown = view(page, task.id);
       await expect(shown).toHaveAttribute("data-browser-state", "watching");

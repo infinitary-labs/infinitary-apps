@@ -50,6 +50,7 @@ import {
 import { pastePictures, promptInput } from "./prompt";
 import {
   expandDock,
+  expectRecordBody,
   feedLine,
   nowRowGroup,
   pressRow,
@@ -915,6 +916,7 @@ test("ready waiting follows reachable choices through a reply, reload and return
     // A ready return waits behind the record, rather than stealing its place.
     await pressRow(page, key);
     await expect(recordCard(page)).toBeVisible();
+    await expectRecordBody(page);
     mockProvider?.releaseThreadAnswer();
     await expect
       .poll(

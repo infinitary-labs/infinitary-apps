@@ -16,6 +16,7 @@ import {
 import { promptInput } from "./prompt";
 import {
   expandDock,
+  expectRecordBody,
   hideRecord,
   pressRow,
   recordBar,
@@ -40,6 +41,7 @@ async function openRecord(page: Page, key: string, id: string): Promise<void> {
   await pressRow(page, key);
   await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
   await expect(recordCard(page)).toHaveCSS("opacity", "1");
+  await expectRecordBody(page);
 }
 
 /** One record on the stack at a time, so its bar is the one clicked. */

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-show-card-waits-for-body",
+      "reason": "Journeys that press a record's controls wait until its body frame has drawn, inside the open, so a late drawing cannot move the button out from under the press. Nothing in the app changed."
+    }
+  ]
+}

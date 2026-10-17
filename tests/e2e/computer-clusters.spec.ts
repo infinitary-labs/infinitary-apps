@@ -6,7 +6,7 @@ import { crewSummary } from "./crew";
 import { launchApp } from "./launch";
 import { expectClearOf, intersects, type Rect, resizeWindow, within } from "./layout";
 import { promptInput } from "./prompt";
-import { hideRecord, recordCard } from "./rails";
+import { expectRecordBody, hideRecord, recordCard } from "./rails";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 /** Every crew glyph target on the page, with the computer it belongs to and its box. */
@@ -98,6 +98,7 @@ test("actual task placement groups work computers, and keyboard inspection opens
     const target = page.locator(`[data-crew-model-name="${task.id}"]`);
     await pressKey(target, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+    await expectRecordBody(page);
     await expect(page.locator("[data-computer-cluster]").filter({ visible: true })).toHaveCount(0);
     await expect(crewSummary(page)).toHaveCount(0);
     await hideRecord(page).click();

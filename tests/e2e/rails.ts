@@ -353,6 +353,17 @@ export function recordFrame(page: Page): FrameLocator {
   return drawnFrame(page, RECORD_FRAME_SELECTOR);
 }
 
+/**
+ * The shown record's body has drawn. The host reveals the record once its
+ * own facts are on screen, before this frame draws (FI3-948), and the frame
+ * then grows the card. A press on the record's controls in that gap can
+ * release beside the control. A journey waits here inside the open, not at
+ * the press. A record that could not be read never draws this body.
+ */
+export async function expectRecordBody(page: Page): Promise<void> {
+  await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
+}
+
 /** A detail fact's value, by stable identity rather than its displayed label. */
 export function recordFact(page: Page, fact: RecordFact): Locator {
   return recordFrame(page).locator(`[data-record-fact="${fact}"]`);

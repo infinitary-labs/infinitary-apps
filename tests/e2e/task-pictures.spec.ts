@@ -10,6 +10,7 @@ import { providerMessages } from "./providerRequest";
 import {
   expandDock,
   expectRecordBar,
+  expectRecordBody,
   openGroup,
   pressRow,
   recordBarButton,
@@ -116,6 +117,7 @@ test("a picture on a message that files a task reaches its crewmate after a rela
   await rowAtRest(page, key);
   await pressRow(page, key);
   await expect(recordCard(page)).toBeVisible();
+  await expectRecordBody(page);
   expect(await expectRecordBar(page)).toMatchObject({ next: "start" });
   await recordBarButton(page, "next").click();
 

@@ -8,6 +8,7 @@ import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE, SPAWN_PROMPT_MARKER } from "./
 import { promptInput } from "./prompt";
 import {
   expandDock,
+  expectRecordBody,
   hideRecord,
   nowFrame,
   pressRow,
@@ -119,6 +120,7 @@ test("records page one per task beside the cards, and the character returns when
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
     await page.getByRole("button", { name: "Previous card" }).click();
     await expect(recordCard(page)).toBeVisible();
+    await expectRecordBody(page);
     await hideRecord(page).click();
     await expect(recordCard(page)).toHaveCount(0);
     await expect(nowFrame(page).locator("[data-now-selected]")).toHaveCount(0);

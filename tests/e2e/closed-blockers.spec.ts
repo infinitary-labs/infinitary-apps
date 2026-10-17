@@ -7,7 +7,15 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { RECORD_NEXT_LABELS } from "../../src/shared/recordBar";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
-import { expandDock, nowFrame, pressRow, recordBarButton, recordCard, recordFrame } from "./rails";
+import {
+  expandDock,
+  expectRecordBody,
+  nowFrame,
+  pressRow,
+  recordBarButton,
+  recordCard,
+  recordFrame,
+} from "./rails";
 
 /** Current blockers are live work, not the closed edges retained in the task's history. */
 function seeded(): string {
@@ -80,7 +88,7 @@ async function openRecord(id: string): Promise<void> {
   await pressRow(page, detail.key);
   await expect(recordCard(page)).toHaveAttribute("data-task-record", id);
   await expect(recordCard(page)).toHaveCSS("opacity", "1");
-  await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
+  await expectRecordBody(page);
 }
 
 test("an active task names only its open and active blockers", async () => {

@@ -16,6 +16,7 @@ import { heroShot, regionShot } from "./pictures";
 import {
   dockFrameElement,
   expandDock,
+  expectRecordBody,
   hideRecord,
   nowRow,
   nowRowGroup,
@@ -133,6 +134,7 @@ test("a cardless wait opens its record with the reported reason, while a real ch
     }
     await pressRow(page, key("blocked"));
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "blocked");
+    await expectRecordBody(page);
     if (dir) await regionShot(recordCard(page), join(dir, "record.png"));
     if (process.env.FM_WAIT_HERO)
       await heroShot(page, { region: recordCard(page), name: "task-wait-reason" });

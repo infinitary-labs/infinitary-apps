@@ -27,6 +27,7 @@ import { launchApp } from "./launch";
 import { expectClearOf, type Point, slidePointer } from "./layout";
 import {
   expandDock,
+  expectRecordBody,
   hideRecord,
   nowFrame,
   nowRow,
@@ -422,6 +423,7 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
       await expect(rowSummary(page)).toHaveCount(0);
       await expect(recordCard(page)).toHaveAttribute("data-task-record", idle.id);
       await page.mouse.move(4, 400);
+      await expectRecordBody(page);
       await hideRecord(page).click();
     });
   } finally {

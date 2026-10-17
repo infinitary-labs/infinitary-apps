@@ -20,6 +20,7 @@ import {
 import { promptInput } from "./prompt";
 import { latestContext, providerMessages, requestToolNames } from "./providerRequest";
 import {
+  expectRecordBody,
   feedLine,
   nowFrame,
   pressRow,
@@ -238,6 +239,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     }
     await pressRow(page, "SCR-2");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", followup?.id ?? "");
+    await expectRecordBody(page);
     await recordBarButton(page, "next").click();
 
     // The mock classifier sorts it as research, so the record says it

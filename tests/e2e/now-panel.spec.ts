@@ -21,6 +21,7 @@ import {
   dockSummaryParts,
   expandDock,
   expectRecordBar,
+  expectRecordBody,
   expectRecordTaskStatus,
   expectTaskMark,
   feedLineOf,
@@ -439,6 +440,8 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await expect(recordCard(page)).toBeVisible();
 
     await resizeWindow(app, page, restore);
+    // The body may only draw once the record is in view again.
+    await expectRecordBody(page);
   });
 
   await test.step("new Tasks rows remain reachable at the smallest window", async () => {

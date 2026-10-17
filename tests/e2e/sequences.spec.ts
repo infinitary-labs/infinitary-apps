@@ -54,6 +54,7 @@ import { promptInput } from "./prompt";
 import {
   expandDock,
   expectRecordBar,
+  expectRecordBody,
   feedLine,
   hideRecord,
   nowFrame,
@@ -362,6 +363,7 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
   // Its record offers the captain's Start; his press starts it.
   await pressRow(page, build.key);
   await expect(recordCard(page)).toHaveAttribute("data-task-record", build.id);
+  await expectRecordBody(page);
   expect(await expectRecordBar(page)).toMatchObject({ next: "start" });
   await page.screenshot({ path: testInfo.outputPath("saved-build-record.png") });
   await recordBarButton(page, "next").click();

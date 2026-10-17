@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { checksSentence } from "../../src/core/tasks/recordActivity";
 import { crewRoster } from "./crewRoster";
 import { launchApp } from "./launch";
-import { expandDock, pressRow, recordCard, recordFrame, taskFact } from "./rails";
+import { expandDock, expectRecordBody, pressRow, recordCard, recordFrame, taskFact } from "./rails";
 import { clickInBody } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -38,6 +38,7 @@ test("every pull request a task's card names opens it, from the strip, Now and A
     if (!key) throw new Error("The seeded task is missing");
     await pressRow(page, key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "linked-pr-0");
+    await expectRecordBody(page);
 
     await test.step("the fact strip's pull request opens it on a click", async () => {
       const strip = recordCard(page).locator("[data-record-strip]");

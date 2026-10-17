@@ -12,6 +12,7 @@ import {
   activityFrame,
   atRest,
   expandDock,
+  expectRecordBody,
   hideRecord,
   keySummary,
   linkedTaskKeys,
@@ -273,6 +274,7 @@ test("a task key in a card body opens its task's summary on a rest and the task 
         "data-task-record",
         seeded.ids[seeded.ledger] ?? "",
       );
+      await expectRecordBody(page);
       await expect(keySummary(page)).toHaveCount(0);
       await page.mouse.move(4, 400);
       await hideRecord(page).click();

@@ -14,7 +14,7 @@ import { crewRoster } from "./crewRoster";
 import { type LaunchedApp, launchApp } from "./launch";
 import { CANCEL_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { expandDock, hideRecord, nowRow, pressRow, recordCard, taskFact } from "./rails";
+import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
 import { setThemeViaSettings } from "./theme";
 import { focusOn } from "./windowKeys";
 
@@ -78,6 +78,7 @@ test("crew model names default on, toggle immediately and survive restart indepe
     await expandDock(page, "now");
     await pressRow(page, task.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+    await expectRecordBody(page);
     await expect(crewModelNames(page)).toHaveCount(0);
     await expect(crewSummary(page)).toHaveCount(0);
     await hideRecord(page).click();

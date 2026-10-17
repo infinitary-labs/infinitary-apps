@@ -98,6 +98,7 @@ A card's or a panel's page draws in a frame of its own, and the frame's title sh
 A one-shot read of that document (a count, a text, a size) answers "nothing there" once in a few runs: the card-before-after journey failed 15 of 20 runs on an unchanged main before it waited for the drawing.
 The app marks a frame `data-frame-drawn` when its page has drawn, so `tests/e2e/frames.ts` is the one door to a frame: `cardBody(page, title)`, `panelBody(page, id)`, `observeBody`, `bodyIn(scope)` and the helpers built on them (`shownCardFrame`, `recordFrame`, `nowFrame`, `activityFrame`, `dockBody`, `shownPanelCardFrame`, `browserPage`, `boardPage`) select a frame through that mark.
 Whatever a journey then asks of the frame waits for the drawing, or fails loudly because it never came.
+A journey that presses the record's controls waits for `expectRecordBody` in `tests/e2e/rails.ts` inside the open, not at the press: the host reveals the record before its body frame draws, and that frame then grows the card.
 A rail panel's frame (`panelBody`, `nowFrame`, `activityFrame`, `dockBody`) goes through `railFrame`, which also takes it as it stands while the rails are folded.
 A folded rail keeps its panels outside the window, where Chromium runs no animation frame, so a panel whose page mounted after the fold (a reload with a card's thread open) is marked drawn only once the rails unfold.
 A locator in that page still waits for its element, while a one-shot read of a folded panel can meet the empty first document.

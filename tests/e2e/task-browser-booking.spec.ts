@@ -64,7 +64,7 @@ import {
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
-import { atRest, expandDock, pressRow, recordCard, recordFrame, taskFact } from "./rails";
+import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
 import { SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
 import {
   canvasReading,
@@ -263,7 +263,7 @@ async function openFromRecord(page: Page, task: TaskDetail): Promise<Locator> {
   await expect(line).toBeVisible();
   // The record lays out around its body's page once that page draws, and a
   // press while the line still moves lands on whatever moved under it.
-  await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
+  await expectRecordBody(page);
   await atRest(page, line);
   return line;
 }

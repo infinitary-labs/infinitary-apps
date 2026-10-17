@@ -27,6 +27,7 @@ import {
   dockFrameElement,
   expandDock,
   expectRecordBar,
+  expectRecordBody,
   expectRecordTaskStatus,
   hideRecord,
   nowFrame,
@@ -266,6 +267,7 @@ async function openRecord(page: Page, taskId: string): Promise<void> {
   await pressRow(page, keys[taskId] as string);
   await expect(pane(page)).toHaveAttribute("data-task-record", taskId);
   await expect(pane(page)).toHaveCSS("opacity", "1");
+  await expectRecordBody(page);
 }
 
 /**
@@ -411,6 +413,8 @@ async function openRecordFromPanel(page: Page, taskId: string): Promise<void> {
         ).inf.action("point.openRecord", { taskId: id }),
       taskId,
     );
+  await expect(pane(page)).toHaveAttribute("data-task-record", taskId);
+  await expectRecordBody(page);
 }
 
 test("while a decision card waits the bar keeps Drop task, and Show the card brings it forward", async () => {

@@ -657,6 +657,8 @@ An uncertain opening is read first, then an explicit `recovery.retryOpening` can
 That deliberate retry also permits preparing a newer version while retaining the prior opening receipt, so a late first response or duplicate-opening refusal is reconciled rather than mistaken for a legacy PR.
 If an uncertain replacement left the exact last published region in place, the host restores that confirmed state and a deliberate later `open_change` retries its idempotent replacement.
 A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR on GitHub.
+A task whose pull request was opened before saved stories and has since closed forgets it: its next `prepare_change` and `open_change` start a saved story like any new task, and only a pull request still open for the branch is refused as predating them.
+One that merged outside the app stops there like a merged published story: nothing more is opened for it.
 Hosted files can outlive a failed or abandoned opening, and local cleanup never deletes them.
 
 The first published description says checks are pending.

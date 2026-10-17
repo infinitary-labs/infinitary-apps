@@ -1271,14 +1271,16 @@ export class PrCiService {
       if ("said" in located) return located.said;
       if (!this.options.presentations || !located.forge.attachments)
         return "Saved change stories are available only for future github.com pull requests.";
-      if (located.record.delivery?.prNumber && !located.record.delivery.presentation)
-        return "This pull request predates saved stories and will not be rewritten.";
       try {
+        // Only a pull request still open for the branch predates saved stories;
+        // a recorded one that has closed is forgotten, as for any new task.
         if (
           !located.record.delivery?.presentation &&
           (await located.forge.changeFor(located.branch))
         )
           return "This pull request predates saved stories and will not be rewritten.";
+        const merged = await this.mergedBeforeStories(located.record, located.forge);
+        if (merged) return merged;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
         return `Prepared presentation ${revision} for ${staged.head}. No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
       } catch (caught) {
@@ -1289,6 +1291,33 @@ export class PrCiService {
     } finally {
       await this.options.presentations?.discardStaged(taskId, staged);
     }
+  }
+
+  /**
+   * The pull request a task recorded before saved stories, merged outside the
+   * app: nothing more is opened for it, as for a merged published story. One
+   * closed without merging is forgotten and the task starts a story.
+   */
+  private async mergedBeforeStories(
+    record: {
+      delivery?: {
+        prNumber?: number;
+        presentation?: { published?: unknown; reconciled?: unknown };
+      } | null;
+    },
+    forge: Forge,
+  ): Promise<string | undefined> {
+    const story = record.delivery?.presentation;
+    // Once a story is published or reconciled, #N is the story's own pull
+    // request and its own stops decide. A failed read reaches the caller's
+    // catch, so the check fails closed.
+    if (story?.published || story?.reconciled) return undefined;
+    const number = record.delivery?.prNumber;
+    if (number === undefined) return undefined;
+    const pull = await this.pullOf(forge, number);
+    return pull.merged
+      ? `${numberLabel(forge, pull.number)} was merged outside the app. Nothing more is opened for it; close this task or start a new one.`
+      : undefined;
   }
 
   async presentationHead(taskId: string): Promise<string> {
@@ -1352,6 +1381,10 @@ export class PrCiService {
           return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
       }
       const presentations = this.options.presentations;
+      if (!existing && presentations && forge.attachments) {
+        const merged = await this.mergedBeforeStories(current, forge);
+        if (merged) return merged;
+      }
       const usesStory =
         presentations && forge.attachments && (!existing || current.delivery?.presentation);
       if (usesStory && (input.presentation === undefined || input.body !== undefined))

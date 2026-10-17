@@ -1919,7 +1919,7 @@ describe("shared story delivery boundaries", () => {
   const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
   const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
   async function saved() {
-    const bringBranchHome = vi.fn(async () => {
+    const bringBranchHome = vi.fn(async (): Promise<string> => {
       throw new Error("Work computer is asleep");
     });
     const at = setup({ bringBranchHome });
@@ -2119,6 +2119,105 @@ describe("shared story delivery boundaries", () => {
       "predates saved stories",
     );
     expect(at.tasks.changePresentation("ab12cd34")).toBeUndefined();
+  });
+
+  it("starts a saved story when the recorded pre-story PR has closed (INF-92 F1, captain's choice)", async () => {
+    const at = await saved();
+    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    const open = at.forge.change;
+    let body = "";
+    at.forge.change = null;
+    Object.assign(at.forge, {
+      branchHead: async () => story.head,
+      openChange: async (input: { branch: string; title: string; body: string }) => {
+        at.forge.calls.push(`openChange ${input.branch} ${input.title}`);
+        body = input.body;
+        at.forge.change = {
+          ...at.forge.opened,
+          branch: input.branch,
+          body: input.body,
+          headSha: story.head,
+        };
+        return at.forge.change;
+      },
+      pull: async () => ({ number: 23, state: "closed", merged: false, base: "main" }),
+    });
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(story.head);
+    const said = await at.service.preparePresentation("ab12cd34", story);
+    expect(said).toContain("Prepared presentation");
+    expect(said).not.toContain("predates");
+    const revision = Number(/Prepared presentation (\d+)/.exec(said)?.[1]);
+    const opened = await at.service.open("ab12cd34", {
+      title: "feat: share the story",
+      presentation: revision,
+    });
+    expect(opened).toContain("Opened");
+    expect(at.forge.calls).toContain("openChange fm/task-ab12cd34 feat: share the story");
+    const delivery = at.tasks.get("ab12cd34")?.delivery;
+    expect(body).toContain("infinitary-story:ab12cd34:start");
+    expect(delivery?.prNumber).toBe(at.forge.opened.number);
+    expect(delivery?.prNumber).not.toBe(23);
+    expect(delivery?.changeLabel).not.toContain("23");
+    // An open pull request for the branch is still a legacy one.
+    at.tasks.recordDelivery("ab12cd34", { presentation: undefined });
+    at.forge.change = open;
+    expect(await at.service.preparePresentation("ab12cd34", story)).toContain(
+      "predates saved stories",
+    );
+  });
+
+  it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
+    const at = await saved();
+    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    at.forge.change = null;
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(story.head);
+    Object.assign(at.forge, {
+      pull: async () => ({ number: 23, state: "closed", merged: true, base: "main" }),
+    });
+    expect(await at.service.preparePresentation("ab12cd34", story)).toContain("merged outside");
+    const opened = await at.service.open("ab12cd34", {
+      title: "feat: share the story",
+      presentation: 1,
+    });
+    expect(opened).toContain("merged outside");
+    expect(at.forge.calls.some((call) => call.startsWith("openChange"))).toBe(false);
+  });
+
+  it("fails closed when the recorded pre-story PR cannot be read, and when it merges between prepare and open (INF-292 F5, F6)", async () => {
+    const at = await saved();
+    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    at.forge.change = null;
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(story.head);
+    Object.assign(at.forge, { branchHead: async () => story.head });
+    Object.assign(at.forge, {
+      pull: async () => {
+        throw new Error("GitHub is unreachable");
+      },
+    });
+    const refused = await at.service.preparePresentation("ab12cd34", story);
+    expect(refused).toContain("Could not prepare the change story");
+    expect(at.tasks.get("ab12cd34")?.delivery?.presentation).toBeUndefined();
+    // Read fine at prepare, merged before open: the unpublished story opens nothing.
+    Object.assign(at.forge, {
+      pull: async () => ({ number: 23, state: "closed", merged: false, base: "main" }),
+    });
+    const said = await at.service.preparePresentation("ab12cd34", story);
+    const revision = Number(/Prepared presentation (\d+)/.exec(said)?.[1]);
+    Object.assign(at.forge, {
+      pull: async () => ({ number: 23, state: "closed", merged: true, base: "main" }),
+    });
+    const opened = await at.service.open("ab12cd34", {
+      title: "feat: share the story",
+      presentation: revision,
+    });
+    expect(opened).toContain("merged outside");
+    expect(at.forge.calls.some((call) => call.startsWith("openChange"))).toBe(false);
   });
 
   it.each(["missing task", "unsupported host", "recorded legacy", "unrecorded legacy"])(

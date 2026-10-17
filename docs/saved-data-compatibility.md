@@ -42,7 +42,9 @@ The installer-owned channel marker is a different file and contract (`update-cha
 A folder that carries `retired-profile.json` moved to Infinitary and is refused for good; the marker's presence is the whole rule, and nothing reads its contents.
 A folder whose move lock is held is refused until the move finishes.
 The move lock is `<folder>.move-lock`, a sibling of the data folder in the application-data directory (`src/core/storage/moveLock.ts`), so a move can rename the folder it guards.
-A lock that names a process which no longer exists is stale and does not block; a lock that cannot be read holds.
+A lock that names a process which no longer exists is stale and does not block.
+So is a lock written before this computer last started: its process ended with that start, whoever has its number now (`predatesBoot`, `src/core/helper/lock.ts`, the same rule `running.lock` follows).
+Any other lock that cannot be read holds.
 The one-time move below writes both the marker and the lock.
 
 ## The one-time move
@@ -79,7 +81,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
    The working folders are read from the new folder, two levels down from it and from its `work/`: the home's `worktrees/<task>`, and the `work/worktrees/<task>` a computer that runs work keeps (`src/core/folderMove/claudeSessions.ts`).
 
 The older folder stays as it was, with only the marker added: it is the recovery copy, and nothing deletes it.
-A move stopped before its copy was checked leaves nothing changed, and the next launch takes that staged copy away and starts again; one stopped after resumes from the last state its record names, and never copies again.
+A move stopped before its copy was checked - a restart included - leaves nothing changed, and the next launch takes that staged copy away and starts again; one stopped after resumes from the last state its record names, and never copies again.
 A full disk, the older app still open, its background work still running, another launch already moving, or saved work newer than this build reads stops the move with nothing changed.
 
 When both folders hold saved work, the hand-over asks which to open and never merges them.

@@ -1,10 +1,20 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
+import { uptime } from "node:os";
 import { join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { createKeyIdentity } from "../devices/identity";
 import { JoinedHome } from "../devices/joinedHome";
+import { stagedFolderFor } from "../folderMove/due";
+import { acquireMoveLock, moveLockPathFor } from "../storage/moveLock";
 import { isProfileRetired } from "../storage/retiredProfile";
 import { type BackgroundContext, readInstalled, servicePlist, writeInstalled } from "./background";
 import { moveWork } from "./moveWork";
@@ -187,6 +197,34 @@ describe("Infinitary's run that finds its work in Firstmate 3000's folder", () =
     expect(existsSync(at.own)).toBe(false);
     expect(isProfileRetired(at.older)).toBe(false);
     expect(at.asked).toEqual([]);
+  });
+
+  /**
+   * INF-276 (INF-275): the Mac mini's run began the move as process 625, and a
+   * restart cut it off with most of the copy made. After the restart 625 was
+   * root's userfsd, so every start read the move as under way and ended, and
+   * the computer stayed out of reach.
+   */
+  it("moves the work on its first start after a restart cut the move off", async () => {
+    const at = computer();
+    const beforeStart = new Date(Date.now() - uptime() * 1000 - 15 * 60 * 1000);
+    // What the move left: both locks, written before this computer last
+    // started and naming a process that is running now, and its half copy.
+    for (const lock of [moveLockPathFor(at.older), moveLockPathFor(at.own)]) {
+      expect(acquireMoveLock(lock, 1, () => beforeStart)).toBe(true);
+      utimesSync(lock, beforeStart, beforeStart);
+    }
+    const half = stagedFolderFor(at.own, 625);
+    mkdirSync(join(half, "work", "tasks"), { recursive: true });
+
+    expect(await at.run()).toEqual({ kind: "handed-over" });
+    expect(readFileSync(join(at.own, "work", "tasks", "t1", "conversation.json"), "utf8")).toBe(
+      "a conversation\n",
+    );
+    expect(isProfileRetired(at.older)).toBe(true);
+    expect(existsSync(half)).toBe(false);
+    expect(existsSync(moveLockPathFor(at.older))).toBe(false);
+    expect(existsSync(moveLockPathFor(at.own))).toBe(false);
   });
 
   it("runs from the older folder while Firstmate 3000's window has it open, and moves nothing", async () => {

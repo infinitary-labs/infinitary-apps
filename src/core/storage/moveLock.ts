@@ -1,14 +1,17 @@
 import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
+import { predatesBoot } from "../helper/lock";
 
 /**
  * The lock a one-time move of a data folder holds (a later step writes it).
  * It sits beside the data folder, never inside it: the move renames that
  * folder, and Electron's single-instance lock lives inside userData, so that
  * lock cannot guard the move. A lock whose process is gone is stale and does
- * not block; a lock that cannot be read is held, never guessed away, because
- * the move writes it whole or not at all.
+ * not block, and so is one written before this computer last started, whose
+ * process ended with that start whoever has its number now. Any other lock
+ * that cannot be read is held, never guessed away, because the move writes
+ * it whole or not at all.
  */
 export const MOVE_LOCK_SUFFIX = ".move-lock";
 
@@ -38,15 +41,19 @@ export function processAlive(pid: number): boolean {
   }
 }
 
-/** True while a move holds the lock: the file is there, and it is unreadable or names a live process. */
+/**
+ * True while a move holds the lock: the file is there, written since this
+ * computer last started, and it is unreadable or names a live process.
+ */
 export function moveLockHeld(lockPath: string, alive: (pid: number) => boolean = processAlive) {
-  let raw: string;
+  let raw: string | undefined;
   try {
     raw = readFileSync(lockPath, "utf8");
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ENOENT";
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
   }
-  const lock = parseMoveLock(raw);
+  if (predatesBoot(lockPath)) return false;
+  const lock = raw === undefined ? undefined : parseMoveLock(raw);
   return lock === undefined || alive(lock.pid);
 }
 
@@ -79,6 +86,7 @@ export function moveLockRunning(
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
   }
+  if (predatesBoot(lockPath)) return false;
   const lock = raw === undefined ? undefined : parseMoveLock(raw);
   if (lock) {
     if (!alive(lock.pid)) return false;

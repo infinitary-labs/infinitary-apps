@@ -51,11 +51,12 @@ function holderIn(path: string): number | null {
 }
 
 /**
- * Whether the lock was written before this computer last started. Its
+ * Whether a lock was written before this computer last started. Its
  * process died with that start, and its number may belong to anything now,
  * including a process of another user that `processAlive` counts as running.
+ * The move lock reads it too (`storage/moveLock.ts`).
  */
-function predatesBoot(path: string): boolean {
+export function predatesBoot(path: string): boolean {
   try {
     return statSync(path).mtimeMs < Date.now() - uptime() * 1000 - 2000;
   } catch {

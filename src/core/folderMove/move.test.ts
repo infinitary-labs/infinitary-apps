@@ -33,7 +33,7 @@ import { readMoveRecord, writeMoveRecord } from "./record";
 
 // Integration budget (docs/test-cohorts.md): real git, the system's copier,
 // SQLite, a vite build and the Electron binary on scratch folders; the slowest
-// case's fastest of three Mac runs is 0.400 s.
+// case's fastest of three Mac runs is 0.588 s.
 vi.setConfig({ testTimeout: 10_000 });
 
 function git(cwd: string, ...args: string[]): string {
@@ -60,6 +60,15 @@ function repo(dir: string): string {
   return dir;
 }
 
+/** A working copy a computer that runs work keeps for its home's task: `work/worktrees/<task>`. */
+const WORK_COPY = join("work", "worktrees", "three");
+
+/** The Claude sessions the older folder holds, by the working copy each was started in. */
+const CLAUDE_SESSIONS = [
+  { copy: join("worktrees", "one"), file: "s-1.jsonl" },
+  { copy: WORK_COPY, file: "s-3.jsonl" },
+] as const;
+
 type World = {
   base: string;
   appData: string;
@@ -76,8 +85,9 @@ type World = {
  * rows are still in its write-ahead log, a project cloned into the folder
  * with a working copy, a working copy of a project kept outside, a link the
  * app makes to a working copy's skills, private sign-in files, the
- * background work's record, a Claude session started in a working copy,
- * and start at login on.
+ * background work's record, a working copy the work keeps for its home
+ * (docs/helper.md, "Its working copies"), a Claude session started in each
+ * working copy, and start at login on.
  */
 function olderFolder(): World {
   const base = realpathSync(scratchDir("fm-folder-move-"));
@@ -113,6 +123,10 @@ function olderFolder(): World {
       service: { label: "x", file: "/elsewhere/x.plist" },
     }),
   );
+  // The work's bare clone of a project and a task's working copy of it, three levels down.
+  const workClone = join(from, "work", "repos", "0123456789abcdef");
+  git(from, "clone", "-q", "--bare", outside, workClone);
+  git(workClone, "worktree", "add", "-q", "-b", "fm/task-three", join(from, WORK_COPY));
   writeFileSync(join(from, "update-channel.json"), '{"schemaVersion":1,"channel":"stable"}\n');
   recordStartAtLogin(from, true);
 
@@ -151,9 +165,11 @@ function olderFolder(): World {
   for (const name of readdirSync(build)) copyFileSync(join(build, name), join(from, name));
   db.close();
 
-  const session = join(claude, "projects", encodeClaudeProjectDir(join(from, "worktrees", "one")));
-  mkdirSync(session, { recursive: true });
-  writeFileSync(join(session, "s-1.jsonl"), '{"cwd":"x"}\n');
+  for (const { copy, file } of CLAUDE_SESSIONS) {
+    const session = join(claude, "projects", encodeClaudeProjectDir(join(from, copy)));
+    mkdirSync(session, { recursive: true });
+    writeFileSync(join(session, file), '{"cwd":"x"}\n');
+  }
 
   return {
     base,
@@ -256,16 +272,15 @@ describe("the one-time move of a data folder", () => {
     expect(statSync(join(to, "accounts", "codex", "a1", "auth.json")).mode & 0o777).toBe(0o600);
     // The newer install's channel marker is the one kept.
     expect(readFileSync(join(to, "update-channel.json"), "utf8")).toContain('"alpha"');
-    // Claude's session, under the new working copy's name, beside the old.
+    // Claude's sessions, under the new working copies' names, beside the old:
+    // the home's own and the work's (INF-283).
     const projects = join(world.claude, "projects");
-    expect(
-      existsSync(join(projects, encodeClaudeProjectDir(join(to, "worktrees", "one")), "s-1.jsonl")),
-    ).toBe(true);
-    expect(
-      existsSync(
-        join(projects, encodeClaudeProjectDir(join(from, "worktrees", "one")), "s-1.jsonl"),
-      ),
-    ).toBe(true);
+    for (const { copy, file } of CLAUDE_SESSIONS)
+      for (const folder of [to, from])
+        expect(
+          existsSync(join(projects, encodeClaudeProjectDir(join(folder, copy)), file)),
+          join(folder, copy),
+        ).toBe(true);
     // The older folder: retired, and otherwise as it was.
     expect(isProfileRetired(from)).toBe(true);
     expect(rows(from, "SELECT worktree_dir FROM tasks WHERE id = 'one'")).toEqual([

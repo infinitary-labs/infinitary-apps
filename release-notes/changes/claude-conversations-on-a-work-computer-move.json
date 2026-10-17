@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-conversations-on-a-work-computer-move",
+      "kind": "fix",
+      "title": "Claude crewmates on a computer that runs your work keep their conversation after the move to Infinitary",
+      "body": "When Infinitary moves saved work out of Firstmate 3000's folder, it brings each Claude crewmate's conversation along. It left out the crewmates working on a computer that runs your work, so after the move they could lose their place in their conversation. Now their conversations come along too.",
+      "area": "crewmates",
+      "noPicture": "The change is in which conversations the move brings along; no screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

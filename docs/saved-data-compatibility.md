@@ -76,6 +76,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
 7. It writes the record `verified`, writes `retired-profile.json` into the older folder, and renames the staged copy into place in one rename.
    A folder already there with no saved work - an installer's channel marker and nothing else - hands its marker over first, so the newer install's marker is kept.
 8. After that commit it changes git's links in repositories kept outside both folders, keeping each file's earlier text in the record, copies Claude's session folders under the new working folders' names (`~/.claude/projects/<encoded folder>`, beside the old ones, never changing them), and writes the record `done`.
+   The working folders are read from the new folder, two levels down from it and from its `work/`: the home's `worktrees/<task>`, and the `work/worktrees/<task>` a computer that runs work keeps (`src/core/folderMove/claudeSessions.ts`).
 
 The older folder stays as it was, with only the marker added: it is the recovery copy, and nothing deletes it.
 A move stopped before its copy was checked leaves nothing changed, and the next launch takes that staged copy away and starts again; one stopped after resumes from the last state its record names, and never copies again.
@@ -129,7 +130,7 @@ Saved work is protected from stable 0.1.25 onward (`docs/alpha.md`, "Activating 
 - `saved-data-refusal.spec.ts`: isolated Electron journeys for future database and incompatible non-database format; each sees the explanation with no normal bridge and verifies protected files unchanged after quit.
   Screenshots go to the run's own results folder.
 - `older-profile.spec.ts`: a profile an older release saved opens in this build and works ("Profiles saved by an older release", below).
-- `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, resuming after the check and after the commit, a full disk, the older app open, another move and newer saved work.
+- `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, with Claude's sessions of the home's and the work's working copies, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, resuming after the check and after the commit, a full disk, the older app open, another move and newer saved work.
 
 ## Profiles saved by an older release
 

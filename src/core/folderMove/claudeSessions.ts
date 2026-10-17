@@ -14,7 +14,9 @@ import { type CopyOptions, copyEntry } from "./copy";
  *
  * The working folders are read from the new folder itself - the folder, its
  * top-level folders and theirs (`worktrees/<task>`, `firstmate/home`,
- * `fleet/personal`) - because the encoding loses characters: matching by a
+ * `fleet/personal`), and the same of `work/`, the folder a computer that
+ * runs work keeps its own working copies in (`work/worktrees/<task>`,
+ * docs/helper.md) - because the encoding loses characters: matching by a
  * prefix would also take another folder's sessions (`firstmate-3000-dev`
  * starts with `firstmate-3000-`).
  */
@@ -29,14 +31,21 @@ function folders(dir: string): string[] {
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 }
 
-/** The working folders under `to` a Claude session may have been started in, relative to it. */
+/**
+ * The working folders under `to` a Claude session may have been started in,
+ * relative to it: of the folder and of its `work/`, each the folder, its
+ * top-level folders and theirs.
+ */
 function workingFolders(to: string): string[] {
-  const found = [""];
-  for (const top of folders(to)) {
-    found.push(top);
-    for (const child of folders(join(to, top))) found.push(join(top, child));
+  const found = new Set<string>();
+  for (const base of ["", "work"]) {
+    found.add(base);
+    for (const top of folders(join(to, base))) {
+      found.add(join(base, top));
+      for (const child of folders(join(to, base, top))) found.add(join(base, top, child));
+    }
   }
-  return found;
+  return [...found];
 }
 
 /**

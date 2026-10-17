@@ -11,7 +11,7 @@ The visual rules live in the design skill's `components/devices/PhoneView.prompt
 
 Settings → Devices → **A phone** on the Mac opens a locally generated QR code, the same one-use computer link, Copy link and Stop it.
 A packaged build leaves **A phone** out until the phone app is on TestFlight, so only a development build of the Mac app offers it (`docs/devices.md`, "Settings -> Devices").
-The panel explains that the phone app is installed from Xcode for now.
+The panel explains that the phone app comes from TestFlight for now.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
 The Mac announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works.
@@ -67,13 +67,16 @@ A removal close or repeated authenticated refusal clears cards and feed, forgets
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
 
-## Xcode installation
+## Installing on a phone
 
-The captain opens `ios/Infinitary/Infinitary.xcodeproj`, chooses the Infinitary scheme and their iPhone or iPad, and runs it with their own development sign-in.
+The captain installs Infinitary through TestFlight, not Xcode.
+Once a build is in internal testing, Apple emails each tester in the app's internal group an invitation.
+On the phone, the tester opens Apple's TestFlight app with the Apple Account in that group, accepts the invitation and installs Infinitary; automatic distribution offers each later build there too.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
 Open **A phone** in the Devices settings of a development build of the Mac app (an installed build leaves it out until TestFlight), scan or paste its link in the phone app, and confirm that Mac.
 The phone should name the Mac and show In reach, its Cards and Activity.
-Local physical-device signing, installation, camera scanning and the real Local Network prompt are the captain's checks.
+TestFlight installation, camera scanning and the real Local Network prompt are the captain's checks on a physical phone.
+Someone working on the phone app can still run it on their own iPhone or iPad from `ios/Infinitary/Infinitary.xcodeproj` with the Infinitary scheme and their own development sign-in.
 Release signing runs only in the separately dispatched TestFlight workflow below.
 
 ## TestFlight releases
@@ -99,9 +102,9 @@ A configured tester somewhere in the group is not proof that the captain accepte
 The captain's one-time Apple setup is:
 
 1. In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, register the explicit identifier `com.getinfinitary.infinitary` for team `9T2J7MNUP9` if it does not exist.
-2. In App Store Connect → Apps → + → New App, choose iOS, name **Infinitary**, the registered identifier and a stable SKU such as `infinitary-ios`.
+2. In App Store Connect → Apps → + → New App, choose iOS, name **Infinitary**, a primary language, the registered identifier, a stable SKU such as `infinitary-ios` and Full Access.
    An existing record must have that name and identifier, and the API key must have access to it.
-3. In that app's TestFlight → Internal Testing, create or select a group, enable automatic distribution and add the captain.
+3. In that app's TestFlight tab, press + beside Internal Testing to create a group, or select one, enable automatic distribution, and add the captain with Invite Testers.
    Accept its TestFlight invitation once the first build is available; that acceptance is not an upload prerequisite.
    A missing eligible tester is managed through App Store Connect → Users and Access, not by this workflow.
 4. Keep the three existing repository secrets set to a team key authorized for the app and Xcode automatic signing.
@@ -131,8 +134,7 @@ The final Linux job reads the exact marketing-version/build pair until Apple rep
 Rejected, expired or unknown states fail explicitly, and export-compliance holds name Apple's required action rather than uploading again.
 A processing timeout or uncertain upload is checked by dispatching the same workflow with `version` and `check_build` set to the existing build number.
 That mode performs only Apple reads, runs no Mac job and never uploads.
-The real first delivery is verified after this workflow is merged: record the run, Apple's internal-testing result, and the captain's TestFlight installation of Infinitary.
-Apple availability is not a substitute for that last confirmation, and no Xcode installation is required of the captain.
+Apple's internal-testing state means testers can install the build, not that a phone has; a tester's installation through TestFlight is that check, and no Xcode installation is required of the captain.
 
 ## Disposable verification
 

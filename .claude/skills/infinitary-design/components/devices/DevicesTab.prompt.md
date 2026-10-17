@@ -34,7 +34,7 @@ On the right a mono state - "1 task" in `--accent`, "idle", "connecting" while i
 The dot is `ok` while the device answers, `idle` while its connection is being made (its state on the right reads "connecting"), and `warn` while it is out of reach.
 Out of reach, the mono line ends "out of reach since 14:02"; a user who has not logged in since a restart reads "not logged in since this computer restarted" (`RunsOn.prompt.md` has their feed lines).
 The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three chips, "+ A computer", "+ A phone" and "+ Running as another user".
-A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current Xcode-only availability.
+A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current TestFlight-only availability.
 An installed build leaves "+ A phone" out until the phone app is on TestFlight, so its foot has two chips; a development build shows all three.
 
 **Bringing a computer back.**

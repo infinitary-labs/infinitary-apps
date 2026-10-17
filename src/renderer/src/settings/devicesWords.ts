@@ -61,7 +61,7 @@ export const PANEL_WORDS: Record<
     say: [
       "Your first mate stays on this computer. Your phone shows its cards and Activity.",
       "Scan the code inside Infinitary on your phone, or paste this link there.",
-      "The phone app is installed from Xcode for now; it is not in the App Store yet.",
+      "The phone app comes from TestFlight for now; it is not in the App Store yet.",
     ],
     copy: "Copy link",
     thing: "link",

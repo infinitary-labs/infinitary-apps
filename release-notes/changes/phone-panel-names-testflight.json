@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-panel-names-testflight",
+      "reason": "The phone panel in Settings -> Devices now says the phone app comes from TestFlight instead of Xcode, with the phone documentation to match. Installed builds leave + A phone out, so only a development build shows the panel and nobody on a release sees the sentence."
+    }
+  ]
+}

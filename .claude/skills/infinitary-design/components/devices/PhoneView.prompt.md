@@ -27,4 +27,4 @@ The iPad uses the same single-column view with roomier margins, not a side-by-si
 
 On the Mac, + A phone opens the existing link panel with a locally encoded scan code, a Copy link alternative and Stop it.
 The code has a white quiet margin in both themes because the phone's camera must read it.
-The panel says the phone app is installed from Xcode for now, so it does not imply App Store availability.
+The panel says the phone app comes from TestFlight for now, so it does not imply App Store availability.

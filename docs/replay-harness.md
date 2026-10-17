@@ -70,6 +70,7 @@ The host's wakes carry typed facts rendered once where they are served (`docs/in
 Tier 3 reads a LIVE wake by its facts (phase 6 of the primitives plan, with the one decision ledger): the engine joins each served wake to the row it was rendered from, and `factsWakeRef` names its kind and task in the recorded half's vocabulary - a kind the recordings never named has no ref and matches by its text alone.
 The same facts decide whether a live wake is an escalation (the whose-turn rule's `captain` sort of that wake, by the wake's identity), a wake after a cancel, or a guidance-queued wake; a prose wake is still read by its words.
 Moving the live half onto facts moved no number in the baseline.
+An answer-close receipt matches by its structured recorded task and choice ids, so adding its direct task-read instruction does not strand the recorded approval turn.
 
 A wake with no recorded answer is played as silence and counted under `fidelity.unrecorded_firstmate_wakes` rather than invented - and, when it was an escalation, it stays out of `escalation_precision`'s denominator: whether the first mate would have acted is unknown, not a failure.
 It still counts in `escalations`.

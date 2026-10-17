@@ -1,5 +1,11 @@
 import { HERE } from "@shared/deviceNames";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import {
+  ABANDON,
+  APPROVE_AND_BUILD,
+  SAVE_AND_DEFER,
+  START_THE_NEXT_STEP,
+} from "../prompts/cardContract";
 import { CHECK_DIAGNOSIS_NEXT } from "./checkRepair";
 /**
  * The typed wake envelope (the primitives review's P3; docs/inbox.md, "The
@@ -1468,7 +1474,14 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "settled":
       return `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`;
     case "answer-closed":
-      return `[fm-op] ${JSON.stringify(facts.handoff)}`;
+      return `[fm-op] ${JSON.stringify({
+        ...facts.handoff,
+        read: {
+          tool: "tasks",
+          arguments: { key: facts.handoff.task.key || facts.handoff.task.id },
+        },
+        next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
+      })}`;
     case "guidance-set-aside":
       return `[fm-op] guidance for task ${facts.task.id} "${facts.task.title}" could not be delivered after ${facts.attempts} attempts and was set aside: ${facts.excerpt}. You can interrupt the task or spawn a follow-up.`;
     case "quiet":

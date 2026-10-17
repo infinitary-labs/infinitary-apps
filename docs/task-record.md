@@ -287,6 +287,14 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 A single `tasks` lookup includes `resolution` alongside the report/newest card: closing action, submitted answers, resolved time and stored card, plus an exact `offer` when interaction capture recorded it.
 Both the first mate and crewmates read the same fields.
+The tool-text renderer returns the original heading and indented JSON byte for byte when the complete response fits 50,000 characters, on every provider.
+Only above that threshold, it shares identical values within each row when a local JSON Pointer such as `{ "$ref": "#/0/card" }` is shorter; this includes repeated bodies, reports, actions and answer arrays.
+The response explains these references: they point inside that same response and require no extra tool call.
+Above 50,000 characters it drops JSON indentation and, where that saves more space, serves strings as verbatim length-framed `Text #/…` blocks below the JSON metadata.
+A `{ "$text": N }` field names that block’s exact UTF-16 length; references still resolve inside the same result, without decoding compressed data or fetching files.
+This reduces serialization overhead, not the meaning or completeness of the plan; truly larger unique content can still exceed a client’s limit.
+The latest outcome and newest card are the first canonical texts; distinct historical reports and differing closing card/offer bodies remain whole, alongside every event id, answer, action and other metadata.
+This is a lossless presentation of the query, not a storage change, truncation, or change to authorization.
 Lists omit this material.
 This is evidence, not authorization interpreted by the host.
 The shared `HANDOFF` contract owns that agent judgment.

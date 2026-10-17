@@ -705,7 +705,10 @@ One source marks reader-specific passages: `FIRSTMATE_HANDOFF` omits five planne
 Both retain shared authorization boundaries, submitted settings and merge consent; the first mate also retains the opening sentence naming all plan buttons and the shared click/reply/next-owner guidance.
 
 - A ready plan for a product change offers **Approve and build** as its default, and a ready plan for an operation offers **Start the next step**, each beside **Save and defer** and **Abandon**; a plan with a preview offers the same three for a product change.
-  Choosing that default starts only the next step with no unanswered safety gate, and a later gate holds only that later step.
+  Choosing that default queues the approved pieces with their prerequisites; the existing queue starts each when its blockers clear.
+  A piece that includes a captain-only action starts normally, and its crewmate asks on a card when it reaches that action, without a separate filing hold.
+  Queued means `when-ready`; Backlog means `on-request`, waiting for the captain's word, with no separate plan mark.
+  Work the captain reserved to start personally, or moved back to Backlog after approval, stays there until fresh authorization; older approval cannot queue it again.
   A question card and a design-only exploration are declared facts on the card, not a reading of its sentences.
   The captain asks for changes by reply, so a plan card carries no revise button.
 - **Save and defer** keeps the agreed plan and authorizes no build.

@@ -35,6 +35,7 @@ import {
   type SDKUserMessage,
   scriptedClaudeQuery,
 } from "../../../tests/helpers/scriptedClaudeQuery";
+import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
 import { attachmentPath } from "../attachments";
 import { createClaudeSessionFactory } from "../claude/session";
 import { ForgeSignInStore, ForgeSignIns, type ForgeWhoAmI } from "../forge/signIns";
@@ -2854,7 +2855,7 @@ describe("FirstmateAgent", () => {
     expect(session.prompts).toHaveLength(2);
     const lines = decodeContext(session.prompts[1] as string).captain_resolutions as string[];
     expect(lines).toEqual([
-      "what the captain did outside this conversation since your last turn (already done; not a request; a card line carries the persisted closing offer, action and submitted answers):",
+      "what the captain did outside this conversation since your last turn (already done; not a request; a card line summarizes the choice and submitted answers; tasks by key carries the full saved report and closing offer):",
       expect.stringMatching(
         new RegExp(
           `^- card ${courseId} \\(decision\\) "Pick a course" .*: chose "Plot new course", just now$`,
@@ -6494,7 +6495,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     store.resolve("card-welcome-recovery", "agree", answers);
     tasks.recordReport(adr?.id as string, { text: "Copy and race still unresolved." });
     const recovered = await text("tasks", { key: "SCR-1" });
-    const recoveredRow = JSON.parse(recovered.slice(recovered.indexOf("[")))[0];
+    const recoveredRow = readTaskQueryText(recovered)[0]!;
     expect(recoveredRow.resolution).toMatchObject({
       action: "agree",
       answers,
@@ -6531,6 +6532,71 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     ]);
   });
 
+  // INF-188 F2: declare the existing graph before a policy update can sweep it.
+  it("refuses an automatic update until its declared prerequisites match the linked graph", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse(
+      "file the ADR and its implementation; enable automatic work after linking",
+    );
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    for (const title of ["Write the ADR", "Implement the ADR"])
+      await text("create_task", {
+        title,
+        goal: title,
+        user_words: "file the ADR and its implementation",
+      });
+    const prerequisite = tasks.byKey("SCR-1")!;
+    const piece = tasks.byKey("SCR-2")!;
+    const before = tasks.get(piece.id);
+    const eventsBefore = tasks.timeline(piece.id);
+    // A declared but not yet linked prerequisite must not be silently ignored.
+    expect(
+      await text("update_task", {
+        task: piece.key,
+        start_policy: "when-ready",
+        blocked_by: [prerequisite.key],
+        title: "Must not change",
+        start_now: true,
+      }),
+    ).toContain("do not match");
+    expect(tasks.get(piece.id)).toEqual(before);
+    expect(tasks.timeline(piece.id)).toEqual(eventsBefore);
+    await text("link_tasks", { from: prerequisite.key, to: piece.key, type: "blocks" });
+    expect(
+      await text("update_task", {
+        task: piece.key,
+        start_policy: "when-ready",
+        blocked_by: [],
+      }),
+    ).toContain("do not match");
+    expect(tasks.get(piece.id)).toMatchObject({ status: "open", startPolicy: "on-request" });
+    // Ids and keys name the same prerequisite; duplicate references count once.
+    expect(
+      await text("update_task", {
+        task: piece.key,
+        start_policy: "when-ready",
+        blocked_by: [prerequisite.id, prerequisite.key.toLowerCase()],
+      }),
+    ).toMatch(/^Updated SCR-2:/);
+    expect(tasks.get(piece.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
+    expect(tasks.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
+    // Explicit independence keeps the existing automatic-start capability.
+    expect(
+      await text("update_task", {
+        task: prerequisite.key,
+        start_policy: "when-ready",
+        blocked_by: [],
+      }),
+    ).toMatch(/^Updated SCR-1:/);
+    expect(tasks.get(prerequisite.id)?.status).toBe("active");
+  });
+
   it("says a crewmate starts now on a when-ready row nothing waits on", async () => {
     const { agent, specs } = setup();
     await agent.converse("fix the meter");
@@ -6542,6 +6608,8 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
         title: "Fix the meter",
         goal: "The meter keeps its reading",
         user_words: "fix the meter",
+        // INF-143: this existing independent-work case now declares that it has no blockers.
+        blocked_by: [],
         start_policy: "when-ready",
       },
       undefined,
@@ -7944,4 +8012,65 @@ describe("FirstmateAgent with knowledge", () => {
     expect(decodeContext(f.session.prompts[0] ?? "").knowledge).toBeUndefined();
     expect(tools.has("remember")).toBe(false);
   });
+});
+
+// INF-87 / INF-86: the actual INF-64 offer and submitted answer, not a padded plan.
+it("recovers the complete accepted plan through the answer-close wake's task read", async () => {
+  const fixture = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8"));
+  const taskId = "accepted-plan";
+  const cardId = `card-${taskId}-split`;
+  const card: Card = {
+    ...crewCard(cardId, taskId, fixture.title, fixture.body),
+    width: "wide",
+    actions: fixture.actions,
+  };
+  const { agent, session, supervisor, specs, tasks, db } = setup({
+    seedTasks: [
+      {
+        id: taskId,
+        title: fixture.taskTitle,
+        status: "idle",
+        outcome: fixture.report,
+        shape: { kind: "plan", deliverable: "answer" },
+        intent: {
+          goal: fixture.taskTitle,
+          userWords: fixture.userWords,
+          constraints: [{ kind: "read-only" }],
+        },
+      },
+    ],
+    seedCards: [card],
+  });
+  try {
+    supervisor.act(cardId, "start-next", "chrome", { answers: fixture.answers });
+    await tick();
+    expect(session.prompts).toHaveLength(1);
+    const served = session.prompts[0]!;
+    const wake = parseServedInput(served)!.find((part) => part.kind === "wake")!;
+    const handoff = JSON.parse(wake.body.replace("[fm-op] ", ""));
+    // The receipt alone was insufficient: follow the read it actually supplies.
+    expect(handoff.read).toEqual({ tool: "tasks", arguments: { key: tasks.get(taskId)!.key } });
+    const query = specs[0]!.tools.find((tool) => tool.name === handoff.read.tool)!;
+    const result = await query.run(handoff.read.arguments);
+    const text = result.text!;
+    const row = readTaskQueryText(text)[0]!;
+    expect(row.outcome).toBe(fixture.report);
+    expect(row.card).toBe(fixture.body);
+    expect(row.resolution).toMatchObject({ action: "start-next", answers: fixture.answers });
+    expect(row.resolution?.offer?.body).toBe(fixture.body);
+    expect(row.reports?.at(-1)?.text).toBe(fixture.report);
+    expect(tasks.get(taskId)?.status).toBe("done");
+    session.emitTurnEnd("Read the accepted specification.");
+    session.resolveNextPrompt();
+    await tick();
+    // A second click cannot redeliver approval or start a second builder.
+    expect(supervisor.act(cardId, "start-next", "chrome", { answers: fixture.answers })).toEqual(
+      {},
+    );
+    await tick();
+    expect(session.prompts).toHaveLength(1);
+  } finally {
+    agent.dispose();
+    db.close();
+  }
 });

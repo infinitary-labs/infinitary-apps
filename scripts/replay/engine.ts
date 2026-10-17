@@ -502,6 +502,15 @@ function normalizeWording(text: string): string {
  */
 export function wakeRef(payload: string): string {
   const task = (pattern: RegExp) => pattern.exec(payload)?.[1] ?? "";
+  // Answer receipts are structured recordings, not prose to classify. Match the
+  // same task/choice even when the live renderer adds a recovery instruction.
+  if (payload.startsWith("[fm-op] {")) {
+    try {
+      const receipt = JSON.parse(payload.slice("[fm-op] ".length));
+      if (receipt.event === "answer_task_closed" && typeof receipt.task?.id === "string" && typeof receipt.choice?.id === "string")
+        return `answer-closed:${receipt.task.id}:${receipt.choice.id}`;
+    } catch {}
+  }
   if (/^\[fm-op\] fleet event escalated to you/.test(payload)) {
     return `escalated:${task(/escalated to you \(task ([^)\s]+)\)/)}`;
   }
@@ -559,6 +568,8 @@ export function factsWakeRef(
   name: (text: string) => string = (text) => text,
 ): string | null {
   switch (facts.kind) {
+    case "answer-closed":
+      return `answer-closed:${name(facts.handoff.task.id)}:${facts.handoff.choice.id}`;
     case "report":
       return `reported:${name(facts.task.id)}`;
     case "turn-failed":

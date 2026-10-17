@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { WorkKind } from "../../src/shared/routingPolicy.ts";
 
 /** Offline evaluation data/scoring, never production approval logic. */
 export type EvalCall = {
@@ -6,6 +7,8 @@ export type EvalCall = {
   args: Record<string, unknown>;
   /** Record actual execution, not the model's claimed success. */
   result?: "success" | "refused" | "invalid" | "failed";
+  /** Observed model request; absent in older recordings, never inferred from call order. */
+  request?: number;
 };
 export type EvalTask = {
   task_id: string;
@@ -16,6 +19,12 @@ export type EvalTask = {
   parent?: string;
   basis?: string;
   outcome?: string;
+  userWords?: string;
+  goal?: string;
+  brief?: string;
+  summary?: string;
+  kind?: WorkKind;
+
   /** Open a real inert owner session before evaluating Firstmate. */
   availableOwner?: boolean;
   internalStep?: boolean;
@@ -26,6 +35,11 @@ export type EvalTask = {
     answers: { name: string; values: string[]; changed: boolean }[];
     offer: {
       body: string;
+      title?: string;
+      asking?: true;
+      meta?: string;
+      model?: string;
+      width?: "wide" | "full";
       actions: { id: string; label: string; default?: boolean }[];
       /** Declared design-only fact. Absent is not design-only. */
       designOnly?: boolean;
@@ -35,6 +49,8 @@ export type EvalTask = {
 export type ApprovalCase = {
   id: string;
   role: "firstmate" | "builder";
+  /** A shorter case may reserve fewer requests, never more than its role's bound. */
+  maxCalls?: number;
   context: string;
   /** `defer`: Save and defer - no start, and exactly one build planned on the plan. */
   expected: "start" | "wait" | "clarify" | "hold" | "review" | "defer" | "next";
@@ -42,6 +58,8 @@ export type ApprovalCase = {
   next?: string;
   held?: string[];
   tasks: Record<string, EvalTask>;
+  /** Start with the compact index, requiring native task reads for the saved plan. */
+  taskIndexOnly?: boolean;
   firstmateThread?: { title: string; body: string; reply: string };
 };
 
@@ -360,6 +378,22 @@ export type EvalRun = {
   endedNormally: boolean;
   calls: EvalCall[];
   state: {
+    /** Actual dispatched owners, including automatic queue starts. */
+    started?: string[];
+    graph?: {
+      id: string;
+      /** Native task keys stay beside normalized ids for reviewing tool references. */
+      key?: string;
+      title: string;
+      goal: string | null;
+      prompt: string;
+      kind?: string;
+      status: string;
+      startPolicy: string;
+      parent?: string;
+      basis?: string;
+      blockers: string[];
+    }[];
     /** Absent when the case has no BUILD record. */
     buildStatus?: EvalTask["status"] | "dropped";
     basis?: string;

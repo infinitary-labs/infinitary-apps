@@ -65,6 +65,9 @@ export function inertSession(): ModelSession {
   };
 }
 
+// INF-104 F4: a refused fixture choice must not hang no-cost preparation.
+export const ACCEPTANCE_WAIT_MS = 10_000;
+
 export async function approvalHost(
   test: ApprovalCase,
   dir: string,
@@ -83,20 +86,27 @@ export async function approvalHost(
   const repos = new RepoRegistry(db, paths.fleetDir);
   const ids = Object.fromEntries(Object.keys(test.tasks).map((alias) => [alias, randomUUID()]));
   const aliases = Object.fromEntries(Object.entries(ids).map(([alias, id]) => [id, alias]));
+  const pendingChoices: {
+    cardId: string;
+    resolution: NonNullable<ApprovalCase["tasks"][string]["resolution"]>;
+  }[] = [];
   for (const [alias, task] of Object.entries(test.tasks)) {
+    const closeThroughHost = test.taskIndexOnly && task.status === "done" && task.resolution;
     seedTask(tasks, {
       id: ids[alias]!,
       title: task.title,
       parentId: task.parent ? ids[task.parent] : undefined,
-      status:
-        task.status === "active" &&
-        !task.availableOwner &&
-        !(test.role === "builder" && alias === "BUILD")
+      status: closeThroughHost
+        ? "idle"
+        : task.status === "active" &&
+            !task.availableOwner &&
+            !(test.role === "builder" && alias === "BUILD")
           ? "idle"
           : "queued",
       startPolicy: task.start_policy ?? "on-request",
       shape: {
-        kind: alias === "PLAN" ? "plan" : "implement",
+        kind: task.kind ?? (alias === "PLAN" ? "plan" : "implement"),
+        ...(closeThroughHost ? { deliverable: "answer" as const } : {}),
         autonomy_ask: false,
         ...(task.basis ? { basis: ids[task.basis] } : {}),
         ...(task.internalStep
@@ -104,27 +114,47 @@ export async function approvalHost(
           : {}),
       },
       prompt: task.outcome ?? task.title,
+      ...(task.userWords
+        ? {
+            intent: {
+              goal: task.goal ?? task.title,
+              userWords: task.userWords,
+              constraints: [{ kind: "read-only" as const }],
+            },
+          }
+        : {}),
     });
     aliases[tasks.get(ids[alias]!)!.key] = alias;
-    if (task.outcome) tasks.recordReport(ids[alias]!, { text: task.outcome });
-    if (task.status === "done")
+    if (task.outcome)
+      tasks.recordReport(ids[alias]!, {
+        text: task.outcome,
+        ...(task.summary ? { summary: task.summary } : {}),
+      });
+    if (task.brief) tasks.recordBrief(ids[alias]!, [task.brief]);
+    if (task.status === "done" && !closeThroughHost)
       tasks.close(ids[alias]!, { status: "done", reason: "answered", actor: "host" });
     if (task.resolution) {
-      const cardId = `card-${randomUUID()}`;
+      const cardId = `card-${ids[alias]}-${randomUUID()}`;
       cards.upsert({
         id: cardId,
         taskId: ids[alias],
         author: "crewmate",
         priority: 0,
-        title: task.title,
-        meta: "evaluation",
+        title: task.resolution.offer.title ?? task.title,
+        meta: task.resolution.offer.meta ?? "evaluation",
+        ...(task.resolution.offer.model ? { model: task.resolution.offer.model } : {}),
+        ...(task.resolution.offer.width ? { width: task.resolution.offer.width } : {}),
+        ...(task.resolution.offer.asking !== undefined
+          ? { asking: task.resolution.offer.asking }
+          : {}),
         body: task.resolution.offer.body,
         actions: task.resolution.offer.actions,
         status: "ready",
         createdAt: Date.now(),
         ...(task.resolution.offer.designOnly ? { designOnly: true as const } : {}),
       });
-      cards.resolve(cardId, task.resolution.action, task.resolution.answers);
+      if (closeThroughHost) pendingChoices.push({ cardId, resolution: task.resolution });
+      else cards.resolve(cardId, task.resolution.action, task.resolution.answers);
     }
   }
   let threadContext = "";
@@ -169,12 +199,20 @@ export async function approvalHost(
       return session;
     },
   };
+  let acceptReceived!: () => void;
+  const receivedAcceptance = new Promise<void>((resolve) => {
+    acceptReceived = resolve;
+  });
   const seatFactory: SessionFactory = {
     backend: "pi",
     controlProfile: PI_CONTROL_PROFILE,
     open: async (spec) => {
       captured = spec;
-      return inertSession();
+      const session = inertSession();
+      session.prompt = async () => {
+        acceptReceived();
+      };
+      return session;
     },
   };
   const host = wireIsolatedHost(
@@ -239,7 +277,37 @@ export async function approvalHost(
       coalesceMs: 0,
     },
   );
-  await host.firstmate.converse("Prepare isolated evaluation");
+  const close = async () => {
+    host.firstmate.dispose();
+    await host.supervisor.disposeAll();
+    db.close();
+  };
+  try {
+    if (pendingChoices.length) {
+      for (const { cardId, resolution } of pendingChoices)
+        host.supervisor.act(cardId, resolution.action, "chrome", { answers: resolution.answers });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          receivedAcceptance,
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(
+              () =>
+                reject(
+                  new Error("The evaluation's answer-close wake did not reach the first mate"),
+                ),
+              ACCEPTANCE_WAIT_MS,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
+    } else await host.firstmate.converse("Prepare isolated evaluation");
+  } catch (error) {
+    await close();
+    throw error;
+  }
   if (!captured) throw new Error("Production seat did not open");
   let spec = seatSessionSpec({
     paths,
@@ -276,7 +344,15 @@ export async function approvalHost(
       Object.entries(test.tasks).map(([alias, task]) => [
         alias,
         {
-          ...task,
+          ...(test.taskIndexOnly
+            ? {
+                key: alias,
+                title: task.title,
+                status: task.status,
+                start_policy: task.start_policy,
+                autonomy: task.autonomy,
+              }
+            : task),
           task_id: ids[alias],
           basis: task.basis ? ids[task.basis] : undefined,
           parent: task.parent ? ids[task.parent] : undefined,
@@ -404,6 +480,24 @@ export async function approvalHost(
     state: (): EvalRun["state"] => {
       const build = ids.BUILD ? tasks.get(ids.BUILD) : undefined;
       return {
+        ...(test.taskIndexOnly
+          ? {
+              started: [...starts],
+              graph: tasks.list().map((task) => ({
+                id: String(normalize(task.id)),
+                key: task.key,
+                title: task.title,
+                goal: task.goal,
+                prompt: task.prompt,
+                kind: task.shape?.kind,
+                status: task.status,
+                startPolicy: task.startPolicy,
+                parent: task.parentId ? String(normalize(task.parentId)) : undefined,
+                basis: task.shape?.basis ? String(normalize(taskRef(task.shape.basis))) : undefined,
+                blockers: tasks.blockers(task.id).map((row) => String(normalize(row.id))),
+              })),
+            }
+          : {}),
         ...(build
           ? {
               buildStatus: build.status,
@@ -429,10 +523,6 @@ export async function approvalHost(
         })),
       };
     },
-    close: async () => {
-      host.firstmate.dispose();
-      await host.supervisor.disposeAll();
-      db.close();
-    },
+    close,
   };
 }

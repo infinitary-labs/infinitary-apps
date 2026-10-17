@@ -236,8 +236,14 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     const facts = [
       'A read-only planner defaults a product change to "Approve and build"',
       'and an operation to "Start the next step", beside "Save and defer" and "Abandon", with changes by reply',
-      "Acceptance starts only the next ungated step and authorizes no credential command, repair, permission change or merge",
-      "A declared design-only offer limits that choice",
+      // INF-87 P1/P4: Queued owns continuation; Backlog and authorization boundaries remain.
+      "Acceptance queues approved plan pieces (when-ready)",
+      "the host starts each as its prerequisites clear",
+      "It authorizes no credential command, repair, permission change or merge",
+      "Backlog (on-request) waits for the captain's word",
+      "do not requeue a piece he moved there without fresh authorization",
+      "At a captain-only action, its crewmate asks on a card",
+      "design-only limits even a filed build",
       "Never steer an unstarted builder or closed planner",
       "Every planned or recovered builder retains the full accepted specification",
       "Implementation approval, plan closure, saved answers and passing validation never grant merge permission",
@@ -287,7 +293,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
 
   it("serves only the reader-specific rules to the reader that acts on them", () => {
     const firstmateOnly = [
-      "In the approval turn, the first mate reads the original user words",
+      "On approval, read original user words",
       "reuses the plan's planned successor, or else files one with create_task",
       "Once implementation is authorized, the first mate starts the builder",
       "Before any start call, the first mate finds the existing successor",
@@ -394,7 +400,11 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
   });
 
   it("delegates evidence gathering to crewmates without exposing synchronous reading", () => {
-    expect(core).toContain("Anything that needs code, files, logs, git history");
+    // INF-87: saved plan recovery belongs to the Firstmate, not a retrieval crewmate.
+    expect(core).toContain(
+      "Read saved plans with tasks by key and file accepted work yourself, not through a retrieval.",
+    );
+    expect(core).toContain("Work needing code, files, logs, git history");
     expect(core).toContain("Spawn an investigation with the read-only constraint");
     expect(core).not.toMatch(/\bbash\b/);
     expect(core).not.toContain("read tools");
@@ -572,7 +582,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
   });
 
   it("makes investigations an explicit crewmate responsibility", () => {
-    expect(core).toContain("Anything that needs code, files, logs, git history");
+    expect(core).toContain("Work needing code, files, logs, git history");
     const spawn = (
       createCrewTools({} as never) as unknown as { name: string; description: string }[]
     ).find((tool) => tool.name === "spawn_crewmate");
@@ -1483,5 +1493,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   expect(hash(CARD_AUTHORING)).toBe(
     "024fc749c97058a0f6190dc1f3333d267b66504c3307ac3410941f7d2b454318",
   );
-  expect(hash(HANDOFF)).toBe("4155adda60c0661cc5c20be2c08985628e56a026e1bc3eded0a43fdc02707c2b");
+  // INF-87 P1/P4: Queued owns later starts; the shared authorization boundary remains.
+  expect(hash(HANDOFF)).toBe("733f2b6184f3e39bda6fdbaf180447d4f99d5e6c7a0f5a6a54e71c7f70f5d3a1");
 });

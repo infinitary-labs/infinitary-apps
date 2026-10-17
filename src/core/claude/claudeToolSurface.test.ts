@@ -6,6 +6,12 @@ import { join } from "node:path";
 import { type McpSdkServerConfigWithInstance, query } from "@anthropic-ai/claude-agent-sdk";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import {
+  acceptedPlanCase,
+  largeDesignCase,
+  scorePlanRead,
+} from "../../../scripts/evals/acceptedPlan";
+import { approvalHost } from "../../../scripts/evals/host";
 import { sdkBundledClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import { answerText, startStubApi } from "../../../tests/helpers/anthropicDialect";
 import {
@@ -16,14 +22,20 @@ import {
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { firstmateTools } from "../../../tests/helpers/firstmateTools";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { createAppTools } from "../pi/appTools";
 import { EMIT_CARD_TOOL_DESCRIPTION } from "../pi/cardTool";
+import { createTasksQueryTool } from "../pi/taskTools";
 import { CLAUDE_TOOL_DESCRIPTION_CAP } from "../prompts/cardContract";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { type BoundTool, FIRSTMATE_TOOLS } from "../session/tools";
-import { CLAUDE_SEAT_TOOL_PREFIX, CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
+import {
+  CLAUDE_SEAT_TOOL_PREFIX,
+  CLAUDE_SEAT_TOOL_SERVER,
+  readSession,
+} from "../storage/sessionReader";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { claudeToolServer, claudeToolsOf, zodShapeOf } from "./claudeTaskTools";
@@ -537,4 +549,106 @@ describe("what the Claude client adds to the Firstmate seat", () => {
       await api.close();
     }
   });
+});
+
+// INF-113: a complete keyed plan must reach the model through the installed client's own cap.
+describe("the accepted plan through the real Claude client", () => {
+  afterEach(async () => {
+    resetStoreLeasesForTest();
+    await seatBoxesFlushed();
+  });
+  it.each([
+    { name: acceptedPlanCase.id, test: acceptedPlanCase, key: "PLAN" },
+    { name: largeDesignCase.id, test: largeDesignCase, key: "PLAN" },
+    { name: "captured INF-91", test: acceptedPlanCase, key: "182c1d82" },
+  ])(
+    "serves the complete native tasks result for $name without oversized-result substitution",
+    {
+      timeout: 180_000,
+    },
+    async ({ test, key }) => {
+      const model = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const host = await approvalHost(test, scratchDir("accepted-plan-transport-"), model, []);
+      const api = await startStubApi();
+      try {
+        const box = claudeSeatBox(api, resolveClaudeExecutable() ?? sdkBundledClaudeClient());
+        const captured =
+          key === "182c1d82"
+            ? JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8"))
+            : undefined;
+        const capturedRead = captured
+          ? createTasksQueryTool((input) => {
+              expect(input).toEqual({ key });
+              return { rows: captured, total: captured.length };
+            })
+          : undefined;
+        let nativeText: string | undefined;
+        const tools = host.spec.tools.map((tool) =>
+          tool.name !== "tasks"
+            ? tool
+            : {
+                ...tool,
+                run: async (args: unknown) => {
+                  const answer = await (capturedRead ?? tool).run(args);
+                  nativeText = answer.text;
+                  return answer;
+                },
+              },
+        );
+        api.answer((request, res) =>
+          request.n === 1
+            ? answerTool(request, res, "tasks", { key })
+            : answerText(request, res, "Read the accepted plan."),
+        );
+        const session = await box.factory({
+          cwd: box.cwd,
+          sessionsDir: join(box.home, "firstmate", "sessions"),
+          binding: { backend: "claude", accountId: "acct_fixture" },
+          model,
+          tools,
+        });
+        await session.prompt(host.prompt);
+        session.dispose();
+        await session.closed();
+        const received = api.requests
+          .at(-1)
+          ?.body.messages?.flatMap((message) =>
+            message.role === "user" && Array.isArray(message.content) ? message.content : [],
+          )
+          .findLast((block) => block.type === "tool_result");
+        const content = received?.content;
+        const text =
+          typeof content === "string"
+            ? content
+            : content?.map((block: { text?: string }) => block.text ?? "").join("\n");
+        expect(nativeText).toBeDefined();
+        expect(text).toBe(nativeText);
+        if (captured) expect(readTaskQueryText(text ?? "")).toEqual(captured);
+        else {
+          const native = readSession(session.recordPath()!)
+            .entries.filter((entry) => entry.type === "message")
+            .map((entry) => entry.message as { role?: string; content?: unknown });
+          const result = { text: nativeText!, servedText: nativeText! };
+          const format = test === largeDesignCase ? "text-block" : "shared-json";
+          expect(scorePlanRead(test, format, result, native)).toEqual([]);
+          expect(
+            scorePlanRead(test, format, { ...result, servedText: "truncated" }, native),
+          ).not.toEqual([]);
+          expect(scorePlanRead(test, format, result, [])).not.toEqual([]);
+          expect(
+            scorePlanRead(
+              test,
+              format === "text-block" ? "shared-json" : "text-block",
+              result,
+              native,
+            ),
+          ).not.toEqual([]);
+        }
+        expect(api.requests).toHaveLength(2);
+      } finally {
+        await host.close();
+        await api.close();
+      }
+    },
+  );
 });

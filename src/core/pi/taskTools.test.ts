@@ -1,6 +1,13 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
+import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "../../../tests/helpers/claudeMcpLimit";
+import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
 import { renderIntentBrief } from "../orchestrator/intentBrief";
-import { createTaskTools, type TaskToolsDelegate } from "./taskTools";
+import { CardStore } from "../storage/cardStore";
+import { openInMemoryDatabase } from "../storage/db";
+import { queryTasks } from "../tasks/taskQuery";
+import { TaskService } from "../tasks/taskService";
+import { createTaskTools, renderTasksQueryResult, type TaskToolsDelegate } from "./taskTools";
 import { piToolsOf } from "./toolSpec";
 
 /**
@@ -79,6 +86,56 @@ describe("task tools", () => {
     await expect(
       byName.get("create_task")?.execute("c2", { title: "x", goal: " ", user_words: "y" }),
     ).rejects.toThrow(/goal is required/);
+  });
+
+  // INF-143: declaration presence, not the words of the task, controls automatic admission.
+  it("keeps safe drafting and explicitly independent automatic creation available", async () => {
+    const input = JSON.parse(
+      readFileSync("tests/fixtures/accepted-plan/inf143-early-starts.json", "utf8"),
+    ).calls[0].args;
+    const { delegate, byName } = toolset();
+    const refused = await byName.get("create_task")?.execute("undeclared", input);
+    expect(delegate.plan).not.toHaveBeenCalled();
+    expect(refused).toHaveProperty("details.refusal.kind", "undeclared-prerequisites");
+    await byName.get("create_task")!.execute("independent", { ...input, blocked_by: [] });
+    expect(delegate.plan).toHaveBeenLastCalledWith(
+      expect.objectContaining({ startPolicy: "when-ready", blockedBy: [] }),
+    );
+    await byName.get("create_task")!.execute("draft", { ...input, start_policy: "on-request" });
+    expect(delegate.plan).toHaveBeenLastCalledWith(
+      expect.objectContaining({ startPolicy: "on-request" }),
+    );
+    expect(delegate.plan).toHaveBeenCalledTimes(2);
+  });
+
+  // INF-188 F2: an update must not turn an unfinished graph into automatic work.
+  it("requires declared prerequisites before an automatic update or combined start", async () => {
+    const { delegate, byName } = toolset();
+    const update = byName.get("update_task")!;
+    for (const extra of [{}, { start_now: true, title: "Changed too early" }]) {
+      const refused = await update.execute("undeclared", {
+        task: "SCR-3",
+        start_policy: "when-ready",
+        ...extra,
+      });
+      expect(refused).toHaveProperty("details.refusal.kind", "undeclared-prerequisites");
+      expect(delegate.update).not.toHaveBeenCalled();
+      expect(delegate.startNow).not.toHaveBeenCalled();
+    }
+    for (const blocked_by of [[], ["SCR-2"]]) {
+      await update.execute("declared", {
+        task: "SCR-3",
+        start_policy: "when-ready",
+        blocked_by,
+      });
+      expect(delegate.update).toHaveBeenLastCalledWith({
+        task: "SCR-3",
+        startPolicy: "when-ready",
+        declaredBlockers: blocked_by,
+      });
+    }
+    await update.execute("draft", { task: "SCR-3", start_policy: "on-request" });
+    expect(delegate.update).toHaveBeenLastCalledWith({ task: "SCR-3", startPolicy: "on-request" });
   });
 
   it("create_task carries constraints and a delivery note into the step's brief", async () => {
@@ -335,4 +392,100 @@ describe("update_task runs_on", () => {
     expect(delegate.update).toHaveBeenLastCalledWith({ task: "SCR-3", runsOn: null });
     expect(delegate.startNow).not.toHaveBeenCalled();
   });
+});
+
+// INF-113: identical accepted text must travel once, without changing any stored content.
+it.each([false, true])(
+  "serves complete task text once and retains distinct closing cards (revised=%s)",
+  (revised) => {
+    const fixture = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8"));
+    const db = openInMemoryDatabase();
+    try {
+      const tasks = new TaskService({ db });
+      const cards = new CardStore(db);
+      const task = tasks.create({
+        id: "plan",
+        title: fixture.taskTitle,
+        prompt: fixture.userWords,
+        repoId: null,
+      });
+      tasks.recordReport(task.id, { text: fixture.report });
+      tasks.recordReport(task.id, { text: fixture.report });
+      const card = {
+        id: "card-plan",
+        taskId: task.id,
+        author: "crewmate",
+        priority: 1,
+        title: fixture.title,
+        meta: "",
+        body: fixture.body,
+        actions: fixture.actions,
+        status: "ready",
+        createdAt: 1000,
+      } as const;
+      cards.upsert(card);
+      cards.resolve("card-plan", "start-next", fixture.answers);
+      if (revised) {
+        tasks.recordReport(task.id, { text: "Finished." });
+        cards.upsert({
+          ...card,
+          id: "card-later",
+          createdAt: 2000,
+          body: fixture.body + "<!-- current revision -->",
+        });
+      }
+      const result = queryTasks(
+        tasks,
+        { key: task.key },
+        () => undefined,
+        (id) => cards.newestForTask(id)?.body,
+        (id) => cards.resolvedSince(0, 1, () => true, id)[0],
+      );
+      const original = structuredClone(result.rows);
+      const text = renderTasksQueryResult(result);
+      expect(readTaskQueryText(text)).toEqual(original);
+      expect(result.rows).toEqual(original);
+      expect(text.split(JSON.stringify(fixture.report)).length - 1).toBe(1);
+      expect(text.split(JSON.stringify(fixture.body)).length - 1).toBe(1);
+      const raw = JSON.parse(text.slice(text.indexOf("[")))[0];
+      expect(raw.resolution.card.body).toEqual(revised ? fixture.body : { $ref: "#/0/card" });
+      expect(raw.reports).toHaveLength(original[0]!.reports!.length);
+      expect(queryTasks(tasks, {}).rows).not.toHaveProperty("0.card");
+    } finally {
+      db.close();
+    }
+  },
+);
+
+// Captain's production INF-91 read: 135,333 characters previously hid the whole plan.
+it("fits the large design record through Claude without losing the report, answers or offer", () => {
+  const rows = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8"));
+  const original = structuredClone(rows);
+  const text = renderTasksQueryResult({ rows, total: 1 });
+  expect(readTaskQueryText(text)).toEqual(original);
+  expect(rows).toEqual(original);
+  expect(text.length).toBeLessThanOrEqual(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+});
+
+// INF-133 F2: captain chose byte-for-byte compatibility for every read that already fits.
+it("leaves fitting reads byte for byte as before, including repeated report text", () => {
+  const db = openInMemoryDatabase();
+  try {
+    const tasks = new TaskService({ db });
+    const task = tasks.create({
+      id: "welcome",
+      title: "Immediate welcome",
+      prompt: "Finish the welcome plan.",
+      repoId: null,
+    });
+    tasks.recordReport(task.id, {
+      text: readFileSync("tests/fixtures/approval-handoff/welcome-spec.md", "utf8"),
+    });
+    const result = queryTasks(tasks, { key: task.key }, () => undefined);
+    const original = `1 of 1 matching task:\n${JSON.stringify(result.rows, null, 2)}`;
+    expect(original.length).toBeLessThan(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+    expect(renderTasksQueryResult(result)).toBe(original);
+  } finally {
+    db.close();
+  }
 });

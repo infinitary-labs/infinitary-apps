@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -13,7 +13,7 @@ import {
 import { renderWake, type WakeFacts } from "../src/core/orchestrator/wakes.ts";
 import { lintCrewmateCard } from "../src/core/pi/cardLint.ts";
 import { SessionRecordStore } from "../src/core/storage/sessionRecordStore.ts";
-import { frameServedInput } from "../src/shared/servedFrame.ts";
+import { frameServedInput, parseServedInput } from "../src/shared/servedFrame.ts";
 import {
   CREW_TWIN_TURNS,
   claudeCrewTwin,
@@ -65,6 +65,36 @@ describe("live wakes classified by their typed facts (P6)", () => {
       }
       expect(factsWakeRef(facts)).toBe(wakeRef(renderWake({ facts })));
     }
+  });
+
+  // INF-87: the existing approval recording must still answer the same receipt.
+  it("matches the real recorded acceptance after the wake gains a recovery read", () => {
+    const rows = readFileSync(
+      "tests/fixtures/replay/sep30-handoff-agree/firstmate/sessions/2026-09-23T06-07-33-769Z_01a0cce0-6789-73aa-966d-818286673091.jsonl",
+      "utf8",
+    )
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    const texts = rows
+      .flatMap((row) => (row.message?.role === "user" ? row.message.content : []))
+      .filter((part) => part.type === "text")
+      .map((part) => part.text as string);
+    const receipt = texts
+      .flatMap((text) => parseServedInput(text) ?? [])
+      .find(
+        (part) =>
+          part.kind === "wake" &&
+          part.body.startsWith('[fm-op] {"version":1,"event":"answer_task_closed"'),
+      )!.body;
+    expect(receipt).toBeDefined();
+    const handoff = JSON.parse(receipt.slice("[fm-op] ".length));
+    const facts: WakeFacts = { kind: "answer-closed", handoff };
+    const live = renderWake({ facts });
+    expect(live).not.toBe(receipt);
+    expect(wakeRef(receipt)).toBe(factsWakeRef(facts));
+    expect(wakeRef(live)).toBe(wakeRef(receipt));
+    expect(wakeRef(live)).not.toBe("other:");
   });
 
   it("reads an outage's first failure as the failed turn a recording of that moment named", () => {

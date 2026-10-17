@@ -55,6 +55,7 @@ export type Limits = {
   caseMs: number;
   outputTokens: number;
   retries: number;
+  toolResultBytes: number;
 };
 export const LIMITS: Limits = {
   calls: 80,
@@ -67,6 +68,7 @@ export const LIMITS: Limits = {
   caseMs: 600_000,
   outputTokens: FIRSTMATE_MAX_OUTPUT_TOKENS,
   retries: 0,
+  toolResultBytes: 16_384,
 };
 export type Sheet = {
   runId: string;
@@ -93,7 +95,15 @@ export type Sheet = {
   maximumInputTokens: number;
 };
 export type EvalHost = Awaited<ReturnType<typeof approvalHost>>;
-export type EvaluationModule = { name: string; cases: ApprovalCase[]; host: typeof approvalHost };
+export type EvaluationModule = {
+  name: string;
+  cases: ApprovalCase[];
+  host: typeof approvalHost;
+  /** Reserve enough room for full native task reads; included in the approved sheet. */
+  toolResultBytes?: number;
+  /** Longer filing turns retain the same global call/input ceilings. */
+  firstmateCalls?: number;
+};
 export const approvalEvaluation: EvaluationModule = {
   name: "approval-handoff",
   cases: approvalCases,
@@ -265,8 +275,6 @@ function normalizedTurn(host: EvalHost): string {
   return turn;
 }
 
-/** Tool-result text one request can return; every later request reads it again. */
-const TOOL_RESULT_BYTES = 16_384;
 /** UTF-8 bytes are a deliberately conservative token ceiling for a case's first request. */
 export function promptBytes(host: EvalHost): number {
   return Buffer.byteLength(
@@ -282,10 +290,14 @@ export function promptBytes(host: EvalHost): number {
       ),
   );
 }
+/** Keep full native results when they fit; the fallback stays within a UTF-8 byte budget. */
+export function boundedToolText(text: string, bytes: number): string {
+  return Buffer.byteLength(text) <= bytes ? text : text.slice(0, Math.floor(bytes / 4));
+}
 /** A whole case's input for `calls` requests, including the output and tool results each adds. */
 export function reservation(bytes: number, calls: number, limits: Limits = LIMITS): number {
   return (
-    calls * bytes + ((limits.outputTokens * 4 + TOOL_RESULT_BYTES) * calls * (calls - 1)) / 2
+    calls * bytes + ((limits.outputTokens * 4 + limits.toolResultBytes) * calls * (calls - 1)) / 2
   );
 }
 /**
@@ -295,12 +307,16 @@ export function reservation(bytes: number, calls: number, limits: Limits = LIMIT
  * earlier case can never shorten a later one.
  */
 export function planAllowances(
-  cases: readonly { role: Role; bytes: number }[],
+  cases: readonly { role: Role; bytes: number; maxCalls?: number }[],
   limits: Limits = LIMITS,
 ): { calls: number; inputTokens: number }[] {
-  const calls = cases.map((test) =>
-    test.role === "builder" ? limits.builderCalls : limits.firstmateCalls,
-  );
+  const calls = cases.map((test) => {
+    const roleLimit = test.role === "builder" ? limits.builderCalls : limits.firstmateCalls;
+    if (test.maxCalls === undefined) return roleLimit;
+    if (!Number.isSafeInteger(test.maxCalls) || test.maxCalls < 1 || test.maxCalls > roleLimit)
+      throw new Error("Invalid case request allowance");
+    return test.maxCalls;
+  });
   const over = () =>
     calls.reduce((sum, n) => sum + n, 0) > limits.calls ||
     cases.reduce((sum, test, i) => sum + reservation(test.bytes, calls[i]!, limits), 0) >
@@ -320,6 +336,23 @@ export async function runEvaluation(
   deps: Deps = {},
 ): Promise<{ sheet: Sheet; sheetHash: string; responses?: Record<string, EvalRun> }> {
   const evaluation = deps.module ?? approvalEvaluation;
+  const limits = {
+    ...LIMITS,
+    toolResultBytes: evaluation.toolResultBytes ?? LIMITS.toolResultBytes,
+    firstmateCalls: evaluation.firstmateCalls ?? LIMITS.firstmateCalls,
+  };
+  if (
+    !Number.isSafeInteger(limits.toolResultBytes) ||
+    limits.toolResultBytes < 1 ||
+    limits.toolResultBytes > 1_048_576
+  )
+    throw new Error("Invalid tool-result reservation");
+  if (
+    !Number.isSafeInteger(limits.firstmateCalls) ||
+    limits.firstmateCalls < 1 ||
+    limits.firstmateCalls > 12
+  )
+    throw new Error("Invalid first mate call allowance");
   const ids = evaluation.cases.map((test) => test.id);
   if (
     !ids.length ||
@@ -332,6 +365,23 @@ export async function runEvaluation(
   const protectedDirs = [release, `${release}-dev`, userData];
   const out = resolve(options.out);
   refuseOverlap(out, protectedDirs);
+  const saved =
+    options.live && existsSync(join(out, "run-sheet.json"))
+      ? (JSON.parse(readFileSync(join(out, "run-sheet.json"), "utf8")) as Sheet & {
+          sheetHash?: string;
+        })
+      : undefined;
+  // Reject already-invalid admission before rebuilding every isolated host. This only
+  // refuses: a matching saved hash still needs the fresh fingerprints measured below.
+  if (
+    options.live &&
+    (!saved ||
+      !options.approvedHash ||
+      (saved.sheetHash !== undefined && options.approvedHash !== saved.sheetHash) ||
+      saved.version !== options.version ||
+      saved.sourceHash !== options.sourceHash)
+  )
+    throw new Error("Live evaluation requires the exact approved run-sheet hash");
   const scratch = deps.scratch ?? (() => mkdtempSync(join(tmpdir(), "fm-model-eval-")));
   const measured: Omit<Sheet["cases"][number], "calls" | "inputTokens">[] = [];
   for (const test of evaluation.cases) {
@@ -358,12 +408,15 @@ export async function runEvaluation(
       rmSync(dir, { recursive: true, force: true });
     }
   }
-  const plan = planAllowances(measured.map((row) => ({ role: row.role, bytes: row.promptBytes })));
+  const plan = planAllowances(
+    measured.map((row, index) => ({
+      role: row.role,
+      bytes: row.promptBytes,
+      maxCalls: evaluation.cases[index]!.maxCalls,
+    })),
+    limits,
+  );
   const prepared: Sheet["cases"] = measured.map((row, i) => ({ ...row, ...plan[i]! }));
-  const saved =
-    options.live && existsSync(join(out, "run-sheet.json"))
-      ? (JSON.parse(readFileSync(join(out, "run-sheet.json"), "utf8")) as Sheet)
-      : undefined;
   const sheet: Sheet = {
     runId: saved?.runId ?? randomUUID(),
     outputDirectory: out,
@@ -371,7 +424,7 @@ export async function runEvaluation(
     sourceHash: options.sourceHash,
     module: evaluation.name,
     roles: options.roles,
-    limits: LIMITS,
+    limits,
     cases: prepared,
     maximumCalls: prepared.reduce((sum, row) => sum + row.calls, 0),
     maximumInputTokens: prepared.reduce((sum, row) => sum + row.inputTokens, 0),
@@ -435,7 +488,7 @@ export async function runEvaluation(
           .catch(() => {});
       };
       let requestCount = 0;
-      let resultBytesLeft = TOOL_RESULT_BYTES;
+      let resultBytesLeft = limits.toolResultBytes;
       const started = Date.now();
       try {
         host = await evaluation.host(
@@ -479,13 +532,16 @@ export async function runEvaluation(
                   } else if (!Value.Check(tool.parameters, args)) {
                     result = "invalid";
                     text = "Invalid tool parameters";
-                  } else if (tool.name === "settle_task" && (args as { mode?: string }).mode !== "answered") {
+                  } else if (
+                    tool.name === "settle_task" &&
+                    (args as { mode?: string }).mode !== "answered"
+                  ) {
                     result = "refused";
                     text = "Evaluation never merges, discards or releases tasks";
                   } else {
                     const answer = await tool.run(args);
                     hostText = answer.text;
-                    text = answer.text.slice(0, Math.floor(resultBytesLeft / 4));
+                    text = boundedToolText(answer.text, resultBytesLeft);
                     resultBytesLeft -= Buffer.byteLength(text);
                     result = executeHost.effect(tool.name, args, answer);
                     // The throwaway host verifies typed effects, never parses refusal prose.
@@ -498,6 +554,7 @@ export async function runEvaluation(
                   name: tool.name,
                   args: executeHost.normalize(args) as Record<string, unknown>,
                   result,
+                  request: requestCount,
                 });
                 results.push({ name: tool.name, text: hostText ?? text, servedText: text, result });
                 if (result !== "success") {
@@ -540,7 +597,7 @@ export async function runEvaluation(
               }
               callsUsed++;
               requestCount++;
-              resultBytesLeft = TOOL_RESULT_BYTES;
+              resultBytesLeft = limits.toolResultBytes;
               checkClient();
             }
             // A turn the runner cut itself reports the cut as its failure; keep the runner's reason.
@@ -573,7 +630,7 @@ export async function runEvaluation(
           if (clientEnded) bounded = CLIENT_ENDED;
           tokensReserved -= Math.max(
             0,
-            reserve - reservation(intended.promptBytes, requestCount),
+            reserve - reservation(intended.promptBytes, requestCount, limits),
           );
           await session.detach();
           session.dispose();

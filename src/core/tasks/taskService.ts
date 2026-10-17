@@ -1344,7 +1344,11 @@ export class TaskService {
       ways.push({
         label: `Start ${child.key} first`,
         tool: "update_task",
-        args: { task: child.key, start_policy: "when-ready" },
+        args: {
+          task: child.key,
+          start_policy: "when-ready",
+          blocked_by: this.waitingOn(child.id).map((blocker) => blocker.key || blocker.id),
+        },
       });
       ways.push({
         label: `Drop ${child.key}`,

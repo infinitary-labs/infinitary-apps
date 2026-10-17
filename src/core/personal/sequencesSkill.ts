@@ -93,19 +93,19 @@ const PLAN_STEP = `a read-only step. Research the code and the field, then propo
 /** The built-in text: the document's body as seeded, and the fallback when the file is unusable. */
 export const SEQUENCES_SEED = `# Sequences
 
-How I want work of each kind approached. An ask that takes one step is that step alone,
-spawned with no parent. Open an ask that takes more than one step as a parent task, left on
+An ask that takes one step is that step alone, without a parent.
+Open an ask that takes more than one step as a parent task, left on
 request, and its steps as child tasks: spawn the step that runs now under it, and file the
-next step on request in the same turn; each step is one kind (plan, retrieval, research,
-reproduce, implement, fix); start each later step when its turn comes. Validation is the
-project's rigor and happens inside the implement or fix step; it is never a step of its
-own. Each step you add yourself is an internal step: say so when you create it
+next step on request pending approval; approved pieces follow feature/pieces. Each step is one kind (plan, retrieval, research,
+reproduce, implement, fix); start each later step when its turn comes.
+Validate inside implement/fix at project rigor, never as its own step.
+Each step you add yourself is an internal step: say so when you create it
 (internal_step), and once the next step has started, close it as answered. An answer I ask
 for myself is never an internal step - a plan, a reproduction, some research, or a step's
 result I asked to see ("show me the repro first"): it shows its answer as a card, it is
 mine to close, and the next step starts on my choice there. The parent completes when its
 last step merges.
-Steps that need nothing from each other run at the same time; a step that builds on another
+Authorized steps that need nothing from each other run at the same time; a step that builds on another
 waits for it and names it as its basis.
 Skip the plan only when you can name
 one place the change touches, no rule, state transition, or meaning changes, and the
@@ -134,16 +134,19 @@ you proved it: pointed at it, reasoned it through, or ran it.
 
 ## feature - building something new, or an unclear ask
 - The plan is the ideation plan line, relayed whole; wait for my choice.
-- implement: on request. Start it when I accept, grounded on the plan (basis) - its
+- implement: on request until I accept, then Queued. Ground it on the plan (basis) - its
   recorded spec and my choice - from the plan's branch if it has one; on Save and defer it
   waits on request until I press Start or ask. The simplest change that meets the accepted
   plan.
-- pieces: when the accepted plan records separate pieces, each is its own implement step
-  under the same parent, grounded on the plan (basis), titled as the plan names it. Block
-  each by exactly the pieces it needs (link_tasks blocks, one edge per need), never by list
-  order; the rest run at the same time. Reuse the prefiled successor as the first piece; file
-  every piece on request, link, read the graph back, then start the ready ones. One change
-  stays one successor. The parent completes when the last piece is merged.
+- pieces: siblings under the approved answer's parent, that answer as basis regardless
+  of kind; reuse successors. File Queued (when-ready), prerequisites first, with every
+  blocker in blocked_by ([] only if none). For reused work, finish links, read unmet
+  blockers, then queue with that declaration. Read all pieces by parent in a later
+  request after filing/linking; correct/re-read only blockers or start policy.
+  The queue starts ready work now and after merges. Backlog waits for my word;
+  never bypass it with start_now.
+  Read autonomy to report who merges; never edit it without explicit captain words, even to match another task.
+  One successor per change; parent ends after last merge.
 
 ## bugfix - something is broken
 - reproduce: a read-only step. Reproduce it as reported, in a clean setup, and put the

@@ -82,6 +82,12 @@ import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/placedSessions";
+import {
+  ABANDON,
+  APPROVE_AND_BUILD,
+  SAVE_AND_DEFER,
+  START_THE_NEXT_STEP,
+} from "../prompts/cardContract";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
@@ -3081,6 +3087,188 @@ describe("CrewSupervisor", () => {
     expect(wake("land")).toContain("Cannot merge: The main worktree is dirty.");
     expect(wake("merge")).toContain("PR merge blocked: CI is red.");
   });
+
+  // INF-87 P1: the existing queue, not a first-mate continuation turn, owns later starts.
+  it.each(
+    (["card", "tool", "detailed"] as const).flatMap((via) =>
+      (["land", "merge-pr", "discard", "refused"] as const).map((outcome) => ({ via, outcome })),
+    ),
+  )(
+    "$via / $outcome starts ready pieces, whose crew asks at captain-only actions",
+    async ({ via, outcome }) => {
+      const { supervisor, tasks, workspace, sessions, specs, cardStore } = setup(fakeCrewmate(), {
+        mergePullRequest: async () => ({ ok: true, text: "Change #9 is in on GitHub." }),
+      });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+        outcome === "merge-pr" ? "direct-pr" : "local-only",
+      );
+      const wakes: WakeFacts[] = [];
+      supervisor.setFirstmateHooks({
+        notifyOp: (wake) => {
+          if (typeof wake === "object" && "facts" in wake && wake.facts) wakes.push(wake.facts);
+        },
+        retryConverse: vi.fn(),
+      });
+      // P3: an approved answer need not be classified as a plan.
+      seedTask(tasks, {
+        id: "P",
+        title: "Approved work",
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      seedTask(tasks, {
+        id: "PLAN",
+        title: "The plan",
+        status: "idle",
+        parentId: "P",
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      tasks.recordReport("PLAN", {
+        text: "Build the two approved repairs after the foundation merges; keep the other work held.",
+      });
+      tasks.close("PLAN", { status: "done", reason: "answered", actor: "captain" });
+      seedTask(tasks, {
+        id: "root",
+        title: "Foundation",
+        status: "idle",
+        worktreeDir: "/root",
+        shape: { kind: "implement", autonomy_ask: true },
+      });
+      for (const id of [
+        "first",
+        "second",
+        "captain-action",
+        "blocked",
+        "other",
+        "gated",
+        "unrelated",
+        "manual",
+        "unapproved",
+        "backlog",
+      ]) {
+        seedTask(tasks, {
+          id,
+          title: id,
+          status: "queued",
+          startPolicy: [
+            "first",
+            "second",
+            "captain-action",
+            "blocked",
+            "gated",
+            "backlog",
+          ].includes(id)
+            ? "when-ready"
+            : "on-request",
+          ...(id !== "manual"
+            ? {
+                parentId: "P",
+                shape: {
+                  kind: "implement" as const,
+                  basis: "PLAN",
+                },
+              }
+            : {}),
+        });
+        if (id !== "other" && id !== "unrelated") tasks.link("root", id, "blocks", "host");
+      }
+      tasks.link("other", "blocked", "blocks", "host");
+      // INF-269 Q1: a plan-named action is not a host-set gate before dispatch.
+      tasks.updateFields(
+        "captain-action",
+        {
+          goal: "Prepare Infinitary for the App Store; ask the captain before signing or submission.",
+        },
+        "host",
+      );
+      // An already recorded captain decision remains a real hold, unlike words in a plan.
+      tasks.setGate(
+        "gated",
+        { kind: "captain", ref: "later-choice" },
+        "An existing captain decision holds this task.",
+      );
+      tasks.setQueued("backlog", "unqueue-task", { actor: "captain" });
+      for (const status of ["idle", "cancelled"] as const) {
+        seedTask(tasks, { id: status, title: status, status, startPolicy: "on-request" });
+        tasks.link("root", status, "blocks", "host");
+      }
+      if (outcome === "refused")
+        vi.mocked(workspace.landTaskWork).mockRejectedValue(
+          new Error("The main worktree is dirty."),
+        );
+      const card = supervisor.addFirstmateCard({
+        requiredActions: [],
+        taskId: "root",
+        title: "Settle the foundation",
+        body: "Choose what happens to this work.",
+        actions: [
+          {
+            id: "settle",
+            label: outcome,
+            effect: outcome === "discard" ? SETTLE_DISCARD : SETTLE_MERGE,
+          },
+        ],
+      });
+      let text: string;
+      let wake: Extract<WakeFacts, { kind: "settled" }> | undefined;
+      if (via === "card") {
+        supervisor.act(card, "settle");
+        await vi.waitFor(() => expect(wakes.some((wake) => wake.kind === "settled")).toBe(true));
+        wake = wakes.find((wake) => wake.kind === "settled");
+        text = renderWake({ facts: wake! });
+      } else {
+        const mode =
+          outcome === "discard" ? "discard" : outcome === "merge-pr" ? "merge-pr" : "land";
+        text =
+          via === "tool"
+            ? await supervisor.settleTask("root", mode)
+            : (await supervisor.settleTaskDetailed("root", mode)).text;
+        expect(wakes.filter((wake) => wake.kind === "settled")).toEqual([]);
+      }
+      const merged = outcome === "land" || outcome === "merge-pr";
+      const opened = () => sessions.open.mock.calls.map(([spec]) => spec.owner);
+      if (merged) {
+        // No start_now, manual sweep or first-mate reply: settlement owns the recheck.
+        await vi.waitFor(() =>
+          expect(opened()).toEqual(expect.arrayContaining(["first", "second", "captain-action"])),
+        );
+        for (const id of ["first", "second", "captain-action"])
+          expect(tasks.get(id)?.status).toBe("active");
+        expect(tasks.get("captain-action")?.gate).toBeNull();
+        const crew = specs.find((spec) => spec.taskId === "captain-action")!;
+        const answer = await bindTool(EMIT_CARD_TOOL, crew).run({
+          title: "Infinitary needs your signing decision",
+          body: "<p>Infinitary needs your signing decision.</p><p>The approved plan reserves signing and submission for you; nothing has been signed or submitted.</p>",
+          asking: true,
+          actions: [
+            { id: "review", label: "Review signing", default: true },
+            { id: "wait", label: "Leave waiting" },
+          ],
+        });
+        const decision = cardStore.listOpen().find((card) => card.taskId === "captain-action")!;
+        expect(answer.text).toContain(decision.id);
+        expect(decision.actions.map((action) => action.effect)).toEqual([undefined, undefined]);
+        await vi.waitFor(() =>
+          expect(tasks.get("captain-action")?.gate).toMatchObject({
+            kind: "captain",
+            ref: decision.id,
+          }),
+        );
+      } else {
+        for (const id of ["first", "second", "captain-action"]) {
+          expect(tasks.get(id)?.status).toBe("open");
+          expect(opened()).not.toContain(id);
+        }
+      }
+      for (const id of ["manual", "unapproved", "backlog", "blocked", "gated", "unrelated"]) {
+        expect(tasks.get(id)?.status).toBe("open");
+        expect(opened()).not.toContain(id);
+        expect(text).not.toContain(`"${id}"`);
+      }
+      expect(tasks.get("backlog")?.startPolicy).toBe("on-request");
+      expect(tasks.get("gated")?.gate).toEqual({ kind: "captain", ref: "later-choice" });
+    },
+  );
 
   it("refs a shell settle wake after the close purge so it survives and anchors the turn", async () => {
     const { supervisor, tasks, inbox } = setup(fakeCrewmate());
@@ -16480,18 +16668,28 @@ describe("the deliverable axis (Task B)", () => {
       card: { id: card.id, title: "The meter is idle because the claim query filters on repo_id" },
       choice: { id: "noted", label: "Got it", effect: null },
       close: { status: "done", reason: "answered", actor: "captain" },
+      read: { tool: "tasks", arguments: { key: tasks.get(taskId)?.key } },
+      next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
     });
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
 
-  it("serves the answer's close as the payload it is, byte for byte", async () => {
+  it.each([
+    "Got it",
+    ABANDON,
+    APPROVE_AND_BUILD,
+    START_THE_NEXT_STEP,
+    SAVE_AND_DEFER,
+    "Start the fix",
+    "Implement the correction",
+  ])("serves recovery guidance by meaning, not the label %s", async (label) => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards, inbox, taskId, tasks } = await investigation(crewmate);
     specs[0]?.onCard?.({
       title: "The meter is idle",
       body: "<p>The claim query filters on repo_id.</p><p>Seven idle rows.</p>",
       actions: [
-        { id: "noted", label: "Got it", default: true },
+        { id: "noted", label, default: true },
         { id: "dig", label: "Dig further" },
       ],
     });
@@ -16502,7 +16700,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const key = tasks.get(taskId)?.key;
     expect(inbox.pending(FIRSTMATE_RECIPIENT).map(renderWake)).toEqual([
-      `[fm-op] {"version":1,"event":"answer_task_closed","task":{"id":"${taskId}","key":"${key}","title":"Why is the meter idle"},"card":{"id":"${card.id}","title":"The meter is idle"},"choice":{"id":"noted","label":"Got it","effect":null},"close":{"status":"done","reason":"answered","actor":"captain"}}`,
+      `[fm-op] {"version":1,"event":"answer_task_closed","task":{"id":"${taskId}","key":"${key}","title":"Why is the meter idle"},"card":{"id":"${card.id}","title":"The meter is idle"},"choice":{"id":"noted","label":"${label}","effect":null},"close":{"status":"done","reason":"answered","actor":"captain"},"read":{"tool":"tasks","arguments":{"key":"${key}"}},"next":"This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates."}`,
     ]);
   });
 

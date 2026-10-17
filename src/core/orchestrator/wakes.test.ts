@@ -35,6 +35,27 @@ describe("renderWake", () => {
     expect(renderWake({ text: "keep going" })).toBe("keep going");
   });
 
+  // INF-87 R7: legacy answer records may have no human-readable task key.
+  it.each(["", "SCR-7"])("recovers an answer by its key or id (%s)", (key) => {
+    const text = renderWake({
+      facts: {
+        kind: "answer-closed",
+        handoff: {
+          version: 1,
+          event: "answer_task_closed",
+          task: { id: "plan-id", key, title: "The accepted plan" },
+          card: { id: "card-plan", title: "Build the plan" },
+          choice: { id: "build", label: "Approve and build", effect: null },
+          close: { status: "done", reason: "answered", actor: "captain" },
+        },
+      },
+    });
+    expect(JSON.parse(text.slice("[fm-op] ".length)).read).toEqual({
+      tool: "tasks",
+      arguments: { key: key || "plan-id" },
+    });
+  });
+
   it("renders the nudge to the words the crewmate has always been sent", () => {
     expect(renderWake(idleNudge())).toBe(IDLE_NUDGE_TEXT);
     expect(renderWake(idleNudge(true))).toBe(IDLE_THREAD_NUDGE_TEXT);

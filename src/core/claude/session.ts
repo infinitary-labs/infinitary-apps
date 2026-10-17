@@ -273,6 +273,10 @@ export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
 /** The client's own words a rolling session turns on: the idle signal the settle rule reads. */
 export const CLAUDE_ROLLING_ENV = { CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: "1" } as const;
 
+// INF-133 F1: the captain chose a higher, host-owned first mate tool-result cap.
+// An explicit positive value takes precedence over the client's remote configuration.
+export const CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS = 100_000;
+
 /**
  * The client's documented switch that keeps its per-turn extras off the
  * seat: without it the installed 2.1.283 tells a seat that ran a few tool
@@ -285,7 +289,10 @@ export const CLAUDE_ROLLING_ENV = { CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: "1" }
  * `claudeToolSurface.test.ts` holds the set on the real client. A coding
  * session keeps the client's extras: they are its own coding aids.
  */
-export const CLAUDE_SEAT_ENV = { CLAUDE_CODE_DISABLE_ATTACHMENTS: "1" } as const;
+export const CLAUDE_SEAT_ENV = {
+  CLAUDE_CODE_DISABLE_ATTACHMENTS: "1",
+  MAX_MCP_OUTPUT_TOKENS: String(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS),
+} as const;
 
 /** The priority a steer rides; measured, see the module comment. */
 export const CLAUDE_STEER_PRIORITY = "next" as const;

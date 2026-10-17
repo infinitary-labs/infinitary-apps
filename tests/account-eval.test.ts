@@ -12,17 +12,26 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  acceptedPlanCase,
+  evaluation as acceptedPlanEvaluation,
+  largeDesignCase,
+  scoreAcceptedPlan,
+  scoreLargeDesign,
+  scoreReadyPlanPieces,
+} from "../scripts/evals/acceptedPlan.ts";
+import {
   ownershipCases,
   evaluation as ownershipEvaluation,
   scoreOwnershipRun,
 } from "../scripts/evals/answerOwnership.ts";
 import { approvalCases } from "../scripts/evals/approvalHandoff.ts";
-import { approvalHost, refuseOverlap } from "../scripts/evals/host.ts";
+import { ACCEPTANCE_WAIT_MS, approvalHost, refuseOverlap } from "../scripts/evals/host.ts";
 import {
   type AccountModel,
   accountModels,
   approvalEvaluation,
   artifact,
+  boundedToolText,
   CLIENT_ENDED,
   claudeCrewClient,
   evaluationClaudeEnv,
@@ -40,7 +49,9 @@ import { appPathsFor } from "../src/core/paths.ts";
 import { AccountVault } from "../src/core/pi/accountVault.ts";
 import { PiAccountBackend } from "../src/core/pi/piAccountBackend.ts";
 import { createPiSessionFactory } from "../src/core/pi/session.ts";
+import { renderTasksQueryResult } from "../src/core/pi/taskTools.ts";
 import type { SessionBinding, SessionSpec } from "../src/core/session/session.ts";
+import { InboxStore } from "../src/core/storage/inboxStore.ts";
 import { MOCK_CLAUDE_OAUTH_TOKEN, writeMockClaudeClient } from "./e2e/mockClaudeClient.ts";
 import { mockModelsJson, startMockProvider } from "./e2e/mockProvider.ts";
 import {
@@ -50,7 +61,9 @@ import {
   writeAnthropicText,
   writeAnthropicToolUse,
 } from "./helpers/anthropicDialect.ts";
+import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "./helpers/claudeMcpLimit.ts";
 import { scratchDir } from "./helpers/scratchDirs.ts";
+import { readTaskQueryText } from "./helpers/taskQueryText.ts";
 
 // Each independent case owns its boxed client and migrations; never put every cold start under one ceiling.
 vi.setConfig({ testTimeout: 30_000 });
@@ -146,7 +159,15 @@ describe("account evaluation approval and isolation", () => {
     const root = scratchDir("eval-gate-");
     const opts = options(root);
     let connects = 0;
+    let preparedHosts = 0;
     const deps = {
+      module: {
+        ...approvalEvaluation,
+        host: async (...args: Parameters<typeof approvalHost>) => {
+          preparedHosts++;
+          return approvalHost(...args);
+        },
+      },
       factory: async () => {
         connects++;
         throw new Error("Must not connect");
@@ -158,17 +179,51 @@ describe("account evaluation approval and isolation", () => {
     expect(dry.sheet.maximumCalls).toBe(dry.sheet.cases.reduce((sum, row) => sum + row.calls, 0));
     expect(dry.sheet.limits.calls).toBe(80);
     expect(connects).toBe(0);
-    for (const approvedHash of [undefined, "wrong"])
+    for (const approvedHash of [undefined, "wrong"]) {
       await expect(runEvaluation({ ...opts, live: true, approvedHash }, deps)).rejects.toThrow(
         "exact approved",
       );
+      // INF-87: invalid approval must not repeat the expensive twelve-host preparation.
+      expect(preparedHosts).toBe(dry.sheet.cases.length);
+    }
     await expect(
       runEvaluation(
         { ...opts, sourceHash: "changed", live: true, approvedHash: dry.sheetHash },
         deps,
       ),
     ).rejects.toThrow("exact approved");
+    expect(preparedHosts).toBe(dry.sheet.cases.length);
     expect(connects).toBe(0);
+  });
+  it("still measures current tool fingerprints after the saved approval matches", async () => {
+    // INF-87: early refusals save work, never authorize a changed tool surface.
+    const root = scratchDir("eval-current-fingerprint-");
+    const opts = options(root);
+    let changed = false;
+    const factory = vi.fn(async () => {
+      throw new Error("Must not connect");
+    });
+    const deps = {
+      module: {
+        ...approvalEvaluation,
+        cases: approvalCases.slice(0, 1),
+        host: async (...args: Parameters<typeof approvalHost>) => {
+          const host = await approvalHost(...args);
+          return changed
+            ? { ...host, spec: { ...host.spec, tools: host.spec.tools.slice(1) } }
+            : host;
+        },
+      },
+      factory,
+      scratch: () => scratchDir("eval-case-"),
+    };
+    const dry = await runEvaluation(opts, deps);
+    changed = true;
+    await expect(
+      runEvaluation({ ...opts, live: true, approvedHash: dry.sheetHash }, deps),
+    ).rejects.toThrow("exact approved");
+    expect(factory).not.toHaveBeenCalled();
+    expect(existsSync(join(opts.out, "run-started.json"))).toBe(false);
   });
   it("refuses overlapping app state and any account-vault mutation", () => {
     expect(() => refuseOverlap("/scratch/app/child", ["/scratch/app"])).toThrow("overlaps");
@@ -974,5 +1029,524 @@ describe("answer ownership evaluation", () => {
         await host.close();
       }
     });
+  }
+});
+
+// INF-87: a live evaluation must expose the real plan through tools, not preload or cut it.
+it("keeps the accepted plan off the index and serves the entire native read within its approved budget", async () => {
+  const root = scratchDir("accepted-plan-eval-");
+  const host = await approvalHost(
+    acceptedPlanCase,
+    join(root, "host"),
+    { provider: "fm-mock", id: "mock-1" },
+    [],
+  );
+  try {
+    expect(host.prompt).not.toContain("Your Mac lets a phone join as a phone.");
+    const read = host.spec.tools.find((tool) => tool.name === "tasks")!;
+    const result = await read.run({ key: "PLAN" });
+    const row = readTaskQueryText(result.text)[0]!;
+    expect(row.outcome).toBe(acceptedPlanCase.tasks.PLAN!.outcome);
+    expect(row.resolution?.offer?.body).toBe(acceptedPlanCase.tasks.PLAN!.resolution!.offer.body);
+    expect(row.resolution?.answers).toEqual(acceptedPlanCase.tasks.PLAN!.resolution!.answers);
+    // No-loss contract: an older accepted offer may differ from the newest stored card.
+    // Use the retained original offer, before the evaluation's task-key remapping.
+    const differingOffer = structuredClone(row);
+    differingOffer.resolution!.offer!.body = JSON.parse(
+      readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8"),
+    ).body;
+    expect(differingOffer.resolution!.offer!.body).not.toBe(differingOffer.card);
+    expect(readTaskQueryText(renderTasksQueryResult({ rows: [differingOffer], total: 1 }))).toEqual(
+      [differingOffer],
+    );
+    // INF-113: the real client rejected the repeated full record, despite our larger reservation.
+    expect(result.text.length).toBeLessThanOrEqual(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+    expect(result.text.length).toBeGreaterThan(LIMITS.toolResultBytes);
+    expect(boundedToolText(result.text, acceptedPlanEvaluation.toolResultBytes)).toBe(result.text);
+    // An oversized response remains bounded, including multibyte characters.
+    expect(Buffer.byteLength(boundedToolText(result.text, 20))).toBeLessThanOrEqual(20);
+    expect(Buffer.byteLength(boundedToolText("😀".repeat(20), 21))).toBeLessThanOrEqual(21);
+    const dry = await runEvaluation(options(root), { module: acceptedPlanEvaluation });
+    expect(dry.sheet.cases.map(({ id }) => id)).toEqual(
+      acceptedPlanEvaluation.cases.map(({ id }) => id),
+    );
+    expect(dry.sheet.cases[1]!.calls).toBe(largeDesignCase.maxCalls);
+    expect(dry.sheet.limits.toolResultBytes).toBe(acceptedPlanEvaluation.toolResultBytes);
+    expect(dry.sheet.cases[0]!.calls).toBe(acceptedPlanEvaluation.firstmateCalls);
+    expect(dry.sheet.cases[0]!.inputTokens).toBe(
+      reservation(
+        dry.sheet.cases[0]!.promptBytes,
+        acceptedPlanEvaluation.firstmateCalls,
+        dry.sheet.limits,
+      ),
+    );
+    expect(dry.sheet.maximumInputTokens).toBeLessThanOrEqual(LIMITS.inputTokens);
+  } finally {
+    await host.close();
+  }
+});
+
+// INF-87 R1: the captain requires every ready root in the acceptance turn.
+// P1/P4 are independent review repairs; the historical capture itself stays unchanged.
+it.each([
+  ["id", "research"],
+  ["key", "reproduce"],
+  ["lower-case key", "implement"],
+] as const)("queues both ready roots by %s from an approved %s answer", async (reference, kind) => {
+  // P1/P3: approved answers use the existing queue, regardless of classification.
+  const fixture = structuredClone(acceptedPlanCase);
+  fixture.id = "two-ready-plan-roots";
+  fixture.tasks.PLAN!.kind = kind;
+  const words =
+    "Use the board's existing lanes, with no separate mark or new label; restore the authorization limit.";
+  fixture.context = words;
+  fixture.tasks.P!.title = "Fix the accepted-plan review findings";
+  fixture.tasks.PLAN!.title = "Two independent review repairs";
+  fixture.tasks.PLAN!.userWords = words;
+  fixture.tasks.PLAN!.outcome =
+    "Correct queue guidance and restore the authorization limit. Neither repair depends on the other.";
+  fixture.tasks.PLAN!.resolution = {
+    action: "fix-review",
+    answers: [],
+    offer: {
+      body: fixture.tasks.PLAN!.outcome,
+      actions: [{ id: "fix-review", label: "Fix and review once more" }],
+    },
+  };
+  const host = await approvalHost(
+    fixture,
+    scratchDir("accepted-plan-roots-"),
+    { provider: "fm-mock", id: "mock-1" },
+    [],
+  );
+  const calls: import("../scripts/evals/approvalHandoff.ts").EvalCall[] = [];
+  const call = async (name: string, args: Record<string, unknown>) => {
+    const answer = await host.spec.tools.find((tool) => tool.name === name)!.run(args);
+    const result = host.effect(name, args, answer);
+    expect(result, answer.text).toBe("success");
+    calls.push({
+      name,
+      args: host.normalize(args) as Record<string, unknown>,
+      result,
+      request: calls.length + 1,
+    });
+    return answer;
+  };
+  try {
+    await call("tasks", { key: "PLAN" });
+    const build = readTaskQueryText((await call("tasks", { key: "BUILD" })).text)[0]!;
+    await call("update_task", {
+      task:
+        reference === "id"
+          ? "BUILD"
+          : reference === "key"
+            ? build.key
+            : ` ${build.key.toLowerCase()} `,
+      title: "Correct accepted-plan queue guidance",
+      goal: words,
+      start_policy: "when-ready",
+      blocked_by: [],
+    });
+    const before = new Set(host.state().graph!.map((row) => row.id));
+    await call("create_task", {
+      title: "Restore the authorization limit",
+      goal: "Approval authorizes no credential command, repair, permission change or merge.",
+      user_words: words,
+      parent: "P",
+      basis: "PLAN",
+      start_policy: "when-ready",
+      blocked_by: [],
+      constraints: [{ kind: "free", text: "implement: queued" }],
+    });
+    const second = host.state().graph!.find((row) => !before.has(row.id))!.id;
+    await call("tasks", { parent: "P" });
+    await vi.waitFor(() => expect(host.starts).toEqual(expect.arrayContaining(["BUILD", second])));
+    const run = { calls, state: host.state() };
+    expect(scoreReadyPlanPieces(run, ["BUILD", second], [[], []])).toEqual([]);
+    for (const started of [["BUILD"], [...host.starts, second], [...host.starts, "unknown"]])
+      expect(
+        scoreReadyPlanPieces(
+          { ...run, state: { ...run.state, started } },
+          ["BUILD", second],
+          [[], []],
+        ),
+      ).toContain("Start every ready piece and no blocked piece");
+    expect(
+      scoreReadyPlanPieces(
+        { ...run, state: { ...run.state, started: undefined } },
+        ["BUILD", second],
+        [[], []],
+      ),
+    ).toContain("Record actual queue dispatches");
+    for (const id of ["BUILD", second])
+      expect(host.state().graph!.find((row) => row.id === id)).toMatchObject({
+        parent: "P",
+        basis: "PLAN",
+        startPolicy: "when-ready",
+      });
+  } finally {
+    await host.close();
+  }
+});
+
+it("scores the six-piece graph from actual task tools and refuses missing reads, wrong dependencies and missing review", async () => {
+  const host = await approvalHost(
+    acceptedPlanCase,
+    scratchDir("accepted-plan-graph-"),
+    { provider: "fm-mock", id: "mock-1" },
+    [],
+  );
+  const calls: import("../scripts/evals/approvalHandoff.ts").EvalCall[] = [];
+  const call = async (name: string, args: Record<string, unknown>) => {
+    const answer = await host.spec.tools.find((tool) => tool.name === name)!.run(args);
+    const result = host.effect(name, args, answer);
+    calls.push({
+      name,
+      args: host.normalize(args) as Record<string, unknown>,
+      result,
+      // Scripted host proof: each awaited call represents a separate request.
+      request: calls.length + 1,
+    });
+    expect(result, answer.text).toBe("success");
+    return answer;
+  };
+  try {
+    await call("tasks", { key: "PLAN" });
+    const plan = acceptedPlanCase.tasks.PLAN!;
+    // These are real recorded piece headings/outcomes, not model outputs or a live-eval pass.
+    const sections = plan.outcome!.split(/\n(?=[1-6]\. )/).slice(1);
+    const ids = ["BUILD"];
+    const needs = [[], [0], [1], [1], [1], [2, 3, 4]];
+    await call("tasks", { key: "BUILD" });
+    await call("update_task", {
+      task: "BUILD",
+      goal: sections[0],
+      start_policy: "when-ready",
+      blocked_by: [],
+    });
+    for (let i = 1; i < 6; i++) {
+      const before = new Set(host.state().graph!.map((row) => row.id));
+      await call("create_task", {
+        title: sections[i]!.split(". ").slice(1, 2)[0]!,
+        goal: sections[i],
+        user_words: plan.userWords,
+        parent: "P",
+        basis: "PLAN",
+        start_policy: "when-ready",
+        blocked_by: needs[i]!.map((n) => ids[n]),
+        constraints: [{ kind: "free", text: "implement: queued" }],
+      });
+      ids.push(host.state().graph!.find((row) => !before.has(row.id))!.id);
+    }
+    // INF-269 Q2: Queued starts the ready root before the graph read, not after it.
+    await vi.waitFor(() => expect(host.starts).toEqual(["BUILD"]));
+    const readBackIndex = calls.length;
+    await call("tasks", { parent: "P" });
+    const run = {
+      endedNormally: true,
+      calls,
+      state: host.state(),
+      review: { fullAcceptedSpecPreserved: false, noInventedMergePermission: false },
+    };
+    // Semantic verdicts below are ONLY scorer fixtures. A real run needs independent quotations.
+    const review = {
+      pieces: ids,
+      fullSpecificationAndChecks: true,
+      phoneCodeInPiece2: true,
+      captainOnlyActionsPreserved: true,
+      noInventedMergePermission: true,
+      graphReadBack: true,
+      quotations: ["Scorer plumbing fixture, not a model evaluation"],
+    };
+    expect(scoreAcceptedPlan(run, review)).toEqual([]);
+    // INF-201/P1: the graph read must be in a later request than its last mutation.
+    const lastLinkIndex = calls.findLastIndex((call) => call.name === "create_task");
+    for (const grouped of [[lastLinkIndex, readBackIndex]]) {
+      const batched = structuredClone(calls);
+      batched[grouped[1]!]!.request = batched[grouped[0]!]!.request;
+      expect(scoreAcceptedPlan({ ...run, calls: batched }, review)).toContain(
+        "Read the completed graph after filing, linking and queue changes",
+      );
+    }
+    const unmeasured = calls.map(({ request: _request, ...call }) => call);
+    expect(scoreAcceptedPlan({ ...run, calls: unmeasured }, review)).toContain(
+      "Read the completed graph after filing, linking and queue changes",
+    );
+    // INF-164: read the completed graph after linking, not merely PLAN before filing.
+    const withoutReadBack = calls.filter((_, index) => index !== readBackIndex);
+    expect(scoreAcceptedPlan({ ...run, calls: withoutReadBack }, review)).toContain(
+      "Read the completed graph after filing, linking and queue changes",
+    );
+    const staleReadBack = [...withoutReadBack];
+    staleReadBack.splice(
+      calls.findLastIndex((call) => call.name === "create_task"),
+      0,
+      calls[readBackIndex]!,
+    );
+    expect(scoreAcceptedPlan({ ...run, calls: staleReadBack }, review)).toContain(
+      "Read the completed graph after filing, linking and queue changes",
+    );
+    expect(scoreAcceptedPlan(run, { ...review, graphReadBack: false })).not.toEqual([]);
+    // INF-269 Q1: preserve the captain-only actions, not a hold before starting the piece.
+    expect(scoreAcceptedPlan(run, { ...review, captainOnlyActionsPreserved: false })).toContain(
+      "Independent review must substantiate the full scope, selected answer and captain-only actions",
+    );
+    expect(
+      scoreAcceptedPlan(
+        {
+          ...run,
+          calls: [
+            ...calls,
+            {
+              name: "emit_card",
+              args: {
+                title: "Approve the pieces again",
+                body: "<p>Approve the already accepted pieces again.</p><p>They have not been queued.</p>",
+                actions: [
+                  { id: "approve", label: "Approve", default: true },
+                  { id: "wait", label: "Leave waiting" },
+                ],
+              },
+              result: "success",
+            },
+          ],
+        },
+        review,
+      ),
+    ).toContain("The first mate must not ask again before queueing approved pieces");
+    // INF-104 F5: read-only context before the native plan read is not a write.
+    for (const name of ["knowledge", "app_state", "supervision_log", "locate_project"]) {
+      expect(
+        scoreAcceptedPlan(
+          { ...run, calls: [{ name, args: {}, result: "success" }, ...calls] },
+          review,
+        ),
+      ).toEqual([]);
+    }
+    expect(
+      scoreAcceptedPlan(
+        { ...run, calls: [calls[2]!, calls[0]!, calls[1]!, ...calls.slice(3)] },
+        review,
+      ),
+    ).toContain("Read the saved plan directly before writing");
+    expect(scoreAcceptedPlan({ ...run, calls: calls.slice(1) }, review)).toContain(
+      "Read the saved plan directly before writing",
+    );
+    expect(scoreAcceptedPlan(run, { ...review, phoneCodeInPiece2: false })).not.toEqual([]);
+    const wrong = structuredClone(run);
+    wrong.state.graph!.find((row) => row.id === ids[3])!.blockers = [ids[2]!];
+    expect(scoreAcceptedPlan(wrong, review)).toContain("Piece 4 has the wrong prerequisites");
+    const wrongParent = structuredClone(run);
+    wrongParent.state.graph!.find((row) => row.id === ids[1])!.parent = "another-parent";
+    expect(scoreAcceptedPlan(wrongParent, review)).toContain(
+      "Piece 2 needs the original parent and plan basis",
+    );
+    expect(scoreAcceptedPlan({ ...run, endedNormally: false }, review)).toContain(
+      "The turn did not end normally",
+    );
+    // P1/P2: a forgotten Backlog piece would stall after its blockers merge.
+    for (const piece of [1, 3, 4])
+      await call("update_task", { task: ids[piece], start_policy: "on-request" });
+    const stalled = scoreAcceptedPlan({ ...run, calls, state: host.state() }, review);
+    for (const piece of [2, 4, 5]) expect(stalled).toContain(`Piece ${piece} must be Queued`);
+    for (const piece of [1, 3, 4])
+      await call("update_task", {
+        task: ids[piece],
+        start_policy: "when-ready",
+        blocked_by: needs[piece]!.map((n) => ids[n]),
+      });
+    await call("tasks", { parent: "P" });
+    expect(scoreAcceptedPlan({ ...run, calls, state: host.state() }, review)).toEqual([]);
+    const manual = {
+      ...run,
+      state: host.state(),
+      calls: [
+        ...calls,
+        {
+          name: "update_task",
+          args: { task: "BUILD", start_now: true },
+          result: "success" as const,
+        },
+      ],
+    };
+    expect(scoreAcceptedPlan(manual, review)).toContain(
+      "Queued pieces start through the host, not manual start calls",
+    );
+    // INF-222: the live model set every new piece to autonomy off to match BUILD,
+    // despite no captain request. Disclosure or a mistaken review cannot authorize it.
+    for (const task of ids.slice(1)) await call("update_task", { task, autonomy: "off" });
+    expect(scoreAcceptedPlan({ ...run, calls, state: host.state() }, review)).toContain(
+      "Plan acceptance does not authorize autonomy edits",
+    );
+  } finally {
+    await host.close();
+  }
+});
+
+// INF-104 F3: an accepted-plan run refunds only unused calls at its approved module rate.
+it("keeps the enlarged native-read reservation for requests actually used", async () => {
+  const root = scratchDir("accepted-plan-refund-");
+  const api = await scriptedEndpoint({ name: "tasks", args: { key: "PLAN" } });
+  closeProvider = api.close;
+  const opts = options(root);
+  disposablePiAccounts(opts, api.port);
+  const paths = appPathsFor(opts.userData as string);
+  const vault = readOnlyVault(
+    AccountVault.create(paths, { pi: new PiAccountBackend({ modelsPath: paths.modelsPath }) }),
+  );
+  const deps = {
+    // This refund regression keeps its original one-read fixture; both cases are checked above.
+    module: { ...acceptedPlanEvaluation, cases: [acceptedPlanCase] },
+    scratch: () => scratchDir("eval-case-"),
+    factory: async (role: AccountModel, dir: string) => ({
+      factory: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }),
+      binding: {
+        backend: "pi",
+        accountId: role.accountId,
+        runtime: await vault.runtimeFor(role.accountId),
+      } as SessionBinding,
+    }),
+  };
+  const dry = await runEvaluation(opts, deps);
+  const result = await runEvaluation({ ...opts, live: true, approvedHash: dry.sheetHash }, deps);
+  expect(result.responses![acceptedPlanCase.id]!.endedNormally).toBe(true);
+  const record = JSON.parse(readFileSync(join(opts.out, `${acceptedPlanCase.id}.json`), "utf8"));
+  // INF-201: the scorer's request boundaries are observed events, not call-array positions.
+  expect(result.responses![acceptedPlanCase.id]!.calls.map((call) => call.request)).toEqual(
+    record.frames
+      .filter((frame: { type: string }) => frame.type === "tool_end")
+      .map((frame: { request: number }) => frame.request),
+  );
+  const usage = JSON.parse(readFileSync(join(opts.out, "usage.json"), "utf8"));
+  expect(usage.callsUsed).toBe(2); // Read the native plan, then finish the turn.
+  expect(usage.inputTokensReserved).toBe(
+    reservation(dry.sheet.cases[0]!.promptBytes, usage.callsUsed, dry.sheet.limits),
+  );
+});
+
+// INF-104 F4: loss of the queued wake must fail even when the accepted choice itself is valid.
+it("fails and disposes a missing acceptance wake instead of hanging preparation", async () => {
+  const dir = scratchDir("accepted-plan-refusal-");
+  const enqueue = vi.spyOn(InboxStore.prototype, "enqueueWake").mockReturnValue(null);
+  vi.useFakeTimers();
+  try {
+    const failure = approvalHost(
+      acceptedPlanCase,
+      dir,
+      { provider: "fm-mock", id: "mock-1" },
+      [],
+    ).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(ACCEPTANCE_WAIT_MS);
+    expect(await failure).toEqual(
+      new Error("The evaluation's answer-close wake did not reach the first mate"),
+    );
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    enqueue.mockRestore();
+    vi.useRealTimers();
+  }
+});
+
+// INF-133 F3: the second approved live case must serve actual length-framed text,
+// including the saved report, brief, selected answers and complete accepted offer.
+it("serves the large design through production task tools as lossless text blocks", async () => {
+  const host = await approvalHost(
+    largeDesignCase,
+    scratchDir("large-design-eval-"),
+    { provider: "fm-mock", id: "mock-1" },
+    [],
+  );
+  try {
+    const tool = host.spec.tools.find(({ name }) => name === "tasks")!;
+    const result = await tool.run({ key: "PLAN" });
+    const row = readTaskQueryText(result.text)[0]!;
+    expect(result.text).toContain("\n\nText #/");
+    expect(boundedToolText(result.text, acceptedPlanEvaluation.toolResultBytes)).toBe(result.text);
+    expect(row.outcome).toBe(largeDesignCase.tasks.PLAN!.outcome);
+    expect(row.brief).toBe(largeDesignCase.tasks.PLAN!.brief);
+    expect(row.resolution?.answers).toEqual(largeDesignCase.tasks.PLAN!.resolution!.answers);
+    expect(row.resolution?.offer?.body).toBe(largeDesignCase.tasks.PLAN!.resolution!.offer.body);
+    const calls: import("../scripts/evals/approvalHandoff.ts").EvalCall[] = [
+      { name: "tasks", args: { key: "PLAN" }, result: "success" },
+    ];
+    for (const args of [
+      { task: "DESIGN", goal: largeDesignCase.tasks.PLAN!.outcome },
+      { task: "DESIGN", start_now: true },
+    ]) {
+      const answer = await host.spec.tools.find((tool) => tool.name === "update_task")!.run(args);
+      const result = host.effect("update_task", args, answer);
+      expect(result, answer.text).toBe("success");
+      calls.push({ name: "update_task", args, result });
+    }
+    const run = {
+      endedNormally: true,
+      calls,
+      state: host.state(),
+      review: { fullAcceptedSpecPreserved: false, noInventedMergePermission: false },
+    };
+    // Scorer fixture only: a live verdict requires an independent reader's quotations.
+    const review = {
+      fullSpecificationAvailable: true,
+      selectedAnswersPreserved: true,
+      unansweredChoicesPreserved: true,
+      noBuildOrPublicationPermission: true,
+      noRetrievalDelegation: true,
+      quotations: ["Scorer fixture, not live model evidence"],
+    };
+    expect(scoreLargeDesign(run, review)).toEqual([]);
+    expect(scoreLargeDesign({ ...run, calls: calls.slice(1) }, review)).not.toEqual([]);
+    expect(scoreLargeDesign(run, { ...review, selectedAnswersPreserved: false })).not.toEqual([]);
+    const wrong = structuredClone(run);
+    wrong.state.graph!.find((row) => row.id === "DESIGN")!.kind = "implement";
+    expect(scoreLargeDesign(wrong, review)).toContain(
+      "The continuation must remain a grounded read-only plan",
+    );
+    const implementation = structuredClone(run);
+    implementation.state.graph!.find((row) => row.id === "BUILD")!.status = "active";
+    expect(scoreLargeDesign(implementation, review)).toContain("Keep BUILD open and on request");
+  } finally {
+    await host.close();
+  }
+});
+
+// INF-143: these exact live calls started four later pieces before their links existed.
+it("refuses automatic creation with undeclared prerequisites before writing any task", async () => {
+  const recorded = JSON.parse(
+    readFileSync("tests/fixtures/accepted-plan/inf143-early-starts.json", "utf8"),
+  );
+  const host = await approvalHost(
+    acceptedPlanCase,
+    scratchDir("undeclared-starts-"),
+    { provider: "fm-mock", id: "mock-1" },
+    [],
+  );
+  try {
+    const before = host.state();
+    const tool = host.spec.tools.find(({ name }) => name === "create_task")!;
+    const answers = [];
+    for (const call of recorded.calls) answers.push(await tool.run(call.args));
+    expect(host.state()).toEqual(before);
+    expect(host.starts).toEqual([]);
+    for (const [i, answer] of answers.entries()) {
+      expect(answer.details?.refusal).toEqual({ kind: "undeclared-prerequisites" });
+      expect(host.effect("create_task", recorded.calls[i].args, answer)).toBe("refused");
+    }
+    // P1: approved pieces are queued with their prerequisites declared atomically.
+    const answer = await tool.run({ ...recorded.calls[0].args, blocked_by: ["BUILD"] });
+    expect(answer.details?.refusal).toBeUndefined();
+    const created = host
+      .state()
+      .graph!.find((row) => !before.graph!.some((old) => old.id === row.id))!;
+    expect(created).toMatchObject({
+      status: "open",
+      startPolicy: "when-ready",
+      blockers: ["BUILD"],
+    });
+    expect(host.starts).toEqual([]);
+  } finally {
+    await host.close();
   }
 });

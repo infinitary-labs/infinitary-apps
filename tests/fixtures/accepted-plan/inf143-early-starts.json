@@ -1,0 +1,77 @@
+{
+  "source": "INF-143 live run on b1bf8a5: four automatic creations omitted blocked_by before adding links in the next response.",
+  "calls": [
+    {
+      "name": "create_task",
+      "args": {
+        "title": "The phone app joins your Mac and reads it",
+        "goal": "Piece 2 per plan PLAN: Xcode project ios/Infinitary/ (Infinitary names, com.getinfinitary.infinitary, team 9T2J7MNUP9), join by link or Nearby, phone key, connection with catch-up, Mac reachability, feed, read-only cards, find Mac again, Leave and Removed, plus the test home; and, per the captain's answer (option a), the Mac's \"+ A phone\" with its code to scan ships in this piece.",
+        "user_words": "Start the next step (phonecode: a: with piece 2, so you scan from your first build; people on the alpha see it before they can get the app)",
+        "constraints": [
+          {
+            "kind": "free",
+            "text": "implement: The simplest change that meets the accepted plan."
+          }
+        ],
+        "parent": "P",
+        "start_policy": "when-ready",
+        "basis": "PLAN"
+      },
+      "result": "success"
+    },
+    {
+      "name": "create_task",
+      "args": {
+        "title": "TestFlight puts each phone build on your phone",
+        "goal": "Piece 3 per plan PLAN: dispatched workflow gated on the simulator suite, archive and upload with the App Store Connect key; release tooling tests plus one real run delivering a build. Needs the captain to add the key.",
+        "user_words": "Start the next step",
+        "constraints": [
+          {
+            "kind": "free",
+            "text": "implement: The simplest change that meets the accepted plan."
+          }
+        ],
+        "parent": "P",
+        "start_policy": "when-ready",
+        "basis": "PLAN"
+      },
+      "result": "success"
+    },
+    {
+      "name": "create_task",
+      "args": {
+        "title": "Cards on the phone: answer, reply and close",
+        "goal": "Piece 4 per plan PLAN: card bodies in a web view with the bridge, footer buttons, threads and past cards; the view journey's checks pass on the phone against the test home.",
+        "user_words": "Start the next step",
+        "constraints": [
+          {
+            "kind": "free",
+            "text": "implement: The simplest change that meets the accepted plan."
+          }
+        ],
+        "parent": "P",
+        "start_policy": "when-ready",
+        "basis": "PLAN"
+      },
+      "result": "success"
+    },
+    {
+      "name": "create_task",
+      "args": {
+        "title": "Talk and tasks from the phone",
+        "goal": "Piece 5 per plan PLAN: message box, photos, dictation, Tasks tab with records, search, Start, Continue, Steer, Interrupt, and in-app notifications; a typed message is the captain's own turn on the Mac and a phone-started task runs there.",
+        "user_words": "Start the next step",
+        "constraints": [
+          {
+            "kind": "free",
+            "text": "implement: The simplest change that meets the accepted plan."
+          }
+        ],
+        "parent": "P",
+        "start_policy": "when-ready",
+        "basis": "PLAN"
+      },
+      "result": "success"
+    }
+  ]
+}

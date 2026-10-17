@@ -1099,7 +1099,10 @@ export class SettleService {
       proceedWithOpen ?? false,
     );
     this.recordRefusal(taskId, mode, result);
-    return { text: result.text, ...(result.refusal ? { refusal: result.refusal } : {}) };
+    return {
+      text: result.text,
+      ...(result.refusal ? { refusal: result.refusal } : {}),
+    };
   }
 
   /**

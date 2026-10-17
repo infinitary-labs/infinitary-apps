@@ -109,6 +109,7 @@ describe("the Claude classifier session", () => {
     // Not the person's servers, notes or ambient credentials: the machine's default login only.
     expect(options.mcpServers).toBeUndefined();
     expect(options.env?.CLAUDE_CODE_DISABLE_AUTO_MEMORY).toBe("1");
+    expect(options.env?.MAX_MCP_OUTPUT_TOKENS).toBeUndefined();
     expect(options.env?.ANTHROPIC_API_KEY).toBeUndefined();
     expect(options.env?.CLAUDE_CONFIG_DIR).toBeUndefined();
     expect(harness().inputs.map((input) => input.message.content)).toEqual(["Which way?"]);

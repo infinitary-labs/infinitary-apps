@@ -233,6 +233,7 @@ describe("the Claude crewmate's coding session", () => {
     expect(options.env).toMatchObject(CLAUDE_ROLLING_ENV);
     // Unlike the seat, it keeps the client's per-turn extras.
     expect(options.env?.CLAUDE_CODE_DISABLE_ATTACHMENTS).toBeUndefined();
+    expect(options.env?.MAX_MCP_OUTPUT_TOKENS).toBeUndefined();
     expect(options.extraArgs).toEqual({ "replay-user-messages": null });
     // The tier's level is set on the opening query, not a per-turn update.
     expect(options.effort).toBe("medium");

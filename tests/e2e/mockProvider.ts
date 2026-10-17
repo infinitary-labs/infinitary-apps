@@ -4724,7 +4724,8 @@ function sequencesFirstmateMove(
           name: "update_task",
           args: {
             task: implement,
-            start_now: true,
+            start_policy: "when-ready",
+            blocked_by: [],
             goal: SEQ_IMPLEMENT_AMENDED_GOAL,
           },
         },
@@ -5496,7 +5497,10 @@ export async function startMockProvider(): Promise<MockProviderServer> {
               ]);
             } else if (!calledTool(latestUserTail, "update_task")) {
               streamToolCalls([
-                { name: "update_task", args: { task: filing, start_policy: "when-ready" } },
+                {
+                  name: "update_task",
+                  args: { task: filing, start_policy: "when-ready", blocked_by: [origin] },
+                },
               ]);
             } else if (!calledTool(latestUserTail, "steer_crewmate")) {
               streamToolCalls([

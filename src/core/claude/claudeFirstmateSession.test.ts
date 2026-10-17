@@ -6,6 +6,7 @@ import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from "@anthropic-ai/claude-agent-sdk";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
+import { CLAUDE_MCP_DEFAULT_OUTPUT_TOKENS } from "../../../tests/helpers/claudeMcpLimit";
 import { type ManualClock, manualClock } from "../../../tests/helpers/manualClock";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
@@ -45,7 +46,11 @@ import {
   runExclusiveStoreTask,
 } from "./claudeStoreLease";
 import { encodeClaudeProjectDir } from "./claudeTranscript";
-import { CLAUDE_STEER_PRIORITY, createClaudeSessionFactory } from "./session";
+import {
+  CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS,
+  CLAUDE_STEER_PRIORITY,
+  createClaudeSessionFactory,
+} from "./session";
 
 /**
  * The Claude seat against a scripted client (W1 S6). The message shapes are
@@ -91,6 +96,7 @@ function seat(
     ignoresEndOfInput?: boolean;
     /** What the client check answers; read at each check, so a test can change it. */
     check?: { current: ClaudeClientCheck };
+    env?: NodeJS.ProcessEnv;
   } = {},
 ): Seat {
   const dir = scratchDir("infinitary-claude-seat-");
@@ -117,7 +123,12 @@ function seat(
       clock,
       onRateLimit: (accountId, reading) => readings.push({ accountId, reading }),
       log: (line) => logs.push(line),
-      env: () => ({ PATH: "/usr/bin", HOME: dir, INFINITARY_CLAUDE_CLI: "/nonexistent/claude" }),
+      env: () => ({
+        PATH: "/usr/bin",
+        HOME: dir,
+        INFINITARY_CLAUDE_CLI: "/nonexistent/claude",
+        ...options.env,
+      }),
       checkClient: async () =>
         options.check?.current ?? { state: "ready", executable: "/bin/claude" },
       query: scripted.factory,
@@ -233,6 +244,19 @@ afterEach(async () => {
 });
 
 describe("the Claude seat's options (the contract test)", () => {
+  // INF-133 F1: captain chose a higher host-owned limit for first mate Claude sessions.
+  it("pins a higher MCP output cap instead of leaving it to ambient or remote configuration", async () => {
+    const s = seat({ onInput: answering(), env: { MAX_MCP_OUTPUT_TOKENS: "1" } });
+    const session = await s.factory(spec());
+    await session.prompt("Read the saved plan.");
+    expect(s.harness().options.env?.MAX_MCP_OUTPUT_TOKENS).toBe(
+      String(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS),
+    );
+    expect(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS).toBeGreaterThan(CLAUDE_MCP_DEFAULT_OUTPUT_TOKENS);
+    session.dispose();
+    await session.closed();
+  });
+
   it("attaches the client exactly as the seat's contract pins", async () => {
     const s = seat({ onInput: answering() });
     const session = await s.factory(spec());

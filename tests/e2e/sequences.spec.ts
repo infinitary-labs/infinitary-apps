@@ -75,7 +75,7 @@ import { cardReply, showCard, shownCard, shownCardFrame, shownEntry } from "./st
  * than one step becomes an ordinary parent task with child steps (a
  * one-step ask is one task with no parent), and every hand-off between the
  * steps runs through primitives the host already has - a planned child
- * naming its basis, `update_task start_now` on the wake the Firstmate
+ * naming its basis, `update_task start_policy: when-ready` on the wake the Firstmate
  * already gets, the basis section in the next step's brief, and a parent no
  * crewmate holds closing with its last child.
  *

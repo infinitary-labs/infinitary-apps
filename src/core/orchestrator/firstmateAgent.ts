@@ -2311,8 +2311,8 @@ export class FirstmateAgent {
         this.options.broadcastEvent({ type: "firstmate_emote", emote, text });
       }),
       ...createCrewTools(delegate),
-      // The graph (task-system P2): plan without starting, edit or drop a
-      // record, link records, and the query side of the record.
+      // The graph (task-system P2): file on request by default or start when ready,
+      // edit or drop a record, link records, and query the record.
       ...createTaskTools(this.taskToolsDelegate()),
       // Project discovery stays a host-owned typed operation; CI state rides crew_status.
       createLocateProjectTool(locate),
@@ -2751,6 +2751,17 @@ export class FirstmateAgent {
         try {
           const text = (() => {
             const record = resolve(input.task);
+            if (input.declaredBlockers !== undefined) {
+              const declared = new Set(input.declaredBlockers.map((ref) => resolve(ref).id));
+              const blockers = tasks.waitingOn(record.id);
+              if (
+                declared.size !== blockers.length ||
+                blockers.some((row) => !declared.has(row.id))
+              )
+                throw new TaskGraphRefusal(
+                  `The declared prerequisites do not match ${record.key}'s current unmet blockers. Use link_tasks to finish its links, read tasks, then declare that blocked_by list ([] if none). Nothing changed.`,
+                );
+            }
             this.asks.attach(record.id, "update_task");
             const runsOn = input.runsOn;
             // What updateFields applies first - a reopening, a move to another
@@ -3006,7 +3017,7 @@ export class FirstmateAgent {
     if (entries.length === 0) return [];
     const rest = entries.length - RESOLVED_CONTEXT_LIMIT;
     return [
-      "what the captain did outside this conversation since your last turn (already done; not a request; a card line carries the persisted closing offer, action and submitted answers):",
+      "what the captain did outside this conversation since your last turn (already done; not a request; a card line summarizes the choice and submitted answers; tasks by key carries the full saved report and closing offer):",
       ...entries.slice(0, RESOLVED_CONTEXT_LIMIT).flatMap((entry) => entry.lines()),
       ...(rest > 0
         ? [`- and ${rest} more, older; each task's record holds them (tasks by key)`]

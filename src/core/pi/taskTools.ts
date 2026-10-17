@@ -12,7 +12,7 @@ import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM } from "./crewTools";
 
 /**
  * The Firstmate agent's graph tools (task-system P2, design section 7):
- * create_task records work without starting it, update_task edits, moves,
+ * create_task records work on request by default, update_task edits, moves,
  * re-parents or drops a record, link_tasks records typed edges, and
  * `tasks` is the query side of the record. Every refusal a graph rule
  * makes - a cycle, a parent with open children, a move a workspace
@@ -45,6 +45,8 @@ export type TaskToolsDelegate = {
     parent?: string;
     project?: string;
     startPolicy?: TaskStartPolicy;
+    /** Confirmation of current unmet blockers; link_tasks owns edits to them. */
+    declaredBlockers?: string[];
     verdict?: string | null;
     basis?: string;
     /** The model the user named (override_model_id); empty clears it. */
@@ -78,17 +80,23 @@ const START_POLICY_VALUES = ["when-ready", "on-request"] as const;
 
 const START_POLICY = stringEnum(START_POLICY_VALUES, {
   description:
-    "when-ready: the host starts a crewmate on this task by itself as soon as nothing blocks or holds it. on-request (the default): no crewmate starts on it until update_task start_now. Leave a parent on request: its children do its work, and a when-ready parent gets a crewmate of its own that repeats it.",
+    "when-ready auto-starts once unblocked/unheld. on-request (the default): no crewmate starts on it until update_task start_now. Leave a parent on request: its children do its work.",
 });
+
+function undeclaredPrerequisites(verb: "filed" | "changed") {
+  return {
+    text: `Nothing was ${verb}. Follow HANDOFF. Queued work requires every prerequisite in blocked_by ([] only if none). For update_task, link the prerequisites first and declare the current unmet blockers from tasks.`,
+    details: { refusal: { kind: "undeclared-prerequisites" } },
+  };
+}
 
 export function createTaskTools(delegate: TaskToolsDelegate) {
   const create = boundTool({
     name: "create_task",
     label: "Create task",
     description: [
-      "Record project work without starting: saved plans, waits or containers.",
-      "As spawn_crewmate's intent; graph adds parent, blocked_by and start_policy.",
-      "A basis may still run; host checks it at start. Returns key/id and start state; one feed line.",
+      "when-ready can start now; declare blocked_by ([] none).",
+      "Basis checked at start.",
     ].join(" "),
     parameters: Type.Object({
       title: Type.String({
@@ -115,7 +123,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
-          description: "Tasks (ids or keys) that must close before this one can start",
+          description: "Prerequisite ids/keys. Required for when-ready; [] declares none.",
         }),
       ),
       start_policy: Type.Optional(START_POLICY),
@@ -134,6 +142,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
     }),
     run: async (params) => {
+      // Automatic creation must not turn an undeclared graph into independent work (INF-143).
+      if (params.start_policy === "when-ready" && params.blocked_by === undefined)
+        return undeclaredPrerequisites("filed");
       const basis = params.basis?.trim();
       const shape = {
         ...(params.placement_requirements
@@ -193,6 +204,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       // What each policy means is said once, on create_task's start_policy.
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, { description: "As create_task's start_policy" }),
+      ),
+      blocked_by: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "Required when-ready: unmet blockers from tasks (ids/keys; [] none). Link first.",
+        }),
       ),
       parent: Type.Optional(
         Type.String({ description: "New parent (task id or key); empty string clears it" }),
@@ -301,6 +318,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
     }),
     run: async (params) => {
+      // INF-188: an update must not bypass automatic creation's declaration gate.
+      if (params.start_policy === "when-ready" && params.blocked_by === undefined)
+        return undeclaredPrerequisites("changed");
       if (params.start_again) {
         if (
           Object.keys(params).some(
@@ -362,6 +382,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.parent !== undefined ? { parent: params.parent } : {}),
         ...(params.project !== undefined ? { project: params.project } : {}),
         ...(params.start_policy ? { startPolicy: params.start_policy } : {}),
+        ...(params.blocked_by !== undefined ? { declaredBlockers: params.blocked_by } : {}),
         ...(params.verdict !== undefined ? { verdict: params.verdict } : {}),
       };
       const hasEdits = Object.keys(edits).some((key) => key !== "task" && key !== "direction");
@@ -425,11 +446,86 @@ export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "The context block's tasks index is a bounded view of the same record; this is the full one.",
 ].join(" ");
 
-/** The query result as tool text: the rows, or a plain no-match line. */
+/** Keep task reads in the client's unconditional text band when formatting alone can do so. */
+const TASK_QUERY_TEXT_BAND = 50_000;
+
+function pointerChild(path: string, key: string | number): string {
+  return `${path}/${String(key).replaceAll("~", "~0").replaceAll("/", "~1")}`;
+}
+
+/** The query result as tool text; identical content is served once, never removed from records. */
 export function renderTasksQueryResult(result: { rows: TaskQueryRow[]; total: number }): string {
-  return result.rows.length === 0
-    ? "No tasks match."
-    : `${result.rows.length} of ${result.total} matching task${result.total === 1 ? "" : "s"}:\n${JSON.stringify(result.rows, null, 2)}`;
+  if (result.rows.length === 0) return "No tasks match.";
+  const heading = `${result.rows.length} of ${result.total} matching task${result.total === 1 ? "" : "s"}:\n`;
+  const original = heading + JSON.stringify(result.rows, null, 2);
+  // INF-133 F2: fitting reads retain their exact format on every provider.
+  if (original.length <= TASK_QUERY_TEXT_BAND) return original;
+  let references = false;
+  const rows = result.rows.map((row, index) => {
+    const seen = new Map<string, string>();
+    // Keep the familiar latest report and newest card as the canonical text.
+    for (const key of ["outcome", "card"] as const) {
+      const value = row[key];
+      if (value !== undefined && !seen.has(JSON.stringify(value))) {
+        seen.set(JSON.stringify(value), `#/${index}/${key}`);
+      }
+    }
+    const share = (value: unknown, path: string): unknown => {
+      const encoded = JSON.stringify(value);
+      if (encoded === undefined) return value;
+      const ref = seen.get(encoded);
+      if (
+        ref !== undefined &&
+        ref !== path &&
+        JSON.stringify({ $ref: ref }).length < encoded.length
+      ) {
+        references = true;
+        return { $ref: ref };
+      }
+      if (ref === undefined) seen.set(encoded, path);
+      if (Array.isArray(value)) return value.map((item, at) => share(item, pointerChild(path, at)));
+      if (value !== null && typeof value === "object") {
+        return Object.fromEntries(
+          Object.entries(value).map(([key, item]) => [key, share(item, pointerChild(path, key))]),
+        );
+      }
+      return value;
+    };
+    return share(row, `#/${index}`);
+  });
+  const note = references
+    ? "Repeated values use $ref JSON Pointers inside this result, not another tool call.\n"
+    : "";
+  const pretty = heading + note + JSON.stringify(rows, null, 2);
+  if (pretty.length <= TASK_QUERY_TEXT_BAND) return pretty;
+  const compact = heading + note + JSON.stringify(rows);
+  if (compact.length <= TASK_QUERY_TEXT_BAND) return compact;
+  // Large markup pays for every escaped quote and newline inside JSON. Serve
+  // only profitable strings as verbatim, length-framed blocks in this SAME read.
+  // Never summarize the accepted offer or silently cut any unique content.
+  const blocks: string[] = [];
+  const frameText = (value: unknown, path: string): unknown => {
+    if (typeof value === "string") {
+      const marker = { $text: value.length };
+      const block = `\n\nText ${path} (${value.length} UTF-16 units):\n${value}`;
+      if (JSON.stringify(marker).length + block.length < JSON.stringify(value).length) {
+        blocks.push(block);
+        return marker;
+      }
+    }
+    if (Array.isArray(value))
+      return value.map((item, at) => frameText(item, pointerChild(path, at)));
+    if (value !== null && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, frameText(item, pointerChild(path, key))]),
+      );
+    }
+    return value;
+  };
+  const metadata = rows.map((row, index) => frameText(row, `#/${index}`));
+  const blockNote = "$text names the length of its verbatim Text block below.\n";
+  const framed = heading + note + blockNote + JSON.stringify(metadata) + blocks.join("");
+  return framed.length < compact.length ? framed : compact;
 }
 
 /**

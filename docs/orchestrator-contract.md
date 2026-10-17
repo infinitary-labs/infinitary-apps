@@ -143,3 +143,14 @@ A rule that the core, a tool description and a parameter each stated is said onc
 `tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past its 18,000-token ceiling.
 The ceiling has room for several revisions, so it moves rarely: a change that would cross it trims first, or raises it in a revision that says what the new words buy, and each revision file says what its words cost.
 The test's ledger names, for every rule taken out of one text, the text that still says it.
+
+## An answer's closing receipt
+
+Every `answer-closed` receipt carries a `read` naming the exact `tasks` key; only the `next` instruction to use it is conditional.
+That instruction covers any choice that files, starts or saves work by meaning, not by label: Approve and build, Start the next step and Save and defer are examples, not an allowlist.
+The first mate judges the choice under HANDOFF: before filing or starting authorized work it reads the full report, closing offer and submitted answers; routine acknowledgements and Abandon need no read.
+The host does not parse action ids or labels into authorization.
+The report may never have reached the first mate while its planner's decision card was open, so the receipt cannot assume an earlier report wake.
+The context's recent choice line is a summary, not the full offer; the keyed task read remains the durable source.
+Reading these typed records and filing their already-accepted work belongs to the first mate, not a retrieval crewmate.
+HANDOFF still decides what the choice authorizes, and the pieces guide still decides how to reuse successors and link real prerequisites.

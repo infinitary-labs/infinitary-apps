@@ -3345,8 +3345,8 @@ export class CrewSupervisor {
   }
 
   /**
-   * Record work without starting it (create_task, design section 7): an
-   * open row that waits on request by default, or dispatches with the ready
+   * Record work (create_task, design section 7): an open row that waits
+   * on request by default, or dispatches with the ready
    * sweep when its policy is when-ready and nothing blocks or holds it. A
    * pure container (a parent with no crewmate of its own) is exactly this.
    * The row carries a shape the way a queued spawn does, so it dispatches

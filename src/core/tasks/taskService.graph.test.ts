@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedTask } from "./seedTask";
+import { queryTasks } from "./taskQuery";
 import { TaskGraphRefusal, TaskService } from "./taskService";
 
 /**
@@ -39,6 +40,38 @@ function setup() {
 }
 
 describe("the task graph (task-system P2)", () => {
+  // INF-87 P1: the captain chose the existing lanes, not a separate permission mark.
+  it.each(["backlog", "on-request edit"] as const)(
+    "%s keeps an approved piece waiting even after late classification",
+    (change) => {
+      const { tasks, work } = setup();
+      const parent = work("parent");
+      const answer = work("answer", {
+        parentId: parent.id,
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      tasks.close(answer.id, { status: "done", reason: "answered", actor: "captain" });
+      const piece = work("piece", {
+        parentId: parent.id,
+        shape: { kind: "implement", basis: answer.key },
+        startPolicy: "when-ready",
+      });
+      expect(tasks.listReady().map((row) => row.id)).toContain(piece.id);
+      if (change === "backlog")
+        expect(tasks.setQueued(piece.id, "unqueue-task", { actor: "captain" })).toEqual({
+          ok: true,
+          changed: true,
+        });
+      else tasks.updateFields(piece.id, { startPolicy: "on-request" }, "firstmate");
+      tasks.recordShape(piece.id, piece.shape!, null);
+      expect(queryTasks(tasks, { key: piece.key }).rows[0]).toMatchObject({
+        status: "open",
+        start_policy: "on-request",
+      });
+      expect(tasks.listReady().map((row) => row.id)).not.toContain(piece.id);
+    },
+  );
+
   describe("ready and blocked", () => {
     it("lists open when-ready work with every blocker closed, priority first", () => {
       const { tasks, work } = setup();
@@ -336,7 +369,7 @@ describe("the task graph (task-system P2)", () => {
       );
       // Every way is a runnable pointing gesture, never a host mutation.
       expect(refusal?.ways.map((way) => ("tool" in way ? [way.tool, way.args] : way))).toEqual([
-        ["update_task", { task: "SCR-3", start_policy: "when-ready" }],
+        ["update_task", { task: "SCR-3", start_policy: "when-ready", blocked_by: [] }],
         ["update_task", { task: "SCR-3", drop: true, reason: "superseded", confirm: true }],
       ]);
       expect(tasks.closeRefusal("c1")).toBeUndefined();

@@ -123,6 +123,7 @@ export async function placedContractWorld(inner: ContractWorld): Promise<Contrac
     },
     caughtUp: () => {},
     jobExit: () => {},
+    reopened: () => {},
   });
   const dispatch = (async (channel, rawArgs, actor) => {
     if (channel === "inf:app:healthcheck")

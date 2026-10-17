@@ -30,6 +30,11 @@ import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import {
+  scriptedClaudeCleanup,
+  scriptedClaudeWorld,
+} from "../../../tests/helpers/scriptedClaudeContract";
+import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
@@ -46,10 +51,13 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
+import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
+import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
+import type { CrewmateTool } from "../session/tools";
 import { SettingsStore } from "../storage/settingsStore";
 import { seedTask } from "../tasks/seedTask";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
@@ -62,7 +70,8 @@ import { NO_PLACED_TASK } from "./placedWork";
  * the home's side (docs/helper.md, "Holding a conversation"): the real
  * supervisor and task record over a real database, `PlacedSessions` behind
  * the real connection and pairing, and the helper as the work mode composes
- * it holding a real Pi conversation against a local stub of the model's API.
+ * it holding a real Pi conversation against a local stub of the model's API,
+ * or a real Claude session on a scripted client (`scriptedClaudeWorld`).
  * A home restart is a new home over the same folder and port; a computer
  * restart is a new helper over the same folder.
  */
@@ -174,16 +183,20 @@ function startHome(
   port: number,
   pairing: () => DevicePairing,
   forgeFor?: ForgeFor,
-  extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> = {},
+  extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> & {
+    claude?: ContractWorld;
+  } = {},
 ): PlacedHome {
   const home = startPlacedHome({
     userData,
     port,
     pairing,
     now,
-    binding: { backend: "pi", runtime },
+    // A home whose crew runs on Claude binds every task to Claude there.
+    binding: extra.claude?.binding ?? { backend: "pi", runtime },
     profiles: {
       pi: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }).controlProfile,
+      ...(extra.claude ? { claude: extra.claude.factory.controlProfile } : {}),
     },
     ...(forgeFor ? { forgeFor } : {}),
     connecting: (deviceId) => connectingNow.has(deviceId),
@@ -256,6 +269,11 @@ async function world(
     refuseClone?: () => boolean;
     /** What the computer's conversations run on; this file's stub unless named. */
     runtime?: ModelRuntime;
+    /**
+     * Claude's factory on a scripted client (`scriptedClaudeWorld`), which the
+     * computer's Claude conversations run on, and every task's crew binds to.
+     */
+    claude?: ContractWorld;
     /** Whether Firstmate there runs work for another Firstmate now, as the home's SSH connection found. */
     runsForAnotherFirstmate?: (deviceId: string) => boolean;
   } = {},
@@ -297,7 +315,7 @@ async function world(
   let refusing = false;
   /** Every binding the home asked the computer to resolve with its own sign-ins. */
   const bound: PlacedSpec["binding"][] = [];
-  const startComputer = () => {
+  const startComputer = (tools?: readonly CrewmateTool[]) => {
     const started = startHelper({
       dataDir,
       say: () => {},
@@ -323,12 +341,17 @@ async function world(
           tasks: new PlacedTasks(dir, copies.worktreesDir),
           copies,
           ask,
-          factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+          factories: {
+            pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }),
+            ...(options.claude ? { claude: options.claude.factory } : {}),
+          },
           bind: async (binding) => {
             bound.push(binding);
             if (refusing) throw new Error(`This computer has no sign-in for ${PROVIDER} here.`);
+            if (binding.backend === "claude" && options.claude) return options.claude.binding;
             return { backend: "pi", runtime: options.runtime ?? runtime };
           },
+          ...(tools ? { tools } : {}),
           log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[computer] ${line}\n`),
         });
         return { host, close: () => host.close() };
@@ -378,10 +401,13 @@ async function world(
       home = startHome(userData, port, pairingNow, forgeFor, options);
       await home.listen();
     },
-    /** The computer's own process quits, and starts again from the same folder. */
-    restartComputer: async () => {
+    /**
+     * The computer's own process quits, and starts again from the same
+     * folder; updated, with the crewmate tools its new version binds.
+     */
+    restartComputer: async (updated?: { tools: readonly CrewmateTool[] }) => {
       await run?.stop();
-      startComputer();
+      startComputer(updated?.tools);
     },
     /** The computer's own process quits, as when nobody is logged in there. */
     stopComputer: async () => {
@@ -528,6 +554,22 @@ function routingReasons(home: PlacedHome, taskId: string): string[] {
 /** The folders under `dir`, none when it is absent. */
 function listed(dir: string): string[] {
   return existsSync(dir) ? readdirSync(dir).sort() : [];
+}
+
+/** The crewmate tools a newer version binds, with one of them described in other words. */
+function reworded(name: string): CrewmateTool[] {
+  return CREWMATE_TOOLS.map((tool: CrewmateTool): CrewmateTool => {
+    if (tool.name !== name) return tool;
+    const description = `${tool.description} Updated.`;
+    return {
+      ...tool,
+      description,
+      bind: (delegate) => {
+        const bound = tool.bind(delegate);
+        return bound && { ...bound, description };
+      },
+    };
+  });
 }
 
 /** The timeline kinds a task's record holds, oldest first. */
@@ -780,6 +822,70 @@ describe("a task that runs on a computer that runs work", () => {
       .toBe("Picked the footer up again.");
     expect(api.requests.length - requests).toBe(2);
     expect(said(api.requests.at(-1))).toContain("Fix the footer.");
+  });
+
+  it("tells a Claude crewmate its brief and where its earlier conversation is when that computer's update starts it over, and only once (INF-296)", async () => {
+    const claude = await scriptedClaudeWorld();
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude });
+    claude.answer({ text: "Looking at the footer." });
+    await at.start("t-renew");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
+    const earlier = home.tasks.get("t-renew")?.sessionFile ?? "";
+    expect(earlier).not.toBe("");
+    const briefed = home.tasks
+      .timeline("t-renew")
+      .filter((event) => event.kind === "briefed")
+      .at(-1);
+    const brief = briefed ? home.tasks.servedBrief(briefed) : "";
+    expect(brief).toContain("Fix the footer.");
+
+    // Its update describes a tool the conversation had in other words, which
+    // Claude's client would serve in the old ones: reopened there, it starts over.
+    await at.restartComputer({ tools: reworded("report") });
+    // The record names the new conversation before any turn of it, and the timeline says why.
+    await expect.poll(() => home.tasks.get("t-renew")?.sessionFile).not.toBe(earlier);
+    const renewed = home.tasks.get("t-renew")?.sessionFile;
+    const renewal = { from: earlier, changed: ["prompt" as const] };
+    const moved = () =>
+      home.tasks
+        .timeline("t-renew")
+        .filter((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal));
+    expect(moved()).toHaveLength(1);
+    expect(moved()[0]?.data).toMatchObject({ conversation: renewal });
+
+    // Its next prompt says why, its brief, and where the transcript of its
+    // earlier conversation is saved on that computer, which holds it there.
+    const transcript = join(at.folders("t-renew").sessions, `${earlier}.jsonl`);
+    expect(readFileSync(transcript, "utf8")).toContain("Fix the footer.");
+    const told = crewmateRestartText({
+      restart: renewal,
+      taskKey: home.tasks.get("t-renew")?.key ?? "",
+      brief,
+      earlier: transcript,
+    });
+    const asked = claude.served().length;
+    await home.supervisor.steerCrewmate("t-renew", "Make it blue too.");
+    await expect.poll(() => claude.served().length).toBe(asked + 1);
+    expect(claude.served().at(-1)?.said).toBe(`${told}\n\nMake it blue too.`);
+    await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
+
+    // A home restart while that computer still holds it: the same conversation, said nothing again.
+    await at.restartHome();
+    const after = at.home();
+    await after.supervisor.steerCrewmate("t-renew", "And the header.");
+    await expect.poll(() => claude.served().length).toBe(asked + 2);
+    const since = claude.served().at(-1)?.said ?? "";
+    expect(since).toContain("And the header.");
+    // What it was told stands once, in the conversation it goes on with.
+    expect(since.split(told)).toHaveLength(2);
+    expect(after.tasks.get("t-renew")?.sessionFile).toBe(renewed);
+    expect(
+      after.tasks
+        .timeline("t-renew")
+        .filter((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal)),
+    ).toHaveLength(1);
   });
 
   it("closes the conversation there when its record closes, now or once the computer is back", async () => {

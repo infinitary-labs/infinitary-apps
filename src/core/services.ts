@@ -2109,6 +2109,7 @@ export async function createServices(
     adopt: (taskId) => supervisor.adoptPlaced(taskId),
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
     jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
+    reopened: (taskId) => supervisor.placedReopened(taskId),
   });
   // A computer with work out of reach for a minute is said once in the feed.
   ticker.register("placed-reach", TICK_PERIOD_MS, (now) => placed.tick(now));

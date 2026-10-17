@@ -304,9 +304,14 @@ export class PlacedSession implements ModelSession {
     return this.state.resume;
   }
 
-  /** Opened there again after that computer restarted: its state now. */
+  /**
+   * Opened there again after that computer restarted: its state now, and
+   * the session it started over from when that open renewed it, taken as
+   * an open's is (`takeRenewal`).
+   */
   reopened(state: PlacedState): void {
     this.state = state;
+    this.renewal = state.renewal;
   }
 
   /** Runs once someone listens and has heard what it said before: now, if someone does. */

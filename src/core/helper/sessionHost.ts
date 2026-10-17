@@ -192,6 +192,7 @@ type Held = {
   jobs: number | undefined;
   /** The account of this computer's own the open conversation is bound to, if it is one. */
   account: string | undefined;
+  /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
   renewal: SessionRenewal | undefined;
   opening: Promise<void> | null;
   unsubscribe: (() => void) | null;
@@ -703,6 +704,9 @@ export class SessionHost {
     if (held.state.running?.turn !== turn || !held.session) return;
     const undelivered = held.session.takeUndeliveredSteers();
     held.state = { ...held.state, running: undefined };
+    // The home told the crewmate why with this turn's prompt, so a home
+    // that opens it again later hears of no move.
+    if (outcome === "done") held.renewal = undefined;
     this.record(held, {
       type: "turn_ended",
       turn,

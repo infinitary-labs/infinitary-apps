@@ -123,6 +123,12 @@ export type PlacedHost = {
   caughtUp(taskIds: readonly string[]): void;
   /** A background job the crewmate's shell started there ended. */
   jobExit(taskId: string, exit: JobExit): void;
+  /**
+   * The task's conversation opened there again after that computer
+   * restarted, in the session the crewmate here holds: one that started
+   * over there is carried into its new conversation as at its open.
+   */
+  reopened(taskId: string): void;
 };
 
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
@@ -912,7 +918,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /**
    * Opens the conversation there again, from where its record ends, for the
-   * session this Mac still holds; the lane waits until it is open.
+   * session this Mac still holds; the lane waits until it is open, and until
+   * the supervisor took a conversation that started over there.
    */
   private reopen(placed: Placed, session: PlacedSession, deviceId: string): Promise<void> {
     const spec = placed.spec;
@@ -926,7 +933,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           spec: { ...spec, ...(resume ? { resume } : {}) },
         },
       ])
-      .then((raw) => session.reopened(openAnswerSchema.parse(raw).state))
+      .then((raw) => {
+        session.reopened(openAnswerSchema.parse(raw).state);
+        if (!session.letGo) this.host?.reopened(placed.task);
+      })
       .catch((caught: unknown) =>
         this.log(`could not open ${placed.task} there again: ${messageOf(caught)}`),
       );

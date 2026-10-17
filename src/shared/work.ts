@@ -142,7 +142,11 @@ export const placedStateSchema = z.object({
   model: modelRefSchema.optional(),
   modelLabel: z.string().optional(),
   reasoning: reasoningSchema.optional(),
-  /** The session this one started over from, once, when an open renewed it. */
+  /**
+   * The session this one started over from, when an open renewed it, until
+   * a turn of the new conversation finishes: a home that opens it before
+   * then, here or again after a restart, has yet to tell the crewmate why.
+   */
   renewal: z
     .object({ from: z.string(), changed: z.array(z.enum(["prompt", "instructions"])) })
     .optional(),

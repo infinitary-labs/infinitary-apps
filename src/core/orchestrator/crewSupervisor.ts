@@ -4511,9 +4511,30 @@ export class CrewSupervisor {
         { news: true },
       );
     }
-    // A Claude conversation resumed under changed instructions renews: the
-    // record names the one it moved to now, so a quit before its first turn
-    // ends does not reopen the earlier one again.
+    this.carryRestart(
+      task,
+      crewmate.machineId,
+      session,
+      unopenable ? crewmate.resumeToken : undefined,
+    );
+    return session;
+  }
+
+  /**
+   * A conversation that replaced the task's earlier one: a Claude
+   * conversation resumed under changed instructions renews as it opens -
+   * here, or on its computer again after that computer restarted
+   * (`placedReopened`) - or the earlier one, `unopenable`, could not be
+   * reopened. A renewal is noted, and the record names the one it moved to
+   * now, so a quit before its first turn ends does not reopen the earlier
+   * one again; either way its first prompt says why.
+   */
+  private carryRestart(
+    task: TaskRuntime,
+    machine: string,
+    session: ModelSession,
+    unopenable?: string,
+  ): void {
     const renewal = session.takeRenewal();
     if (renewal) {
       this.options.tasks.note(task.id, crewmateRenewedNote(renewal), {
@@ -4524,12 +4545,8 @@ export class CrewSupervisor {
       if (token) this.options.tasks.setSessionFile(task.id, token);
     }
     const restart: CrewmateRestart | undefined =
-      renewal ??
-      (unopenable && crewmate.resumeToken
-        ? { from: crewmate.resumeToken, changed: "unopenable" }
-        : undefined);
-    if (restart) task.restartText = this.restartText(task, crewmate.machineId, restart);
-    return session;
+      renewal ?? (unopenable ? { from: unopenable, changed: "unopenable" } : undefined);
+    if (restart) task.restartText = this.restartText(task, machine, restart);
   }
 
   /**
@@ -8422,6 +8439,17 @@ export class CrewSupervisor {
     if (!record?.deviceId || !TaskService.isResumable(record))
       throw new Error(`Task ${taskId} does not run on another computer.`);
     await this.resumeTask(taskId);
+  }
+
+  /**
+   * A task's conversation opened again on the computer that runs it, after
+   * that computer restarted (src/core/placed/), in the session this crewmate
+   * holds: one that started over there is carried into its new
+   * conversation as an open carries it, before its lane goes on.
+   */
+  placedReopened(taskId: string): void {
+    const task = this.tasks.get(taskId);
+    if (task?.session) this.carryRestart(task, this.machineOf(taskId), task.session);
   }
 
   /**

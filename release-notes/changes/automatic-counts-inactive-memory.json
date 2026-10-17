@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "projects",
       "title": "Automatic counts a Mac's inactive memory",
-      "body": "A Mac at normal memory pressure now counts inactive memory as room. A task in a project set to Automatic can start on this Mac when that memory can be reclaimed, and still waits when macOS warns that memory is tight.",
+      "body": "A Mac now counts its inactive memory as room while macOS says memory is fine, so a task in a project set to Automatic can start on a Mac that used to look full. When macOS warns that memory is tight, Automatic now starts no new task on that Mac. Another Mac that runs your work counts this way once it is updated too.",
       "noPicture": "Nothing new on screen: a task starts on this Mac, or waits with the same words, with no new layout.",
       "provenance": { "origin": "change" }
     }

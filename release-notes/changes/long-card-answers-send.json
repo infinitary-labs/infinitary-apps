@@ -3,10 +3,10 @@
     {
       "id": "long-card-answers-send",
       "kind": "fix",
-      "title": "A long card's answers send",
-      "body": "Filling out a card with many questions no longer stops its button or a reply under it.",
+      "title": "A card with many questions sends your answers",
+      "body": "Answering many questions on a card no longer ends in \"These answers are too long to send.\" The card's button sends them, and so does a reply under the card. Only a far longer set is still refused.",
       "area": "cards",
-      "noPicture": "A still of the filled card looks the same. The change is that the button sends the answers instead of a red line.",
+      "noPicture": "A still of the filled card looks the same. The change is that the button sends the answers instead of showing a red line.",
       "provenance": { "origin": "change" }
     }
   ]

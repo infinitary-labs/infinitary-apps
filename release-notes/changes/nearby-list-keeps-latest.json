@@ -3,8 +3,8 @@
     {
       "id": "nearby-list-keeps-latest",
       "kind": "fix",
-      "title": "A refused local network shows at once instead of Looking",
-      "body": "In Settings, on Devices, adding a computer by its address could show Looking for up to 20 seconds after macOS had refused local network access (Mac only). The same fix stops a look that failed at once, such as on Linux when this computer cannot look for others on its network, from staying off the screen. You can still type an address.",
+      "title": "Devices says at once when it cannot look for nearby computers",
+      "body": "In Settings, on Devices, adding a computer by its address could show Looking for up to 20 seconds after macOS refused local network access (Mac only). It now shows that refusal at once. A look that fails right away, such as on a Linux computer that cannot look on its network, also shows at once. You can still type an address.",
       "area": "devices",
       "noPicture": "The lines are already on the address aside. A still picture cannot show an older answer arriving after a newer push.",
       "provenance": { "origin": "change" }

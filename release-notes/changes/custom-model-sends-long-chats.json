@@ -3,10 +3,10 @@
     {
       "id": "custom-model-sends-long-chats",
       "kind": "fix",
-      "title": "A long chat on a custom model is shortened instead of refused up front",
-      "body": "A long conversation on a custom model is no longer stopped before it is sent. Infinitary shortens it as it grows. A very large paste in a small window can still be refused.",
+      "title": "A long chat on a custom model is no longer refused too early",
+      "body": "Infinitary no longer guesses before sending whether a chat fits a custom model. Its guess was too strict, so it refused chats and pastes the model could take. Now the model's server decides. When the server says the chat is too long, Infinitary shortens the chat and tries once more. Before sending, Infinitary now stops only a request larger than the connection can carry, and shortens the chat for that too.",
       "area": "subscriptions",
-      "noPicture": "Nothing new on screen: a long chat is shortened instead of being stopped before it is sent.",
+      "noPicture": "Nothing new on screen: a chat that fits is now sent instead of refused.",
       "provenance": { "origin": "change" }
     }
   ],

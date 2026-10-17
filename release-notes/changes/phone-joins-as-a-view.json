@@ -3,7 +3,7 @@
   "exclusions": [
     {
       "id": "phone-joins-as-a-view",
-      "reason": "Internal: the Mac now accepts a phone's join request and announces itself on Wi-Fi while a phone is on the list; the phone app does not exist yet, so nobody notices this change."
+      "reason": "Internal: the Mac accepts a phone's join as a device that only reads, and announces itself on the local network while a phone is on the list. No phone can join yet because the phone app is not available to install; the A phone button and its code are covered by phone-reads-your-mac."
     }
   ]
 }

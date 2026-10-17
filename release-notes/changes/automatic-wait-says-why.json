@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "tasks",
       "title": "A task waiting for Automatic says what it waits for",
-      "body": "When Automatic holds a new task back, its Details and its line in Activity now say why: a computer short of spare processing capacity or memory, room set aside for other tasks that are starting, or each computer's own reason. Automatic also stops setting room aside for tasks once they are running and measured, so a new task no longer waits for room your computer has.",
+      "body": "When Automatic holds a new task back, its Details and its line in Activity now say why: a computer short of spare processing capacity or memory, room set aside for other tasks that are starting, or each computer's own reason. Automatic also frees the room it set aside for a task once that task is running and measured. Before, the first new task after a quiet spell could wait for room your computer had.",
       "picture": {
         "dark": "automatic-wait-says-why-dark.webp",
         "light": "automatic-wait-says-why-light.webp",

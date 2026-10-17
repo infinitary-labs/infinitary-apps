@@ -5,7 +5,7 @@
       "kind": "improvement",
       "area": "crewmates",
       "title": "Claude crewmates no longer credit Claude in commits and pull requests",
-      "body": "A crewmate running on your Claude subscription no longer ends its commit messages with a Co-Authored-By line naming Claude, or its pull request descriptions with a line saying Claude generated them.",
+      "body": "A crewmate on your Claude subscription no longer adds a line naming Claude as a co-author to its commits. Its pull request descriptions no longer end with a line saying Claude made them. A crewmate that was already at work before the update may still add them. A crewmate on another computer stops adding them once that computer is updated.",
       "noPicture": "The change shows in the commits and pull requests a crewmate writes in your project, not on the app's screen.",
       "provenance": { "origin": "change" }
     }

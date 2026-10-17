@@ -1,17 +1,9 @@
 {
-  "entries": [
+  "entries": [],
+  "exclusions": [
     {
       "id": "phone-reads-your-mac",
-      "kind": "feature",
-      "title": "A code to connect your phone",
-      "body": "Devices has A phone with a code to scan using the early phone app. You can read your Mac’s cards and Activity there; answers stay on your Mac. The phone app is not in the App Store yet.",
-      "area": "devices",
-      "picture": {
-        "dark": "phone-reads-your-mac-dark.webp",
-        "light": "phone-reads-your-mac-light.webp",
-        "alt": "The A phone panel in Devices shows a code to scan, Copy link, a time limit and Stop it"
-      },
-      "provenance": { "origin": "change" }
+      "reason": "The A phone button in Devices, its code to scan and the phone app reading a Mac's cards and Activity. Installed builds hide the button until the phone app is on TestFlight (phone-chip-waits-for-testflight), so nobody on a release notices it; its note comes back when the button does."
     }
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-2-alpha-2",
+      "reason": "Release review for the alpha after 0.4.2-alpha.2: ranks the merge button, one task's reasoning and previews in a project's own look as highlights; corrects notes that claimed too much or left out a limit; says the phone app cannot be downloaded yet; makes the task browser's scroll fix a crewmate note. Nothing in the app changes."
+    }
+  ]
+}

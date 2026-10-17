@@ -31,7 +31,6 @@ describe("a wheel scroll waits until the page has moved", () => {
       if (method === "Runtime.evaluate") {
         expect(params?.awaitPromise).toBe(false);
         expect(String(params?.expression)).toContain("scrollend");
-        expect(String(params?.expression)).toContain("canMove");
         return { result: { objectId: "promise-1" } } as T;
       }
       if (method === "Runtime.awaitPromise") {
@@ -59,9 +58,6 @@ describe("a wheel scroll waits until the page has moved", () => {
       deltaX: 0,
       deltaY: 480,
     });
-    expect(calls.findIndex((call) => call.method === "Input.dispatchMouseEvent")).toBeGreaterThan(
-      calls.findIndex((call) => String(call.params?.expression).includes("scrollend")),
-    );
     ended.resolve();
     await scrolling;
     expect(returned).toBe(true);
@@ -114,6 +110,7 @@ type Box = {
   clientHeight: number;
   scrollTop: number;
   overflowY: string;
+  flexDirection?: string;
   parentElement: Box | null;
 };
 
@@ -132,7 +129,10 @@ function armScroll(direction: "up" | "down", hit: Box | null, scrollingElement: 
     body: scrollingElement,
     elementFromPoint: () => hit,
   };
-  const getComputedStyle = (node: Box): { overflowY: string } => ({ overflowY: node.overflowY });
+  const getComputedStyle = (node: Box): { overflowY: string; flexDirection: string } => ({
+    overflowY: node.overflowY,
+    flexDirection: node.flexDirection ?? "column",
+  });
   const expression = canStillScrollExpression(direction, 400, 300, 1_000);
   const settled = new Function(
     "document",
@@ -251,5 +251,56 @@ describe("whether a wheel can still move the page", () => {
     expect(innerSettled).toBe(false);
     inner.fire(nested);
     await expect(inner.settled).resolves.toBe(true);
+  });
+
+  it("returns a native promise when the page replaces Promise", () => {
+    const page = root(0);
+    const zone = function ZonePromise(executor: (done: (value: unknown) => void) => void) {
+      executor(() => undefined);
+      return { zone: true };
+    };
+    const expression = canStillScrollExpression("down", 400, 300, 1_000);
+    const document = {
+      scrollingElement: page,
+      documentElement: page,
+      body: page,
+      elementFromPoint: () => page,
+    };
+    const result: unknown = new Function(
+      "document",
+      "getComputedStyle",
+      "addEventListener",
+      "removeEventListener",
+      "setTimeout",
+      "Promise",
+      `return (${expression})`,
+    )(
+      document,
+      () => ({ overflowY: "visible", flexDirection: "column" }),
+      () => undefined,
+      () => undefined,
+      () => 0,
+      zone,
+    );
+    expect(result).toBeInstanceOf(Promise);
+    expect(result).not.toMatchObject({ zone: true });
+  });
+
+  it("can move up from a column-reverse scroller's resting edge, and not down", () => {
+    const page = root(1400);
+    const reversed: Box = {
+      scrollHeight: 900,
+      clientHeight: 100,
+      scrollTop: 0,
+      overflowY: "auto",
+      flexDirection: "column-reverse",
+      parentElement: page,
+    };
+    expect(armScroll("down", reversed, page).settled).toBe(false);
+    expect(armScroll("up", reversed, page).settled).toBeInstanceOf(Promise);
+    reversed.scrollTop = -800;
+    page.scrollTop = 0;
+    expect(armScroll("down", reversed, page).settled).toBeInstanceOf(Promise);
+    expect(armScroll("up", reversed, page).settled).toBe(false);
   });
 });

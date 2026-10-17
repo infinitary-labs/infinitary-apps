@@ -39,7 +39,10 @@ export function canStillScrollExpression(
       if (!node) return false;
       const max = node.scrollHeight - node.clientHeight;
       if (max <= epsilon) return false;
-      return direction === "down" ? node.scrollTop < max - epsilon : node.scrollTop > epsilon;
+      const top = node.scrollTop;
+      const reversed = top < -epsilon || getComputedStyle(node).flexDirection === "column-reverse";
+      if (reversed) return direction === "down" ? top < -epsilon : top > -max + epsilon;
+      return direction === "down" ? top < max - epsilon : top > epsilon;
     };
     const scrolls = (node) => {
       if (node === document.scrollingElement || node === document.documentElement) return true;
@@ -54,11 +57,10 @@ export function canStillScrollExpression(
     }
     if (!target) return false;
     const documentScroller =
-      target === document ||
       target === document.documentElement ||
       target === document.scrollingElement ||
       target === document.body;
-    return new Promise((done) => {
+    return (async () => new Promise((done) => {
       const onEnd = (event) => {
         const scrolled = event.target;
         const ours =
@@ -76,7 +78,7 @@ export function canStillScrollExpression(
         removeEventListener("scrollend", onEnd, { capture: true });
         done(false);
       }, ${boundMs});
-    });
+    }))();
   })()`;
 }
 

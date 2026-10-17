@@ -381,6 +381,16 @@ export class GithubGatewayService {
   }
 }
 
+/**
+ * Query names GitHub (and the same shape on GitLab) uses for a temporary
+ * credential on a link. A private file's `download_url` carries `token`.
+ * Anything else in the answer, including the file's content, stays.
+ */
+const CREDENTIAL_QUERY = new Set(["token", "access_token"]);
+
+/** What the crewmate is told when a download token was removed from a link. */
+export const DOWNLOAD_TOKEN_NOTE = "Download tokens were removed from links.";
+
 /** Status, ids and the bounded answer; a next page only as a path a read may reach. */
 function render(response: ForgeApiResponse, api: ForgeApi): string {
   let body: unknown = response.body;
@@ -391,6 +401,14 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
       body = response.body;
     }
   } else body = null;
+  const cleaned = stripCredentialLinks(body);
+  const notes = [
+    response.status === 404 ? "404 can also mean the sign-in cannot see the route." : undefined,
+    response.status === 403 && response.rateLimit?.remaining === 0
+      ? "The hourly allowance is spent; retry after the reset time."
+      : undefined,
+    cleaned.stripped ? DOWNLOAD_TOKEN_NOTE : undefined,
+  ].filter((note) => note !== undefined);
   return JSON.stringify(
     {
       status: response.status,
@@ -399,17 +417,61 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
       ...(response.rateLimit ? { rateLimit: response.rateLimit } : {}),
       ...(response.retryAfterSeconds ? { retryAfterSeconds: response.retryAfterSeconds } : {}),
       nextPath: api.nextPath(response.link),
-      ...(response.status === 404
-        ? { note: "404 can also mean the sign-in cannot see the route." }
-        : {}),
-      ...(response.status === 403 && response.rateLimit?.remaining === 0
-        ? { note: "The hourly allowance is spent; retry after the reset time." }
-        : {}),
-      body,
+      ...(notes.length > 0 ? { note: notes.join(" ") } : {}),
+      body: cleaned.value,
     },
     null,
     2,
   );
+}
+
+/**
+ * Remove credential query parameters from every link in a parsed answer.
+ * A value is a link only when the whole string is one, so file content that
+ * mentions a token is left as GitHub returned it.
+ */
+function stripCredentialLinks(value: unknown): { value: unknown; stripped: boolean } {
+  if (typeof value === "string") {
+    const stripped = stripCredentialQuery(value);
+    return stripped === null ? { value, stripped: false } : { value: stripped, stripped: true };
+  }
+  if (Array.isArray(value)) {
+    let stripped = false;
+    const next = value.map((item) => {
+      const result = stripCredentialLinks(item);
+      stripped ||= result.stripped;
+      return result.value;
+    });
+    return { value: stripped ? next : value, stripped };
+  }
+  if (value !== null && typeof value === "object") {
+    let stripped = false;
+    const next: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      const result = stripCredentialLinks(item);
+      stripped ||= result.stripped;
+      next[key] = result.value;
+    }
+    return { value: stripped ? next : value, stripped };
+  }
+  return { value, stripped: false };
+}
+
+/** An absolute link without credential query parameters, or null when it had none. */
+function stripCredentialQuery(text: string): string | null {
+  if (!/^https?:\/\//i.test(text)) return null;
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  const drop = [...url.searchParams.keys()].filter((key) =>
+    CREDENTIAL_QUERY.has(key.toLowerCase()),
+  );
+  if (drop.length === 0) return null;
+  for (const key of drop) url.searchParams.delete(key);
+  return url.toString();
 }
 
 function objectOf(value: unknown): Record<string, unknown> {

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "github-read-download-token",
+      "reason": "A private file read no longer saves GitHub's temporary download token. The Crewmate tab already hides that token, and nothing on screen changes. Tokens already saved are left alone."
+    }
+  ]
+}

@@ -323,6 +323,8 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   Request body 256 KiB, one answer 256 KiB (refused, never cut), 30 s timeout, 200 calls per task per app run.
   Redirects are never followed.
   The answer carries the status, request id, rate limit or retry-after, and `nextPath` whenever GitHub's next page stays on the API origin and under its own path - including a repository listing's `/repositories/{id}/...` pages (FI3-1546).
+  An absolute link in the answer's body loses a `token` or `access_token` query parameter before the crewmate or any saved file sees it; the file's content stays, and the answer says the download tokens were removed.
+  Tokens already saved are left where they are.
   A GitHub refusal (422, 404, 403) is a status in the answer; a 401 asks the health service to look again.
   Nothing is retried for the crewmate.
 - **Reading a project's pull request history.**
@@ -383,9 +385,10 @@ Evidence: `tests/e2e/forge-signin.spec.ts` - a write to another repository, a pr
 - **Reruns**: `POST .../jobs/{id}/retry`, `.../jobs/{id}/play` and `.../pipelines/{id}/retry` are reruns: an accepted one records an existing reservation and arms the check watch as on GitHub.
 - **Its answers** carry GitLab's `x-request-id`, its `RateLimit-Remaining` and `RateLimit-Reset`, `Retry-After`, and `nextPath` whenever the next page stays under the server's own `/api/v4`.
   A redirect is refused, and a 401 asks GitLab who the key is before it asks the health service to look again.
+  An absolute link in the answer's body loses the same `token` and `access_token` query parameters as a GitHub answer, before it is saved.
   Refusals and the call budget name the host: "Cannot call GitLab", "Cannot call gitlab.example.com".
 
-Evidence: `src/core/forge/api.test.ts` (the policy) and `src/core/forge/providers/github/gateway.test.ts` (the tool entries over a real HTTP stand-in, including caller-selected refs/inputs, project operations, reads of other repositories, search and the account, a task with no project, GraphQL and account-write refusals and the rerun arming the watch), and the journeys in `tests/e2e/forge-signin.spec.ts`: the verification requests (an existing disposable ref with workflow inputs, app-owned sign-in, queued run and cancellation, account-scope refusal and missing sign-in), and a project kept on this computer reading the person's notifications and a repository listing's `/repositories/{id}` next page through the github.com sign-in, with GraphQL never sent.
+Evidence: `src/core/forge/api.test.ts` (the policy) and `src/core/forge/providers/github/gateway.test.ts` (the tool entries over a real HTTP stand-in, including caller-selected refs/inputs, project operations, reads of other repositories, search and the account, a task with no project, GraphQL and account-write refusals, the rerun arming the watch, and a private file read that keeps the file and drops GitHub's download token), and the journeys in `tests/e2e/forge-signin.spec.ts`: the verification requests (an existing disposable ref with workflow inputs, app-owned sign-in, queued run and cancellation, account-scope refusal and missing sign-in), and a project kept on this computer reading the person's notifications and a repository listing's `/repositories/{id}` next page through the github.com sign-in, with GraphQL never sent.
 GitLab's are `src/core/forge/providers/gitlab/api.test.ts` (its policy: encoded paths, reads anywhere, account writes kept out, own-project writes, the project's deletion, reruns and next pages) and `src/core/forge/providers/gitlab/gateway.test.ts` (the tool entries over a GitLab stand-in: reads by encoded path with GitLab's ids, allowance and next page, other projects' reads, refused writes, a 401 by whether GitLab still answers for the key, a job retry arming the watch, redirects, oversize, a missing sign-in and the budget).
 
 ## The app's own git (phase 2)

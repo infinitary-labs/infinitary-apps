@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
-import { GithubGatewayService } from "../../../orchestrator/githubGateway";
+import { DOWNLOAD_TOKEN_NOTE, GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
 import { openInMemoryDatabase } from "../../../storage/db";
@@ -13,7 +13,44 @@ import { RepoRegistry } from "../../../workspace/repoRegistry";
 import { GitHubForge } from "./githubForge";
 
 const HEAD = "a".repeat(40);
+/** Invented. GitHub's private-file download_url carries a query parameter of this name. */
+const INVENTED_DOWNLOAD_TOKEN = "INVENTED_DOWNLOAD_TOKEN";
 const cleanup: (() => Promise<void> | void)[] = [];
+
+/** GitHub's contents answer for one private file, with the temporary download token. */
+function privateFile(path: string) {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return {
+    type: "file",
+    encoding: "base64",
+    size: 5,
+    name,
+    path,
+    content: "aGVsbG8=",
+    sha: "3d21ec53a331a6f037a91c368710b99387d012c1",
+    url: `https://api.github.com/repos/octo/meter/contents/${path}`,
+    git_url:
+      "https://api.github.com/repos/octo/meter/git/blobs/3d21ec53a331a6f037a91c368710b99387d012c1",
+    html_url: `https://github.com/octo/meter/blob/main/${path}`,
+    download_url: `https://raw.githubusercontent.com/octo/meter/main/${path}?token=${INVENTED_DOWNLOAD_TOKEN}`,
+    _links: {
+      self: `https://api.github.com/repos/octo/meter/contents/${path}`,
+      git: "https://api.github.com/repos/octo/meter/git/blobs/3d21ec53a331a6f037a91c368710b99387d012c1",
+      html: `https://github.com/octo/meter/blob/main/${path}`,
+    },
+  };
+}
+
+/** A directory listing entry: GitHub omits content, and a private file still has the token. */
+function directoryEntry(path: string, withToken = true) {
+  const { content: _content, encoding: _encoding, ...entry } = privateFile(path);
+  return withToken
+    ? entry
+    : {
+        ...entry,
+        download_url: `https://raw.githubusercontent.com/octo/meter/main/${path}`,
+      };
+}
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
@@ -87,6 +124,10 @@ async function fixture(
     } else if (url.pathname === "/repos/octo/meter/redirect") {
       res.writeHead(302, { location: "https://elsewhere.example/" });
       res.end();
+    } else if (url.pathname === "/repos/octo/meter/contents/README.md") {
+      json(privateFile("README.md"));
+    } else if (url.pathname === "/repos/octo/meter/contents/src") {
+      json([directoryEntry("src/secret.ts"), directoryEntry("src/public.ts", false)]);
     } else json({ message: "Not Found" }, 404);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -387,6 +428,45 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       ok: false,
       body: { message: "Validation Failed" },
     });
+  });
+
+  it("reads a private file without saving GitHub's temporary download token", async () => {
+    // Intent: a crewmate's read of a private GitHub file no longer saves the
+    // download token (INF-206). Tokens already saved are left alone.
+    const { read } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: "/repos/octo/meter/contents/README.md" })).text,
+    );
+    expect(answer).toMatchObject({
+      status: 200,
+      ok: true,
+      note: DOWNLOAD_TOKEN_NOTE,
+      body: {
+        type: "file",
+        path: "README.md",
+        content: "aGVsbG8=",
+        html_url: "https://github.com/octo/meter/blob/main/README.md",
+        download_url: "https://raw.githubusercontent.com/octo/meter/main/README.md",
+      },
+    });
+    expect(JSON.stringify(answer)).not.toContain(INVENTED_DOWNLOAD_TOKEN);
+    expect(JSON.stringify(answer)).not.toContain("token=");
+    const plain = JSON.parse((await read.run({ path: "/repos/octo/meter/pulls?per_page=1" })).text);
+    expect(plain.note).toBeUndefined();
+    expect(plain.body).toEqual([{ number: 1 }]);
+
+    const listing = JSON.parse((await read.run({ path: "/repos/octo/meter/contents/src" })).text);
+    expect(listing.body).toEqual([
+      expect.objectContaining({
+        path: "src/secret.ts",
+        download_url: "https://raw.githubusercontent.com/octo/meter/main/src/secret.ts",
+      }),
+      expect.objectContaining({
+        path: "src/public.ts",
+        download_url: "https://raw.githubusercontent.com/octo/meter/main/src/public.ts",
+      }),
+    ]);
+    expect(JSON.stringify(listing)).not.toContain(INVENTED_DOWNLOAD_TOKEN);
   });
 
   it("refuses an answer over 256 KiB and a redirect, and never echoes the token", async () => {

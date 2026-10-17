@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
 import { cardEffectSchema, cardPictureSchema, riskDeclarationSchema } from "./cards";
+import { openChangeInputSchema, stagedChangePresentationSchema } from "./changePresentation";
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "./checkRepair";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
@@ -286,6 +287,7 @@ export const placedCardSchema = z.object({
   ),
   id: z.string().optional(),
   pictures: z.array(cardPictureSchema).optional(),
+  presentationRevision: z.number().int().positive().optional(),
   width: z.enum(["wide", "full"]).optional(),
   holdsPlace: z.boolean().optional(),
   reply: z.string().optional(),
@@ -572,9 +574,14 @@ export const workRequests = {
    * open_change: the home offers the task's branch where the project lives,
    * with its own sign-in, once it has brought the branch home.
    */
+  "inf:work:prepare-change": {
+    effect: "change",
+    request: asked({ input: stagedChangePresentationSchema }),
+    response: toolTextSchema,
+  },
   "inf:work:open-change": {
     effect: "change",
-    request: asked({ input: z.object({ title: z.string(), body: z.string() }) }),
+    request: asked({ input: openChangeInputSchema }),
     response: toolTextSchema,
   },
   /** check_change: the home reads the change's checks, and records what the crewmate declared. */

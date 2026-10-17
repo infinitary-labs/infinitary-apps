@@ -1,7 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ChangePresentation } from "@shared/changePresentation";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -13,13 +16,18 @@ import {
   type ForgePull,
   type ForgeReadiness,
   overallOfChecks,
+  presentationCommitMessage,
+  presentationContentHash,
+  presentationMarkdown,
 } from "../forge";
+import { stageChangePresentation } from "../pi/changePresentation";
 import type { MergeAuthorization } from "../storage/taskStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
+import { ChangePresentations } from "./changePresentations";
 import { type MergeGuard, PrCiService } from "./prCi";
 
 // Integration budget (docs/test-cohorts.md): real git plus the product's
@@ -131,6 +139,7 @@ function setup(
     onNote?: (text: string) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
+    bringBranchHome?: (taskId: string) => Promise<string | undefined>;
   } = {},
 ) {
   const db = freshDatabase();
@@ -138,16 +147,20 @@ function setup(
   const paths = scratchDir("infinitary-prci-");
   const repos = new RepoRegistry(db, join(paths, "fleet"));
   const forge = options.forge ?? new FakeForge();
+  const readHead = vi.fn(async () => forge.change?.headSha ?? "");
+  const presentations = new ChangePresentations({ tasks, mediaDir: () => paths, head: readHead });
   const service = new PrCiService({
     tasks,
     repos,
     forgeFor: () => forge,
+    presentations,
+    ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),
     ...(options.now ? { now: options.now } : {}),
     ...(options.onCap ? { onCap: options.onCap } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
   });
-  return { db, tasks, repos, service, forge, paths };
+  return { db, tasks, repos, service, forge, paths, presentations, readHead };
 }
 
 function insertTask(tasks: TaskService, overrides: Partial<TaskSeed> = {}): void {
@@ -186,6 +199,18 @@ function recordPr(tasks: TaskService, number: number, id = "ab12cd34"): void {
 }
 
 describe("PrCiService", () => {
+  it("holds a missing saved story at the merge boundary even when every check passes (INF-92)", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    recordPr(tasks, 23);
+    tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
+    expect(await service.checkForCrew("ab12cd34")).toContain("overall: green");
+    const result = await service.merge("ab12cd34");
+    expect(result.ok).toBe(false);
+    expect(result.text).toContain("story has not been published");
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
+  });
+
   it("reads a change with no checks as green, says so, and lets the put-in through", async () => {
     // A repo whose check suite is deliberately absent (or skipped for the
     // branch) must still be landable: the recorded reading is green, the
@@ -1885,6 +1910,289 @@ describe("a passed review covers the same change", () => {
     );
     expect(await reading("repair")).toContain(
       "Declare a repair that brings the change up to date with conflictRepair from that head.",
+    );
+  });
+});
+
+// INF-169 F4/F5/F6/F12: exercise the public service, not a source-text pin.
+describe("shared story delivery boundaries", () => {
+  const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+  const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+  async function saved() {
+    const bringBranchHome = vi.fn(async () => {
+      throw new Error("Work computer is asleep");
+    });
+    const at = setup({ bringBranchHome });
+    await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
+    const story: ChangePresentation = {
+      version: 1,
+      taskId: "ab12cd34",
+      revision: 1,
+      title: "One saved story",
+      base: original,
+      head: original,
+      destination: {
+        host: "github.com",
+        projectId: 1422452335,
+        fullName: "kunchenguid/infinitary-evidence-test-public",
+        visibility: "public",
+      },
+      why: ["Keep the approved explanation."],
+      whatChanged: ["The publication recovers."],
+      before: ["Recovery could wait forever."],
+      after: ["Recovery is deliberate."],
+      noPicture: "This fixture changes publication recovery, not a screen.",
+      views: [],
+      assets: [],
+      pictures: [],
+      verification: ["Read the saved publication."],
+      risk: Object.fromEntries(
+        RISK_DIMENSIONS.map((dimension) => [
+          dimension,
+          { level: "low", why: "A harmless delivery fixture." },
+        ]),
+      ) as RiskDeclaration,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+    };
+    const region = presentationMarkdown(story, new Map(), "passed");
+    const published = {
+      revision: 1,
+      head: original,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      contentHash: presentationContentHash(story),
+      number: 23,
+    };
+    at.tasks.updateChangePresentation("ab12cd34", () => ({
+      revisions: [story],
+      receipts: [],
+      publication: published,
+      published,
+    }));
+    at.forge.change = { ...(at.forge.change as ForgeChange), headSha: original, body: region };
+    const update = vi.fn(async (_change: ForgeChange, body: string) => {
+      at.forge.change = { ...(at.forge.change as ForgeChange), body };
+    });
+    Object.assign(at.forge, {
+      attachments: {
+        destination: async () => story.destination,
+        upload: async () => {
+          throw new Error("No upload expected");
+        },
+      },
+      branchHead: async () => at.forge.change?.headSha ?? "",
+      updateChangeBody: update,
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha: at.forge.change?.headSha,
+        base: "main",
+        readiness: "clean",
+      }),
+    });
+    recordPr(at.tasks, 23);
+    return { ...at, bringBranchHome, update, story };
+  }
+
+  it("merges the published PR while its work computer is asleep and reads completion only once", async () => {
+    const at = await saved();
+    const completion = vi.spyOn(at.presentations, "completion");
+    expect((await at.service.completionPresentation("ab12cd34", 1)).title).toBe("One saved story");
+    expect(completion).toHaveBeenCalledTimes(1);
+    at.readHead.mockRejectedValue(new Error("Work computer is asleep"));
+    at.readHead.mockClear();
+    expect((await at.service.merge("ab12cd34")).ok).toBe(true);
+    expect(at.bringBranchHome).not.toHaveBeenCalled();
+    expect(at.readHead).not.toHaveBeenCalled();
+    expect(completion).toHaveBeenCalledTimes(1);
+  });
+
+  it("automatically republishes the unchanged story before a kept conflict-only merge", async () => {
+    const at = await saved();
+    const putIn = vi.spyOn(at.forge, "putIn");
+    at.forge.change = { ...(at.forge.change as ForgeChange), headSha: repaired };
+    at.readHead.mockRejectedValue(new Error("Work computer is asleep"));
+    const authorization: MergeAuthorization = {
+      version: 1,
+      id: "approved-story",
+      generation: 2,
+      issuer: "captain",
+      at: 1,
+      card: { id: "approved-card", offerId: "offer-1", actionId: "merge" },
+      target: {
+        repoId: at.tasks.get("ab12cd34")?.repoId as string,
+        host: "github.com",
+        owner: "x",
+        name: "y",
+        prNumber: 23,
+        branch: "fm/task-ab12cd34",
+        delivery: "direct-pr",
+        method: "squash",
+      },
+      approvedHead: original,
+      proceedWithOpen: false,
+      status: "standing",
+      lineage: [
+        {
+          fromHead: original,
+          toHead: repaired,
+          newBase: original,
+          impact: "conflict-only",
+          changedPaths: [],
+          evidence: "The accepted repair preserves behavior.",
+          validation: "The affected checks passed.",
+          generation: 2,
+          at: 2,
+        },
+      ],
+    };
+    at.tasks.recordDelivery("ab12cd34", {
+      mergeAuthorization: authorization,
+      completionOffers: [
+        {
+          cardId: "approved-card",
+          offerId: "offer-1",
+          headSha: original,
+          prNumber: 23,
+          at: 1,
+          presentationRevision: 1,
+          presentationContentHash: at.tasks.changePresentation("ab12cd34")?.published?.contentHash,
+        },
+      ],
+    });
+    const outcome = await at.service.merge("ab12cd34", {
+      head: repaired,
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    });
+    expect(outcome.ok).toBe(true);
+    expect(at.update).toHaveBeenCalledTimes(1);
+    // INF-169 R2 / INF-228 F2: the current description and its plain squash summary travel together.
+    expect(putIn).toHaveBeenCalledWith(
+      { ...at.forge.change, squashMessage: presentationCommitMessage(at.story) },
+      repaired,
+    );
+    expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
+    expect(putIn.mock.calls[0]?.[0].body).not.toContain(`demonstrated version ${original}`);
+    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+      revision: 2,
+      head: repaired,
+    });
+    expect(at.bringBranchHome).not.toHaveBeenCalled();
+    expect(at.readHead).not.toHaveBeenCalled();
+    // A human-directed replacement is not the same-content exception.
+    const current = at.tasks.changePresentation("ab12cd34")?.revisions.at(-1) as ChangePresentation;
+    at.readHead.mockResolvedValue(repaired);
+    const revision = await at.presentations.prepare(
+      "ab12cd34",
+      { ...current, after: ["A different account of the work."] },
+      at.forge,
+    );
+    await at.presentations.publish(
+      "ab12cd34",
+      revision,
+      at.forge,
+      "fm/task-ab12cd34",
+      "fix: ship it",
+    );
+    const refused = await at.service.merge("ab12cd34", {
+      head: repaired,
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    });
+    expect(refused.ok).toBe(false);
+    expect(refused.text).toContain("differs from the approved story");
+    expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+  });
+
+  it("does not attach a saved-story hold to an existing unrecorded legacy PR", async () => {
+    const at = await saved();
+    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: undefined });
+    expect(await at.service.preparePresentation("ab12cd34", story)).toContain(
+      "predates saved stories",
+    );
+    expect(at.tasks.changePresentation("ab12cd34")).toBeUndefined();
+  });
+
+  it.each(["missing task", "unsupported host", "recorded legacy", "unrecorded legacy"])(
+    "cleans staged copies when preparation refuses %s (INF-169 R4)",
+    async (reason) => {
+      const at = await saved();
+      const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+      at.tasks.recordDelivery("ab12cd34", {
+        presentation: undefined,
+        prNumber: reason === "unrecorded legacy" ? undefined : 23,
+      });
+      const taskId = reason === "missing task" ? "missing-task" : "ab12cd34";
+      const path = "release-notes/pictures/action-reply-line-dark.webp";
+      const staged = await stageChangePresentation(
+        {
+          title: story.title,
+          base: story.base,
+          head: story.head,
+          publishable: true,
+          why: story.why,
+          whatChanged: story.whatChanged,
+          before: story.before,
+          after: story.after,
+          verification: story.verification,
+          risk: story.risk,
+          requiredActions: [],
+          unfinished: [],
+          views: [
+            {
+              id: "picture",
+              kind: "new",
+              caption: "The reply view",
+              before: [],
+              after: [
+                { path, alt: "The dark reply view", inspected: true, captureHead: story.head },
+              ],
+            },
+          ],
+        },
+        { taskId, worktree: process.cwd(), dir: at.paths },
+      );
+      if (reason === "unsupported host") Object.assign(at.forge, { attachments: undefined });
+      expect(await at.service.preparePresentation(taskId, staged)).not.toContain(
+        "Prepared presentation",
+      );
+      expect(staged.assets.every((asset) => !existsSync(join(at.paths, asset.file)))).toBe(true);
+      expect(existsSync(path)).toBe(true);
+    },
+  );
+
+  it("ignores downloaded untracked evidence but still refuses tracked edits before preparation", async () => {
+    const at = setup();
+    const { repo } = await at.repos.setup({ kind: "init", name: "head-check" });
+    insertTask(at.tasks, { repoId: repo.id, repoDir: repo.path, worktreeDir: repo.path });
+    const dir = repo.path;
+    const run = (...args: string[]) =>
+      execFileSync("git", ["-C", dir, ...args])
+        .toString()
+        .trim();
+    run("config", "user.email", "test@example.com");
+    run("config", "user.name", "Test");
+    run("checkout", "-b", "fm/task-ab12cd34");
+    writeFileSync(join(dir, "tracked.txt"), "Recorded fixture\n");
+    run("add", "tracked.txt");
+    run("commit", "-m", "test: record a fixture");
+    mkdirSync(join(dir, ".infinitary-artifacts"));
+    writeFileSync(
+      join(dir, ".infinitary-artifacts", "empty.zip"),
+      Buffer.from("504b05060000000000000000000000000000000000000000", "hex"),
+    );
+    expect(await at.service.presentationHead("ab12cd34")).toBe(run("rev-parse", "HEAD"));
+    writeFileSync(join(dir, "tracked.txt"), "An uncommitted change\n");
+    await expect(at.service.presentationHead("ab12cd34")).rejects.toThrow(
+      "Commit the task's changes",
     );
   });
 });

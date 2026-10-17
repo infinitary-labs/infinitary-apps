@@ -6,6 +6,7 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
+import type { ChangePresentationDraft } from "@shared/changePresentation";
 import type { ServedSegment } from "@shared/servedFrame";
 import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
 import { HIDDEN_VALUE_WORDS, REF_PATTERN } from "../../src/core/browser/outline";
@@ -170,7 +171,7 @@ export const KEYBOARD_CARD_TITLES = {
  * (FI3-1128; docs/card-authoring.md "The risk chart"): the real emit_card
  * refuses a merge card without one, so a scripted crewmate call that
  * merges and names none is given this one on the wire, as a crewmate is
- * told to give its own.
+ * told to give its own. A saved-story card takes its risk from that story instead.
  */
 export const MOCK_RISK = {
   blast: { level: "medium", why: "The meter and its settings row" },
@@ -190,7 +191,7 @@ function withDeclaredRisk(call: ScriptedCall): ScriptedCall {
   const merges = args.actions?.some(
     (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
   );
-  return merges
+  return merges && (!("presentation" in args) || args.presentation === undefined)
     ? ({
         ...call,
         args: {
@@ -2523,8 +2524,8 @@ export const MOCK_SENT_UP_CARD_TITLE = "The meter fix is ready to go in";
  * A project on GitHub with the app's own sign-in (git integration PR 1.2,
  * forge-signin e2e): a brief carrying this marker saves a point, sends its
  * branch up with its own shell (git answers GitHub through the app's
- * helper), opens the proposed change with `open_change`, reads its checks
- * with `check_change`, and on green declares the completion card and
+ * helper), prepares a typed story and opens it with `open_change`, reads
+ * its checks with `check_change`, and on green declares the completion card and
  * reports.
  */
 export const WORKFLOW_DISPATCH_MARKER = "request the project verification workflow";
@@ -2551,6 +2552,53 @@ export const MOCK_CONTINUE_CHANGE = {
   title: "fix: stage the meter",
   body: "## Intent\nStage the meter.",
 };
+
+/** INF-132: a scripted GitHub author prepares the same typed story as a real crewmate. */
+export const MOCK_GITHUB_STORY: Omit<
+  ChangePresentationDraft,
+  "title" | "base" | "head" | "publishable"
+> & { projectText: string } = {
+  why: ["The meter should read on time."],
+  whatChanged: ["The meter reads on time."],
+  before: ["The meter reading lagged."],
+  after: ["The meter reads on time."],
+  verification: ["Checked the committed meter change."],
+  views: [],
+  noPicture: "This disposable git change has no visible interface.",
+  risk: MOCK_RISK,
+  requiredActions: [],
+  unfinished: [],
+  projectText: "",
+};
+export const MOCK_CONTINUE_STORY = {
+  ...MOCK_GITHUB_STORY,
+  whatChanged: ["Stage the meter."],
+  unfinished: [`${CONTINUE_CHANGE_TITLE} starts once it is merged.`],
+};
+
+function prepareMockStory(
+  title: string,
+  gitReading: string | undefined,
+  content = MOCK_GITHUB_STORY,
+): ScriptedCall {
+  const versions = gitReading?.match(/\b[0-9a-f]{40}\b/g) ?? [];
+  return {
+    name: "prepare_change",
+    args: {
+      story: {
+        ...content,
+        title,
+        base: versions.at(-2) ?? "",
+        head: versions.at(-1) ?? "",
+        publishable: true,
+      },
+    },
+  };
+}
+
+function preparedRevision(reading: string): number {
+  return Number([...reading.matchAll(/Prepared presentation (\d+) for/g)].at(-1)?.[1] ?? 0);
+}
 
 /**
  * locate_project's listing from the app's own sign-in (PR 1.2): a Firstmate
@@ -4064,24 +4112,25 @@ function keptMergeMove(
     {
       name: "bash",
       args: {
-        command: `printf 'kept\\n' > kept.txt && git add kept.txt && git commit -m "${KEPT_MERGE_TITLE}"`,
+        command: `printf 'kept\\n' > kept.txt && git add kept.txt && git commit -m "${KEPT_MERGE_TITLE}" && git rev-parse main HEAD`,
       },
     },
+    prepareMockStory(KEPT_MERGE_CARD, results[0], {
+      ...MOCK_GITHUB_STORY,
+      why: ["A merge click should survive a conflict refusal."],
+      whatChanged: ["Added the kept file."],
+      before: ["The click bought one attempt."],
+    }),
     {
       name: "open_change",
-      args: { title: KEPT_MERGE_TITLE, body: "Keeps the merge click through a conflict." },
+      args: { title: KEPT_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
     },
     { name: "check_change", args: {} },
     {
       name: "emit_card",
       args: {
         title: KEPT_MERGE_CARD,
-        body: completionCardBody(
-          "<p>A merge click should survive a conflict refusal.</p>",
-          "<p>Added the kept file.</p>",
-          "<p>The click bought one attempt.</p>",
-          "<p>The change is ready and its checks passed.</p>",
-        ),
+        presentation: preparedRevision(results.join("\n")),
         actions: [
           { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
         ],
@@ -4276,24 +4325,25 @@ function guidedMergeMove(
     {
       name: "bash",
       args: {
-        command: `printf 'guided\\n' > guided.txt && git add guided.txt && git commit -m "${GUIDED_MERGE_TITLE}"`,
+        command: `printf 'guided\\n' > guided.txt && git add guided.txt && git commit -m "${GUIDED_MERGE_TITLE}" && git rev-parse main HEAD`,
       },
     },
+    prepareMockStory(GUIDED_MERGE_CARD, results[0], {
+      ...MOCK_GITHUB_STORY,
+      why: ["A kept merge should wait for the captain's newest words."],
+      whatChanged: ["Added the guided file."],
+      before: ["A reply did not hold the merge."],
+    }),
     {
       name: "open_change",
-      args: { title: GUIDED_MERGE_TITLE, body: "Holds the kept merge for the captain's guidance." },
+      args: { title: GUIDED_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
     },
     { name: "check_change", args: {} },
     {
       name: "emit_card",
       args: {
         title: GUIDED_MERGE_CARD,
-        body: completionCardBody(
-          "<p>A kept merge should wait for the captain's newest words.</p>",
-          "<p>Added the guided file.</p>",
-          "<p>A reply did not hold the merge.</p>",
-          "<p>The change is ready and its checks passed.</p>",
-        ),
+        presentation: preparedRevision(results.join("\n")),
         actions: [
           { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
         ],
@@ -7464,7 +7514,7 @@ export async function startMockProvider(): Promise<MockProviderServer> {
                   name: "emit_card",
                   args: {
                     title: CONTINUE_CHANGE_CARD_TITLE,
-                    body: `${MOCK_STANDARD_CARD_BODY}<p>${CONTINUE_CHANGE_TITLE} starts once it is merged.</p>`,
+                    presentation: preparedRevision(body),
                     actions: [
                       {
                         id: "put-in",
@@ -7487,7 +7537,7 @@ export async function startMockProvider(): Promise<MockProviderServer> {
                 name: "bash",
                 args: {
                   command:
-                    'git commit --allow-empty -m "fix: stage the meter" && git push origin HEAD',
+                    'git commit --allow-empty -m "fix: stage the meter" && git push origin HEAD && git rev-parse main HEAD',
                 },
               },
             ]);
@@ -7517,11 +7567,19 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             }
           } else if (latestUserTail.includes("Read its checks with check_change")) {
             streamToolCalls([{ name: "check_change", args: {} }]);
+          } else if (!calledTool(latestUserTail, "prepare_change")) {
+            streamToolCalls([
+              prepareMockStory(
+                CONTINUE_CHANGE_CARD_TITLE,
+                sinceLastUser(body).results[0],
+                MOCK_CONTINUE_STORY,
+              ),
+            ]);
           } else {
             streamToolCalls([
               {
                 name: "open_change",
-                args: MOCK_CONTINUE_CHANGE,
+                args: { title: MOCK_CONTINUE_CHANGE.title, presentation: preparedRevision(body) },
               },
             ]);
           }
@@ -7923,19 +7981,21 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           return;
         }
         if (!isFirstmate && latestUserTail.includes(GITHUB_CHANGE_PROMPT_MARKER) && wantsStream) {
+          const gitReading = sinceLastUser(body).results[0];
+          const savedStory = gitReading?.includes("https://github.com/") === true;
           if (!hasToolResults) {
             streamToolCalls([
               {
                 name: "bash",
                 args: {
                   command:
-                    'git commit --allow-empty -m "fix: the meter reads on time" && git push origin HEAD',
+                    'git commit --allow-empty -m "fix: the meter reads on time" && git push origin HEAD && git config --get remote.origin.url && git rev-parse main HEAD',
                 },
               },
             ]);
             return;
           }
-          if (latestUserTail.includes(MOCK_GITHUB_CHANGE_CARD_TITLE)) {
+          if (calledTool(latestUserTail, "emit_card")) {
             streamText("done");
             return;
           }
@@ -7945,7 +8005,9 @@ export async function startMockProvider(): Promise<MockProviderServer> {
                 name: "emit_card",
                 args: {
                   title: MOCK_GITHUB_CHANGE_CARD_TITLE,
-                  body: MOCK_STANDARD_CARD_BODY,
+                  ...(savedStory
+                    ? { presentation: preparedRevision(body) }
+                    : { body: MOCK_STANDARD_CARD_BODY }),
                   actions: [
                     {
                       id: "put-in",
@@ -7964,10 +8026,16 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             streamToolCalls([{ name: "check_change", args: {} }]);
             return;
           }
+          if (savedStory && !calledTool(latestUserTail, "prepare_change")) {
+            streamToolCalls([prepareMockStory(MOCK_GITHUB_CHANGE_CARD_TITLE, gitReading)]);
+            return;
+          }
           streamToolCalls([
             {
               name: "open_change",
-              args: MOCK_GITHUB_CHANGE,
+              args: savedStory
+                ? { title: MOCK_GITHUB_CHANGE.title, presentation: preparedRevision(body) }
+                : MOCK_GITHUB_CHANGE,
             },
           ]);
           return;

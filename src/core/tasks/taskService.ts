@@ -7,6 +7,7 @@ import type {
   OpenEffect,
   TaskLifecycleOp,
 } from "@shared/cards";
+import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
@@ -3098,6 +3099,27 @@ export class TaskService {
       }
     });
     run();
+  }
+
+  /** The publication ledger's one writer; a claim is committed before any external write. */
+  changePresentation(id: string): ChangePresentationRecord | undefined {
+    return this.mustGet(id).delivery?.presentation;
+  }
+
+  updateChangePresentation(
+    id: string,
+    update: (current: ChangePresentationRecord | undefined) => ChangePresentationRecord,
+  ): void {
+    this.write(() => {
+      const record = this.mustGet(id);
+      if (record.status === "done" || record.status === "dropped")
+        throw new Error("A closed task cannot publish another story.");
+      const presentation = update(record.delivery?.presentation);
+      this.patch(id, {
+        delivery: this.mergeDelivery(record, { presentation }),
+        updatedAt: this.now(),
+      });
+    })();
   }
 
   /**

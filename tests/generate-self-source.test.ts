@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { CARD_PRESENTATIONS } from "@shared/cards";
 import { fmEventSchema } from "@shared/events";
@@ -38,6 +38,8 @@ describe("generate-self-source", () => {
       encoding: "utf8",
     });
     expect(result.status, result.stderr || result.stdout).toBe(0);
+    // INF-92 needs the complete tree even beyond the former buffer, with no leftover archive.
+    expect(readdirSync(outDir).sort()).toEqual(["self-map.json", "self-source"]);
 
     // INF-79 pushes the real tracked archive beyond the former 64 MiB buffer.
     // The bundle still contains the complete tree, never its temporary archive too.

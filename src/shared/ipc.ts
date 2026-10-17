@@ -388,7 +388,7 @@ import { workRequests } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.12.0";
+export const PROTOCOL_VERSION = "8.13.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -473,6 +473,12 @@ export const TASK_BROWSERS_THERE_SINCE = "4.1.0";
  * One that speaks an older one gives its tasks no knowledge.
  */
 export const KNOWLEDGE_THERE_SINCE = "5.5.0";
+
+/** Work computers stage saved change stories and pass their revision on completion cards. */
+export const CHANGE_PRESENTATIONS_SINCE = "8.13.0";
+export function speaksChangePresentations(deviceVersion: string): boolean {
+  return speaksSince(deviceVersion, CHANGE_PRESENTATIONS_SINCE);
+}
 
 /**
  * The first contract a computer that runs work is updated on over the
@@ -2524,6 +2530,11 @@ export const invokeContract = {
   },
   "inf:work:github-write": {
     ...workRequests["inf:work:github-write"],
+    surface: "core",
+    reach: "work",
+  },
+  "inf:work:prepare-change": {
+    ...workRequests["inf:work:prepare-change"],
     surface: "core",
     reach: "work",
   },

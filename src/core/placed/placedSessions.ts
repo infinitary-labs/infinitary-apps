@@ -20,6 +20,7 @@ import type { FmEvent } from "@shared/events";
 import {
   type InvokeRequest,
   type InvokeResponse,
+  speaksChangePresentations,
   speaksInfinitaryNames,
   speaksKnowledge,
   speaksSeed,
@@ -175,6 +176,7 @@ export type CrewMachines = {
    * home cannot tell.
    */
   takesKnowledge?(machine: string): boolean;
+  takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;
   /** What the task's working copy there holds unmerged; null while nobody can tell. */
@@ -474,6 +476,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   takesRepoless(machine: string): boolean {
     const version = this.options.devices.version(machine);
     return version ? speaksSeed(version.contract) : true;
+  }
+
+  takesChangePresentations(machine: string): boolean {
+    const version = this.options.devices.version(machine);
+    return version ? speaksChangePresentations(version.contract) : false;
   }
 
   takesKnowledge(machine: string): boolean {
@@ -1125,6 +1132,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       case "inf:work:github-write": {
         const { input } = request as InvokeRequest<"inf:work:github-write">[0];
         return { text: await (callbacks?.onGithubWrite ?? missing())(input) };
+      }
+      case "inf:work:prepare-change": {
+        const { input } = request as InvokeRequest<"inf:work:prepare-change">[0];
+        return { text: await (callbacks?.onPrepareChange ?? missing())(input) };
       }
       case "inf:work:open-change": {
         const { input } = request as InvokeRequest<"inf:work:open-change">[0];

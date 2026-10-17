@@ -240,6 +240,45 @@ async function fixture(
 }
 
 describe("the GitHub gateway through crewmate tools and the app's sign-in", () => {
+  it("cannot bypass the saved-story publication barrier, while legacy descriptions remain writable (INF-92)", async () => {
+    const f = await fixture();
+    const opened = await f.write.run({
+      method: "POST",
+      path: "/repos/octo/meter/pulls",
+      body: JSON.stringify({
+        title: "fix: meter",
+        head: "fm/task-1",
+        base: "main",
+        body: "No evidence yet",
+      }),
+    });
+    expect(opened.text).toContain("prepare_change and open_change");
+    expect(f.seen).toEqual([]);
+    await f.write.run({
+      method: "PATCH",
+      path: "/repos/octo/meter/pulls/1",
+      body: JSON.stringify({ body: "Legacy description" }),
+    });
+    expect(f.seen).toHaveLength(1);
+    f.tasks.recordDelivery("task-1", { prNumber: 1 });
+    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    const changed = await f.write.run({
+      method: "PATCH",
+      path: "/repos/octo/meter/pulls/1",
+      body: JSON.stringify({ body: "Bypass the story" }),
+    });
+    expect(changed.text).toContain("saved story with open_change");
+    expect(f.seen).toHaveLength(1);
+    // INF-169 F9: GitHub accepts the issues alias for a pull request body too.
+    const alias = await f.write.run({
+      method: "PATCH",
+      path: "/repos/octo/meter/issues/1",
+      body: JSON.stringify({ body: "Bypass through issues" }),
+    });
+    expect(alias.text).toContain("saved story with open_change");
+    expect(f.seen).toHaveLength(1);
+  });
+
   it("reads a project route with the app's token and hands back status, request id and a next page", async () => {
     const { read, seen } = await fixture();
     const answer = JSON.parse(

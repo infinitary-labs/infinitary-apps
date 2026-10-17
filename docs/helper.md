@@ -537,6 +537,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   The folder the record named when the task started can be another: the one-time move leaves a placed task's record naming the older folder (`docs/saved-data-compatibility.md`, "The one-time move").
   Out of reach, this Mac reads what it brought last.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
+  `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
   An artifact is downloaded here and written into the working copy there before the tool answers, never into a folder here.
   A crewmate there calls `read_workflow` as one here does (`inf:work:read-workflow`), and the home reads the run through the project's own forge: with `runId` alone the short read, whose run watch wakes the crewmate there (`docs/forge.md`, "The run watch"), and with `jobId` that job's log.
 - **Discarding.**

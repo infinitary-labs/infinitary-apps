@@ -16,7 +16,11 @@ import {
 } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
-import type { CardMediaExtension } from "@shared/cardPictures";
+import {
+  type CardMediaExtension,
+  parseCardMediaFileName,
+  parseCardPictureFileName,
+} from "@shared/cardPictures";
 import {
   PLACED_COPY_CHUNK_BYTES,
   type PlacedEventRecord,
@@ -81,6 +85,17 @@ export class PlacedTasks {
   /** The task's folders, by the layout the home writes instructions with. */
   folders(task: string) {
     return placedTaskFolders(this.tasksDir, this.checked(task), this.worktreesDir);
+  }
+
+  /** Discard staging copies after their consumer has received them, never source evidence. */
+  async discardCardCopies(task: string, files: string[]): Promise<void> {
+    const dir = this.folders(task).cards;
+    for (const file of new Set(files)) {
+      const parsed = parseCardPictureFileName(file) ?? parseCardMediaFileName(file);
+      if (!parsed || parsed.taskId !== task)
+        throw new Error("The media copy belongs to another task.");
+      await rm(join(dir, file), { force: true });
+    }
   }
 
   /** Makes the task's folders, each 0700; a working copy is its own writer's to make. */

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -18,7 +18,9 @@ import {
   cardPresentation,
   onStage,
   opensSettings,
+  splitSettleFacts,
 } from "@shared/cards";
+import type { ChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import type { FmEvent } from "@shared/events";
@@ -41,6 +43,7 @@ import {
   MERGE_WORDS,
 } from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { completionCardBody } from "../../../tests/helpers/completionCard";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
@@ -62,6 +65,8 @@ import {
   type ForgePull,
   type ForgeReadiness,
   overallOfChecks,
+  presentationCardBody,
+  presentationMarkdown,
 } from "../forge";
 import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
@@ -291,7 +296,11 @@ type SetupExtras = {
   killJobs?: (taskId: string) => void;
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
-  openChange?: (taskId: string, input: { title: string; body: string }) => Promise<string>;
+  openChange?: (
+    taskId: string,
+    input: import("@shared/changePresentation").OpenChangeInput,
+  ) => Promise<string>;
+  completionPresentation?: CrewSupervisorOptions["completionPresentation"];
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
   readWorkflow?: CrewSupervisorOptions["readWorkflow"];
   downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
@@ -437,6 +446,9 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.openChange ? { openChange: extras.openChange } : {}),
+    ...(extras.completionPresentation
+      ? { completionPresentation: extras.completionPresentation }
+      : {}),
     ...(extras.checkChange ? { checkChange: extras.checkChange } : {}),
     ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),
     ...(extras.downloadArtifact ? { downloadArtifact: extras.downloadArtifact } : {}),
@@ -5367,6 +5379,164 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await expect(result).rejects.toThrow(/Card refused: the checks read failed, not passed/);
     await tick();
     expect(cards()).toHaveLength(0);
+  });
+
+  it.each(["unpublished", "failed checks"])(
+    "removes completion copies after %s refuse the card (INF-228 F3)",
+    async (refusal) => {
+      let taskId = "";
+      let dir = "";
+      const pictureId = () => `${taskId}-${"a".repeat(32)}`;
+      const recordingId = () => `${taskId}-${"b".repeat(32)}`;
+      const completionPresentation = vi.fn(async () => {
+        if (!DEMO_POSTER.bytes) throw new Error("Missing poster fixture");
+        writeFileSync(join(dir, `${pictureId()}.png`), DEMO_POSTER.bytes);
+        writeFileSync(join(dir, `${recordingId()}.mp4`), DEMO_RECORDING.bytes);
+        return {
+          title: "The story is ready",
+          body: completionBody(
+            `<figure data-inf-demo="app-frame://media/${recordingId()}.mp4"><img src="app-frame://images/${pictureId()}.png" alt="The box at its starting place"></figure>`,
+          ),
+          pictures: [],
+          riskDeclaration: METER_RISK,
+          requiredActions: [],
+        };
+      });
+      const { supervisor, tasks, specs, cards, paths } = setup(fakeCrewmate(), {
+        completionPresentation,
+        checkCi: async () => "red",
+      });
+      ({ taskId } = await supervisor.commission({
+        title: "Share the story",
+        intent: intentOf("share the same story"),
+        shape: { rigor_ask: "quick" },
+      }));
+      await tick();
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      dir = join(paths.crewmatesDir, taskId, "cards");
+      mkdirSync(dir, { recursive: true });
+      // An earlier card's independent copy must survive this later refusal.
+      const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
+      writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
+      if (refusal === "failed checks")
+        tasks.updateChangePresentation(taskId, () => ({
+          revisions: [],
+          receipts: [],
+          published: {
+            state: "confirmed",
+            revision: 1,
+            number: 1,
+            head: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+            region: "story",
+            regionHash: createHash("sha256").update("story").digest("hex"),
+          },
+        }));
+      await expect(
+        specs[0]?.onCard?.({
+          title: "The story is ready",
+          body: "",
+          presentationRevision: 1,
+          actions: [{ id: "merge", effect: SETTLE_MERGE }],
+        }),
+      ).rejects.toThrow(refusal === "unpublished" ? /not been published/ : /checks read failed/);
+      expect(cards()).toHaveLength(0);
+      expect(readdirSync(dir)).toEqual([earlier]);
+      expect(readFileSync(join(dir, earlier))).toEqual(DEMO_RECORDING.bytes);
+    },
+  );
+
+  it("renders the published story and refuses a click after a newer revision is prepared (INF-92)", async () => {
+    const crewmate = fakeCrewmate();
+    let story: ChangePresentation;
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const completionPresentation = vi.fn(async () => ({
+      title: story.title,
+      body: presentationCardBody(story),
+      riskDeclaration: story.risk,
+      requiredActions: story.requiredActions,
+      pictures: story.pictures,
+    }));
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged" }));
+    const { supervisor, tasks, specs, cards } = setup(crewmate, {
+      checkCi: async () => "green",
+      completionPresentation,
+      mergePullRequest,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    story = {
+      version: 1,
+      taskId,
+      revision: 1,
+      destination: {
+        host: "github.com",
+        projectId: 1,
+        fullName: "octo/meter",
+        visibility: "private",
+      },
+      title: "The upload survives restart",
+      base: head,
+      head,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    };
+    const region = presentationMarkdown(story, new Map(), "passed");
+    const publication = {
+      revision: 1,
+      head,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      number: 1,
+    };
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication,
+      published: publication,
+    }));
+    tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
+    expect(() =>
+      specs[0]?.onCard?.({
+        title: "A second account",
+        body: completionBody("<p>Different.</p>"),
+        actions: [{ id: "merge", effect: SETTLE_MERGE }],
+      }),
+    ).toThrow(/Use presentation/);
+    const id = await specs[0]?.onCard?.({
+      title: "Ignored duplicate title",
+      body: "",
+      presentationRevision: 1,
+      actions: [{ id: "merge", effect: SETTLE_MERGE }],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.id === id);
+    expect(card?.title).toBe(story.title);
+    expect(splitSettleFacts(card?.body ?? "")?.body).toBe(presentationCardBody(story));
+    expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)?.presentationRevision).toBe(1);
+    tasks.updateChangePresentation(taskId, (record) => {
+      if (!record) throw new Error("Missing story");
+      return { ...record, revisions: [...record.revisions, { ...story, revision: 2 }] };
+    });
+    if (!card) throw new Error("Missing completion card");
+    expect(() => supervisor.act(card.id, "merge")).toThrow();
+    expect(mergePullRequest).not.toHaveBeenCalled();
   });
 
   it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {

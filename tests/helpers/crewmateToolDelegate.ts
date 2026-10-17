@@ -64,6 +64,7 @@ export function crewmateToolDelegate(): Required<
     onDownloadArtifact: async (input) => answer("onDownloadArtifact", "artifact downloaded")(input),
     onGithubRead: async (input) => answer("onGithubRead", "github answered")(input),
     onGithubWrite: async (input) => answer("onGithubWrite", "github changed")(input),
+    onPrepareChange: async (input) => answer("onPrepareChange", "story prepared")(input),
     onOpenChange: async (input) => answer("onOpenChange", "change opened")(input),
     onCheckChange: async () => answer("onCheckChange", "overall: green")(),
     browser: {

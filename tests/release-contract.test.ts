@@ -22,9 +22,9 @@ import type {
   JSONReportTestResult,
 } from "@playwright/test/reporter";
 import { describe, expect, it, vi } from "vitest";
-
 import { ALONE_RESULTS } from "../scripts/e2e-alone.ts";
 import { ARCHES, manifestEntry } from "../scripts/ensure-bundled-git.ts";
+import { presentationCommitMessage } from "../src/core/forge";
 import { compareSemver, isAlphaVersion } from "../src/core/update/semver";
 import { BUNDLE_ID, renderCask } from "../src/core/update/tapPublication";
 import {
@@ -1753,7 +1753,14 @@ describe("resolving a release", () => {
     const breaking = commit("feat(cards)!: drop the old card shape", { "src.txt": "7" });
     git(clone, "update-ref", "refs/remotes/origin/main", breaking);
     expect(resolve(clone, { CANDIDATE: breaking }).outputs.version).toBe("0.2.0-alpha.7");
-    const footer = commit("fix: x\n\nBREAKING CHANGE: saved data moves", { "src.txt": "8" });
+    // INF-228 F2: the actual squash-summary owner keeps the release reader's footer reachable.
+    const footer = commit(
+      `fix: x\n\n${presentationCommitMessage({
+        whatChanged: ["Move saved data to the new folder."],
+        projectText: "BREAKING CHANGE: saved data moves",
+      })}`,
+      { "src.txt": "8" },
+    );
     git(clone, "tag", "v0.2.0", breaking);
     git(clone, "update-ref", "refs/remotes/origin/main", footer);
     expect(resolve(clone, { CANDIDATE: footer }).outputs.version).toBe("0.3.0-alpha.7");

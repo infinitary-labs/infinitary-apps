@@ -60,6 +60,23 @@ describe("the GitHub stand-in, through the app's forge", () => {
     });
   });
 
+  it("serves the destination, branch and updated body needed by saved stories (INF-228 F1)", async () => {
+    const branch = "fm/task-story";
+    const head = sha("saved story");
+    const { forge } = await forgeOver({ [branch]: head });
+    expect(await forge.attachments?.destination()).toMatchObject({
+      fullName: "octo/meterlab",
+      visibility: "private",
+    });
+    expect(await forge.branchHead(branch)).toBe(head);
+    const change = await forge.openChange({ branch, title: TITLE, body: BODY });
+    const replacement = `${BODY}\n\nThe same story now names its verification.`;
+    await forge.updateChangeBody(change, replacement);
+    expect(await forge.changeFor(branch)).toMatchObject({ ...change, body: replacement });
+    await forge.close(change);
+    expect(await forge.changeFor(branch)).toBeNull();
+  });
+
   it("accepts verification only for a pushed branch and lists its queued run at that version", async () => {
     const branch = "fm/task-verify";
     const { github, forge } = await forgeOver({ [branch]: sha("verification") });

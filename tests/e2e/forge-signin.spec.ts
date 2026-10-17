@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
+import { presentationCommitMessage } from "../../src/core/forge";
 import { openDatabase } from "../../src/core/storage/db";
 import {
   FORGE_SECTION_WORDS,
@@ -49,8 +50,10 @@ import {
   GITHUB_CHANGE_PROMPT_MARKER,
   LOCATE_PROJECTS_PROMPT_MARKER,
   MOCK_CONTINUE_CHANGE,
+  MOCK_CONTINUE_STORY,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_STORY,
   MOCK_LOCATED_CARD_TITLE,
   MOCK_PROJECT_LIVES_CARD_TITLE,
   PROJECT_LIVES_PROMPT_MARKER,
@@ -547,14 +550,14 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect(putInLine(page, task?.key as string)).toBeVisible({ timeout: 30_000 });
   // A squash of exactly the change the crewmate opened, at the version it
-  // sent up, under the title and body it gave.
+  // sent up, with the typed story's plain summary (captain's INF-228 F2).
   expect(github.merges()).toEqual([
     {
       number: 100,
       sha: sentUp,
       method: "squash",
       title: MOCK_GITHUB_CHANGE.title,
-      message: MOCK_GITHUB_CHANGE.body,
+      message: presentationCommitMessage(MOCK_GITHUB_STORY),
     },
   ]);
   await expect
@@ -965,7 +968,7 @@ test("the first change goes in and its continuation starts from the landed proje
       sha: landedHead,
       method: "squash",
       title: MOCK_CONTINUE_CHANGE.title,
-      message: MOCK_CONTINUE_CHANGE.body,
+      message: presentationCommitMessage(MOCK_CONTINUE_STORY),
     },
   ]);
 });

@@ -71,7 +71,7 @@ describe("where a crewmate keeps its evidence", () => {
     const prompt = buildCrewmateSystemPrompt("claude", evidenceDir);
     expect(prompt).toContain(`Your evidence folder is ${evidenceDir}`);
     expect(prompt).toContain("never inside your working copy");
-    expect(prompt).toContain("the PR carries no pictures, evidence files or local paths");
+    expect(prompt).toContain("no local path or private thread enters the description");
     expect(buildCrewmateSystemPrompt("pi")).not.toContain("Your evidence folder is");
   });
 
@@ -1399,7 +1399,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Show that the intent is met with evidence. Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy, a commit or the PR: the PR carries no pictures, evidence files or local paths, so Verified states in words what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
+      "Show that the intent is met with evidence. Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit. Future github.com pull requests use prepare_change to retain selected, inspected, publishable pictures and recordings for native uploads; no local path or private thread enters the description. Existing PRs and other hosts keep evidence in prose. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(
@@ -1419,10 +1419,9 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "read the whole diff once against the user's words and your self-brief, and revert or name every change the words did not ask for",
     );
     expect(prompt).toContain("update every document the change makes stale");
-    // The evidence contract: five headings, in this order, on the report
-    // AND the PR body.
+    // Reports retain the evidence contract; INF-92 scopes future GitHub PRs to the shared story.
     expect(prompt).toContain(
-      "Your report and your PR body carry five headings in this order - Intent, What changed, Verified, Risk, Not done.",
+      "Your report carries five headings in this order - Intent, What changed, Verified, Risk, Not done.",
     );
     const headings = ["Intent", "What changed", "Verified", "Risk", "Not done"];
     let last = -1;

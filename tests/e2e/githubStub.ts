@@ -42,6 +42,7 @@ type StubPull = {
   title: string;
   body?: string;
   merged?: boolean;
+  closed?: boolean;
 };
 
 export type StubDispatch = {
@@ -573,7 +574,33 @@ export async function startGitHubStub(
           return;
         }
         if (method === "GET" && rest === "") {
-          send(200, { default_branch: "main" });
+          const fullName = `${owner}/${name}`;
+          const index = projects.findIndex((project) => project.fullName === fullName);
+          const project = projects[index];
+          send(200, {
+            id: index + 2,
+            full_name: fullName,
+            default_branch: "main",
+            private: project?.private ?? true,
+            visibility: (project?.private ?? true) ? "private" : "public",
+            permissions: { push: true },
+          });
+          return;
+        }
+        if (method === "GET" && rest.startsWith("/git/ref/heads/")) {
+          const branch = decodeURIComponent(rest.slice("/git/ref/heads/".length));
+          let sha: string | undefined;
+          try {
+            sha = headOf?.(branch);
+          } catch {
+            /* unknown branch */
+          }
+          send(
+            sha ? 200 : 404,
+            sha
+              ? { ref: `refs/heads/${branch}`, object: { type: "commit", sha } }
+              : { message: "Not Found" },
+          );
           return;
         }
         if (method === "GET" && rest === "/pulls" && owner === "octo" && name === "website") {
@@ -588,9 +615,14 @@ export async function startGitHubStub(
           const head = url.searchParams.get("head") ?? "";
           const branch = head.slice(head.indexOf(":") + 1);
           const found = opened.get(branch);
-          if (found && !found.merged) {
+          if (found && !found.merged && !found.closed) {
             send(200, [pullJson(found, owner, name)]);
-          } else if (anyPull && !anyPull.merged && (anyPull.branch ?? branch) === branch) {
+          } else if (
+            anyPull &&
+            !anyPull.merged &&
+            !anyPull.closed &&
+            (anyPull.branch ?? branch) === branch
+          ) {
             anyPull.branch = branch;
             send(200, [pullJson(anyPull, owner, name)]);
           } else {
@@ -624,7 +656,7 @@ export async function startGitHubStub(
           }
           send(200, {
             ...pullJson(pull, owner, name),
-            state: pull.merged ? "closed" : "open",
+            state: pull.merged || pull.closed ? "closed" : "open",
             merged: pull.merged === true,
             merge_commit_sha: pull.merged ? `squash-${headOfPull(pull)}` : null,
             draft: false,
@@ -808,8 +840,19 @@ export async function startGitHubStub(
           send(200, { merged: true, sha: body.sha });
           return;
         }
-        if (method === "PATCH" && /^\/pulls\/\d+$/.test(rest)) {
-          send(200, { state: "closed" });
+        if (method === "PATCH" && numbered) {
+          const number = Number(numbered[1]);
+          const pull =
+            [...opened.values()].find((open) => open.number === number) ??
+            (anyPull?.number === number ? anyPull : undefined);
+          if (!pull) {
+            send(404, { message: "Not Found" });
+            return;
+          }
+          const update = JSON.parse(raw || "{}") as { body?: string; state?: string };
+          if (update.body !== undefined) pull.body = update.body;
+          if (update.state === "closed") pull.closed = true;
+          send(200, { ...pullJson(pull, owner, name), state: pull.closed ? "closed" : "open" });
           return;
         }
         send(404, { message: "Not Found" });

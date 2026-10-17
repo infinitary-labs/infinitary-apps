@@ -599,6 +599,8 @@ function rewrittenTag(image: FoundImage, src: string, size: Sized): string {
 export async function verifyCardImages(
   body: string,
   root: CardPictureRoot | undefined,
+  /** A staging caller owns each newly minted picture/recording, including a failed write. */
+  onCopy?: (file: string) => void,
 ): Promise<VerifiedCardBody> {
   const found = findImages(body);
   const isNamed = (image: FoundImage) => {
@@ -725,7 +727,9 @@ export async function verifyCardImages(
     if (!copy) {
       const id = mint();
       const { kind } = recording.read;
-      await writeFile(join(root.dir, cardMediaFileName(id, kind)), recording.bytes);
+      const file = join(root.dir, cardMediaFileName(id, kind));
+      onCopy?.(file);
+      await writeFile(file, recording.bytes);
       copy = {
         id,
         kind,
@@ -752,10 +756,9 @@ export async function verifyCardImages(
     let id = copies.get(picture.file);
     if (!id) {
       id = mint();
-      await writeFile(
-        join(root.dir, cardPictureFileName(id, picture.format.extension)),
-        picture.bytes,
-      );
+      const file = join(root.dir, cardPictureFileName(id, picture.format.extension));
+      onCopy?.(file);
+      await writeFile(file, picture.bytes);
       copies.set(picture.file, id);
     }
     let group = groups.get(image.groupKey);

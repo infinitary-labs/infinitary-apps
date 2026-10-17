@@ -220,7 +220,7 @@ describe("renderRigorSection (delivery rigor phase 2)", () => {
       "Rigor: quick - the repository's own gate and green CI; the five headings are welcome, nothing more is required.",
     );
     expect(standard).toBe(
-      "Rigor: standard - the fixed pre-PR procedure, the five headings on the report and the PR body, three CI rounds then a blocker report.",
+      "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, a saved story on future github.com PRs (the five headings elsewhere), three CI rounds then a blocker report.",
     );
     // The reviewed line orders the sequence: review BEFORE the pull
     // request (captain ruling, 2026-09-19), no card until Firstmate says

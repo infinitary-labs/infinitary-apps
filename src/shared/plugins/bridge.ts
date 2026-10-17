@@ -179,7 +179,9 @@ import { mediatedFetchRequestSchema } from "./fetch";
  * alone is still on that link when the button comes up, where a new
  * document would have lost the click. Only the host's own fact strip asks
  * for it (`FrameMountSpec.markup`); a card body is still a new document per
- * revision. The parsed markup is inert: nothing in it runs.
+ * revision. Before DOMContentLoaded, only the latest refresh is kept:
+ * morphing a document still being parsed would let the parser append its
+ * remaining nodes a second time. The parsed markup is inert: nothing runs.
  *
  * A card's page is born HELD (FI3-871; docs/renderer.md, "Held
  * preparation"), so the stage can prepare the next card before it is shown
@@ -457,12 +459,26 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     message.document = documentId;
     parent.postMessage(message, "*");
   }
+  var pendingMarkup;
   function refreshMarkup(html) {
+    // The initial refresh can arrive before the original parser finishes.
+    // Let it finish before morphing, including when no body exists yet.
+    if (document.readyState === "loading") {
+      pendingMarkup = html;
+      return;
+    }
+    pendingMarkup = undefined;
     if (!document.body) return;
     var next = document.createElement("template");
     next.innerHTML = html;
     morphChildren(document.body, next.content);
   }
+  document.addEventListener("DOMContentLoaded", function () {
+    if (pendingMarkup === undefined) return;
+    var html = pendingMarkup;
+    pendingMarkup = undefined;
+    refreshMarkup(html);
+  }, { once: true });
   function blank(node) {
     return node.nodeType === 3 && node.nodeValue.trim() === "";
   }
@@ -1630,7 +1646,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-jvh5zO4n6HuanxsN1ZIUpKQQWHGmalDP04gDMgDA/7Q=";
+export const FRAME_BRIDGE_SHA256 = "sha256-h49nA/iUS/5L6woR7RLrp2tKdLST+VVcHEoy96V7Sd8=";
 
 // --- the envelope, frame -> host -------------------------------------------
 

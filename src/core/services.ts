@@ -115,6 +115,7 @@ import { CardNotifier } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
+import { ChangePresentations } from "./orchestrator/changePresentations";
 import { CrewSupervisor, type PersonalLiveDelegate } from "./orchestrator/crewSupervisor";
 import { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import { firstmateCanServe } from "./orchestrator/firstmateAvailability";
@@ -1564,16 +1565,22 @@ export async function createServices(
     writeElsewhere: (taskId, deviceId, artifact) =>
       placed.copies.writeArtifact(taskId, deviceId, artifact),
   });
-  const prCi = new PrCiService({
+  const presentations: ChangePresentations = new ChangePresentations({
+    tasks,
+    mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
+    head: (taskId) => prCi.presentationHead(taskId),
+  });
+  const prCi: PrCiService = new PrCiService({
     tasks,
     repos,
+    presentations,
     // The forge seam (git integration PR 1.1): GitHub is the REST forge with
     // the app's own GitHub sign-in (PR 1.2), read at each request. A 401
     // asks the sign-in service to look again; its health read is the proof.
     forgeFor,
     onCap: (taskId, facts) => supervisor.holdForCiCap(taskId, facts),
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
-    bringBranchHome: (taskId) => placed.bringBranchHome(taskId),
+    bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
     now: ticker.now,
   });
   const githubGateway = new GithubGatewayService({
@@ -1905,7 +1912,9 @@ export async function createServices(
     readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
     closePullRequest: (taskId) => prCi.close(taskId),
     checkCi: (taskId) => prCi.checkOverall(taskId),
+    prepareChange: (taskId, input) => prCi.preparePresentation(taskId, input),
     openChange: (taskId, input) => prCi.open(taskId, input),
+    completionPresentation: (taskId, revision) => prCi.completionPresentation(taskId, revision),
     checkChange: (taskId, input) => prCi.checkForCrew(taskId, input),
     readWorkflow: (taskId, input) => workflowEvidence.read(taskId, input),
     downloadArtifact: (taskId, input) => workflowEvidence.download(taskId, input),

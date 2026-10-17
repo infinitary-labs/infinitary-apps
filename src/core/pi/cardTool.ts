@@ -140,6 +140,8 @@ export function emittedAction(action: {
 export type EmittedCard = {
   title: string;
   body: string;
+  /** A completion from the current saved change story; resolved by the home before any card lint. */
+  presentationRevision?: number;
   actions: EmittedAction[];
   id?: string;
   /**
@@ -311,12 +313,14 @@ function crewActionParam<Effect extends TSchema>(effect: Effect) {
  * top-level ones are described: an action's rules ride `actions` and the
  * tool's own description (`CARD_PARAMS`).
  */
+const REQUIRED_ACTIONS_DESCRIPTION =
+  "Required on a completion merge offer, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. The first mate may declare immediately required actions on a non-merge card.";
+
 const sharedCardParams = {
   required_actions: Type.Optional(
     Type.Unsafe<RequiredAction[]>({
       ...z.toJSONSchema(requiredActionsSchema),
-      description:
-        "Required on a completion merge offer, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. The first mate may declare immediately required actions on a non-merge card.",
+      description: REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
   title: Type.String({ description: CARD_PARAMS.title }),
@@ -378,6 +382,24 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
 
 const crewmateCardParams = Type.Object({
   ...sharedCardParams,
+  title: Type.String({
+    description: `${CARD_PARAMS.title} With presentation, supply the saved story title here; the host uses that saved title.`,
+  }),
+  required_actions: Type.Optional(
+    Type.Unsafe<RequiredAction[]>({
+      ...z.toJSONSchema(requiredActionsSchema),
+      description:
+        "Omit with presentation: the saved story supplies required actions. Otherwise required on a completion merge offer, including [] when none. " +
+        REQUIRED_ACTIONS_DESCRIPTION,
+    }),
+  ),
+  presentation: Type.Optional(
+    Type.Integer({
+      minimum: 1,
+      description:
+        "A current, fully published github.com story revision. The saved title wins. Give one settle merge action and no body, risk or required_actions; the host uses the saved story after checks pass.",
+    }),
+  ),
   actions: Type.Optional(
     Type.Array(
       crewActionParam(
@@ -394,13 +416,19 @@ const crewmateCardParams = Type.Object({
     ),
   ),
   body: Type.Optional(sharedCardParams.body),
-  risk: Type.Optional(riskParam),
+  risk: Type.Optional(
+    Type.Object(riskParam.properties, {
+      description:
+        "Omit with presentation: the saved story supplies every risk rating. Otherwise: " +
+        CARD_PARAMS.risk,
+    }),
+  ),
   asking: Type.Optional(Type.Boolean({ description: CARD_PARAMS.asking })),
   design_only: Type.Optional(Type.Boolean({ description: CARD_PARAMS.design_only })),
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for him; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
+        "Except for a saved-story completion using presentation, write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for him; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
     }),
   ),
 });
@@ -533,6 +561,40 @@ async function emitCard(
     browserButton?: boolean;
   },
 ): Promise<string> {
+  if (!options.firstmate && params.presentation !== undefined) {
+    const actions = params.actions ?? [];
+    const merges =
+      actions.length === 1 &&
+      actions[0]?.effect?.kind === "settle" &&
+      actions[0].effect.mode === "merge";
+    if (
+      !merges ||
+      params.body !== undefined ||
+      params.body_file !== undefined ||
+      params.risk !== undefined ||
+      params.required_actions !== undefined ||
+      params.browser_button ||
+      params.browser_handoff ||
+      params.browser_page ||
+      params.asking ||
+      params.design_only
+    )
+      throw new Error(
+        "A saved-story completion gives presentation and one settle merge action, without body, risk, required_actions or browser controls; those facts come from its published version.",
+      );
+    const id = parseStableCardId(params.id);
+    const cardId = await options.onCard({
+      title: params.title,
+      body: "",
+      presentationRevision: params.presentation,
+      actions: actions.map(emittedAction),
+      ...(id ? { id } : {}),
+      ...(params.reply?.trim() ? { reply: params.reply.trim() } : {}),
+      ...(params.holds_place ? { holdsPlace: true } : {}),
+      ...(params.width ? { width: params.width } : {}),
+    });
+    return `Card shown from presentation ${params.presentation}${cardId ? ` (${cardId})` : ""}`;
+  }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
     throw new Error("Card refused: give exactly one of body or body_file.");
   }

@@ -65,6 +65,8 @@ export type EmittedAction = {
 export type EmittedCardInput = {
   title: string;
   body: string;
+  /** Current published story revision, resolved by the home before any card lint. */
+  presentationRevision?: number;
   requiredActions?: RequiredAction[];
   actions: EmittedAction[];
   /** Stable kebab-case id; reuse to revise an open card in place. */
@@ -309,7 +311,10 @@ export type CrewmateToolDelegate = {
    * crewmate whose task ships a change: offer the branch as a proposed
    * change, and read its checks, through the app's own sign-in.
    */
-  onOpenChange?: (input: { title: string; body: string }) => Promise<string>;
+  onPrepareChange?: (
+    input: import("@shared/changePresentation").StagedChangePresentation,
+  ) => Promise<string>;
+  onOpenChange?: (input: import("@shared/changePresentation").OpenChangeInput) => Promise<string>;
   onCheckChange?: (input?: CheckChangeInput) => Promise<string>;
   /** Read-only evidence through the project's forge and the app's sign-in. */
   onReadWorkflow?: (input: ReadWorkflowInput) => Promise<string>;

@@ -24,11 +24,13 @@ import {
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
+  ForgeWriteError,
   isSignInForgeFailure,
   isTransientForgeFailure,
   overallOfChecks,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
+import { GitHubAttachments } from "./attachments";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -186,6 +188,7 @@ export class GitHubForge implements Forge {
   readonly place: string;
   readonly hasChecks = true;
   readonly workflows: GitHubWorkflows;
+  readonly attachments?: GitHubAttachments;
   readonly api: ForgeApi;
   private readonly base: string;
   private readonly fetcher: typeof fetch;
@@ -206,6 +209,23 @@ export class GitHubForge implements Forge {
     };
     this.base = (options.apiBaseUrl ?? GITHUB_API_URL).replace(/\/+$/, "");
     this.fetcher = options.fetch ?? fetch;
+    if (location.host === GITHUB_COM && location.owner && location.name) {
+      this.attachments = new GitHubAttachments({
+        fullName: `${location.owner}/${location.name}`,
+        token: options.token,
+        readRepository: async () => {
+          const answer = await this.apiCall("GET", this.repoPath());
+          if (answer.status !== 200)
+            throw new ForgeError(
+              answer.status === 401 ? "sign-in" : answer.status === 403 ? "permission" : "refused",
+              `GitHub did not confirm the evidence destination (${answer.status}).`,
+            );
+          return JSON.parse(answer.body) as unknown;
+        },
+        fetch: this.fetcher,
+        onSignInRejected: options.onSignInRejected,
+      });
+    }
     this.workflows = new GitHubWorkflows(
       () => this.repoPath(),
       (path) => this.request("GET", path),
@@ -283,14 +303,82 @@ export class GitHubForge implements Forge {
   }
 
   async openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange> {
-    const base = await this.defaultBranch();
-    const pull = (await this.request("POST", `${this.repoPath()}/pulls`, {
-      title: input.title,
-      head: input.branch,
-      base,
-      body: input.body,
-    })) as PullJson;
-    return changeOf(pull, input.branch);
+    const base = await this.defaultBranch().catch((error: unknown) => {
+      throw new ForgeWriteError(
+        "failed",
+        error instanceof ForgeError ? error.failure : "transient",
+        "Could not read the base branch; no pull request was sent.",
+      );
+    });
+    const answer = await this.apiCall(
+      "POST",
+      `${this.repoPath()}/pulls`,
+      JSON.stringify({
+        title: input.title,
+        head: input.branch,
+        base,
+        body: input.body,
+      }),
+    );
+    if (answer.status !== 201)
+      throw changeWriteError(answer.status, "opening the pull request", answer.body);
+    return changeOf(JSON.parse(answer.body) as PullJson, input.branch);
+  }
+
+  async branchHead(branch: string): Promise<string> {
+    const answer = await this.apiCall(
+      "GET",
+      `${this.repoPath()}/git/ref/heads/${encodeURIComponent(branch)}`,
+    );
+    if (answer.status !== 200)
+      throw new ForgeError(
+        "refused",
+        "The story's branch has not been confirmed on GitHub. Push the reviewed version first.",
+      );
+    const value = JSON.parse(answer.body) as { object?: { type?: string; sha?: string } };
+    if (value.object?.type !== "commit" || !/^[0-9a-f]{40,64}$/.test(value.object.sha ?? ""))
+      throw new ForgeError("refused", "GitHub did not confirm the branch's code version.");
+    return value.object.sha as string;
+  }
+
+  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+    const path = `${this.repoPath()}/pulls/${numbered(change)}`;
+    const fresh = await this.apiCall("GET", path).catch((error: unknown) => {
+      throw new ForgeWriteError(
+        "failed",
+        error instanceof ForgeError ? error.failure : "transient",
+        "Could not reread the pull request; no description was sent.",
+      );
+    });
+    if (fresh.status !== 200)
+      throw new ForgeWriteError(
+        "failed",
+        "refused",
+        "Could not reread the pull request before updating its story.",
+      );
+    let pull: PullStateJson;
+    try {
+      pull = JSON.parse(fresh.body) as PullStateJson;
+    } catch {
+      throw new ForgeWriteError(
+        "failed",
+        "refused",
+        "GitHub did not return a readable pull request; no description was sent.",
+      );
+    }
+    if (
+      pull?.state !== "open" ||
+      pull.head?.sha !== change.headSha ||
+      (pull.body ?? "") !== (change.body ?? "")
+    )
+      throw new ForgeWriteError(
+        "failed",
+        "refused",
+        "The pull request changed while preparing its story. Read it again before updating.",
+      );
+    const answer = await this.apiCall("PATCH", path, JSON.stringify({ body }));
+    if (answer.status !== 200)
+      throw changeWriteError(answer.status, "replacing the story", answer.body);
   }
 
   async changeFor(branch: string): Promise<ForgeChange | null> {
@@ -488,7 +576,7 @@ export class GitHubForge implements Forge {
         sha: headSha,
         merge_method: "squash",
         commit_title: requireConventional(change.title ?? "", "pull request title"),
-        commit_message: change.body ?? "",
+        commit_message: change.squashMessage ?? change.body ?? "",
       },
     )) as { merged?: boolean; sha?: string; message?: string } | null;
     // A 200 is not a merge on its own: GitHub says it merged, or it did not.
@@ -594,7 +682,7 @@ export class GitHubForge implements Forge {
         merge_action: "direct_merge",
         bypass_rules: true,
         commit_title: requireConventional(change.title ?? "", "pull request title"),
-        commit_message: change.body ?? "",
+        commit_message: change.squashMessage ?? change.body ?? "",
       },
       ASYNC_MERGE_API_VERSION,
     )) as AsyncMergeJson | null;
@@ -1063,4 +1151,27 @@ async function boundedBytes(
   } finally {
     reader.releaseLock();
   }
+}
+
+function changeWriteError(status: number, operation: string, body: string): ForgeWriteError {
+  const refused = [400, 401, 403, 404, 409, 413, 415, 422, 429].includes(status);
+  const messages: string[] = [];
+  try {
+    const answer: unknown = JSON.parse(body);
+    if (answer && typeof answer === "object") {
+      if ("message" in answer && typeof answer.message === "string") messages.push(answer.message);
+      if ("errors" in answer && Array.isArray(answer.errors)) {
+        for (const error of answer.errors) {
+          if (error && typeof error.message === "string") messages.push(error.message);
+        }
+      }
+    }
+  } catch {
+    // An unreadable answer does not change whether the write could have happened.
+  }
+  return new ForgeWriteError(
+    refused ? "failed" : "uncertain",
+    status === 401 ? "sign-in" : status === 403 ? "permission" : "refused",
+    `GitHub answered ${status} when ${operation}${refused ? ". Nothing was written." : "; read it back before any retry."}${messages.length ? ` ${messages.join(" ")}` : ""}`,
+  );
 }

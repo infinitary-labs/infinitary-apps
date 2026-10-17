@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
@@ -36,6 +37,7 @@ import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import type { ChangePresentations } from "./changePresentations";
 import { checkRepairWords, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import {
@@ -223,6 +225,7 @@ export class PrCiService {
     private readonly options: {
       tasks: TaskService;
       repos: RepoRegistry;
+      presentations?: ChangePresentations;
       /** The forge for a task's repository (`createForgeResolver` in `src/core/forge/`). */
       forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
       now?: () => number;
@@ -247,7 +250,7 @@ export class PrCiService {
        * it, into the project's folder (docs/helper.md, "Its working
        * copies"). Never throws.
        */
-      bringBranchHome?: (taskId: string) => Promise<string | undefined>;
+      bringBranchHome?: (taskId: string, strict?: boolean) => Promise<string | undefined>;
     },
   ) {}
 
@@ -895,7 +898,7 @@ export class PrCiService {
     }
     const { forge, pull } = fresh;
     const place = forge.place ?? "GitHub";
-    const change: ForgeChange = {
+    let change: ForgeChange = {
       number: pull.number,
       url: null,
       branch: pull.branch ?? review.branch,
@@ -905,6 +908,17 @@ export class PrCiService {
     };
     try {
       requireConventional(change.title ?? "", "pull request title");
+      if (relationship === "owned" && this.options.tasks.get(taskId)?.delivery?.presentation) {
+        const current = await forge.changeFor(change.branch);
+        if (
+          !current ||
+          current.number !== change.number ||
+          current.headSha !== change.headSha ||
+          !this.options.presentations
+        )
+          throw new Error("The current story cannot be checked for complete evidence.");
+        change = await this.options.presentations.assertPublished(taskId, current, forge);
+      }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return { ok: false, relationship, text: `Cannot merge: ${message}`, problem: message };
@@ -1251,7 +1265,58 @@ export class PrCiService {
    * is answered, not opened twice. Recorded like a reading's change:
    * `pr_opened` on the timeline, the label and link on the delivery facts.
    */
-  async open(taskId: string, input: { title: string; body: string }): Promise<string> {
+  async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
+    try {
+      const located = this.locate(taskId, "open");
+      if ("said" in located) return located.said;
+      if (!this.options.presentations || !located.forge.attachments)
+        return "Saved change stories are available only for future github.com pull requests.";
+      if (located.record.delivery?.prNumber && !located.record.delivery.presentation)
+        return "This pull request predates saved stories and will not be rewritten.";
+      try {
+        if (
+          !located.record.delivery?.presentation &&
+          (await located.forge.changeFor(located.branch))
+        )
+          return "This pull request predates saved stories and will not be rewritten.";
+        const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
+        return `Prepared presentation ${revision} for ${staged.head}. No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
+      } catch (caught) {
+        if (isSignInForgeFailure(caught))
+          return crewSignInText(this.signInFact(located.forge, located.record.repoId));
+        return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
+      }
+    } finally {
+      await this.options.presentations?.discardStaged(taskId, staged);
+    }
+  }
+
+  async presentationHead(taskId: string): Promise<string> {
+    const record = this.options.tasks.get(taskId);
+    if (!record?.branch) throw new Error("The task has no committed branch.");
+    let dir = record.worktreeDir;
+    if (record.deviceId) {
+      dir = (await this.options.bringBranchHome?.(taskId, true)) ?? "";
+    } else if (dir && (await git(dir, ["status", "--porcelain", "--untracked-files=no"])).trim()) {
+      throw new Error(
+        "Commit the task's changes before preparing or publishing its demonstrated version.",
+      );
+    }
+    if (!dir) throw new Error("The current code version is unavailable.");
+    return git(dir, ["rev-parse", `${record.branch}^{commit}`]);
+  }
+
+  async completionPresentation(taskId: string, revision: number) {
+    const located = this.locate(taskId, "open");
+    if ("said" in located) throw new Error(located.said);
+    if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
+    const change = await located.forge.changeFor(located.branch);
+    if (!change) throw new Error("The story's pull request is not open.");
+    await this.options.presentations.assertPublished(taskId, change, located.forge);
+    return this.options.presentations.completion(taskId, revision, change.headSha);
+  }
+
+  async open(taskId: string, input: OpenChangeInput): Promise<string> {
     const located = this.locate(taskId, "open");
     if ("said" in located) return located.said;
     const { record, branch, forge } = located;
@@ -1286,7 +1351,29 @@ export class PrCiService {
         if (!reviewCoversHead(covered?.delivery, head))
           return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
       }
-      const change = existing ?? (await forge.openChange({ branch, ...input }));
+      const presentations = this.options.presentations;
+      const usesStory =
+        presentations && forge.attachments && (!existing || current.delivery?.presentation);
+      if (usesStory && (input.presentation === undefined || input.body !== undefined))
+        return "Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write.";
+      if (!usesStory && input.presentation !== undefined)
+        return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
+      if (!usesStory && !existing && input.body === undefined)
+        return "The pull request description is missing.";
+      const change = usesStory
+        ? await presentations.publish(
+            taskId,
+            input.presentation as number,
+            forge,
+            branch,
+            input.title,
+            current.delivery?.ci === "green" && current.delivery.headSha === existing?.headSha
+              ? "passed"
+              : "pending",
+            input.recovery,
+          )
+        : (existing ??
+          (await forge.openChange({ branch, title: input.title, body: input.body ?? "" })));
       this.noteChange(record.id, { change, forge });
       const next =
         "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.";
@@ -1576,7 +1663,7 @@ export class PrCiService {
     let dispatched = false;
     try {
       const record = this.options.tasks.get(taskId);
-      if (record) await this.branchHome(record);
+      if (record && !record.delivery?.presentation) await this.branchHome(record);
       const dir = await this.validateRange(
         record?.repoId,
         record?.repoDir,
@@ -1614,6 +1701,62 @@ export class PrCiService {
         const held = readinessStop(forge, pull, { head: guard?.head ?? change.headSha });
         if (held) return held;
       }
+      let publishedChange = change;
+      if (record?.delivery?.presentation) {
+        if (!this.options.presentations)
+          throw new Error("The current story cannot be checked for complete evidence.");
+        const authorization = standingAuthorization(record.delivery);
+        const publishedHead = record.delivery.presentation.published?.head;
+        if (guard && authorization) {
+          const offered = record.delivery.completionOffers?.find(
+            (offer) =>
+              offer.cardId === authorization.card.id &&
+              offer.offerId === authorization.card.offerId,
+          );
+          if (
+            !offered?.presentationContentHash ||
+            offered.presentationContentHash !== record.delivery.presentation.published?.contentHash
+          )
+            throw new Error(
+              "The published story differs from the approved story. Show a new completion offer before merging.",
+            );
+        }
+        const beforeRefresh = guard?.held?.();
+        if (beforeRefresh)
+          return { ok: false, text: `Cannot merge yet: ${beforeRefresh}.`, stop: "guidance" };
+        if (
+          guard &&
+          authorization &&
+          candidateHead(authorization) === change.headSha &&
+          publishedHead &&
+          publishedHead !== change.headSha &&
+          authorization.lineage.length > 0 &&
+          (publishedHead === authorization.approvedHead ||
+            authorization.lineage.some((step) => step.toHead === publishedHead))
+        ) {
+          await this.options.presentations.refreshConflictOnly(
+            taskId,
+            publishedHead,
+            change.headSha,
+            forge,
+            change.branch,
+            change.title ?? "",
+          );
+          const refreshed = await forge.changeFor(change.branch);
+          if (
+            !refreshed ||
+            refreshed.number !== change.number ||
+            refreshed.headSha !== change.headSha
+          )
+            throw new Error("The pull request changed during the story refresh.");
+          publishedChange = refreshed;
+        }
+        publishedChange = await this.options.presentations.assertPublished(
+          taskId,
+          publishedChange,
+          forge,
+        );
+      }
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       const withdrawn =
@@ -1622,7 +1765,7 @@ export class PrCiService {
         return { ok: false, text: `Cannot merge: ${withdrawn}.`, stop: "withdrawn" };
       }
       dispatched = true;
-      const receipt = await forge.putIn(change, change.headSha);
+      const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
       return {
         ok: true,
         text: this.putInText(taskId, forge, change),

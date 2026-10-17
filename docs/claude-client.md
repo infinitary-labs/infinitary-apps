@@ -50,6 +50,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The crewmate preset (`crewmateSessionSpec`) binds the entries to the crewmate's callbacks, and each session generates its own tools from the bound list: Pi's with `piToolsOf` (`src/core/pi/toolSpec.ts`), Claude's tool server with `claudeToolServer` (`src/core/claude/claudeTaskTools.ts`), which turns the same JSON Schema into zod and REFUSES a parameter kind it cannot carry rather than serving a looser schema.
   There are no hand-written Claude twins any more, so a rule reaches both runtimes in one edit and the self-source map lists the same set (`crewmateTools`).
   A tool is served only when the crewmate's delegate hands the callback it runs on.
+  `prepare_change` shares this spec: on a paired computer, `inf:work:prepare-change` transfers inspected media to the home behind `CHANGE_PRESENTATIONS_SINCE` (`docs/forge.md`, "Saved change stories").
   The task's browser is no tool: the client's own shell carries the task's command, `infinitary-browser-axi`, in its environment (`docs/axi-commands.md`).
   `crewmateTaskTools.test.ts` holds both runtimes to the spec by what they serve and do, and shows that a new entry reaches both and the pin; `claudeToolSurface.test.ts` still captures what the real client sends.
   The transport rules above still bind every entry: the description under the cap, ASCII only, and a rule a Claude crewmate must see in the description or a top-level parameter's description.

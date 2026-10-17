@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { claudeCrewmateTools, zodShapeOf } from "../claude/claudeTaskTools";
 import { crewmateTool } from "../session/tools";
 import { CREWMATE_TOOLS, CREWMATE_TOOLS_MODULE, crewmateToolManifest } from "./crewmateTaskTools";
@@ -125,6 +126,28 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     params: { method: "POST", path: "/repos/o/r/issues/1/comments", body: '{"body":"hi"}' },
     callback: "onGithubWrite",
   },
+  prepare_change: {
+    params: {
+      story: {
+        title: "Recovery keeps the confirmed uploads",
+        base: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+        head: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+        publishable: true,
+        why: ["Uploads must survive restart."],
+        whatChanged: ["The task keeps confirmed receipts."],
+        before: ["A restart could send the bytes twice."],
+        after: ["A confirmed receipt is reused."],
+        views: [],
+        noPicture: "This changes internal upload recovery, not a visible view.",
+        verification: ["Restart recovery passed."],
+        risk: RISK,
+        requiredActions: [],
+        unfinished: [],
+        projectText: "",
+      },
+    },
+    callback: "onPrepareChange",
+  },
   open_change: { params: { title: "Fix", body: "Intent" }, callback: "onOpenChange" },
   check_change: {
     params: {
@@ -191,8 +214,9 @@ describe("the crewmate tool spec", () => {
     for (const spec of CREWMATE_TOOLS) {
       const call = CALLS[spec.name];
       if (!call) throw new Error(`no call for ${spec.name}`);
-      const piDelegate = crewmateToolDelegate();
-      const claudeDelegate = crewmateToolDelegate();
+      const media = scratchDir("infinitary-tool-story-");
+      const piDelegate = { ...crewmateToolDelegate(), picturesDir: media, cwd: media };
+      const claudeDelegate = { ...crewmateToolDelegate(), picturesDir: media, cwd: media };
       const piTool = createCrewmateTools(piDelegate).find((tool) => tool.name === spec.name);
       const claudeTool = claudeCrewmateTools(claudeDelegate).find(
         (tool) => tool.name === spec.name,

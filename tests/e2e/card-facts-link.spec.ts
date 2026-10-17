@@ -98,6 +98,42 @@ test("a press on the fact strip's pull request link opens it though the strip re
     const link = facts.change.locator(`a[href="${PR}"]`);
     await expect(link).toBeVisible();
     await expect(facts.cell("checks")).toHaveAttribute("title", "read 2 min ago");
+
+    // INF-92: the captain asked to repair repeated completion facts without
+    // changing the rigor-standard journey. Replay this real document with
+    // its parser stopped before the care value. The host's initial markup
+    // refresh must arrive before the parser finishes, without a timed race.
+    const parseState = await facts.care.evaluate(
+      (value) =>
+        new Promise<DocumentReadyState>((resolve) => {
+          const doc = value.ownerDocument;
+          const view = doc.defaultView;
+          if (!view) throw new Error("The fact document has no window");
+          const html = doc.documentElement.outerHTML;
+          const valueHtml = value.outerHTML;
+          const at = html.indexOf(valueHtml);
+          if (at < 0 || html.indexOf(valueHtml, at + valueHtml.length) !== -1)
+            throw new Error("The care value must identify one parser position");
+          doc.open();
+          doc.write(html.slice(0, at));
+          // Install after the bridge: it receives the refresh first, while
+          // the original parser still has these same facts left to read.
+          const refreshed = (event: MessageEvent) => {
+            if (event.source !== view.parent || event.data?.type !== "markup") return;
+            view.removeEventListener("message", refreshed);
+            const state = doc.readyState;
+            doc.write(html.slice(at));
+            doc.close();
+            resolve(state);
+          };
+          view.addEventListener("message", refreshed);
+        }),
+    );
+    expect(parseState).toBe("loading");
+    await expect(facts.care).toHaveCount(1);
+    await expect(facts.change).toHaveCount(1);
+    await expect(facts.checks).toHaveCount(1);
+
     // The card grows into place as it arrives; the press goes where it rests.
     await atRest(page.locator("[data-card-facts]"));
 

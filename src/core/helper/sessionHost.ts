@@ -6,6 +6,7 @@ import {
   cardTypefaceNames,
   parseCardTypefaceFileName,
 } from "@shared/cardPictures";
+import type { CardPicture } from "@shared/cards";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
 import { keepsCardTypefaces, type WorkInvokeChannel } from "@shared/ipc";
@@ -164,6 +165,7 @@ const FORWARDED_TOOLS = new Set([
   "read_workflow",
   "github_read",
   "github_write",
+  "prepare_change",
   "open_change",
   "check_change",
   "download_artifact",
@@ -797,6 +799,32 @@ export class SessionHost {
     const text = async (channel: WorkInvokeChannel, fields: object) =>
       toolTextSchema.parse(await this.call(held, channel, { callId: randomUUID(), ...fields }))
         .text;
+    const sendPictures = async (pictures: readonly CardPicture[]) => {
+      // Each picture's bytes first, so the home holds them when it shows the card.
+      for (const picture of pictures) {
+        const { extension, data } = this.options.tasks.picture(held.task, picture.id);
+        await this.call(held, "inf:work:picture", {
+          callId: randomUUID(),
+          id: picture.id,
+          extension,
+          data: data.toString("base64"),
+        });
+        // A poster's recording follows it, a piece at a time.
+        if (!picture.demo) continue;
+        const { id, kind } = picture.demo;
+        const recording = this.options.tasks.recording(held.task, id, kind);
+        for (let offset = 0; offset < recording.length; offset += CARD_MEDIA_PIECE_BYTES) {
+          await this.call(held, "inf:work:media", {
+            callId: randomUUID(),
+            id,
+            extension: kind,
+            offset,
+            size: recording.length,
+            data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
+          });
+        }
+      }
+    };
     return {
       taskId: held.task,
       cwd: folders.work,
@@ -820,29 +848,7 @@ export class SessionHost {
           );
         }
         // Each picture's bytes first, so the home holds them when it shows the card.
-        for (const picture of card.pictures ?? []) {
-          const { extension, data } = this.options.tasks.picture(held.task, picture.id);
-          await this.call(held, "inf:work:picture", {
-            callId: randomUUID(),
-            id: picture.id,
-            extension,
-            data: data.toString("base64"),
-          });
-          // A poster's recording follows it, a piece at a time.
-          if (!picture.demo) continue;
-          const { id, kind } = picture.demo;
-          const recording = this.options.tasks.recording(held.task, id, kind);
-          for (let offset = 0; offset < recording.length; offset += CARD_MEDIA_PIECE_BYTES) {
-            await this.call(held, "inf:work:media", {
-              callId: randomUUID(),
-              id,
-              extension: kind,
-              offset,
-              size: recording.length,
-              data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
-            });
-          }
-        }
+        await sendPictures(card.pictures ?? []);
         // Each project font its preview names, before the card too.
         for (const typeface of typefaces) {
           await this.call(held, "inf:work:typeface", {
@@ -893,6 +899,21 @@ export class SessionHost {
       },
       // The home opens, checks and merges with its own sign-in, once it has
       // brought the branch home; an artifact is written here before it answers.
+      onPrepareChange: async (story) => {
+        try {
+          await sendPictures(story.pictures);
+          return await text("inf:work:prepare-change", { input: story });
+        } finally {
+          await this.options.tasks
+            .discardCardCopies(
+              held.task,
+              story.assets.map((asset) => asset.file),
+            )
+            .catch(() => {
+              console.warn("Could not remove transferred story staging copies", held.task);
+            });
+        }
+      },
       onOpenChange: (input) => text("inf:work:open-change", { input }),
       onCheckChange: (input) => text("inf:work:check-change", { input: input ?? {} }),
       onDownloadArtifact: (input) => text("inf:work:download-artifact", { input }),

@@ -1,0 +1,269 @@
+import { createHash } from "node:crypto";
+import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
+import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
+import { githubAttachmentUrl } from "./providers/github/attachments";
+
+export function presentationRegionMarkers(taskId: string): { start: string; end: string } {
+  if (!/^[A-Za-z0-9_-]+$/.test(taskId)) throw new Error("Invalid story task identity.");
+  return {
+    start: `<!-- infinitary-story:${taskId}:start -->`,
+    end: `<!-- infinitary-story:${taskId}:end -->`,
+  };
+}
+
+/** Deliberately plain, escaped author prose; general card HTML is never scraped or exported. */
+export function presentationHtmlText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+function markdown(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&")
+    .replaceAll("\n", " ");
+}
+const versionWords = (story: ChangePresentation) =>
+  `Story ${story.revision} · demonstrated version ${story.head}`;
+
+/** GitHub ignores video widths; only picture-only pairs can safely sit side by side. */
+function adjacentPictures(
+  story: ChangePresentation,
+  view: ChangePresentation["views"][number],
+  role: "before" | "after",
+): boolean {
+  return (
+    view.layout === "adjacent" &&
+    view[role].every((entry) =>
+      story.assets.find((asset) => asset.id === entry.asset)?.mediaType.startsWith("image/"),
+    )
+  );
+}
+
+/** Bare recording URLs use GitHub's native player and its private-media signing. */
+export function presentationMarkdown(
+  story: ChangePresentation,
+  urls: ReadonlyMap<string, string>,
+  checks: "pending" | "passed",
+): string {
+  const media = (
+    entry: RetainedPresentationMedia,
+    caption: string,
+    isNew: boolean,
+    adjacent = false,
+  ) => {
+    const asset = story.assets.find((candidate) => candidate.id === entry.asset);
+    const url = githubAttachmentUrl(urls.get(entry.asset));
+    if (!asset || !url) throw new Error("The story has an unconfirmed attachment.");
+    const shown =
+      asset.mediaType === "video/mp4"
+        ? url
+        : adjacent
+          ? `<a href="${url}"><img src="${url}" alt="${presentationHtmlText(entry.alt)}" width="320"></a>`
+          : `![${markdown(entry.alt)}](${url})`;
+    return [
+      isNew ? "**New**" : "",
+      shown,
+      markdown(caption),
+      asset.mediaType === "video/mp4" ? markdown(entry.alt) : "",
+      entry.applicability ? `Evidence applicability: ${markdown(entry.applicability)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  };
+  const paragraphs = (lines: string[]) => lines.map(markdown).join("\n\n");
+  const views = (role: "before" | "after") =>
+    story.views
+      .map((view) => {
+        if (!view[role].length) return "";
+        const adjacent = adjacentPictures(story, view, role);
+        const cells = view[role].map((entry) =>
+          media(entry, view.caption, view.kind === "new", adjacent),
+        );
+        return adjacent
+          ? `<table><tr>\n${cells.map((cell) => `<td width="50%">\n\n${cell}\n\n</td>`).join("\n")}\n</tr></table>`
+          : cells.join("\n\n");
+      })
+      .join("\n\n");
+  const actions = story.requiredActions
+    .map((action) =>
+      [
+        `### ${markdown(action.title)}`,
+        `For: ${markdown(action.target)}`,
+        markdown(action.consequence),
+        action.instructions.map((line, index) => `${index + 1}. ${markdown(line)}`).join("\n"),
+        `Complete when: ${markdown(action.criterion)}`,
+        action.prerequisites.length
+          ? `Prerequisites: ${action.prerequisites.map(markdown).join(", ")}`
+          : "",
+        action.completion.kind === "manual"
+          ? `Confirmation: ${markdown(action.completion.label)}`
+          : `Required device version: ${markdown(action.completion.deviceId)} ${markdown(action.completion.minVersion)}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    )
+    .join("\n\n");
+  const { start, end } = presentationRegionMarkers(story.taskId);
+  return [
+    start,
+    "## Why",
+    paragraphs(story.why),
+    "## What changed",
+    paragraphs(story.whatChanged),
+    "## Before",
+    paragraphs(story.before),
+    views("before"),
+    "## After",
+    paragraphs(story.after),
+    views("after"),
+    story.noPicture ? `No pictures: ${markdown(story.noPicture)}` : "",
+    "### Verified",
+    paragraphs(story.verification),
+    checks === "pending"
+      ? "Checks are pending at this publication."
+      : "The checks passed for this version at publication.",
+    versionWords(story),
+    "### Risk",
+    [
+      "| Dimension | Level | Why |",
+      "| --- | --- | --- |",
+      ...RISK_DIMENSIONS.map(
+        (dimension) =>
+          `| ${RISK_WORDS[dimension].label} | ${story.risk[dimension].level} | ${markdown(story.risk[dimension].why)} |`,
+      ),
+    ].join("\n"),
+    "### Required actions",
+    actions || "None.",
+    "### Not done",
+    story.unfinished.length ? paragraphs(story.unfinished) : "Nothing remains.",
+    end,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** INF-228 F2: a squash carries the author's summary, not the evidence presentation. */
+export function presentationCommitMessage(
+  story: Pick<ChangePresentation, "whatChanged" | "projectText">,
+): string {
+  // Conventional footers are structured project text, not scraped rendered Markdown.
+  // Keep their continuation lines so the release reader and people retain the full warning.
+  const footer = /^BREAKING[ -]CHANGE:[^\r\n]*(?:\r?\n[^\r\n]+)*/m.exec(story.projectText)?.[0];
+  return [...story.whatChanged, ...(footer ? [footer.replaceAll("\r\n", "\n")] : [])].join("\n\n");
+}
+
+/** The exact same story; CardService keeps the risk chart, requirements and merge controls. */
+export function presentationCardBody(story: ChangePresentation): string {
+  const text = presentationHtmlText;
+  const paragraphs = (lines: string[]) => lines.map((line) => `<p>${text(line)}</p>`).join("\n");
+  const assetUrl = (id: string) => {
+    const asset = story.assets.find((candidate) => candidate.id === id);
+    if (!asset) throw new Error("The story has missing retained media.");
+    return `app-frame://${asset.mediaType === "video/mp4" ? "media" : "images"}/${asset.file}`;
+  };
+  const views = (role: "before" | "after") =>
+    story.views
+      .map((view) => {
+        const figures = view[role]
+          .map((entry) => {
+            const asset = story.assets.find((candidate) => candidate.id === entry.asset);
+            const poster = story.assets.find(
+              (candidate) => candidate.id === (entry.poster ?? entry.asset),
+            );
+            if (!asset || !poster) throw new Error("The story has missing retained media.");
+            if (entry.poster && !asset.durationMs)
+              throw new Error("The recording's measured duration is missing.");
+            const demo = entry.poster
+              ? ` data-inf-demo="${assetUrl(entry.asset)}" data-inf-demo-duration="${asset.durationMs}"`
+              : "";
+            return `<figure${view.kind === "new" ? " data-inf-new" : ""}${demo}><img src="${assetUrl(entry.poster ?? entry.asset)}" alt="${text(entry.alt)}" width="${poster.width}" height="${poster.height}"><figcaption>${text(view.caption)}</figcaption></figure>${entry.applicability ? `<p>Evidence applicability: ${text(entry.applicability)}</p>` : ""}`;
+          })
+          .join("\n");
+        return figures && adjacentPictures(story, view, role)
+          ? `<div class="inf-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">${figures}</div>`
+          : figures;
+      })
+      .join("\n");
+  return [
+    "<h3>Why</h3>",
+    paragraphs(story.why),
+    "<h3>What changed</h3>",
+    paragraphs(story.whatChanged),
+    "<h3>Before</h3>",
+    paragraphs(story.before),
+    views("before"),
+    "<h3>After</h3>",
+    paragraphs(story.after),
+    views("after"),
+    story.noPicture ? `<p data-inf-no-picture>${text(story.noPicture)}</p>` : "",
+    "<h4>Verified</h4>",
+    paragraphs(story.verification),
+    `<p class="inf-mono">${text(versionWords(story))}</p>`,
+    story.unfinished.length ? `<h4>Not done</h4>${paragraphs(story.unfinished)}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** GitHub’s web editor changes line endings, not the person’s words. */
+export const presentationLines = (text: string): string => text.replaceAll("\r\n", "\n");
+
+/** Missing or duplicate boundaries make the whole body the text a person must review. */
+function presentationBounds(
+  body: string,
+  taskId: string,
+): { first: number; end: number } | undefined {
+  const { start, end } = presentationRegionMarkers(taskId);
+  const first = body.indexOf(start);
+  const last = body.indexOf(end);
+  if (
+    first < 0 ||
+    last < first ||
+    body.indexOf(start, first + start.length) >= 0 ||
+    body.indexOf(end, last + end.length) >= 0
+  )
+    return undefined;
+  return { first, end: last + end.length };
+}
+
+/** Read the exact review text, including the whole body when its boundaries were edited. */
+export function readPresentationRegion(body: string, taskId: string): string {
+  body = presentationLines(body);
+  const bounds = presentationBounds(body, taskId);
+  return bounds ? body.slice(bounds.first, bounds.end) : body;
+}
+
+/** Preserve surrounding words and normalize GitHub web-editor line endings. */
+export function replacePresentationRegion(
+  body: string,
+  previous: string,
+  next: string,
+  taskId: string,
+): string {
+  body = presentationLines(body);
+  previous = presentationLines(previous);
+  next = presentationLines(next);
+  const bounds = presentationBounds(body, taskId);
+  const old = readPresentationRegion(body, taskId);
+  if (old !== previous)
+    throw new Error(`Someone edited the generated story. Show the captain the saved story and this current ${bounds ? "region" : "whole description"} on a card; only after a deliberate republish choice pass this exact text as recovery.replaceRegion.${bounds ? "" : " Its markers are missing or duplicated: republishing keeps all existing text, removes only this story's marker comments and appends a restored generated section."}
+${old}`);
+  if (bounds) return body.slice(0, bounds.first) + next + body.slice(bounds.end);
+  // With no unambiguous boundary, no prose is ours to delete. Restore one
+  // marked section while retaining even the old story's unmarked words.
+  const { start, end } = presentationRegionMarkers(taskId);
+  const preserved = body.replaceAll(start, "").replaceAll(end, "");
+  return [preserved, next].filter(Boolean).join("\n\n");
+}
+
+/** Bind a kept approval to its content, independently of the demonstrated version. */
+export function presentationContentHash(story: ChangePresentation): string {
+  const { head: _head, revision: _revision, ...content } = story;
+  return createHash("sha256").update(JSON.stringify(content)).digest("hex");
+}

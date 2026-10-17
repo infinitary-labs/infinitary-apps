@@ -175,3 +175,10 @@ Never drop the table or rewrite its rows to recover from a capture problem.
 Author-directed replies also commit their bounded named answers in the existing `message_ref` observation.
 Basis handoffs read the newest captain-submitted answers from action or message observations; legacy resolution-only answers remain readable.
 Draft control changes alone create no submission.
+
+## Evidence shared with a future GitHub pull request
+
+A prepared change story selects publishable evidence explicitly and reuses the retained card-media copies; it never exports an arbitrary card or its thread.
+The saved revision supplies the same views, captions, media, verification, risk explanations, required actions and unfinished work to the pull request and completion card (`docs/forge.md`, "Saved change stories").
+The pull request uses confirmed native attachments; the card uses the retained local files and its inspected recording posters.
+The story and receipts survive restart, while task close never deletes hosted attachments.

@@ -119,6 +119,7 @@ export class GithubGatewayService {
       if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
         await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
       }
+      this.guardPresentationWrite(taskId, forge, route, parsed);
       const why = this.askReason(taskId, route, target);
       if (why) return this.keepAsk(taskId, target, route, body, why);
       const response = await this.send(taskId, api, route.method, route.path, body);
@@ -221,6 +222,12 @@ export class GithubGatewayService {
           () => forge.defaultBranch(),
         );
       }
+      this.guardPresentationWrite(
+        taskId,
+        forge,
+        route,
+        ask.body === undefined ? undefined : JSON.parse(ask.body),
+      );
       this.spend(taskId, target.api);
     } catch (caught) {
       return done({ kind: "refused", why: messageOf(caught) });
@@ -241,6 +248,38 @@ export class GithubGatewayService {
       { kind: "answered", status: response.status, requestId: response.requestId },
       `${render(response, target.api)}${await this.afterWrite(taskId, target, route, response)}`,
     );
+  }
+
+  /** Raw JSON writes cannot bypass this task's all-attachments-first publication barrier. */
+  private guardPresentationWrite(
+    taskId: string,
+    forge: Forge,
+    route: ApiRoute,
+    body: unknown,
+  ): void {
+    if (!route.own || forge.host !== "github.com" || !forge.attachments) return;
+    const record = this.options.tasks.get(taskId);
+    if (record?.shape?.deliverable === "answer") return;
+    if (route.method === "POST" && route.rest === "pulls")
+      throw new ForgeError(
+        "refused",
+        "Use prepare_change and open_change to open this task's pull request only after all selected attachments are confirmed.",
+      );
+    const ledger = record?.delivery?.presentation;
+    const number =
+      ledger?.publication?.number ?? ledger?.published?.number ?? record?.delivery?.prNumber;
+    if (
+      ledger &&
+      route.method === "PATCH" &&
+      (route.rest === `pulls/${number}` || route.rest === `issues/${number}`) &&
+      body &&
+      typeof body === "object" &&
+      "body" in body
+    )
+      throw new ForgeError(
+        "refused",
+        "Update this task's description through its saved story with open_change; raw writes cannot replace its evidence region.",
+      );
   }
 
   /**

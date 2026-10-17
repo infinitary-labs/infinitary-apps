@@ -12,6 +12,7 @@ import {
 import type { DeviceView } from "@shared/devices";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import type { ComputerForges } from "@shared/signIns";
 import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -911,6 +912,109 @@ describe("a task that runs on a computer that runs work", () => {
           text: "Not yours.",
         }),
       ).rejects.toThrow(NO_PLACED_TASK);
+  });
+
+  it("prepares a story on the home after transferring the work computer's inspected pictures, without showing a card or uploading (INF-92)", async () => {
+    const project = await gitProject();
+    const upload = vi.fn(async () => {
+      throw new Error("Preparation uploads nothing");
+    });
+    const at = await world(() =>
+      Object.assign(project.forge(Buffer.alloc(0)), {
+        changeFor: async () => null,
+        attachments: {
+          destination: async () => ({
+            host: "github.com",
+            projectId: 1,
+            fullName: "octo/website",
+            visibility: "private" as const,
+          }),
+          upload,
+        },
+      }),
+    );
+    const home = at.home();
+    expect(
+      home.placed.takesChangePresentations(at.deviceId),
+      JSON.stringify(home.devices.version(at.deviceId)),
+    ).toBe(true);
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    model([{ text: "Ready to prepare." }]);
+    await at.start("t-story", "Prepare the inspected change story.", repo.id);
+    await expect.poll(() => home.tasks.get("t-story")?.activity).toBe("idle");
+    const source = readFileSync("release-notes/pictures/action-reply-line-dark.webp");
+    const evidence = at.folders("t-story").evidence;
+    mkdirSync(evidence, { recursive: true });
+    const picture = join(evidence, "reply.webp");
+    writeFileSync(picture, source);
+    const risk = Object.fromEntries(
+      RISK_DIMENSIONS.map((dimension) => [
+        dimension,
+        { level: "low", why: `The ${dimension} assessment for this fixture.` },
+      ]),
+    ) as RiskDeclaration;
+    model([
+      {
+        tools: [
+          {
+            name: "prepare_change",
+            args: {
+              story: {
+                title: "The change shows its evidence",
+                publishable: true,
+                base: project.main,
+                head: project.main,
+                why: ["The pull request and card should show the same evidence."],
+                whatChanged: ["The task retains the selected picture."],
+                before: ["The description had text alone."],
+                after: ["The description has a picture."],
+                views: [
+                  {
+                    id: "reply",
+                    kind: "new",
+                    caption: "The reply",
+                    before: [],
+                    after: [
+                      {
+                        path: picture,
+                        alt: "The task reply in the dark appearance",
+                        inspected: true,
+                        captureHead: project.main,
+                      },
+                    ],
+                  },
+                ],
+                verification: ["Opened the selected picture."],
+                risk,
+                requiredActions: [],
+                unfinished: [],
+              },
+            },
+          },
+        ],
+      },
+      { text: "The story is prepared." },
+    ]);
+    await home.supervisor.steerCrewmate("t-story", "Prepare the selected story now.");
+    await expect.poll(() => home.tasks.get("t-story")?.outcome).toBe("The story is prepared.");
+    expect(
+      home.tasks.changePresentation("t-story")?.revisions.length,
+      said(api.requests.at(-1)),
+    ).toBe(1);
+    const story = home.tasks.changePresentation("t-story")?.revisions[0];
+    const asset = story?.assets[0];
+    if (!asset) throw new Error("No retained picture reached home");
+    expect(readFileSync(join(crewmateCardPicturesDir(home.paths, "t-story"), asset.file))).toEqual(
+      source,
+    );
+    expect(story?.head).toBe(project.main);
+    // INF-169 F13: only the home retains prepared copies after transfer.
+    expect(readdirSync(at.folders("t-story").cards)).toEqual([]);
+    expect(readFileSync(picture)).toEqual(source);
+    expect(home.tasks.changePresentation("t-story")?.receipts[0]?.state).toBe("prepared");
+    expect(upload).not.toHaveBeenCalled();
+    expect(home.cards()).toEqual([]);
   });
 
   it("works in a working copy cloned there, opens its change from here once its branch is home, and takes its kept work home before that computer deletes the copy", async () => {

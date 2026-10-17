@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "./cards";
 import {
+  CHANGE_PRESENTATIONS_SINCE,
   CORE_INVOKE_CHANNELS,
   CORE_PUSH_CHANNELS,
   contractAccess,
@@ -13,6 +14,7 @@ import {
   PUSH_CHANNELS,
   parseInvokeRequest,
   pushContract,
+  speaksChangePresentations,
   takesWork,
   VIEW_INVOKE_CHANNELS,
   WORK_INVOKE_CHANNELS,
@@ -355,6 +357,7 @@ describe("ipc contract", () => {
       "inf:work:media",
       "inf:work:open-change",
       "inf:work:picture",
+      "inf:work:prepare-change",
       "inf:work:progress",
       "inf:work:read-workflow",
       "inf:work:record-knowledge",
@@ -412,4 +415,12 @@ describe("the version rule (docs/contract.md)", () => {
     expect(contractAccess(`${Number(major) - 1}.0.0`)).toBe("full");
     expect(contractAccess(`${Number(major) + 1}.0.0`)).toBe("read");
   });
+});
+
+// INF-169 F8: already published computers do not advertise a channel they never had.
+it("gates shared stories above every previously published 8.x version", () => {
+  for (const version of ["8.7.0", "8.8.0", "8.9.0", "8.10.0", "8.11.0", "8.12.0"])
+    expect(speaksChangePresentations(version)).toBe(false);
+  expect(speaksChangePresentations(CHANGE_PRESENTATIONS_SINCE)).toBe(true);
+  expect(speaksChangePresentations(PROTOCOL_VERSION)).toBe(true);
 });

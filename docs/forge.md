@@ -605,3 +605,81 @@ For a change it opens or puts in, that base is measured from the fetched `origin
 Merge commits are skipped: git names them, and they bring in no work of the branch's own.
 Plain Git and local-only delivery validate incoming commits before fast-forwarding, including reviewer work.
 The app cannot intercept a raw push from a terminal; this is not a hosted required check.
+
+## Saved change stories
+
+A future github.com pull request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
+`prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
+It records Why, What changed, Before, After, ordered view identities, captions, capture versions, verification, all seven risk explanations, required actions and unfinished work.
+Changed views have Before and After media; new views have only After; an invisible change has no views and an explicit no-picture reason.
+An author may group two media as an adjacent view, with the same ordering in both outputs.
+Picture-only pairs appear side by side; a pair containing a recording stacks in both outputs because GitHub's native players ignore the requested width and overflow a two-column table.
+The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
+Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.
+Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication.
+A saved story's squash commit message is its plain `whatChanged` summary, followed by any conventional `BREAKING CHANGE:` (or `BREAKING-CHANGE:`) footer and continuation lines in the current surrounding project text.
+That text begins as `projectText`; the merge preserves a footer the person later adds outside the verified story region too.
+Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
+
+`stageChangePresentation` reuses the card media reader and retains exact validated files in the task's card-media folder, outside its working copy and temporary folder.
+A recording keeps its inspected local poster and must be a playable silent H.264 MP4 below 10,000,000 bytes; it is never silently replaced by a still or GIF.
+The existing image, total-size, duration and resolution limits still apply, and no conversion happens silently.
+`TaskService` owns the revisions, attachment states and last complete publication in `TaskDelivery.presentation`.
+Only the newest revision and the last published revision remain (or the unresolved opening revision while its outcome is unknown); replacing them removes their otherwise unreferenced copied media, while receipts remain reusable.
+Each receipt is scoped to the host, numeric project identity, full project name, visibility, content digest and media type.
+The paired computer transfers retained pictures and recordings through the existing picture and chunked-media routes before asking the home to prepare the story.
+`CHANGE_PRESENTATIONS_SINCE` gates that tool on work computers; an older computer must be updated before opening a new github.com PR, rather than bypassing the publication barrier.
+The home opens the PR using its own sign-in; no sign-in moves to the work computer.
+The work computer discards its staging copies after transfer; the home retains the newest and last published story copies.
+A refused preparation discards unretained staging copies even before host or legacy-PR validation, or when another story operation is running; it never removes that active operation's files.
+Completion cards receive independently named copies of the validated media in the task's `cards/` folder, so later story pruning leaves shown cards and their history intact.
+A staging refusal removes every newly minted picture and recording, and a refused completion card removes its new copies unless the card was already persisted.
+
+`open_change` takes the prepared `presentation` revision instead of `body` for a new github.com PR.
+The native GitHub attachment capability checks destination identity, public/private/internal visibility and write/maintain/admin permission before each upload.
+It sends raw bytes once to `https://uploads.github.com/user-attachments/assets`, with the short names `recording.mp4` or `picture.<format>` and the app's own sign-in; it refuses redirects, unsupported credentials and non-native returned URLs.
+GitHub shows an upload's name above its player, so the name is readable and never contains a source path or content hash.
+The digest still owns receipt identity; changing the display name never resends a confirmed attachment, whose original hosted name stays unchanged.
+Recordings always use bare attachment-URL paragraphs, not HTML video elements, so GitHub supplies its native player and rewrites private media to signed, temporary links.
+An HTML `video src` would stay unsigned in a private project and require a signed-in viewer with access; the renderer does not emit that form.
+Internal projects use the same sign-in-gated native media as private projects; the exact visibility remains in receipt identity so audience changes are refused.
+Saved receipts keep canonical GitHub attachment URLs, never the temporary links GitHub renders.
+Every selected file must have a confirmed receipt before the PR opens, including a draft, or an existing story is replaced.
+The publication barrier rereads the committed and pushed head, destination and retained hashes after uploading.
+Raw JSON gateway writes cannot create an own-project PR or replace this task's saved description around that barrier.
+No setting, repeated publication approval, evidence commit, public-storage fallback or Infinitary-hosted fallback exists.
+An access or validation failure before sending is a failed upload, not an uncertain write.
+A write whose response is lost stays uncertain across restart and is never automatically replayed.
+A matching PR body can resolve a lost publication response even after a later push; that confirmation retains the earlier demonstrated version and cannot qualify the new version for completion.
+GitHub offers no supported attachment lookup by digest for a lost receipt; the tool names the uncertain digest and discloses a possible orphan rather than inventing a URL or claiming absence proves failure.
+The crewmate shows that disclosure on a card, and only after the captain chooses another attempt sends that digest in `recovery.retryUploads`; the receipt retains the possible-orphan fact.
+An uncertain opening is read first, then an explicit `recovery.retryOpening` can resend when no open PR exists, relying on GitHub's one-open-PR-per-head-and-base constraint.
+That deliberate retry also permits preparing a newer version while retaining the prior opening receipt, so a late first response or duplicate-opening refusal is reconciled rather than mistaken for a legacy PR.
+If an uncertain replacement left the exact last published region in place, the host restores that confirmed state and a deliberate later `open_change` retries its idempotent replacement.
+A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR on GitHub.
+Hosted files can outlive a failed or abandoned opening, and local cleanup never deletes them.
+
+The first published description says checks are pending.
+After checks finish, the author updates verification in a new story revision and deliberately republishes it before offering completion.
+A replacement keeps the original Before base and evidence; After needs fresh captures or an explicit applicability declaration for the current committed version.
+Confirmed receipts are reused after restart without another upload, while an open PR keeps its last complete story until the replacement is ready.
+The generated region carries stable markers and a last-published hash; replacement normalizes CRLF to LF, preserves the surrounding words, and refuses edits inside it.
+The refusal returns the edited region as data: the crewmate shows it beside the saved story on a card, then passes that exact region as `recovery.replaceRegion` only after a republish choice.
+Missing or duplicated markers make the whole current description the review text, including an empty description.
+After that exact-text-bound choice, the host removes only this story's marker comments, preserves all existing prose (including the old unmarked story) and appends one restored generated section.
+A newer edit refuses the earlier choice; no ordinary raw body write through either `pulls/{number}` or `issues/{number}` bypasses this boundary.
+GitHub supplies no atomic conditional body write, so the adapter rereads before and after writing; a simultaneous human edit can still race those reads.
+An ambiguous PR write is reconciled by branch, PR number when known, and exact generated region before any further write; a later push does not prevent confirming the earlier write.
+Missing or mismatched evidence holds the completion offer and the final own-task merge boundary independently of checks and merge authority.
+The completion call gives `emit_card presentation` and one merge action, without a second body, risk declaration or required-action list.
+CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.
+
+Existing PRs are not rewritten into this format.
+GitLab delivery, GitHub Enterprise Server, self-hosted GitLab, plain Git, local-only delivery, answer cards and release-note hero pictures are unchanged.
+The GitLab continuation adds its native capability and explicit private-media protection separately.
+
+Preparation and ordinary publication reject tracked uncommitted changes, not untracked downloads such as `.infinitary-artifacts` archives.
+The completion card reads its local committed version and retained files once; merge checks compare the remote PR head with the published head, not a work computer's dirty copy or availability.
+An accepted conflict-only repair republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
+The completion offer binds a content hash; only the host's exact conflict-only clone inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
+The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.

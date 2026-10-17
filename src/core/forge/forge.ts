@@ -1,6 +1,7 @@
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { ForgeApi } from "./api";
+import type { ForgeAttachments } from "./attachments";
 import type { ForgeWorkflows } from "./workflows";
 
 /**
@@ -54,8 +55,10 @@ export type ForgeChange = {
   headSha: string;
   /** Host title; required on a pull or merge request, absent for plain Git branches. */
   title?: string;
-  /** Host body, retained for breaking-change footers. */
+  /** Host body, retained for legacy delivery and breaking-change footers. */
   body?: string;
+  /** Plain text from the verified saved story, never its rendered description. */
+  squashMessage?: string;
 };
 
 /**
@@ -181,6 +184,18 @@ export class ForgeError extends Error {
   }
 }
 
+/** A write's owner distinguishes a definite refusal from a response lost after sending. */
+export class ForgeWriteError extends ForgeError {
+  constructor(
+    readonly outcome: "failed" | "uncertain",
+    failure: ForgeFailure,
+    message: string,
+  ) {
+    super(failure, message);
+    this.name = "ForgeWriteError";
+  }
+}
+
 /** The host refused who the app is: no sign-in, or one it no longer accepts. */
 export function isSignInForgeFailure(caught: unknown): boolean {
   return caught instanceof ForgeError && caught.failure === "sign-in";
@@ -204,6 +219,8 @@ export interface Forge {
   readonly hasChecks: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */
   readonly workflows?: ForgeWorkflows;
+  /** Native evidence attachments, offered only on hosts qualified for publication. */
+  readonly attachments?: ForgeAttachments;
   /** Optional project-scoped JSON gateway; absent on hosts without a REST API. */
   readonly api?: ForgeApi;
   /** The person's projects on this host, newest first. */
@@ -215,6 +232,10 @@ export interface Forge {
   defaultBranch(): Promise<string>;
   /** Offer the branch as a proposed change; on a plain host this sends it up. */
   openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange>;
+  /** Replace a story only if its just-read body and code version still match. */
+  updateChangeBody?(change: ForgeChange, body: string): Promise<void>;
+  /** Read the pushed branch before opening a story-bound change. */
+  branchHead?(branch: string): Promise<string>;
   /** The open proposed change for a branch, or null when there is none. */
   changeFor(branch: string): Promise<ForgeChange | null>;
   /** The checks on the change's head version, read by the one green rule. */

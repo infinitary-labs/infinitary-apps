@@ -34,6 +34,13 @@ export type {
 } from "./api";
 export { API_CALLS_PER_TASK, API_RESPONSE_MAX_BYTES, nextPagePath, parseApiRequest } from "./api";
 export type {
+  AttachmentDestination,
+  AttachmentMediaType,
+  ForgeAttachments,
+  UploadAttachment,
+} from "./attachments";
+export { AttachmentUploadError, sameAttachmentDestination } from "./attachments";
+export type {
   Forge,
   ForgeBypass,
   ForgeChange,
@@ -52,12 +59,24 @@ export type {
 export {
   describeCheckState,
   ForgeError,
+  ForgeWriteError,
   isAcceptedCheckState,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
   overallOfChecks,
 } from "./forge";
+export {
+  presentationCardBody,
+  presentationCommitMessage,
+  presentationContentHash,
+  presentationHtmlText,
+  presentationLines,
+  presentationMarkdown,
+  presentationRegionMarkers,
+  readPresentationRegion,
+  replacePresentationRegion,
+} from "./presentation";
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";
 export { gitlabReleaseFileCalls } from "./providers/gitlab/api";

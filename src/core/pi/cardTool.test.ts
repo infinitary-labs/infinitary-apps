@@ -191,6 +191,7 @@ describe("createEmitCardTool", () => {
       "holds_place",
       "reply",
       "actions",
+      "presentation",
       "risk",
       "asking",
       "design_only",
@@ -216,6 +217,32 @@ describe("createEmitCardTool", () => {
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
     await tool.execute("t1", { title: "Note", body: "x", task_id: "t9", standalone: true });
     expect(onCard).toHaveBeenCalledWith({ title: "Note", body: "x", actions: [] });
+  });
+
+  // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.
+  it("hands a saved-story completion to the home without accepting competing body or risk", async () => {
+    const onCard = vi.fn(() => "card-task-story");
+    const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
+    const params = {
+      title: "The story is ready",
+      presentation: 2,
+      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+    };
+    await tool.execute("t1", params);
+    expect(onCard).toHaveBeenCalledWith({
+      title: params.title,
+      body: "",
+      presentationRevision: 2,
+      actions: params.actions,
+    });
+    await expect(tool.execute("t2", { ...params, body: "A different account" })).rejects.toThrow(
+      /without body/,
+    );
+    await expect(tool.execute("t3", { ...params, risk: {} })).rejects.toThrow(/without body/);
+    await expect(tool.execute("t4", { ...params, actions: [] })).rejects.toThrow(
+      /one settle merge/,
+    );
+    expect(onCard).toHaveBeenCalledTimes(1);
   });
 
   it("takes a completion decision only with its risk, and risk on no other card (FI3-1128)", async () => {

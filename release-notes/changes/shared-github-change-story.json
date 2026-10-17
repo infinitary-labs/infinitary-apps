@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "shared-github-change-story",
+      "kind": "feature",
+      "title": "GitHub pull requests carry the same evidence as their merge cards",
+      "body": "New GitHub pull requests and their merge cards share one explanation, with the same pictures and recordings. Infinitary confirms every upload before opening the pull request, reuses confirmed uploads after a restart, and preserves text you add around its description. Pictures can sit side by side; recordings appear one below another so both stay visible.",
+      "area": "cards",
+      "noPicture": "The story spans GitHub and the app; one app picture cannot demonstrate that they share the same evidence.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

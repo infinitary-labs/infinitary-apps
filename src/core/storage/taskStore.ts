@@ -80,6 +80,9 @@ export type CompletionOffer = {
   offerId: string;
   headSha: string;
   prNumber: number;
+  /** The saved story this offer showed, when it uses one. */
+  presentationRevision?: number;
+  presentationContentHash?: string;
   at: number;
 };
 
@@ -220,6 +223,8 @@ export type MergeAuthorization = {
 
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
+  /** Versioned public story and native-upload receipts; only TaskService writes them. */
+  presentation?: import("@shared/changePresentation").ChangePresentationRecord;
   requiredActionOffer?: RequiredActionOffer;
   captainAction?: CaptainAction;
   /** Policies frozen with the closed outcome, never a routing/dispatch stamp. */

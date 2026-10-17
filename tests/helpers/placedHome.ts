@@ -7,11 +7,12 @@ import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import type { Forge, ForgeRepo, ReadWorkflowInput } from "../../src/core/forge";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
+import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
 import { PrCiService } from "../../src/core/orchestrator/prCi";
 import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import { WorkflowEvidenceService } from "../../src/core/orchestrator/workflowEvidence";
-import { type AppPaths, appPathsFor } from "../../src/core/paths";
+import { type AppPaths, appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
 import { PlacedSessions } from "../../src/core/placed/placedSessions";
 import { WorkDevices } from "../../src/core/placed/workDevices";
 import type { QuotaCatalogModel } from "../../src/core/quota/auth";
@@ -232,12 +233,20 @@ export function startPlacedHome(options: {
     },
   };
   const forgeFor = options.forgeFor;
-  const prCi = forgeFor
+  const prCi: PrCiService | undefined = forgeFor
     ? new PrCiService({
         tasks,
         repos,
         forgeFor,
-        bringBranchHome: (taskId) => placed.bringBranchHome(taskId),
+        bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
+        presentations: new ChangePresentations({
+          tasks,
+          mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
+          head: (taskId) => {
+            if (!prCi) throw new Error("No delivery service");
+            return prCi.presentationHead(taskId);
+          },
+        }),
         now,
       })
     : undefined;
@@ -265,8 +274,16 @@ export function startPlacedHome(options: {
     repos,
     ...(prCi
       ? {
-          openChange: (taskId: string, input: { title: string; body: string }) =>
-            prCi.open(taskId, input),
+          prepareChange: (
+            taskId: string,
+            input: import("@shared/changePresentation").StagedChangePresentation,
+          ) => prCi.preparePresentation(taskId, input),
+          completionPresentation: (taskId: string, revision: number) =>
+            prCi.completionPresentation(taskId, revision),
+          openChange: (
+            taskId: string,
+            input: import("@shared/changePresentation").OpenChangeInput,
+          ) => prCi.open(taskId, input),
           checkChange: (taskId: string) => prCi.checkForCrew(taskId),
         }
       : {}),

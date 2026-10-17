@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { isAbsolute, join, resolve as resolvePath } from "node:path";
+import { dirname, isAbsolute, join, resolve as resolvePath } from "node:path";
 import { type AttachmentRef, attachmentWords } from "@shared/attachments";
 import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
@@ -629,7 +629,20 @@ export type CrewSupervisorOptions = {
    * `check_change` reads its checks through the app's sign-in, recorded
    * like check_pr_ci. Absent means neither tool is offered.
    */
-  openChange?: (taskId: string, input: { title: string; body: string }) => Promise<string>;
+  prepareChange?: (
+    taskId: string,
+    input: import("@shared/changePresentation").StagedChangePresentation,
+  ) => Promise<string>;
+  openChange?: (
+    taskId: string,
+    input: import("@shared/changePresentation").OpenChangeInput,
+  ) => Promise<string>;
+  completionPresentation?: (
+    taskId: string,
+    revision: number,
+  ) => Promise<
+    Pick<DeclaredCardInput, "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions">
+  >;
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
   readWorkflow?: (taskId: string, input: ReadWorkflowInput) => Promise<string>;
   downloadArtifact?: (taskId: string, input: DownloadArtifactInput) => Promise<string>;
@@ -4714,6 +4727,7 @@ export class CrewSupervisor {
     task: TaskRuntime,
   ): Pick<
     CrewmateSpec,
+    | "onPrepareChange"
     | "onOpenChange"
     | "onCheckChange"
     | "onReadWorkflow"
@@ -4722,12 +4736,30 @@ export class CrewSupervisor {
     | "onGithubWrite"
   > {
     if (this.isPersonalTask(task.id)) return {};
-    const { openChange, checkChange, readWorkflow, downloadArtifact, githubRead, githubWrite } =
-      this.options;
+    const {
+      prepareChange,
+      openChange,
+      checkChange,
+      readWorkflow,
+      downloadArtifact,
+      githubRead,
+      githubWrite,
+    } = this.options;
+    const machine = this.machineOf(task.id);
+    const canPrepare =
+      machine === LOCAL_MACHINE_ID || this.options.machines?.takesChangePresentations?.(machine);
     return {
       ...(openChange && checkChange && !this.isAnswerTask(task.id)
         ? {
-            onOpenChange: (input: { title: string; body: string }) => openChange(task.id, input),
+            ...(prepareChange && canPrepare
+              ? {
+                  onPrepareChange: (
+                    input: import("@shared/changePresentation").StagedChangePresentation,
+                  ) => prepareChange(task.id, input),
+                }
+              : {}),
+            onOpenChange: (input: import("@shared/changePresentation").OpenChangeInput) =>
+              openChange(task.id, input),
             onCheckChange: (input?: CheckChangeInput) => checkChange(task.id, input),
           }
         : {}),
@@ -6648,7 +6680,56 @@ export class CrewSupervisor {
    * stays synchronous whenever the gate does not apply, which is what most
    * of this file's tests exercise.
    */
-  private addCrewmateCard(task: TaskRuntime, input: DeclaredCardInput): string | Promise<string> {
+  private addCrewmateCard(
+    task: TaskRuntime,
+    input: DeclaredCardInput,
+    presentationChecked?: { revision: number; head: string },
+  ): string | Promise<string> {
+    if (input.presentationRevision !== undefined) {
+      const revision = input.presentationRevision;
+      if (
+        !this.options.completionPresentation ||
+        input.actions.length !== 1 ||
+        !input.actions[0] ||
+        settleEffectOf(input.actions[0])?.mode !== "merge"
+      )
+        throw new Error("A saved-story card is only a completion offer for this task.");
+      return this.options.completionPresentation(task.id, revision).then(async (story) => {
+        try {
+          const head = this.options.tasks.get(task.id)?.delivery?.presentation?.published?.head;
+          if (!head) throw new Error("The current story has not been published.");
+          const { presentationRevision: _revision, ...rest } = input;
+          return await this.addCrewmateCard(task, { ...rest, ...story }, { revision, head });
+        } catch (caught) {
+          const files = cardPictureFiles(story.body, this.options.paths.crewmatesDir);
+          // A late failure after persistence must not delete a shown card's own evidence.
+          const kept = cardPictureFiles(
+            this.cards.newestForTask(task.id)?.body ?? "",
+            this.options.paths.crewmatesDir,
+          );
+          const retained = new Set([...kept.pictures, ...kept.recordings]);
+          const dir = crewmateCardPicturesDir(this.options.paths, task.id);
+          await Promise.all(
+            [...files.pictures, ...files.recordings].map(async (file) => {
+              if (dirname(file) !== dir || retained.has(file)) return;
+              await rm(file, { force: true }).catch((error: unknown) => {
+                console.warn("Could not remove refused completion story copy", error);
+              });
+            }),
+          );
+          throw caught;
+        }
+      });
+    }
+    const ownPresentation = this.options.tasks.get(task.id)?.delivery?.presentation;
+    if (
+      ownPresentation &&
+      input.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
+      !presentationChecked
+    )
+      throw new Error(
+        "Use presentation on the completion card so it shows the current published story, not a second account of the change.",
+      );
     // The task's holds speak before the card's shape: a card the task
     // cannot take at all is refused for that, not for its headings.
     if (
@@ -6807,6 +6888,18 @@ export class CrewSupervisor {
       if (!current || TaskService.isClosed(current)) {
         throw new Error("Card refused: this task has closed.");
       }
+      if (presentationChecked) {
+        const ledger = current.delivery?.presentation;
+        if (
+          ledger?.revisions.at(-1)?.revision !== presentationChecked.revision ||
+          ledger.publication?.state !== "confirmed" ||
+          ledger.published?.head !== presentationChecked.head ||
+          current.delivery?.headSha !== presentationChecked.head
+        )
+          throw new Error(
+            "The story or the checked code changed before the completion card could be shown. Publish the current story first.",
+          );
+      }
       // The model rides beside the meta line as its own chip (the
       // captain's 1C, 2026-09-28), and where the task runs as its own
       // words, never inside it.
@@ -6827,7 +6920,7 @@ export class CrewSupervisor {
         )
       ) {
         if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
-          this.recordCompletionOffer(task.id, id, checked);
+          this.recordCompletionOffer(task.id, id, checked, presentationChecked?.revision);
         const offered = this.cards.get(id);
         if (card.requiredActions !== undefined && offered?.offerId)
           this.options.tasks.declareRequiredActions(task.id, {
@@ -7082,7 +7175,12 @@ export class CrewSupervisor {
    * baseline a click on exactly that offer approves. An offer that shows
    * the same content at another head is ambiguous and keeps no baseline.
    */
-  private recordCompletionOffer(taskId: string, cardId: string, checked: boolean): void {
+  private recordCompletionOffer(
+    taskId: string,
+    cardId: string,
+    checked: boolean,
+    presentationRevision?: number,
+  ): void {
     this.settle.endAuthorization(taskId, "superseded", "its crewmate put up a new completion card");
     const record = this.options.tasks.get(taskId);
     const offerId = this.cards.get(cardId)?.offerId;
@@ -7097,7 +7195,22 @@ export class CrewSupervisor {
     this.options.tasks.recordDelivery(taskId, {
       completionOffers: ambiguous
         ? rest
-        : [...rest, { cardId, offerId, headSha: head, prNumber, at: this.now() }].slice(-4),
+        : [
+            ...rest,
+            {
+              cardId,
+              offerId,
+              headSha: head,
+              prNumber,
+              ...(presentationRevision
+                ? {
+                    presentationRevision,
+                    presentationContentHash: record.delivery?.presentation?.published?.contentHash,
+                  }
+                : {}),
+              at: this.now(),
+            },
+          ].slice(-4),
     });
   }
 
@@ -9526,6 +9639,25 @@ export class CrewSupervisor {
     // An answer task closes on this very resolution (Task B), so its
     // crewmate is gone: the choice has nowhere to round-trip to.
     const effect = chosen.effect;
+    if (
+      effect?.kind === "settle" &&
+      effect.mode === "merge" &&
+      associated?.delivery?.presentation
+    ) {
+      const ledger = associated.delivery.presentation;
+      const offered = associated.delivery.completionOffers?.find(
+        (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
+      );
+      if (
+        !offered?.presentationRevision ||
+        offered.presentationRevision !== ledger.revisions.at(-1)?.revision ||
+        ledger.published?.revision !== offered.presentationRevision ||
+        ledger.publication?.state !== "confirmed"
+      ) {
+        this.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("action-changed");
+      }
+    }
     // The captain's merge click mints his approval of the offer he was
     // reading, in the resolution's own transaction (FI3-304). A frame or
     // agent never reaches here with a settle effect, so nothing else can.

@@ -115,6 +115,9 @@ A computer on an older minor sends none of them, and a home on an older minor ig
 Protocol 8.12 adds `phone` to `inf:devices:shown`: whether Settings -> Devices offers + A phone, which every build answers yes (`docs/devices.md`, "Settings -> Devices").
 Only this Mac's own window asks that request, and a client on an older minor ignores the field.
 
+Protocol 8.13 adds `inf:work:prepare-change` and optional saved-story revisions on change publication and completion cards (`docs/forge.md`, "Saved change stories").
+A home and work computer use these only when the other speaks 8.13 or later (`CHANGE_PRESENTATIONS_SINCE`); an 8.12 computer has the phone-button flag, not saved change stories.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
+import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
 import {
   GITHUB_API_URL,
@@ -293,6 +294,77 @@ describe("GitHubForge", () => {
     runsAnswer = { status: 401, json: { message: "Bad credentials" } };
     await expect(forge.checks(change)).rejects.toMatchObject({ failure: "sign-in" });
   });
+
+  it("sends the saved plain summary on both merge routes, not the rendered story (INF-228 F2)", async () => {
+    const { forge, seen } = await stub({
+      "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: { merged: true } }),
+      "PUT /repos/octo/meter/pulls/23/merge-async": () => ({
+        json: { status: "merged", details: { sha: PULL.head.sha } },
+      }),
+    });
+    const squashMessage = presentationCommitMessage({
+      whatChanged: ["Keep upload_receipts on restart."],
+      projectText: "BREAKING CHANGE: update the work computer.",
+    });
+    const change = {
+      number: PULL.number,
+      url: PULL.html_url,
+      branch: PULL.head.ref,
+      headSha: PULL.head.sha,
+      title: PULL.title,
+      body: "<!-- infinitary-story:sample:start -->\n## What changed\nKeep upload\\_receipts on restart\\.\n### Risk\n| Dimension | Level | Why |",
+      squashMessage,
+    };
+    await forge.putIn(change, change.headSha);
+    await forge.putInSkippingRules(change, change.headSha);
+    expect(seen).toHaveLength(2);
+    for (const request of seen)
+      expect(request.body).toMatchObject({
+        commit_message: squashMessage,
+        commit_title: PULL.title,
+        sha: PULL.head.sha,
+      });
+  });
+
+  it.each([422, 503])(
+    "keeps GitHub's write explanation and the certainty split for %s (INF-228 F4)",
+    async (status) => {
+      const message = status === 422 ? "Validation Failed" : "Service unavailable";
+      const detail = "A pull request already exists for octo:fm/task-1.";
+      const { forge } = await stub({
+        "POST /repos/octo/meter/pulls": () => ({
+          status,
+          json: { message, errors: [{ message: detail }] },
+        }),
+        "GET /repos/octo/meter": () => ({ json: { default_branch: "main" } }),
+        "GET /repos/octo/meter/pulls/23": () => ({ json: { ...PULL, state: "open" } }),
+        "PATCH /repos/octo/meter/pulls/23": () => ({
+          status,
+          json: { message, errors: [{ message: detail }] },
+        }),
+      });
+      for (const write of [
+        () => forge.openChange({ branch: PULL.head.ref, title: PULL.title, body: PULL.body }),
+        () =>
+          forge.updateChangeBody(
+            {
+              number: PULL.number,
+              url: PULL.html_url,
+              branch: PULL.head.ref,
+              headSha: PULL.head.sha,
+              title: PULL.title,
+              body: PULL.body,
+            },
+            "Revised story",
+          ),
+      ]) {
+        const error = await write().catch((caught: unknown) => caught);
+        expect(error).toMatchObject({ outcome: status === 422 ? "failed" : "uncertain" });
+        expect((error as Error).message).toContain(message);
+        expect((error as Error).message).toContain(detail);
+      }
+    },
+  );
 
   it("puts the change in only at the checked head, and closes one without putting it in", async () => {
     const { forge, seen } = await stub({

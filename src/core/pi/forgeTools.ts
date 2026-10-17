@@ -1,6 +1,15 @@
+import {
+  type ChangePresentationDraft,
+  changePresentationDraftSchema,
+  type PresentationRecovery,
+  presentationRecoverySchema,
+} from "@shared/changePresentation";
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "@shared/checkRepair";
 import { Type } from "typebox";
+import { z } from "zod";
 import { crewmateTool, stringEnum } from "../session/tools";
+import { cardPictureRoot } from "./cardImages";
+import { stageChangePresentation } from "./changePresentation";
 
 /**
  * The crewmate's pair where the project lives (git integration PR 1.2,
@@ -25,19 +34,21 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your task's branch as a pull request where the project lives: a pull request onto the default branch on GitHub, a merge request onto it on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
-  "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes; body uses the five headings your rigor asks for.",
-  "A change already open for your branch is answered, not opened twice.",
+  "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes.",
+  "On github.com, prepare_change first, then pass its presentation revision, not body. Every selected attachment must upload before a new pull request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
+  "For GitLab, other hosts and pull requests opened before saved stories, keep body with the project's required headings; an existing legacy change is answered unchanged.",
+  "A saved story is replaced whole, preserving surrounding text. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed PR stops publication.",
   "Never squash your commits yourself (the merge does): bring the branch up to date with git rebase onto the default branch, never git reset --soft onto it, which would undo its newer work.",
   "If it answers that the app is not signed in, report that as a blocker: the captain signs in, never you.",
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
-  "Read the checks on your pull request's newest version: every check and the overall reading (green only when every check completed successfully; a project that runs no checks reads green on the strength of your local gate, but checks that have not started yet read pending, never green).",
+  "Read every check on the newest PR version: green only when all completed successfully or skipped. With no checks use the local gate; unstarted checks are pending, not green.",
   "While checks run the app watches them and wakes you once on the first failed check, then once when they finish. End your turn; do not call check_change again until a wake comes. If the host runs no checks the app can watch, no wake will come.",
   "On failure read logs first, then pass diagnosis keyed to headSha/check with classification and evidence; baseline-blocked also needs a separately owned dependencyTask reproduced on untouched main. A wait is not evidence. Unknown earns one investigation. No captain card for diagnosis, repair or dependency waits.",
   "For your regression pass repair with a stable id, sourceHead, new headSha, check and evidence of the fix; only unsuccessful own repairs spend the three attempts. For an evidenced flake reserve rerun before rerunning the failed job once with github_write; proceed only if this call authorizes it. A duplicate reservation is not permission. A failed rerun is diagnosis, not another rerun.",
   "A reading is only good for the version it read: after you push a fix, read the new version.",
-  "When the captain's merge is kept after a refusal, declare bringing the change up to date with conflictRepair once it is pushed. While it is kept, his new words hold the merge until you declare their impact with captainGuidance.",
+  "When the captain's merge is kept after a refusal, declare bringing the change up to date with conflictRepair once it is pushed; conflict-only automatically republishes the unchanged story before merging. While it is kept, his new words hold the merge until you declare their impact with captainGuidance.",
   "If it answers that the app is not signed in, report that as a blocker: the captain signs in, never you.",
   "Pass pull, a pull request number in this project, to prepare a merge review, including one this task did not open. The answer's review id is what request_merge references. That request grants no approval and merges nothing. Pass absentChecks only for that exact head, with workflow evidence and the local gate; it cannot waive a failed, pending or unreadable check.",
 ].join(" ");
@@ -46,7 +57,7 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
 export const CONFLICT_REPAIR_DESCRIPTION = [
   "The captain's merge approval is kept after the project's host refused his click: declare what bringing the change up to date did, on its own, after you push.",
   "fromHead is the head his approval covers (the approved head, or your last accepted repair); toHead your pushed head; newBase the default branch commit you took in.",
-  "conflict-only keeps his approval - end your turn once the checks pass and the host merges, with no new card; changed-work ends it - put up a new completion card; unknown holds the merge, and once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare that repair again.",
+  "conflict-only keeps his approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new completion card; unknown holds the merge, and once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare that repair again.",
   "changedPaths names every path that now differs from the approved change. Few lines, or editing only conflicted files, is not proof: compare the behavior.",
 ].join(" ");
 
@@ -65,17 +76,58 @@ export const SKIP_RULES_DESCRIPTION = [
   "The review names each rule and failed check, and request_merge's card shows them. Only the captain's click on that card sends it, once, at that version.",
 ].join(" ");
 
+export const PREPARE_CHANGE_TOOL = crewmateTool({
+  name: "prepare_change",
+  label: "Prepare change story",
+  description:
+    "Prepare one saved story for a future github.com pull request and its completion card, without showing a card or uploading. Commit the demonstrated version first. Supply Why, What changed, Before, After, ordered views, inspected local pictures or MP4 recordings with posters, verification, seven risk lines, required actions and unfinished work. Picture-only pairs may sit side by side; pairs containing a recording stack in both outputs. Declare publishable only after reviewing the exact words and bytes for the project's audience. Never include private threads or secrets. Before names the original base; later After evidence is fresh or carries an explicit applicability declaration for the new head. A change with no visible surface gives noPicture and no views. The host validates and retains immutable copies in the task's card folder. Keep project-required public template text and issue references in projectText. The returned revision is passed to open_change and, after checks pass, emit_card as presentation. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. Not for old PRs, GitLab, plain Git or local-only tasks.",
+  parameters: Type.Object({
+    story: Type.Unsafe<ChangePresentationDraft>({
+      ...z.toJSONSchema(changePresentationDraftSchema),
+    }),
+  }),
+  bind: (delegate) => {
+    const prepare = delegate.onPrepareChange;
+    return (
+      prepare &&
+      (async ({ story }) => {
+        const root = cardPictureRoot(delegate);
+        if (!root) throw new Error("This task has no retained-evidence folder.");
+        const prepared = await stageChangePresentation(story, root);
+        return { text: await prepare(prepared) };
+      })
+    );
+  },
+});
+
 export const OPEN_CHANGE_TOOL = crewmateTool({
   name: OPEN_CHANGE_TOOL_NAME,
   label: "Open change",
   description: OPEN_CHANGE_TOOL_DESCRIPTION,
   parameters: Type.Object({
     title: Type.String({ description: "The pull request's title" }),
-    body: Type.String({ description: "The pull request's description" }),
+    body: Type.Optional(
+      Type.String({
+        description: "The legacy pull request description, on hosts without saved stories.",
+      }),
+    ),
+    presentation: Type.Optional(
+      Type.Integer({
+        minimum: 1,
+        description:
+          "The current revision returned by prepare_change; uploads all selected evidence before opening or updating its github.com pull request.",
+      }),
+    ),
+    recovery: Type.Optional(
+      Type.Unsafe<PresentationRecovery>({
+        ...z.toJSONSchema(presentationRecoverySchema),
+        description:
+          "Deliberate recovery only, never an automatic retry: retryOpening after the earlier uncertain opening was read and no open PR exists; retryUploads names the exact uncertain digests after a card disclosed possible orphan uploads and the captain chose another attempt; replaceRegion is the exact edited region shown with the saved story on a card, after the captain chose to republish. A newer edit refuses that choice; show it again. Existing confirmed uploads are reused.",
+      }),
+    ),
   }),
   bind: ({ onOpenChange }) =>
-    onOpenChange &&
-    (async (params) => ({ text: await onOpenChange({ title: params.title, body: params.body }) })),
+    onOpenChange && (async (params) => ({ text: await onOpenChange(params) })),
 });
 
 export const CHECK_CHANGE_TOOL = crewmateTool({

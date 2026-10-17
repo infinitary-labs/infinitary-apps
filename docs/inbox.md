@@ -12,6 +12,9 @@ A task lane has nowhere else to go, exactly as the first mate's lane has none.
 
 - A `turn_failed` that `src/shared/authFailure.ts` does not classify as a sign-in problem releases its rows through `InboxStore.releaseAfterProviderFailure`: the attempt is given back, `failures` counts one more, `failing_since` remembers when the row first failed, and `next_attempt_at` is the backoff - 90 s, 3 min, 5 min, 10 min, then every 15 min, forever (`INBOX_BACKOFF_MS`).
   Nothing is ever parked for a provider failure; the row is delivered on the first attempt after the provider answers.
+- A provider error Pi retries inside the same prompt is not a `turn_failed` until that retry fails or is cancelled (`holdingRecoverableAttempt`, `src/core/pi/session.ts`).
+  A retry that succeeds is a clean turn: its report is kept, and the guidance is acknowledged.
+  Each attempt's measured usage is recorded either way; only the provisional failure and its closing text are withheld.
 - The provider answering on a lane - any clean turn - ends its outage (`InboxStore.endOutage`): every row still backing off is due at once.
 - Attempts still count what the ladder was built for: a steer or a resume that throws, and a sign-in failure (which also raises the sign-in card, once).
   Three of those still escalate loudly and stop.

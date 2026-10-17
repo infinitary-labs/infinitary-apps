@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
@@ -39,6 +41,7 @@ import {
   MERGE_WORDS,
 } from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { codingSpec } from "../../../tests/helpers/codingSession";
 import { completionCardBody } from "../../../tests/helpers/completionCard";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
 import {
@@ -68,13 +71,15 @@ import { type AppPaths, appPathsFor } from "../paths";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
+import { createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
+import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/placedSessions";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
-import type { ModelSession, SessionSpec } from "../session/session";
+import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
 import { bindTool } from "../session/tools";
 import { CardStore } from "../storage/cardStore";
 import {
@@ -829,6 +834,345 @@ describe("CrewSupervisor", () => {
     // and the report meanwhile sorts as still moving.
     expect(crewmate.promptCalls.at(-1)).toBe(crewmate.promptCalls[0]);
     expect(ops.at(-1)).not.toContain("reported on task");
+  });
+
+  /**
+   * Pi's order for one attempt (agent-loop.js emits turn_end then agent_end;
+   * agent-session.js adds willRetry, and emits auto_retry_end after the next
+   * assistant message). Fed through the same holder the session uses.
+   */
+  function pipePiAttempt(
+    taskId: string,
+    emit: (event: SessionEvent) => void,
+  ): (event: unknown) => void {
+    const translate = piSessionEvents(taskId);
+    return holdingRecoverableAttempt((raw) => {
+      for (const event of translate(raw)) emit(event);
+    });
+  }
+
+  it("keeps the report when Pi retries a cut request and the retry succeeds", async () => {
+    // INF-248, the fix started from INF-243: a lid close cuts the request,
+    // Pi retries inside the same prompt, and a retry that works is the turn.
+    const recorded: Array<{ input?: number; output?: number }> = [];
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, ops, tasks, inbox } = setup(crewmate, {
+      recordUsage: (input) => recorded.push(input.usage),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Lid close",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+    const pipe = pipePiAttempt(taskId, (event) => crewmate.emit(event));
+    pipe({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "terminated",
+        content: [{ type: "text", text: "partial" }],
+        usage: { input: 11, output: 2, cost: { total: 0.01 } },
+      },
+      toolResults: [],
+    });
+    pipe({ type: "agent_end", willRetry: true, messages: [] });
+    pipe({
+      type: "auto_retry_start",
+      attempt: 1,
+      maxAttempts: 2,
+      delayMs: 2000,
+      errorMessage: "terminated",
+    });
+    pipe({
+      type: "message_update",
+      assistantMessageEvent: { type: "text_delta", delta: "All done." },
+    });
+    pipe({
+      type: "auto_retry_end",
+      success: true,
+      attempt: 1,
+    });
+    pipe({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "stop",
+        content: [{ type: "text", text: "All done." }],
+        usage: { input: 4, output: 3, cost: { total: 0.02 } },
+      },
+      toolResults: [],
+    });
+    pipe({ type: "agent_end", willRetry: false, messages: [] });
+    pipe({ type: "agent_settled", aborted: false });
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(events.find((event) => event.type === "turn_failed")).toBeUndefined();
+    expect(recorded).toEqual([
+      expect.objectContaining({ input: 11, output: 2, cost: 0.01 }),
+      expect.objectContaining({ input: 4, output: 3, cost: 0.02 }),
+    ]);
+    expect(events.find((event) => event.type === "task_report")).toMatchObject({
+      title: "Lid close",
+      summary: "All done.",
+    });
+    expect(tasks.get(taskId)?.outcome).toBe("All done.");
+    expect(ops.some((line) => line.includes("failed at the provider"))).toBe(false);
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(inbox.inFlight(taskId)).toEqual([]);
+  });
+
+  it("records an unknown custom count when the retried attempt is dropped", async () => {
+    // INF-253: a custom request with no volunteered counts is an empty usage
+    // record. The ledger still receives it after the attempt is dropped.
+    const recorded: Array<Record<string, unknown>> = [];
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate, {
+      recordUsage: (input) => recorded.push(input.usage),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Lid close",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+    const pipe = pipePiAttempt(taskId, (event) => crewmate.emit(event));
+    pipe({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "terminated",
+        provider: "fm-custom-0123456789abcdef",
+        content: [],
+        usage: { input: 0, output: 0 },
+      },
+      toolResults: [],
+    });
+    pipe({ type: "agent_end", willRetry: true, messages: [] });
+    pipe({ type: "auto_retry_end", success: true, attempt: 1 });
+    pipe({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "stop",
+        content: [{ type: "text", text: "All done." }],
+      },
+      toolResults: [],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    expect(recorded[0]).toEqual({});
+  });
+
+  it("still fails the turn when Pi's retry of a cut request does not succeed", async () => {
+    // INF-248's other half: retries that run out still take the honest retry.
+    // Both attempts' measured usage is kept; only the last failure stands.
+    const recorded: Array<{ input?: number }> = [];
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, ops, inbox } = setup(crewmate, {
+      recordUsage: (input) => recorded.push(input.usage),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Lid close",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+    const pipe = pipePiAttempt(taskId, (event) => crewmate.emit(event));
+    const failed = (input: number) => ({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "terminated",
+        content: [],
+        usage: { input, output: 1, cost: { total: 0.01 } },
+      },
+      toolResults: [],
+    });
+    pipe(failed(11));
+    pipe({ type: "agent_end", willRetry: true, messages: [] });
+    pipe({
+      type: "auto_retry_start",
+      attempt: 1,
+      maxAttempts: 2,
+      delayMs: 2000,
+      errorMessage: "terminated",
+    });
+    pipe(failed(17));
+    pipe({ type: "agent_end", willRetry: false, messages: [] });
+    pipe({
+      type: "auto_retry_end",
+      success: false,
+      attempt: 1,
+      finalError: "terminated",
+    });
+    pipe({ type: "agent_settled", aborted: false });
+    crewmate.finishPrompt();
+    await tick();
+
+    expect(events.find((event) => event.type === "task_report")).toBeUndefined();
+    expect(events.filter((event) => event.type === "turn_failed")).toHaveLength(1);
+    expect(ops.at(-1)).toContain("failed at the provider: terminated");
+    expect(inbox.allFor(taskId).map((row) => row.failures)).toEqual([1]);
+    expect(recorded.map((usage) => usage.input)).toEqual([11, 17]);
+  });
+
+  it("still fails the turn when a retry of a cut request is cancelled", async () => {
+    // INF-248: cancelling the backoff is not a success. Pi emits auto_retry_end
+    // success false and does not start another attempt.
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, inbox } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Lid close",
+      intent: intentOf("do the work"),
+    });
+    await tick();
+    const pipe = pipePiAttempt(taskId, (event) => crewmate.emit(event));
+    pipe({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "terminated",
+        content: [],
+      },
+      toolResults: [],
+    });
+    pipe({ type: "agent_end", willRetry: true, messages: [] });
+    pipe({
+      type: "auto_retry_end",
+      success: false,
+      attempt: 1,
+      finalError: "Retry cancelled",
+    });
+    pipe({ type: "agent_settled", aborted: false });
+    crewmate.finishPrompt();
+    await tick();
+    expect(ops.at(-1)).toContain("failed at the provider: terminated");
+    expect(inbox.allFor(taskId).map((row) => row.failures)).toEqual([1]);
+  });
+
+  it("keeps the report when a real Pi stream is cut and Pi retries it", {
+    timeout: 30_000,
+  }, async () => {
+    // INF-253 R2: the holder tests feed Pi's events. This one is Pi's own
+    // retry of a stream this process cuts, through the production session.
+    vi.useRealTimers();
+    let chats = 0;
+    let cut = false;
+    const server = createServer((req, res) => {
+      const chat = req.method === "POST" && (req.url ?? "").includes("chat/completions");
+      if (!chat) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      req.resume();
+      req.on("end", () => {
+        chats += 1;
+        const base = {
+          id: `chatcmpl-${chats}`,
+          object: "chat.completion.chunk",
+          model: "mock-1",
+        };
+        const chunk = (delta: unknown, finish: string | null = null) =>
+          `data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+        if (chats === 1) {
+          cut = true;
+          res.writeHead(200, { "Content-Type": "text/event-stream" });
+          res.write(chunk({ role: "assistant", content: "part" }));
+          res.socket?.destroy();
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "text/event-stream" });
+        res.write(chunk({ role: "assistant" }));
+        res.write(chunk({ content: "All done." }));
+        res.end(`${chunk({}, "stop")}data: [DONE]\n\n`);
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+    const port = (server.address() as AddressInfo).port;
+    const dir = scratchDir("infinitary-cut-stream-");
+    const modelsPath = join(dir, "models.json");
+    writeFileSync(join(dir, "auth.json"), "{}", { mode: 0o600 });
+    writeFileSync(
+      modelsPath,
+      JSON.stringify({
+        providers: {
+          "fm-mock": {
+            name: "Mock",
+            baseUrl: `http://127.0.0.1:${port}/v1`,
+            api: "openai-completions",
+            apiKey: "mock-key",
+            models: [{ id: "mock-1", name: "Mock", input: ["text"] }],
+          },
+        },
+      }),
+    );
+    const runtime = await createModelRuntime({
+      authPath: join(dir, "auth.json"),
+      modelsPath,
+      catalogBaseUrl: `http://127.0.0.1:${port}`,
+    });
+    const opened = await createPiSessionFactory({ agentDir: join(dir, "agent") }).open(
+      codingSpec({
+        binding: { backend: "pi", runtime },
+        cwd: dir,
+        owner: "cut-stream",
+        model: { provider: "fm-mock", id: "mock-1" },
+        recordDir: join(dir, "record"),
+      }),
+    );
+    const inner = (
+      opened as unknown as {
+        session: { settingsManager: { applyOverrides: (overrides: object) => void } };
+      }
+    ).session;
+    inner.settingsManager.applyOverrides({
+      retry: { enabled: true, maxRetries: 2, baseDelayMs: 0 },
+    });
+    const crewmate = fakeCrewmate();
+    let promptError = "";
+    crewmate.prompt = async (text) => {
+      try {
+        await opened.prompt(text);
+      } catch (caught) {
+        promptError = caught instanceof Error ? caught.message : String(caught);
+        throw caught;
+      }
+    };
+    crewmate.subscribe = (listener) => opened.subscribe(listener);
+    const { supervisor, events, ops, tasks, inbox } = setup(crewmate);
+    try {
+      const { taskId } = await supervisor.commission({
+        title: "Lid close",
+        intent: intentOf("do the work"),
+      });
+      // The first turn runs after commission returns.
+      await vi.waitFor(
+        () => {
+          expect(chats, promptError || "the stream was never cut").toBeGreaterThan(1);
+          expect(cut).toBe(true);
+        },
+        { timeout: 20_000 },
+      );
+      await vi.waitFor(() => expect(tasks.get(taskId)?.outcome).toBe("All done."), {
+        timeout: 20_000,
+      });
+      expect(events.find((event) => event.type === "turn_failed")).toBeUndefined();
+      expect(events.find((event) => event.type === "task_report")).toMatchObject({
+        summary: "All done.",
+      });
+      expect(tasks.get(taskId)?.outcome).toBe("All done.");
+      expect(ops.some((line) => line.includes("failed at the provider"))).toBe(false);
+      expect(inbox.allFor(taskId)).toEqual([]);
+      expect(inbox.inFlight(taskId)).toEqual([]);
+    } finally {
+      opened.dispose();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("raises the sign-in decision and refs its wake when a turn has a real auth failure", async () => {

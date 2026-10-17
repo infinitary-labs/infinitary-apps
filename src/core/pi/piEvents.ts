@@ -121,6 +121,13 @@ export function fmEventsFromPiEvent(event: unknown, taskId: string): FmEvent[] {
  */
 export function seatEventsFromPiEvent(event: unknown, taskId: string): SessionEvent[] {
   const type = (event as { type?: unknown } | null)?.type;
+  // A retried attempt is not a failed turn, but its measured usage still is.
+  // The holder already normalized it, provider included. Reading the message
+  // again would drop a custom request whose counts are unknown.
+  if (type === "turn_end" && (event as { usageOnly?: unknown }).usageOnly === true) {
+    const usage = (event as { usage?: FmUsage }).usage;
+    return usage ? [{ type: "turn_end", taskId, usage }] : [];
+  }
   if (type === "compaction_start" || isAssistantStart(event)) {
     return [{ type: "request_started" }, ...fmEventsFromPiEvent(event, taskId)];
   }

@@ -133,6 +133,121 @@ describe("the Pi coding session's production contract", () => {
     expect(seen.some((event) => (event as { type: string }).type === "turn_closed")).toBe(false);
   });
 
+  it("does not deliver a cut request Pi retries inside the same prompt", async () => {
+    // INF-248: the crewmate session is the path that reaches the supervisor.
+    let rawListener: ((event: unknown) => void) | undefined;
+    piMocks.agentSession.subscribe.mockImplementation(((listener: (event: unknown) => void) => {
+      rawListener = listener;
+      return () => {};
+    }) as never);
+    const session = await openCodingSession(spec);
+    const seen: unknown[] = [];
+    session.subscribe((event) => seen.push(event));
+    piMocks.agentSession.subscribe.mockImplementation(() => () => {});
+    const emit = (event: unknown) => rawListener?.(event);
+    emit({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "terminated",
+        content: [],
+      },
+      toolResults: [],
+    });
+    emit({ type: "agent_end", willRetry: true, messages: [] });
+    emit({ type: "auto_retry_end", success: true, attempt: 1 });
+    emit({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "stop",
+        content: [{ type: "text", text: "All done." }],
+      },
+      toolResults: [],
+    });
+    expect(seen.some((event) => (event as { type: string }).type === "turn_failed")).toBe(false);
+    expect(seen).toContainEqual({ type: "turn_closed", text: "All done." });
+  });
+
+  it("keeps a recovered overflow attempt's usage without its failure", async () => {
+    let rawListener: ((event: unknown) => void) | undefined;
+    piMocks.agentSession.subscribe.mockImplementation(((listener: (event: unknown) => void) => {
+      rawListener = listener;
+      return () => {};
+    }) as never);
+    const session = await openCodingSession(spec);
+    const seen: unknown[] = [];
+    session.subscribe((event) => seen.push(event));
+    piMocks.agentSession.subscribe.mockImplementation(() => () => {});
+    const emit = (event: unknown) => rawListener?.(event);
+    emit({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage: "prompt is too long: 213462 tokens > 200000 maximum",
+        content: [],
+        usage: { input: 30, output: 1, cost: { total: 0.03 } },
+      },
+      toolResults: [],
+    });
+    emit({
+      type: "compaction_end",
+      reason: "overflow",
+      aborted: false,
+      willRetry: true,
+      result: { usage: { input: 8, output: 2 } },
+    });
+    expect(seen.some((event) => (event as { type: string }).type === "turn_failed")).toBe(false);
+    expect(seen).toContainEqual({
+      type: "turn_end",
+      taskId: "task-1",
+      usage: expect.objectContaining({ input: 30, output: 1, cost: 0.03 }),
+    });
+  });
+
+  it("keeps an unknown custom count when either recovery drops the attempt", async () => {
+    // INF-253: the empty usage record is the measurement. Retry and overflow
+    // recovery both keep it, and neither becomes a failed turn.
+    let rawListener: ((event: unknown) => void) | undefined;
+    piMocks.agentSession.subscribe.mockImplementation(((listener: (event: unknown) => void) => {
+      rawListener = listener;
+      return () => {};
+    }) as never);
+    const session = await openCodingSession(spec);
+    const seen: unknown[] = [];
+    session.subscribe((event) => seen.push(event));
+    piMocks.agentSession.subscribe.mockImplementation(() => () => {});
+    const emit = (event: unknown) => rawListener?.(event);
+    const attempt = (errorMessage: string) => ({
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage,
+        provider: "fm-custom-0123456789abcdef",
+        content: [],
+        usage: { input: 0, output: 0 },
+      },
+      toolResults: [],
+    });
+    emit(attempt("terminated"));
+    emit({ type: "agent_end", willRetry: true, messages: [] });
+    emit({ type: "auto_retry_end", success: true, attempt: 1 });
+    emit(attempt("prompt is too long: 3 tokens > 2 maximum"));
+    emit({ type: "compaction_end", reason: "overflow", aborted: false, willRetry: true });
+    expect(seen.filter((event) => (event as { type: string }).type === "turn_failed")).toEqual([]);
+    expect(
+      seen.filter(
+        (event) =>
+          (event as { type: string }).type === "turn_end" &&
+          (event as { usage?: object }).usage &&
+          Object.keys((event as { usage: object }).usage).length === 0,
+      ),
+    ).toHaveLength(2);
+  });
+
   it("requests the routed thinking level, and says it opened there", async () => {
     const runtime = {
       getModel: () => ({

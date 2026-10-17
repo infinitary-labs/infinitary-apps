@@ -52,7 +52,7 @@ export { PI_CONTROL_PROFILE } from "./controlProfile";
 
 import { createEventBashTool, type EventBashInput } from "./bashTool";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "./ollamaStream";
-import { piSessionEvents } from "./piEvents";
+import { piSessionEvents, usageFromMessage } from "./piEvents";
 import { createCrewmateResourceLoader } from "./piResourceLoader";
 import { piToolsOf } from "./toolSpec";
 import type { ModelRuntime } from "./types";
@@ -271,12 +271,11 @@ class PiOneShotSession implements ModelSession {
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
     const translate = piSessionEvents(this.owner);
-    return this.session.subscribe((event) => {
+    const deliver = holdingRecoverableAttempt((event) => {
       const reported = rewriteTimedOutTurn(event, this.failure !== undefined, this.failure ?? "");
-      for (const sessionEvent of translate(reported)) {
-        listener(sessionEvent);
-      }
+      for (const sessionEvent of translate(reported)) listener(sessionEvent);
     });
+    return this.session.subscribe((event) => deliver(event));
   }
 
   prompt(text: string): Promise<void> {
@@ -413,7 +412,7 @@ class PiRollingSession implements ModelSession {
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
     const translate = piSessionEvents(this.options.owner);
-    const deliver = holdingRecoverableOverflow((event) => {
+    const deliver = holdingRecoverableAttempt((event) => {
       const rewritten = rewriteTimedOutTurn(event, this.failure !== undefined, this.failure ?? "");
       for (const sessionEvent of translate(rewritten)) {
         listener(sessionEvent);
@@ -679,33 +678,86 @@ function eventType(event: unknown): string | undefined {
 }
 
 /**
- * Pi answers a turn that failed on a context overflow by compacting and
- * retrying it once. A custom connection raises that overflow when the server
- * says the request does not fit, or when Pi trimmed the reply and the cut
- * answer cannot stand. An attempt Pi retries is not a failed turn: its
- * turn_end waits until Pi says what it does next, is dropped when a
- * compaction ends ready to retry, and is delivered as it was when Pi moves
- * on without one (nothing to compact, a failed or cancelled compaction, or a
- * second overflow after the one retry).
+ * An attempt Pi retries inside the same prompt is not a failed turn.
+ *
+ * Overflow: Pi compacts and retries once. A custom connection raises that
+ * overflow when the server says the request does not fit, or when Pi trimmed
+ * the reply and the cut answer cannot stand. The failed turn_end waits until
+ * compaction ends. It is dropped when that compaction will retry, and
+ * delivered when Pi moves on without one (nothing to compact, a failed or
+ * cancelled compaction, or a second overflow after the one retry).
+ *
+ * Any other provider error: Pi emits the failed turn_end, then agent_end
+ * with willRetry, and retries inside the same prompt. The turn_end waits.
+ * It is dropped when that retry succeeds, delivered when Pi will not retry
+ * or the retry is cancelled, and delivered if the prompt settles while it
+ * is still held. A later attempt supersedes the one being held.
+ * Dropping keeps the attempt's measured usage and suppresses only its
+ * failure and closing text.
  */
-function holdingRecoverableOverflow(deliver: (event: unknown) => void): (event: unknown) => void {
-  let held: unknown;
+export function holdingRecoverableAttempt(
+  deliver: (event: unknown) => void,
+): (event: unknown) => void {
+  let heldOverflow: unknown;
+  let heldRetry: unknown;
   return (event) => {
     const type = eventType(event);
-    if (held !== undefined && type === "compaction_end") {
+    if (heldOverflow !== undefined && type === "compaction_end") {
       const end = event as { willRetry?: unknown; errorMessage?: unknown };
-      if (end.willRetry !== true || end.errorMessage) deliver(held);
-      held = undefined;
+      if (end.willRetry !== true || end.errorMessage) deliver(heldOverflow);
+      else preserveMeasuredUsage(deliver, heldOverflow);
+      heldOverflow = undefined;
     } else if (
-      held !== undefined &&
+      heldOverflow !== undefined &&
       (type === "message_start" || type === "turn_end" || type === "agent_settled")
     ) {
-      deliver(held);
-      held = undefined;
+      deliver(heldOverflow);
+      heldOverflow = undefined;
     }
-    if (isOverflowTurnEnd(event)) held = event;
-    else deliver(event);
+    if (heldRetry !== undefined && type === "agent_end") {
+      if ((event as { willRetry?: unknown }).willRetry !== true) {
+        deliver(heldRetry);
+        heldRetry = undefined;
+      }
+    } else if (heldRetry !== undefined && type === "auto_retry_end") {
+      if ((event as { success?: unknown }).success !== true) deliver(heldRetry);
+      else preserveMeasuredUsage(deliver, heldRetry);
+      heldRetry = undefined;
+    } else if (heldRetry !== undefined && (type === "turn_end" || type === "agent_settled")) {
+      // A later attempt replaces the one held. The prompt ending still
+      // delivers it: a failure must not vanish because its decision never came.
+      if (type === "agent_settled") deliver(heldRetry);
+      else preserveMeasuredUsage(deliver, heldRetry);
+      heldRetry = undefined;
+    }
+    if (isOverflowTurnEnd(event)) {
+      heldOverflow = event;
+      return;
+    }
+    if (isRetriedErrorTurnEnd(event)) {
+      heldRetry = event;
+      return;
+    }
+    deliver(event);
   };
+}
+
+/**
+ * The dropped attempt's measured usage, and nothing else. The usage is the
+ * one already read from the attempt, provider included, so a custom request
+ * with unknown counts keeps its empty record. The translator does not read
+ * it again. No failure, no closing text.
+ */
+function preserveMeasuredUsage(deliver: (event: unknown) => void, event: unknown): void {
+  const usage = usageFromMessage((event as { message?: unknown }).message);
+  if (!usage) return;
+  deliver({ type: "turn_end", usageOnly: true, usage });
+}
+
+/** A provider-error turn_end that is not an overflow Pi recovers by compacting. */
+function isRetriedErrorTurnEnd(event: unknown): boolean {
+  if (!isFailedTurnEnd(event) || isOverflowTurnEnd(event)) return false;
+  return (event as { message: { stopReason?: unknown } }).message.stopReason === "error";
 }
 
 function isOverflowTurnEnd(event: unknown): boolean {

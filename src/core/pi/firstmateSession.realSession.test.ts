@@ -504,6 +504,9 @@ describe("the seat's bounds", () => {
         errorMessage: "This operation was aborted",
       },
     });
+    // Pi follows a failed turn_end with agent_end before the prompt settles.
+    // willRetry false: the cut is the turn, not an attempt Pi will retry.
+    emit({ type: "agent_end", willRetry: false, messages: [] });
     expect(seen).toEqual([
       {
         type: "turn_failed",

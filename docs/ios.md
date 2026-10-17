@@ -110,7 +110,7 @@ The captain's one-time Apple setup is:
 After preflight, the existing disposable iPhone and iPad gates run on `MAC_RUNNER`, falling back only to `mini-mac`.
 Either failure prevents archive and upload; iPad still runs after an iPhone failure unless cancelled.
 The release job shares the `mac-mini-phone` queue, and each device gate and the release command use the existing exclusive command lease while desktop jobs retain their parallel queues.
-The job allows the native lane's 120 minutes plus 60 minutes for release work; this changes no test deadline.
+The job allows the native lane's 165 minutes, which include waiting behind local phone gates that took the entry lock first, plus 60 minutes for release work; this changes no test deadline.
 Install-time checks use a scratch HOME and an empty local-signing directory, as in `phone.yml`.
 
 `scripts/release-phone.sh` uses ordinary Xcode automatic signing on the existing Mac runner with the same Apple team and API key as SSHHIP.
@@ -136,7 +136,7 @@ Apple availability is not a substitute for that last confirmation, and no Xcode 
 
 ## Disposable verification
 
-`pnpm test:phone --evidence <absolute-folder-outside-the-project>` runs the foundation's native gate on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
+`pnpm test:phone --evidence <absolute-folder-outside-the-project>` takes the same exclusive lease as CI's native gate, waiting behind pull-request journeys and CI phone gates, then runs the foundation's native gate on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 Add `--demo`, with FFmpeg installed, to keep a real-speed reconnect/catch-up recording and its poster beside the test results.
 The recording crops the top of the phone view around the connection state and first two cards; it retains real speed and holds the final frame for two seconds.
@@ -171,10 +171,12 @@ A newer push waits for the running native gate to finish and remove its own simu
 Only native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and each native device gate an exclusive one.
-The runner slots use the same account and `$HOME/Library/Caches/infinitary-ci/checks.lock`; active desktop commands finish before a phone enters, and a waiting phone prevents new desktops passing it.
+The `test:phone` package script takes that lease around `scripts/test-phone.ts`, and the script never takes it, because CI already wraps the script and a nested exclusive lease waits forever; the script also swaps `HOME` for a scratch home before anything else runs.
+The runner slots and a crewmate's `pnpm test:phone` use the same account and `$HOME/Library/Caches/infinitary-ci/checks.lock`; active desktop commands finish before a phone enters, and a waiting phone prevents new desktops passing it.
 The helper replaces itself with the command and retains the lease descriptor, so command exit or cancellation releases it without stale markers or a daemon; lock files are never unlinked.
 Phone gates can yield to desktop work between iPhone and iPad.
-The native job's 120-minute limit allows 45 minutes for both device gates, 60 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
+The native job's 165-minute limit allows 45 minutes for both device gates, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
+The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
 Setup, evidence upload, the choosers and Linux jobs remain independent.
 Neither device's failure is ignored, and iPad still runs after an iPhone failure unless the job was cancelled.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.

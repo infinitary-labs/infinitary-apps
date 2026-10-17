@@ -104,11 +104,13 @@ Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` 
 Desktop journey jobs from different pull requests remain parallel.
 The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; each native device gate takes an exclusive lease against the same runner-account cache file.
 A waiting phone holds the entry lock while active desktops finish, so new desktops cannot continually pass it; after admission, command exit or cancellation releases the kernel lease.
+A crewmate's local `pnpm test:phone` takes the same exclusive lease through its package script, so it waits behind pull-request journeys and CI phone gates; `scripts/test-phone.ts` never takes it itself.
 The runner slots must share one account; the helper uses stock Python and `fcntl`, never signing material.
-The native job's 120-minute limit allows 45 minutes for both device gates, 60 across admission waits and 15 for setup, cleanup and evidence upload, without changing any test deadline.
+The native job's 165-minute limit allows 45 minutes for both device gates, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
+The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
 Desktop work may run between the two device gates.
 Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
-`tests/mac-check-lock.test.ts` runs the actual workflow command strings with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure and cancellation.
+`tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure and cancellation.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ## Journeys on the pull request

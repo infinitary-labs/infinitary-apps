@@ -107,7 +107,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
-| `tests/mac-check-lock.test.ts` | actual workflow commands, held Node processes and Python kernel-lock probes, on macOS/Linux | 5 s default |
+| `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes and Python kernel-lock probes, on macOS/Linux | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup; the build guard (node, `ps`) under one held run | 15 s |
 | `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on the real-git describe |

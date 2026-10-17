@@ -47,17 +47,27 @@ process.stdin.once('data', () => process.exit(0));
   };
   const trace: string[] = [];
   const children: Work[] = [];
-  function launch(name: string, kind: "desktop" | "iphone" | "ipad", fail = false): Work {
-    const workflow = yaml.load(
-      readFileSync(
-        kind === "desktop" ? ".github/workflows/journeys.yml" : ".github/workflows/phone.yml",
-        "utf8",
-      ),
-    );
-    const job = workflow.jobs[kind === "desktop" ? "affected-journeys" : "native-phone"];
-    const command = job.steps.find(
-      (step: { id?: string }) => step.id === (kind === "desktop" ? "e2e" : kind),
-    ).run;
+  function launch(
+    name: string,
+    kind: "desktop" | "iphone" | "ipad" | "package",
+    fail = false,
+    args = "",
+  ): Work {
+    const command =
+      kind === "package"
+        ? `${JSON.parse(readFileSync("package.json", "utf8")).scripts["test:phone"]} ${args}`
+        : yaml
+            .load(
+              readFileSync(
+                kind === "desktop"
+                  ? ".github/workflows/journeys.yml"
+                  : ".github/workflows/phone.yml",
+                "utf8",
+              ),
+            )
+            .jobs[kind === "desktop" ? "affected-journeys" : "native-phone"].steps.find(
+              (step: { id?: string }) => step.id === (kind === "desktop" ? "e2e" : kind),
+            ).run;
     const child = spawn("bash", ["-e", "-c", command], {
       cwd: resolve("."),
       env: {
@@ -227,6 +237,25 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       await desktop.wait("started:after-failure");
       desktop.release();
       expect(await desktop.result).toBe(0);
+    } finally {
+      await f.close();
+    }
+  });
+  // SCR-410: the documented local `pnpm test:phone` waits on the lease CI's phone checks take.
+  it("makes the documented pnpm test:phone wait for a running desktop check, then run", async () => {
+    const f = fixture();
+    try {
+      const desktop = f.launch("desktop-a", "desktop");
+      await desktop.wait("started:desktop-a");
+      const local = f.launch("local-phone", "package", false, "--ipad --evidence /tmp/x");
+      await local.wait(queued("exclusive"));
+      expect(await f.probe("shared")).toBe("free");
+      desktop.release();
+      expect(await desktop.result).toBe(0);
+      await local.wait("started:local-phone");
+      expect(await f.probe("shared")).toBe("busy");
+      local.release();
+      expect(await local.result).toBe(0);
     } finally {
       await f.close();
     }

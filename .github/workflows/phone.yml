@@ -47,9 +47,11 @@ jobs:
       group: mac-mini-phone
       queue: max
       cancel-in-progress: false
-    # Allow 45 minutes for both native gates, 60 across admission waits,
-    # and 15 for setup, cleanup and upload. Test deadlines remain unchanged.
-    timeout-minutes: 120
+    # Allow 45 minutes for both native gates, 105 across admission waits
+    # (60 behind active desktop journeys plus two local phone gates of about
+    # 22 minutes each, ahead through the entry lock), and 15 for setup, cleanup
+    # and upload. Test deadlines remain unchanged.
+    timeout-minutes: 165
     defaults:
       run:
         working-directory: Application Support/firstmate

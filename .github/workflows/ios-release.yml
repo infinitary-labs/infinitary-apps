@@ -62,8 +62,9 @@ jobs:
       group: mac-mini-phone
       queue: max
       cancel-in-progress: false
-    # The native gate's existing 120-minute allowance, plus up to 60 for release work.
-    timeout-minutes: 180
+    # The native lane's 165-minute allowance, which includes waiting behind local
+    # phone gates that took the entry lock first, plus up to 60 for release work.
+    timeout-minutes: 225
     defaults:
       run:
         working-directory: Application Support/infinitary

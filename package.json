@@ -18,7 +18,7 @@
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -b --pretty",
     "test": "vitest run",
     "test:e2e": "pnpm build && playwright test",
-    "test:phone": "node scripts/test-phone.ts",
+    "test:phone": "python3 scripts/with-mac-check.py exclusive \"$HOME/Library/Caches/infinitary-ci/checks.lock\" -- node scripts/test-phone.ts",
     "test:probes": "node scripts/affected-probes.ts --run",
     "test:styles": "playwright test tests/renderer/railDocking.spec.ts --project styles --no-deps",
     "test:watch": "vitest",

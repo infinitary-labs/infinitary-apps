@@ -6,7 +6,9 @@ import { type AttachmentRef, attachmentWords } from "@shared/attachments";
 import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
+  CARD_ANSWERS_BOUND_REFUSAL,
   CARD_ANSWERS_MAX_BYTES,
+  CARD_ANSWERS_TOO_LONG,
   CARD_REPLY_MAX_CHARS,
   type Card,
   type CardAnswer,
@@ -7369,7 +7371,7 @@ export class CrewSupervisor {
     if (answers) {
       cardAnswersSchema.parse(answers);
       if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
-        throw new Error("These answers are too long to send. Shorten them and try again.");
+        throw new Error(CARD_ANSWERS_TOO_LONG);
       }
     }
     const text = withPastedFiles(typed, files);
@@ -10668,7 +10670,7 @@ function chromeAnswers(value: unknown): CardAnswer[] | undefined {
   const parsed = cardChromeValueSchema.safeParse(value);
   if (!parsed.success) throw new Error("The card's answers could not be read.");
   if (cardAnswersBytes(parsed.data.answers) > CARD_ANSWERS_MAX_BYTES) {
-    throw new Error("The card's answers must be JSON no larger than 4,096 bytes.");
+    throw new Error(CARD_ANSWERS_BOUND_REFUSAL);
   }
   return parsed.data.answers.length > 0 ? parsed.data.answers : undefined;
 }

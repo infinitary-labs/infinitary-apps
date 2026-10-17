@@ -8,6 +8,7 @@ import type {
 } from "@shared/cards";
 import {
   CARD_ANSWERS_MAX_BYTES,
+  CARD_ANSWERS_TOO_LONG,
   CARD_QUESTIONS_MAX_BYTES,
   CARD_REPLY_MAX_CHARS,
   CONVERSE_TEXT_MAX_CHARS,
@@ -1776,7 +1777,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
             throw new Error("Answer every question the card asks first.");
           }
           if (cardAnswersBytes(reading.answers) > CARD_ANSWERS_MAX_BYTES) {
-            throw new Error("These answers are too long to send. Shorten them and try again.");
+            throw new Error(CARD_ANSWERS_TOO_LONG);
           }
           sentAnswers = reading.answers;
           sent = { answers: sentAnswers };
@@ -2000,7 +2001,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       const reading = fresh ?? get().cardAnswers[cardId];
       const answers = reading?.answers;
       if (answers && cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
-        throw new Error("These answers are too long to send. Shorten them and try again.");
+        throw new Error(CARD_ANSWERS_TOO_LONG);
       }
       // Sending hands the turn to the author: the core's push takes the card
       // off the stack unless it stayed at send time.

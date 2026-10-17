@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -706,6 +707,85 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
         },
       ],
     });
+  } finally {
+    recordedDb.close();
+  }
+});
+
+/**
+ * A long decision sends (the captain: "i filled out this card but the
+ * finalize button is not working", on a card reading "37 of 37 picked ·
+ * 15 changed"). The 37 questions keep the shape and lengths of real radio
+ * groups (card-answers-37.questions.json), with the wording replaced; 15
+ * picks differ from the recommendation. The default footer button sends
+ * every answer, labels included, and the card leaves.
+ *
+ * Promised result: the finalize button is taken and the saved row holds
+ * the 37 answers. Data: that fixture. Completion signal: the card is gone
+ * from the stack and the saved answers match the picks. Platform: the
+ * hermetic launcher, application lane, mock provider, no native focus.
+ * Shared resources: none; the test owns its userData.
+ */
+const LONG_ANSWERS_TITLE = "Finalize the rules for these tasks";
+const LONG_ANSWERS_KEEP = "Keep rules open";
+const LONG_ANSWERS_FINALIZE = "Use answers to finalize tasks";
+const LONG_ANSWERS_ID = "card-fm-long-answers";
+
+type LongQuestion = { name: string; pick: string; changed: boolean; html: string };
+
+test("a 37-question card's footer sends its answers", async () => {
+  const questions = JSON.parse(
+    readFileSync(new URL("./card-answers-37.questions.json", import.meta.url), "utf8"),
+  ) as LongQuestion[];
+  const changedCount = questions.filter((question) => question.changed).length;
+  const userDataDir = scratchDir("infinitary-long-answers-");
+  const db = openDatabase(userDataDir);
+  new CardStore(db).upsert({
+    id: LONG_ANSWERS_ID,
+    title: LONG_ANSWERS_TITLE,
+    author: "firstmate",
+    priority: 50,
+    meta: "firstmate",
+    status: "ready",
+    createdAt: Date.now(),
+    body: `<p>Answer each rule, then I finalize the tasks.</p>${questions
+      .map((question) => question.html)
+      .join("\n")}`,
+    actions: [
+      { id: "keep-open", label: LONG_ANSWERS_KEEP, variant: "secondary" },
+      { id: "finalize", label: LONG_ANSWERS_FINALIZE, default: true, variant: "primary" },
+    ],
+  });
+  db.close();
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const { page } = launched;
+  try {
+    await showCard(page, LONG_ANSWERS_TITLE);
+    const frame = cardBody(page, LONG_ANSWERS_TITLE);
+    await expect(answersLine(page)).toHaveText(pickedLine(0, questions.length));
+    for (const question of questions) {
+      await pick(frame, `input[name="${question.name}"][value="${question.pick}"]`);
+    }
+    await expect(answersLine(page)).toHaveText(
+      pickedLine(questions.length, questions.length, changedCount),
+    );
+    await page.getByRole("button", { name: LONG_ANSWERS_FINALIZE, exact: true }).click();
+    await expectNoCard(page, LONG_ANSWERS_TITLE);
+  } finally {
+    await launched.close();
+  }
+  const recordedDb = openDatabase(userDataDir);
+  try {
+    const store = new CardStore(recordedDb);
+    expect(store.chosenAction(LONG_ANSWERS_ID)).toBe("finalize");
+    const answers = store.past(LONG_ANSWERS_ID)?.answers ?? [];
+    expect(answers).toHaveLength(questions.length);
+    for (const question of questions) {
+      const answer = answers.find((item) => item.name === question.name);
+      expect(answer?.values).toEqual([question.pick]);
+      expect(answer?.changed).toBe(question.changed);
+      expect(answer?.labels?.[0]?.length).toBeGreaterThan(0);
+    }
   } finally {
     recordedDb.close();
   }

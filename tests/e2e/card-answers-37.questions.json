@@ -1,0 +1,224 @@
+[
+  {
+    "name": "q00abcde",
+    "pick": "v1ab",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this optio</legend>\n<label><input type=\"radio\" name=\"q00abcde\" value=\"v0a\" data-inf-recommended> Choose this option for the rul</label>\n<label><input type=\"radio\" name=\"q00abcde\" value=\"v1ab\"> Choose this option for the rule. Choose this o</label>\n<label><input type=\"radio\" name=\"q00abcde\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q01abcdefg",
+    "pick": "v1abcdefgh",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose</legend>\n<label><input type=\"radio\" name=\"q01abcdefg\" value=\"v0abcde\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. </label>\n<label><input type=\"radio\" name=\"q01abcdefg\" value=\"v1abcdefgh\"> Choose this option for the rule. Choose this option for the rule. Choose t</label>\n<label><input type=\"radio\" name=\"q01abcdefg\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q02abcdefghi",
+    "pick": "v1abcdefg",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this </legend>\n<label><input type=\"radio\" name=\"q02abcdefghi\" value=\"v0abcdefghi\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this opt</label>\n<label><input type=\"radio\" name=\"q02abcdefghi\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for the rule. C</label>\n<label><input type=\"radio\" name=\"q02abcdefghi\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q03a",
+    "pick": "v1abcdefg",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the r</legend>\n<label><input type=\"radio\" name=\"q03a\" value=\"v0abcdefghi\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option</label>\n<label><input type=\"radio\" name=\"q03a\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for t</label>\n<label><input type=\"radio\" name=\"q03a\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q04abcdef",
+    "pick": "v0abcd",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for th</legend>\n<label><input type=\"radio\" name=\"q04abcdef\" value=\"v0abcd\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose </label>\n<label><input type=\"radio\" name=\"q04abcdef\" value=\"v1abcd\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose thi</label>\n<label><input type=\"radio\" name=\"q04abcdef\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q05abcdef",
+    "pick": "b",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Ch</legend>\n<label><input type=\"radio\" name=\"q05abcdef\" value=\"a\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this</label>\n<label><input type=\"radio\" name=\"q05abcdef\" value=\"b\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option f</label>\n<label><input type=\"radio\" name=\"q05abcdef\" value=\"c\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. </label>\n<label><input type=\"radio\" name=\"q05abcdef\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q06abcdefghij",
+    "pick": "v1abcdefghijklm",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this </legend>\n<label><input type=\"radio\" name=\"q06abcdefghij\" value=\"v0abcdef\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. </label>\n<label><input type=\"radio\" name=\"q06abcdefghij\" value=\"v1abcdefghijklm\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for t</label>\n<label><input type=\"radio\" name=\"q06abcdefghij\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q07abcdefghij",
+    "pick": "v1abcdefg",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this opti</legend>\n<label><input type=\"radio\" name=\"q07abcdefghij\" value=\"v0abcd\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choos</label>\n<label><input type=\"radio\" name=\"q07abcdefghij\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the</label>\n<label><input type=\"radio\" name=\"q07abcdefghij\" value=\"v2ab\"> Choose this option for the rule. Choo</label>\n<label><input type=\"radio\" name=\"q07abcdefghij\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q08abcdefghijklmno",
+    "pick": "v1abcd",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose </legend>\n<label><input type=\"radio\" name=\"q08abcdefghijklmno\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the rul</label>\n<label><input type=\"radio\" name=\"q08abcdefghijklmno\" value=\"v1abcd\"> Choose this option for the rule. Choose thi</label>\n<label><input type=\"radio\" name=\"q08abcdefghijklmno\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q09abcdefg",
+    "pick": "v1abcdefgh",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the </legend>\n<label><input type=\"radio\" name=\"q09abcdefg\" value=\"v0abcdef\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this opti</label>\n<label><input type=\"radio\" name=\"q09abcdefg\" value=\"v1abcdefgh\"> Choose this option for the rule. Choose this o</label>\n<label><input type=\"radio\" name=\"q09abcdefg\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q10abcdefgh",
+    "pick": "v1ab",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose</legend>\n<label><input type=\"radio\" name=\"q10abcdefgh\" value=\"v0abcdefgh\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for th</label>\n<label><input type=\"radio\" name=\"q10abcdefgh\" value=\"v1ab\"> Choose this option for the rul</label>\n<label><input type=\"radio\" name=\"q10abcdefgh\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q11abcdef",
+    "pick": "v1ab",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option</legend>\n<label><input type=\"radio\" name=\"q11abcdef\" value=\"v0abcdefghij\" data-inf-recommended> Choose this option for the rule. C</label>\n<label><input type=\"radio\" name=\"q11abcdef\" value=\"v1ab\"> Choose this option for the rule. </label>\n<label><input type=\"radio\" name=\"q11abcdef\" value=\"v2abcd\"> Choose this option for the</label>\n<label><input type=\"radio\" name=\"q11abcdef\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q12abcdefg",
+    "pick": "v0abcdefghij",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this op</legend>\n<label><input type=\"radio\" name=\"q12abcdefg\" value=\"v0abcdefghij\"> Choose this option for the rule. Choose this option for the rule. Choose this option</label>\n<label><input type=\"radio\" name=\"q12abcdefg\" value=\"v1abcdefghijk\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Ch</label>\n<label><input type=\"radio\" name=\"q12abcdefg\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q13abcdefg",
+    "pick": "v1abcdefg",
+    "changed": true,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose this </legend>\n<label><input type=\"radio\" name=\"q13abcdefg\" value=\"v0abcdefghijkl\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. </label>\n<label><input type=\"radio\" name=\"q13abcdefg\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for th</label>\n<label><input type=\"radio\" name=\"q13abcdefg\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q14abcdef",
+    "pick": "v1",
+    "changed": true,
+    "html": "<fieldset data-inf-options-only>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose this optio</legend>\n<label><input type=\"radio\" name=\"q14abcdef\" value=\"v0a\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule</label>\n<label><input type=\"radio\" name=\"q14abcdef\" value=\"v1\"> Choose this option for the rule. Choose this option f</label>\n</fieldset>"
+  },
+  {
+    "name": "q15abcdefg",
+    "pick": "v0abc",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose this option for the r</legend>\n<label><input type=\"radio\" name=\"q15abcdefg\" value=\"v0abc\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule.</label>\n<label><input type=\"radio\" name=\"q15abcdefg\" value=\"v1a\"> Choose this o</label>\n<label><input type=\"radio\" name=\"q15abcdefg\" value=\"v2abc\"> Choose this</label>\n<label><input type=\"radio\" name=\"q15abcdefg\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q16abcdefg",
+    "pick": "v0abcde",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the </legend>\n<label><input type=\"radio\" name=\"q16abcdefg\" value=\"v0abcde\" data-inf-recommended> Choose this option for the rule. Choose this option for the rul</label>\n<label><input type=\"radio\" name=\"q16abcdefg\" value=\"v1a\"> Choose this option for the rule. Choose this option for the</label>\n<label><input type=\"radio\" name=\"q16abcdefg\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q17ab",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option</legend>\n<label><input type=\"radio\" name=\"q17ab\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option fo</label>\n<label><input type=\"radio\" name=\"q17ab\" value=\"v1abcd\"> Choose this option for the rule. Choose this option for the r</label>\n<label><input type=\"radio\" name=\"q17ab\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q18abcd",
+    "pick": "v0a",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option</legend>\n<label><input type=\"radio\" name=\"q18abcd\" value=\"v0a\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Cho</label>\n<label><input type=\"radio\" name=\"q18abcd\" value=\"v1abcdef\"> Choose this option for the rule. Choose this option for the rule. Choose</label>\n<label><input type=\"radio\" name=\"q18abcd\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q19abcd",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for </legend>\n<label><input type=\"radio\" name=\"q19abcd\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the</label>\n<label><input type=\"radio\" name=\"q19abcd\" value=\"v1ab\"> Choose this option for the rule. Choose this option for the </label>\n<label><input type=\"radio\" name=\"q19abcd\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q20abcdefghijklmno",
+    "pick": "v0abcdef",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option f</legend>\n<label><input type=\"radio\" name=\"q20abcdefghijklmno\" value=\"v0abcdef\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option</label>\n<label><input type=\"radio\" name=\"q20abcdefghijklmno\" value=\"v1abcdefghijk\"> Choose this option for the rule. Choose this option for the rule. Choose t</label>\n<label><input type=\"radio\" name=\"q20abcdefghijklmno\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q21ab",
+    "pick": "v1abcdefghijk",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the </legend>\n<label><input type=\"radio\" name=\"q21ab\" value=\"v0abcde\"> Choose this option for the rule. Choose this option for the rule. Choose this option for </label>\n<label><input type=\"radio\" name=\"q21ab\" value=\"v1abcdefghijk\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choo</label>\n<label><input type=\"radio\" name=\"q21ab\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q22abcdefghi",
+    "pick": "v0abcdefg",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose </legend>\n<label><input type=\"radio\" name=\"q22abcdefghi\" value=\"v0abcdefg\" data-inf-recommended> Choose this option for the rule. Choose this option for </label>\n<label><input type=\"radio\" name=\"q22abcdefghi\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for the rule. Choose this option for th</label>\n<label><input type=\"radio\" name=\"q22abcdefghi\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q23a",
+    "pick": "v0abcdefghijklmno",
+    "changed": false,
+    "html": "<fieldset data-inf-options-only>\n<legend>Choose this option for the rule. Choose this option for the rule.</legend>\n<label><input type=\"radio\" name=\"q23a\" value=\"v0abcdefghijklmno\" data-inf-recommended> Choose this option for the rule. Choose </label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v1abcdefghijklmnopqrstuvwx\"> Choose this option for the rule. Choose this option fo</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v2abcdefghijklmnopqrstuvwxyzv2abcdefg\"> Choose this option for the rule. Choose thi</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v3abcdefghijklmnopqrstuvwxyzv3abcdefg\"> Choose this option for the rule. Choose this opti</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v4abcdefghijklmnopqrstuvwxyzv4a\"> Choose this option for the rule. Choose t</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v5abcdefghijklmnopqrstuvwxyzv5abc\"> Choose this option for the rule. Choose this option for the rule. Ch</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v6abcdefghijklmnopqrstuvwxyzv6abcd\"> Choose this option for the rule. Choose </label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v7abcdefghijklmnop\"> Choose this option for the rule. Choose this option fo</label>\n<label><input type=\"radio\" name=\"q23a\" value=\"v8abcdefghijklmnopqrstuvwxy\"> Choose this option for the rule. Choose</label>\n</fieldset>"
+  },
+  {
+    "name": "q24abcdefghijkl",
+    "pick": "v0abc",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. C</legend>\n<label><input type=\"radio\" name=\"q24abcdefghijkl\" value=\"v0abc\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for th</label>\n<label><input type=\"radio\" name=\"q24abcdefghijkl\" value=\"v1abcdefghij\"> Choose this option for the rule. Choose this option for the ru</label>\n<label><input type=\"radio\" name=\"q24abcdefghijkl\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q25abc",
+    "pick": "v0abc",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the </legend>\n<label><input type=\"radio\" name=\"q25abc\" value=\"v0abc\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rul</label>\n<label><input type=\"radio\" name=\"q25abc\" value=\"v1abc\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option</label>\n<label><input type=\"radio\" name=\"q25abc\" value=\"v2abcde\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choose this option f</label>\n<label><input type=\"radio\" name=\"q25abc\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q26a",
+    "pick": "v0abcdef",
+    "changed": false,
+    "html": "<fieldset data-inf-options-only>\n<legend>Choose this option for the r</legend>\n<label><input type=\"radio\" name=\"q26a\" value=\"v0abcdef\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Ch</label>\n<label><input type=\"radio\" name=\"q26a\" value=\"v1abcdef\"> Choose this option for the rule. Choose this option for the rule. Choose this</label>\n</fieldset>"
+  },
+  {
+    "name": "q27abcd",
+    "pick": "v0abcdef",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rul</legend>\n<label><input type=\"radio\" name=\"q27abcd\" value=\"v0abcdef\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this op</label>\n<label><input type=\"radio\" name=\"q27abcd\" value=\"v1abcdefghijkl\"> Choose this option for the rule. Choose this option for the rule. Choose th</label>\n<label><input type=\"radio\" name=\"q27abcd\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q28abc",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset data-inf-options-only>\n<legend>Choose this option for the rul</legend>\n<label><input type=\"radio\" name=\"q28abc\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the </label>\n<label><input type=\"radio\" name=\"q28abc\" value=\"v1ab\"> Choose this option for the rule. Choose this option for the rule. Choose this option for the r</label>\n<label><input type=\"radio\" name=\"q28abc\" value=\"v2abcdefgh\"> Choose this option for the rule. Choose this option for the r</label>\n</fieldset>"
+  },
+  {
+    "name": "q29ab",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option </legend>\n<label><input type=\"radio\" name=\"q29ab\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this </label>\n<label><input type=\"radio\" name=\"q29ab\" value=\"v1abcdefg\"> Choose this option for the rule. Choose this option for the rule. Cho</label>\n<label><input type=\"radio\" name=\"q29ab\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q30abcd",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset data-inf-options-only>\n<legend>Choose this optio</legend>\n<label><input type=\"radio\" name=\"q30abcd\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Cho</label>\n<label><input type=\"radio\" name=\"q30abcd\" value=\"v1abcd\"> Choose this</label>\n</fieldset>"
+  },
+  {
+    "name": "q31abc",
+    "pick": "v0",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for</legend>\n<label><input type=\"radio\" name=\"q31abc\" value=\"v0\" data-inf-recommended> Choose this option for the rule. Choose this optio</label>\n<label><input type=\"radio\" name=\"q31abc\" value=\"v1\"> Choose this option for</label>\n<label><input type=\"radio\" name=\"q31abc\" value=\"v2\"> Choose this</label>\n<label><input type=\"radio\" name=\"q31abc\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q32abc",
+    "pick": "v0ab",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for</legend>\n<label><input type=\"radio\" name=\"q32abc\" value=\"v0ab\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule</label>\n<label><input type=\"radio\" name=\"q32abc\" value=\"v1abcd\"> Choose this option for the rule. Choose this option for th</label>\n<label><input type=\"radio\" name=\"q32abc\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q33abcd",
+    "pick": "v0a",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for th</legend>\n<label><input type=\"radio\" name=\"q33abcd\" value=\"v0a\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule. Choose this option for the rule. Choo</label>\n<label><input type=\"radio\" name=\"q33abcd\" value=\"v1abcd\"> Choose this option for the rule. Choose this option f</label>\n<label><input type=\"radio\" name=\"q33abcd\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q34abcdefghi",
+    "pick": "v0abcd",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose </legend>\n<label><input type=\"radio\" name=\"q34abcdefghi\" value=\"v0abcd\" data-inf-recommended> Choose this option for the rule. Choose this option for the</label>\n<label><input type=\"radio\" name=\"q34abcdefghi\" value=\"v1abcde\"> Choose this option for the rule. Choose this option for th</label>\n</fieldset>"
+  },
+  {
+    "name": "q35abcd",
+    "pick": "v0abcdefg",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for the rule. Choose this o</legend>\n<label><input type=\"radio\" name=\"q35abcd\" value=\"v0abcdefg\" data-inf-recommended> Choose this option for the rule. Choose this option for the rule</label>\n<label><input type=\"radio\" name=\"q35abcd\" value=\"v1abc\"> Choose this option for the rule. Choose th</label>\n<label><input type=\"radio\" name=\"q35abcd\" value=\"v2abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  },
+  {
+    "name": "q36a",
+    "pick": "v0abcdefghi",
+    "changed": false,
+    "html": "<fieldset>\n<legend>Choose this option for the rule. Choose this option for</legend>\n<label><input type=\"radio\" name=\"q36a\" value=\"v0abcdefghi\" data-inf-recommended> Choose this option for the rule. Choose this opt</label>\n<label><input type=\"radio\" name=\"q36a\" value=\"v1abcdefghij\"> Choose this option for the rule. Choose this option for t</label>\n<label><input type=\"radio\" name=\"q36a\" value=\"v2abcdefghi\"> Choose this option for the rule. Choose this optio</label>\n<label><input type=\"radio\" name=\"q36a\" value=\"v3abc\" data-inf-write-in> Something else</label>\n</fieldset>"
+  }
+]

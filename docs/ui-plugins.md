@@ -142,7 +142,7 @@ Inside the frame it exposes `window.inf` and nothing more:
 | `inf.fetch(alias, request)` | a mediated outbound request, answered by the core's seam | forwarded to `inf:plugins:fetch`; refused until a grant is served |
 | `inf.theme` / `inf.onTheme(cb)` | theme as data; the bridge applies `data-theme` itself | - |
 | `inf.store(request)` / `inf.onStore(cb)` | the mount's own store slice (a panel in the frame realm's `PanelProps.store`): get, set, delete, list by key; `onStore` hears its keys change | the slice the HOST bound to the mount (`FrameMountSpec.store`); refused on a mount bound to none |
-| `inf.stage(name, value)` | a JSON snapshot staged under a name beside a card body's form; local, it leaves with a footer click or author-directed reply | the answers' 4,096-byte bound at submission |
+| `inf.stage(name, value)` | a JSON snapshot staged under a name beside a card body's form; local, it leaves with a footer click or author-directed reply | the answers' 64 KiB bound at submission |
 
 Every verb is request/response with a correlation id (`FrameRequest` / `HostMessage`), so a later verb is an addition to the same envelope.
 `resize` and `link` stay as one-way notifications, and `data-inf-action` clicks plus `window.infAction` stay for agent-authored card bodies.

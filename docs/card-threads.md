@@ -312,7 +312,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 ## Current settings on replies
 
 Author-directed replies carry the current named form answers as context alongside the captain's words and pictures, read fresh from the mounted body when available.
-A partial reading is allowed for feedback; the same 4,096-byte answer bound applies.
+A partial reading is allowed for feedback; the same 64 KiB answer bound applies.
 Submitted values reach the durable thread, card observations and crew steer record and supersede earlier submissions in a basis handoff.
 The thread shows the captain's words alone, with the settings as one quiet collapsed line under them (FI3-617; the design skill's `CardThread.prompt.md`).
 A reply is saved as its author reads it - his words, then "Current settings (context, not permission):" and the `cardAnswerLines` lines (`replyWithSettings`) - and its `message_ref` observation records the answers.

@@ -1,4 +1,6 @@
 import {
+  CARD_ANSWER_TEXT_MAX,
+  CARD_ANSWERS_TOO_LONG,
   CARD_REPLY_MAX_CHARS,
   type Card,
   CONVERSE_TEXT_MAX_CHARS,
@@ -1615,18 +1617,21 @@ describe("card action receipts", () => {
     it("refuses answers past the value bound with an honest error", async () => {
       const ipc = request();
       useShellStore.setState({ cards: [withAnswers] });
-      const long = { name: "notes", values: ["x".repeat(5_000)], changed: true };
+      // One value cannot pass the per-value cap and still exceed the set bound.
+      const over = Array.from({ length: 5 }, (_, index) => ({
+        name: `notes-${index}`,
+        values: ["x".repeat(CARD_ANSWER_TEXT_MAX)],
+        changed: true,
+      }));
       await useShellStore.getState().actOnCard("choice", "go", "chrome", undefined, async () => ({
-        answered: 1,
-        of: 1,
-        changed: 1,
-        picked: 1,
-        answers: [long],
+        answered: over.length,
+        of: over.length,
+        changed: over.length,
+        picked: over.length,
+        answers: over,
       }));
       expect(ipc.act).not.toHaveBeenCalled();
-      expect(useShellStore.getState().cardActionErrors.choice).toBe(
-        "These answers are too long to send. Shorten them and try again.",
-      );
+      expect(useShellStore.getState().cardActionErrors.choice).toBe(CARD_ANSWERS_TOO_LONG);
     });
 
     it("reports the offer mounted at the click and the questions the fresh reading defined", async () => {

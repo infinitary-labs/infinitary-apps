@@ -5,9 +5,14 @@ import { join } from "node:path";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import {
+  CARD_ANSWER_TEXT_MAX,
+  CARD_ANSWERS_BOUND_REFUSAL,
+  CARD_ANSWERS_MAX_BYTES,
+  CARD_ANSWERS_TOO_LONG,
   type Card,
   type CardEffect,
   type CardThread,
+  cardAnswersBytes,
   cardPresentation,
   onStage,
   opensSettings,
@@ -136,6 +141,19 @@ import {
 vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
+
+/** Schema-valid answers whose JSON exceeds the footer bound. One value cannot, so this is several. */
+function answersPastBound(): { name: string; values: string[]; changed: boolean }[] {
+  const answers = Array.from({ length: 5 }, (_, index) => ({
+    name: `notes-${index}`,
+    values: ["x".repeat(CARD_ANSWER_TEXT_MAX)],
+    changed: true,
+  }));
+  if (cardAnswersBytes(answers) <= CARD_ANSWERS_MAX_BYTES) {
+    throw new Error("the bound fixture no longer exceeds the answers bound");
+  }
+  return answers;
+}
 
 /**
  * The shared fake session (`tests/helpers/fakeSession.ts`) as this file
@@ -13938,9 +13956,9 @@ describe("decision actions", () => {
     ).toThrow("could not be read");
     expect(() =>
       supervisor.act(cardId, "mock-clock", "chrome", {
-        answers: [{ name: "notes", values: ["界".repeat(1400)], changed: true }],
+        answers: answersPastBound(),
       }),
-    ).toThrow("4,096 bytes");
+    ).toThrow(CARD_ANSWERS_BOUND_REFUSAL);
     expect(cards().find((card) => card.id === cardId)?.status).toBe("ready");
   });
 
@@ -16884,10 +16902,8 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.tasks.get(taskId)?.status).toBe("active");
     expect(harness.workspace.landTaskWork).not.toHaveBeenCalled();
     expect(() =>
-      harness.supervisor.replyToCard(card.id, "build it", undefined, undefined, [
-        { name: "look", values: ["x".repeat(4096)], changed: true },
-      ]),
-    ).toThrow(/too long/);
+      harness.supervisor.replyToCard(card.id, "build it", undefined, undefined, answersPastBound()),
+    ).toThrow(CARD_ANSWERS_TOO_LONG);
   });
 
   it("hands a builder each reply under its basis card with the settings it was sent with", async () => {

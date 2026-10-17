@@ -30,8 +30,9 @@ describe("bridge v2", () => {
     expect(FRAME_BRIDGE_SCRIPT).not.toContain("</script");
     expect(FRAME_BRIDGE_SCRIPT).toContain("document.body.getBoundingClientRect().height");
     expect(ACTION_VALUE_MAX_BYTES).toBe(4_096);
-    // A footer click's answers ride the same bound as a frame value.
-    expect(CARD_ANSWERS_MAX_BYTES).toBe(ACTION_VALUE_MAX_BYTES);
+    // Footer answers are the shell's reading of every question, not a
+    // frame action value. A 37-question card exceeds the frame bound.
+    expect(CARD_ANSWERS_MAX_BYTES).toBeGreaterThan(ACTION_VALUE_MAX_BYTES);
   });
 
   it("parses the closed frame-to-host envelope and nothing else", () => {

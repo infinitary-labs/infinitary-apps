@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "long-card-answers-send",
+      "kind": "fix",
+      "title": "A long card's answers send",
+      "body": "Filling out a card with many questions no longer stops its button or a reply under it.",
+      "area": "cards",
+      "noPicture": "A still of the filled card looks the same. The change is that the button sends the answers instead of a red line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

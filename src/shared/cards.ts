@@ -613,16 +613,25 @@ export const CARD_MAX_ANSWER_VALUES = 256;
 export const CARD_ANSWER_NAME_MAX = 200;
 /**
  * One value or one label of an answer. The frame's reading is the shell's
- * draft and is bounded as an envelope; what a footer click may SEND is the
- * smaller CARD_ANSWERS_MAX_BYTES bound on the whole set.
+ * draft and is bounded per value; what a footer click may SEND is
+ * CARD_ANSWERS_MAX_BYTES on the whole set.
  */
 export const CARD_ANSWER_TEXT_MAX = 16_384;
 /**
- * The most a footer click's answers may weigh as JSON: the frame value's own
- * bound (`ACTION_VALUE_MAX_BYTES` in `./plugins/bridge`, which pins the two
- * equal). A literal here because this module loads in plain Node.
+ * The most a footer click's answers may weigh as JSON. Footer answers are
+ * the shell's own reading of every question, not a frame action value
+ * (`ACTION_VALUE_MAX_BYTES` in `./plugins/bridge`), so the two are not the
+ * same bound. An engineering envelope for a full answer set, the same size
+ * as the question definitions that ride the same click, not a measured
+ * optimum. Past it the chrome refuses the click rather than cut the
+ * captain's picks. A literal here because this module loads in plain Node.
  */
-export const CARD_ANSWERS_MAX_BYTES = 4_096;
+export const CARD_ANSWERS_MAX_BYTES = 64 * 1024;
+/** What the captain sees when a footer click or a reply's answers exceed the bound. */
+export const CARD_ANSWERS_TOO_LONG =
+  "These answers are too long to send. Shorten them and try again.";
+/** What the core says when a footer click's answers exceed the bound. */
+export const CARD_ANSWERS_BOUND_REFUSAL = `The card's answers must be JSON no larger than ${CARD_ANSWERS_MAX_BYTES.toLocaleString("en-US")} bytes.`;
 /**
  * The most the captain may write in a question's Something else field
  * (FI3-1002): the field's own `maxlength`, and the bound on `written`.

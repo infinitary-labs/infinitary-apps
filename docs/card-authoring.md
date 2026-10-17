@@ -571,7 +571,7 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `HomeScreen.ts
   Other choices send whatever is picked.
   Options marked `data-inf-recommended` get an app-drawn tag without changing their selected state; unmarked legacy cards still use their authored defaults.
 - A footer click asks the frame for a fresh reading (`collect`, so a field a script filled is read as it is now), falls back on the last reading when the frame cannot answer, and sends `{ answers }` as `inf:cards:act`'s value (protocol 1.35.0).
-  The whole set may weigh at most 4,096 bytes of JSON, the frame value's bound; the chrome says so rather than cut it.
+  The whole set may weigh at most 64 KiB of JSON, an envelope for the shell's reading of every question, not the frame action value's bound; the chrome says so rather than cut it.
 - The core (`CrewSupervisor.act`) words the answers into the choice's own wake - the `card-choice` steer, an isolated captain-origin `[user]` choice on a Chrome-clicked first mate card (with card/task identity), or a script-fired operational choice - one line each: `- read-scope: "Every project your sign-in can see" (all-visible), changed`.
   A closing choice records them on the card row (`cards.answers_json`, migration 54) and the task's `card_resolved` event (`data.answers`); the first mate's resolutions context line and a build brief grounded in the task (`renderBasisSection`) carry them the same way.
 - A revision keeps the captain's picks by name: every new document of the card gets the shell's draft back with the `form` message, and the bridge reapplies each choice answer, including recommended picks, whose name the new body still has (an option that no longer exists is left at the new proposal).
@@ -682,7 +682,8 @@ The sequences document's plan line says so, and the first mate core sends the as
 Those two sentences are the only places the word prototype reaches the first mate; `CARD_AUTHORING` speaks of a preview.
 
 A playable preview is a decision body that draws the thing being chosen with its own controls ("The preview is the decision" above).
-Its settings ride a hidden named field or `inf.stage(name, value)` as a compact JSON snapshot with stable names and units, at most 4,096 UTF-8 bytes with the other answers.
+Its settings ride a hidden named field or `inf.stage(name, value)` as a compact JSON snapshot with stable names and units.
+The 4,096 UTF-8 bytes named in the authoring instructions are an authoring budget for that snapshot, not a limit shared with the other answers.
 Controls update the preview and the renderer's draft only: no author turn and no durable submission, and an unsent draft disappears on restart.
 The footer choices and author-directed replies submit the current settings.
 A preview ships nothing: its author's scratch stays private in its working copy, and the author revises the same card as feedback arrives.

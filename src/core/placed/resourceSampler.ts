@@ -10,8 +10,8 @@ import {
 } from "@shared/resources";
 
 export type ResourceSamplerOptions = {
-  /** The host supplies memory facts; core never reaches into Electron. */
-  memory?: () => ResourceMemory | null;
+  /** The host supplies memory facts; core never reaches into Electron. A Mac read is async. */
+  memory?: () => ResourceMemory | null | Promise<ResourceMemory | null>;
   cpus?: () => CpuInfo[];
   /** Monotonic, so a clock correction cannot make an old reading new. */
   now?: () => number;
@@ -61,7 +61,7 @@ export class ResourceSampler {
         return unknown("interrupted");
       if (first.length === 0 || first.length !== last.length || last.length > 65_536)
         return unknown("interrupted");
-      const memory = this.options.memory();
+      const memory = await this.options.memory();
       if (!memory || !validResourceMemory(memory)) return unknown("unavailable");
       let total = 0;
       let idle = 0;

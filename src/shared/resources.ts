@@ -10,14 +10,22 @@ export const RESOURCE_OBSERVATIONS_SINCE = "6.3.0";
 export const RESOURCE_ORDER = "inf:computer:resources";
 
 const bytes = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+/** macOS `kern.memorystatus_vm_pressure_level`: normal counts inactive memory, the others do not. */
+export const macMemoryPressureSchema = z.enum(["normal", "warning", "critical"]);
+export type MacMemoryPressure = z.infer<typeof macMemoryPressureSchema>;
 export const resourceMemorySchema = z.object({
   totalBytes: bytes.positive(),
   freeBytes: bytes,
   /** Linux MemAvailable; absent where the system supplies no such estimate. */
   availableBytes: bytes.optional(),
-  /** macOS facts kept separately: neither is added to free memory here. */
+  /** macOS facts kept separately: none of these is added to free memory here. */
   purgeableBytes: bytes.optional(),
   fileBackedBytes: bytes.optional(),
+  /** macOS inactive and speculative pages. Absent on Linux, an older computer, or a failed read. */
+  inactiveBytes: bytes.optional(),
+  speculativeBytes: bytes.optional(),
+  /** Absent when macOS did not report a pressure level with this sample. */
+  memoryPressure: macMemoryPressureSchema.optional(),
 });
 export type ResourceMemory = z.infer<typeof resourceMemorySchema>;
 
@@ -99,8 +107,13 @@ export const resourceOrders = {
 export function validResourceMemory(memory: ResourceMemory): boolean {
   return (
     resourceMemorySchema.safeParse(memory).success &&
-    [memory.freeBytes, memory.availableBytes, memory.purgeableBytes, memory.fileBackedBytes].every(
-      (value) => value === undefined || value <= memory.totalBytes,
-    )
+    [
+      memory.freeBytes,
+      memory.availableBytes,
+      memory.purgeableBytes,
+      memory.fileBackedBytes,
+      memory.inactiveBytes,
+      memory.speculativeBytes,
+    ].every((value) => value === undefined || value <= memory.totalBytes)
   );
 }

@@ -341,7 +341,10 @@ They are demand-only, kept in memory, and never load accounts or sign-ins just t
   A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
 - The desktop host supplies memory facts in bytes through `HostCapabilities.resourceMemory`; work mode supplies the same adapter (`src/main/host/resourceMemory.ts`).
   Linux supplies `MemAvailable` separately from free memory.
-  On macOS, the adapter supplies free, purgeable and file-backed memory separately; the sampler does not add them or claim they are Linux's available-memory estimate.
+  On macOS, the adapter supplies free, purgeable and file-backed memory from Electron, and inactive memory, speculative memory and macOS's pressure level from a fresh `vm_stat` and `kern.memorystatus_vm_pressure_level` read with each sample.
+  The sampler awaits that read.
+  A failed system read omits those facts and keeps Electron's.
+  The sampler does not add the Mac figures or claim they are Linux's available-memory estimate.
   Missing or invalid memory makes the whole observation unknown.
 - Every answer names the sampler's random lifetime epoch and an increasing sequence, not a remote timestamp or a permanent hardware identifier.
   The home measures age on its own monotonic clock, from before the request, so network travel and sampling both consume the ten-second freshness allowance.

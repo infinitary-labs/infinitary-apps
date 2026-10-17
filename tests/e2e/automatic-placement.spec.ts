@@ -27,8 +27,9 @@ import { pressWindowKey, typeInto } from "./windowKeys";
  * A new task in a project set to Automatic, the default for every project
  * that lives on a host (docs/helper.md, "Automatic starts"), starts on this
  * computer from its own readings. Nothing here stands in for them: the
- * memory comes from Electron's own reading of this computer, the CPU from
- * the sampler's real window, and the program, project-access and identity
+ * memory comes from this computer's own reading, including macOS page and
+ * pressure reads on a Mac, the CPU from the sampler's real window, and the
+ * program, project-access and identity
  * facts from the real git, ioreg or machine id. A Mac in ordinary use keeps
  * almost no memory page empty, so a rule that counted only empty pages left
  * every such task waiting for a computer with room (FI3-1733); a virtual

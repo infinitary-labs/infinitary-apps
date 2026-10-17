@@ -93,7 +93,7 @@ export type StartHelperOptions = {
   /** This computer's loader for a preview's project font; absent, a card naming one is refused here. */
   probeTypeface?: TypefaceProbe;
   /** Host memory observations, independent of accounts and conversations. */
-  resourceMemory?: () => ResourceMemory | null;
+  resourceMemory?: () => Promise<ResourceMemory | null>;
   /**
    * This computer's browser engine and command process, which its tasks'
    * own browsers run on (docs/task-browser.md, "On another computer");

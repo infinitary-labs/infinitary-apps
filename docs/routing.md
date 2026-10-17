@@ -127,8 +127,11 @@ CPU capacity is 80% of the observed idle logical CPUs.
 Memory capacity keeps the larger of 512 MiB and 10% of installed RAM untouched, then subtracts pending demand.
 Linux starts from MemAvailable and refuses a missing estimate.
 Mac starts from free, purgeable and file-backed bytes together, capped at installed RAM: the memory macOS hands back without compressing or swapping.
+When that reading also carries inactive memory, speculative memory and a normal pressure level, room starts from the larger of that sum and free, speculative and inactive memory, still capped at installed RAM.
+At warning or critical pressure, a Mac has no memory room, and a waiting task still says it is short of spare memory.
+A reading without those facts, from an older computer or a failed read, keeps the free, purgeable and file-backed sum.
 A Mac in ordinary use keeps almost no page free, so free bytes alone would read a Mac with room as full.
-The observation still carries the three Mac figures separately, and the sum makes no claim to Linux's MemAvailable; compressible app memory never counts.
+The observation still carries the Mac figures separately, and neither sum claims to be Linux's MemAvailable.
 `tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, from that computer's own readings, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request, and the hosted Linux virtual machines in the full suite.
 It also holds a premium ask that computer cannot serve on the premium reset, and checks that the first mate hears once.
 

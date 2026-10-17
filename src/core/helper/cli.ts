@@ -64,7 +64,7 @@ export type CliContext = {
   probeMedia?: MediaProbe;
   /** This computer's loader for a preview's project font; absent, a card naming one is refused here. */
   probeTypeface?: TypefaceProbe;
-  resourceMemory?: () => ResourceMemory | null;
+  resourceMemory?: () => Promise<ResourceMemory | null>;
   /**
    * This computer's browser engine, the process a task's command runs in
    * and the launcher's folder: its tasks' own browsers run here

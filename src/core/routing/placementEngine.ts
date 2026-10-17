@@ -303,6 +303,50 @@ function resourceRejection(reading: ComputerResourceReading): PlacementRejection
   return null;
 }
 
+/**
+ * Free, purgeable and file-backed bytes, the memory macOS hands back without
+ * compressing or swapping. A Mac in ordinary use keeps almost no page free.
+ */
+function macHandedBackBytes(memory: {
+  totalBytes: number;
+  freeBytes: number;
+  purgeableBytes?: number;
+  fileBackedBytes?: number;
+}): number {
+  return Math.min(
+    memory.totalBytes,
+    memory.freeBytes + (memory.purgeableBytes ?? 0) + (memory.fileBackedBytes ?? 0),
+  );
+}
+
+/**
+ * At normal pressure, the larger of that sum and free, speculative and inactive
+ * memory, capped at installed memory. Warning or critical pressure has no room.
+ * A reading without the new facts keeps the handed-back sum.
+ */
+function macUsableBytes(memory: {
+  totalBytes: number;
+  freeBytes: number;
+  purgeableBytes?: number;
+  fileBackedBytes?: number;
+  inactiveBytes?: number;
+  speculativeBytes?: number;
+  memoryPressure?: "normal" | "warning" | "critical";
+}): number {
+  const handedBack = macHandedBackBytes(memory);
+  if (memory.memoryPressure === "warning" || memory.memoryPressure === "critical") return 0;
+  if (
+    memory.memoryPressure !== "normal" ||
+    memory.inactiveBytes === undefined ||
+    memory.speculativeBytes === undefined
+  )
+    return handedBack;
+  return Math.min(
+    memory.totalBytes,
+    Math.max(handedBack, memory.freeBytes + memory.speculativeBytes + memory.inactiveBytes),
+  );
+}
+
 /** OS-specific usable-memory guidance, never a claim that a Mac reports Linux's estimate. */
 function capacityOf(candidate: PlacementCandidate): PlacementDemand | null {
   const reading = candidate.resources;
@@ -312,13 +356,7 @@ function capacityOf(candidate: PlacementCandidate): PlacementDemand | null {
     candidate.system === "linux"
       ? memory.availableBytes
       : candidate.system === "macos"
-        ? // A Mac in ordinary use keeps almost no page empty. Cached file pages
-          // and purgeable memory are what it hands back without compressing or
-          // swapping, so free pages alone read a Mac with room as full.
-          Math.min(
-            memory.totalBytes,
-            memory.freeBytes + (memory.purgeableBytes ?? 0) + (memory.fileBackedBytes ?? 0),
-          )
+        ? macUsableBytes(memory)
         : undefined;
   if (usable === undefined) return null;
   return {

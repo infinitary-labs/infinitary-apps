@@ -104,6 +104,10 @@ declare module "@infinitary/contracts" {
             /** Mac facts; never add these to freeBytes. */
             purgeableBytes?: number;
             fileBackedBytes?: number;
+            /** Optional Mac facts from a newer computer. Absent is not zero. */
+            inactiveBytes?: number;
+            speculativeBytes?: number;
+            memoryPressure?: "normal" | "warning" | "critical";
           };
         };
       }

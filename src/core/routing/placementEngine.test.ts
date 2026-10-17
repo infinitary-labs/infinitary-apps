@@ -218,3 +218,158 @@ describe("a computer refused for its connection", () => {
     expect(wait(undefined)).toContain("Mac mini: out of reach.");
   });
 });
+
+/**
+ * INF-213, the build approved on INF-212: count a Mac's inactive memory while
+ * macOS reports normal pressure, and none once it warns. The page counts are
+ * the real 4:10:05 PM reading of this MacBook (16 KiB pages, 24 GiB installed).
+ */
+const MACBOOK_PAGE = 16_384;
+const MACBOOK_TOTAL = 24 * 1024 ** 3;
+describe("evaluatePlacement counts inactive memory until macOS warns", () => {
+  const standard = resolvePlacementRequirements({
+    home: { system: "macos", chip: "arm64" },
+    workingCopy: true,
+  });
+  const pages = {
+    free: 15_979,
+    speculative: 13_408,
+    inactive: 553_134,
+    purgeable: 18_976,
+    fileBacked: 265_899,
+  };
+  const bytes = (count: number) => count * MACBOOK_PAGE;
+  const macBook = (
+    pressure: "normal" | "warning" | "critical" | undefined,
+  ): PlacementCandidate => ({
+    ...thisMac,
+    resources: {
+      status: "fresh",
+      ageMs: 50,
+      observation: {
+        ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
+          .observation,
+        memory: {
+          totalBytes: MACBOOK_TOTAL,
+          freeBytes: bytes(pages.free),
+          purgeableBytes: bytes(pages.purgeable),
+          fileBackedBytes: bytes(pages.fileBacked),
+          ...(pressure
+            ? {
+                inactiveBytes: bytes(pages.inactive),
+                speculativeBytes: bytes(pages.speculative),
+                memoryPressure: pressure,
+              }
+            : {}),
+        },
+      },
+    },
+  });
+  const room = (candidate: PlacementCandidate) => {
+    const decision = evaluatePlacement({
+      requirements: standard,
+      candidates: [candidate],
+      reservations: [],
+    });
+    return decision.candidates[0];
+  };
+  const tasks = (memoryBytes: number) => memoryBytes / standard.demand.memoryBytes;
+
+  it("fits about 3.2 standard tasks at normal pressure, against 1.1 without the new facts", () => {
+    const normal = room(macBook("normal"));
+    const today = room(macBook(undefined));
+    expect(normal?.rejections).toEqual([]);
+    expect(today?.rejections).toEqual([]);
+    expect(tasks(normal?.remaining?.memoryBytes ?? 0)).toBeGreaterThan(3.1);
+    expect(tasks(normal?.remaining?.memoryBytes ?? 0)).toBeLessThan(3.3);
+    expect(tasks(today?.remaining?.memoryBytes ?? 0)).toBeGreaterThan(1);
+    expect(tasks(today?.remaining?.memoryBytes ?? 0)).toBeLessThan(1.2);
+    expect(normal?.remaining?.memoryBytes).toBeGreaterThan(today?.remaining?.memoryBytes ?? 0);
+  });
+
+  it("has no memory room at warning, and the wait still names spare memory", () => {
+    const warned = room(macBook("warning"));
+    expect(warned?.rejections).toEqual(["memory-busy"]);
+    expect(warned?.remaining?.memoryBytes).toBe(0);
+    const decision = evaluatePlacement({
+      requirements: standard,
+      candidates: [macBook("warning")],
+      reservations: [],
+    });
+    expect(decision.status).toBe("waiting");
+    const words = placementWait(
+      decision.candidates.map((row) => ({
+        name: HERE.This,
+        rejections: row.rejections,
+        capacity: row.capacity,
+      })),
+      standard.demand,
+    ).words;
+    expect(words).toContain("spare memory");
+    expect(words).not.toContain("processing capacity");
+  });
+
+  it("has no memory room at critical pressure", () => {
+    expect(room(macBook("critical"))?.remaining?.memoryBytes).toBe(0);
+    expect(room(macBook("critical"))?.rejections).toEqual(["memory-busy"]);
+  });
+});
+
+/**
+ * Kun's Mac mini at 4:31 PM, pressure normal, 64 GiB. The plan's 4:08 PM
+ * vm_stat stopped before file-backed pages. On this complete reading, free,
+ * purgeable and cached files already exceed free, speculative and inactive,
+ * so the new rule must not read less room than today.
+ */
+describe("evaluatePlacement does not shrink the Mac mini's room", () => {
+  const page = 16_384;
+  const reading = {
+    free: 1_619_854,
+    speculative: 104_548,
+    inactive: 984_027,
+    purgeable: 12_179,
+    fileBacked: 1_101_024,
+  };
+  const bytes = (count: number) => count * page;
+  const mini = (withFacts: boolean): PlacementCandidate => ({
+    ...thisMac,
+    computerId: "mac-mini",
+    resources: {
+      status: "fresh",
+      ageMs: 40,
+      observation: {
+        ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
+          .observation,
+        memory: {
+          totalBytes: 68_719_476_736,
+          freeBytes: bytes(reading.free),
+          purgeableBytes: bytes(reading.purgeable),
+          fileBackedBytes: bytes(reading.fileBacked),
+          ...(withFacts
+            ? {
+                inactiveBytes: bytes(reading.inactive),
+                speculativeBytes: bytes(reading.speculative),
+                memoryPressure: "normal" as const,
+              }
+            : {}),
+        },
+      },
+    },
+  });
+  const memoryOf = (candidate: PlacementCandidate) =>
+    evaluatePlacement({
+      requirements: resolvePlacementRequirements({
+        home: { system: "macos", chip: "arm64" },
+        workingCopy: true,
+      }),
+      candidates: [candidate],
+      reservations: [],
+    }).candidates[0]?.remaining?.memoryBytes;
+
+  it("reads no less room than today's sum on the same reading", () => {
+    const today = memoryOf(mini(false));
+    const counted = memoryOf(mini(true));
+    expect(today).toBeGreaterThan(0);
+    expect(counted).toBeGreaterThanOrEqual(today ?? 0);
+  });
+});

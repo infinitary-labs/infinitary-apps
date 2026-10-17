@@ -413,8 +413,8 @@ export type HostCapabilities = {
    * is refused.
    */
   readonly typefaceProbe?: TypefaceProbe;
-  /** Physical memory facts in bytes; absent or unreadable is unknown, never zero. */
-  readonly resourceMemory?: () => ResourceMemory | null;
+  /** Physical memory facts in bytes; absent or unreadable is unknown, never zero. A Mac read awaits the system. */
+  readonly resourceMemory?: () => Promise<ResourceMemory | null>;
   /**
    * Each task's own browser page (docs/task-browser.md). Absent, crewmates
    * have no browser tools.

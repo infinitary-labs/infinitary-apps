@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-testflight-delivery",
+      "reason": "Release tooling and required phone packaging: a versioned TestFlight workflow and the existing square Infinitary icon. This change does not publish a phone build or change the desktop experience; the first TestFlight delivery follows its merge."
+    }
+  ]
+}

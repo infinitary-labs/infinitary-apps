@@ -108,6 +108,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands, held Node processes and Python kernel-lock probes, on macOS/Linux | 5 s default |
+| `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup; the build guard (node, `ps`) under one held run | 15 s |
 | `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on the real-git describe |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |

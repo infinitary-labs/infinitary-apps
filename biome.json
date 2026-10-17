@@ -408,6 +408,7 @@
         "!tests/install-clones.test.ts",
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
+        "!tests/phone-release-process.test.ts",
         "!tests/mockClaudeClient.test.ts",
         "!tests/module-runner.test.ts",
         "!tests/release-contract.test.ts",

@@ -1,0 +1,158 @@
+name: Infinitary to TestFlight
+run-name: Infinitary ${{ inputs.version }}${{ inputs.check_build && format(' — check build {0}', inputs.check_build) || ' — TestFlight' }}
+
+# INF-64 piece 3 / INF-80. Only a deliberate dispatch on merged main releases.
+# Tests and ordinary Xcode automatic signing use the same Mac mini as SSHHIP.
+# No explicit keychain operations, no certificate cleanup, no automatic retries.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Phone version, for example 0.1.0
+        required: true
+        type: string
+      check_build:
+        description: Only check an existing build, for example 1.1; leave empty to release
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  PHONE_VERSION: ${{ inputs.version }}
+  CHECK_BUILD: ${{ inputs.check_build }}
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      build_number: ${{ steps.resolve.outputs.build_number }}
+      source_commit: ${{ steps.resolve.outputs.source_commit }}
+      mode: ${{ steps.resolve.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: resolve
+        name: Validate the version and exact source
+        run: node scripts/phone-release.ts resolve
+      - name: Check Apple's app record and internal testing
+        if: steps.resolve.outputs.mode == 'release'
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: node scripts/phone-release.ts preflight
+
+  testflight:
+    needs: resolve
+    if: needs.resolve.outputs.mode == 'release'
+    environment: ios-release
+    runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    # Share the existing phone queue, not the desktop jobs' queues.
+    concurrency:
+      group: mac-mini-phone
+      queue: max
+      cancel-in-progress: false
+    # The native gate's existing 120-minute allowance, plus up to 60 for release work.
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: Application Support/infinitary
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          persist-credentials: false
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          path: Application Support/infinitary
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/infinitary/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/infinitary/pnpm-lock.yaml
+      - id: release_request
+        name: Refuse release-job reruns before installing or testing
+        run: node scripts/phone-release.ts resolve
+      - name: Install without reading this Mac's signing material
+        run: |
+          store="$(pnpm store path --silent)"
+          install_home="$RUNNER_TEMP/phone-install-home"
+          mkdir -p "$install_home"
+          HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
+            INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
+            pnpm install --frozen-lockfile --store-dir "$store"
+      - id: iphone
+        name: Read and recover on iPhone
+        run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
+      - id: ipad
+        name: Read and recover on iPad
+        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
+        run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
+      # Default success() is deliberate: either device failing means no signing or upload.
+      - id: upload
+        name: Archive and upload Infinitary
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          PHONE_RECEIPT: ${{ runner.temp }}/phone-upload.json
+        run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash scripts/release-phone.sh
+      - name: Remove this release's temporary key and archive
+        if: always()
+        run: |
+          if [[ -n "${PHONE_RELEASE_WORK:-}" && "$PHONE_RELEASE_WORK" == "$RUNNER_TEMP"/infinitary-ios-release.* ]]; then
+            rm -rf "$PHONE_RELEASE_WORK"
+          fi
+      - name: Keep native results and the non-secret upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-release-${{ needs.resolve.outputs.version }}-${{ needs.resolve.outputs.build_number }}
+          path: |
+            ${{ runner.temp }}/phone/
+            ${{ runner.temp }}/phone-upload.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  availability:
+    needs: [resolve, testflight]
+    # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
+    # inspect them with check_build, never automatically resubmit the upload.
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.mode == 'status' || needs.testflight.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for Apple to confirm internal TestFlight availability
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          CHECK_BUILD: ${{ needs.resolve.outputs.build_number }}
+        run: node scripts/phone-release.ts status

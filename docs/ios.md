@@ -4,7 +4,7 @@ The native SwiftUI app lives in `ios/Infinitary/`, supports iPhone and iPad from
 Its name is Infinitary, its bundle identifier is `com.getinfinitary.infinitary`, and its Xcode development team is `9T2J7MNUP9`.
 This is the join-and-read foundation of the accepted phone plan, not a separate first mate or a place that runs work.
 The phone shows Cards and Activity read-only; it does not run card HTML, scripts, actions or replies, and has no Talk or Tasks controls.
-TestFlight, App Store distribution, the app icon, background notifications, the character and a side-by-side iPad layout belong to later work.
+The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution, background notifications, the character and a side-by-side iPad layout remain separate work.
 The visual rules live in the design skill's `components/devices/PhoneView.prompt.md`.
 
 ## Joining and trust
@@ -73,7 +73,66 @@ The captain opens `ios/Infinitary/Infinitary.xcodeproj`, chooses the Infinitary 
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
 Open **A phone** in the Devices settings of a development build of the Mac app (an installed build leaves it out until TestFlight), scan or paste its link in the phone app, and confirm that Mac.
 The phone should name the Mac and show In reach, its Cards and Activity.
-Physical-device signing, installation, camera scanning and the real Local Network prompt are the captain's checks, never unattended signing work.
+Local physical-device signing, installation, camera scanning and the real Local Network prompt are the captain's checks.
+Release signing runs only in the separately dispatched TestFlight workflow below.
+
+## TestFlight releases
+
+`.github/workflows/ios-release.yml` is dispatched from merged `main` with a numeric phone `version`, such as `0.1.0`.
+A branch dispatch is refused before Apple is contacted.
+Every job checks out the same full source commit recorded by the dispatch; the phone version is independent of the Mac's version and does not edit a version file or create a desktop release tag.
+The build number is the workflow run number followed by `.1`, such as `42.1`; validation refuses a run beyond 9999 rather than exceeding Apple's four-digit first component.
+The Mac job refuses release-job reruns immediately after Node setup, before dependency installation or either exclusive simulator lease; the upload command checks again before Xcode runs.
+GitHub can preserve an earlier resolve job's outputs while advancing another job's attempt, and an unclear upload must not be renumbered or resubmitted.
+A status-only request remains safe to rerun because it never uploads.
+A fresh dispatch creates another build, not a retry of a prior upload.
+
+The Linux preflight reads App Store Connect with the existing `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and base64-encoded `APP_STORE_CONNECT_API_KEY` secrets.
+It requires exactly the app record named **Infinitary** for `com.getinfinitary.infinitary`, the registered bundle identifier, and an internal TestFlight group with automatic distribution and a configured, non-revoked tester.
+Apple's identifier filters can return prefix matches; the preflight selects exact identifiers before requiring one match.
+Apple sends the TestFlight invitation only after a build is available, so `NOT_INVITED` and `INVITED` are valid preflight states, not proof of installation ([Apple's internal-testing instructions](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers/)).
+These are GET-only reads; the workflow creates no app record or tester, changes no account permissions and deletes no certificate.
+It signs short-lived requests in memory, refuses redirects or pagination to another host, and prints neither credentials nor tester identities.
+A successful read proves app access, not permission to manage signing; Xcode checks that authority during the archive.
+A configured tester somewhere in the group is not proof that the captain accepted an invitation or installed the app.
+
+The captain's one-time Apple setup is:
+
+1. In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, register the explicit identifier `com.getinfinitary.infinitary` for team `9T2J7MNUP9` if it does not exist.
+2. In App Store Connect → Apps → + → New App, choose iOS, name **Infinitary**, the registered identifier and a stable SKU such as `infinitary-ios`.
+   An existing record must have that name and identifier, and the API key must have access to it.
+3. In that app's TestFlight → Internal Testing, create or select a group, enable automatic distribution and add the captain.
+   Accept its TestFlight invitation once the first build is available; that acceptance is not an upload prerequisite.
+   A missing eligible tester is managed through App Store Connect → Users and Access, not by this workflow.
+4. Keep the three existing repository secrets set to a team key authorized for the app and Xcode automatic signing.
+   The private-key secret contains base64 of the downloaded `.p8` file, never a value pasted into a task or a command argument.
+
+After preflight, the existing disposable iPhone and iPad gates run on `MAC_RUNNER`, falling back only to `mini-mac`.
+Either failure prevents archive and upload; iPad still runs after an iPhone failure unless cancelled.
+The release job shares the `mac-mini-phone` queue, and each device gate and the release command use the existing exclusive command lease while desktop jobs retain their parallel queues.
+The job allows the native lane's 120 minutes plus 60 minutes for release work; this changes no test deadline.
+Install-time checks use a scratch HOME and an empty local-signing directory, as in `phone.yml`.
+
+`scripts/release-phone.sh` uses ordinary Xcode automatic signing on the existing Mac runner with the same Apple team and API key as SSHHIP.
+This CI path is captain-approved; it is not permission for a crewmate to sign locally or inspect the person's keychains.
+There are no explicit `security`, Keychain or certificate-pruning commands.
+SSHHIP's post-upload cleanup revokes older development certificates team-wide, so this workflow deliberately omits it; certificate cleanup remains with SSHHIP's releases.
+The key is written with mode 0600 inside this invocation's owned mode-0700 temporary folder and supplied to Xcode by file path.
+The uploader receives that exact file through `--p8-file-path`, bypassing its earlier working-directory and HOME search locations rather than relying on the last-searched `API_PRIVATE_KEYS_DIR`.
+Archive, derived data, export and key cleanup run on exit, with an `always()` cleanup for the known invocation path; local verification uses only unsigned simulator runs and unsigned packaging rehearsals.
+A force-killed job can interrupt cleanup, so the final cleanup and runner's temporary-directory lifecycle both matter.
+The archive gate reads the built app's name, bundle identifier, version, build, iOS platform, compiled icon, all four iPad orientations and encryption declaration before export.
+`ios/ExportOptions.plist` selects automatic App Store Connect export and disables automatic version/build renumbering.
+Exactly one exported IPA is accepted for a single upload attempt; no upload is automatically retried.
+
+The `phone-release-<version>-<build>` artifact keeps native results and a non-secret upload receipt, not keys, signed archives or unredacted signing logs.
+An `attempted` receipt means the outcome is unknown; `accepted` means the uploader accepted it for processing, not that it reached a phone.
+The final Linux job reads the exact marketing-version/build pair until Apple reports it in internal beta testing, for up to 60 readings separated by 30 seconds.
+Rejected, expired or unknown states fail explicitly, and export-compliance holds name Apple's required action rather than uploading again.
+A processing timeout or uncertain upload is checked by dispatching the same workflow with `version` and `check_build` set to the existing build number.
+That mode performs only Apple reads, runs no Mac job and never uploads.
+The real first delivery is verified after this workflow is merged: record the run, Apple's internal-testing result, and the captain's TestFlight installation of Infinitary.
+Apple availability is not a substitute for that last confirmation, and no Xcode installation is required of the captain.
 
 ## Disposable verification
 
@@ -118,10 +177,22 @@ Phone gates can yield to desktop work between iPhone and iPad.
 The native job's 120-minute limit allows 45 minutes for both device gates, 60 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
 Setup, evidence upload, the choosers and Linux jobs remain independent.
 Neither device's failure is ignored, and iPad still runs after an iPhone failure unless the job was cancelled.
-Phone release workflows belong to the accepted plan's TestFlight piece; this lane neither signs a physical-device build nor publishes one.
+This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
 
 ## Generated and bundled assets
+
+The phone's `Assets.xcassets/AppIcon.appiconset` contains a flat, opaque 1024-pixel render of the existing design asset `.claude/skills/infinitary-design/assets/app-icon.svg`.
+Unlike the desktop package icon, it has no inset or baked-in corner mask; iOS supplies its own shape.
+`scripts/render-phone-icon.mjs` renders that source through a hidden Electron window and writes an RGB PNG with no alpha channel, as Apple requires.
+To regenerate it, create an empty temporary folder outside the project, set `HOME`, `CFFIXED_USER_HOME` and `INFINITARY_ICON_HOME` to that folder, set `INFINITARY_LOCAL_CODESIGN_DIR` to an empty child of it, then run `node_modules/.bin/electron scripts/render-phone-icon.mjs`.
+The renderer never launches the product or reads its saved data.
+The app bundles BoringSSL as a dependency of `swift-certificates`, which builds the phone's self-signed sign-in certificate using a CryptoKit P-256 key.
+Connections use iOS `URLSession` TLS in `PinnedTransport`; bundled BoringSSL does not provide the app's TLS transport.
+`ITSAppUsesNonExemptEncryption` remains false for this sign-in and secure-connection use; revisit the declaration whenever the cryptography or its uses change.
+The release-tool tests exercise version validation, Apple readiness and processing reads, the workflow's actual conditions, and archive/export/upload through disposable stand-in commands.
+They run in the existing Linux PR cohorts; no secret or signing access is needed.
+Set `INFINITARY_PHONE_RELEASE_EVIDENCE` to a folder outside the project to retain their non-secret command transcripts; the stand-in uploader's success is never proof of a real Apple upload.
 
 `node scripts/generate-phone-theme.ts` copies light/dark values, spacing and radii from the design skill into adaptive native colors and lengths.
 The native TTF fonts are format-only conversions of the skill's Latin Space Grotesk and JetBrains Mono WOFF2 assets, retaining their original names and outlines.

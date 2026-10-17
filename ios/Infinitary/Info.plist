@@ -9,10 +9,13 @@
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>LSRequiresIPhoneOS</key><true/>
+<!-- swift-certificates builds the phone's sign-in certificate and brings BoringSSL as a dependency; connections use iOS TLS. -->
+<key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>com.getinfinitary.infinitary.join</string><key>CFBundleURLSchemes</key><array><string>infinitary</string></array></dict></array>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+<key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>NSLocalNetworkUsageDescription</key><string>Infinitary finds your Mac and reads its cards and Activity on your network.</string>
 <key>NSCameraUsageDescription</key><string>Infinitary scans the code you open in Devices on your Mac so this phone can join it.</string>
 <key>NSBonjourServices</key><array><string>_infinitary._tcp</string></array>

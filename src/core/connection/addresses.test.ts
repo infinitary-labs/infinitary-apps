@@ -50,7 +50,7 @@ describe("where the connection listens", () => {
 
 describe("whether an address is this Mac's own", () => {
   it("counts loopback and this Mac's own interface addresses, as a socket spells them", () => {
-    const interfaces = own("192.168.1.20", "fd7a:115c::5");
+    const interfaces = own("192.168.1.20", "fd7a:115c::5", "fe80::8c4:1520:bfba:1909");
     for (const address of [
       "127.0.0.1",
       "127.0.0.2",
@@ -60,6 +60,9 @@ describe("whether an address is this Mac's own", () => {
       "::ffff:192.168.1.20",
       "fd7a:115c::5",
       "[fd7a:115c::5]",
+      // Link-local, with the zone a socket or sshd names and the list does not (review INF-255 S1).
+      "fe80::8c4:1520:bfba:1909%en0",
+      "fe80::8c4:1520:bfba:1909",
     ])
       expect(isThisMachine(address, interfaces), address).toBe(true);
   });

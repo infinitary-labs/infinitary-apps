@@ -9,7 +9,9 @@ import { JoinedHome } from "../devices/joinedHome";
 import {
   type BackgroundContext,
   readInstalled,
+  separateMac,
   serviceLabel,
+  sshSessionFrom,
   startInBackground,
 } from "./background";
 import { cleanUp, LEFT_CLAUDE_LOGIN } from "./cleanUp";
@@ -34,8 +36,12 @@ function bundleAt(dir: string, says: string): string {
   return app;
 }
 
-/** A computer joined to a home at 192.0.2.20, running its work from a kept copy in the background. */
-async function joined() {
+/**
+ * A computer joined to a home at 192.0.2.20, running its work from a kept
+ * copy in the background; or, `overSsh`, joined as the Mac mini was: as
+ * `work`, reaching its home through the home's own SSH connection.
+ */
+async function joined(options: { overSsh?: boolean } = {}) {
   const dataDir = scratchDir("infinitary-from-home-");
   const asked: string[][] = [];
   const background: BackgroundContext = {
@@ -51,7 +57,9 @@ async function joined() {
   const identity = createKeyIdentity("Firstmate device");
   new JoinedHome(dataDir, () => {}).join(
     {
-      at: "192.0.2.20:47623",
+      ...(options.overSsh
+        ? { at: "127.0.0.1:47623", via: "ssh" as const }
+        : { at: "192.0.2.20:47623" }),
       homeKey: "K".repeat(43),
       deviceId: "mini",
       kind: "work",
@@ -104,6 +112,43 @@ describe("the work mode started by its home over Remote Login", () => {
     expect(readInstalled(at.dataDir)).toEqual({ service: { label, file }, app: at.kept });
     // Still joined.
     expect(new JoinedHome(at.dataDir, () => {}).read()?.grant.deviceId).toBe("mini");
+  });
+
+  // INF-247: the Mac mini joined as `work` through the home's SSH connection,
+  // whose grant names only that connection's far end; the home's SSH session
+  // tells whether the home is this Mac, and the agent's file keeps it.
+  it("starts a separate Mac the home reaches over SSH as an app once the home updates it, and another user here as before", async () => {
+    const PROCESS_TYPE = "<key>ProcessType</key>\n\t<string>Interactive</string>";
+    const agent = join("Library", "LaunchAgents", `${label}.plist`);
+    for (const [from, separate] of [
+      ["192.0.2.30", true],
+      ["127.0.0.1", false],
+    ] as const) {
+      const at = await joined({ overSsh: true });
+      expect(separateMac(at.dataDir)).toBe(false);
+      const sent = bundleAt(scratchDir("infinitary-from-home-sent-"), "the home's version");
+      const background = { ...at.background, homeSshFrom: from };
+      expect(
+        await updateFromHome(
+          { dataDir: at.dataDir, background, backgroundEnv: {}, expected: EXPECTED },
+          sent,
+        ),
+      ).toEqual({ firstmate: "updated", background: "running" });
+      const plist = readFileSync(join(at.background.homeDir, agent), "utf8");
+      if (separate) expect(plist, from).toContain(PROCESS_TYPE);
+      else expect(plist, from).not.toContain("ProcessType");
+      // The run started after reads it from the agent's file, with no SSH session of its own.
+      expect(separateMac(at.dataDir), from).toBe(separate);
+    }
+  });
+
+  it("reads where the home's own SSH session comes from", () => {
+    expect(sshSessionFrom({ SSH_CONNECTION: "192.0.2.30 52114 192.0.2.40 22" })).toBe("192.0.2.30");
+    // Over link-local IPv6, sshd names the zone too (review INF-255 S1).
+    expect(sshSessionFrom({ SSH_CONNECTION: "fe80::1%en0 52114 fe80::2%en0 22" })).toBe(
+      "fe80::1%en0",
+    );
+    expect(sshSessionFrom({})).toBeUndefined();
   });
 
   it("says the background failed when its agent cannot be written", async () => {

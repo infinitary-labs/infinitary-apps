@@ -26,6 +26,7 @@ import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { writeInstalled } from "./background";
 import { cleanUp, LEFT_CLAUDE_LOGIN } from "./cleanUp";
+import { onHomeMac } from "./homePlace";
 import { type HelperIO, homeDialAddress, joinHome } from "./join";
 import { HomeRoute, ROUTE_LEASE_MS } from "./route";
 import { type HelperRun, helperStatus, startHelper } from "./run";
@@ -1012,6 +1013,31 @@ describe("a home on this Mac while this Mac's network address changes", () => {
       "[::1]:47623",
     ])
       expect(homeDialAddress(at, interfaces), at).toBe(at);
+  });
+});
+
+describe("whose work stays below the UI", () => {
+  // Captain on INF-255: another user on the home's own Mac keeps a crewmate's
+  // builds and tests below the UI the home's window draws there, while a
+  // separate Mac like the Mac mini runs them at its normal priority.
+  it("keeps work on the home's own Mac below the UI, and a separate Mac's at its own priority", () => {
+    const interfaces = () => network("192.168.65.2");
+    // Another user here, joined by the command for one, which names loopback.
+    expect(onHomeMac({ kind: "work", at: "127.0.0.1:47623" }, interfaces)).toBe(true);
+    // A user here added at this Mac's own address.
+    expect(onHomeMac({ kind: "mac", at: "192.168.65.2:47623" }, interfaces)).toBe(true);
+    // Separate Macs: joined at the home's address on the network or a private
+    // network service, or reached through the home's own SSH connection.
+    for (const at of ["192.168.65.77:47623", "macbook.local:47623", "mac.tail.ts.net:47623"])
+      expect(onHomeMac({ kind: "mac", at }, interfaces), at).toBe(false);
+    expect(onHomeMac({ kind: "mac", at: "127.0.0.1:47623", via: "ssh" }, interfaces)).toBe(false);
+    // Review INF-255 N1: a separate Mac that joined as `work` before a Mac
+    // could do both still holds that kind, and its address tells.
+    for (const at of ["192.168.65.77:47623", "macbook.local:47623", "mac.tail.ts.net:47623"])
+      expect(onHomeMac({ kind: "work", at }, interfaces), at).toBe(false);
+    // A user here added at its address joins through the home's SSH
+    // connection as `work`, whose grant names only that connection's far end.
+    expect(onHomeMac({ kind: "work", at: "127.0.0.1:47623", via: "ssh" }, interfaces)).toBe(true);
   });
 });
 

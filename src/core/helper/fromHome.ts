@@ -14,7 +14,8 @@ import {
   writeInstalled,
 } from "./background";
 import { cleanUp } from "./cleanUp";
-import { fetchedLauncher, homePlace, keepApp } from "./join";
+import { homePlace } from "./homePlace";
+import { fetchedLauncher, keepApp } from "./join";
 import { STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
 import { homeLabel } from "./words";
 

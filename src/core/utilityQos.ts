@@ -16,7 +16,10 @@ import { hostPlatform } from "./platform";
  * app-started CPU load clamped to utility). `taskpolicy` execs the program
  * in its own process, so the pid, signals, exit status and output are the
  * program's own. Elsewhere, and on a Mac without the tool, the command is
- * returned unchanged.
+ * returned unchanged. A separate Mac that runs work draws no character, so
+ * its crewmates' shell jobs run at its own priority there, while another
+ * user's work on the home's own Mac keeps them below the UI
+ * (`JobManagerOptions.belowUi`).
  */
 
 const TASKPOLICY = "/usr/sbin/taskpolicy";

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { renderWake } from "../orchestrator/wakes";
 import { initOverflowDir } from "../overflow";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { atUtilityQos } from "../utilityQos";
 import { type JobExit, JobManager, jobExitWake } from "./jobManager";
 
 // A job's live output spills to the overflow dir; the app wires userData's
@@ -90,6 +92,33 @@ describe("JobManager (R2: the exit is the wake)", () => {
     });
     expect(outcome).toEqual({ kind: "done", exitCode: 3, output: "oops" });
   });
+
+  // INF-247: a crewmate placed on a separate Mac that runs work starved
+  // behind that Mac's other work at utility priority, so its commands run at
+  // the run's own priority there; the home's, and another user's work on the
+  // home's own Mac, stay below the UI (captain on INF-255).
+  it.runIf(process.platform === "darwin")(
+    "runs a command below the UI, or at the run's own priority where there is none",
+    async () => {
+      const PRIORITY = "ps -o pri= -p $$";
+      const read = (file: string, args: readonly string[]) =>
+        Number(execFileSync(file, args, { encoding: "utf8" }).trim());
+      const clamped = atUtilityQos("/bin/sh", ["-c", PRIORITY]);
+      const below = read(clamped.file, clamped.args);
+      const own = read("/bin/sh", ["-c", PRIORITY]);
+      const ran = async (belowUi?: boolean) => {
+        const jobs = new JobManager({
+          onExit: () => {},
+          ...(belowUi === undefined ? {} : { belowUi }),
+        });
+        const outcome = await jobs.run({ ownerId: "t1", command: PRIORITY, cwd: "/tmp" });
+        if (outcome.kind !== "done") throw new Error("expected a finished command");
+        return Number(outcome.output.trim());
+      };
+      expect(await ran()).toBe(below);
+      expect(await ran(false)).toBe(own);
+    },
+  );
 
   it("converts a slow command into a background job at the cap, then wakes on exit", async () => {
     const { jobs, exits, db } = manager();

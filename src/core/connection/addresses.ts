@@ -187,7 +187,9 @@ export function isThisMachine(
 ): boolean {
   if (!address) return false;
   if (isLoopback(address)) return true;
-  const plain = plainAddress(address);
+  // A link-local address from a socket or sshd names its zone ("fe80::1%en0"),
+  // which the interface list never does (review INF-255 S1).
+  const plain = plainAddress(address).replace(/%.*$/, "");
   return Object.values(interfaces)
     .flat()
     .some((entry) => entry?.address.toLowerCase() === plain);

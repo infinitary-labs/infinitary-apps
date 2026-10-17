@@ -64,6 +64,14 @@ export type JobManagerOptions = {
    * reads `Date.now()`.
    */
   now?: () => number;
+  /**
+   * Whether its commands run below the UI (`atUtilityQos`), as they do on
+   * the Mac whose window draws the character: the home's own, and another
+   * user's work there. A separate Mac that runs work draws none, so its
+   * crewmates' builds and tests run at the run's own priority instead
+   * (docs/helper.md, "Holding a conversation"). Absent means below.
+   */
+  belowUi?: boolean;
 };
 
 export class JobManager {
@@ -105,8 +113,13 @@ export class JobManager {
     const startedAt = this.now();
     // The channel compares this stamp with `Date.now()`, not the ticker.
     const shellStartedAt = Date.now();
-    // A crewmate's builds and tests run below the UI (../utilityQos.ts).
-    const command = atUtilityQos("/bin/bash", ["-c", input.command]);
+    // A crewmate's builds and tests run below the UI (../utilityQos.ts),
+    // where there is one.
+    const shell = ["-c", input.command];
+    const command =
+      this.options.belowUi === false
+        ? { file: "/bin/bash", args: shell }
+        : atUtilityQos("/bin/bash", shell);
     const child = spawn(command.file, command.args, {
       cwd: input.cwd,
       // The person's search path, so node, pnpm and gh are there from a Dock

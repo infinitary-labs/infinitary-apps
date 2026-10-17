@@ -164,6 +164,11 @@ export async function startConversations(options: {
   probeTypeface?: TypefaceProbe;
   /** The contract the home said in its welcome, while it is known. */
   homeVersion?: () => string | null;
+  /**
+   * Whether a crewmate's builds and tests here stay below the UI: on the
+   * home's own Mac, whose window draws the character (`separateMac`).
+   */
+  belowUi: boolean;
   log?: (line: string) => void;
 }): Promise<Conversations> {
   // The person's search path for the crewmate's shell and the Claude client.
@@ -190,6 +195,9 @@ export async function startConversations(options: {
     onChange: () => host?.jobsChanged(),
     onExit: (exit) => host?.jobExit(exit),
     now: ticker.now,
+    // Below the UI on the home's own Mac, where its window draws the
+    // character; on a separate Mac, at the run's own priority.
+    belowUi: options.belowUi,
   });
   // Its clones and pushes answer where a project lives with this
   // computer's own sign-in there, when it has one (`configureComputerGit`).

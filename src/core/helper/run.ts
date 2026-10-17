@@ -24,11 +24,12 @@ import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { readPlacementFacts } from "../placed/placementFacts";
 import { ResourceSampler } from "../placed/resourceSampler";
 import type { ComputerAccounts } from "./accounts";
-import { type BackgroundContext, retireStrays } from "./background";
+import { type BackgroundContext, retireStrays, separateMac } from "./background";
 import { type CleanUpResult, LEFT_CLAUDE_LOGIN } from "./cleanUp";
 import type { ComputerBrowserParts, Conversations } from "./conversations";
 import { configureComputerGit, holdsForgeSignIn } from "./forges";
-import { homeDialAddress, homePlace } from "./join";
+import { homePlace } from "./homePlace";
+import { homeDialAddress } from "./join";
 import { FolderBusyError, folderHolder, lockFolder } from "./lock";
 import { PlacedTasks } from "./placedTasks";
 import { homeDialOptions } from "./route";
@@ -128,6 +129,8 @@ export type StartHelperOptions = {
     probeMedia?: MediaProbe;
     probeTypeface?: TypefaceProbe;
     homeVersion?: () => string | null;
+    /** Whether its crewmates' builds and tests stay below the UI: on the home's own Mac (`separateMac`). */
+    belowUi: boolean;
   }) => Promise<Conversations>;
   /**
    * Loads this computer's own sign-ins (`startSignIns`) unless a test
@@ -295,6 +298,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
           // The contract its home said in its welcome, which decides whether it keeps project fonts.
           homeVersion: () => link.state().homeVersion,
+          belowUi: !separateMac(dataDir, undefined, options.interfaces),
         }),
       )
       .then((held) => {

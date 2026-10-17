@@ -9,8 +9,11 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
+import type { DeviceGrant } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { createKeyIdentity } from "../devices/identity";
+import { JoinedHome } from "../devices/joinedHome";
 import { writeMoveRecord } from "../folderMove/record";
 import {
   acquireMoveLock,
@@ -93,6 +96,45 @@ describe("running in the background", () => {
     expect(plist).toContain("<key>RunAtLoad</key>\n\t<true/>");
     expect(plist).not.toContain("EnvironmentVariables");
     expect(readInstalled(ctx.dataDir)).toEqual({ service: { label, file }, app: null });
+  });
+
+  // INF-247 and the captain on INF-255 ("Keep low priority for another user
+  // on your own Mac"): a separate Mac's run starts as an app, never as a
+  // throttled daemon, while another user's on the home's own Mac keeps the
+  // low priority it always had.
+  it("starts a separate Mac's run as an app, and another user's on the home's own Mac as before", async () => {
+    const agentFor = async (
+      grant: Pick<DeviceGrant, "kind" | "at" | "via">,
+      homeSshFrom?: string,
+    ) => {
+      const { ctx: plain } = context();
+      const ctx = homeSshFrom ? { ...plain, homeSshFrom } : plain;
+      const own = createKeyIdentity("Firstmate device");
+      new JoinedHome(ctx.dataDir, () => {}).join(
+        {
+          ...grant,
+          homeKey: createKeyIdentity("The home").pin,
+          deviceId: "mini",
+          key: own.key,
+          cert: own.cert,
+        },
+        1_000,
+      );
+      await startInBackground(ctx, { launcher: LAUNCHER, env: {}, app: null });
+      const label = serviceLabel("dev");
+      return readFileSync(join(ctx.homeDir, "Library", "LaunchAgents", `${label}.plist`), "utf8");
+    };
+    // A separate Mac, joined by the command for another Mac at the home's address.
+    expect(await agentFor({ kind: "mac", at: "192.0.2.20:47623" })).toContain(
+      "<key>ProcessType</key>\n\t<string>Interactive</string>",
+    );
+    // Another user on the home's own Mac, joined by the command for one.
+    expect(await agentFor({ kind: "work", at: "127.0.0.1:47623" })).not.toContain("ProcessType");
+    // A Mac added by its address, which the home's own look found on another
+    // Mac, whatever address the home's SSH session comes from (review INF-255 S2).
+    expect(
+      await agentFor({ kind: "mac", at: "127.0.0.1:47623", via: "ssh" }, "127.0.0.1"),
+    ).toContain("<key>ProcessType</key>\n\t<string>Interactive</string>");
   });
 
   it("starts at the next login when the user has no login session to give it to", async () => {

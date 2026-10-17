@@ -1,14 +1,18 @@
 import { execFile } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import type { NetworkInterfaceInfo } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { OWN_IDENTITY, type Spelling, workLabelOf, workLabels } from "@shared/codeNames";
 import type { BuildFlavor } from "@shared/userDataFolders";
 import { z } from "zod";
+import { isThisMachine } from "../connection/addresses";
 import { writePrivate } from "../devices/identity";
+import { JoinedHome } from "../devices/joinedHome";
 import { pathsOf } from "../folderMove/due";
 import { readMoveRecord } from "../folderMove/record";
 import { hostEnv } from "../hostEnv";
 import { moveLockPathFor, moveLockRunning } from "../storage/moveLock";
+import { onHomeMac } from "./homePlace";
 import { folderHolder } from "./lock";
 
 /**
@@ -64,6 +68,13 @@ export type BackgroundContext = {
   homeDir: string;
   /** The user's number: the agent runs in that user's own session. */
   uid: number;
+  /**
+   * Where the home's own SSH session comes from, for a command the home
+   * started over Remote Login: the client address `SSH_CONNECTION` names
+   * (`sshSessionFrom`). It tells a separate Mac from the home's own for a
+   * grant that reaches its home through that connection (`separateMac`).
+   */
+  homeSshFrom?: string;
 } & ServiceManager;
 
 /** The agent as `installed.json` records it: its label, and the file it is set up by. */
@@ -113,21 +124,26 @@ export function forgetInstalled(dataDir: string): void {
   rmSync(join(dataDir, INSTALLED_FILE), { force: true });
 }
 
+/** The lines that start an agent's run as an app, which also record that its Mac is a separate one. */
+const STARTS_AS_APP = ["\t<key>ProcessType</key>", "\t<string>Interactive</string>"];
+
 const xml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
  * The agent: `<app> work run` at login, kept running while the user is
  * joined - while its grant (`home.json`) is in the data folder - so a stop
- * after the home removes it is the last. What it says goes to the folder's
- * own `service.log`. `env` is what it carries of the joining process's
- * environment: a development run's stand-ins alone.
+ * after the home removes it is the last. `interactive` starts it at the
+ * priority of an app the person started: a separate Mac's. What it says
+ * goes to the folder's own `service.log`. `env` is what it carries of the
+ * joining process's environment: a development run's stand-ins alone.
  */
 export function servicePlist(options: {
   label: string;
   launcher: Launcher;
   dataDir: string;
   env: Readonly<Record<string, string>>;
+  interactive?: boolean;
 }): string {
   const strings = (values: readonly string[]) =>
     values.map((value) => `\t\t<string>${xml(value)}</string>`).join("\n");
@@ -154,6 +170,12 @@ export function servicePlist(options: {
     "\t\t\t<true/>",
     "\t\t</dict>",
     "\t</dict>",
+    // Named, launchd starts the run as an app the person started; unnamed, as
+    // a throttled daemon, where it and every process under it - a crewmate's
+    // builds and tests among them - run below the computer's other work and
+    // starve while it is busy (INF-247). Another user's work on the home's own
+    // Mac keeps that low priority (`separateMac`).
+    ...(options.interactive ? STARTS_AS_APP : []),
     "\t<key>StandardOutPath</key>",
     `\t<string>${xml(log)}</string>`,
     "\t<key>StandardErrorPath</key>",
@@ -272,7 +294,12 @@ const launchd: Adapter = {
     mkdirSync(dirname(service.file), { recursive: true });
     writePrivate(
       service.file,
-      servicePlist({ label: service.label, dataDir: context.dataDir, ...text }),
+      servicePlist({
+        label: service.label,
+        dataDir: context.dataDir,
+        interactive: separateMac(context.dataDir, context.homeSshFrom),
+        ...text,
+      }),
     );
   },
   load: async (context, service) => {
@@ -303,6 +330,57 @@ const launchd: Adapter = {
     return (await launchctl(["print", `${domain}/${service.label}`])).ok ? "running" : "failed";
   },
 };
+
+/**
+ * Whether the folder runs work for a home on a separate Mac: its agent then
+ * starts the run as an app, and its crewmates' builds and tests run at the
+ * run's own priority. On the home's own Mac, or with no grant to read, the
+ * run keeps low priority (captain on INF-255).
+ *
+ * The address the grant dials tells (`onHomeMac`). A grant that reaches its
+ * home through the home's SSH connection names only that connection's far
+ * end: as `mac`, the home's own look found it on another Mac; as `work`, it
+ * is another user here or a Mac that joined before a Mac could do both, so
+ * the home's own SSH session tells when the home joins or updates it over
+ * Remote Login (`homeSshFrom`): from this Mac's own address or loopback only
+ * on the home's own Mac. Its agent's file keeps that answer
+ * (`STARTS_AS_APP`), so the run and a move to another label read it later;
+ * an agent written before names nothing, and the run keeps low priority.
+ */
+export function separateMac(
+  dataDir: string,
+  homeSshFrom?: string,
+  interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>,
+): boolean {
+  const joined = new JoinedHome(dataDir, () => {}).read();
+  if (!joined) return false;
+  const { grant } = joined;
+  if (grant.via !== "ssh") return !onHomeMac(grant, interfaces);
+  // A `mac` grant the home's own look already found on another Mac.
+  if (grant.kind !== "work") return true;
+  if (homeSshFrom !== undefined) return !isThisMachine(homeSshFrom, interfaces?.());
+  return startsAsApp(dataDir);
+}
+
+/** Whether the agent `installed.json` records starts its run as an app, which it does only on a separate Mac. */
+function startsAsApp(dataDir: string): boolean {
+  const { service } = readInstalled(dataDir);
+  if (!service) return false;
+  try {
+    return readFileSync(service.file, "utf8").includes(STARTS_AS_APP.join("\n"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where the home's own SSH session that started this command comes from:
+ * the client address `SSH_CONNECTION` begins with ("client port server
+ * port"); none outside an SSH session.
+ */
+export function sshSessionFrom(env: NodeJS.ProcessEnv): string | undefined {
+  return env.SSH_CONNECTION?.trim().split(/\s+/)[0] || undefined;
+}
 
 /** The states in which this user's systemd holds the service as running or about to. */
 const SYSTEMD_RUNNING = new Set(["active", "activating", "reloading", "deactivating"]);

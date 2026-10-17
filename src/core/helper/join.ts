@@ -5,7 +5,6 @@ import type { FoundTools } from "@shared/connection";
 import {
   type DeviceGrant,
   deviceRunsWork,
-  type HomeVia,
   type PairingLink,
   parsePairingLink,
   splitDialAddress,
@@ -24,6 +23,7 @@ import { HomeLink } from "../devices/homeLink";
 import { type Joined, JoinedHome } from "../devices/joinedHome";
 import { type Launcher, readInstalled } from "./background";
 import type { CleanUpResult } from "./cleanUp";
+import { homePlace } from "./homePlace";
 import { FolderBusyError, lockFolder, STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
 import { homeDialOptions } from "./route";
 import { type HomePlace, helperWords, homeLabel, type InBackground } from "./words";
@@ -146,20 +146,6 @@ type Used = {
   kept: string | null;
   again: boolean;
 };
-
-/**
- * Where a home's link or grant sends this Mac, as its person knows it. One
- * that reaches its home through the home's SSH connection names the home's
- * loopback, the far end of that connection, which is never this Mac's own.
- */
-export function homePlace(
-  reach: { at: string; via?: HomeVia },
-  interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>,
-): HomePlace {
-  const host = splitDialAddress(reach.at)?.host ?? reach.at;
-  if (reach.via === "ssh") return { host, thisMac: false, overSsh: true };
-  return { host, thisMac: isThisMachine(host, interfaces?.()) };
-}
 
 /**
  * Where a grant dials its home (docs/helper.md, "Finding the home again"): a

@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { createKeyIdentity } from "../devices/identity";
+import { JoinedHome } from "../devices/joinedHome";
 import { isProfileRetired } from "../storage/retiredProfile";
 import { type BackgroundContext, readInstalled, servicePlist, writeInstalled } from "./background";
 import { moveWork } from "./moveWork";
@@ -20,7 +22,14 @@ import { helperPlace } from "./place";
 const OLDER_LABEL = workLabelOf("fm", "release");
 const OWN_LABEL = workLabelOf("inf", "release");
 
-function computer(options: { agent?: "older" | "own" | "none"; refuses?: string } = {}) {
+function computer(
+  options: {
+    agent?: "older" | "own" | "none";
+    refuses?: string;
+    /** Joined as the Mac mini was: `work`, through the home's SSH connection, its agent already starting it as an app. */
+    separateOverSsh?: boolean;
+  } = {},
+) {
   const appData = scratchDir("infinitary-move-work-");
   const homeDir = scratchDir("infinitary-move-work-home-");
   const older = join(appData, "firstmate-3000");
@@ -29,7 +38,22 @@ function computer(options: { agent?: "older" | "own" | "none"; refuses?: string 
   mkdirSync(join(work, "tasks", "t1"), { recursive: true });
   mkdirSync(join(work, "app"), { recursive: true });
   mkdirSync(join(work, "chromium"), { recursive: true });
-  writeFileSync(join(work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
+  if (options.separateOverSsh) {
+    const own = createKeyIdentity("Firstmate device");
+    new JoinedHome(work, () => {}).join(
+      {
+        at: "127.0.0.1:47623",
+        via: "ssh",
+        homeKey: createKeyIdentity("The home").pin,
+        deviceId: "mini",
+        kind: "work",
+        key: own.key,
+        cert: own.cert,
+      },
+      1_000,
+    );
+  } else
+    writeFileSync(join(work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
   writeFileSync(join(work, "tasks", "t1", "conversation.json"), "a conversation\n");
   // The copy the run starts from: an AppImage keeps one name whichever app it is.
   const app = join(work, "app", "infinitary.AppImage");
@@ -59,7 +83,13 @@ function computer(options: { agent?: "older" | "own" | "none"; refuses?: string 
     mkdirSync(join(homeDir, "Library", "LaunchAgents"), { recursive: true });
     writeFileSync(
       agentFile(label),
-      servicePlist({ label, launcher: { executable: app, args: [] }, dataDir: work, env: {} }),
+      servicePlist({
+        label,
+        launcher: { executable: app, args: [] },
+        dataDir: work,
+        env: {},
+        interactive: options.separateOverSsh === true,
+      }),
     );
     writeInstalled(work, { service: { label, file: agentFile(label) }, app });
   }
@@ -122,6 +152,16 @@ describe("Infinitary's run that finds its work in Firstmate 3000's folder", () =
       ["bootout", `gui/502/${OLDER_LABEL}`],
     ]);
     expect(existsSync(at.agentFile(OLDER_LABEL))).toBe(false);
+  });
+
+  // INF-247: the Mac mini joined as `work` through the home's SSH connection,
+  // and only its agent's file keeps that it is a separate Mac.
+  it("keeps a separate Mac's agent starting its run as an app when the home reaches it over SSH", async () => {
+    const at = computer({ separateOverSsh: true });
+    expect(await at.run()).toEqual({ kind: "handed-over" });
+    expect(readFileSync(at.agentFile(OWN_LABEL), "utf8")).toContain(
+      "<key>ProcessType</key>\n\t<string>Interactive</string>",
+    );
   });
 
   it("goes on from the new folder when the service manager refuses Infinitary's agent, and points the old one there for its next load", async () => {

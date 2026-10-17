@@ -307,12 +307,14 @@ async function placed(
   const deviceId = joined.grant.deviceId;
 
   let host: SessionHost | undefined;
+  let belowUi: boolean | undefined;
   const start = () => {
     const started = startHelper({
       dataDir,
       say: () => {},
       retryMs: [20],
-      conversations: async ({ dataDir: dir, ask, homeVersion }) => {
+      conversations: async ({ dataDir: dir, ask, homeVersion, belowUi: below }) => {
+        belowUi = below;
         const copies = options.copies ? folderCopies(dir) : undefined;
         host = new SessionHost({
           tasks: new PlacedTasks(dir, copies?.worktreesDir),
@@ -370,6 +372,8 @@ async function placed(
       if (!host) throw new Error("No conversation was opened.");
       return host;
     },
+    /** Whether the run had its conversations keep a crewmate's builds and tests below the UI. */
+    belowUi: () => belowUi,
     open: () => order("inf:session:open", [{ orderId: `open:${TASK}:1`, task: TASK, spec }]),
     /** The home's turn ends: the computer said `turn_ended` for this turn. */
     ended: (turn: number) =>
@@ -868,6 +872,13 @@ describe("a conversation held on a computer that runs work", () => {
       callId: "job:job1",
       request: { task: TASK, exit: { jobId: "job1", exitCode: 0, tail: "passed" } },
     });
+  });
+
+  it("keeps a crewmate's builds and tests below the UI as another user on the home's own Mac", async () => {
+    // Captain on INF-255. This world joins by a link for another user here (`work`).
+    const at = await placed();
+    await at.open();
+    expect(at.belowUi()).toBe(true);
   });
 
   it("refuses an order it does not know, a malformed one, and one for a task it never opened", async () => {

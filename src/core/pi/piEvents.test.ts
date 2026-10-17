@@ -174,6 +174,12 @@ describe("usageFromMessage", () => {
         usage: {},
       });
     }
+    expect(
+      usageFromMessage({
+        provider: "fm-custom-0123456789abcdef",
+        usage: { input: 0, output: 0, cost: { total: Number.NaN } },
+      }),
+    ).toEqual({});
     expect(usageFromMessage({ provider: "openai", usage: { input: Number.NaN } })).toBeUndefined();
   });
 });

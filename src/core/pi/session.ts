@@ -1,4 +1,3 @@
-import { normalizeContext } from "@earendil-works/pi-ai/utils/transcript";
 import { clampThinkingLevel } from "./reasoning";
 
 export { clampThinkingLevel } from "./reasoning";
@@ -13,7 +12,9 @@ import {
 import {
   type AgentSession,
   createAgentSession,
+  DEFAULT_COMPACTION_SETTINGS,
   type EditToolInput,
+  estimateTokens,
   type FindToolInput,
   type GrepToolInput,
   type LsToolInput,
@@ -50,8 +51,6 @@ import { speedRuntime } from "./crewSpeed";
 export { PI_CONTROL_PROFILE } from "./controlProfile";
 
 import { createEventBashTool, type EventBashInput } from "./bashTool";
-import { customInputTokens } from "./customApiProtocol";
-import { CUSTOM_API_BYTES_PER_TOKEN } from "./customApiTransport";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "./ollamaStream";
 import { piSessionEvents } from "./piEvents";
 import { createCrewmateResourceLoader } from "./piResourceLoader";
@@ -681,12 +680,13 @@ function eventType(event: unknown): string | undefined {
 
 /**
  * Pi answers a turn that failed on a context overflow by compacting and
- * retrying it once, and a custom connection's own context check refuses
- * that way before it sends anything. An attempt Pi retries is not a failed
- * turn: its turn_end waits until Pi says what it does next, is dropped when
- * a compaction ends ready to retry, and is delivered as it was when Pi
- * moves on without one (nothing to compact, a failed or cancelled
- * compaction, or a second overflow after the one retry).
+ * retrying it once. A custom connection raises that overflow when the server
+ * says the request does not fit, or when Pi trimmed the reply and the cut
+ * answer cannot stand. An attempt Pi retries is not a failed turn: its
+ * turn_end waits until Pi says what it does next, is dropped when a
+ * compaction ends ready to retry, and is delivered as it was when Pi moves
+ * on without one (nothing to compact, a failed or cancelled compaction, or a
+ * second overflow after the one retry).
  */
 function holdingRecoverableOverflow(deliver: (event: unknown) => void): (event: unknown) => void {
   let held: unknown;
@@ -837,49 +837,30 @@ async function openOneShot(
 }
 
 /**
- * Pi retains history in characters/4, but custom admission counts JSON bytes/3
- * and includes the prompt, schemas and output. Retain at most a quarter of
- * the room left after that fixed cost and size the summary to another quarter.
- * Rebudget at each prompt boundary so resumed sessions and re-served tools use
- * the current model and instructions. Overflow still uses Pi's real compactor
- * and its single retry; admission is never relaxed.
+ * Budget compaction in Pi's own token count. Kept turns are a quarter of the
+ * history room and never more than Pi's default; the reserve is sized so the
+ * summary is that quarter, and never more than Pi's default. Rebudget at each
+ * prompt boundary so a resumed session uses the current model. Overflow still
+ * uses Pi's real compactor and its single retry.
  */
 function budgetCustomCompaction(session: AgentSession): void {
   const model = session.model;
   if (!model || !isCustomApiProvider(model.provider)) return;
-  const prefix = customInputTokens({
-    context: normalizeContext({
-      systemPrompt: session.systemPrompt,
-      tools: session.agent.state.tools,
-      messages: [],
-    }),
-  });
-  const piTokensPerAdmissionToken = CUSTOM_API_BYTES_PER_TOKEN / 4;
-  const historyRoom = Math.max(0, model.contextWindow - model.maxTokens - prefix);
-  // Pi sizes a summary at 80% of reserveTokens (up to the model's output cap)
-  // and folds the last summary into each new one, so an unsized summary
-  // outgrows the room and every compacted retry is refused again. Leave the
-  // summary a quarter of the history room and the kept turns another quarter;
-  // the rest is for the next turns, and for the whole turn Pi keeps when it
-  // cuts past the budget.
-  const summaryBudget = Math.max(1, Math.floor((historyRoom * piTokensPerAdmissionToken) / 4));
+  const historyRoom = Math.max(0, model.contextWindow - model.maxTokens - piPrefixTokens(session));
+  const quarter = Math.max(1, Math.floor(historyRoom / 4));
   session.settingsManager.applyOverrides({
     compaction: {
-      keepRecentTokens: Math.max(
-        1,
-        Math.min(20000, Math.floor((historyRoom * piTokensPerAdmissionToken) / 4)),
-      ),
-      reserveTokens: Math.min(
-        model.contextWindow - 1,
-        Math.max(
-          16384,
-          model.contextWindow -
-            Math.floor((model.contextWindow - model.maxTokens) * piTokensPerAdmissionToken),
-        ),
-        Math.ceil(summaryBudget / 0.8),
-      ),
+      keepRecentTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter),
+      reserveTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8)),
     },
   });
+}
+
+/** Instructions and tool schemas, counted the way Pi's compactor counts them. */
+function piPrefixTokens(session: AgentSession): number {
+  const prompt = estimateTokens({ role: "system", content: session.systemPrompt, timestamp: 0 });
+  const tools = session.agent.state.tools;
+  return prompt + (tools.length > 0 ? Math.ceil(JSON.stringify(tools).length / 4) : 0);
 }
 
 async function openRolling(

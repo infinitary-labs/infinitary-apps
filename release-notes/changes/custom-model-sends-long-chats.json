@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-sends-long-chats",
+      "kind": "fix",
+      "title": "A long chat on a custom model is shortened instead of refused up front",
+      "body": "A long conversation on a custom model is no longer stopped before it is sent. Infinitary shortens it as it grows. A very large paste in a small window can still be refused.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new on screen: a long chat is shortened instead of being stopped before it is sent.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

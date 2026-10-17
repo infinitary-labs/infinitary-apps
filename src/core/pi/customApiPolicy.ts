@@ -33,8 +33,7 @@ const messages: Record<CustomApiFailure, string> = {
     "Enter documented positive whole-number context and output limits, with output below context.",
   // Worded as an overflow Pi recognizes (`isContextOverflow`), so a rolling
   // session compacts and retries the refused turn instead of failing it.
-  "context-limit":
-    "This request exceeds the context window documented for this model. Shorten it before trying again.",
+  "context-limit": "This request exceeds the context window. Shorten it before trying again.",
 };
 
 /** Never retain a raw error, body, header, URL or credential as message/cause. */

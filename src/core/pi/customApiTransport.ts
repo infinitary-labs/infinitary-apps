@@ -1,8 +1,9 @@
 import { lookup } from "node:dns/promises";
-import { type ClientRequest, request as httpRequest } from "node:http";
+import { type ClientRequest, request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { rootCertificates } from "node:tls";
+import { type AssistantMessage, isContextOverflow } from "@earendil-works/pi-ai";
 import {
   approvedCustomApiCertificates,
   type CustomCertificateApproval,
@@ -21,17 +22,21 @@ import {
 } from "./customApiPolicy";
 
 const MAX_BYTES = 1024 * 1024;
-/** The context check admits about this many bytes of conversation per token (`assertCustomGeneration`). */
+/**
+ * Bytes of conversation the wire cap allows per documented token. A connection
+ * size bound, not a token estimate: Pi decides whether the request fits.
+ */
 export const CUSTOM_API_BYTES_PER_TOKEN = 3;
+/** Bytes of a server error read, only to tell an overflow from any other failure. */
+const ERROR_CLASSIFY_BYTES = 16 * 1024;
 
 /**
  * The largest generation request for a model with this documented context
  * (FI3-563), so a large-context model is never cut off at a fixed size before
- * its own limit. A request carries at most the conversation the context check
- * admits, three bytes per token, and at most twice that on the wire, where a
- * tool call's arguments travel as JSON text inside JSON. The 1 MiB every
- * request may use covers the model name and fixed fields. Picture bytes are
- * added separately after pixel-based context admission; only sent pictures count.
+ * its own limit. The cap allows three bytes per token, and twice that on the
+ * wire, where a tool call's arguments travel as JSON text inside JSON. The
+ * 1 MiB every request may use covers the model name and fixed fields. Picture
+ * bytes are added for the pictures the request sends.
  */
 export function customApiRequestBytes(context?: number, pictureBytes = 0): number {
   if (!Number.isSafeInteger(pictureBytes) || pictureBytes < 0) throw new CustomApiError("limits");
@@ -193,7 +198,9 @@ export function createCustomApiTransport(
       body !== undefined &&
       Buffer.byteLength(body) > customApiRequestBytes(context, pictureBytes)
     ) {
-      throw new CustomApiError("oversized");
+      // The wire cap is the documented window's size bound. Refuse it as the
+      // overflow Pi already compacts and retries, not as a plain size error.
+      throw new CustomApiError("context-limit");
     }
     if (signal?.aborted) throw new CustomApiError("cancelled");
     const limits = operation === "models" ? LIST_LIMITS : generation;
@@ -288,8 +295,15 @@ export function createCustomApiTransport(
             heard();
             const status = reply.statusCode ?? 0;
             if (status < 200 || status >= 300) {
-              // Do not read, retain, decode or surface a hostile error body/header.
-              fail(new CustomApiError(statusCategory(status), status));
+              const category = statusCategory(status);
+              // Listing, redirects and auth failures are classified without
+              // reading. A generation failure is read only far enough to tell
+              // an overflow, which Pi compacts on, from any other server error.
+              if (category === "server" && operation !== "models") {
+                classifyServerError(reply, status, fail, heard);
+                return;
+              }
+              fail(new CustomApiError(category, status));
               reply.destroy();
               return;
             }
@@ -406,6 +420,46 @@ const certificateCodes = new Set([
   "ERR_TLS_CERT_ALTNAME_INVALID",
   "CERT_REVOKED",
 ]);
+
+/**
+ * Read at most 16 KiB of bytes from a generation error, test the decoded text
+ * with Pi's overflow check, and discard it. Only the yes or no leaves the transport.
+ */
+function classifyServerError(
+  reply: IncomingMessage,
+  status: number,
+  fail: (error: CustomApiError) => void,
+  heard: () => void,
+): void {
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  let settled = false;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    const text = Buffer.concat(chunks).toString("utf8");
+    chunks.length = 0;
+    const overflow = isContextOverflow({
+      stopReason: "error",
+      errorMessage: text,
+    } as AssistantMessage);
+    fail(new CustomApiError(overflow ? "context-limit" : "server", status));
+    reply.destroy();
+  };
+  reply.on("data", (chunk: Buffer) => {
+    if (settled) return;
+    heard();
+    if (bytes < ERROR_CLASSIFY_BYTES) {
+      const slice = chunk.subarray(0, ERROR_CLASSIFY_BYTES - bytes);
+      chunks.push(slice);
+      bytes += slice.length;
+    }
+    if (bytes >= ERROR_CLASSIFY_BYTES) finish();
+  });
+  reply.on("end", finish);
+  reply.on("error", finish);
+  reply.on("aborted", finish);
+}
 
 function statusCategory(status: number): CustomApiFailure {
   if (status >= 300 && status < 400) return "redirect";

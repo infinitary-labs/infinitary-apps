@@ -381,6 +381,42 @@ describe("opt-in custom transport on actual sockets", () => {
     );
   });
 
+  it("recognizes a generation overflow from the error reply and discards the text", async () => {
+    const key = "opaque-synthetic-secret";
+    const overflow = `This model's maximum context length is 20000 tokens. However, you requested 90000 tokens. Please reduce the length of the messages or completion. ${key}`;
+    const base = await fixture((_req, res) => {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: { message: overflow } }));
+    });
+    const error = await transport(base, key)
+      .request("chat/completions", "{}")
+      .catch((e: unknown) => e);
+    expect(error).toMatchObject({ category: "context-limit", status: 400 });
+    expect(JSON.stringify(error)).not.toContain(key);
+    expect(String(error)).not.toContain("90000");
+    expect(error).not.toHaveProperty("cause");
+
+    const other = await fixture((_req, res) => {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: { message: `${key} quota is exhausted for this account` } }));
+    });
+    const plain = await transport(other, key)
+      .request("chat/completions", "{}")
+      .catch((e: unknown) => e);
+    expect(plain).toMatchObject({ category: "server", status: 400 });
+    expect(JSON.stringify(plain)).not.toContain(key);
+
+    const late = await fixture((_req, res) => {
+      res.writeHead(400);
+      res.end(`${"x".repeat(16 * 1024)} exceeds the context window`);
+    });
+    const missed = await transport(late)
+      .request("chat/completions", "{}")
+      .catch((e: unknown) => e);
+    expect(missed).toMatchObject({ category: "server", status: 400 });
+    expect(String(missed)).not.toContain("exceeds the context window");
+  });
+
   it("bounds chunked replies and refuses unsupported content types", async () => {
     const large = await fixture((_req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -607,7 +643,7 @@ describe("opt-in custom transport on actual sockets", () => {
       [largest, undefined],
     ] as const) {
       await expect(client.request("chat/completions", body, undefined, size)).rejects.toMatchObject(
-        { category: "oversized" },
+        { category: "context-limit" },
       );
     }
     for (const size of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {

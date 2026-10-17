@@ -182,15 +182,16 @@ describe.each(["openai-completions", "openai-responses"] as const)(
       }
       const independent = await generateCustomApi(client(base), generation(protocol));
       expect(textOf(independent)).toBe("FIRSTMATE_CUSTOM_API_OK");
-      expect(independent.usage.input).toBeNaN();
-      expect(independent.usage.output).toBeNaN();
+      expect(independent.usage.input).toBe(0);
+      expect(independent.usage.output).toBe(0);
+      expect(independent.usage.cost.total).toBeNaN();
       console.info(
         "CUSTOM_API_PROFILE_WIRE",
         JSON.stringify({
           protocol,
           requests: wire.slice(0, 2),
           proof,
-          usageUnknown: Number.isNaN(independent.usage.input),
+          usageUnpriced: Number.isNaN(independent.usage.cost.total),
         }),
       );
     });
@@ -233,7 +234,7 @@ describe.each(["openai-completions", "openai-responses"] as const)(
       expect(requests).toBe(1);
     });
 
-    it("refuses unknown limits, oversized context and unpaired tool history before any request", async () => {
+    it("refuses unknown limits and unpaired tool history before any request, and sends a long message", async () => {
       let requests = 0;
       const base = await fixture((_req, res) => {
         requests++;
@@ -246,14 +247,19 @@ describe.each(["openai-completions", "openai-responses"] as const)(
       await expect(
         checkCustomApiModel({ ...config, limits: { context: 100, output: 100 } }),
       ).rejects.toMatchObject({ category: "limits" });
-      await expect(
-        generateCustomApi(client(base), {
-          ...generation(protocol),
-          context: normalizeContext({
-            messages: [{ role: "user", content: "x".repeat(30000), timestamp: 0 }],
+      expect(requests).toBe(0);
+      // INF-202: a message the old bytes-per-token check refused is sent.
+      expect(
+        textOf(
+          await generateCustomApi(client(base), {
+            ...generation(protocol),
+            context: normalizeContext({
+              messages: [{ role: "user", content: "x".repeat(30000), timestamp: 0 }],
+            }),
           }),
-        }),
-      ).rejects.toMatchObject({ category: "context-limit" });
+        ),
+      ).toBe("unused");
+      expect(requests).toBe(1);
       await expect(
         generateCustomApi(client(base), {
           ...generation(protocol),
@@ -271,7 +277,7 @@ describe.each(["openai-completions", "openai-responses"] as const)(
           }),
         }),
       ).rejects.toMatchObject({ category: "incompatible" });
-      expect(requests).toBe(0);
+      expect(requests).toBe(1);
     });
 
     it("invalidates proof for each relevant revision but not canonical outer whitespace", async () => {
@@ -861,11 +867,10 @@ it.each(["openai-completions", "openai-responses"] as const)(
     const [sent = 0] = received;
     expect(sent).toBeGreaterThan(1.9 * room);
     expect(sent).toBeLessThanOrEqual(customApiRequestBytes(limits.context));
-    // A byte past the documented context is refused before any request.
-    await expect(generateCustomApi(turn, conversation(fill + 1))).rejects.toMatchObject({
-      category: "context-limit",
-    });
-    expect(received).toEqual([sent]);
+    // INF-202: a byte past the old admission estimate is still sent. The wire
+    // cap, not a token estimate, is what refuses before anything leaves.
+    expect(textOf(await generateCustomApi(turn, conversation(fill + 1)))).toBe("read");
+    expect(received).toHaveLength(2);
   },
 );
 
@@ -912,6 +917,44 @@ function proxyEnding(body: string, usage = { input: 20, output: 8 }): string {
   );
 }
 
+it("treats a streamed context overflow as the refusal, and discards the server text", async () => {
+  // INF-202: an overflow reported inside the reply, not as an error status.
+  const base = await fixture((_req, res) => {
+    sendCustomStream(
+      res,
+      chatFrame({ content: "secret overflow wording" }) +
+        chatFrame({}, "model_context_window_exceeded") +
+        "data: [DONE]\n\n",
+    );
+  });
+  const error = await generateCustomApi(client(base), generation("openai-completions")).catch(
+    (caught: unknown) => caught,
+  );
+  expect(error).toMatchObject({ category: "context-limit" });
+  expect(error).toBeInstanceOf(CustomApiError);
+  expect((error as CustomApiError).message).toBe(new CustomApiError("context-limit").message);
+  expect(String(error)).not.toContain("secret overflow wording");
+  expect(String(error)).not.toContain("model_context_window_exceeded");
+});
+
+it("keeps a reply that used its full output allowance and stopped there", async () => {
+  // INF-202: a reply that used the allowance it was given is kept.
+  const base = await fixture(async (req, res) => {
+    const body = await bodyOf(req);
+    const asked = Number(body.max_completion_tokens ?? body.max_tokens);
+    sendCustomStream(
+      res,
+      chatFrame({ content: "Shortened." }) +
+        chatFrame({}, "length") +
+        `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 20, completion_tokens: asked } })}\n\n` +
+        "data: [DONE]\n\n",
+    );
+  });
+  const reply = await generateCustomApi(client(base), generation("openai-completions"));
+  expect(reply.stopReason).toBe("length");
+  expect(textOf(reply)).toBe("Shortened.");
+});
+
 it("accepts a working proxy ending on the connection check and reads its usage", async () => {
   let requests = 0;
   const base = await fixture((_req, res) => {
@@ -933,7 +976,7 @@ it("accepts a working proxy ending on the connection check and reads its usage",
 });
 
 it.each(["openai-completions", "openai-responses"] as const)(
-  "%s budgets picture pixels, not their base64 bytes, and refuses a genuine context overflow before sending",
+  "%s sends a picture by its pixels, including one the old context check refused",
   async (protocol) => {
     let requests = 0;
     const base = await fixture(async (req, res) => {
@@ -963,10 +1006,16 @@ it.each(["openai-completions", "openai-responses"] as const)(
     expect(png.data.length / 3).toBeGreaterThan(input.limits.context);
     expect((await generateCustomApi(client(base), input)).stopReason).toBe("stop");
     expect(requests).toBe(1);
-    await expect(
-      generateCustomApi(client(base), { ...input, limits: { context: 3000, output: 512 } }),
-    ).rejects.toMatchObject({ category: "context-limit" });
-    expect(requests).toBe(1);
+    // INF-202: pixel size no longer refuses before the request is sent.
+    expect(
+      (
+        await generateCustomApi(client(base), {
+          ...input,
+          limits: { context: 3000, output: 512 },
+        })
+      ).stopReason,
+    ).toBe("stop");
+    expect(requests).toBe(2);
   },
 );
 

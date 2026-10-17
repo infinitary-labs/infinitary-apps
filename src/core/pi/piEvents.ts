@@ -187,11 +187,16 @@ export function usageFromMessage(message: unknown): FmUsage | undefined {
   const cacheWrite = num(u.cacheWrite);
   const reasoning = num(u.reasoning);
   const total = cost ? num(cost.total) : undefined;
-  if (reasoning !== undefined) result.reasoning = reasoning;
-  if (input !== undefined) result.input = input;
-  if (output !== undefined) result.output = output;
-  if (cacheRead !== undefined) result.cacheRead = cacheRead;
-  if (cacheWrite !== undefined) result.cacheWrite = cacheWrite;
+  // A missing custom count is stored as zero so Pi estimates the chat, and the
+  // price stays unknown. Zero with an unknown price is that stand-in, not a measurement.
+  // A reported price of zero still counts: those tokens were measured.
+  const priced = total !== undefined;
+  const reported = (value: number | undefined) => value !== undefined && (value !== 0 || priced);
+  if (reported(reasoning)) result.reasoning = reasoning;
+  if (reported(input)) result.input = input;
+  if (reported(output)) result.output = output;
+  if (reported(cacheRead)) result.cacheRead = cacheRead;
+  if (reported(cacheWrite)) result.cacheWrite = cacheWrite;
   if (cost && total !== undefined && total > 0) {
     result.cost = total;
     result.costSource = "listed-prices";

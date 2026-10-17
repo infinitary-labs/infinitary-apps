@@ -9,11 +9,10 @@ import {
   type TranscriptContext,
 } from "@earendil-works/pi-ai";
 import { customDefaultCacheRetention } from "@shared/customApi";
-import { readPicture } from "../pictureFormat";
 import { type CustomCapabilities, customCacheRetentions } from "./customApiModels";
 import { readCustomApiWithPi } from "./customApiPi";
 import { CustomApiError } from "./customApiPolicy";
-import { CUSTOM_API_BYTES_PER_TOKEN, type CustomApiTransport } from "./customApiTransport";
+import type { CustomApiTransport } from "./customApiTransport";
 
 export type CustomApiProtocol = "openai-completions" | "openai-responses" | "anthropic-messages";
 export type CustomResponsesPolicy =
@@ -87,7 +86,8 @@ function assertCustomGeneration(input: CustomGeneration): void {
   const retention = input.cacheRetention ?? customDefaultCacheRetention(input.protocol);
   if (!customCacheRetentions(input.protocol, input.capabilities).includes(retention))
     throw new CustomApiError("incompatible");
-  const output = Math.min(input.maxOutput ?? input.limits.output, input.limits.output);
+  // Pi sizes the request and compacts. A documented window is not a reason to
+  // refuse before anything is sent (INF-202, captain: rely on Pi).
   assertPairedHistory(input.context.messages);
   const tools = getCurrentTools(input.context.messages);
   if (
@@ -95,46 +95,6 @@ function assertCustomGeneration(input: CustomGeneration): void {
     tools.some((tool) => !toolName.test(tool.name))
   )
     throw new CustomApiError("incompatible");
-  if (customInputTokens(input) + output > input.limits.context)
-    throw new CustomApiError("context-limit");
-}
-
-/** Same conservative admission estimate for checks, requests and compaction. */
-export function customInputTokens(
-  input: Pick<CustomGeneration, "context" | "readsPictures">,
-): number {
-  const messages = input.context.messages.map((message) => {
-    // Response accounting and runtime identity are never input tokens.
-    const { timestamp: _timestamp, ...entry } = message;
-    const projected =
-      message.role === "assistant" ? { role: message.role, content: message.content } : entry;
-    if (typeof message.content === "string") return projected;
-    return {
-      ...projected,
-      content: message.content.map((part) =>
-        part.type === "image"
-          ? {
-              type: "text",
-              text: input.readsPictures
-                ? "picture"
-                : "(tool image omitted: model does not support images)",
-            }
-          : part,
-      ),
-    };
-  });
-  return (
-    Math.ceil(Buffer.byteLength(JSON.stringify(messages)) / CUSTOM_API_BYTES_PER_TOKEN) +
-    customPictures(input).reduce((tokens, image) => {
-      const size = readPicture(Buffer.from(image.data, "base64"))?.size;
-      return (
-        tokens +
-        (size
-          ? Math.ceil((size.width * size.height) / 750)
-          : Math.ceil(image.data.length / CUSTOM_API_BYTES_PER_TOKEN))
-      );
-    }, 0)
-  );
 }
 
 export const customToolName = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;

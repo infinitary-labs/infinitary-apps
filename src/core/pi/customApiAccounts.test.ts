@@ -6,6 +6,7 @@ import type { CustomApiInput } from "@shared/customApi";
 import { Type } from "typebox";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  chatFrame,
   customChatCall,
   customChatText,
   customResponsesCall,
@@ -59,6 +60,23 @@ async function fixture() {
   let workCallSent = false;
   let reads = 0;
   let reportHigh = false;
+  let windowTokens: number | undefined;
+  let cutBelow = 0;
+  let tokenBytes = 4;
+  let reportEnforced = true;
+  const refused: number[] = [];
+  const refusedText: string[] = [];
+  const answered: string[] = [];
+  const latestUser = (value: Record<string, unknown>) => {
+    const messages = value.messages;
+    if (!Array.isArray(messages)) return "";
+    const user = [...messages]
+      .reverse()
+      .find((message) => message && typeof message === "object" && message.role === "user");
+    return JSON.stringify(user ?? "");
+  };
+  let countTokens = false;
+  let lengthWithoutUsage = false;
   let answer: string | string[] = "Synthetic work answer.";
   let hold: "check" | "work" | undefined;
   let reached: (() => void) | undefined;
@@ -143,8 +161,56 @@ async function fixture() {
       );
       return;
     }
-    const usage = !isCheck && reportHigh ? { input: 60000, output: 20 } : undefined;
-    if (!isCheck) reportHigh = false;
+    let usage = !isCheck && reportHigh ? { input: 60000, output: 20 } : undefined;
+    if (!isCheck && windowTokens) {
+      const count = Math.ceil(
+        Buffer.byteLength(JSON.stringify(body.messages ?? body.input ?? [])) / tokenBytes,
+      );
+      const max = Number(
+        body.max_completion_tokens ?? body.max_tokens ?? body.max_output_tokens ?? 0,
+      );
+      if (count + max > windowTokens) {
+        refused.push(count + max);
+        refusedText.push(latestUser(body));
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            error: {
+              message: `This model's maximum context length is ${windowTokens} tokens. However, you requested ${count + max} tokens (${count} in the messages, ${max} in the completion). Please reduce the length of the messages or completion.`,
+              type: "BadRequestError",
+            },
+          }),
+        );
+        return;
+      }
+      if (max < cutBelow) {
+        res.writeHead(200, { "Content-Type": "text/event-stream" });
+        res.end(
+          chatFrame({ content: "Cut" }) +
+            chatFrame({}, "length") +
+            `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: count, completion_tokens: max } })}\n\n` +
+            "data: [DONE]\n\n",
+        );
+        return;
+      }
+      if (reportEnforced) usage = { input: count, output: 300 };
+    } else if (!isCheck && lengthWithoutUsage) {
+      lengthWithoutUsage = false;
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end(
+        chatFrame({ content: "Finished the file." }) + chatFrame({}, "length") + "data: [DONE]\n\n",
+      );
+      return;
+    } else if (!isCheck && countTokens) {
+      usage = {
+        input: Math.ceil(Buffer.byteLength(JSON.stringify(body.messages ?? body.input ?? [])) / 4),
+        output: 20,
+      };
+    }
+    if (!isCheck) {
+      reportHigh = false;
+      answered.push(latestUser(body));
+    }
     sendCustomStream(
       res,
       isCheck && !hasResult
@@ -186,6 +252,21 @@ async function fixture() {
     },
     highUsage: () => {
       reportHigh = true;
+    },
+    enforce: (tokens: number, cut: number, bytesPerToken = 4, reportUsage = true) => {
+      windowTokens = tokens;
+      cutBelow = cut;
+      tokenBytes = bytesPerToken;
+      reportEnforced = reportUsage;
+    },
+    refused,
+    refusedText,
+    answered,
+    count: () => {
+      countTokens = true;
+    },
+    lengthWithoutUsage: () => {
+      lengthWithoutUsage = true;
     },
     answer: (text: string | string[]) => {
       answer = text;
@@ -561,7 +642,7 @@ it.each(["openai-completions", "openai-responses"] as const)(
           : {}),
       },
     ]);
-    expect(reply.usage.input).toBeNaN();
+    expect(reply.usage.input).toBe(0);
     expect(reply.usage.cost.total).toBeNaN();
     const wire = api.requests.at(-1);
     expect(wire?.authorization).toBe("Bearer opaque-synthetic-secret");
@@ -684,7 +765,7 @@ it.each(["openai-completions", "openai-responses"] as const)(
         },
       ]).flat(),
     ];
-    // About 2.8 MB, within the 1M-token context at the check's three bytes a token.
+    // About 2.8 MB. The connection's wire cap allows it; Pi decides the window.
     const reply = await runtime.completeSimple(model, { messages: session(50) });
     expect(reply.stopReason).toBe("stop");
     expect(reply.content).toEqual([
@@ -699,12 +780,11 @@ it.each(["openai-completions", "openai-responses"] as const)(
     const sent = JSON.stringify(api.requests.at(-1)?.body);
     expect(sent.split("a line of synthetic source code").length - 1).toBe(50 * 1000);
     expect(Buffer.byteLength(sent)).toBeGreaterThan(2 * 1024 * 1024);
-    // Past the documented context, the turn is refused before any request.
+    // INF-202: a session the old check refused, about 3.3 MB, is sent.
     const count = api.requests.length;
     const over = await runtime.completeSimple(model, { messages: session(60) });
-    expect(over.stopReason).toBe("error");
-    expect(over.errorMessage).toBe(new CustomApiError("context-limit").message);
-    expect(api.requests).toHaveLength(count);
+    expect(over.stopReason).toBe("stop");
+    expect(api.requests.length).toBeGreaterThan(count);
   },
 );
 
@@ -955,10 +1035,7 @@ it.each(["openai-completions", "openai-responses"] as const)(
 );
 
 /**
- * A rolling session on a checked 128k-token model whose context check
- * fills before Pi's own estimate of the conversation reaches its compaction
- * threshold: the check counts JSON bytes, three a token, and Pi characters,
- * four a token. Its one tool reads back a file's text.
+ * A rolling session on a checked 128k-token model. Its one tool reads back a file's text.
  */
 async function longSession(protocol: CustomApiInput["protocol"]) {
   const api = await fixture();
@@ -998,9 +1075,10 @@ async function longSession(protocol: CustomApiInput["protocol"]) {
 }
 
 it.each(["openai-completions", "openai-responses"] as const)(
-  "a long %s session compacts instead of failing a turn at its context check",
+  "a long %s session compacts from the server's count instead of failing a turn",
   async (protocol) => {
     const { api, session, events, file } = await longSession(protocol);
+    api.count();
     const turns = 14;
     try {
       // Each prompt carries a file's text, as a person pasting code does.
@@ -1028,20 +1106,20 @@ it.each(["openai-completions", "openai-responses"] as const)(
         })),
       );
 
-      // A prompt that alone exceeds the context is still refused, once, and
-      // never sent: shortening the conversation cannot make it fit.
+      // INF-202: a prompt the old check refused is sent, and the model answers it.
       const failures = events.length;
+      const before = api.requests.length;
       await session.prompt(`Oversized:\n${file.repeat(11)}`);
-      expect(events.slice(failures).filter((event) => event.type === "turn_failed")).toEqual([
-        {
-          type: "turn_failed",
-          taskId: "synthetic-session",
-          error: new CustomApiError("context-limit").message,
-        },
-      ]);
+      expect(events.slice(failures).filter((event) => event.type === "turn_failed")).toEqual([]);
       expect(
-        api.requests.some((request) => JSON.stringify(request.body).includes("Oversized:")),
-      ).toBe(false);
+        api.requests
+          .slice(before)
+          .some((request) => JSON.stringify(request.body).includes("Oversized:")),
+      ).toBe(true);
+      expect(events.filter((event) => event.type === "turn_closed").at(-1)).toEqual({
+        type: "turn_closed",
+        text: "Synthetic work answer.",
+      });
     } finally {
       session.dispose();
       await session.closed();
@@ -1545,3 +1623,250 @@ it.each(["openai-completions", "openai-responses"] as const)(
     expect(api.requests).toHaveLength(before);
   },
 );
+
+/** English prose, repeated to a byte size. INF-202's paste, not a repeated letter. */
+function englishPaste(bytes: number): string {
+  const prose = readFileSync(join(__dirname, "../../../docs/architecture.md"), "utf8").replace(
+    /[^\x20-\x7e\n]/g,
+    " ",
+  );
+  let text = "";
+  while (Buffer.byteLength(text) < bytes) text += prose;
+  return text.slice(0, bytes);
+}
+
+async function smallWindowSession(limits: { context: number; output: number }) {
+  const api = await fixture();
+  const world = vault();
+  const draft = world.vault.customPrepare({
+    ...input(api.baseUrl, "openai-completions"),
+    models: [{ id: "operator-model", ...limits }],
+  });
+  await world.vault.customCheck(draft.draftId ?? "", "operator-model");
+  const account = await world.vault.customSave(draft.draftId ?? "", false);
+  const runtime = await world.vault.runtimeFor(account.id);
+  const factory = createPiSessionFactory({ agentDir: join(world.paths.userData, "agent") });
+  const session = await factory.open({
+    machine: "local",
+    owner: "synthetic-session",
+    cwd: world.paths.userData,
+    binding: { backend: "pi", accountId: account.id, runtime },
+    model: { provider: account.providerId, id: "operator-model" },
+    thinking: { level: "off" },
+    instructions: { base: "Synthetic session instruction" },
+    builtins: "none",
+    tools: [],
+    shape: { turns: "rolling", record: { dir: join(world.paths.userData, "sessions") } },
+  });
+  const events: SessionEvent[] = [];
+  session.subscribe((event) => events.push(event));
+  return { api, session, events };
+}
+
+it("sends a paste the old context check refused, and answers it", async () => {
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  try {
+    const marker = "Paste marker 55000:";
+    await session.prompt(`${marker}\n${englishPaste(55_000)}`);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(events.filter((event) => event.type === "turn_closed").at(-1)).toEqual({
+      type: "turn_closed",
+      text: "Synthetic work answer.",
+    });
+    expect(api.requests.some((request) => JSON.stringify(request.body).includes(marker))).toBe(
+      true,
+    );
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("shows a server overflow as the context refusal, not a general server error", async () => {
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.enforce(20_000, 300);
+  try {
+    await session.prompt(`Overflow marker:\n${englishPaste(90_000)}`);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([
+      {
+        type: "turn_failed",
+        taskId: "synthetic-session",
+        error: new CustomApiError("context-limit").message,
+      },
+    ]);
+    expect(events.some((event) => event.type === "assistant_delta")).toBe(false);
+    expect(
+      api.requests.some((request) => JSON.stringify(request.body).includes("Overflow marker:")),
+    ).toBe(true);
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("shortens the chat and answers when the server counts more tokens than Pi estimates", async () => {
+  // INF-202: the server counts more strictly and reports nothing, so Pi sends
+  // on its own estimate, the server refuses, and the shortened retry is answered.
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.enforce(20_000, 0, 2.5, false);
+  try {
+    for (let turn = 1; turn <= 6; turn++) {
+      await session.prompt(`Turn ${turn}:\n${englishPaste(8_000)}`);
+    }
+    expect(api.refused.length).toBeGreaterThan(0);
+    // The refused turn's own message, not the summary's quotation of it, is sent again and accepted.
+    expect(
+      api.refusedText.some((text) => !text.includes("[User]:") && api.answered.includes(text)),
+    ).toBe(true);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(
+      events.filter(
+        (event) =>
+          event.type === "tool_end" &&
+          event.callId === "synthetic-session:compaction" &&
+          event.isError === false,
+      ),
+    ).toHaveLength(1);
+    expect(events.filter((event) => event.type === "turn_closed")).toEqual(
+      Array.from({ length: 6 }, () => ({
+        type: "turn_closed",
+        text: "Synthetic work answer.",
+      })),
+    );
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("shows a refusal instead of a trimmed reply when the retry cannot recover", async () => {
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.enforce(20_000, 300);
+  try {
+    await session.prompt(`Trimmed marker:\n${englishPaste(65_000)}`);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([
+      {
+        type: "turn_failed",
+        taskId: "synthetic-session",
+        error: new CustomApiError("context-limit").message,
+      },
+    ]);
+    expect(
+      events.some(
+        (event) =>
+          (event.type === "turn_closed" && event.text === "Cut") ||
+          (event.type === "assistant_delta" && event.text.includes("Cut")),
+      ),
+    ).toBe(false);
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("compacts a small custom window instead of filling it on the first turns", async () => {
+  // INF-202: a small window compacts from the server's count, not on the first turn.
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.count();
+  try {
+    await session.prompt(`Turn 1:\n${englishPaste(6_000)}`);
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(
+      events.some(
+        (event) => event.type === "tool_end" && event.callId === "synthetic-session:compaction",
+      ),
+    ).toBe(false);
+    for (let turn = 2; turn <= 12; turn++) {
+      await session.prompt(`Turn ${turn}:\n${englishPaste(6_000)}`);
+    }
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_end",
+        callId: "synthetic-session:compaction",
+        isError: false,
+      }),
+    );
+    expect(events.filter((event) => event.type === "turn_closed")).toHaveLength(12);
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("keeps a full-length reply when the server sends no usage", async () => {
+  // INF-202: a full-length reply with no usage count is kept, not run again.
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.lengthWithoutUsage();
+  try {
+    await session.prompt("Write the file.");
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(events.filter((event) => event.type === "turn_closed")).toEqual([
+      { type: "turn_closed", text: "Finished the file." },
+    ]);
+    expect(
+      events.some(
+        (event) => event.type === "tool_end" && event.callId === "synthetic-session:compaction",
+      ),
+    ).toBe(false);
+    const closed = events.filter((event) => event.type === "turn_end");
+    expect(closed).toHaveLength(1);
+    expect(closed[0]?.type === "turn_end" ? closed[0].usage?.output : undefined).toBeUndefined();
+    expect(
+      api.requests.some(
+        (request) =>
+          request.body.max_completion_tokens === 4_000 || request.body.max_tokens === 4_000,
+      ),
+    ).toBe(true);
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("still compacts after a full-length reply when the server sends no usage", async () => {
+  // INF-202: that kept reply does not become the size later turns measure from.
+  const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  api.lengthWithoutUsage();
+  try {
+    await session.prompt("Write the file.");
+    expect(events.filter((event) => event.type === "turn_closed")).toEqual([
+      { type: "turn_closed", text: "Finished the file." },
+    ]);
+    for (let turn = 2; turn <= 12; turn++) {
+      await session.prompt(`Turn ${turn}:\n${englishPaste(6_000)}`);
+    }
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_end",
+        callId: "synthetic-session:compaction",
+        isError: false,
+      }),
+    );
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
+it("compacts a small window from the character estimate when the server sends no usage", async () => {
+  // INF-202: a server that sends no usage still shortens the chat from the character estimate.
+  const { session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
+  try {
+    for (let turn = 1; turn <= 12; turn++) {
+      await session.prompt(`Turn ${turn}:\n${englishPaste(6_000)}`);
+    }
+    expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_end",
+        callId: "synthetic-session:compaction",
+        isError: false,
+      }),
+    );
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});

@@ -4,6 +4,8 @@ import {
   calculateCost,
   getCurrentTools,
   getSupportedThinkingLevels,
+  isContextOverflow,
+  isRecoverableLength,
   type Model,
   type SimpleStreamOptions,
   type Usage,
@@ -44,6 +46,9 @@ export async function readCustomApiWithPi(
   const operation = customOperation(input.protocol);
   const retention = input.cacheRetention ?? customDefaultCacheRetention(input.protocol);
   let refusal: CustomApiError | undefined;
+  // The allowance Pi actually sent. It trims this below `output` when its
+  // estimate leaves no room; that trim is not the connection's output cap.
+  let sentMax = output;
   const remember = (error: unknown) => {
     if (!refusal && error instanceof CustomApiError) refusal = error;
     return error;
@@ -68,7 +73,14 @@ export async function readCustomApiWithPi(
     timeoutMs: PI_TIMEOUT_MS,
     signal,
     env: {},
-    onPayload: (payload) => enforcePolicy(input, payload),
+    onPayload: (payload) => {
+      const body = enforcePolicy(input, payload);
+      const field = ["max_tokens", "max_completion_tokens", "max_output_tokens"].find(
+        (key) => typeof body[key] === "number",
+      );
+      if (field) sentMax = body[field] as number;
+      return body;
+    },
     onProviderStreamEvent: (event) => observeUsagePresence(event, presence),
     fetch: async (request, init) => {
       try {
@@ -100,16 +112,25 @@ export async function readCustomApiWithPi(
   if (signal?.aborted) throw new CustomApiError("cancelled");
   if (refusal) throw refusal;
   if (message.stopReason === "aborted") throw new CustomApiError("cancelled");
-  if (message.stopReason === "error" || message.stopReason === "pending")
+  if (message.stopReason === "error" || message.stopReason === "pending") {
+    // An overflow reported inside the reply, such as a finish reason, is the
+    // same refusal as an error status. The server's text is discarded.
+    if (isContextOverflow(message)) throw new CustomApiError("context-limit");
     throw new CustomApiError(
       /finish_reason|terminal response|unfinished tool|incomplete/i.test(message.errorMessage ?? "")
         ? "incompatible"
         : "malformed",
     );
+  }
+  // Pi trimmed the reply and the server stopped there. Raise the refusal Pi
+  // already compacts and retries, and do not publish the cut text. A retry
+  // that fails the same way is the refusal the person sees (INF-202).
+  if (isRecoverableLength(message, output) && sentMax < output)
+    throw new CustomApiError("context-limit");
   validateReply(message, input);
   // Signatures, thinking, tool arguments and all other retained fields are checked too.
   transport.assertSafeOutput([message]);
-  restoreUnknownUsage(message.usage, model, presence);
+  restoreUnknownUsage(message.usage, model, presence, message.stopReason === "length");
   for (const event of events) onEvent?.(event);
   return message;
 }
@@ -213,6 +234,7 @@ function restoreUnknownUsage(
   usage: Usage,
   model: Model<CustomGeneration["protocol"]>,
   present: Set<UsageCount>,
+  lengthStop = false,
 ): void {
   // A rate absent from the catalog is not zero. A missing rate only matters
   // for a nonzero normalized category; do arithmetic before unknown markers.
@@ -221,20 +243,38 @@ function restoreUnknownUsage(
     if (usage[key] === 0 && !Number.isFinite(rates[key])) rates[key] = 0;
   calculateCost({ ...model, cost: rates }, usage);
   const totalCost = usage.cost.total;
-  // Keep Pi's context total before unknown category markers: servers may
-  // report input/output without total_tokens, and Pi's compactor needs their sum.
+  // Keep Pi's context total before filling missing categories. NaN is falsy,
+  // so `totalTokens || input + output + …` stays NaN when a missing count was
+  // stored as NaN, and Pi estimates only when that total is exactly 0.
+  // Zero-fill only when neither input nor output was reported. Filling one
+  // missing side with zero would make the reported side the size of the chat.
+  // A length stop that reported no output stays NaN: NaN is not below the
+  // allowance, so Pi keeps the reply, and a NaN total is never that anchor.
   const totalTokens = calculateContextTokens(usage);
+  const counted = present.has("input") && present.has("output");
+  const neither = !present.has("input") && !present.has("output");
+  const lengthWithoutOutput = lengthStop && !present.has("output");
   for (const key of ["input", "output", "cacheRead", "cacheWrite", "reasoning"] as const) {
     if (!present.has(key)) {
       if (key === "reasoning") delete usage.reasoning;
-      else {
+      else if (key === "output" && lengthWithoutOutput) {
+        usage.output = Number.NaN;
+        usage.cost.output = Number.NaN;
+      } else if (neither) {
+        usage[key] = 0;
+        usage.cost[key] = Number.NaN;
+      } else {
         usage[key] = Number.NaN;
         usage.cost[key] = Number.NaN;
       }
     }
   }
-  const counted = present.has("input") && present.has("output");
-  usage.totalTokens = present.has("totalTokens") || counted ? totalTokens : Number.NaN;
+  usage.totalTokens =
+    present.has("totalTokens") || counted
+      ? totalTokens
+      : neither && !lengthWithoutOutput
+        ? 0
+        : Number.NaN;
   usage.cost.total = counted ? totalCost : Number.NaN;
 }
 

@@ -66,9 +66,10 @@ This is a transport lifetime, not the account Pause policy.
   A no-key connection sends no Authorization header of its own, in any mode.
   A bearer key is printable ASCII, at most 8 KiB, without outer whitespace; shell/environment-looking values stay literal.
   No auth file, environment lookup or other account is read.
-- A generation request may carry 1 MiB plus six bytes per token of its model's documented context (FI3-563), plus the encoded pictures it sends, so a large-context model reaches its own context limit, never a fixed size first.
-  The context check admits three bytes of conversation per token, and a tool call's arguments travel as JSON text inside JSON, which at most doubles them; the 1 MiB covers the model name and fixed fields.
-  A larger request is refused as `oversized` before anything is sent.
+- A generation request may carry 1 MiB plus six bytes per token of its model's documented context (FI3-563), plus the encoded pictures it sends, so a large-context model is never cut off at a fixed size first.
+  That bound is a connection size limit, not a token estimate: a tool call's arguments travel as JSON text inside JSON, which at most doubles them, and the 1 MiB covers the model name and fixed fields.
+  A larger request is refused as the context overflow before anything is sent, so a rolling session can shorten the chat and retry.
+  Whether the request fits the model's context window is left to the server and to compaction, not decided before anything is sent.
   Listing is bounded by 15 seconds and a 1 MiB reply, and each connection-check request by 60 seconds, including DNS and streaming, and a 1 MiB reply.
   A real turn's request (FI3-490) runs as long as the server keeps sending.
   It is cut off after five minutes without a reply byte (`stalled`; Pi's own HTTP idle default, which also covers the wait for headers), after one hour in all (`timeout`) or past a 64 MiB reply (`oversized`).
@@ -77,7 +78,10 @@ This is a transport lifetime, not the account Pause policy.
   Caller abort and terminal close apply before DNS completes and during streaming.
   Stream cancellation destroys the native request.
   There are no automatic retries.
-- Error statuses are translated before their bodies/headers are read or returned: redirects, 401 key rejection, 403 access refusal, 404 path/model, 429 rate limit and other server failures.
+- Redirects, 401 key rejection, 403 access refusal, 404 path/model and 429 rate limit are translated before their bodies or headers are read.
+  A generation request's other server failure is read only far enough to tell whether it is a context overflow, at most 16 KiB, and the text is then discarded.
+  Only that yes or no leaves the transport: an overflow becomes the context refusal a rolling session already compacts and retries on, and any other wording stays a server failure.
+  A model-list error is not read.
   Raw network/TLS errors and abort reasons are also discarded, without a raw `cause`.
   Successful replies expose only a validated JSON/SSE content type, not arbitrary headers, links or request IDs.
   Success content remains untrusted; a hostile server can disguise a key in generated output.
@@ -200,8 +204,11 @@ Chat requests usage and a terminal finish reason; Responses keeps the checked ou
 A narrow payload policy enforces storage consent and refuses remote continuation, background requests and service-tier changes.
 The connection transport remains the only sender and ignores Pi's URL, headers and availability marker except for validating the expected operation.
 The first mate holds every event until a clean finish and output validation, checks all retained fields for credential echoes, then forwards Pi's events rather than reconstructing text/tool-only replies.
-A reply cut off at its output limit is kept as a shortened answer, the same way other subscriptions keep one.
-Usage stays unknown when the server sends none.
+A reply that uses its full output allowance and stops there is kept as a shortened answer, the same way other subscriptions keep one.
+A reply cut off because the reply allowance was trimmed to fit the window is not kept: it becomes the same context refusal, so a retry that cannot recover shows the refusal instead of the cut text.
+The price stays unknown when the server sends no usage.
+A reply that did not stop at its output limit keeps a zero token count, so a long chat still shortens from the character estimate.
+A reply that stopped at its output limit and reported no count stays unknown, so it is kept and does not become the size of the chat.
 Chat's checked profile is `pi-capabilities-v4` and Responses' is `pi-capabilities-v3`, so saved models need one fresh check before use; a server rejecting the usage field fails that check without a fallback.
 A saved check never counts for another profile.
 When the first mate was chosen on a connection whose saved checks no longer count, the first-launch gate names that connection and runs its fresh check in place (`docs/first-launch.md`).
@@ -211,13 +218,15 @@ Disconnect or an applied replacement meanwhile ends it.
 A crewmate or the first mate that cannot reach its custom connection raises the usual sign-in card, which names the connection and says to press Edit and then Save in Settings → Intelligence to check it again (`CrewSupervisor.signInCardBody`, `FirstmateAgent.signInCardBody`).
 Like every sign-in card, it never quotes the failure: Pi's own text names its terminal sign-in and paths into the app's files, so the raw text stays on the task's timeline or the first mate turn's records.
 Every consumer (turns, compaction and decision/background sessions) uses this same guarded stream; custom sessions disable automatic provider retries.
-The context check counts a request's text and schemas as JSON bytes, three to a token, and each PNG, JPEG or WebP by its pixels at one token per 750 pixels, before anything is sent, while Pi's compaction threshold counts characters, four to a token, so the check can fill first.
-Custom rolling sessions budget compaction at each prompt boundary against the current model's window, bounded output, instructions and tool schemas, using the context check's estimate for that fixed cost.
-They retain at most half the remaining history room (converted to Pi's characters-per-token estimate), capped at Pi's default 20,000 recent tokens, leaving room for the summary and a new turn.
-Their reserve also accounts for the check's three-bytes-per-token estimate versus Pi's four-characters-per-token threshold, without reducing Pi's default reserve.
-Its refusal is worded as a context overflow Pi recognizes, so a rolling session compacts and retries the refused turn once instead of failing it, and the refused attempt never reaches the captain as a failed turn.
-Only a request that alone exceeds the context, even after that compaction, still fails.
-Other picture formats retain the conservative encoded-byte estimate.
+Infinitary does not estimate a request's tokens or refuse it for the documented window before it is sent.
+Pi sizes each request and compacts a rolling session from the server's reported count when it sends one.
+When it sends none, the token counts stay zero rather than an invalid number, and Pi compacts from its own character estimate.
+A server overflow is recognized from the error reply and raised as the context refusal Pi already compacts and retries once.
+Custom rolling sessions budget compaction at each prompt boundary in that same count, against the current model's window, bounded output, instructions and tool schemas.
+Kept turns are a quarter of the remaining history room, and never more than Pi's default of 20,000.
+The reserve is sized so the summary is that quarter, and never more than Pi's default of 16,384.
+The refusal is worded as a context overflow Pi recognizes, so a rolling session compacts and retries the refused turn once instead of failing it, and the refused attempt never reaches the captain as a failed turn.
+Only a request the server still refuses after that compaction, or a trimmed reply whose retry fails the same way, is shown.
 Only the newest two tool results that carry pictures send them; older ones keep their text and one omission note, without changing the saved transcript.
 Pi sends the retained pictures through its own Chat and Responses builders, and writes the omission note for a text-only model.
 A picture-reading model also accepts pictures the captain attaches.

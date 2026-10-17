@@ -169,6 +169,12 @@ A field's new text is marked as the crewmate's own in its current ref book, as o
 
 A scroll without a ref accepts `top` or `bottom` as well as `up` and `down`.
 Top and bottom scroll the document to its edge, and answer with the lines on screen, as other scrolls do.
+Up and down send a real wheel, and the host does not return until that scroll has ended, or until a one-second bound when the page never says so, so the answer is not read at the old position.
+The wait follows the scroller under the wheel, or the document when the page itself scrolls, and ignores a scroll end from any other scroller.
+A scroller inside a frame or a shadow root is not followed.
+A page that locks scrolling can still take the bound, because the wheel then never ends.
+The host also stops a moment after that bound, so a page that replaces its own timer cannot hold the answer.
+A wheel that cannot move the page, because it is already at that edge, is still sent and does not wait the bound.
 An element photograph accepts its page-named ref (`--uid`), or a whole-page photograph `--full-page`, never both.
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.
 All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text anywhere on the page refuses the picture.
@@ -486,6 +492,7 @@ It also holds that, once the captain has held the page, typed text reads hidden 
 It also holds every line of a long page with its words and whether the window shows it, a line the host could not place read as where its parent is.
 `changes.test.ts` holds unchanged outlines, additions and removals with old and current numbers, repeated lines, and bounded work and output for a wholesale replacement.
 `taskBrowsers.test.ts` also holds hover, drag, multi-field fill without submitting, edge scrolls, a stale destination or later field refusing before input, stopping a fill on a page move, element captures and whole-page privacy and captain-control guards.
+`wheelScroll.test.ts` holds that a wheel does not return until that scroller's scroll has ended, and that a page already at that edge does not wait.
 `tests/e2e/task-browser-actions.spec.ts` exercises the real core delegate and Electron host in the hermetic launcher: hover reveals a menu, two fields hold their values, real pointer input drops an item, edge scrolls reach their content, and a crop photographs one element.
 `taskBrowsers.test.ts` also holds a same-page action answering only changed lines, a no-change action, and a fresh inspection recovering the full window.
 `window.test.ts` holds the windows: a page that fits whole with no map, a repeated passage folded at its depth, a cut within its bound with its map and next lines, reading on from a line and past the end, a search past the cut within the smaller bound and stepping to the next match, a search reading a whole cut passage, the lines on screen with the skipped lines named, the top when nothing could be placed, the part around a passage, and a small page shown whole around its words.

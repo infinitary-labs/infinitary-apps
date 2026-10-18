@@ -85,7 +85,7 @@ const START_POLICY = stringEnum(START_POLICY_VALUES, {
 
 function undeclaredPrerequisites(verb: "filed" | "changed") {
   return {
-    text: `Nothing was ${verb}. Follow HANDOFF. Queued work must declare blocked_by in this call; [] declares none.`,
+    text: `Nothing was ${verb}. Follow HANDOFF. Queued work must declare blocked_by in this call, as create_task's blocked_by says.`,
     details: { refusal: { kind: "undeclared-prerequisites" } },
   };
 }
@@ -202,10 +202,11 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, { description: "As create_task's start_policy" }),
       ),
+      // What [] declares is said once, on create_task's blocked_by.
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Required for when-ready; [] declares none. Adds prerequisite ids/keys not yet linked; never removes.",
+            "As create_task's blocked_by; required for when-ready. Adds any not yet linked; never removes.",
         }),
       ),
       parent: Type.Optional(

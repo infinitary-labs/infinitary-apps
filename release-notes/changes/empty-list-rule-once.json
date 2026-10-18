@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "empty-list-rule-once",
+      "reason": "The first mate is told once, on one task field, that an empty list of prerequisites declares none. Nothing a person sees or receives changes."
+    }
+  ]
+}

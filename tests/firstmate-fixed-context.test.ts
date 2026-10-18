@@ -580,3 +580,31 @@ describe("every rule the trim took out of one text is still served (contract v4.
     }
   });
 });
+
+describe("what an empty blocked_by declares has one home (INF-461)", () => {
+  // INF-416 piece I said it once, on create_task's blocked_by; piece K said it
+  // again on update_task's and in the refusal. The captain chose the one home
+  // again (INF-460): update_task's parameter and the refusal point there.
+  it("is said only on create_task's blocked_by, and update_task's points there", async () => {
+    const { systemPrompt, served } = await fixedContext();
+    const texts: { where: string; text: string }[] = [{ where: "prompt", text: systemPrompt }];
+    const walk = (where: string, schema: Schema) => {
+      if (schema.description) texts.push({ where, text: schema.description });
+      for (const [name, inner] of Object.entries(schema.properties ?? {})) {
+        walk(`${where}.${name}`, inner);
+      }
+    };
+    // Every text served about a tool that takes prerequisites.
+    for (const tool of served.filter((candidate) => candidate.parameters.properties?.blocked_by)) {
+      texts.push({ where: tool.name, text: tool.description });
+      walk(tool.name, { properties: tool.parameters.properties });
+    }
+    expect(texts.filter(({ text }) => text.includes("[]")).map(({ where }) => where)).toEqual([
+      "create_task.blocked_by",
+    ]);
+    const update = served.find((tool) => tool.name === "update_task");
+    expect(update?.parameters.properties?.blocked_by?.description).toContain(
+      "As create_task's blocked_by",
+    );
+  });
+});

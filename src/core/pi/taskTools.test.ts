@@ -146,7 +146,8 @@ describe("task tools", () => {
         ...extra,
       });
       expect(refused).toHaveProperty("details.refusal.kind", "undeclared-prerequisites");
-      expect(refused?.content[0]?.text).toContain("[] declares none");
+      // INF-461: the refusal points to the one home of what [] declares.
+      expect(refused?.content[0]?.text).toContain("as create_task's blocked_by says");
       expect(delegate.update).not.toHaveBeenCalled();
       expect(delegate.startNow).not.toHaveBeenCalled();
     }

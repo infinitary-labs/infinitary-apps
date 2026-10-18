@@ -421,6 +421,7 @@ it.each([
       : await scriptedClaudeWorld();
     const world = await placedContractWorld(inner, {
       protocolVersion,
+      homeProtocolVersion: protocolVersion,
       now: () => now,
       schedule: (ms, run) => {
         const timer = { due: now + ms, run };
@@ -505,7 +506,12 @@ it.each([
 ])(
   "gates record refresh for a computer speaking $protocolVersion",
   async ({ protocolVersion, refresh }) => {
-    const world = await placedContractWorld(await scriptedClaudeWorld(), { protocolVersion });
+    // INF-416 L: the historical minor boundary needs a same-major home;
+    // a protocol 9 home correctly gives an 8.x worker no work.
+    const world = await placedContractWorld(await scriptedClaudeWorld(), {
+      protocolVersion,
+      homeProtocolVersion: protocolVersion,
+    });
     const { devices, deviceId, paths } = world.placement;
     const sent = vi.spyOn(devices, "ask");
     const session = await world.factory.open(

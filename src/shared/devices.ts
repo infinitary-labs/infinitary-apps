@@ -359,8 +359,7 @@ export type DeviceSsh = z.infer<typeof deviceSshSchema>;
 /**
  * A computer's reach, worked out once from the facts the home already holds
  * (`inReach`, and the SSH state `SshConnections.state` reads, whose connecting
- * limit is that read). Every reader takes this value. `connecting` on a
- * published shape stays until an older view no longer needs it.
+ * limit is that read). Every reader takes this value, including published task places, sign-ins and placement explanations.
  *
  * - `in-reach`: its work said hello, so it takes work.
  * - `connecting`: out of reach only because its connection is being made.

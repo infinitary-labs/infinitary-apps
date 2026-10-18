@@ -907,7 +907,8 @@ describe("running work for a home", () => {
   });
 
   it("takes no new work from a home on another major, and says so once", async () => {
-    const at = await joined({ protocolVersion: "9.0.0" });
+    const otherMajor = `${Number(PROTOCOL_VERSION.split(".")[0]) + 1}.0.0`;
+    const at = await joined({ protocolVersion: otherMajor });
     const { started, said } = start(at.dataDir);
     if (!started.ok) throw new Error(started.reason);
     await expect.poll(() => started.run.state().takesWork).toBe(false);

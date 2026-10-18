@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { taskLifecycleOpSchema } from "./cards";
+import { computerReachSchema } from "./devices";
 import { modelReasonSchema } from "./modelReason";
 import { slotSchema } from "./modelSlots";
 import { placementSnapshotSchema } from "./placement";
@@ -205,25 +206,15 @@ const taskMoveAllowanceSchema = z.discriminatedUnion("ok", [
  * (docs/helper.md, "Runs on"): where it started, or where it would start
  * now. `name` is that computer as the feed names it ("Mac mini", "Running
  * as Builder"), `where` as the Tasks row reads it after the project ("on
- * Mac mini", "as Builder"). `outOfReach` is present while open or underway
- * work's computer is out of reach, or back and not yet caught up.
+ * Mac mini", "as Builder"). `reach` names whether open or underway work's computer is ready, connecting, or out of reach.
  */
 export const taskPlaceSchema = z.object({
   name: z.string(),
   where: z.string(),
-  outOfReach: z.literal(true).optional(),
-  /**
-   * With `outOfReach`: the computer is connected on an older Firstmate and
-   * takes no new work until it is updated, which is not being out of reach.
-   */
+  /** The core's one reach reading; absent on a historical task place. */
+  reach: computerReachSchema.optional(),
+  /** Connected on an older app, so it takes no new work until updated. */
   noNewWork: z.literal(true).optional(),
-  /**
-   * With `outOfReach`: the computer is out of reach only because its
-   * connection is being made (`deviceConnecting`), so the task says
-   * connecting, with no warn mark. `outOfReach` stays so a paired view on
-   * protocol 8.5, which knows only that marker, still draws it.
-   */
-  connecting: z.literal(true).optional(),
 });
 export type TaskPlace = z.infer<typeof taskPlaceSchema>;
 

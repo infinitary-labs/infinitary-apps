@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
-import { AUTOMATIC_COMPUTER } from "@shared/placement";
+import { AUTOMATIC_COMPUTER, PLACEMENT_DEMANDS, placementSnapshotSchema } from "@shared/placement";
 import type { RiskAssessment } from "@shared/risk";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -78,7 +78,7 @@ const PROVENANCE_COLUMNS = [
 const LABEL_COLUMNS = ["missed_escalation", "missed_note", "missed_at"] as const;
 
 /** Every migration shipped today; the head moves as migrations are added. */
-const ALL_VERSIONS = Array.from({ length: 85 }, (_, index) => index + 1);
+const ALL_VERSIONS = Array.from({ length: 86 }, (_, index) => index + 1);
 /** Migration 68's reply line, undone: the `captain_asks` column. */
 const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
 /** Migration 80's delivery columns, undone. */
@@ -3127,4 +3127,84 @@ describe("migration 85 (a recorded wait holds the start)", () => {
     ]);
     upgraded.close();
   });
+});
+
+// INF-416 L: removing published flags must preserve a saved placement's words.
+it("migration 86 retains connecting in saved placement verdicts without the old flag", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 85);
+  const tasks = new TaskService({ db: old });
+  seedTask(tasks, {
+    id: "connecting-placement",
+    title: "Fix the footer.",
+    prompt: "Fix the footer.",
+    status: "queued",
+  });
+  const candidate = {
+    physicalComputerId: null,
+    missingTools: [],
+    reading: { status: "unknown", reason: "out-of-reach" },
+    factsAgeMs: null,
+    capacity: null,
+    reserved: { cpu: 0, memoryBytes: 0 },
+    remaining: null,
+    model: null,
+    preferenceRank: null,
+  };
+  const snapshot = placementSnapshotSchema.parse({
+    version: 1,
+    at: 1_000,
+    computerId: "chosen",
+    computerName: "This computer",
+    physicalComputerId: "a".repeat(64),
+    orderId: "prepare:footer",
+    demand: PLACEMENT_DEMANDS.standard,
+    model: { provider: "openai-codex", id: "gpt-6-astra" },
+    acceptedFallback: false,
+    requirements: { tools: ["git"], systems: ["macos"], profile: "standard" },
+    candidateCount: 2,
+    candidates: [
+      { ...candidate, computerId: "mini", name: "Mac mini", rejections: ["out-of-reach"] },
+      { ...candidate, computerId: "chosen", name: "This computer", rejections: [] },
+    ],
+  });
+  // The legacy snapshot has the same whole shape, with its earlier connecting flag.
+  const placement = {
+    reservation: "pending",
+    snapshot: {
+      ...snapshot,
+      candidates: [{ ...snapshot.candidates[0], connecting: true }, snapshot.candidates[1]],
+    },
+  };
+
+  old
+    .prepare("UPDATE tasks SET placement_json = ? WHERE id = ?")
+    .run(JSON.stringify(placement), "connecting-placement");
+  old.close();
+  const upgraded = openDatabase(dir);
+  const read = () =>
+    JSON.parse(
+      (
+        upgraded
+          .prepare("SELECT placement_json FROM tasks WHERE id = ?")
+          .get("connecting-placement") as { placement_json: string }
+      ).placement_json,
+    );
+  expect(read()).toEqual({
+    ...placement,
+    snapshot: {
+      ...placement.snapshot,
+      candidates: [
+        { ...snapshot.candidates[0], reach: "connecting" },
+        placement.snapshot.candidates[1],
+      ],
+    },
+  });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(
+    new TaskService({ db: reopened }).get("connecting-placement")?.placement?.snapshot.candidates[0]
+      ?.reach,
+  ).toBe("connecting");
+  reopened.close();
 });

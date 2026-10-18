@@ -72,8 +72,9 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
     word: words[mark],
     reason: reason === words[mark] ? "" : reason,
   });
-  const connecting = task.place?.connecting === true;
-  const away = task.place?.outOfReach || connecting ? task.place?.name : null;
+  const connecting = task.place?.reach === "connecting";
+  const away =
+    task.place?.reach !== undefined && task.place.reach !== "in-reach" ? task.place?.name : null;
   const awayWords = connecting
     ? `${away} is connecting`
     : task.place?.noNewWork

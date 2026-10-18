@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { isAbsolute, relative, sep } from "node:path";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import {
   CARD_MEDIA_PIECE_BYTES,
@@ -32,13 +32,11 @@ import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import type { JobExit } from "../jobs/jobManager";
 import {
   crewmateContractStamp,
-  crewmateMovedText,
   crewmateResume,
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
-import type { RecordJoin } from "../pi/recordJoin";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -229,8 +227,6 @@ type Held = {
   copying: Map<string, Promise<unknown>>;
   /** Its folder was removed (`inf:session:remove`): nothing of it is written again. */
   removed: boolean;
-  /** What its crewmate is told ahead of its next prompt: its folders moved (`crewmateMovedText`). */
-  movedNotice: string | undefined;
   /** The tool names and instructions this conversation was opened with. */
   opened: { tools: readonly string[]; instructions: string; browser: boolean } | undefined;
 };
@@ -694,33 +690,14 @@ export class SessionHost {
       if (this.options.copies && !this.options.copies.has(held.task))
         throw new Error("This task has no working copy here yet.");
       const folders = this.options.tasks.ensure(held.task);
-      // What the home kept from before this computer's one-time move names
-      // this folder now: a Pi conversation resumes from, and writes to, its
-      // record here, and its instructions name its folders here.
-      const named = (text: string) => this.options.tasks.inThisFolder(text);
-      const instructions = named(spec.instructions);
-      const resume = crewmateResume(spec.resume && named(spec.resume), binding.backend);
-      // Turns an earlier version wrote to the older folder's copy of its
-      // record after the move come into the record here before it resumes,
-      // and its crewmate is told of them with the move, again if need be.
-      let olderTurns: RecordJoin | undefined;
-      try {
-        if (resume?.backend === "pi")
-          olderTurns = this.options.tasks.olderTurns(held.task, resume.sessionFile);
-      } catch (error) {
-        this.log(`could not bring ${held.task}'s turns from the older folder: ${messageOf(error)}`);
-      }
-      if (olderTurns) {
-        const { toldMoved: _told, ...state } = held.state;
-        held.state = { ...state, olderTurns };
-        this.writeOut(held);
-      }
-      // Its earlier turns and its brief may still name the older folder,
-      // whatever this open carries - a Claude conversation's token names no
-      // folder, and a restarted home names this one: a task whose folder
-      // the older folder holds too has its crewmate told once where its
-      // folders are now.
-      const moved = held.state.toldMoved ? undefined : this.options.tasks.movedFolders(held.task);
+      const instructions = spec.instructions;
+      // Pi records belong to this task's sessions folder, never a path a
+      // home cached before an update. Claude's token is its session id.
+      const token =
+        spec.resume && binding.backend === "pi"
+          ? join(folders.sessions, basename(spec.resume))
+          : spec.resume;
+      const resume = crewmateResume(token, binding.backend);
       // Its own browser, here beside its shell, when the home says it has one.
       const granted = spec.browser ? this.options.browsers?.grant(held.task) : undefined;
       const tools = bindTools(
@@ -793,7 +770,6 @@ export class SessionHost {
         browser: spec.browser === true,
       };
       held.backend = binding.backend;
-      held.movedNotice = moved ? crewmateMovedText(moved, held.state.olderTurns) : undefined;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
       held.unsubscribe = session.subscribe((event) => {
@@ -854,20 +830,17 @@ export class SessionHost {
     const session = this.conversation(held);
     if (held.state.running) throw new Error("A turn is already running here.");
     const turn = held.state.turn + 1;
-    const notice = held.movedNotice;
-    held.movedNotice = undefined;
     held.state = {
       ...held.state,
       turn,
       running: { turn, orderId },
-      ...(notice ? { toldMoved: true as const } : {}),
     };
     this.record(held, { type: "turn_started", turn, orderId });
     this.writeOut(held);
     // Kept before the turn starts: asked again after a quit here, it is
     // answered and never started twice; that turn ended `interrupted`.
     this.remember(held, orderId, { turn });
-    session.prompt(notice ? `${notice}\n\n${text}` : text, images).then(
+    session.prompt(text, images).then(
       () => this.ended(held, turn, "done"),
       (error: unknown) => this.ended(held, turn, "failed", messageOf(error)),
     );
@@ -1250,7 +1223,6 @@ export class SessionHost {
       chain: Promise.resolve(),
       copying: new Map(),
       removed: false,
-      movedNotice: undefined,
       opened: undefined,
     };
     this.held.set(task, held);

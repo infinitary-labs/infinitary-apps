@@ -219,7 +219,7 @@ describe("a computer refused for its connection", () => {
           {
             name: "Mac mini",
             rejections: ["out-of-reach"],
-            ...(connecting ? { connecting } : {}),
+            ...(connecting ? { reach: "connecting" as const } : {}),
             capacity: null,
           },
         ],

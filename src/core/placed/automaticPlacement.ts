@@ -287,7 +287,7 @@ export class AutomaticPlacement {
             decision.candidates.map((row) => ({
               name: nameOf(row.computerId),
               rejections: row.rejections,
-              ...(row.connecting ? { connecting: true as const } : {}),
+              ...(row.connecting ? { reach: "connecting" as const } : {}),
               capacity: row.capacity,
             })),
             requirements.demand,
@@ -338,7 +338,7 @@ export class AutomaticPlacement {
             name: nameOf(row.computerId),
             physicalComputerId: row.physicalComputerId,
             rejections: row.rejections,
-            ...(row.connecting ? { connecting: true as const } : {}),
+            ...(row.connecting ? { reach: "connecting" as const } : {}),
             missingTools: row.missingTools,
             reading: row.resources,
             factsAgeMs: read ? Math.max(0, now - read.started) : null,

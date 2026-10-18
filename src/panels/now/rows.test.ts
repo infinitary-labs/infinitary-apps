@@ -352,12 +352,12 @@ describe("what a row says after its title about its computer", () => {
   it("says connecting while its computer's connection is being made, out of reach otherwise", () => {
     const place = { name: "Mac mini", where: "on Mac mini" };
     const reach = (task: PanelTaskRow) => trailingOf(board(), task, true);
-    expect(reach(task({ place: { ...place, outOfReach: true } }))).toMatchObject({
+    expect(reach(task({ place: { ...place, reach: "out-of-reach" } }))).toMatchObject({
       outOfReach: true,
       connecting: false,
       reach: "out of reach",
     });
-    expect(reach(task({ place: { ...place, connecting: true } }))).toMatchObject({
+    expect(reach(task({ place: { ...place, reach: "connecting" } }))).toMatchObject({
       outOfReach: true,
       connecting: true,
       reach: "connecting",

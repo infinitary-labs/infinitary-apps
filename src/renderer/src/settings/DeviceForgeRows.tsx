@@ -44,8 +44,8 @@ export function deviceForgeRows(devices: DeviceSignIns[]): DeviceForgeRow[] {
       host: host.host,
       hostName: host.name,
       place: signInPlace(device),
-      inReach: device.inReach,
-      connecting: device.connecting === true,
+      inReach: device.reach === "in-reach",
+      connecting: device.reach === "connecting",
       signIn: forges.signIns.find((entry) => entry.host === host.host) ?? null,
     }));
   });

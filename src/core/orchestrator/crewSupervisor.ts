@@ -1889,14 +1889,14 @@ export class CrewSupervisor {
     const live = record.status === "open" || record.status === "active";
     const away = live && machines.ready(device, record.id) !== true;
     const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
-    // Still connecting says so, with no warn mark where `connecting` is read;
-    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
-    const connecting = away && !older && this.options.reachOf?.(device) === "connecting";
     return {
       name: label,
       where,
-      ...(away ? { outOfReach: true as const } : {}),
-      ...(connecting ? { connecting: true as const } : {}),
+      reach: away
+        ? this.options.reachOf?.(device) === "connecting" && !older
+          ? "connecting"
+          : "out-of-reach"
+        : "in-reach",
       ...(older ? { noNewWork: true as const } : {}),
     };
   }

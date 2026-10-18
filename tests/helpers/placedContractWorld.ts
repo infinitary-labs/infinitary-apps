@@ -96,6 +96,8 @@ export async function placedContractWorld(
   inner: ContractWorld,
   options: {
     protocolVersion?: string;
+    /** A historical minor-boundary case runs against a matching-major home. */
+    homeProtocolVersion?: string;
     now?: () => number;
     schedule?: (ms: number, run: () => void) => () => void;
   } = {},
@@ -140,7 +142,7 @@ export async function placedContractWorld(
         ok: true,
         version: "9.9.9",
         platform: "test-os",
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: options.homeProtocolVersion ?? PROTOCOL_VERSION,
         capabilities: [...HOME_CAPABILITIES],
       };
     if (actor?.kind !== "device" || !isWorkInvokeChannel(channel))
@@ -155,6 +157,7 @@ export async function placedContractWorld(
     devices: pairing,
     port,
     name: () => "MacBook Pro",
+    protocolVersion: options.homeProtocolVersion ?? PROTOCOL_VERSION,
   });
   started.connections.push(connection);
   devices.attach(connection);

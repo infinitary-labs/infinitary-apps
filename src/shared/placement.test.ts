@@ -2,9 +2,8 @@ import { describe, expect, it } from "vitest";
 import { type PlacementSnapshot, placementCandidateLines } from "./placement";
 
 /**
- * A saved placement keeps `out-of-reach` for a computer whose connection was
- * being made, so an older build still reads it; the optional `connecting`
- * beside it is what the words follow (INF-49).
+ * A saved placement keeps its rejection and the core reach reading, so
+ * its words distinguish connecting from out of reach (INF-49; INF-416 L).
  */
 describe("a candidate's saved verdict", () => {
   const candidate = (over: Record<string, unknown>) => ({
@@ -30,7 +29,7 @@ describe("a candidate's saved verdict", () => {
     } as unknown as PlacementSnapshot);
 
   it("says connecting for a computer whose connection was being made, and out of reach otherwise", () => {
-    expect(lines({ connecting: true })[0]).toContain("Mac mini: connecting.");
+    expect(lines({ reach: "connecting" })[0]).toContain("Mac mini: connecting.");
     expect(lines({})[0]).toContain("Mac mini: out of reach.");
   });
 });

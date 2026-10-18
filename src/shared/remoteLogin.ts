@@ -280,10 +280,10 @@ export const remoteLoginPasswordQuestionSchema = z.strictObject({
 });
 
 /**
- * A refusal answered as data, for a caller that asks for it (`answerRefusals`):
+ * A Remote Login refusal answered as typed data:
  * which refusal it was and the two lines the feed said, so Settings can tell a
- * refusal that is about reaching a computer from the rest. Without the ask the
- * request rejects with the same two lines, as it always did.
+ * refusal that is about reaching a computer from the rest. Update and
+ * change-address requests always use this answer; other errors still reject.
  */
 export const remoteLoginRefusedAnswerSchema = z.strictObject({
   refused: remoteLoginRefusalSchema,

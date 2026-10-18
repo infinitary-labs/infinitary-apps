@@ -2,9 +2,9 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.17.0",
+  "protocolVersion": "9.0.0",
   "versionRule": {
-    "majorsBehind": 1,
+    "majorsBehind": 0,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
     "major": "Anything a client written against an older version could not survive: a request, push or field removed or renamed, a field made required, or a meaning changed.",
     "window": "A home answers every request of a client whose major is its own or one of the majorsBehind before it. A client on any other major, older or newer, is answered its reads (effect read) and sent every push, and each change (effect change) is refused until the client is updated. The welcome's access says which the client got.",
@@ -2872,10 +2872,6 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 1024
-              },
-              "answerRefusals": {
-                "type": "boolean",
-                "const": true
               }
             },
             "additionalProperties": false
@@ -3618,16 +3614,6 @@
             "minLength": 1,
             "maxLength": 255,
             "pattern": "^(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}$"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "answerRefusals": {
-                "type": "boolean",
-                "const": true
-              }
-            },
-            "additionalProperties": false
           }
         ],
         "minItems": 2,
@@ -3887,14 +3873,10 @@
         "properties": {
           "shown": {
             "type": "boolean"
-          },
-          "phone": {
-            "type": "boolean"
           }
         },
         "required": [
-          "shown",
-          "phone"
+          "shown"
         ]
       }
     },
@@ -4345,11 +4327,14 @@
             "onThisMac": {
               "type": "boolean"
             },
-            "inReach": {
-              "type": "boolean"
-            },
-            "connecting": {
-              "type": "boolean"
+            "reach": {
+              "type": "string",
+              "enum": [
+                "in-reach",
+                "connecting",
+                "reconnecting",
+                "out-of-reach"
+              ]
             },
             "signIns": {
               "anyOf": [
@@ -5042,7 +5027,7 @@
             "deviceId",
             "name",
             "onThisMac",
-            "inReach",
+            "reach",
             "signIns"
           ]
         }
@@ -20039,15 +20024,16 @@
                     "where": {
                       "type": "string"
                     },
-                    "outOfReach": {
-                      "type": "boolean",
-                      "const": true
+                    "reach": {
+                      "type": "string",
+                      "enum": [
+                        "in-reach",
+                        "connecting",
+                        "reconnecting",
+                        "out-of-reach"
+                      ]
                     },
                     "noNewWork": {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    "connecting": {
                       "type": "boolean",
                       "const": true
                     }
@@ -21293,15 +21279,16 @@
               "where": {
                 "type": "string"
               },
-              "outOfReach": {
-                "type": "boolean",
-                "const": true
+              "reach": {
+                "type": "string",
+                "enum": [
+                  "in-reach",
+                  "connecting",
+                  "reconnecting",
+                  "out-of-reach"
+                ]
               },
               "noNewWork": {
-                "type": "boolean",
-                "const": true
-              },
-              "connecting": {
                 "type": "boolean",
                 "const": true
               }
@@ -22731,9 +22718,14 @@
                         ]
                       }
                     },
-                    "connecting": {
-                      "type": "boolean",
-                      "const": true
+                    "reach": {
+                      "type": "string",
+                      "enum": [
+                        "in-reach",
+                        "connecting",
+                        "reconnecting",
+                        "out-of-reach"
+                      ]
                     },
                     "missingTools": {
                       "maxItems": 65,
@@ -24739,15 +24731,16 @@
                 "where": {
                   "type": "string"
                 },
-                "outOfReach": {
-                  "type": "boolean",
-                  "const": true
+                "reach": {
+                  "type": "string",
+                  "enum": [
+                    "in-reach",
+                    "connecting",
+                    "reconnecting",
+                    "out-of-reach"
+                  ]
                 },
                 "noNewWork": {
-                  "type": "boolean",
-                  "const": true
-                },
-                "connecting": {
                   "type": "boolean",
                   "const": true
                 }
@@ -44335,15 +44328,16 @@
                     "where": {
                       "type": "string"
                     },
-                    "outOfReach": {
-                      "type": "boolean",
-                      "const": true
+                    "reach": {
+                      "type": "string",
+                      "enum": [
+                        "in-reach",
+                        "connecting",
+                        "reconnecting",
+                        "out-of-reach"
+                      ]
                     },
                     "noNewWork": {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    "connecting": {
                       "type": "boolean",
                       "const": true
                     }
@@ -45589,15 +45583,16 @@
                     "where": {
                       "type": "string"
                     },
-                    "outOfReach": {
-                      "type": "boolean",
-                      "const": true
+                    "reach": {
+                      "type": "string",
+                      "enum": [
+                        "in-reach",
+                        "connecting",
+                        "reconnecting",
+                        "out-of-reach"
+                      ]
                     },
                     "noNewWork": {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    "connecting": {
                       "type": "boolean",
                       "const": true
                     }
@@ -49011,11 +49006,14 @@
             "onThisMac": {
               "type": "boolean"
             },
-            "inReach": {
-              "type": "boolean"
-            },
-            "connecting": {
-              "type": "boolean"
+            "reach": {
+              "type": "string",
+              "enum": [
+                "in-reach",
+                "connecting",
+                "reconnecting",
+                "out-of-reach"
+              ]
             },
             "signIns": {
               "anyOf": [
@@ -49708,7 +49706,7 @@
             "deviceId",
             "name",
             "onThisMac",
-            "inReach",
+            "reach",
             "signIns"
           ]
         }

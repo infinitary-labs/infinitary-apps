@@ -1023,6 +1023,31 @@ const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "task_links", "holds_merge", "INTEGER NOT NULL DEFAULT 0");
     db.exec("UPDATE task_links SET holds_merge = 1 WHERE type = 'blocks'");
   },
+  // 86: protocol 9 publishes one reach reading; preserve saved placement words.
+  (db) => {
+    const rows = db
+      .prepare("SELECT id, placement_json FROM tasks WHERE placement_json IS NOT NULL")
+      .all() as { id: string; placement_json: string }[];
+    const write = db.prepare("UPDATE tasks SET placement_json = ? WHERE id = ?");
+    for (const row of rows) {
+      const placement = JSON.parse(row.placement_json) as {
+        snapshot?: { candidates?: Record<string, unknown>[] };
+      };
+      const candidates = placement.snapshot?.candidates;
+      if (!Array.isArray(candidates)) continue;
+      let changed = false;
+      placement.snapshot!.candidates = candidates.map((candidate) => {
+        if (!("connecting" in candidate)) return candidate;
+        const { connecting, ...kept } = candidate;
+        changed = true;
+        return {
+          ...kept,
+          ...(connecting === true && kept.reach === undefined ? { reach: "connecting" } : {}),
+        };
+      });
+      if (changed) write.run(JSON.stringify(placement), row.id);
+    }
+  },
 ];
 
 /** The migration that published the views; every later one re-creates them. */

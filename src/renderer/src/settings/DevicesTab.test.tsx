@@ -77,7 +77,6 @@ function render(overrides: Partial<DevicesTabViewProps> = {}) {
   return renderToStaticMarkup(
     <DevicesTabView
       devices={[AIR]}
-      phone={false}
       addresses={{
         addresses: [{ address: "192.168.1.20", network: "local" }],
         chosen: null,
@@ -146,16 +145,11 @@ describe("Settings -> Devices", () => {
     expect(html).not.toContain("data-device-chooser");
   });
 
-  it("offers + A phone only when the build does", () => {
-    // The captain's choice on INF-171's phone card, "Hide it until TestFlight",
-    // made the build's answer decide; every build now answers yes (INF-279).
-    const hidden = render({ phone: false });
-    expect(hidden).toContain('data-device-add="mac"');
-    expect(hidden).toContain('data-device-add="user"');
-    expect(hidden).not.toContain('data-device-add="phone"');
-    expect(hidden).not.toContain("A phone");
-    const offered = render({ phone: true });
-    expect(offered).toContain('data-device-add="phone"');
+  // INF-416 L: every build offers a phone; no capability flag remains.
+  it("offers a computer, another user, and a phone", () => {
+    const offered = render();
+    for (const kind of ["mac", "user", "phone"])
+      expect(offered).toContain(`data-device-add="${kind}"`);
     expect(offered).toContain("A phone");
   });
 
@@ -740,7 +734,7 @@ describe("Settings -> Devices", () => {
         name: "MacBook Pro",
         user: "builder",
         onThisMac: true,
-        inReach: true,
+        reach: "in-reach",
         signIns: {
           providers: [],
           accounts: [

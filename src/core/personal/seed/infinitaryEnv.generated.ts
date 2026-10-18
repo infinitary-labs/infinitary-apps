@@ -255,16 +255,14 @@ declare module "@infinitary/contracts" {
      * Where it runs when another computer runs it: that computer's name as the
      * feed says it, where as the row says it after the project (\`on <name>\`,
      * or \`as <user>\` for another user of this computer), and, on open or
-     * underway work, whether that computer is out of reach now. \`connecting\`
-     * comes with \`outOfReach\` while its connection is being made: read it first.
+     * underway work, the core's single reach reading.
      * Absent for a task this computer runs.
      */
     place?: {
       name: string;
       where: string;
-      outOfReach?: true;
+      reach?: "in-reach" | "connecting" | "reconnecting" | "out-of-reach";
       noNewWork?: true;
-      connecting?: true;
     };
     assignee: string | null;
     model: string | null;

@@ -15,7 +15,7 @@ function computer(over: Partial<DeviceSignIns> & Pick<DeviceSignIns, "deviceId">
   return {
     name: "Mac mini",
     onThisMac: false,
-    inReach: true,
+    reach: "in-reach",
     signIns: { providers: [], accounts: [], quota: null, forges: { signIns: [], hosts: [GITHUB] } },
     ...over,
   };
@@ -60,7 +60,7 @@ describe("a computer's own GitHub row", () => {
 
   it("says a computer is out of reach, and draws nothing for one that never said its hosts", () => {
     const rows = deviceForgeRows([
-      computer({ deviceId: "mini", inReach: false }),
+      computer({ deviceId: "mini", reach: "out-of-reach" }),
       computer({ deviceId: "older", signIns: { providers: [], accounts: [], quota: null } }),
       computer({ deviceId: "silent", signIns: null }),
     ]);
@@ -71,9 +71,7 @@ describe("a computer's own GitHub row", () => {
   });
 
   it("says a computer whose connection is being made is connecting", () => {
-    const [row] = deviceForgeRows([
-      computer({ deviceId: "mini", inReach: false, connecting: true }),
-    ]);
+    const [row] = deviceForgeRows([computer({ deviceId: "mini", reach: "connecting" })]);
     expect(row && deviceForgeRowView(row).line).toBe("not signed in to GitHub · connecting");
   });
 });

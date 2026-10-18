@@ -660,7 +660,7 @@ describe("the home's connection", () => {
     expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:app:healthcheck", "inf:cards:act"]);
   });
 
-  it("answers a device on the home's major or the one before in full, and only the reads of any other", async () => {
+  it("answers a device on the home's major in full, and only the reads of any other", async () => {
     // A home two majors past this app's, so a device further behind than the
     // window exists; the rule only reads the two versions.
     const at = await home({ protocolVersion: "3.2.0" });
@@ -672,18 +672,18 @@ describe("the home's connection", () => {
     const newer = await speaking("4.0.0");
     expect(current.welcome).toMatchObject({ protocolVersion: "3.2.0", access: "full" });
     expect([behind, older, newer].map((device) => device.welcome.access)).toEqual([
-      "full",
+      "read",
       "read",
       "read",
     ]);
 
     // In the window a change reaches the core, whose stand-in refuses it.
-    for (const device of [current, behind])
+    for (const device of [current])
       await expect(device.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
         "malformed request",
       );
     // Outside it a device still reads and is sent every push, and changes nothing.
-    for (const device of [older, newer]) {
+    for (const device of [behind, older, newer]) {
       expect(await device.invoke("inf:app:healthcheck", [])).toMatchObject({ ok: true });
       await expect(device.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(
         "only reads from a home on 3.2.0 until it is updated",
@@ -691,11 +691,13 @@ describe("the home's connection", () => {
     }
     changed(at.events);
     await Promise.all(
-      [older, newer].map((device) => device.push((push) => push.channel === "inf:models:changed")),
+      [behind, older, newer].map((device) =>
+        device.push((push) => push.channel === "inf:models:changed"),
+      ),
     );
     expect(at.asked.map((ask) => ask.channel)).toEqual([
       "inf:cards:close",
-      "inf:cards:close",
+      "inf:app:healthcheck",
       "inf:app:healthcheck",
       "inf:app:healthcheck",
     ]);
@@ -709,8 +711,8 @@ describe("the home's connection", () => {
       ["3.0.1", "2.9.0", "4.0.0"].map((version) => speaking(version)),
     );
     expect(current?.welcome).toMatchObject({ access: "full", takesWork: true });
-    // The major before is answered in full as a client, and still takes no work.
-    expect(behind?.welcome).toMatchObject({ access: "full", takesWork: false });
+    // A previous-major client reads only and takes no work.
+    expect(behind?.welcome).toMatchObject({ access: "read", takesWork: false });
     expect(newer?.welcome).toMatchObject({ access: "read", takesWork: false });
     const view = await connectClient(await at.join("view"), { protocolVersion: "3.0.1" });
     expect(view.welcome.takesWork).toBeUndefined();
@@ -720,7 +722,7 @@ describe("the home's connection", () => {
     const at = await home();
     const grant = await at.join("work", "Mini");
     const older = await connectClient(grant, { protocolVersion: beforePlacedWork() });
-    expect(older.welcome).toMatchObject({ access: "full", takesWork: false });
+    expect(older.welcome).toMatchObject({ access: "read", takesWork: false });
     // It stays in reach, and is asked nothing and answered no work.
     await expect(at.connection.ask(grant.deviceId, "inf:session:roster", [])).rejects.toThrow(
       DeviceOutOfReachError,

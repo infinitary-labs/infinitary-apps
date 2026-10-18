@@ -8,7 +8,7 @@ Protocol 5.0 adds the project-change card’s apply and decline host ops, and op
 The closed host-op enum requires a major change; project configuration retains its policy fields.
 Protocol 5.0 also adds `request_write` to a card action's effect: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
 It is a new member of a closed union, so the version rule requires a major change; a work computer's placed card carries it, and its placed `check_change` carries the optional `skipRules` of a merge past the branch rules.
-A computer one major behind is still answered in full; it never sends the new effect.
+A computer on another major must update before making changes.
 Protocol 5.0 also adds a card's page from its task's project (`docs/task-browser.md`, "A page from the project"): a second kind, `page`, in a card's live attachment, again a new member of a closed set, with the home-only `inf:cards:open-page` request, a placed card's optional `browserPage` and an open browser fact's optional `own`.
 
 Protocol 5.1 adds the optional `system` and `chip` to what a computer sends where it gets Infinitary (`fetchApp`'s request): a home on 5.1 or later answers the copy of Infinitary published for them (`docs/devices.md`, "Infinitary for another system").
@@ -89,7 +89,7 @@ The request is the home's own, so no client on an older minor sends it.
 
 Protocol 8.4 lets `inf:working-copy:source-ref` name the Infinitary rename's git refs: a task's starting work fetched into `refs/infinitary/sources/`, from a kept ref under `refs/infinitary/kept/`, beside Firstmate 3000's `refs/fm3000/` names (`docs/helper.md`, "Starting from a source task").
 A computer on 8.4 also gives its crewmates the browser command as `infinitary-browser-axi`.
-A computer on an older minor knows only the older names, so the home names those to it, in the refs and in a placed crewmate's instructions (`INFINITARY_NAMES_SINCE`).
+A computer on an older minor knows only the older names, so the home names those to it, in the refs (`INFINITARY_NAMES_SINCE`); protocol 9 no longer rewrites placed instructions.
 
 Protocol 8.5 lets a placed crewmate's `inf:work:read-workflow` leave out `jobId`: the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
 A home on an older minor refuses that read as a malformed request; a read that names a job is the same on both.
@@ -196,7 +196,7 @@ How the shapes are written:
 
 A bump is `PROTOCOL_VERSION` and the regenerated file alone: no test pins the number and no ledger lists the bumps, so two changes that both take the next minor write the same line and merge cleanly.
 
-A home answers every request of a client whose major is its own or the one before it (`PROTOCOL_MAJORS_BEHIND`, 1).
+A home answers every request only on its own major (`PROTOCOL_MAJORS_BEHIND`, 0).
 A client on any other major, older or newer, is answered its reads (`effect: "read"`) and sent every push, and each change (`effect: "change"`) is refused, as the result's error, until the client is updated.
 A client on an answered major keeps everything it knows whatever its minor, because a minor only adds.
 
@@ -206,8 +206,8 @@ A client also hides what its home lacks by the `capabilities` it lists, not by r
 Both sides read the envelope leniently: a frame field this version does not know is ignored, so adding one is a minor change, never a closed connection.
 A request's arguments are read as published.
 
-Because the previous major is answered in full, a major change keeps what that major asks working: a request or push whose shape has to break ships under a new name beside the old one, which the home keeps answering until the next major.
-`src/shared/ipc.test.ts` pins the version, so the number moves only on purpose.
+A major may retire earlier shapes under their existing channel names; paired views must update before changing anything.
+`src/shared/ipc.test.ts` exercises the rule with explicit versions and derives the current boundary from the version owner.
 
 ## The scripted client
 
@@ -230,8 +230,8 @@ node scripts/contract-client.ts --grant grant.json [--contract docs/contract.jso
 
 - `src/shared/publishedContract.test.ts`: the committed file is what the contract renders; every core request and push is published with the version and the rule, and no host channel; every shape compiles in a standard validator; argument lists are admitted exactly as the home admits them; what the home sends is open to a later field.
 - `src/shared/ipc.test.ts`, "the version rule": the window, read by majors alone, and a version that cannot be read gets reads only.
-- `src/core/connection/connection.test.ts`: a home two majors on answers its own major and the one before in full, and an older or a newer client only its reads, with every push; a frame's unknown fields are ignored.
-- `src/core/core.test.ts`, "a client that knows only the published contract": the scripted client, as its own process against the real core, answers a stall card and reads the feed; a client one major behind does the same; an older and a newer one read the cards and the feed and have their answer refused, and the card stays.
+- `src/core/connection/connection.test.ts`: a home two majors on answers its own major in full, and an older or a newer client only its reads, with every push; a frame's unknown fields are ignored.
+- `src/core/core.test.ts`, "a client that knows only the published contract": the scripted client, as its own process against the real core, answers a stall card and reads the feed; a client one major behind reads the feed but cannot answer a card; an older and a newer one read the cards and the feed and have their answer refused, and the card stays.
 
 ## Protocol 6.0: required captain actions
 
@@ -245,3 +245,14 @@ A work computer on an older supported minor can still save references through th
 
 Protocol 8.14 adds an optional `download` observation to a Remote Login copy: bytes received and, only when the release states it, a total.
 The existing copy states stay unchanged; older views ignore the added observation.
+
+## Protocol 9: compatibility cleanup
+
+Protocol 9 requires paired views as well as work computers to update across a major (INF-416 piece L, captain's compatibility choice).
+A different-major view retains read-only access, with no promise that retired field shapes remain readable by its older interface.
+Work computers on another major take no work, while the cross-major update orders stay unchanged.
+Device update and change-address requests always answer typed Remote Login refusals and no longer accept `answerRefusals`.
+The device visibility answer has only `shown`; every build offers a phone without a second flag.
+Task places, computer sign-ins and placement explanations carry the core reach value instead of published connecting/out-of-reach flags.
+Placed instructions keep the home's words unchanged, without the browser-command swap for 8.0–8.3 computers.
+Saved conversation recovery runs once before conversations open, not at each open (`docs/helper.md`, "After the one-time move").

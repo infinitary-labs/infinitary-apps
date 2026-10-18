@@ -553,7 +553,7 @@ describe("a computer that runs work signs in to its own subscriptions from its h
       .poll(() => world.group()?.signIns?.providers.map((p) => p.id))
       .toEqual(expect.arrayContaining(["openai-codex", "xai", "openrouter", "anthropic-claude"]));
     expect(world.group()?.signIns?.accounts).toEqual([]);
-    expect(world.group()?.inReach).toBe(true);
+    expect(world.group()?.reach).toBe("in-reach");
   });
 
   it("signs in to OpenRouter with a key typed at home, which the home keeps nowhere", async () => {

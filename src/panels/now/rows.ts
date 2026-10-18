@@ -92,12 +92,12 @@ export function trailingOf(
   task: PanelTaskRow,
   singleProject = hasSingleRegisteredRepoProject(board),
 ): { name: string; place: string; outOfReach: boolean; connecting: boolean; reach: string } {
-  const connecting = task.place?.connecting === true;
+  const connecting = task.place?.reach === "connecting";
   return {
     name: singleProject ? "" : projectNameOf(board, task),
     place: task.place?.where ?? "",
     // The row says why its computer cannot take work now: out of reach, or connecting.
-    outOfReach: task.place?.outOfReach === true || connecting,
+    outOfReach: task.place?.reach !== undefined && task.place.reach !== "in-reach",
     connecting,
     reach: connecting ? "connecting" : task.place?.noNewWork ? "takes no new work" : "out of reach",
   };

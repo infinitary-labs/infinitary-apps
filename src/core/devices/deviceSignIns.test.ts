@@ -33,12 +33,13 @@ function view(inReach: boolean, ssh: DeviceSsh | undefined) {
 describe("a computer's sign-ins view", () => {
   it("says connecting only for a computer out of reach whose connection is being made", () => {
     expect(view(false, { state: "connecting" })).toMatchObject({
-      inReach: false,
-      connecting: true,
+      reach: "connecting",
     });
     for (const state of ["reconnecting", "at-login", "not-started", "stopped"] as const)
-      expect(view(false, { state })?.connecting).toBeUndefined();
-    expect(view(false, undefined)?.connecting).toBeUndefined();
-    expect(view(true, { state: "connecting" })?.connecting).toBeUndefined();
+      expect(view(false, { state })?.reach).toBe(
+        state === "reconnecting" ? "reconnecting" : "out-of-reach",
+      );
+    expect(view(false, undefined)?.reach).toBe("out-of-reach");
+    expect(view(true, { state: "connecting" })?.reach).toBe("in-reach");
   });
 });

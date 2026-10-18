@@ -584,7 +584,6 @@ function HomeDevicesTab() {
   }, [panel, signIns, clear]);
   const { adding, updating, moving, updateCopy } = useSetups();
   const arrival = useShellStore((s) => s.pendingDeviceArrival);
-  const phone = useShellStore((s) => s.phoneShown);
 
   devicesNow.current = devices;
   useEffect(() => {
@@ -788,7 +787,6 @@ function HomeDevicesTab() {
       try {
         const answer = await window.infinitary.devices.update(deviceId, {
           ...(password ? { password } : {}),
-          answerRefusals: true,
         });
         if ("refused" in answer) {
           refused(deviceId, answer);
@@ -826,9 +824,7 @@ function HomeDevicesTab() {
       if (setups.moving.some((each) => each.deviceId === deviceId)) return;
       setups.moveFrom({ deviceId, address });
       try {
-        const answer = await window.infinitary.devices.changeAddress(deviceId, address, {
-          answerRefusals: true,
-        });
+        const answer = await window.infinitary.devices.changeAddress(deviceId, address);
         if ("refused" in answer) refused(deviceId, answer, address);
       } catch (caught) {
         setProblem(
@@ -921,7 +917,6 @@ function HomeDevicesTab() {
   return (
     <DevicesTabView
       devices={devices}
-      phone={phone}
       signIns={signIns}
       addresses={addresses}
       panel={shown}
@@ -1009,8 +1004,6 @@ function HomeDevicesTab() {
 
 export type DevicesTabViewProps = {
   devices: DeviceView[];
-  /** Whether + A phone is offered (`phone` on `inf:devices:shown`; every build offers it). */
-  phone: boolean;
   /** What each computer that runs work last said of its sign-ins. */
   signIns: DeviceSignIns[];
   addresses: DeviceAddresses | null;
@@ -1135,18 +1128,16 @@ export function DevicesTabView(props: DevicesTabViewProps) {
             {plusIcon}
             <span>A {COMPUTER.one}</span>
           </button>
-          {props.phone && (
-            <button
-              type="button"
-              className="fm-connect-chip"
-              data-device-add="phone"
-              disabled={busy === "link"}
-              onClick={() => props.onMake("phone")}
-            >
-              {plusIcon}
-              <span>A phone</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="fm-connect-chip"
+            data-device-add="phone"
+            disabled={busy === "link"}
+            onClick={() => props.onMake("phone")}
+          >
+            {plusIcon}
+            <span>A phone</span>
+          </button>
           <button
             type="button"
             className="fm-connect-chip"

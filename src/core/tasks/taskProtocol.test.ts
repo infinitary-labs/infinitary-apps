@@ -1670,19 +1670,19 @@ describe("provenance events on the wire (R2)", () => {
     let place: import("@shared/tasks").TaskPlace = {
       name: "Mac mini",
       where: "on Mac mini",
-      outOfReach: true,
+      reach: "out-of-reach",
     };
     const f = setup({ place: () => place });
     f.tasks.create({ id: "t", title: "On the mini", prompt: "p", repoId: "r1" });
     await f.settle();
     f.protocol.refreshPresentation();
-    expect(f.protocol.board().tasks[0]?.place).toMatchObject({ outOfReach: true });
+    expect(f.protocol.board().tasks[0]?.place).toMatchObject({ reach: "out-of-reach" });
     // The connection starts being made: the services call this at once on a connection change.
-    place = { name: "Mac mini", where: "on Mac mini", outOfReach: true, connecting: true };
+    place = { name: "Mac mini", where: "on Mac mini", reach: "connecting" };
     expect(f.protocol.refreshPresentation()).toBe(true);
     const row = f.protocol.board().tasks[0]?.place;
-    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
-    expect(row).toMatchObject({ connecting: true, outOfReach: true });
+    // Protocol 9 publishes the core reach value without compatibility flags.
+    expect(row).toMatchObject({ reach: "connecting" });
     f.protocol.dispose();
     f.db.close();
   });

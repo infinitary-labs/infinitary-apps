@@ -115,7 +115,7 @@ describe("one task status", () => {
     const away = read({
       status: "active",
       activity: "running",
-      place: { ...place, outOfReach: true },
+      place: { ...place, reach: "out-of-reach" },
     });
     expect(away).toMatchObject({
       mark: "working",
@@ -125,7 +125,7 @@ describe("one task status", () => {
     const connecting = read({
       status: "active",
       activity: "running",
-      place: { ...place, connecting: true },
+      place: { ...place, reach: "connecting" },
     });
     expect(connecting).toMatchObject({ mark: "working", reason: "Mac mini is connecting" });
     expect(connecting.outOfReach).toBeUndefined();
@@ -133,10 +133,12 @@ describe("one task status", () => {
     const sent = read({
       status: "active",
       activity: "running",
-      place: { ...place, outOfReach: true, connecting: true },
+      place: { ...place, reach: "connecting" },
     });
     expect(sent).toMatchObject({ mark: "working", reason: "Mac mini is connecting" });
     expect(sent.outOfReach).toBeUndefined();
-    expect(read({ place: { ...place, connecting: true } }).reason).toBe("Mac mini is connecting");
+    expect(read({ place: { ...place, reach: "connecting" } }).reason).toBe(
+      "Mac mini is connecting",
+    );
   });
 });

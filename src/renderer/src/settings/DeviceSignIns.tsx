@@ -86,13 +86,13 @@ export type DeviceAccountRowProps = {
 
 /** Under a computer's label while it is not in reach: out of reach, or connecting while its connection is being made. */
 export function OutOfReachNote({ device }: { device: DeviceSignIns }) {
-  if (device.inReach) return null;
+  if (device.reach === "in-reach") return null;
   return (
     <div
       style={{ ...MONO_NOTE_STYLE, marginBottom: "var(--space-2)" }}
-      data-device-out-of-reach={device.connecting ? "connecting" : ""}
+      data-device-out-of-reach={device.reach === "connecting" ? "connecting" : ""}
     >
-      {awayWord(device.connecting)}
+      {awayWord(device.reach === "connecting")}
       {device.asOf ? ` · as of ${timeOf(device.asOf)}` : ""}
     </div>
   );
@@ -384,14 +384,14 @@ export function DeviceSignInGroups({
                 <div className="fm-subs-add">
                   <span style={LABEL_STYLE}>Add account</span>
                   <ProviderChips
-                    providers={device.inReach ? providers : []}
+                    providers={device.reach === "in-reach" ? providers : []}
                     accounts={accounts}
                     busyProviderId={flow && !flow.ended && !flow.refused ? flow.providerId : null}
                     onConnect={(provider) => connect(device.deviceId, provider)}
                     variant="foot"
                     place="there"
                     custom={
-                      device.inReach
+                      device.reach === "in-reach"
                         ? device.customApi
                           ? { onOpen: () => setCustomFor(device.deviceId) }
                           : { note: CUSTOM_API_UPDATE_THERE_NOTE }

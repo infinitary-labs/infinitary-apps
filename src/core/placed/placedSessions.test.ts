@@ -1,15 +1,7 @@
 import { createHash } from "node:crypto";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import type { AccountView } from "@shared/accounts";
 import {
   deviceForgeGateRef,
@@ -49,7 +41,6 @@ import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
-import { MOVE_RECORD } from "../folderMove/record";
 import { rewriteDatabases } from "../folderMove/rewrite";
 import { createForgeResolver, type Forge } from "../forge";
 import type { ComputerAccounts } from "../helper/accounts";
@@ -64,11 +55,7 @@ import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
-import {
-  crewmateMovedText,
-  crewmateRenewedNote,
-  crewmateRestartText,
-} from "../orchestrator/crewSession";
+import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -306,6 +293,7 @@ async function world(
     jobs?: boolean;
     /** The contract the computer's hello names; this build's own unless a test stands in an older one. */
     protocolVersion?: string;
+    tools?: readonly CrewmateTool[];
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -351,7 +339,10 @@ async function world(
   let protocolVersion = options.protocolVersion;
   /** Every binding the home asked the computer to resolve with its own sign-ins. */
   const bound: PlacedSpec["binding"][] = [];
-  const startComputer = (tools?: readonly CrewmateTool[], version = protocolVersion) => {
+  const startComputer = (
+    tools: readonly CrewmateTool[] | undefined = options.tools,
+    version = protocolVersion,
+  ) => {
     const started = startHelper({
       dataDir,
       say: () => {},
@@ -968,12 +959,12 @@ describe("a task that runs on a computer that runs work", () => {
     // made it says connecting instead, with no warn mark (INF-49).
     const dropped = home.tasks.get("t-drop");
     if (!dropped) throw new Error("no task");
-    expect(home.supervisor.taskPlace(dropped)).toMatchObject({ outOfReach: true });
+    expect(home.supervisor.taskPlace(dropped)).toMatchObject({ reach: "out-of-reach" });
     connectingNow.add(at.deviceId);
     const connectingPlace = home.supervisor.taskPlace(dropped);
     connectingNow.clear();
-    // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
-    expect(connectingPlace).toMatchObject({ connecting: true, outOfReach: true });
+    // Protocol 9 carries only the core reach reading.
+    expect(connectingPlace).toMatchObject({ reach: "connecting" });
 
     // Out of reach: words wait on its lane, nothing calls it stuck, and after
     // a minute the feed says so once.
@@ -1169,9 +1160,11 @@ describe("a task that runs on a computer that runs work", () => {
     },
   );
 
-  it("gives a crewmate prepare_change after that computer restarts from 8.12.0 onto this contract (INF-398)", async () => {
+  it("gives a crewmate prepare_change after its computer restarts with that tool available (INF-398, INF-416 L)", async () => {
     const project = await gitProject();
-    const at = await world(() => project.forge(Buffer.alloc(0)), { protocolVersion: "8.12.0" });
+    const at = await world(() => project.forge(Buffer.alloc(0)), {
+      tools: CREWMATE_TOOLS.filter((tool) => tool.name !== "prepare_change"),
+    });
     const home = at.home();
     const { repo } = await adoptHere(home.repos, project.home);
     home.repos.configure(repo.id, { delivery: "direct-pr" });
@@ -1181,9 +1174,9 @@ describe("a task that runs on a computer that runs work", () => {
     const opened = api.requests.at(-1)?.body.tools?.map((tool) => tool.name) ?? [];
     expect(opened).toContain("open_change");
     expect(opened).not.toContain("prepare_change");
-    expect(home.placed.takesChangePresentations(at.deviceId)).toBe(false);
+    expect(home.placed.takesChangePresentations(at.deviceId)).toBe(true);
 
-    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+    await at.restartComputer({ tools: CREWMATE_TOOLS, protocolVersion: PROTOCOL_VERSION });
     // The old connection can still be in reach when the restart returns.
     await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
     await at.inReach("t-contract");
@@ -1375,181 +1368,76 @@ describe("a task that runs on a computer that runs work", () => {
   // INF-284: after its update moves Firstmate 3000's folder into
   // Infinitary's, a conversation held there must go on in the new folder,
   // never in the older one the move keeps as its recovery copy.
-  for (const restart of ["computer", "both"] as const) {
-    it(`goes on from the new folder once that computer's one-time move brought its work there, when ${restart === "both" ? "this Mac restarts too" : "only that computer restarts"} (INF-284)`, async () => {
-      const at = await world(undefined, { inOlderFolder: true });
-      model([
-        { text: "Started on the footer." },
-        {
-          tools: [
-            { name: "report", args: { text: "The header is fixed too.", summary: "Fixed." } },
-          ],
-        },
-        { text: "Reported." },
-        {
-          tools: [{ name: "report", args: { text: "The footer still holds.", summary: "Held." } }],
-        },
-        { text: "Reported." },
-      ]);
-      await at.start("t-moved");
-      await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
-      const older = at.folders("t-moved");
-      const before = at.home().tasks.get("t-moved")?.sessionFile ?? "";
-      expect(before.startsWith(`${older.sessions}/`)).toBe(true);
-      const kept = readFileSync(before, "utf8");
+  // Protocol 9 requires the home and work computer to update together.
+  it("goes on from the migrated record after both computers update (INF-416 L)", async () => {
+    const at = await world(undefined, { inOlderFolder: true });
+    model([
+      { text: "Started on the footer." },
+      {
+        tools: [{ name: "report", args: { text: "The header is fixed too.", summary: "Fixed." } }],
+      },
+      { text: "Reported." },
+      {
+        tools: [{ name: "report", args: { text: "The footer still holds.", summary: "Held." } }],
+      },
+      { text: "Reported." },
+    ]);
+    await at.start("t-moved");
+    await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
+    const older = at.folders("t-moved");
+    const before = at.home().tasks.get("t-moved")?.sessionFile ?? "";
+    expect(before.startsWith(`${older.sessions}/`)).toBe(true);
+    const kept = readFileSync(before, "utf8");
 
-      if (restart === "both") {
-        await at.stopComputer();
-        await at.restartHome(() => at.moveComputer());
-      } else await at.moveComputer();
-      await at.inReach("t-moved");
-      const requests = api.requests.length;
-      await at.home().supervisor.steerCrewmate("t-moved", "Fix the header too.");
-      await expect
-        .poll(() => at.home().tasks.get("t-moved")?.outcome)
-        .toBe("The header is fixed too.");
+    await at.stopComputer();
+    await at.restartHome(() => at.moveComputer());
+    await at.inReach("t-moved");
+    const requests = api.requests.length;
+    await at.home().supervisor.steerCrewmate("t-moved", "Fix the header too.");
+    await expect
+      .poll(() => at.home().tasks.get("t-moved")?.outcome)
+      .toBe("The header is fixed too.");
 
-      // It resumed from its record's copy in the new folder and wrote this turn there.
-      const moved = at.folders("t-moved");
-      const file = join(moved.sessions, relative(older.sessions, before));
-      const now = readFileSync(file, "utf8");
-      expect(now.startsWith(kept)).toBe(true);
-      expect(now).toContain("Fix the header too.");
-      // The older folder's record is as the move left it.
-      expect(readFileSync(before, "utf8")).toBe(kept);
-      // The task's record names the file there now, and this Mac's copy has the turn.
-      await expect.poll(() => at.home().tasks.get("t-moved")?.sessionFile).toBe(file);
-      const copy = join(
-        crewmateSessionsDir(at.home().paths, "t-moved"),
-        relative(moved.sessions, file),
-      );
-      await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
-      // It was told its folders in the new folder, none in the older one.
-      const system = JSON.stringify(api.requests[requests]?.body.system);
-      expect(system).toContain(moved.evidence);
-      expect(system).toContain(moved.cardBodies);
-      expect(system).toContain(moved.temp);
-      expect(system).not.toContain(`${join(older.root, "..", "..", "..")}/`);
-      // Its earlier turns name the older folder, so it was told once where its folders are now.
-      const notice = JSON.stringify(
-        crewmateMovedText({
-          work: { from: older.work, to: moved.work },
-          root: { from: older.root, to: moved.root },
-        }),
-      ).slice(1, -1);
-      expect(said(api.requests[requests])).toContain(notice);
-      expect(said(api.requests[requests]).indexOf(notice)).toBeLessThan(
-        said(api.requests[requests]).indexOf("Fix the header too."),
-      );
+    // It resumed from its record's copy in the new folder and wrote this turn there.
+    const moved = at.folders("t-moved");
+    const file = join(moved.sessions, relative(older.sessions, before));
+    const now = readFileSync(file, "utf8");
+    expect(now.startsWith(kept)).toBe(true);
+    expect(now).toContain("Fix the header too.");
+    // The older folder's record is as the move left it.
+    expect(readFileSync(before, "utf8")).toBe(kept);
+    // The task's record names the file there now, and this Mac's copy has the turn.
+    await expect.poll(() => at.home().tasks.get("t-moved")?.sessionFile).toBe(file);
+    const copy = join(
+      crewmateSessionsDir(at.home().paths, "t-moved"),
+      relative(moved.sessions, file),
+    );
+    await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
+    // It was told its folders in the new folder, none in the older one.
+    const system = JSON.stringify(api.requests[requests]?.body.system);
+    expect(system).toContain(moved.evidence);
+    expect(system).toContain(moved.cardBodies);
+    expect(system).toContain(moved.temp);
+    expect(system).not.toContain(`${join(older.root, "..", "..", "..")}/`);
+    expect(said(api.requests[requests])).not.toContain("Your working copy was");
 
-      // That computer restarts again: its conversation opens there with the
-      // same paths mapped, and its crewmate is not told a second time.
-      await at.restartComputer();
-      await at.inReach("t-moved");
-      await at.home().supervisor.steerCrewmate("t-moved", "Check the footer again.");
-      await expect
-        .poll(() => at.home().tasks.get("t-moved")?.outcome)
-        .toBe("The footer still holds.");
-      expect(said(api.requests.at(-1)).split(notice)).toHaveLength(2);
-      expect(readFileSync(file, "utf8").split(notice)).toHaveLength(2);
-    });
-  }
+    // That computer restarts again: its conversation opens there with the
+    // same paths mapped, and its crewmate is not told a second time.
+    await at.restartComputer();
+    await at.inReach("t-moved");
+    await at.home().supervisor.steerCrewmate("t-moved", "Check the footer again.");
+    await expect
+      .poll(() => at.home().tasks.get("t-moved")?.outcome)
+      .toBe("The footer still holds.");
+    const asked = ["Fix the footer.", "Fix the header too.", "Check the footer again."];
+    for (const text of asked) {
+      expect(said(api.requests.at(-1))).toContain(text);
+      expect(readFileSync(file, "utf8")).toContain(text);
+    }
+    expect(readFileSync(before, "utf8")).toBe(kept);
+  });
 
-  // INF-378: a computer whose version from before the move's paths were
-  // mapped (`inThisFolder`) went on writing a conversation's record into the
-  // older folder after the move, and then updated, must resume from every
-  // turn - also when the version after it had resumed from the copy the move
-  // left behind and taken turns there.
-  for (const since of ["none", "turns"] as const) {
-    it(`resumes from the turns an earlier version wrote to the older folder after the move, ${since === "turns" ? "ahead of the turns a later version took from the copy the move left" : "when nothing ran from the copy the move left"} (INF-378)`, async () => {
-      const at = await world(undefined, { inOlderFolder: true });
-      model([
-        { text: "Started on the footer." },
-        { text: "Fixed the header." },
-        ...(since === "turns" ? [{ text: "Running them." }] : []),
-        {
-          tools: [{ name: "report", args: { text: "Everything holds.", summary: "Held." } }],
-        },
-        { text: "Reported." },
-      ]);
-      await at.start("t-older");
-      await expect.poll(() => at.home().tasks.get("t-older")?.activity).toBe("idle");
-      const older = at.folders("t-older");
-      const before = at.home().tasks.get("t-older")?.sessionFile ?? "";
-      expect(before.startsWith(`${older.sessions}/`)).toBe(true);
-
-      // The move, and a version that names nothing of it: it resumes from the
-      // older folder's copy of the record and writes its next turn there.
-      let record = "";
-      await at.moveComputer((work) => {
-        record = join(dirname(work), MOVE_RECORD);
-        renameSync(record, `${record}.later`);
-      });
-      await at.inReach("t-older");
-      await at.home().supervisor.steerCrewmate("t-older", "Fix the header too.");
-      await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Fixed the header.");
-      const moved = at.folders("t-older");
-      const file = join(moved.sessions, relative(older.sessions, before));
-      expect(readFileSync(before, "utf8")).toContain("Fix the header too.");
-      expect(readFileSync(file, "utf8")).not.toContain("Fix the header too.");
-      const olderRecord = readFileSync(before, "utf8");
-
-      await at.stopComputer();
-      renameSync(`${record}.later`, record);
-      if (since === "turns") {
-        // The version after it maps the move's paths but reads nothing of
-        // the older copy's later turns: it resumes from the copy the move
-        // left behind.
-        renameSync(before, `${before}.unread`);
-        await at.restartComputer();
-        await at.inReach("t-older");
-        await at.home().supervisor.steerCrewmate("t-older", "Resume the native tests.");
-        await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Running them.");
-        expect(readFileSync(file, "utf8")).not.toContain("Fix the header too.");
-        await at.stopComputer();
-        renameSync(`${before}.unread`, before);
-      }
-      const kept = readFileSync(file, "utf8");
-
-      // This version: the conversation resumes from every turn, in order.
-      await at.restartComputer();
-      await at.inReach("t-older");
-      const requests = api.requests.length;
-      await at.home().supervisor.steerCrewmate("t-older", "Check the footer again.");
-      await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Everything holds.");
-      const words = said(api.requests[requests]);
-      const asked = [
-        "Fix the footer.",
-        "Fix the header too.",
-        ...(since === "turns" ? ["Resume the native tests."] : []),
-        "Check the footer again.",
-      ].map((ask) => words.indexOf(ask));
-      expect(asked.every((index) => index >= 0)).toBe(true);
-      expect(asked).toEqual([...asked].sort((a, b) => a - b));
-      // The record here only grew, so this Mac's copy goes on from where it
-      // ended and matches it; the older copy is as that version left it.
-      expect(readFileSync(file, "utf8").startsWith(kept)).toBe(true);
-      expect(readFileSync(before, "utf8")).toBe(olderRecord);
-      const copy = join(
-        crewmateSessionsDir(at.home().paths, "t-older"),
-        relative(moved.sessions, file),
-      );
-      await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
-      // Its crewmate is told once, ahead of the new words, that those turns
-      // are back and what it wrote in them is only in the older folder.
-      const notice = JSON.stringify(
-        crewmateMovedText(
-          {
-            work: { from: older.work, to: moved.work },
-            root: { from: older.root, to: moved.root },
-          },
-          since === "turns" ? "rejoined" : "continued",
-        ),
-      ).slice(1, -1);
-      expect(words.split(notice)).toHaveLength(2);
-      expect(words.indexOf(notice)).toBeLessThan(words.indexOf("Check the footer again."));
-    });
-  }
+  // INF-378's two divergent-record cases now belong to pi/placedMigration.test.ts.
 
   it("closes the conversation there when its record closes, now or once the computer is back", async () => {
     const at = await world();

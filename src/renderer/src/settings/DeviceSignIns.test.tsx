@@ -4,7 +4,7 @@ import {
   KEYCHAIN_VALUE_FAILURE_THERE,
   type QuotaProviderView,
 } from "@shared/quota";
-import { returnsToLoopback, signInPlace } from "@shared/signIns";
+import { type DeviceSignIns, returnsToLoopback, signInPlace } from "@shared/signIns";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DeviceSignInAside, type Flow, OutOfReachNote } from "./DeviceSignIns";
@@ -247,11 +247,11 @@ describe("a computer's Claude account row", () => {
 
 describe("the note under a computer that is not in reach", () => {
   const mini = { deviceId: "mini", name: "Mac mini", onThisMac: false, signIns: null };
-  const note = (over: { inReach: boolean; connecting?: boolean }) =>
+  const note = (over: { reach: DeviceSignIns["reach"] }) =>
     renderToStaticMarkup(<OutOfReachNote device={{ ...mini, ...over }} />);
   it("says connecting while its connection is being made, out of reach otherwise, and nothing in reach", () => {
-    expect(note({ inReach: false, connecting: true })).toContain(">connecting<");
-    expect(note({ inReach: false })).toContain(">out of reach<");
-    expect(note({ inReach: true })).toBe("");
+    expect(note({ reach: "connecting" })).toContain(">connecting<");
+    expect(note({ reach: "out-of-reach" })).toContain(">out of reach<");
+    expect(note({ reach: "in-reach" })).toBe("");
   });
 });

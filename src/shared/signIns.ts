@@ -12,7 +12,7 @@ import {
   customNetworkModeSchema,
 } from "./customApi";
 import { COMPUTER } from "./deviceNames";
-import { deviceLabel, userDisplayName } from "./devices";
+import { computerReachSchema, deviceLabel, userDisplayName } from "./devices";
 import { FORGE_HOST_NAME, forgeSignInStateSchema } from "./forges";
 import { listedIds } from "./modelListing";
 import { reasoningCapabilitiesSchema } from "./modelSlots";
@@ -358,9 +358,7 @@ export const deviceSignInsSchema = z.object({
   /** The macOS user it runs as, for one that runs as another user on this Mac. */
   user: z.string().optional(),
   onThisMac: z.boolean(),
-  inReach: z.boolean(),
-  /** Out of reach only because its connection is being made (`deviceConnecting`). */
-  connecting: z.boolean().optional(),
+  reach: computerReachSchema,
   /** What it last said, or null before it said anything since this home started. */
   signIns: computerSignInsSchema.nullable(),
   /** When it last said it, in ms since the epoch. */

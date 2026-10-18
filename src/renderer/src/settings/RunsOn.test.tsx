@@ -9,7 +9,7 @@ const mini: DeviceSignIns = {
   deviceId: "mini",
   name: "Mac mini",
   onThisMac: false,
-  inReach: false,
+  reach: "out-of-reach",
   signIns: null,
 };
 const repo = {
@@ -24,7 +24,7 @@ const options = (computer: DeviceSignIns) =>
 
 describe("Runs on's option for a computer not in reach", () => {
   it("says connecting while its connection is being made, out of reach otherwise", () => {
-    expect(options({ ...mini, connecting: true })).toContain("Mac mini · connecting");
+    expect(options({ ...mini, reach: "connecting" })).toContain("Mac mini · connecting");
     expect(options(mini)).toContain("Mac mini · out of reach");
   });
 });

@@ -390,15 +390,15 @@ import { workRequests, workRequestWire } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.17.0";
+export const PROTOCOL_VERSION = "9.0.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
- * of a client whose major is its own or one of this many before it. A client
+ * of a client whose major is its own (the previous-major allowance is zero). A client
  * of any other major, older or newer, is answered its reads only until it is
  * updated.
  */
-export const PROTOCOL_MAJORS_BEHIND = 1;
+export const PROTOCOL_MAJORS_BEHIND = 0;
 
 /** What a client may ask of a home under the version rule: everything, or the reads alone. */
 export type ContractAccess = "full" | "read";
@@ -934,7 +934,6 @@ export const invokeContract = {
       z
         .strictObject({
           password: z.string().min(1).max(1024).optional(),
-          answerRefusals: z.literal(true).optional(),
         })
         .optional(),
     ]),
@@ -978,23 +977,16 @@ export const invokeContract = {
     effect: "change",
     surface: "core",
     reach: "home",
-    request: z.tuple([
-      z.string().min(1).max(64),
-      remoteLoginAddressSchema,
-      z.strictObject({ answerRefusals: z.literal(true).optional() }).optional(),
-    ]),
+    request: z.tuple([z.string().min(1).max(64), remoteLoginAddressSchema]),
     response: z.union([deviceViewSchema, remoteLoginRefusedAnswerSchema]),
   },
-  // Whether Settings -> Devices and Firstmate's device cards are offered
-  // here: every build's home answers yes (docs/devices.md). `phone` is
-  // whether Devices offers + A phone, which every build answers yes too
-  // (docs/devices.md, "Settings -> Devices").
+  // Every build offers Devices, including a phone, on the home computer.
   "inf:devices:shown": {
     effect: "read",
     surface: "core",
     reach: "home",
     request: z.tuple([]),
-    response: z.object({ shown: z.boolean(), phone: z.boolean() }),
+    response: z.object({ shown: z.boolean() }),
   },
   // Stop it: closes an open link by its handle before it expires.
   "inf:devices:stop": {
@@ -2928,10 +2920,9 @@ export type FirstmateApi = {
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {
     /**
-     * Whether this build offers the Devices tab and Firstmate's device cards,
-     * and whether the tab offers + A phone (every build does).
+     * Whether this computer offers the Devices tab and device cards.
      */
-    shown: () => Promise<{ shown: boolean; phone: boolean }>;
+    shown: () => Promise<{ shown: boolean }>;
     list: () => Promise<DeviceView[]>;
     /** A one-use ten-minute link, for this window alone. */
     invite: (request: DeviceInviteRequest) => Promise<DeviceInvite>;
@@ -2952,7 +2943,7 @@ export type FirstmateApi = {
      */
     update: (
       deviceId: string,
-      options?: { password?: string; answerRefusals?: true },
+      options?: { password?: string },
     ) => Promise<DeviceView | RemoteLoginPasswordQuestion | RemoteLoginRefusedAnswer>;
     /**
      * Takes a device off the list; it is cut off before this answers. A
@@ -2971,7 +2962,6 @@ export type FirstmateApi = {
     changeAddress: (
       deviceId: string,
       address: string,
-      options?: { answerRefusals?: true },
     ) => Promise<DeviceView | RemoteLoginRefusedAnswer>;
     /** Your devices, whole, after any change. */
     onDevices: (listener: (devices: DeviceView[]) => void) => () => void;

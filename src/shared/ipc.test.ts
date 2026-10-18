@@ -376,10 +376,10 @@ describe("ipc contract", () => {
 });
 
 describe("the version rule (docs/contract.md)", () => {
-  it("answers everything to the home's own major and the one before, and only reads to any other", () => {
+  it("answers everything to the home's own major, and only reads to any other", () => {
     expect(contractAccess("3.4.1", "3.0.0")).toBe("full");
     expect(contractAccess("3.0.0", "3.9.2")).toBe("full");
-    expect(contractAccess("2.17.0", "3.0.0")).toBe("full");
+    expect(contractAccess("2.17.0", "3.0.0")).toBe("read");
     expect(contractAccess("1.99.0", "3.0.0")).toBe("read");
     expect(contractAccess("0.1.0", "3.0.0")).toBe("read");
     expect(contractAccess("4.0.0", "3.9.2")).toBe("read");
@@ -393,8 +393,8 @@ describe("the version rule (docs/contract.md)", () => {
   it("lets a computer that runs work take new work only on the home's own major", () => {
     expect(takesWork("3.4.1", "3.0.0")).toBe(true);
     expect(takesWork("3.0.0", "3.9.2")).toBe(true);
-    // The client window answers the major before in full; work needs the same one.
-    expect(contractAccess("2.17.0", "3.0.0")).toBe("full");
+    // INF-416 L: paired views, like work, must update across a major.
+    expect(contractAccess("2.17.0", "3.0.0")).toBe("read");
     expect(takesWork("2.17.0", "3.0.0")).toBe(false);
     expect(takesWork("4.0.0", "3.9.2")).toBe(false);
     for (const version of ["", "3", "v3.0.0", "3.0.0-alpha.1"])
@@ -412,7 +412,7 @@ describe("the version rule (docs/contract.md)", () => {
   it("measures against this contract when no home version is given", () => {
     expect(contractAccess(PROTOCOL_VERSION)).toBe("full");
     const [major] = PROTOCOL_VERSION.split(".");
-    expect(contractAccess(`${Number(major) - 1}.0.0`)).toBe("full");
+    expect(contractAccess(`${Number(major) - 1}.0.0`)).toBe("read");
     expect(contractAccess(`${Number(major) + 1}.0.0`)).toBe("read");
   });
 });

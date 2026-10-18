@@ -1063,7 +1063,9 @@ export async function createServices(
       const servedThere = (computerSignIns.view?.() ?? [])
         .filter(
           (device) =>
-            device.inReach && device.asOf !== undefined && now - device.asOf < 24 * 60 * 60 * 1000,
+            device.reach === "in-reach" &&
+            device.asOf !== undefined &&
+            now - device.asOf < 24 * 60 * 60 * 1000,
         )
         .flatMap(
           (device) =>

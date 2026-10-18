@@ -68,7 +68,7 @@ A journey waiting for first contact allows both phases, rather than failing a st
 
 Either way the device's cursor is then the welcome's `epoch` with the newest `seq` it holds.
 
-`access` is `full` when the hello's major is the home's own or the one before it, and `read` for any other major, older or newer (`contractAccess`, `docs/contract.md`).
+`access` is `full` when the hello's major is the home's own, and `read` for any other major, older or newer (`contractAccess`, `docs/contract.md`).
 Both sides ignore a frame's fields they do not know, so a later minor can add one.
 
 Every core push is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.

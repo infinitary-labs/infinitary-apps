@@ -217,8 +217,7 @@ Standing CI rule: CI is green only when every check on the PR head commit has st
 /**
  * The one line a crewmate whose task has a browser reads (docs/axi-commands.md,
  * the captain's approved wording on FI3-1429): the command does the rest,
- * its home view and help say how. `command` is the name its shell has: a
- * computer from before the Infinitary rename has only `fm-browser-axi`.
+ * its home view and help say how. `command` is the name its shell serves.
  */
 export function crewmateBrowserLine(command: string = BROWSER_COMMAND): string {
   return `This task has its own browser: run \`${command}\` to see or use a web page. Never press the last step of a purchase or booking; ask the captain on a card.`;

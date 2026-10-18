@@ -610,7 +610,7 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 - **Any other computer that takes the update order** (`takesUpdate`, a contract from `WORK_UPDATE_SINCE` on, whatever its major): over the connection, below.
 - **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
-Devices asks for its refusals as data (`answerRefusals`, also on `inf:devices:change-address`) and shows the two lines in one error line above the list.
+Device update and change-address requests always answer Remote Login refusals as typed data; Devices shows the two lines in one error line above the list.
 A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`deviceConnected`: connected over SSH, in reach, or in reach on another version), after the row had said it was not.
 For Change address the row has to reconnect at the address that was tried.
 Any other refusal stays until the captain's next action.
@@ -890,7 +890,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   Add it asks `inf:devices:add` with that address, as "By its address" does, and the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
 - **Reached over your SSH**: a computer added by its address reads "a computer · sam@mini.local · connected using SSH" once its work said hello through the connection (`ssh` on its entry, `SshConnections.state`), "connecting using SSH…" before, and after an operation held it (an update, a change of address, finding it again) or a move of its work's folder, which make the connection again by design (`fresh` on the line, until an attempt fails), "reconnecting using SSH…" while this Mac tries again by itself after a drop, and its state on the right reads "connecting" in the first cases and "out of reach" otherwise.
   Every reader takes one reach value, `reachFrom` (`reachOf` in the core): in reach, connecting, reconnecting, or out of reach.
-  `deviceConnecting` is that value being connecting, and the published `connecting` flag stays so an older view still reads it.
+  `deviceConnecting` is that value being connecting, and published task places, sign-ins and placement explanations carry the reach value instead of compatibility flags.
   Subscriptions' device sign-ins, Projects' Runs on, the device forge rows, Remove's question and the remove-when-back line say "connecting" from it.
   It reads connecting for at most `CONNECTING_MS` (5 minutes) from when it began, read when reach is read, and then reads "reconnecting", which every surface says as out of reach.
   The host clock re-reads the list, so no timer flips it.

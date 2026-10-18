@@ -109,7 +109,10 @@ describe("the work mode started by its home over Remote Login", () => {
       ["bootout", `gui/502/${label}`],
       ["bootstrap", "gui/502", file],
     ]);
-    expect(readInstalled(at.dataDir)).toEqual({ service: { label, file }, app: at.kept });
+    expect(readInstalled(at.dataDir)).toEqual({
+      service: { label, file },
+      app: at.kept,
+    });
     // Still joined.
     expect(new JoinedHome(at.dataDir, () => {}).read()?.grant.deviceId).toBe("mini");
   });
@@ -137,7 +140,8 @@ describe("the work mode started by its home over Remote Login", () => {
       const plist = readFileSync(join(at.background.homeDir, agent), "utf8");
       if (separate) expect(plist, from).toContain(PROCESS_TYPE);
       else expect(plist, from).not.toContain("ProcessType");
-      // The run started after reads it from the agent's file, with no SSH session of its own.
+      // INF-416 L: later runs read the owned fact, even if the agent text changes.
+      writeFileSync(join(at.background.homeDir, agent), "not a priority reading");
       expect(separateMac(at.dataDir), from).toBe(separate);
     }
   });

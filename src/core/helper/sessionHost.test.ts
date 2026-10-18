@@ -40,7 +40,6 @@ import { type HomeConnection, startConnection } from "../connection/connection";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
-import { crewmateMovedText } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
@@ -1309,8 +1308,8 @@ describe("a conversation held on a computer that runs work", () => {
   // INF-284, review F4: a Claude conversation's token names no folder, and a
   // home that restarted after this computer's one-time move names the new
   // one, so nothing an open carries names the older folder; its crewmate is
-  // still told once where its folders moved.
-  it("tells a Claude crewmate once where its folders moved when its conversation opens after this computer's one-time move, though nothing the home sends names the older folder (INF-284)", async () => {
+  // still resumes the same conversation after its folders migrate.
+  it("preserves a Claude conversation across the folder migration without injecting a compatibility notice (INF-416 L)", async () => {
     const claude = await scriptedClaudeWorld();
     const at = await placed({ claude, inOlderFolder: true });
     const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
@@ -1337,23 +1336,18 @@ describe("a conversation held on a computer that runs work", () => {
     claude.answer({ text: "On it." });
     expect((await open()).state.backend).toBe("claude");
     await prompt(1, "Fix the footer.");
-    const olderDir = at.dataDir;
-    const older = placedTaskFolders(join(olderDir, "tasks"), TASK);
-    expect(resumeToken()).toBeTruthy();
+    const original = resumeToken();
+    expect(original).toBeTruthy();
 
     await at.moveComputer();
-    const moved = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
     // As a home that restarted opens it: its instructions name no older
     // path, and its token is the conversation's id.
     await open(resumeToken());
     await prompt(2, "Fix the header too.");
-    const notice = crewmateMovedText({
-      work: { from: older.work, to: moved.work },
-      root: { from: older.root, to: moved.root },
-    });
     const told = claude.served().at(-1)?.said ?? "";
-    expect(told).toContain(notice);
-    expect(told.indexOf(notice)).toBeLessThan(told.indexOf("Fix the header too."));
+    expect(resumeToken()).toBe(original);
+    expect(told).toContain("Fix the header too.");
+    expect(told).not.toContain("Your working copy was");
 
     // That computer restarts: the conversation opens again, and its crewmate is not told twice.
     await at.restartComputer();
@@ -1361,7 +1355,8 @@ describe("a conversation held on a computer that runs work", () => {
     await prompt(3, "Check the footer again.");
     const later = claude.served().at(-1)?.said ?? "";
     expect(later).toContain("Check the footer again.");
-    expect(later.split(notice)).toHaveLength(2);
+    expect(resumeToken()).toBe(original);
+    expect(later).not.toContain("Your working copy was");
 
     // A task that began after the move has nothing that moved, and is told nothing.
     const fresh = "task-after-the-move";
@@ -1370,14 +1365,7 @@ describe("a conversation held on a computer that runs work", () => {
       { orderId: "rows:fresh", task: fresh, text: "Start the sidebar." },
     ]);
     await expect.poll(() => claude.served().at(-1)?.said).toContain("Start the sidebar.");
-    const freshOlder = placedTaskFolders(join(olderDir, "tasks"), fresh);
-    const freshNow = placedTaskFolders(join(at.dataDir, "tasks"), fresh);
-    expect(claude.served().at(-1)?.said).not.toContain(
-      crewmateMovedText({
-        work: { from: freshOlder.work, to: freshNow.work },
-        root: { from: freshOlder.root, to: freshNow.root },
-      }),
-    );
+    expect(claude.served().at(-1)?.said).not.toContain("Your working copy was");
   });
 
   it("copies the conversation's record to the home, from where its copy ends", async () => {

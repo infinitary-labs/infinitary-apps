@@ -257,7 +257,7 @@ it("carries the executing computer's backend reasoning choices without inventing
         deviceId: "there",
         name: "Other Mac",
         onThisMac: false,
-        inReach: true,
+        reach: "in-reach",
         user: "captain",
         signIns: {
           accounts: [account("other", "xai")],

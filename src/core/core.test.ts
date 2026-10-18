@@ -2465,7 +2465,6 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
       // "Show it now, as you chose for TestFlight", INF-279).
       expect(await booted.dispatch("inf:devices:shown", [])).toEqual({
         shown: true,
-        phone: true,
       });
       // Joining by a command: another user on this Mac runs this one.
       await expect(
@@ -3768,12 +3767,26 @@ describe("a client that knows only the published contract", () => {
     expect(client.lines.filter((line) => line.t === "invalid")).toEqual([]);
   });
 
-  it("keeps a client one major behind working", async () => {
+  it("requires a client one major behind to update before changing anything", async () => {
     const client = await startScriptedClient(await pairView("A major behind"), {
       speak: `${major - 1}.4.0`,
     });
-    expect(client.welcome).toMatchObject({ protocolVersion: PROTOCOL_VERSION, access: "full" });
-    await answerAndRead(client, "contract-behind");
+    expect(client.welcome).toMatchObject({ protocolVersion: PROTOCOL_VERSION, access: "read" });
+    expect(await client.ask("inf:feed:recent", [])).toMatchObject({ t: "result", ok: true });
+    expect(
+      await client.ask("inf:cards:act", ["card-stall-contract-behind", "stop", "chrome"]),
+    ).toMatchObject({ t: "result", ok: false });
+    expect(core.services.tasks.get("contract-behind")?.status).not.toBe("dropped");
+    console.info(
+      "Previous-major view reading:",
+      JSON.stringify({
+        welcome: client.welcome,
+        taskStatus: core.services.tasks.get("contract-behind")?.status,
+        cardStillOpen: (await core.dispatch("inf:cards:list", [])).some(
+          (card) => card.id === "card-stall-contract-behind",
+        ),
+      }),
+    );
     expect(await client.close()).toBe(0);
   });
 

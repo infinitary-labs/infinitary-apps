@@ -89,19 +89,12 @@ export const SETTLE_MS = 10_000;
  */
 type SettingStep = { target: string; from: unknown; to: unknown };
 
-/**
- * A request that asked for its refusals as data (`answerRefusals`) gets the
- * refusal and its two lines back instead of a rejection that carries only
- * words; any other failure, and any caller that did not ask, rejects as before.
- */
-async function refusalAsAnswer<T>(
-  asked: true | undefined,
-  run: () => Promise<T>,
-): Promise<T | RemoteLoginRefusedAnswer> {
+/** Remote Login refusals always carry their typed kind and lines; other failures reject. */
+async function refusalAsAnswer<T>(run: () => Promise<T>): Promise<T | RemoteLoginRefusedAnswer> {
   try {
     return await run();
   } catch (caught) {
-    if (asked && caught instanceof RemoteLoginRefusedError)
+    if (caught instanceof RemoteLoginRefusedError)
       return { refused: caught.refusal, lines: [...caught.lines] };
     throw caught;
   }
@@ -335,13 +328,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:devices:try-again": (deviceId) => ({
       tried: services.sshConnections.tryAgain(deviceId),
     }),
-    "inf:devices:change-address": (deviceId, address, options) =>
-      refusalAsAnswer(options?.answerRefusals, () =>
-        services.remoteLogin.changeAddress(deviceId, address),
-      ),
+    "inf:devices:change-address": (deviceId, address) =>
+      refusalAsAnswer(() => services.remoteLogin.changeAddress(deviceId, address)),
     // Every build offers them on the Mac where Firstmate lives, + A phone
     // included (docs/devices.md, "Settings -> Devices").
-    "inf:devices:shown": () => ({ shown: true, phone: true }),
+    "inf:devices:shown": () => ({ shown: true }),
     "inf:devices:stop": (linkId) => {
       services.devices.stop(linkId);
       return { ok: true as const };
@@ -351,7 +342,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Another Firstmate's Mac is asked about once; `leave` is the captain's yes.
     "inf:devices:add": (address, options) => services.remoteLogin.addOrAsk(address, options),
     "inf:devices:update": (deviceId, options) =>
-      refusalAsAnswer(options?.answerRefusals, () => services.computers.update(deviceId, options)),
+      refusalAsAnswer(() => services.computers.update(deviceId, options)),
     // Macs nearby while "By its address" is open (docs/devices.md, "Macs nearby").
     "inf:devices:nearby": (watching) => services.nearbyMacs.ask(watching),
     // Devices reads where devices find this computer: a Linux home looks at

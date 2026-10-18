@@ -122,6 +122,7 @@ export function writeInstalled(dataDir: string, installed: Installed): void {
 
 export function forgetInstalled(dataDir: string): void {
   rmSync(join(dataDir, INSTALLED_FILE), { force: true });
+  rmSync(join(dataDir, LAUNCH_FACT), { force: true });
 }
 
 /** The lines that start an agent's run as an app, which also record that its Mac is a separate one. */
@@ -343,9 +344,7 @@ const launchd: Adapter = {
  * is another user here or a Mac that joined before a Mac could do both, so
  * the home's own SSH session tells when the home joins or updates it over
  * Remote Login (`homeSshFrom`): from this Mac's own address or loopback only
- * on the home's own Mac. Its agent's file keeps that answer
- * (`STARTS_AS_APP`), so the run and a move to another label read it later;
- * an agent written before names nothing, and the run keeps low priority.
+ * on the home's own Mac. Its installation record keeps that answer, so the run and a move to another label read the typed fact later.
  */
 export function separateMac(
   dataDir: string,
@@ -358,19 +357,40 @@ export function separateMac(
   if (grant.via !== "ssh") return !onHomeMac(grant, interfaces);
   // A `mac` grant the home's own look already found on another Mac.
   if (grant.kind !== "work") return true;
-  if (homeSshFrom !== undefined) return !isThisMachine(homeSshFrom, interfaces?.());
-  return startsAsApp(dataDir);
+  if (homeSshFrom !== undefined) {
+    const separate = !isThisMachine(homeSshFrom, interfaces?.());
+    keepLaunchFact(dataDir, separate);
+    return separate;
+  }
+  return launchFact(dataDir);
 }
 
-/** Whether the agent `installed.json` records starts its run as an app, which it does only on a separate Mac. */
-function startsAsApp(dataDir: string): boolean {
+const LAUNCH_FACT = "launch-fact.json";
+const launchFactSchema = z.strictObject({ version: z.literal(1), separateMac: z.boolean() });
+
+function keepLaunchFact(dataDir: string, separateMac: boolean): void {
+  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+  writePrivate(join(dataDir, LAUNCH_FACT), `${JSON.stringify({ version: 1, separateMac })}\n`);
+}
+
+/** Import the old installation's app-owned launch fact once, never at every run. */
+function launchFact(dataDir: string): boolean {
+  const file = join(dataDir, LAUNCH_FACT);
+  try {
+    return launchFactSchema.parse(JSON.parse(readFileSync(file, "utf8"))).separateMac;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const { service } = readInstalled(dataDir);
   if (!service) return false;
+  let separate = false;
   try {
-    return readFileSync(service.file, "utf8").includes(STARTS_AS_APP.join("\n"));
-  } catch {
-    return false;
+    separate = readFileSync(service.file, "utf8").includes(STARTS_AS_APP.join("\n"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
+  keepLaunchFact(dataDir, separate);
+  return separate;
 }
 
 /**
@@ -527,6 +547,7 @@ export async function moveInBackground(
     app: string | null;
   },
 ): Promise<MovedInBackground> {
+  keepLaunchFact(context.dataDir, separateMac(context.dataDir, context.homeSshFrom));
   const adapter = adapterOf(context);
   const service = adapter.service(context, options.label);
   const text = { launcher: options.launcher, env: options.env };
@@ -534,7 +555,10 @@ export async function moveInBackground(
   const nothing = async () => {};
   if (!before || before.label === service.label) {
     adapter.write(context, service, text);
-    writeInstalled(context.dataDir, { service, app: options.app });
+    writeInstalled(context.dataDir, {
+      service,
+      app: options.app,
+    });
     return { state: await adapter.load(context, service), retire: nothing };
   }
   const takeAway = async () => {
@@ -554,7 +578,10 @@ export async function moveInBackground(
     await adapter.resume(context, before);
     return { state, retire: nothing };
   }
-  writeInstalled(context.dataDir, { service, app: options.app });
+  writeInstalled(context.dataDir, {
+    service,
+    app: options.app,
+  });
   return {
     state,
     retire: async () => {
@@ -589,8 +616,12 @@ export function rewriteInBackground(
   service: Service,
   options: { launcher: Launcher; env: Readonly<Record<string, string>>; app: string | null },
 ): void {
+  keepLaunchFact(context.dataDir, separateMac(context.dataDir, context.homeSshFrom));
   adapterOf(context).write(context, service, { launcher: options.launcher, env: options.env });
-  writeInstalled(context.dataDir, { service, app: options.app });
+  writeInstalled(context.dataDir, {
+    service,
+    app: options.app,
+  });
 }
 
 /**

@@ -23,7 +23,6 @@ import {
   type InvokeResponse,
   invokeContract,
   speaksChangePresentations,
-  speaksInfinitaryNames,
   speaksKnowledge,
   speaksRecordRefresh,
   speaksSeed,
@@ -56,7 +55,6 @@ import {
   crewmateSessionsDir,
 } from "../paths";
 import { keepContentFile } from "../pi/cardImages";
-import { CREWMATE_BROWSER_LINE, crewmateBrowserLine } from "../pi/piResources";
 import type { QuotaCatalogModel } from "../quota/auth";
 import {
   actualComputerPool,
@@ -432,8 +430,6 @@ type Placed = {
   recordDir: string;
   /** What its session was opened with, to open it there again after that computer restarts. */
   spec: PlacedSpec | undefined;
-  /** The contract `spec` was built for; a reopen retargets instructions when it differs. */
-  contract: string | undefined;
 };
 
 const keptStateSchema = z.object({
@@ -817,7 +813,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         level: spec.thinking.level,
         ...(spec.thinking.quick ? { quick: true } : {}),
       },
-      instructions: instructionsThere(spec.instructions.base, version),
+      instructions: spec.instructions.base,
       ...(spec.personalResources !== undefined
         ? { personalResources: spec.personalResources }
         : {}),
@@ -839,7 +835,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const recordDir = spec.shape.record.dir;
     placed.recordDir = recordDir;
     placed.spec = placedSpec;
-    placed.contract = version;
     const session: PlacedSession = new PlacedSession(
       {
         task,
@@ -969,7 +964,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * opened, so a version-gated tool arrives without this Mac restarting.
    */
   private reopen(placed: Placed, session: PlacedSession, deviceId: string): Promise<void> {
-    const spec = this.specForReopen(placed, this.options.devices.version(deviceId)?.contract);
+    const spec = this.specForReopen(placed);
     if (!spec) return Promise.resolve();
     const resume = session.resumeToken();
     const reopening = this.options.devices
@@ -995,23 +990,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /**
    * The spec to open there again. Tool names are what the supervisor binds
-   * now, and instructions wear the contract that computer speaks now; a
-   * conversation whose contract did not change is opened with what it
-   * opened with, so a restart does not start it over.
+   * now; instructions stay exactly as the home opened the conversation
+   * with them, so a restart does not start it over.
    */
-  private specForReopen(placed: Placed, version: string | undefined): PlacedSpec | undefined {
+  private specForReopen(placed: Placed): PlacedSpec | undefined {
     const spec = placed.spec;
     if (!spec) return undefined;
     const names = this.host?.toolsNow?.(placed.task);
     const tools = names && !sameNames(names, spec.tools) ? [...names] : spec.tools;
-    const instructions =
-      version !== undefined && version !== placed.contract
-        ? instructionsForContract(spec.instructions, placed.contract, version)
-        : spec.instructions;
-    if (tools === spec.tools && instructions === spec.instructions) return spec;
-    const next = { ...spec, tools, instructions };
+    if (tools === spec.tools) return spec;
+    const next = { ...spec, tools };
     placed.spec = next;
-    placed.contract = version ?? placed.contract;
     return next;
   }
 
@@ -1614,7 +1603,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       copiedAt: Number.NEGATIVE_INFINITY,
       recordDir: crewmateSessionsDir(this.options.paths, task),
       spec: undefined,
-      contract: undefined,
     };
     this.placed.set(task, placed);
     // The reports a turn this Mac had not finished gave: a restart here replays them.
@@ -1848,36 +1836,4 @@ function metCutOff(event: PlacedEventRecord["event"]): boolean {
     "cutOff" in event &&
     event.cutOff !== undefined
   );
-}
-
-const OLD_BROWSER_LINE = crewmateBrowserLine("fm-browser-axi");
-
-/**
- * A crewmate's instructions as the computer that runs it knows its own
- * commands: one from before the Infinitary rename has its browser command
- * under Firstmate 3000's name only (`INFINITARY_NAMES_SINCE`), so its
- * crewmate is told that name. Any other computer is told the instructions
- * as they are.
- */
-export function instructionsThere(base: string, contract: string | undefined): string {
-  return contract && !speaksInfinitaryNames(contract)
-    ? base.replace(CREWMATE_BROWSER_LINE, OLD_BROWSER_LINE)
-    : base;
-}
-
-/**
- * Instructions opened under `from`, as `to` allows them. The stored text
- * already wears `from`'s command name; this puts `to`'s on it and leaves
- * every other word as the conversation opened with.
- */
-export function instructionsForContract(
-  stored: string,
-  from: string | undefined,
-  to: string | undefined,
-): string {
-  const homeForm =
-    from !== undefined && !speaksInfinitaryNames(from)
-      ? stored.replace(OLD_BROWSER_LINE, CREWMATE_BROWSER_LINE)
-      : stored;
-  return instructionsThere(homeForm, to);
 }

@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "protocol-nine",
+    "kind": "fix",
+    "area": "devices",
+    "title": "Update your paired devices together",
+    "body": "Update your other computers and phones alongside the computer where your first mate lives. Older copies cannot make changes or take work. Infinitary keeps your conversation turns when its saved work moves.",
+    "noPicture": "This changes connection compatibility and saved-conversation recovery, not the layout or words of a screen.",
+    "provenance": { "origin": "change" }
+  }]
+}

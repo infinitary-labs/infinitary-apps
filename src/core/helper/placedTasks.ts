@@ -15,7 +15,7 @@ import {
   writeSync,
 } from "node:fs";
 import { rm } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   type CardMediaExtension,
   parseCardMediaFileName,
@@ -32,13 +32,11 @@ import {
   workOrders,
 } from "@shared/work";
 import { z } from "zod";
-import { pathsOf } from "../folderMove/due";
-import { readMoveRecord } from "../folderMove/record";
 import type { JobRows } from "../jobs/jobManager";
-import { joinRecord, RECORD_JOINS, type RecordJoin } from "../pi/recordJoin";
 import { APP_KEPT_PARTS, removeTaskLeftovers } from "../tasks/taskLeftovers";
 import { provisionTaskTemp, removeOwnedTempFolder, type TempRemoval } from "../tasks/taskTemp";
 import { sha256Of } from "../workspace/bundles";
+import { migrateConversations } from "./migrateConversations";
 
 /**
  * The one writer over `userData/work/tasks/` on a computer that runs work
@@ -64,14 +62,6 @@ const taskStateSchema = z.object({
   running: z.object({ turn: z.number().int().positive(), orderId: z.string() }).optional(),
   /** A client-owned continuation has started but has not ended yet. */
   continuing: z.literal(true).optional(),
-  /** Its crewmate was told its folders moved with the one-time move (`crewmateMovedText`). */
-  toldMoved: z.literal(true).optional(),
-  /**
-   * Its record took in turns an earlier version of this app wrote to the older
-   * folder's copy after the one-time move (`PlacedTasks.olderTurns`); its
-   * crewmate's notice of the move says so.
-   */
-  olderTurns: z.enum(RECORD_JOINS).optional(),
 });
 export type PlacedTaskState = z.infer<typeof taskStateSchema>;
 
@@ -104,8 +94,6 @@ export class PlacedTasks {
   readonly tasksDir: string;
   private readonly trashDir: string;
   private readonly sourceTransfers = new Map<string, Promise<unknown>>();
-  /** The folder the one-time move brought this work from, if one did; read once. */
-  private older: OlderFolder | null | undefined;
 
   /**
    * `worktreesDir` is where this computer's working copies are
@@ -113,77 +101,17 @@ export class PlacedTasks {
    * working folder is an empty one of its own.
    */
   constructor(
-    private readonly dataDir: string,
+    dataDir: string,
     private readonly worktreesDir?: string,
   ) {
     this.tasksDir = join(dataDir, "tasks");
     this.trashDir = join(dataDir, "worktree-trash");
+    migrateConversations(dataDir);
   }
 
   /** The task's folders, by the layout the home writes instructions with. */
   folders(task: string) {
     return placedTaskFolders(this.tasksDir, this.checked(task), this.worktreesDir);
-  }
-
-  /**
-   * `text` with every path into the folder the one-time move brought this
-   * work from naming the same place in this one (docs/helper.md, "Holding a
-   * conversation"). The home opens a conversation here again with what it
-   * opened it with before - a Pi record's file, instructions that name the
-   * task's folders - and before the move those named the older folder, which
-   * stays as the recovery copy and is never written again.
-   */
-  inThisFolder(text: string): string {
-    const folder = dirname(this.dataDir);
-    let named = text;
-    for (const from of this.olderFolder()?.names ?? [])
-      named = named.split(`${from}${sep}`).join(`${folder}${sep}`);
-    return named;
-  }
-
-  /**
-   * Where the task's working copy and its folder were before the one-time
-   * move brought this work here, as the older app named them, beside where
-   * they are now; undefined unless the older folder holds this task's folder
-   * too, so a task that began after the move has nothing that moved.
-   */
-  movedFolders(task: string): { work: MovedPath; root: MovedPath } | undefined {
-    const older = this.olderFolder();
-    if (!older) return undefined;
-    const folder = dirname(this.dataDir);
-    const { work, root } = this.folders(task);
-    const before = (path: string) =>
-      path.startsWith(`${folder}${sep}`) ? `${older.from}${path.slice(folder.length)}` : path;
-    if (!existsSync(before(root))) return undefined;
-    return { work: { from: before(work), to: work }, root: { from: before(root), to: root } };
-  }
-
-  /**
-   * Brings into the task's Pi record at `file` here the turns its copy in the
-   * folder the one-time move brought this work from gained after the move
-   * (`joinRecord`; docs/helper.md, "Holding a conversation"). A version of
-   * this app from before it named that folder (`inThisFolder`) resumed from
-   * that copy and wrote there; the version after it resumed from the copy
-   * here, which the move made before those turns. Undefined when that copy
-   * is not this task's, has not changed since the move, or holds nothing the
-   * record here lacks.
-   */
-  olderTurns(task: string, file: string): RecordJoin | undefined {
-    const older = this.olderFolder();
-    const folder = dirname(this.dataDir);
-    if (!older || !file.startsWith(`${this.folders(task).sessions}${sep}`)) return undefined;
-    const before = `${older.from}${file.slice(folder.length)}`;
-    try {
-      if (statSync(before).mtimeMs <= older.at) return undefined;
-    } catch {
-      return undefined;
-    }
-    return joinRecord(before, file);
-  }
-
-  private olderFolder(): OlderFolder | null {
-    if (this.older === undefined) this.older = olderFolderOf(dirname(this.dataDir));
-    return this.older;
   }
 
   /** Discard staging copies after their consumer has received them, never source evidence. */
@@ -575,30 +503,4 @@ export class PlacedTasks {
     if (!placedTaskIdSchema.safeParse(task).success) throw new Error(`No task is named ${task}.`);
     return task;
   }
-}
-
-/** A path before the one-time move and the same place now. */
-type MovedPath = { from: string; to: string };
-
-/**
- * The folder the one-time move brought this work from: as the older app
- * named it, and by every name of it, longest first, since the name the disk
- * resolves through a link (`/private/var`) ends with the other; and when the
- * move was made, in milliseconds.
- */
-type OlderFolder = { from: string; names: readonly string[]; at: number };
-
-/**
- * The older folder when the one-time move brought its work into `folder`
- * (its record there, `src/core/folderMove/record.ts`); null when no move did
- * or the person kept this folder's own work.
- */
-function olderFolderOf(folder: string): OlderFolder | null {
-  const record = readMoveRecord(folder);
-  if (!record || record.state === "kept-own") return null;
-  return {
-    from: record.from,
-    names: pathsOf(record.from).sort((a, b) => b.length - a.length),
-    at: Date.parse(record.at),
-  };
 }

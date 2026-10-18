@@ -517,7 +517,7 @@ const actionLines = {
       computers: (c as DeviceSignIns[]).map((device) => ({
         deviceId: device.deviceId,
         name: signInPlace(device).label,
-        inReach: device.inReach,
+        reach: device.reach,
         providers: device.signIns?.providers.map((provider) => provider.id) ?? [],
         signedIn:
           device.signIns?.accounts.map((account) => ({

@@ -10,7 +10,6 @@ import {
   toolFingerprints,
   toolsFingerprint,
 } from "../pi/piResources";
-import type { RecordJoin } from "../pi/recordJoin";
 import { timeZoneFact } from "../prompts/timeZone";
 import {
   type ContractStamp,
@@ -140,40 +139,6 @@ export function crewmateRenewedNote(renewal: SessionRenewal): string {
     ? "the instructions and tools its earlier one started under changed with an update"
     : `${HERE.this}'s own instructions and skills changed since its earlier one began`;
   return `it moved to a new conversation, because ${changed}; the earlier one is kept`;
-}
-
-/**
- * What a crewmate on a computer that runs work is told once, ahead of its
- * first prompt after the one-time move brought its task's folder into that
- * computer's new folder (docs/helper.md, "Holding a conversation"): where its
- * working copy and its task's folders were and are now, so a path it
- * remembers from before - its earlier turns, its brief, its notes - is not
- * used. With `olderTurns` its record took in turns an earlier version wrote
- * to the old folder after the move (`joinRecord`), so it is told that too,
- * even when it was told of the move before, and that what it wrote in those
- * turns is only there.
- */
-export function crewmateMovedText(
-  moved: {
-    work: { from: string; to: string };
-    root: { from: string; to: string };
-  },
-  olderTurns?: RecordJoin,
-): string {
-  return [
-    olderTurns
-      ? "The computer you run on moved its saved work into a new folder, and your working copy and your task's folders moved with it."
-      : "The computer you run on moved its saved work into a new folder since your last turn, and your working copy and your task's folders moved with it.",
-    `Your working copy was ${moved.work.from} and is now ${moved.work.to}.`,
-    `Your task's folders - evidence, card bodies, temporary files, source cards - were under ${moved.root.from} and are now under ${moved.root.to}.`,
-    "The old folder stays only as a recovery copy and nothing reads it, so use the new paths, also in place of any old path in your earlier turns, your brief or your notes.",
-    ...(olderTurns
-      ? [
-          `For a while after the move this computer went on writing your turns into the old folder's copy of this conversation; those turns are back in it now${olderTurns === "rejoined" ? ", ahead of your latest turns, which ran without them" : ""}.`,
-          `A file you wrote in those turns under ${moved.root.from} is still only there: copy what you still need into the same place under ${moved.root.to}, and write nothing new in the old folder.`,
-        ]
-      : []),
-  ].join(" ");
 }
 
 /**

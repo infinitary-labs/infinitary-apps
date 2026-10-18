@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deviceChipSchema } from "./devices";
+import { type ComputerReach, computerReachSchema, deviceChipSchema } from "./devices";
 import { computerResourceReadingSchema } from "./resources";
 import { computerSignInsSchema } from "./signIns";
 
@@ -132,7 +132,7 @@ export const placementSnapshotSchema = z.object({
           .nullable(),
         rejections: z.array(placementRejectionSchema).max(32),
         /** With `out-of-reach`: its connection was being made, so it reads connecting. */
-        connecting: z.literal(true).optional(),
+        reach: computerReachSchema.optional(),
         missingTools: z.array(z.string().max(80)).max(RESOLVED_TOOL_LIMIT),
         reading: computerResourceReadingSchema,
         factsAgeMs: z.number().nonnegative().nullable(),
@@ -206,7 +206,7 @@ export type PlacementWaitRow = {
   name: string;
   rejections: readonly PlacementRejection[];
   /** With `out-of-reach`: its connection was being made, so it reads connecting. */
-  connecting?: true | undefined;
+  reach?: ComputerReach | undefined;
   /** Its own room before pending starts are taken off; null when unknown. */
   capacity: PlacementDemand | null;
 };
@@ -274,7 +274,7 @@ export function placementWait(
   }
   const why = rows
     .filter((row) => row.rejections.length > 0)
-    .map((row) => `${row.name}: ${rejectionWords(row.rejections, row.connecting)}.`);
+    .map((row) => `${row.name}: ${rejectionWords(row.rejections, row.reach === "connecting")}.`);
   return why.length > 0
     ? {
         kind: "other",
@@ -323,10 +323,7 @@ const REJECTION_WORDS: Record<PlacementRejection, string> = {
 };
 
 /** A computer's rejections in words; out of reach reads connecting while its connection was being made. */
-function rejectionWords(
-  rejections: readonly PlacementRejection[],
-  connecting: true | undefined,
-): string {
+function rejectionWords(rejections: readonly PlacementRejection[], connecting: boolean): string {
   return rejections
     .map((reason) =>
       reason === "out-of-reach" && connecting ? "connecting" : REJECTION_WORDS[reason],
@@ -342,7 +339,7 @@ export function placementCandidateLines(snapshot: PlacementSnapshot): string[] {
       const verdict =
         candidate.computerId === snapshot.computerId
           ? "chosen"
-          : rejectionWords(candidate.rejections, candidate.connecting) ||
+          : rejectionWords(candidate.rejections, candidate.reach === "connecting") ||
             "compatible, with less room to start";
       const capacity = candidate.remaining
         ? ` After pending work: ${candidate.remaining.cpu.toFixed(1)} CPUs and ${gib(candidate.remaining.memoryBytes)} GiB memory available.`

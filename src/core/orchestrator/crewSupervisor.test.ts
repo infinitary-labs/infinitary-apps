@@ -9356,16 +9356,66 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "filed-followups" });
   });
 
-  it("cannot tell on a client-side backend, so it arms the stall check instead", async () => {
+  it("stays quiet while a client-side backend's own count says its background task still runs", async () => {
     const crewmate = fakeCrewmate();
     const clientSide: FakeCrewmate = {
       ...crewmate,
-      controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+      controlProfile: CLAUDE_CONTROL_PROFILE,
     };
     const { ops, sorts, taskId } = await reportedTask(clientSide);
+    // The client lists the task it started (`background_tasks_changed`).
+    clientSide.emit({
+      type: "background_work_changed",
+      count: 1,
+      tasks: [{ id: "b7xk2", description: "pnpm test src/core/orchestrator" }],
+    });
     await report(clientSide, taskId, "Kicked off a background task; I'll report back.");
     expect(reportWakes(ops)).toHaveLength(0);
-    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "cannot-tell" });
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+  });
+
+  // INF-11, from the captain's words "make this missed escalation
+  // structurally impossible" (2026-10-18): a crewmate that stops needing the
+  // captain or the first mate, with no card up, is never sorted routine. The
+  // host never reads its words, so a report nothing the host sees holds
+  // wakes the first mate on every backend, and its words carry the need.
+  describe("a cardless report nothing holds wakes the first mate on a backend the host cannot watch (INF-11)", () => {
+    // DOP-18's report (event 63663), the one the captain saw sorted routine.
+    const DOP_18_NOT_DONE =
+      "The token file can read both repositories, but its Administration write capability is insufficient or otherwise unavailable for the second JIT mint; the log cannot distinguish the exact permission issue. The captain must provide a token with runner-registration write access for both repositories, then the supervisor can retry without another restart.";
+    // INF-410's report (event 78325), sorted routine the same way.
+    const INF_410_NOT_DONE =
+      "Needs the app side: prepare_change must accept the head of the task's own branch, here fm/task-fb3b7e63 at 7c76c77, or this crewmate must be re-bound to that branch. Once it returns a revision, I will open the PR, read its checks and emit the card.";
+
+    it("a Pi crewmate on a computer that runs work, whose count says no job runs (DOP-18)", async () => {
+      const crewmate = fakeCrewmate();
+      // The face such a computer's conversation presents here (placedSessions.ts).
+      const placed: FakeCrewmate = {
+        ...crewmate,
+        controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+      };
+      const { supervisor, ops, sorts, taskId } = await reportedTask(placed);
+      // That computer publishes its Pi shell's job count, zero included (docs/helper.md).
+      placed.emit({ type: "background_work_changed", count: 0 });
+      await report(placed, taskId, DOP_18_NOT_DONE);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "cannot-tell" });
+      expect(reportWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 reported on task ${taskId} "Job": ${DOP_18_NOT_DONE}`,
+      ]);
+      expect(supervisor.cardsSnapshot()).toEqual([]);
+    });
+
+    it("a Claude crewmate whose client has listed no background task (INF-410)", async () => {
+      const crewmate = fakeCrewmate();
+      const claude: FakeCrewmate = { ...crewmate, controlProfile: CLAUDE_CONTROL_PROFILE };
+      const { ops, sorts, specs, taskId } = await reportedTask(claude);
+      expect(specs[0]?.onReport?.(INF_410_NOT_DONE)).toContain("Reported.");
+      await report(claude, taskId, "Blocked; reported.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "cannot-tell" });
+      expect(reportWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 reported on task ${taskId} "Job": ${INF_410_NOT_DONE}`,
+      ]);
+    });
   });
 
   // FI3-671: a wait on work nobody has started is the Firstmate's turn on
@@ -9464,7 +9514,9 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     await tick();
     await report(clientSide, taskId, "Pushed a new version; its checks are running.");
     expect(sorts.at(-1)?.rule).toBe("cannot-tell");
-    expect(reportWakes(ops)).toHaveLength(1);
+    expect(reportWakes(ops).at(-1)).toBe(
+      `[fm-op] crewmate 1 reported on task ${taskId} "Job": Pushed a new version; its checks are running.`,
+    );
   });
 
   it("wakes on every report while a blocking filing stays planned, and not once it starts", async () => {
@@ -9601,7 +9653,9 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       });
     }
 
-    it("wakes the Firstmate for the same relay after the planner withdrew its card, which alone woke nobody", async () => {
+    // FI3-696's withdrawn card sat until INF-11: a report nothing holds now
+    // wakes on any backend, and only the declaration carries the ask.
+    it("wakes the Firstmate for the same relay after the planner withdrew its card, and names the ask only when declared", async () => {
       const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
         await plannerWithCard("client");
       supervisor.replyToCard(card.id, APPROVAL);
@@ -9613,15 +9667,17 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         "Reported. It goes on your task's record when this turn ends; whether the first mate is woken for it depends on your task's state. If the first mate must act on it, report again with needs_firstmate.",
       );
       await endTurn(crewmate, taskId);
-      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "cannot-tell" });
-      expect(reportWakes(ops)).toHaveLength(0);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "cannot-tell" });
+      expect(reportWakes(ops)).toHaveLength(1);
+      expect(reportWakes(ops)[0]).not.toContain("It asks the first mate to act");
 
       await supervisor.steerCrewmate(taskId, "go on");
       await tick();
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
       await endTurn(crewmate, taskId);
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
-      expect(reportWakes(ops)).toHaveLength(1);
+      expect(reportWakes(ops)).toHaveLength(2);
+      expect(reportWakes(ops)[1]).toContain(`It asks the first mate to act: ${ASK}.`);
     });
 
     it("answers the captain's reply first: a request beside an unanswered reply says so and wakes nobody", async () => {
@@ -11292,27 +11348,44 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
     });
 
-    it("a declared wait with no card up is still the captain's turn, never one the Firstmate owes, and a steer releases it (FI3-435)", async () => {
-      const { supervisor, crewmate, ops, specs, tasks, taskId, note } = await withOutcomeNote();
+    // INF-11, from the captain's words "make this missed escalation
+    // structurally impossible" (2026-10-18): a wait on the captain with no
+    // card on his screen is a question he cannot see, so the first mate owes
+    // it - the report wakes it, and the ladder reminds it, never the crewmate.
+    it("a declared wait with no card up is the first mate's to put to the captain, and a steer releases it (INF-11)", async () => {
+      const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note, cards } =
+        await withOutcomeNote();
       supervisor.close(note.id);
       await tick();
-      specs[0]?.onReport?.(
-        "The release is out; the captain may still want the old build.",
-        undefined,
-        {
-          wait: { reason: "decide whether to keep the old build" },
-        },
-      );
+      const words = "The release is out; the captain may still want the old build.";
+      const receipt = specs[0]?.onReport?.(words, undefined, {
+        wait: { reason: "decide whether to keep the old build" },
+      });
+      const opsBefore = ops.length;
       await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "captain-gate" });
+      expect(receipt).toContain("No card of yours is up, so the first mate is woken to ask him");
       expect(tasks.get(taskId)?.gate).toEqual({
         kind: "captain",
         reason: "decide whether to keep the old build",
       });
+      expect(ops.slice(opsBefore)).toEqual([
+        `[fm-op] crewmate 1 reported on task ${taskId} "Release": ${words} It waits on the captain to decide whether to keep the old build, and no card of its is on his screen.`,
+      ]);
       const prompts = crewmate.promptCalls.length;
-      const opsBefore = ops.length;
-      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20), minutes(90)]);
+      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20)]);
+      // Nothing nudges the crewmate, which already did its part.
       expect(crewmate.promptCalls).toHaveLength(prompts);
-      expect(ops.slice(opsBefore)).toEqual([]);
+      expect(ops.at(-1)).toContain(
+        `[fm-op] task ${taskId} "Release" is held for the captain (its crewmate waits on him to decide whether to keep the old build) and has had no card up for 20m`,
+      );
+      // Two wakes let go, the app asks him itself, in the crewmate's words.
+      await idleFor({ supervisor, tasks }, taskId, [minutes(50), minutes(80)]);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      const stall = cards().find((entry) => entry.id === `card-stall-${taskId}`);
+      expect(stall?.body).toContain(
+        "<p>It waits on you to decide whether to keep the old build, and no card has asked you. Your first mate was told twice, and nothing has moved since.</p>",
+      );
 
       await supervisor.steerCrewmate(taskId, "The captain keeps the old build.");
       await tick();
@@ -15092,7 +15165,9 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.sorts).toEqual([]);
   });
 
-  it.each([false, true])("keeps a declared captain wait open quietly (note: %s)", async (note) => {
+  // With its note up the wait is quiet; with no card up the captain has
+  // nothing to answer, so the first mate owes the card (INF-11).
+  it.each([false, true])("keeps a declared captain wait open (note: %s)", async (note) => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
     const { taskId } = await h.supervisor.commission({
@@ -15121,8 +15196,17 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.tasks.get(taskId)?.delivery?.captainWait).toMatchObject({
       reason: "check the time zone",
     });
-    expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
-    expect(h.ops).toEqual([]);
+    if (note) {
+      expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+      expect(h.ops).toEqual([]);
+    } else {
+      expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "captain-gate" });
+      expect(h.ops).toEqual([
+        expect.stringContaining(
+          "It waits on the captain to check the time zone, and no card of its is on his screen.",
+        ),
+      ]);
+    }
     expect(crewmate.dispose).not.toHaveBeenCalled();
   });
 

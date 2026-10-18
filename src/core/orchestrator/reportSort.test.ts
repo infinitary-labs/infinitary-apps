@@ -232,11 +232,12 @@ describe("sortReport", () => {
       wake: true,
     },
     {
-      name: "6. the host cannot tell: the idle clock watches it",
+      // INF-11: a report nothing holds is never routine, on any backend.
+      name: "6. the host cannot tell: nothing it sees holds the turn, so wake now",
       facts: NOTHING,
       rule: "cannot-tell",
-      verdict: "routine",
-      wake: false,
+      verdict: "captain",
+      wake: true,
     },
   ];
 
@@ -296,6 +297,58 @@ describe("sortReport", () => {
     expect(sortReport(facts({ waitsOnUnderway: true })).reason).toBe(
       "it waits on work underway; the crewmate's turn continues when that work closes.",
     );
+  });
+
+  // INF-11, from the captain's words "make this missed escalation
+  // structurally impossible": a report stays quiet only while a witness
+  // holds its turn - a card on his screen, a reply its crewmate owes, or
+  // work that moves on its own. Every combination of the facts is tried.
+  it("never leaves a report quiet without a witness that holds its turn (INF-11)", () => {
+    const flags = [
+      "threadAwaitingAuthor",
+      "decisionCardOpen",
+      "captainWait",
+      "browserWithCaptain",
+      "captainGateOwed",
+      "deliverable",
+      "jobsRunning",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "accountHeld",
+      "outOfReach",
+      "waitsOnUnstarted",
+      "waitsOnUnderway",
+      "filedFollowups",
+      "finished",
+      "needsFirstmate",
+      "workObservable",
+      "internalStep",
+    ] as const;
+    const holds = (over: ReportSortFacts) =>
+      over.threadAwaitingAuthor ||
+      over.decisionCardOpen ||
+      over.deliverable ||
+      over.jobsRunning ||
+      over.pendingSettle ||
+      over.timedWait ||
+      over.checksWatched ||
+      over.accountHeld ||
+      over.outOfReach === true ||
+      over.waitsOnUnderway === true;
+    const unheld: string[] = [];
+    for (let mask = 0; mask < 1 << flags.length; mask += 1) {
+      const over = facts(
+        Object.fromEntries(flags.map((flag, bit) => [flag, (mask & (1 << bit)) !== 0])),
+      );
+      const sorted = sortReport(over);
+      if (
+        sorted.verdict !== (sorted.wake ? "captain" : "routine") ||
+        (!sorted.wake && !holds(over))
+      )
+        unheld.push(`${sorted.rule} at ${flags.filter((_, bit) => mask & (1 << bit)).join("+")}`);
+    }
+    expect(unheld).toEqual([]);
   });
 
   it("an unobservable backend can never be called stopped", () => {

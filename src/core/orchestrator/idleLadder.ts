@@ -255,10 +255,14 @@ export class IdleLadder {
     const cardUp = this.decisionCardsFor(taskId).length > 0;
     const gateCardUp =
       gate?.kind === "captain" && gate.ref !== undefined && this.cardOpen(gate.ref);
-    // A wait its crewmate declared is the captain's turn with or without a
-    // card behind it (FI3-435) - never one the Firstmate owes - unless a
-    // round cap stands, whose card the Firstmate does owe.
-    const captainWait = Boolean(record?.delivery?.captainWait) && !standingCap(record?.delivery);
+    // A wait its crewmate declared is the captain's turn while a card of
+    // the task is on his screen (FI3-435), unless a round cap stands, whose
+    // card the Firstmate owes. With no card up he has nothing to answer, so
+    // its gate is a card the Firstmate owes as well (INF-11).
+    const captainWait =
+      Boolean(record?.delivery?.captainWait) &&
+      !standingCap(record?.delivery) &&
+      (cardUp || gateCardUp || this.anyCardFor(taskId));
     // A browser in the captain's hands wakes its crewmate when he returns it.
     const browserWithCaptain = this.host.browserWithCaptain?.(taskId) === true;
     return {
@@ -431,6 +435,12 @@ export class IdleLadder {
 
   private cardOpen(id: string): boolean {
     for (const card of this.host.openCards()) if (card.id === id) return true;
+    return false;
+  }
+
+  /** Any card open on a task, a note included: something on the captain's screen to answer. */
+  private anyCardFor(taskId: string): boolean {
+    for (const card of this.host.openCards()) if (card.taskId === taskId) return true;
     return false;
   }
 
@@ -1066,9 +1076,14 @@ export class IdleLadder {
           ?.label.toLowerCase()
       : undefined;
     const choices = modelWay ? `try again, ${modelWay}, or discard it` : "try again or discard it";
+    // A wait its crewmate declared with no card up is a question nobody put
+    // to him (INF-11): the card names it in the crewmate's words.
+    const wait = cap ? undefined : record.delivery?.captainWait;
     const opening = cap
       ? `<p>It has reached its limit of tries at ${cap.held === "review-cap" ? "getting through a review" : "getting the checks to pass"}, so it needs your call: ${choices}. Your first mate was told twice and has not asked you yet.</p>`
-      : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
+      : wait
+        ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
+        : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
     const continues = cap
       ? `Continue tells it to say what is in its way; it does not give it more tries. To try again${modelWay ? ` or ${modelWay}` : ""}, tell your first mate.`
       : "Continue tells it to finish or say what is in its way.";

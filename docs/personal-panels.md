@@ -171,10 +171,11 @@ The supervisor's brief tells the crewmate so (`renderIntentBrief`), and the `per
 
 **Report, commit, close.**
 A live crewmate's report (`turnComplete`) is the turn's commit: `commitTurn` stamps, lints the touched extensions (findings go on the task's timeline, never the feed), and commits the workspace under the app's identity with the report as the message - the first sentence the subject, the rest the body - and only when the tree changed.
-With no captain-turn witness (`IdleLadder.witnesses().decisionCardOpen`), the report is also the completion: the task closes `done`/`finished` by the host, the feed line is `built in place - <title>` (`taskFeed.ts`, keyed on `delivery.mode === "in-place"` - the task delivery's own mode, `taskDeliveryModeSchema`), and NO wake goes to the whose-turn sort or the first mate - the report is already the feed line and nothing is owed.
+With no captain-turn witness (`IdleLadder.witnesses().decisionCardOpen`, or a declared wait on the captain with no card up), the report is also the completion: the task closes `done`/`finished` by the host, the feed line is `built in place - <title>` (`taskFeed.ts`, keyed on `delivery.mode === "in-place"` - the task delivery's own mode, `taskDeliveryModeSchema`), and NO wake goes to the whose-turn sort or the first mate - the report is already the feed line and nothing is owed.
 A commit that fails closes nothing (`CrewSupervisor.commitFailed`): what the crewmate changed stays in the workspace uncommitted, git's words go on the task's timeline, and the task stays open, its build apart from the rails.
 The first mate hears git's words in a `commit-failed` wake, on any personal task, whatever card is up, and steers the crewmate or tells the captain; the crewmate's next report commits again, and closes the task when that commit lands.
-A report with a captain-turn witness routes as any other: an open decision card or a declared wait on the captain keeps the task open quietly.
+A report with a captain-turn witness routes as any other: an open decision card or a declared wait on the captain keeps the task open.
+It stays quiet while a card of the task is on the captain's screen; a declared wait with no card up wakes the first mate, which owes that card (`docs/report-sort.md`).
 A note alone never holds the turn, and stays on the captain's screen after the task closes done.
 Every settle mode is refused on a personal task with the reason, and a crewmate card carrying a settle effect is refused at `addCrewmateCard` - there is nothing to merge, land, or discard.
 

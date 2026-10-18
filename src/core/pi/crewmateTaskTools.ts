@@ -161,7 +161,7 @@ export const REPORT_TOOL = crewmateTool({
         },
         {
           description:
-            "Pass when nothing is left for you until the captain acts: your outcome card is up, or he may still want something after closing your card. reason says what he still has to read or decide; card_id names your open card he is to read, omitted when none is up. Your task then waits on him: nothing nudges you and the first mate is not woken until he closes, clicks or replies under your card, or you are steered. Never while work of your own remains.",
+            "Pass when nothing is left for you until the captain acts: your outcome card is up, or he may still want something after closing your card. reason says what he still has to read or decide; card_id names your open card he is to read, omitted when none is up. Your task then waits on him: nothing nudges you, and while your card is up the first mate is not woken until he closes, clicks or replies under it, or you are steered. With no card of yours up he has nothing to answer, so the first mate is woken to ask him. Never while work of your own remains.",
         },
       ),
     ),

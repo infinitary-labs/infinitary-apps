@@ -5515,7 +5515,10 @@ export class CrewSupervisor {
       return;
     }
     if (report && !turnError && !options.interrupted && personal && this.isPersonalTask(task.id)) {
-      const cardOpen = this.ladder.witnesses(task.id, this.now()).decisionCardOpen;
+      // A declared wait holds it with or without a card up; with none, the sort wakes the Firstmate.
+      const cardOpen =
+        this.ladder.witnesses(task.id, this.now()).decisionCardOpen ||
+        Boolean(this.options.tasks.get(task.id)?.delivery?.captainWait);
       void this.commitLiveTurn(task, report, personal, { close: !cardOpen });
       if (!cardOpen) return;
     }
@@ -5627,6 +5630,10 @@ export class CrewSupervisor {
       state: wait.status === "dropped" ? ("dropped" as const) : ("not-started" as const),
     }));
     const review = record ? this.reviewToReread(record) : undefined;
+    const witnesses = this.ladder.witnesses(task.id, this.now());
+    // A wait it declared with nothing on the captain's screen to answer is
+    // the card the Firstmate owes (INF-11): the wake says what he must decide.
+    const unseenWait = witnesses.decisionCardOpen ? undefined : record?.delivery?.captainWait;
     const wake: TypedWake = {
       facts: {
         kind: "report",
@@ -5637,6 +5644,7 @@ export class CrewSupervisor {
         ...(waits.length > 0 ? { waits } : {}),
         cards: this.cards.shownCards(task.id),
         ...(refused ? { refused } : {}),
+        ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
         ...(ci ? { ci } : {}),
@@ -5648,13 +5656,13 @@ export class CrewSupervisor {
       return;
     }
     const sort = sortReport({
-      ...this.ladder.witnesses(task.id, this.now()),
+      ...witnesses,
       filedFollowups: filed.length > 0,
       internalStep: record?.shape?.internal_step === true,
       finished,
       needsFirstmate: needsFirstmate !== undefined,
-      // A session that is gone cannot prove anything either: not knowing
-      // is its own answer, and the clock is the safe side of it.
+      // A session that is gone cannot prove anything either; the record
+      // keeps that the host could not tell, and the report still wakes.
       workObservable: task.session?.controlProfile.backgroundWork === "host",
     });
     this.recordSort(task.id, task.title, wake, sort.verdict, sort.reason, sort.rule, () => {
@@ -8747,6 +8755,12 @@ export class CrewSupervisor {
       receipt.push(
         "Your task now waits on the captain: nothing nudges you, and you hear when he acts or you are steered.",
       );
+      // He answers what is on his screen; with nothing there the Firstmate asks (INF-11).
+      if (!declaration.wait.cardId && this.openCardsFor(task.id).length === 0) {
+        receipt.push(
+          "No card of yours is up, so the first mate is woken to ask him unless one is up when this turn ends.",
+        );
+      }
     }
     if (declaration?.needsFirstmate) {
       receipt.push(

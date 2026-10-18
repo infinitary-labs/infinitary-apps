@@ -24,7 +24,9 @@
  *     A note never holds the turn on its own (R4.8 question 1 - a crewmate
  *     may post an FYI and keep working), so only a card with actions
  *     counts - or a wait on the captain its crewmate declared in a report,
- *     which places the task's captain gate (FI3-435).
+ *     which places the task's captain gate (FI3-435), while a card of the
+ *     task is on his screen. A declared wait with none is step 4's: the
+ *     Firstmate owes the card (INF-11).
  *  1a. The report declared the work finished - the captain has read its
  *     outcome and nothing is left (FI3-435): wake, so the Firstmate closes
  *     the task. The crewmate's declaration, never a reading of its words.
@@ -40,8 +42,9 @@
  *     close the sweep turns into its steer: the CREWMATE's turn. No wake;
  *     its next report runs this rule again.
  *  4. The task is held for the captain by its gate and no card is up (a
- *     round cap before the Firstmate's card): the FIRSTMATE's turn, which
- *     owes that card. Wake. Never the crewmate's - it cannot act.
+ *     round cap before the Firstmate's card, or a wait its crewmate
+ *     declared with nothing on his screen to answer): the FIRSTMATE's turn,
+ *     which owes that card. Wake. Never the crewmate's - it cannot act.
  *  4b. A declared internal step has reported its answer, with no witness
  *     holding its turn: the FIRSTMATE's turn. Wake on any backend so it
  *     can start the next step; the report is the step's deliverable.
@@ -49,15 +52,19 @@
  *     report's own words. This is the stuck, blocked, and
  *     finished-with-no-card case - the one the captain named.
  *  6. The host cannot tell, because the backend runs its own background
- *     work (Claude): no wake now. The idle ladder's clock covers it - if
- *     nothing moves the task, its first rung acts ten minutes later.
+ *     work (Claude, or any crewmate on a computer that runs work): wake now
+ *     too (INF-11). Its own count of that work, when it gives one, is
+ *     already the job witness at step 3, so what is left is a crewmate that
+ *     stopped as far as the host can see - and the one way a report that
+ *     needs the captain or the Firstmate is never filed routine is that
+ *     nothing quiet stands without a witness.
  *
  * Only a backend whose background work is the HOST's own can reach step 5:
  * Pi's bash is a host tool, so a running job is in the job registry and its
  * exit is a lane row - all four witnesses are complete and "nothing will
  * ever start its next turn" is provable. A client-side backend gets step 6
- * instead, and so does a task with no transport at all: not knowing is its
- * own answer, and the clock is the safe side of it.
+ * instead, and so does a task with no transport at all; both wake, and the
+ * record keeps which of the two it was.
  *
  * The same witnesses, read the same way, decide the idle ladder's turn
  * (`idleTurn` below, `IdleLadder.reconcileIdle`, docs/report-sort.md): a
@@ -116,11 +123,17 @@ export type Witnesses = {
   /**
    * A card with actions is open on the task (`cardWord` === "decision"),
    * whoever wrote it, or the task's captain gate names an open card, or its
-   * crewmate's last report declared a wait on the captain (FI3-435), or its
-   * browser is in the captain's hands (`browserWithCaptain`).
+   * crewmate's last report declared a wait on the captain (FI3-435) and a
+   * card of the task is up, or its browser is in the captain's hands
+   * (`browserWithCaptain`).
    */
   decisionCardOpen: boolean;
-  /** Its crewmate's last report declared a wait on the captain (counted in `decisionCardOpen`). */
+  /**
+   * Its crewmate's last report declared a wait on the captain and a card of
+   * the task, a note included, is on his screen (counted in
+   * `decisionCardOpen`). A declared wait with no card up is not this: its
+   * gate is `captainGateOwed` (INF-11).
+   */
   captainWait?: boolean;
   /**
    * Its crewmate's last report asked the Firstmate to act (`needs_firstmate`,
@@ -137,7 +150,8 @@ export type Witnesses = {
   browserWithCaptain?: boolean;
   /**
    * The task's gate holds it for the captain and no card is behind it: the
-   * Firstmate owes the card (a round cap before its decision card).
+   * Firstmate owes the card (a round cap before its decision card, or a
+   * wait its crewmate declared with no card up).
    */
   captainGateOwed: boolean;
   /**
@@ -331,9 +345,10 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
   }
   return {
     rule: "cannot-tell",
-    verdict: "routine",
-    wake: false,
-    reason: "this backend runs its own background work; the idle clock watches it instead.",
+    verdict: "captain",
+    wake: true,
+    reason:
+      "nothing the host sees holds its turn, though it cannot watch all of this backend's work.",
   };
 }
 

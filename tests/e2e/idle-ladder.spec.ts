@@ -28,6 +28,7 @@ const TASK_TITLE = "Tidy the docs";
 /** How long it has been idle when the app launches. */
 const IDLE_MS = 90 * 60_000;
 const TITLE = stallCardTitle(TASK_TITLE, formatDurationShort(IDLE_MS));
+const WAIT_TITLE = "Publish the docs";
 
 test("a crewmate stuck past every nudge and wake is the app's own card, and Drop task ends it", async () => {
   const userDataDir = scratchDir("infinitary-idle-ladder-");
@@ -124,8 +125,8 @@ test("a capped task stuck past every wake is still put to the captain on the app
   const launched = await launchApp({ userDataDir });
   try {
     const { page } = launched;
-    // The cap's captain gate does not hide it the way a declared wait does:
-    // the host puts the task to him on its own card.
+    // The cap's captain gate does not hide it: the host puts the task to
+    // him on its own card.
     await expect
       .poll(() =>
         page.evaluate(async () =>
@@ -142,15 +143,17 @@ test("a capped task stuck past every wake is still put to the captain on the app
 });
 
 /**
- * A wait its crewmate declared (FI3-435): the outcome is up to the captain,
- * and the crewmate said so in its report - here after he closed its note
- * and it judged he may still want something. Its clock is as overdue as
- * the stuck task's above, yet nothing climbs: the declared wait is the
- * captain's turn, card or no card, so no stall card goes up. Only a ready
- * card lists a task under "waiting on you" (FI3-702); task-wait-reason.spec.ts
- * owns that and the reported reason its record shows.
+ * A wait its crewmate declared with no card up (FI3-435, and INF-11 from the
+ * captain's words "make this missed escalation structurally impossible"):
+ * the outcome is up to the captain, and the crewmate said so in its report -
+ * here after he closed its note and it judged he may still want something.
+ * Nothing on his screen asks him, so the first mate owes the card; its
+ * clock is as overdue as the stuck task's above, with both wakes let go, so
+ * the app puts the wait to him on its own card. The card's words are
+ * crewSupervisor.test.ts's; only a ready card lists a task under "waiting
+ * on you" (FI3-702), which task-wait-reason.spec.ts owns.
  */
-test("a crewmate's declared wait on the captain holds the turn: no stall card", async () => {
+test("a crewmate's declared wait on the captain with no card up is put to him on the app's own card", async () => {
   const userDataDir = scratchDir("infinitary-idle-ladder-wait-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db });
@@ -158,41 +161,39 @@ test("a crewmate's declared wait on the captain holds the turn: no stall card", 
   mkdirSync(worktreeDir, { recursive: true });
   seedTask(tasks, {
     id: "waiting-task",
-    title: "Publish the docs",
+    title: WAIT_TITLE,
     status: "completed",
     worktreeDir,
     outcome: "The docs are published.",
   });
+  const reason = "decide whether to keep the old pages";
   tasks.recordReport("waiting-task", {
     text: "The docs are published; the captain may still want the old pages kept.",
-    declared: { wait: { reason: "decide whether to keep the old pages" } },
+    declared: { wait: { reason } },
   });
+  // The gate the wait placed when it was reported, so the launch reads the
+  // same hold rather than placing it afresh.
+  tasks.setGate("waiting-task", { kind: "captain", reason });
   const now = Date.now();
   tasks.recordRecovery("waiting-task", {
     rung: 2,
     count: 2,
     at: now - 35 * 60_000,
-    idleSince: now - 90 * 60_000,
+    idleSince: now - IDLE_MS,
   });
   db.close();
 
   const launched = await launchApp({ userDataDir });
   try {
     const { page } = launched;
-    const row = async () =>
-      page.evaluate(async () => {
-        const board = await window.infinitary.tasks.board();
-        return board.tasks.find((task) => task.id === "waiting-task") ?? null;
-      });
-    // The boot sweep placed the captain gate the wait stands for. The board
-    // answers only once the core has started, so the boot reconcile has run.
-    await expect.poll(row).toMatchObject({
-      status: "active",
-      captainWait: true,
-      flags: { held: true, needsYou: true },
-    });
-    // Nothing climbed: no stall card, no card at all.
-    expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+    const title = stallCardTitle(WAIT_TITLE, formatDurationShort(IDLE_MS));
+    await expect(shownCard(page, title)).toBeVisible();
+    // It names what the crewmate waits on him to do.
+    await expect(cardBody(page, title).getByText(reason)).toBeVisible();
+    const cards = await page.evaluate(() => window.infinitary.cards.list());
+    expect(cards.map((card) => [card.id, card.author])).toEqual([
+      ["card-stall-waiting-task", "host"],
+    ]);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: test.info().outputPath("idle-ladder-declared-wait.png") });
   } finally {

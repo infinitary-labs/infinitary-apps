@@ -9,6 +9,7 @@ import {
   toolFingerprints,
   toolsFingerprint,
 } from "../pi/piResources";
+import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
 import {
   type ContractStamp,
   LOCAL_MACHINE_ID,
@@ -301,6 +302,7 @@ export function seatSessionSpec(input: SeatSessionInput): SessionSpec {
         retries: FIRSTMATE_RETRIES,
       },
     },
+    compaction: { maxContextTokens: SESSION_COMPACTION_TOKENS },
     needs: { steer: "native" },
   };
 }

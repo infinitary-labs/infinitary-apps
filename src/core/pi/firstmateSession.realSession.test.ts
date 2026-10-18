@@ -1,3 +1,4 @@
+import { DEFAULT_COMPACTION_SETTINGS, shouldCompact } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModelRuntime, ToolDefinition } from "./types";
@@ -27,7 +28,10 @@ const piMocks = vi.hoisted(() => {
     sessionFile: "/tmp/firstmate/sessions/session.jsonl",
     isStreaming: false,
     messages: [] as unknown[],
-    model: { provider: "fm-mock", id: "mock-1" },
+    model: { provider: "fm-mock", id: "mock-1", contextWindow: 1_000_000 },
+    settingsManager: {
+      applyOverrides: vi.fn((_settings: { compaction?: { reserveTokens?: number } }) => {}),
+    },
     subscribe: vi.fn((_listener: (event: unknown) => void) => () => {}),
     prompt: vi.fn(async () => {}),
     steer: vi.fn(async () => {}),
@@ -174,6 +178,20 @@ describe("the served sequences at the session boundary (contract v4.6)", () => {
 });
 
 describe("the Pi seat's production contract", () => {
+  it("INF-447: compacts at 300k or earlier and rebudgets at every prompt boundary", async () => {
+    const session = await openSeat(spec);
+    for (const window of [1_000_000, 200_000, 128_000, 1_000_000]) {
+      piMocks.agentSession.model.contextWindow = window;
+      await session.prompt("hello");
+      const override = piMocks.agentSession.settingsManager.applyOverrides.mock.calls.at(-1)?.[0];
+      const settings = { ...DEFAULT_COMPACTION_SETTINGS, ...override?.compaction };
+      const trigger = Math.min(300_000, window - DEFAULT_COMPACTION_SETTINGS.reserveTokens);
+      expect(shouldCompact(trigger, window, settings)).toBe(false);
+      expect(shouldCompact(trigger + 1, window, settings)).toBe(true);
+    }
+    session.dispose();
+  });
+
   it("creates the rolling session with the pinned call shape", async () => {
     const session = await openSeat(spec);
 

@@ -372,6 +372,7 @@ class PiRollingSession implements ModelSession {
       maxModelTurns: number;
       local: boolean;
       perTurn: boolean;
+      maxContextTokens?: number;
       /** Drop a failed turn's thinking from the live state (the runaway hardening). */
       stripFailed: boolean;
       stamp: ContractStamp | undefined;
@@ -462,7 +463,11 @@ class PiRollingSession implements ModelSession {
     this.servedPromptPending = true;
     this.promptOpen = true;
     try {
-      budgetCustomCompaction(this.session);
+      budgetCustomCompaction(
+        this.session,
+        this.options.maxContextTokens,
+        this.options.local ? LOCAL_CONTEXT_RESERVE : DEFAULT_COMPACTION_SETTINGS.reserveTokens,
+      );
       if (this.options.local) {
         const fits = async () => {
           const messages = await this.session.agent.convertToLlm([
@@ -895,15 +900,33 @@ async function openOneShot(
  * prompt boundary so a resumed session uses the current model. Overflow still
  * uses Pi's real compactor and its single retry.
  */
-function budgetCustomCompaction(session: AgentSession): void {
+function budgetCustomCompaction(
+  session: AgentSession,
+  maxContextTokens?: number,
+  defaultReserve = DEFAULT_COMPACTION_SETTINGS.reserveTokens,
+): void {
   const model = session.model;
-  if (!model || !isCustomApiProvider(model.provider)) return;
-  const historyRoom = Math.max(0, model.contextWindow - model.maxTokens - piPrefixTokens(session));
+  if (!model) return;
+  const custom = isCustomApiProvider(model.provider);
+  if (!custom && maxContextTokens === undefined) return;
+  const historyRoom = custom
+    ? Math.max(0, model.contextWindow - model.maxTokens - piPrefixTokens(session))
+    : 0;
   const quarter = Math.max(1, Math.floor(historyRoom / 4));
+  const reserve = custom
+    ? Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8))
+    : defaultReserve;
   session.settingsManager.applyOverrides({
     compaction: {
-      keepRecentTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter),
-      reserveTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.reserveTokens, Math.ceil(quarter / 0.8)),
+      ...(custom
+        ? { keepRecentTokens: Math.min(DEFAULT_COMPACTION_SETTINGS.keepRecentTokens, quarter) }
+        : {}),
+      // Pi triggers above window - reserve. Recompute rather than retaining a
+      // previous large-window reserve when the next attachment uses a smaller model.
+      reserveTokens: Math.max(
+        reserve,
+        maxContextTokens === undefined ? 0 : model.contextWindow - maxContextTokens,
+      ),
     },
   });
 }
@@ -980,6 +1003,7 @@ async function openRolling(
     maxModelTurns: request?.maxModelTurns ?? 0,
     local,
     perTurn: spec.thinking.perTurn === true,
+    maxContextTokens: spec.compaction?.maxContextTokens,
     stripFailed: spec.bounds?.watched !== undefined,
     stamp: record.stamp,
     instructions,
@@ -1084,6 +1108,7 @@ async function openCoding(
     maxModelTurns: request?.maxModelTurns ?? 0,
     local: false,
     perTurn: spec.thinking.perTurn === true,
+    maxContextTokens: spec.compaction?.maxContextTokens,
     stripFailed: spec.bounds?.watched !== undefined,
     stamp: record.stamp,
     instructions: { current: undefined },

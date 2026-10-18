@@ -214,6 +214,17 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The same file runs `pnpm score:kinds --provider anthropic-claude` on that boxed client.
   The session contract's shared suite (`tests/helpers/sessionContract.ts`) runs the question's cases on Claude twice, scripted (`claudeSession.contract.test.ts`) and on the same boxed client (`claudeSession.contract.integration.test.ts`), and on real Pi against the same stub API (`pi/piSession.contract.test.ts`), with identical assertions.
 
+## App-owned automatic compaction
+
+Every Claude session enables auto-compaction through the app's flag settings, including one reopened from a saved conversation.
+`CLAUDE_COMPACTION_SETTINGS` sets `autoCompactEnabled: true` and `autoCompactWindow: 321192`: the first mate's 300,000-token threshold plus its 8,192-token answer allowance and the client's 13,000-token compaction buffer.
+The client clamps that window to the model's own context window, so a smaller model compacts earlier without a second catalog in the app.
+The session environment removes `DISABLE_AUTO_COMPACT`, `DISABLE_COMPACT`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` and `CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE`, so a person's shell cannot disable or enlarge this app-owned budget.
+The person's Claude configuration stays untouched.
+`claudeSeatOverflow.integration.test.ts` drives the real boxed client through growing first mate context with the global opt-out and environment switches set, on a large-window model and Haiku's smaller window.
+A failed result whose typed `terminal_reason` is `prompt_too_long` carries `contextOverflow: true`; words alone never declare it.
+The first mate's bounded fresh-conversation recovery is documented in `docs/firstmate-runaway-hardening.md`.
+
 ## Complete task reads through the tool-result cap
 
 Claude Code 2.1.299 defaults to a 25,000-token MCP output cap, overridable by a positive `MAX_MCP_OUTPUT_TOKENS` or the client’s positive finite `mcp_tool` configuration.

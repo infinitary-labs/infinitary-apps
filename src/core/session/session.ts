@@ -200,6 +200,8 @@ export type SessionSpec = {
   tools: readonly BoundTool[];
   shape: SessionShape;
   bounds?: SessionBounds;
+  /** App-owned automatic compaction ceiling; smaller model budgets still win. */
+  compaction?: { maxContextTokens: number };
   /** What the role needs from the backend's control plane (`admits`). */
   needs?: Partial<Pick<ControlProfile, "steer">>;
   /**

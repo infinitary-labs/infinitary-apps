@@ -316,6 +316,7 @@ function setup(
     flagship?: (settings: SettingsStore) => Flagship;
     /** A Claude seat factory's open beside the Pi one (the seat seam); absent = none. */
     claudeSeat?: (spec: SessionSpec) => Promise<ModelSession>;
+    piSeat?: (spec: SessionSpec) => Promise<ModelSession>;
     /** Where the seat records a typed cut-off on its account. */
     noteCutOff?: ConstructorParameters<typeof FirstmateAgent>[0]["noteCutOff"];
     /**
@@ -439,7 +440,7 @@ function setup(
         pi: seatFactory("pi", async (spec) => {
           specs.push(spec);
           if (options.failCreate) throw new Error(options.failCreate);
-          return session;
+          return options.piSeat ? options.piSeat(spec) : session;
         }),
         ...(options.claudeSeat ? { claude: seatFactory("claude", options.claudeSeat) } : {}),
       },
@@ -4085,6 +4086,89 @@ describe("the seat seam: the factory comes from the binding (W1 S4)", () => {
       taskId: "firstmate",
       usage: { input: 12, output: 3 },
     });
+  });
+
+  it.each(["claude", "pi"] as const)(
+    "INF-447: renews an overflowed %s seat with its digest and automatically answers hello once",
+    async (backend) => {
+      const model =
+        backend === "claude" ? CLAUDE_SEAT_MODEL : { provider: "fm-mock", id: "mock-1" };
+      const first = fakeSession(model);
+      const fresh = fakeSession(model);
+      first.sessionId = "overflowed";
+      fresh.sessionId = "fresh";
+      const opened: SessionSpec[] = [];
+      const open = async (spec: SessionSpec) => {
+        opened.push(spec);
+        return opened.length === 1 ? first : fresh;
+      };
+      const f = setup(
+        backend === "claude"
+          ? {
+              flagship: claudeFlagship(),
+              availableModels: () => [model],
+              claudeSeat: open,
+            }
+          : { piSeat: open },
+      );
+      await f.agent.converse("Remember the composer fix");
+      first.emitTurnEnd("I kept the composer fix.");
+      first.resolveNextPrompt();
+      await tick();
+      first.holdSteers();
+      first.dispose = vi.fn(() => {
+        first.takeUndeliveredSteers();
+      });
+      await f.agent.converse("hello");
+      await f.agent.converse("Keep the pasted image fix too");
+      first.emit({
+        type: "turn_failed",
+        taskId: "firstmate",
+        error: "Prompt is too long",
+        contextOverflow: true,
+      });
+      first.resolveNextPrompt();
+      await tick();
+      expect(opened).toHaveLength(2);
+      expect(resumeOf(opened[1])).toBeUndefined();
+      expect(fresh.prompts.join("\n")).toContain("composer fix");
+      expect(fresh.prompts.join("\n")).toContain("hello");
+      expect(fresh.prompts.join("\n")).toContain("Keep the pasted image fix too");
+      expect(f.cards().some((c) => c.title === "Your first mate hit a problem")).toBe(false);
+      fresh.emitTurnEnd("Hello, Captain.");
+      fresh.resolveNextPrompt();
+      await tick();
+      if (backend === "claude") expect(f.settings.getFirstmateClaudeSession()).toBe("fresh");
+      expect(f.agent.isBusy()).toBe(false);
+      expect(opened).toHaveLength(2);
+    },
+  );
+
+  it("INF-447: a refused fresh conversation stops automatic renewal instead of looping", async () => {
+    const opened: SessionSpec[] = [];
+    const sessions = [fakeSession(CLAUDE_SEAT_MODEL), fakeSession(CLAUDE_SEAT_MODEL)];
+    const f = setup({
+      flagship: claudeFlagship(),
+      availableModels: () => [CLAUDE_SEAT_MODEL],
+      claudeSeat: async (spec) => {
+        opened.push(spec);
+        return sessions[opened.length - 1]!;
+      },
+    });
+    await f.agent.converse("hello");
+    for (const session of sessions) {
+      session.emit({
+        type: "turn_failed",
+        taskId: "firstmate",
+        error: "Prompt is too long",
+        contextOverflow: true,
+      });
+      session.resolveNextPrompt();
+      await tick();
+    }
+    expect(opened).toHaveLength(2);
+    expect(f.cards().some((c) => c.title === "Your first mate hit a problem")).toBe(true);
+    expect(f.agent.isBusy()).toBe(false);
   });
 
   it("carries a seat's typed cut-off through to the feed unchanged", async () => {

@@ -127,6 +127,25 @@ describe("fmEventsFromClaudeMessage, a turn's outcome", () => {
     expect(outcome.failure).toEqual({ error: "API Error: 401 Unauthorized" });
   });
 
+  it("INF-447: marks exhausted length recovery only from the typed terminal reason", () => {
+    expect(
+      turn(
+        successResult({
+          is_error: true,
+          result: "Prompt is too long",
+          terminal_reason: "prompt_too_long",
+        }),
+      ).failure,
+    ).toEqual({ error: "Prompt is too long", contextOverflow: true });
+    expect(turn(successResult({ is_error: true, result: "Prompt is too long" })).failure).toEqual({
+      error: "Prompt is too long",
+    });
+    expect(
+      turn(successResult({ result: "Prompt is too long", terminal_reason: "prompt_too_long" }))
+        .failure,
+    ).toBeUndefined();
+  });
+
   it("marks an answer that kept running past the output cap, from its typed error alone", () => {
     // The shape the client ends with once its three carry-ons also hit the
     // cap (measured on 2.1.234 and 2.1.283): a synthetic assistant message

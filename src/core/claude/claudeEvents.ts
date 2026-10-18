@@ -64,7 +64,12 @@ export type ClaudeRateLimit = {
  * output cap: the one failure whose line a session words itself, since it
  * set the cap.
  */
-export type ClaudeTurnFailure = { error: string; cutOff?: CutOff; outputCapped?: true };
+export type ClaudeTurnFailure = {
+  error: string;
+  cutOff?: CutOff;
+  outputCapped?: true;
+  contextOverflow?: true;
+};
 
 /**
  * Claude Code's refusal fallback (`model_refusal_fallback`): the model the
@@ -240,6 +245,7 @@ function turnFailure(
       ? `The turn stopped before it finished (${subtype}).`
       : STOPPED_EARLY_TEXT);
   if (outcome.kind === "cut-off") return { error, cutOff: outcome.cutOff };
+  if (message.terminal_reason === "prompt_too_long") return { error, contextOverflow: true };
   return outputCapped ? { error, outputCapped: true } : { error };
 }
 

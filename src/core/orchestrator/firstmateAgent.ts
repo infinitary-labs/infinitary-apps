@@ -570,6 +570,9 @@ export class FirstmateAgent {
    * the inbox batch for retry instead of deleting it.
    */
   private turnFailed = false;
+  private turnContextOverflow = false;
+  /** One fresh-conversation recovery until a turn succeeds; never an automatic reset loop. */
+  private contextRecoveryAttempted = false;
   /** Consecutive thinking-runaway failures; Reset on a clean turn or Retry. */
   private runawayStreak = 0;
   /** When the last turn's context block was built: its resolutions are already told. */
@@ -3592,6 +3595,7 @@ export class FirstmateAgent {
   ): Promise<void> {
     this.running = true;
     this.turnFailed = false;
+    this.turnContextOverflow = false;
     this.turnAsked = [...asked];
     this.turnTools = [];
     this.turnCutOff = undefined;
@@ -3803,6 +3807,29 @@ export class FirstmateAgent {
     }
     const trigger: TurnTrigger = this.turnOrigin === "captain-turn" ? "captain" : "operation";
     this.recordDigest(trigger, failed);
+    const recoverContext = this.turnContextOverflow && !this.contextRecoveryAttempted && !threw;
+    if (!failed) this.contextRecoveryAttempted = false;
+    if (recoverContext) {
+      this.contextRecoveryAttempted = true;
+      // Keep the old transcript and the failed decision; only forget this backend's
+      // resume pointer. The normal durable lane owns redelivery, including steers.
+      const backend = session.resume()?.backend;
+      if (backend === "claude") this.options.settings.setFirstmateClaudeSession(null);
+      else this.options.settings.setFirstmateSessionFile(null);
+      const recent = digestFor(this.options.settings.getFirstmateSeatDigest(), "");
+      this.options.inbox.enqueue(
+        FIRSTMATE_RECIPIENT,
+        `[fm-op] The previous conversation reached the model's context limit. A fresh conversation starts with this bounded recent-turn digest. Check the task records before repeating any action.\n${JSON.stringify(recent)}`,
+        "context-recovery",
+        "agent",
+      );
+      // The changed conversation, like Retry, makes the kept words due now.
+      this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: "Your first mate reached the conversation limit and is continuing with recent context in a new conversation.",
+      });
+    }
     this.settleTurn(
       failed
         ? {
@@ -3814,6 +3841,7 @@ export class FirstmateAgent {
     );
     this.running = false;
     const tookIn = this.redeliverUndeliveredSteers(session);
+    if (recoverContext) this.detachSession();
     this.clearQuiet();
     // The closing words answer every card reply this turn read - its own
     // about card, and one the captain sent while it ran - unless it
@@ -4166,6 +4194,7 @@ export class FirstmateAgent {
       // (auth decision or retryable error). The flag also tells runTurn to
       // release the inbox batch it delivered.
       this.turnFailed = true;
+      this.turnContextOverflow = event.contextOverflow === true;
       if (event.cutOff && this.boundAccountId) {
         this.options.noteCutOff?.(this.boundAccountId, event.cutOff);
       }
@@ -4190,7 +4219,9 @@ export class FirstmateAgent {
         this.turnPausing = pausing;
         if (this.turnPausing) return;
       }
-      this.raiseSessionFailureCard(event.error);
+      if (!this.turnContextOverflow || this.contextRecoveryAttempted) {
+        this.raiseSessionFailureCard(event.error);
+      }
     } else if (event.type === "turn_end" || event.type === "tool_end") {
       if (event.type === "turn_end" && !this.turnFailed) {
         this.runawayStreak = 0;

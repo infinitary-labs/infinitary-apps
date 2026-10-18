@@ -86,3 +86,20 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Repeated `max_time_limit` / token-generation failures refuse the next idle turn until Retry; they do not change the captain's chosen flagship.
   The supervisor's shared tick still watchdogs through `checkQuiet` (feed line at 10 quiet minutes, informational card at 20).
   Pi gaps, abort granularity, and the reasoning bound: `docs/firstmate-runaway-hardening.md`.
+
+## Conversation length
+
+The seat preset carries an app-owned automatic compaction ceiling of 300,000 tokens (`SESSION_COMPACTION_TOKENS`), not a setting the captain can change.
+Pi recomputes its reserve at every prompt boundary: the larger of its existing model budget and `contextWindow - 300000`.
+A smaller model keeps its earlier trigger, including the custom connection and local model budgets.
+Pi's own compactor observes usage after a response and compacts when that count exceeds its trigger; this is not a hard per-request input cap.
+Claude uses the app's flag settings and its own smaller-model clamp (`docs/claude-client.md`, "App-owned automatic compaction").
+A large new message or tool result can still exceed a model's window, so both backends retain their own overflow compaction and retry first.
+
+An exhausted backend context recovery carries `contextOverflow: true` on `turn_failed`: Claude reads the typed terminal reason, and Pi uses its runtime's overflow classifier after its recoverable attempt has settled.
+The first mate records that failed turn and its usage, keeps the old transcript, forgets only that backend's resume pointer, and opens a fresh conversation with the bounded seat digest.
+The existing durable inbox redelivers the kept captain words, accepted steers and operational updates; the digest tells the new conversation to check task records before repeating actions.
+As on any provider failure, a kept attachment is named as omitted rather than silently discarded (`docs/inbox.md`).
+The recovery makes the kept words due immediately and reports the new conversation in the feed without asking the captain to Retry.
+It makes one such attempt until a turn succeeds; a refusal in the fresh conversation follows the ordinary visible failure and backoff path rather than an automatic renewal loop.
+No failure line recommends a stronger model as a way out of the same oversized conversation.

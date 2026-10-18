@@ -336,6 +336,8 @@
         "!tests/helpers/sshServer.ts",
         "!src/core/pi/customApiCertificates.integration.test.ts",
         "!src/core/claude/claudeAttribution.integration.test.ts",
+        "!src/core/claude/claudeSeatOverflow.integration.test.ts",
+        "!src/core/pi/seatCompaction.integration.test.ts",
         "!src/core/claude/claudeAutoMemory.integration.test.ts",
         "!src/core/claude/claudeClassifierSession.integration.test.ts",
         "!src/core/claude/claudeCrewAgents.integration.test.ts",

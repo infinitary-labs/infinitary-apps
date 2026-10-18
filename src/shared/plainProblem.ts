@@ -177,7 +177,7 @@ const RULES: readonly Rule[] = [
       /\b(?:context[_ ]length|context window|maximum context|prompt is too long|context_length_exceeded)\b/i.test(
         error,
       ),
-    line: "the conversation grew too long for the model - try a stronger model or start fresh",
+    line: "the conversation grew too long for the model - try again",
   },
   {
     test: (error) =>

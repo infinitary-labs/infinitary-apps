@@ -44,7 +44,7 @@ describe("plainProblem", () => {
       ["openai (429): rate_limit_exceeded", "the provider asked to slow down - try again shortly"],
       [
         "400: This model's maximum context length is 128000 tokens",
-        "the conversation grew too long for the model - try a stronger model or start fresh",
+        "the conversation grew too long for the model - try again",
       ],
       ["Connection error.", "could not reach the provider - try again"],
       [

@@ -1,3 +1,4 @@
+import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
 import { claudeCodingReasoning } from "./reasoning";
 
 export { claudeCodingReasoning } from "./reasoning";
@@ -268,6 +269,26 @@ export const CLAUDE_SESSION_ENV = { CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" } as co
  */
 export const CLAUDE_CODING_SETTINGS = { attribution: { commit: "", pr: "" } } as const;
 
+/** Claude clamps this to its model window, then subtracts output room and a 13k buffer. */
+export const CLAUDE_COMPACTION_SETTINGS = {
+  autoCompactEnabled: true,
+  autoCompactWindow: SESSION_COMPACTION_TOKENS + 8192 + 13_000,
+} as const;
+
+/** A person's client switches must not disable or enlarge the app's compaction budget. */
+function claudeSessionEnv(base?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env = claudeEnvFor(base);
+  for (const key of [
+    "DISABLE_COMPACT",
+    "DISABLE_AUTO_COMPACT",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
+    "CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE",
+  ])
+    delete env[key];
+  return env;
+}
+
 /** Where a coding session stages its working copy's skills, inside its record dir. */
 export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
 
@@ -357,7 +378,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // reads, the output bound, and for the seat none of the client's
       // per-turn extras.
       env: {
-        ...claudeEnvFor(input.env),
+        ...claudeSessionEnv(input.env),
         ...CLAUDE_SESSION_ENV,
         ...CLAUDE_ROLLING_ENV,
         ...(coding ? {} : CLAUDE_SEAT_ENV),
@@ -410,14 +431,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
         : {}),
       // A coding session's commits and pull requests carry no attribution,
       // and with a skill staged no hook runs.
-      ...(coding
-        ? {
-            settings: {
-              ...CLAUDE_CODING_SETTINGS,
-              ...(staged ? { disableAllHooks: true } : {}),
-            },
-          }
-        : {}),
+      settings: {
+        ...CLAUDE_COMPACTION_SETTINGS,
+        ...(coding ? CLAUDE_CODING_SETTINGS : {}),
+        ...(staged ? { disableAllHooks: true } : {}),
+      },
       // The app's tools are its own and typed, and a coding session works
       // alone in its own worktree - the isolation Pi's has (docs/architecture.md
       // section 4: social and a worktree, not a filesystem jail) - so there
@@ -451,7 +469,8 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     cwd: spec.cwd,
     // The machine's default login and nothing ambient, none of the person's
     // Claude notes, plus the output bound.
-    env: { ...claudeEnvFor(input.env), ...CLAUDE_SESSION_ENV, ...outputCap },
+    env: { ...claudeSessionEnv(input.env), ...CLAUDE_SESSION_ENV, ...outputCap },
+    settings: CLAUDE_COMPACTION_SETTINGS,
     // The person's own Claude configuration is not the app's.
     settingSources: [],
     // The spec's instruction is the only system prompt the app supplies: no
@@ -689,6 +708,7 @@ class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implements Mode
       taskId: this.taskId,
       error: failure.error,
       ...(failure.cutOff ? { cutOff: failure.cutOff } : {}),
+      ...(failure.contextOverflow ? { contextOverflow: true } : {}),
     });
     this.answer(result, undefined);
   }
@@ -1500,6 +1520,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       taskId: this.taskId,
       error: failure.outputCapped && cap !== undefined ? outputCapErrorMessage(cap) : failure.error,
       ...(failure.cutOff ? { cutOff: failure.cutOff } : {}),
+      ...(failure.contextOverflow ? { contextOverflow: true } : {}),
     });
     this.closeTurn(result, undefined);
   }

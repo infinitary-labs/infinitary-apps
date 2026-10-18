@@ -137,6 +137,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
      * prose only.
      */
     cutOff: cutOffSchema.optional(),
+    /** The backend exhausted its own context-length recovery. */
+    contextOverflow: z.literal(true).optional(),
     /**
      * The Firstmate's seat paused on this cut-off: its pause line and card
      * speak for the failure. Absent when the cut-off paused nothing (a

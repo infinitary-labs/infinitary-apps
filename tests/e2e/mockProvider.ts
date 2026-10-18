@@ -3018,6 +3018,8 @@ export const FORGET_PROMPT_MARKER = "forget the squash-merge note";
  * turn ends with Pi's stopReason "error" path (report REPRO A). */
 export const FAIL_AUTH_PROMPT_MARKER = "fail this turn with a 401";
 export const FAIL_PROVIDER_PROMPT_MARKER = "fail this turn with a provider error";
+/** INF-447: a service refusal the client must compact or renew out of, once per isolated provider. */
+export const CONTEXT_OVERFLOW_PROMPT_MARKER = "recover this overlong conversation";
 export const LAND_PROMPT_MARKER = "land the task ";
 /** Steer marker: "steer the task <title>: <guidance>" -> steer_crewmate on that task. */
 export const STEER_PROMPT_MARKER = "steer the task ";
@@ -5034,6 +5036,7 @@ function settleNeedle(haystack: string, marker: string): string {
 export async function startMockProvider(): Promise<MockProviderServer> {
   let requestCount = 0;
   let failFirstmate = false;
+  let overflowedFirstmate = false;
   let cardFetchProbeHits = 0;
   const requestBodies: string[] = [];
   const requestHeaders: IncomingHttpHeaders[] = [];
@@ -5274,6 +5277,19 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           held.set(res, { body, request: requestNumber });
           res.on("close", () => held.delete(res));
         };
+
+        if (
+          isFirstmate &&
+          !overflowedFirstmate &&
+          latestUserTail.includes(CONTEXT_OVERFLOW_PROMPT_MARKER)
+        ) {
+          overflowedFirstmate = true;
+          writeAnthropicError(res, 400, {
+            type: "invalid_request_error",
+            message: "prompt is too long: 321193 tokens > 300000 maximum",
+          });
+          return;
+        }
 
         if (isFirstmate && failFirstmate) {
           res.writeHead(400, { "Content-Type": "application/json" });

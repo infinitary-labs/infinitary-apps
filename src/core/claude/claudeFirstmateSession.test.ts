@@ -326,6 +326,25 @@ describe("the Claude seat's options (the contract test)", () => {
   });
 });
 
+it("INF-447: the app owns compaction settings and removes all ambient budget overrides", async () => {
+  const switches = {
+    DISABLE_AUTO_COMPACT: "1",
+    DISABLE_COMPACT: "1",
+    CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1000000",
+    CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: "100",
+    CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE: "1000000",
+  };
+  const s = seat({ onInput: answering(), env: switches });
+  const session = await s.factory(spec());
+  await session.prompt("hello");
+  for (const key of Object.keys(switches)) expect(s.harness().options.env?.[key]).toBeUndefined();
+  expect(s.harness().options.settings).toMatchObject({
+    autoCompactEnabled: true,
+    autoCompactWindow: 321192,
+  });
+  session.dispose();
+});
+
 describe("the Claude seat's attachment", () => {
   it("checks the client at every attachment and leases nothing when it is missing", async () => {
     const s = seat({ check: { current: { state: "missing" } } });

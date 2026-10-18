@@ -1683,6 +1683,7 @@ it("sends a paste the old context check refused, and answers it", async () => {
 });
 
 it("shows a server overflow as the context refusal, not a general server error", async () => {
+  // INF-447: exhausted recovery also names the overflow for the session's owner.
   const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
   api.enforce(20_000, 300);
   try {
@@ -1692,6 +1693,7 @@ it("shows a server overflow as the context refusal, not a general server error",
         type: "turn_failed",
         taskId: "synthetic-session",
         error: new CustomApiError("context-limit").message,
+        contextOverflow: true,
       },
     ]);
     expect(events.some((event) => event.type === "assistant_delta")).toBe(false);
@@ -1740,6 +1742,7 @@ it("shortens the chat and answers when the server counts more tokens than Pi est
 });
 
 it("shows a refusal instead of a trimmed reply when the retry cannot recover", async () => {
+  // INF-447: the owner may renew only after Pi's own recovery has failed.
   const { api, session, events } = await smallWindowSession({ context: 20_000, output: 4_000 });
   api.enforce(20_000, 300);
   try {
@@ -1749,6 +1752,7 @@ it("shows a refusal instead of a trimmed reply when the retry cannot recover", a
         type: "turn_failed",
         taskId: "synthetic-session",
         error: new CustomApiError("context-limit").message,
+        contextOverflow: true,
       },
     ]);
     expect(

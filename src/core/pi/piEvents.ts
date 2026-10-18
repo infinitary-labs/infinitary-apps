@@ -1,3 +1,4 @@
+import { type AssistantMessage, isContextOverflow } from "@earendil-works/pi-ai";
 import { isOutOfCreditsRefusal } from "@shared/authFailure";
 import {
   type FmEvent,
@@ -73,6 +74,9 @@ export function fmEventsFromPiEvent(event: unknown, taskId: string, provider?: s
           error,
           ...(isOutOfCreditsRefusal(provider, error)
             ? { cutOff: { class: "no_headroom" as const } }
+            : {}),
+          ...(isContextOverflow(typed.message as AssistantMessage)
+            ? { contextOverflow: true as const }
             : {}),
         });
       }

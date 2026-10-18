@@ -959,7 +959,7 @@ export const workOrders = {
     request: z.tuple([
       z.object({
         task: placedTaskIdSchema,
-        /** Refresh the app-owned record from a live client before reading (8.14 or later). */
+        /** Refresh the app-owned record from a live client before reading (8.15 or later). */
         refresh: z.boolean().optional(),
         from: z
           .array(

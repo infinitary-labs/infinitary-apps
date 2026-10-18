@@ -48,9 +48,10 @@ import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
  * the captain asked to ship reviewed (`rigor_ask` - since the 2026-09-19
  * ruling nothing else derives reviewed) is briefed with the reviewed rigor
  * line and reports its green PR with NO completion card (this spec rides
- * the in-flight-PR path: a builder with a PR on record is reviewed at its
- * recorded head, while a fresh reviewed task is reviewed on its branch
- * before any PR exists - `crewSupervisor.test.ts` covers that path); the Firstmate checks CI and spawns the reviewer
+ * the path where a pull request is already on record: the review still
+ * reads the builder's committed branch head, which this journey keeps
+ * equal to the recorded pull request head - `crewSupervisor.test.ts` covers
+ * a recorded head that has fallen behind); the Firstmate checks CI and spawns the reviewer
  * with `review_of`; the host briefs the reviewer read-only and holds the
  * builder's merge on a `blocks` edge; the reviewer's findings reach the
  * Firstmate directly (never supervision) and become one steer and one

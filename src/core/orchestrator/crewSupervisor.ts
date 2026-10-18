@@ -1528,10 +1528,13 @@ export class CrewSupervisor {
     };
   }
 
-  /** The review target and evidence are read where the builder actually runs. */
+  /**
+   * The review target and evidence are read where the builder actually runs.
+   * The target is that computer's committed branch head, even when an older
+   * pull request already records a different head (INF-288).
+   */
   private async reviewFacts(builder: TaskRecord): Promise<ReviewBriefFacts> {
     const prUrl = builder.delivery?.prUrl;
-    const recordedHead = prUrl ? builder.delivery?.headSha : undefined;
     const machines = this.options.machines;
     const device = builder.deviceId;
     let headSha: string | null;
@@ -1544,18 +1547,12 @@ export class CrewSupervisor {
         throw new Error(
           "The builder's computer is out of reach; the review must wait for it, not run here instead.",
         );
-      ({ headSha, changedFiles, changeReading } = await machines.revision(
-        device,
-        builder.id,
-        recordedHead,
-      ));
+      ({ headSha, changedFiles, changeReading } = await machines.revision(device, builder.id));
       evidenceDir = folders.evidence;
     } else {
-      headSha =
-        recordedHead ??
-        (builder.branch
-          ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
-          : null);
+      headSha = builder.branch
+        ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
+        : null;
       changedFiles = headSha
         ? await this.options.workspace.reviewChangedFiles(builder.repoDir, headSha)
         : null;
@@ -2847,8 +2844,8 @@ export class CrewSupervisor {
    * head (worktrees share the repository's refs, so the diff against the
    * default branch is the change), fix rounds land as local commits, and
    * the push, PR and CI come after the pass. A builder that already
-   * opened a PR (an in-flight task from before the ruling) is reviewed at
-   * its recorded PR head instead. The reviewer is a fresh crewmate on the
+   * opened a PR is still reviewed at its committed branch head, not that
+   * pull request's recorded head. The reviewer is a fresh crewmate on the
    * builder's repository, briefed by the host with the fixed review text,
    * its shape `review` established by the host and never the classifier,
    * and linked `blocks` onto the builder so the builder's close waits on
@@ -2888,9 +2885,8 @@ export class CrewSupervisor {
         `${handle} has not reported yet; a reviewer reads the builder's report beside its change. Wait for the report.`,
       );
     }
-    // Review-before-PR: the reviewer reads the builder's branch at its
-    // current head. A PR already on record (an in-flight task) is read at
-    // its recorded head instead.
+    // Review-before-PR: the reviewer reads the builder's committed branch
+    // head, even when a pull request already records an older head.
     const facts = await this.reviewFacts(builder);
     const { headSha, prUrl } = facts;
     const open = this.openReviewOf(builder.id);
@@ -2961,9 +2957,9 @@ export class CrewSupervisor {
       {},
       {
         kind: "review",
-        text: `review opened - ${title} reads ${
-          prUrl ? `PR ${prUrl}` : `branch ${builder.branch}`
-        } at ${headSha.slice(0, 7)}`,
+        text: `review opened - ${title} reads branch ${builder.branch} at ${headSha.slice(0, 7)}${
+          prUrl ? ` (pull request ${prUrl} is not the assigned head)` : ""
+        }`,
         feed: false,
         data: { reviewTaskId: taskId },
       },

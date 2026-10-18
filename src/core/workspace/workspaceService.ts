@@ -287,9 +287,8 @@ export class WorkspaceService {
    * fetch here: a review must describe the head the host actually named.
    */
   async reviewChangedFiles(repoDir: string, headSha: string): Promise<string[] | null> {
-    // An already-open PR may have a recorded head that is not in this
-    // checkout. The reviewer must enumerate its remote diff instead of
-    // receiving a misleading checklist from another commit.
+    // A named commit that is not in this checkout has no local checklist.
+    // The reviewer reports that gap; it does not substitute another head.
     if (!(await resolveCommit(repoDir, headSha))) return null;
     const base = await reviewDiffBase(repoDir);
     const out = await git(

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-binds-committed-head",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A review counts for the committed version",
+      "body": "A review counts for the version that was committed, even when an older pull request is already open. A pass covers that version.",
+      "noPicture": "Nothing new on screen: the review is tied to the committed version instead of an older pull request.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

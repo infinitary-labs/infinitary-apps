@@ -15340,6 +15340,83 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
+  it("binds a pre-push review of repaired work to the committed branch head when an older pull request exists (INF-288)", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      const recorded = "6402d3ba04120d65fc232dff5fb3d055ae16cb7b";
+      const repaired = "4c771ba299a659abbafb79096c024a0b0737139c";
+      const later = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      tasks.recordDelivery(builderId, {
+        prUrl: "https://github.com/o/r/pull/39",
+        prNumber: 39,
+        headSha: recorded,
+        ci: "green",
+      });
+      vi.mocked(workspace.branchHead).mockResolvedValue(repaired);
+
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      expect(workspace.branchHead).toHaveBeenCalled();
+      expect(workspace.reviewChangedFiles).toHaveBeenCalledWith(expect.any(String), repaired);
+      expect(tasks.get(reviewId)?.delivery?.headSha).toBe(repaired);
+      expect(tasks.get(reviewId)?.delivery?.headSha).not.toBe(recorded);
+      const brief = reviewer.promptCalls[0] ?? "";
+      expect(brief).toContain(`at head ${repaired}`);
+      expect(brief).toContain(`git diff <default>...${repaired}`);
+      expect(brief).toContain("review the assigned commit, not that pull request's recorded head.");
+      expect(brief).not.toContain(recorded);
+      expect(
+        tasks.timeline(builderId).find((event) => event.text.includes("review opened"))?.text,
+      ).toContain(`at ${repaired.slice(0, 7)}`);
+
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: findings\nF1 error src/meter.ts:12 the flush races the read - auto-fix\nrisk: medium - one line moves.",
+      );
+      expect(tasks.get(builderId)?.delivery?.reviewSha).toBe(repaired);
+
+      vi.mocked(workspace.branchHead).mockResolvedValue(later);
+      await supervisor.steerCrewmate(reviewId, "re-review the repaired commit");
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.headSha).toBe(later);
+      expect(reviewer.promptCalls.at(-1)).toContain(`at head ${later}`);
+      expect(reviewer.promptCalls.at(-1)).not.toContain(recorded);
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: pass\nNo findings.\nrisk: low - the repair is the committed head.",
+      );
+      expect(tasks.get(builderId)?.delivery).toMatchObject({
+        reviewVerdict: "pass",
+        reviewSha: later,
+        headSha: recorded,
+      });
+    } finally {
+      repo.dispose();
+    }
+  });
+
   it("answers a review given a named model with the model that took it, since a review never routes on one (FI3-444)", async () => {
     const repo = directPrRepo();
     try {
@@ -15801,7 +15878,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, ops } = setup(builder, {
+      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
         routedModel: { provider: "openai-codex", id: "gpt-5.5" },
         crewmates: [reviewer],
       });
@@ -15822,6 +15899,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
         ciAt: Date.now(),
       });
+      // The review reads the committed branch head, not the recorded pull request head.
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       const { taskId: reviewId } = await supervisor.commission({
         title: "Review",
         intent: intentOf("fix it"),
@@ -15850,12 +15929,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           .some((event) => event.kind === "review" && event.text.includes("round not counted")),
       ).toBe(true);
       tasks.recordDelivery(builderId, { headSha: HEAD_2 });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_2);
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_2}`);
       await tick();
       await reportTurn(reviewer, reviewId, findings(2));
       expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(2);
       expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
       tasks.recordDelivery(builderId, { headSha: HEAD_3 });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_3);
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
       await tick();
       await reportTurn(reviewer, reviewId, findings(3));
@@ -15975,7 +16056,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         routedModel: { provider: "openai-codex", id: "gpt-5.5" },
         crewmates: [reviewer],
       });
-      const { supervisor, tasks, repos } = env;
+      const { supervisor, tasks, repos, workspace } = env;
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
       const { taskId: builderId } = await supervisor.commission({
@@ -15995,6 +16076,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reviewRounds: rounds,
         reviewRoundSha: HEAD.replace("0123", "aaaa"),
       });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       const { taskId: reviewId } = await supervisor.commission({
         title: "Review",
         intent: intentOf("fix it"),
@@ -16185,7 +16267,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
       const asked: { taskId: string; avoidProvider?: string }[] = [];
-      const { supervisor, tasks, repos } = setup(builder, {
+      const { supervisor, tasks, repos, workspace } = setup(builder, {
         routedModel: { provider: "openai-codex", id: "gpt-5.5" },
         crewmates: [reviewer],
         onRouteDecide: (args) =>
@@ -16211,6 +16293,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
         ciAt: Date.now(),
       });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       const { taskId: reviewId } = await supervisor.commission({
         title: "Review",
         intent: intentOf("fix it"),
@@ -16231,7 +16314,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, ops } = setup(builder, {
+      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
         routedModel: { provider: "openai-codex", id: "gpt-5.5" },
         crewmates: [reviewer],
       });
@@ -16252,6 +16335,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
         ciAt: Date.now(),
       });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       const { taskId: reviewId } = await supervisor.commission({
         title: "Review",
         intent: intentOf("fix it"),

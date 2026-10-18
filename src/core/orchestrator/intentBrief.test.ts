@@ -347,26 +347,33 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).not.toContain("ignored: the host names the goal");
   });
 
-  it("reads an in-flight task's recorded PR instead of the branch when one exists", () => {
+  it("keeps an open pull request from replacing the assigned commit (INF-288)", () => {
     const brief = renderReviewBrief(
       { goal: "g", userWords: "review this carefully" },
       "direct-pr",
       { ...facts, prUrl: "https://github.com/o/r/pull/55" },
     );
     expect(brief).toContain(
-      "Review PR https://github.com/o/r/pull/55 at head 0123456789abcdef0123456789abcdef01234567",
+      "Review branch fm/task-abc12345 at head 0123456789abcdef0123456789abcdef01234567",
     );
-    expect(brief).not.toContain("read the diff against the default branch yourself");
+    expect(brief).toContain("git diff <default>...0123456789abcdef0123456789abcdef01234567");
+    expect(brief).toContain(
+      "A pull request is already open at https://github.com/o/r/pull/55; review the assigned commit, not that pull request's recorded head.",
+    );
+    expect(brief).not.toContain("Review PR https://github.com/o/r/pull/55");
   });
 
-  it("does not mistake a missing in-flight PR head for a complete local checklist", () => {
+  it("does not treat a missing assigned commit as a clean checklist (INF-288)", () => {
     const brief = renderReviewBrief(
       { goal: "g", userWords: "review this carefully" },
       "direct-pr",
       { ...facts, prUrl: "https://github.com/o/r/pull/55", changedFiles: null },
     );
-    expect(brief).toContain("Derive the complete changed-file checklist from that PR's diff");
+    expect(brief).toContain(
+      "The assigned commit 0123456789abcdef0123456789abcdef01234567 is not in this working copy.",
+    );
     expect(brief).toContain("do not claim a clean review");
+    expect(brief).not.toContain("that PR's diff");
     expect(brief).not.toContain('- "src/meter.ts"');
   });
 

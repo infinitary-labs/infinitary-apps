@@ -694,23 +694,22 @@ export function basisSectionParts(
  * What the host knows about the change a reviewer reads (delivery rigor
  * phase 2; review-before-PR since the captain's 2026-09-19 ruling). All of
  * it is host-established: the builder's title and last report off the
- * record, the branch and its head off the repository itself (or the PR
- * `check_pr_ci` recorded, on an in-flight task that already opened one).
- * The Firstmate names the task and relays the captain's words; it writes
- * none of this.
+ * record, the branch and its committed head off the repository itself.
+ * An already-open pull request does not replace that head. The Firstmate
+ * names the task and relays the captain's words; it writes none of this.
  */
 export type ReviewBriefFacts = {
   builderTitle: string;
   /** The builder's branch; the review reads it before any PR exists. */
   branch: string;
   headSha: string;
-  /** Present only when the builder already opened a PR (an in-flight task). */
+  /** Present when a pull request is already open. It is not the review target. */
   prUrl?: string;
   /** The builder's last report, verbatim. */
   builderReport: string;
   /** The builder's evidence folder on this machine; evidence is never committed. */
   evidenceDir?: string;
-  /** Committed paths at this head, or null when a recorded PR head is not local. */
+  /** Committed paths at the assigned head, or null when that commit is not local. */
   changedFiles: string[] | null;
   /** The change reading at the assigned commit, when it could be read. */
   changeReading?: string;
@@ -808,9 +807,10 @@ export function renderReviewBrief(
       "A review brief needs the user's words: the reviewer reads the change against them, so pass them as user_words.",
     );
   }
+  const assigned = `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against the default branch yourself (git diff <default>...${facts.headSha})`;
   const target = facts.prUrl
-    ? `Review PR ${facts.prUrl} at head ${facts.headSha}`
-    : `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against the default branch yourself (git diff <default>...${facts.headSha})`;
+    ? `${assigned}. A pull request is already open at ${facts.prUrl}; review the assigned commit, not that pull request's recorded head.`
+    : assigned;
   return [
     `Goal: review the change for "${facts.builderTitle}" and report findings.`,
     "The verdict report is the whole deliverable of this internal review; emit no outcome card.",
@@ -823,7 +823,7 @@ export function renderReviewBrief(
     `Check every path in the changed-file checklist below against the diff; an omitted path is not clean. On re-review at a new head, recompute the complete checklist from its diff. If you cannot inspect a path, name the gap and do not call that path reviewed. Check sibling sites of each broken invariant and name all affected sites in a finding; trace the normal callers to distinguish an isolated symptom from the whole defect class. Only comment on things that genuinely matter. Be concise and actionable; no generic advice like "add more tests". Do not report styling, formatting, linting, compilation, or type-checking issues. Do a full review pass before reporting: do not stop after the first valid finding - continue until you have enumerated all material issues you can substantiate.`,
     "",
     facts.changedFiles === null
-      ? `The recorded PR head ${facts.headSha} is not available in this working copy. Derive the complete changed-file checklist from that PR's diff before judging coverage; if you cannot, report the gap and do not claim a clean review.`
+      ? `The assigned commit ${facts.headSha} is not in this working copy. Report the gap and do not claim a clean review.`
       : `Changed-file checklist at ${facts.headSha} (committed paths against the default branch):`,
     ...(facts.changedFiles ?? []).map((path) => `- ${JSON.stringify(path)}`),
     "",

@@ -666,7 +666,13 @@ export const workRequests = {
     }),
     response: doneSchema,
   },
-  /** A background job the crewmate's shell started there ended; its `callId` is `job:<id>`. */
+  /**
+   * A background job the crewmate's shell started there ended; its `callId`
+   * is `job:<id>`. With `interrupted`, from protocol 8.15, it never exited:
+   * that computer's run ended first, and its next start says so once -
+   * `quit` when the run's own stop killed it, `crash` when the run ended
+   * without one, so the command may have run on.
+   */
   "inf:work:job-exit": {
     effect: "change",
     request: asked({
@@ -676,6 +682,7 @@ export const workRequests = {
         exitCode: z.number().int().nullable(),
         durationMs: z.number().nonnegative(),
         tail: z.string(),
+        interrupted: z.enum(["quit", "crash"]).optional(),
       }),
     }),
     response: doneSchema,

@@ -183,15 +183,6 @@ export async function startConversations(options: {
   // and client hygiene ride its ticks, as on the home.
   const ticker = new Ticker();
   ticker.start();
-  let host: SessionHost | undefined;
-  const jobs = new JobManager({
-    onChange: () => host?.jobsChanged(),
-    onExit: (exit) => host?.jobExit(exit),
-    now: ticker.now,
-    // Below the UI on the home's own Mac, where its window draws the
-    // character; on a separate Mac, at the run's own priority.
-    belowUi: options.belowUi,
-  });
   // Its clones and pushes answer where a project lives with this
   // computer's own sign-in there, when it has one (`configureComputerGit`).
   const copies = new WorkingCopies(options.dataDir, {
@@ -200,6 +191,18 @@ export async function startConversations(options: {
   });
   copies.sweep();
   const tasks = new PlacedTasks(options.dataDir, copies.worktreesDir);
+  let host: SessionHost | undefined;
+  const jobs = new JobManager({
+    // Each job's row in its task's folder, so the next start can tell the
+    // home of a job this run's end cuts off (`SessionHost`).
+    rows: tasks.jobRows,
+    onChange: () => host?.jobsChanged(),
+    onExit: (exit) => host?.jobExit(exit),
+    now: ticker.now,
+    // Below the UI on the home's own Mac, where its window draws the
+    // character; on a separate Mac, at the run's own priority.
+    belowUi: options.belowUi,
+  });
   // Each task's own browser, here beside its shell (docs/task-browser.md,
   // "On another computer"); with no channel, no crewmate here has one.
   const parts = options.browser;

@@ -15,10 +15,11 @@ import { atUtilityQos } from "../utilityQos";
  * process EXIT is what wakes the owning session - nothing polls.
  *
  * Job lifetime is app lifetime: quit kills the processes and leaves each
- * one's row, marked, in the jobs table. Rows left there at boot are the
- * honest record: a marked one the quit stopped; an unmarked one was running
- * when the app ended without its quit, and since jobs run detached, its
- * command may have run on, even to the end.
+ * one's row, marked, where its rows are kept - the jobs table on the home,
+ * the task's own folder on a computer that runs work (`JobRows`). Rows left
+ * there at boot are the honest record: a marked one the quit stopped; an
+ * unmarked one was running when the app ended without its quit, and since
+ * jobs run detached, its command may have run on, even to the end.
  */
 
 export type JobExit = {
@@ -28,6 +29,26 @@ export type JobExit = {
   exitCode: number | null;
   durationMs: number;
   tail: string;
+  /**
+   * It never exited where it ran: the run of the computer that runs work
+   * ended first, and its next start says so once (`SessionHost`). `quit`:
+   * that run's own stop killed it, `durationMs` in. `crash`: the run ended
+   * without its stop, so the command may have run on, even to the end.
+   */
+  interrupted?: "quit" | "crash";
+};
+
+/**
+ * Where each background job's row is kept while it runs, so the next start
+ * can name what the last one's end cut off (the module comment): the home's
+ * jobs table (`JobStore`), or a task's folder on a computer that runs work
+ * (`PlacedTasks.jobRows`), whose conversation names them (`SessionHost`).
+ */
+export type JobRows = {
+  add(job: { id: string; ownerId: string; command: string; startedAt: number }): void;
+  remove(id: string, ownerId: string): void;
+  /** The quit has sent this job its kill, at `at` on the job's clock. */
+  markStoppedByQuit(id: string, ownerId: string, at: number): void;
 };
 
 export type BashOutcome =
@@ -54,8 +75,14 @@ type RunningJob = {
 
 export type JobManagerOptions = {
   onChange?: () => void;
-  /** Absent (tests) means no interrupted-at-quit record. */
+  /**
+   * The home's database, whose jobs table keeps the rows and answers
+   * `reportInterrupted`. Absent with no `rows` either (tests) means no
+   * interrupted-at-quit record.
+   */
   db?: AppDatabase;
+  /** Where the rows are kept instead, by a reader of its own (`JobRows`). */
+  rows?: JobRows;
   /** The wake: one call per background-job exit, with the bounded tail. */
   onExit: (exit: JobExit) => void;
   /**
@@ -77,13 +104,16 @@ export type JobManagerOptions = {
 export class JobManager {
   private readonly jobs = new Map<string, RunningJob>();
   private readonly now: () => number;
-  /** The interrupted-at-quit record; absent with no database (tests). */
-  private readonly rows: JobStore | undefined;
+  /** The home's jobs table, when its rows are kept there. */
+  private readonly store: JobStore | undefined;
+  /** The interrupted-at-quit record; absent with neither (tests). */
+  private readonly rows: JobRows | undefined;
 
   constructor(private readonly options: JobManagerOptions) {
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
-    this.rows = options.db ? new JobStore(options.db) : undefined;
+    this.store = options.db ? new JobStore(options.db) : undefined;
+    this.rows = options.rows ?? this.store;
   }
 
   /**
@@ -92,7 +122,7 @@ export class JobManager {
    * caller can say which, honestly, once.
    */
   reportInterrupted(): InterruptedJob[] {
-    return this.rows?.takeInterrupted() ?? [];
+    return this.store?.takeInterrupted() ?? [];
   }
 
   /**
@@ -183,9 +213,11 @@ export class JobManager {
         if (timer) clearTimeout(timer);
         this.jobs.delete(id);
         this.options.onChange?.();
-        // The quit's kill leaves the row for the next boot to name; a job
-        // that finished on its own before the kill landed leaves none.
-        if (job.stoppedBy !== "quit" || signal === null) this.rows?.remove(id);
+        // Only a job has a row. The quit's kill leaves it for the next boot
+        // to name; a job that finished on its own before the kill landed
+        // leaves none.
+        if (becameJob && (job.stoppedBy !== "quit" || signal === null))
+          this.rows?.remove(id, input.ownerId);
         if (!becameJob) {
           resolve({ kind: "done", exitCode: code, output: renderOutput(job.output) });
           return;
@@ -251,7 +283,7 @@ export class JobManager {
     for (const job of this.jobs.values()) {
       if (job.ownerId !== ownerId) continue;
       job.stoppedBy = "owner";
-      this.rows?.remove(job.id);
+      this.rows?.remove(job.id, job.ownerId);
       killGroup(job, "SIGTERM");
     }
   }
@@ -265,7 +297,7 @@ export class JobManager {
     for (const job of this.jobs.values()) {
       job.stoppedBy = "quit";
       killGroup(job, "SIGKILL");
-      this.rows?.markStoppedByQuit(job.id);
+      this.rows?.markStoppedByQuit(job.id, job.ownerId, this.now());
     }
   }
 }
@@ -307,6 +339,7 @@ export function jobExitWake(exit: JobExit, to: WakeLane): TypedWake {
       exitCode: exit.exitCode,
       durationMs: exit.durationMs,
       ...(exit.tail ? { tail: capWithOverflow(exit.tail, "job-exit-tail", { keep: "tail" }) } : {}),
+      ...(exit.interrupted ? { interrupted: exit.interrupted } : {}),
     },
   };
 }

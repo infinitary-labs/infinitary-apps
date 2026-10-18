@@ -34,6 +34,7 @@ import {
 import { z } from "zod";
 import { pathsOf } from "../folderMove/due";
 import { readMoveRecord } from "../folderMove/record";
+import type { JobRows } from "../jobs/jobManager";
 import { APP_KEPT_PARTS, removeTaskLeftovers } from "../tasks/taskLeftovers";
 import { provisionTaskTemp, removeOwnedTempFolder, type TempRemoval } from "../tasks/taskTemp";
 import { sha256Of } from "../workspace/bundles";
@@ -42,9 +43,10 @@ import { sha256Of } from "../workspace/bundles";
  * The one writer over `userData/work/tasks/` on a computer that runs work
  * (docs/helper.md, "Holding a conversation"): one folder per task a home
  * opened a conversation for, with the conversation's record, the folders
- * its tools read and write, the orders it already applied, and the outbox
- * of what it did that the home has not kept yet. 0700 folders, 0600 files,
- * like the rest of the work folder. Nothing here reads a sign-in.
+ * its tools read and write, the orders it already applied, the outbox of
+ * what it did that the home has not kept yet, and the background jobs its
+ * shell runs. 0700 folders, 0600 files, like the rest of the work folder.
+ * Nothing here reads a sign-in.
  */
 
 /** What a task's folder keeps between runs, beside its outbox and orders. */
@@ -69,6 +71,24 @@ export type PlacedTaskState = z.infer<typeof taskStateSchema>;
 const EMPTY_STATE: PlacedTaskState = { turn: 0, seq: 0, kept: 0, closed: false };
 
 const orderLineSchema = z.object({ orderId: z.string(), answer: z.unknown() });
+
+/** A background job its crewmate's shell started here, kept in `jobs.json` while it runs. */
+const placedJobSchema = z.object({
+  id: z.string(),
+  command: z.string(),
+  startedAt: z.number(),
+  /** When this computer's stop killed it (`JobManager.disposeAll`); absent, nothing stopped it. */
+  stoppedAt: z.number().optional(),
+  /** It exited, and its home has not answered its end yet (`SessionHost.jobExit`). */
+  exit: z
+    .object({
+      exitCode: z.number().int().nullable(),
+      durationMs: z.number().nonnegative(),
+      tail: z.string(),
+    })
+    .optional(),
+});
+export type PlacedJob = z.infer<typeof placedJobSchema>;
 
 export class PlacedTasks {
   readonly tasksDir: string;
@@ -448,6 +468,73 @@ export class PlacedTasks {
     const { root } = this.folders(task);
     mkdirSync(root, { recursive: true, mode: 0o700 });
     return root;
+  }
+
+  /**
+   * The background jobs a task's shell runs here, as `JobManager` keeps them
+   * (`JobRows`): a row while a job runs, gone when it exits or its owner
+   * stops it, and marked when this computer's stop kills it. A row that
+   * cannot be kept only leaves the next start less to say; the job runs on.
+   */
+  readonly jobRows: JobRows = {
+    add: (job) =>
+      this.keepJobs(job.ownerId, (jobs) => [
+        ...jobs,
+        { id: job.id, command: job.command, startedAt: job.startedAt },
+      ]),
+    remove: (id, ownerId) => this.keepJobs(ownerId, (jobs) => jobs.filter((job) => job.id !== id)),
+    markStoppedByQuit: (id, ownerId, at) =>
+      this.keepJobs(ownerId, (jobs) =>
+        jobs.map((job) => (job.id === id ? { ...job, stoppedAt: at } : job)),
+      ),
+  };
+
+  /**
+   * The task's job rows. At a start, before its conversation opens, each is
+   * a job the last run's end cut off, or an exit its home had not answered
+   * yet (`SessionHost`).
+   */
+  jobs(task: string): PlacedJob[] {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(readFileSync(join(this.folders(task).root, "jobs.json"), "utf8"));
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((row) => {
+      const job = placedJobSchema.safeParse(row);
+      return job.success ? [job.data] : [];
+    });
+  }
+
+  /** A job's row as given, in place of the one with its id. */
+  keepJob(task: string, row: PlacedJob): void {
+    this.keepJobs(task, (jobs) => [...jobs.filter((job) => job.id !== row.id), row]);
+  }
+
+  /** The home has heard of this job: its row goes. */
+  forgetJob(task: string, id: string): void {
+    this.keepJobs(task, (jobs) => jobs.filter((job) => job.id !== id));
+  }
+
+  /** Written whole, then moved into place, and never into a folder that is gone. */
+  private keepJobs(task: string, change: (jobs: PlacedJob[]) => PlacedJob[]): void {
+    try {
+      const { root } = this.folders(task);
+      if (!existsSync(root)) return;
+      const jobs = change(this.jobs(task));
+      const file = join(root, "jobs.json");
+      if (jobs.length === 0) {
+        rmSync(file, { force: true });
+        return;
+      }
+      const temporary = `${file}.next`;
+      writeFileSync(temporary, `${JSON.stringify(jobs)}\n`, { mode: 0o600 });
+      renameSync(temporary, file);
+    } catch {
+      // As the rows say: the next start says less.
+    }
   }
 
   /** A task id names a folder: anything but a minted one is refused before a path is built. */

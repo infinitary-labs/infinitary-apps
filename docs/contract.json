@@ -37923,6 +37923,13 @@
                   },
                   "tail": {
                     "type": "string"
+                  },
+                  "interrupted": {
+                    "type": "string",
+                    "enum": [
+                      "quit",
+                      "crash"
+                    ]
                   }
                 },
                 "required": [

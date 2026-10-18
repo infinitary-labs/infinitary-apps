@@ -762,6 +762,8 @@ export type WakeFacts =
       durationMs: number;
       /** The output's tail, already capped; absent when there was none. */
       tail?: string;
+      /** It never exited: its computer's run ended first (`JobExit.interrupted`). */
+      interrupted?: "quit" | "crash";
     }
   | {
       /** A schedule came due (R3). */
@@ -1552,7 +1554,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "browser-returned":
       return renderBrowserReturned(facts);
     case "job-exit":
-      return `${facts.to === "firstmate" ? "[fm-op]" : "[job]"} background job ${facts.jobId} finished: "${facts.command}" exited ${facts.exitCode ?? "by signal"} after ${formatJobDuration(facts.durationMs)}${facts.tail !== undefined ? `. Output tail:\n${facts.tail}` : " with no output"}`;
+      return renderJobExit(facts);
     case "scheduled":
       return `[fm-op] scheduled${scheduledSource(facts)}${facts.catchUp ? ` (catch-up - missed while Infinitary was ${facts.waited ? "closed or busy" : "closed"}${facts.missed ? `; ${facts.missed} more ${facts.missed === 1 ? "occurrence" : "occurrences"} folded in` : ""})` : ""}: ${facts.prompt}`;
     case "welcome":
@@ -1896,6 +1898,20 @@ function answersText(choice: WakeChoice, source?: "chrome" | "frame"): string {
   if (!choice.answers?.length) return "";
   const who = source === "frame" ? "The script submitted answers" : "The user's answers";
   return `\n${who} to the card's questions:\n${cardAnswerLines(choice.answers).join("\n")}`;
+}
+
+/**
+ * A job's end as its owner hears it: its exit, or that it never exited
+ * because the run of the computer it ran on ended first - and so no exit
+ * will come, which is what the owner may have been waiting for.
+ */
+function renderJobExit(facts: Extract<WakeFacts, { kind: "job-exit" }>): string {
+  const job = `${facts.to === "firstmate" ? "[fm-op]" : "[job]"} background job ${facts.jobId}`;
+  if (facts.interrupted === "quit")
+    return `${job} did not finish: "${facts.command}" was stopped after ${formatJobDuration(facts.durationMs)}, when Infinitary stopped on the computer running it. No exit will come; run it again if you still need its result.`;
+  if (facts.interrupted === "crash")
+    return `${job} did not finish there: "${facts.command}" was still running when Infinitary ended unexpectedly on the computer running it, and it may have kept running, even to the end. No exit will come; check what it left before you run it again.`;
+  return `${job} finished: "${facts.command}" exited ${facts.exitCode ?? "by signal"} after ${formatJobDuration(facts.durationMs)}${facts.tail !== undefined ? `. Output tail:\n${facts.tail}` : " with no output"}`;
 }
 
 /** A job's run time in the words its exit wake has always used. */

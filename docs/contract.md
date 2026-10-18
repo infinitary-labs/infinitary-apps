@@ -128,6 +128,9 @@ The home sends it only to a computer on 8.15 or later (`SESSION_RECORD_REFRESH_S
 Protocol 8.15 also adds optional `interrupted` to a placed `continuation_ended`: the helper declares that shutdown or recovery ended its work, and the home supplies the computer's name in its own interruption wording.
 An older home ignores the marker and reads the plain fallback error; ordinary client failures retain their own error and cut-off facts.
 
+Protocol 8.15 also adds the optional `interrupted` to a background job's end (`inf:work:job-exit`): `quit` or `crash`, sent at a computer's next start for a job its last run's end cut off, so the home tells the crewmate the job never exited (`docs/helper.md`, "Holding a conversation").
+A home on an older minor drops the field and words it as an exit by signal, which still ends the crewmate's wait.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

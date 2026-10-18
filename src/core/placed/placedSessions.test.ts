@@ -52,6 +52,7 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
+import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import {
   crewmateMovedText,
@@ -287,6 +288,11 @@ async function world(
      * before its first update to Infinitary (`moveComputer`).
      */
     inOlderFolder?: boolean;
+    /**
+     * Its crewmates' long commands are background jobs there, kept as the
+     * work mode keeps them (`startConversations`); otherwise Pi's own bash.
+     */
+    jobs?: boolean;
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -352,14 +358,33 @@ async function world(
             return prepare(task, project, seed);
           };
         }
-        const host = new SessionHost({
-          tasks: new PlacedTasks(dir, copies.worktreesDir),
+        const tasks = new PlacedTasks(dir, copies.worktreesDir);
+        let host: SessionHost | undefined;
+        const jobs = options.jobs
+          ? new JobManager({
+              rows: tasks.jobRows,
+              onChange: () => host?.jobsChanged(),
+              onExit: (exit) => host?.jobExit(exit),
+              belowUi: false,
+            })
+          : undefined;
+        host = new SessionHost({
+          tasks,
           copies,
           ask,
           factories: {
-            pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }),
+            pi: createPiSessionFactory({
+              agentDir: join(dir, "pi-agent"),
+              ...(jobs ? { runBash: (input) => jobs.run(input) } : {}),
+            }),
             ...(options.claude ? { claude: options.claude.factory } : {}),
           },
+          ...(jobs
+            ? {
+                runningJobCount: (task: string) => jobs.runningJobCount(task),
+                killJobs: (task: string) => jobs.killForOwner(task),
+              }
+            : {}),
           bind: async (binding) => {
             bound.push(binding);
             if (refusing) throw new Error(`This computer has no sign-in for ${PROVIDER} here.`);
@@ -369,7 +394,14 @@ async function world(
           ...(tools ? { tools } : {}),
           log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[computer] ${line}\n`),
         });
-        return { host, close: () => host.close() };
+        const held = host;
+        return {
+          host: held,
+          close: async () => {
+            await held.close();
+            jobs?.disposeAll();
+          },
+        };
       },
     });
     if (!started.ok) throw new Error(started.reason);
@@ -1141,6 +1173,46 @@ describe("a task that runs on a computer that runs work", () => {
       .toBe("Picked the footer up again.");
     expect(api.requests.length - requests).toBe(2);
     expect(said(api.requests.at(-1))).toContain("Fix the footer.");
+  });
+
+  // INF-367: a computer's restart reports each background job it cut off
+  // once to its task, so an idle crewmate never waits for an exit that
+  // cannot arrive.
+  it("tells a crewmate waiting on a background job, as its next turn and once, that its computer's restart stopped the job (INF-367)", async () => {
+    const at = await world(undefined, { jobs: true });
+    const waiting = "The suite runs as a background job; I will pick up its result.";
+    model([
+      {
+        tools: [
+          {
+            name: "bash",
+            args: { command: "sleep 600", background: true, description: "Run the long suite" },
+          },
+        ],
+      },
+      { text: waiting },
+      { text: "Running the suite again." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-job");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-job")?.outcome).toBe(waiting);
+    const job = /background job ([0-9a-f]{8})/.exec(said(api.requests[requests + 1]))?.[1];
+    expect(job).toBeDefined();
+
+    // The computer restarts while the crewmate waits: the job ends with that run.
+    await at.restartComputer();
+    await expect.poll(() => home.tasks.get("t-job")?.outcome).toBe("Running the suite again.");
+    const heard = said(api.requests.at(-1));
+    expect(heard).toContain(`background job ${job} did not finish`);
+    expect(heard).toContain(JSON.stringify('"sleep 600" was stopped').slice(1, -1));
+    expect(api.requests.length - requests).toBe(3);
+    // Once: nothing is left there to tell again, and its lane is empty.
+    expect(existsSync(join(at.folders("t-job").root, "jobs.json"))).toBe(false);
+    expect(home.inbox.allFor("t-job")).toEqual([]);
+    await at.restartComputer();
+    await at.inReach("t-job");
+    expect(api.requests.length - requests).toBe(3);
   });
 
   it("tells a Claude crewmate its brief and where its earlier conversation is when that computer's update starts it over, and only once (INF-296)", async () => {

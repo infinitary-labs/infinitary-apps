@@ -244,6 +244,34 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(fresh.reportInterrupted()).toEqual([]);
   });
 
+  // INF-377 F1: a command that finishes within the cap never became a job,
+  // so it never touches the rows - on a computer that runs work, each one
+  // used to read its task's jobs file and delete or rewrite it.
+  it("keeps a row only for a command that became a job", async () => {
+    const calls: string[] = [];
+    const jobs = new JobManager({
+      rows: {
+        add: (job) => calls.push(`add ${job.command}`),
+        remove: (id) => calls.push(`remove ${id}`),
+        markStoppedByQuit: (id) => calls.push(`mark ${id}`),
+      },
+      onExit: () => {},
+    });
+    expect(await jobs.run({ ownerId: "t1", command: "echo quick", cwd: "/tmp" })).toMatchObject({
+      kind: "done",
+      exitCode: 0,
+    });
+    expect(calls).toEqual([]);
+    const outcome = await jobs.run({
+      ownerId: "t1",
+      command: "true",
+      cwd: "/tmp",
+      background: true,
+    });
+    if (outcome.kind !== "job") throw new Error("expected a job");
+    await expect.poll(() => calls).toEqual(["add true", `remove ${outcome.jobId}`]);
+  });
+
   it("caps captured output at the tail", async () => {
     const { jobs } = manager();
     const outcome = await jobs.run({
@@ -322,6 +350,25 @@ describe("a job's exit wake", () => {
       ),
     ).toBe(
       '[fm-op] background job j3 finished: "pnpm test" exited 1 after 2h 5m. Output tail:\nFAIL a\nFAIL b',
+    );
+  });
+
+  // INF-367: a job its computer's restart cut off reaches its crewmate as the
+  // end that will never come, so it does not wait for one.
+  it("says a job its computer's stop killed did not finish, and that one a crash left may have run on", () => {
+    const cutOff = {
+      jobId: "45d291d9",
+      ownerId: "t1",
+      command: "pnpm test:ios",
+      exitCode: null,
+      durationMs: 12 * 60_000 + 3_000,
+      tail: "",
+    };
+    expect(served({ ...cutOff, interrupted: "quit" }, "crewmate")).toBe(
+      '[job] background job 45d291d9 did not finish: "pnpm test:ios" was stopped after 12m 3s, when Infinitary stopped on the computer running it. No exit will come; run it again if you still need its result.',
+    );
+    expect(served({ ...cutOff, durationMs: 0, interrupted: "crash" }, "crewmate")).toBe(
+      '[job] background job 45d291d9 did not finish there: "pnpm test:ios" was still running when Infinitary ended unexpectedly on the computer running it, and it may have kept running, even to the end. No exit will come; check what it left before you run it again.',
     );
   });
 });

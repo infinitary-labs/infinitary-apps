@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-restart-cut-off-jobs",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A crewmate on another computer carries on after that computer restarts in the middle of a long command",
+      "body": "When a computer that runs work for you restarts while a crewmate there waits on a long command, such as a test run, the crewmate is now told once that the command did not finish, and picks the task up again. A command that finished while that computer could not reach you keeps its result through a restart too. Before, the crewmate could wait for hours for a result that would never come.",
+      "noPicture": "Nothing new appears on screen: the task simply moves on after the restart instead of waiting.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

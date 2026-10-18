@@ -58,7 +58,7 @@ import {
 import { changeRecoveryCheck } from "../session/workRecovery";
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
-import type { PlacedTaskState, PlacedTasks } from "./placedTasks";
+import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
@@ -86,7 +86,8 @@ import type { WorkingCopies } from "./workingCopies";
  * outbox before it is sent, one request at a time, and forgotten only once
  * the home keeps it. A turn this computer quit in the middle of ends as
  * `interrupted` at its next start, as a turn on the home ends when the home
- * quits.
+ * quits, and each background job's end it had not told yet - an exit the
+ * home had not answered, or a job its end cut off - is told to its home once.
  */
 
 export type SessionHostOptions = {
@@ -246,6 +247,9 @@ export class SessionHost {
         this.writeOut(held);
       }
       this.interruptContinuation(held);
+      // No conversation is open yet, so no job of this run is: each row is
+      // a job the last run's end cut off, or an exit the home had not answered.
+      for (const job of options.tasks.jobs(task)) this.tellJobEnd(held, job);
     }
   }
 
@@ -288,20 +292,59 @@ export class SessionHost {
     this.record(held, { type: "background_work_changed", count });
   }
 
-  /** A background job a crewmate's shell started here ended: its home hears it as a wake. */
+  /**
+   * A background job a crewmate's shell started here ended: its home hears
+   * it as a wake. Its row keeps the exit until the home answers, so a stop
+   * before then tells it at the next start.
+   */
   jobExit(exit: JobExit): void {
     const held = this.held.get(exit.ownerId);
     if (!held || held.state.closed) return;
+    const job: PlacedJob = {
+      id: exit.jobId,
+      command: exit.command,
+      startedAt: this.now() - exit.durationMs,
+      exit: { exitCode: exit.exitCode, durationMs: exit.durationMs, tail: exit.tail },
+    };
+    this.options.tasks.keepJob(held.task, job);
+    this.tellJobEnd(held, job);
+  }
+
+  /**
+   * Tells the home a job's end, the one its crewmate waits for, once: its
+   * exit, or - for a job the last run here left running - that it never
+   * exited, because that run's stop killed it or the run ended without one.
+   * It goes under the job's own call id, and its row goes only once the
+   * home answers, so a stop before then asks again at the next start and
+   * the home answers that from what it kept.
+   */
+  private tellJobEnd(held: Held, job: PlacedJob): void {
+    const forget = () => {
+      if (!held.removed) this.options.tasks.forgetJob(held.task, job.id);
+    };
+    // A closed conversation has nobody waiting.
+    if (held.state.closed) {
+      forget();
+      return;
+    }
     void this.call(held, "inf:work:job-exit", {
-      callId: `job:${exit.jobId}`,
+      callId: `job:${job.id}`,
       exit: {
-        jobId: exit.jobId,
-        command: exit.command,
-        exitCode: exit.exitCode,
-        durationMs: exit.durationMs,
-        tail: exit.tail,
+        jobId: job.id,
+        command: job.command,
+        ...(job.exit ?? {
+          exitCode: null,
+          durationMs: Math.max(0, (job.stoppedAt ?? job.startedAt) - job.startedAt),
+          tail: "",
+          interrupted: job.stoppedAt === undefined ? "crash" : "quit",
+        }),
       },
-    }).catch((error: unknown) => this.log(`a job's end was refused: ${messageOf(error)}`));
+    }).then(forget, (error: unknown) => {
+      // Stopping first: its row stays for the next start.
+      if (this.stopped) return;
+      this.log(`a job's end was refused: ${messageOf(error)}`);
+      forget();
+    });
   }
 
   /**

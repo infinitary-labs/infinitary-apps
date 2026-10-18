@@ -1342,6 +1342,68 @@ describe("a conversation held on a computer that runs work", () => {
     });
   });
 
+  // INF-367: a restart here tells the home of each background job's end it
+  // had not told, once, so the crewmate never waits for an exit that cannot
+  // arrive.
+  it("tells the home once of each job end its last run left untold - a job its stop killed, one its end left unmarked, and an exit the home had not answered - asking again under the job's id when it stops again before the home answers (INF-367)", async () => {
+    const at = await placed();
+    await at.open();
+    const told = at.home.hold("inf:work:job-exit");
+    const asks = (id: string) => at.home.asked.filter((ask) => ask.callId === `job:${id}`).length;
+    // The rows a run keeps while its jobs run (`JobManager`): its stop marks
+    // the one it kills, and an end without its stop leaves the other as is.
+    const tasks = new PlacedTasks(at.dataDir);
+    const startedAt = Date.now() - 20 * 60_000;
+    tasks.jobRows.add({ id: "45d291d9", ownerId: TASK, command: "pnpm test:ios", startedAt });
+    tasks.jobRows.add({ id: "5e1f0c2a", ownerId: TASK, command: "pnpm build", startedAt });
+    tasks.jobRows.markStoppedByQuit("45d291d9", TASK, startedAt + 12 * 60_000);
+    // A third job exits now, and the home is slow to answer.
+    at.host().jobExit({
+      jobId: "7c3a9e10",
+      ownerId: TASK,
+      command: "pnpm lint",
+      exitCode: 0,
+      durationMs: 4_000,
+      tail: "clean",
+    });
+    await expect.poll(() => asks("7c3a9e10")).toBe(1);
+
+    await at.restartComputer();
+    await expect
+      .poll(() => [asks("45d291d9"), asks("5e1f0c2a"), asks("7c3a9e10")])
+      .toEqual([1, 1, 2]);
+    // Stopped again before the home answered: every row stays for the next start.
+    await at.restartComputer();
+    expect(tasks.jobs(TASK).map((job) => job.id)).toEqual(["45d291d9", "5e1f0c2a", "7c3a9e10"]);
+    told.open();
+    await expect.poll(() => tasks.jobs(TASK)).toEqual([]);
+    expect(asks("45d291d9")).toBeGreaterThan(1);
+    expect(asks("5e1f0c2a")).toBeGreaterThan(1);
+    const heard = at.home.effects
+      .filter((effect) => effect.channel === "inf:work:job-exit")
+      .map((effect) => effect.request.exit as { jobId: string })
+      .sort((a, b) => a.jobId.localeCompare(b.jobId));
+    expect(heard).toEqual([
+      {
+        jobId: "45d291d9",
+        command: "pnpm test:ios",
+        exitCode: null,
+        durationMs: 12 * 60_000,
+        tail: "",
+        interrupted: "quit",
+      },
+      {
+        jobId: "5e1f0c2a",
+        command: "pnpm build",
+        exitCode: null,
+        durationMs: 0,
+        tail: "",
+        interrupted: "crash",
+      },
+      { jobId: "7c3a9e10", command: "pnpm lint", exitCode: 0, durationMs: 4_000, tail: "clean" },
+    ]);
+  });
+
   it("keeps a crewmate's builds and tests below the UI as another user on the home's own Mac", async () => {
     // Captain on INF-255. This world joins by a link for another user here (`work`).
     const at = await placed();

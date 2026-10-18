@@ -788,7 +788,8 @@ Each comparison's readings can change those words, so each wait also has a kind 
 Room covers spare processing capacity, spare memory, room set aside for other starts and a wait not yet compared, since under load one quarter-second processor reading to the next can trade them.
 Start now's answer and Task Details' Computer choice row carry the latest words.
 Activity says a wait once and again only when its kind changes, since every line about a task is a row in its Activity; the record's Now line keeps the words of the line that said that kind.
-Before the computers have been compared, as after a restart until the next sweep, it waits for a compatible computer with room (`PLACEMENT_WAIT`).
+Before the computers have been compared, it waits for a compatible computer with room (`PLACEMENT_WAIT`).
+The latest wait is stored on the record (`placement_wait`), so a restart keeps those words for Details and Start now, and Activity does not say the line again.
 A comparison never chooses for a task that changed while the computers were compared (`stillCurrent`); one whose model or basis changed is compared again at once on its record as it now stands, never told to wait for room (INF-83).
 A premium ask or escalation rung that no computer serves at its tier is held as a This computer task is: `AutomaticPlacement.choose` returns the held route (`floorHold`), and the supervisor gates the task on that tier's quota reset and wakes the first mate once (`holdForReasoning`), which may start it lower with `update_task start_now`.
 That gate's own check reads the home's quota only, while another computer may serve the tier first, so the gate sweep asks such a task's choice again on every pass (`heldOnItsLevel`); it starts wherever a computer serves its tier, and a repeated hold wakes nobody.
@@ -806,7 +807,7 @@ The first mate sets it only from the captain's words, never by judging, and only
 - **The setting.**
   `WorkShape.runs_on_ask` holds a computer that runs work by its device id, or `this-mac` (`RUNS_ON_THIS_MAC`); absent, the task follows its parent's, else its project's.
   The first mate passes it as `spawn_crewmate`'s `shape.runs_on_ask`, or as `update_task`'s `runs_on` on a filed task, where `project` clears it.
-  `TaskService.updateFields` writes it, one timeline line and feed line ("updated: Runs on: Mac mini (This task)"), and `recordShape` keeps the record's own value, so an edit made while a queued task is classified is never lost.
+  `TaskService.updateFields` writes it, one timeline line and feed line ("updated: Runs on: Mac mini (This task)"), and `recordShape` writes only the host's stamp onto the record as it stands, so an edit made while a queued task is classified is never lost.
 - **Which wins.**
   A task's own Runs on wins; without one, a part takes its nearest parent's; without either, its project's (`CrewSupervisor.ownRunsOn`, `runsOnFor`).
   It works in both directions: a task can run on Mac mini while its project runs here, or stay here while its project runs on Mac mini.

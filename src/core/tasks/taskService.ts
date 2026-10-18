@@ -17,6 +17,7 @@ import {
   PLACEMENT_WAIT,
   type PlacementRequirements,
   type PlacementSnapshot,
+  type PlacementWait,
   placementReason,
   placementRequirementsSchema,
   placementSnapshotSchema,
@@ -47,7 +48,7 @@ import {
   type RequiredAction,
   type RequiredActionOffer,
 } from "@shared/requiredActions";
-import type { WorkShape } from "@shared/routingPolicy";
+import { type HostStamp, stampOnto, type WorkShape } from "@shared/routingPolicy";
 import type { PlanItem } from "@shared/taskPlan";
 import {
   effectiveTaskPolicies,
@@ -2534,42 +2535,46 @@ export class TaskService {
   }
 
   /**
-   * The work shape and the tier it computes to (S3): written when a queued
-   * row's kind is established at gate-open, so the row dispatches from what
-   * the classifier actually said. Deliberately quiet - a shape explains a
-   * routing decision rather than being a state change, and it rides
+   * The host's stamp and the tier it computes to (S3), written onto the
+   * record as it stands (INF-416 piece F). The stamp carries only the
+   * fields the host owns (`HOST_STAMP_FIELDS`); a model, a basis or any
+   * other field a person owns stays, including one cleared while the
+   * stamp was in flight. Deliberately quiet - a shape explains a routing
+   * decision rather than being a state change, and it rides
    * `routing_decisions` for the audit either way.
    */
-  recordShape(id: string, shape: WorkShape, difficulty: TaskRecord["difficulty"]): void {
+  recordShape(id: string, stamp: HostStamp, difficulty: TaskRecord["difficulty"]): void {
     const run = this.write(() => {
-      // Classification/routing awaited outside this writer must not overwrite
-      // a policy, Runs on, speed or reasoning edit accepted while it was in
-      // flight. Those are only ever the record's own: an edit may have
-      // cleared them.
-      const current = this.mustGet(id).shape;
-      const {
-        runs_on_ask: _seen,
-        placement_requirements: _requirements,
-        placement_fallback_accepted: _acceptance,
-        override_speed: _speed,
-        override_reasoning: _reasoning,
-        ...rest
-      } = shape;
+      const current = this.mustGet(id).shape ?? { kind: "unclear" as const };
       this.patch(id, {
-        shape: {
-          ...rest,
-          ...(current?.policies ? { policies: current.policies } : {}),
-          ...(current?.runs_on_ask ? { runs_on_ask: current.runs_on_ask } : {}),
-          ...(current?.override_speed ? { override_speed: current.override_speed } : {}),
-          ...(current?.override_reasoning
-            ? { override_reasoning: current.override_reasoning }
-            : {}),
-          ...(current?.placement_requirements
-            ? { placement_requirements: current.placement_requirements }
-            : {}),
-          ...(current?.placement_fallback_accepted ? { placement_fallback_accepted: true } : {}),
-        },
+        shape: stampOnto(current, stamp),
         difficulty,
+        updatedAt: this.now(),
+      });
+    });
+    run();
+  }
+
+  /**
+   * The latest Automatic wait, on the record rather than in process memory,
+   * so a restart keeps the words and does not say the line again. Not the
+   * could-not-start notice. Null clears it once the task is no longer waiting.
+   */
+  setPlacementWait(id: string, wait: PlacementWait | null): void {
+    const run = this.write(() => {
+      const record = this.store.get(id);
+      if (!record) return;
+      const shape = record.shape ?? { kind: "unclear" as const };
+      const current = shape.placement_wait;
+      if (wait === null) {
+        if (!current) return;
+        const { placement_wait: _wait, ...rest } = shape;
+        this.patch(id, { shape: rest, updatedAt: this.now() });
+        return;
+      }
+      if (current?.kind === wait.kind && current.words === wait.words) return;
+      this.patch(id, {
+        shape: { ...shape, placement_wait: wait },
         updatedAt: this.now(),
       });
     });

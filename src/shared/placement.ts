@@ -172,8 +172,14 @@ export const PLACEMENT_HELD_WAIT = `Waiting for room set aside for other tasks t
  * The words name the check from the latest readings; Activity says a wait
  * again only when this changes.
  */
-export type PlacementWaitKind = "model" | "room" | "other";
-export type PlacementWait = { kind: PlacementWaitKind; words: string };
+export const placementWaitKindSchema = z.enum(["model", "room", "other"]);
+export type PlacementWaitKind = z.infer<typeof placementWaitKindSchema>;
+/** The latest Automatic wait: what it waits for, and the words that say why. */
+export const placementWaitSchema = z.object({
+  kind: placementWaitKindSchema,
+  words: z.string(),
+});
+export type PlacementWait = z.infer<typeof placementWaitSchema>;
 export const UNCOMPARED_WAIT: PlacementWait = { kind: "room", words: PLACEMENT_WAIT };
 
 const BUSY_REJECTIONS: readonly PlacementRejection[] = ["cpu-busy", "memory-busy"];

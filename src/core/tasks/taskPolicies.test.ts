@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import {
+  CAPTAIN_OWNED_SHAPE_FIELDS,
+  DERIVED_SHAPE_FIELDS,
+  HOST_KEPT_SHAPE_FIELDS,
+  HOST_STAMP_FIELDS,
+  workShapeSchema,
+} from "../../shared/routingPolicy";
 import { effectiveTaskPolicies, type PolicyRepo } from "../../shared/taskPolicies";
 import { seedTask } from "./seedTask";
 import { queryTasks } from "./taskQuery";
@@ -320,6 +327,85 @@ describe("live task policies", () => {
     tasks.recordShape(task.id, stale, "high");
     expect(current(tasks, task.id).shape).not.toHaveProperty("override_speed");
     expect(current(tasks, task.id).shape).not.toHaveProperty("override_reasoning");
+  });
+
+  // INF-416 piece F (T2): the old writer copied six fields back by name and
+  // still wrote the classifier's copy over model and basis.
+  it("writes a host stamp onto the record as it stands, so six captain edits survive an old copy", () => {
+    const { tasks } = setup();
+    const first = seedTask(tasks, {
+      id: "first",
+      title: "First plan",
+      repoId: "project",
+      status: "queued",
+    });
+    const second = seedTask(tasks, {
+      id: "second",
+      title: "Second plan",
+      repoId: "project",
+      status: "queued",
+    });
+    const old = {
+      kind: "unclear" as const,
+      kind_source: "none",
+      policies: { rigor: "quick" as const, revision: 1 },
+      basis: first.key,
+      override_model_id: "old-model",
+      override_speed: "fast" as const,
+      override_reasoning: "low" as const,
+      runs_on_ask: "mini",
+    };
+    const task = seedTask(tasks, {
+      id: "stamped",
+      title: "Stamp",
+      repoId: "project",
+      status: "queued",
+      shape: old,
+    });
+    tasks.updateFields(task.id, { policies: { rigor: "reviewed" } }, "firstmate");
+    tasks.updateFields(task.id, { basis: second.key }, "firstmate");
+    tasks.updateFields(task.id, { model: "new-model" }, "firstmate");
+    tasks.updateFields(task.id, { speed: "ultrafast", reasoning: "xhigh" }, "firstmate");
+    tasks.updateFields(task.id, { runsOn: { ask: "this-mac", words: "This Mac" } }, "firstmate");
+    tasks.recordShape(
+      task.id,
+      { ...old, kind: "fix", kind_source: "classifier:test", deliverable: "change" },
+      "high",
+    );
+    expect(current(tasks, task.id).shape).toMatchObject({
+      kind: "fix",
+      kind_source: "classifier:test",
+      deliverable: "change",
+      policies: { rigor: "reviewed" },
+      basis: second.key,
+      override_model_id: "new-model",
+      override_speed: "ultrafast",
+      override_reasoning: "xhigh",
+      runs_on_ask: "this-mac",
+    });
+    expect(current(tasks, task.id).shape).not.toMatchObject({
+      basis: first.key,
+      override_model_id: "old-model",
+    });
+    // The list INF-409 reuses names each of those six, and every shape field once.
+    expect(CAPTAIN_OWNED_SHAPE_FIELDS).toEqual(
+      expect.arrayContaining([
+        "policies",
+        "basis",
+        "override_model_id",
+        "override_speed",
+        "override_reasoning",
+        "runs_on_ask",
+      ]),
+    );
+    expect(
+      new Set([
+        ...CAPTAIN_OWNED_SHAPE_FIELDS,
+        ...HOST_STAMP_FIELDS,
+        ...HOST_KEPT_SHAPE_FIELDS,
+        ...DERIVED_SHAPE_FIELDS,
+      ]),
+    ).toEqual(new Set(workShapeSchema.keyof().options));
   });
 
   // FI3-1812 review R3: update_task's direction says the record names it.

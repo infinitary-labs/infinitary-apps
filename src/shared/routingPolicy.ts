@@ -5,7 +5,7 @@ import {
   intelligenceBucketSchema,
   reasoningChoiceSchema,
 } from "./modelSlots";
-import { placementRequirementsSchema } from "./placement";
+import { placementRequirementsSchema, placementWaitSchema } from "./placement";
 import { repoDeliverySchema } from "./repos";
 import { rigorSchema } from "./rigor";
 import { taskPolicyStateSchema } from "./taskPolicies";
@@ -168,6 +168,12 @@ export const workShapeSchema = z.object({
   /** Host-owned acceptance of the existing fallback while an Automatic start waits. */
   placement_fallback_accepted: z.boolean().optional(),
   /**
+   * The latest Automatic wait, written by the host onto the record so a
+   * restart keeps the words and does not say the line again (INF-416 piece F).
+   * Not the could-not-start notice. Absent once the task is no longer waiting.
+   */
+  placement_wait: placementWaitSchema.optional(),
+  /**
    * The Firstmate's own declaration, made when it creates the task: this is
    * an internal step of a sequence it is running for an ask, whose answer is
    * handed to the next step (docs/sequences.md). Its judgment, taught by its
@@ -216,6 +222,69 @@ export const workShapeSchema = z.object({
   kind_detail: z.string().optional(),
 });
 export type WorkShape = z.infer<typeof workShapeSchema>;
+
+/**
+ * Fields on a work shape a person owns. A host stamp never writes these.
+ * Named once so a start-time write (INF-409) reuses this list instead of
+ * copying fields back by name.
+ */
+export const CAPTAIN_OWNED_SHAPE_FIELDS = [
+  "policies",
+  "basis",
+  "premium_ask",
+  "override_model_id",
+  "override_speed",
+  "override_reasoning",
+  "escalate_from",
+  "rigor_ask",
+  "delivery_ask",
+  "autonomy_ask",
+  "runs_on_ask",
+  "placement_requirements",
+  "internal_step",
+  "knowledge_access",
+  "skipped_plan_because",
+] as const satisfies readonly (keyof WorkShape)[];
+
+/** Fields a host stamp may write onto the shape as it stands. */
+export const HOST_STAMP_FIELDS = [
+  "kind",
+  "kind_source",
+  "kind_detail",
+  "deliverable",
+  "escalation",
+  "rigor",
+  "autonomy",
+] as const satisfies readonly (keyof WorkShape)[];
+
+/**
+ * Host runtime on the shape that a stamp leaves as it stands: not a person's
+ * edit, and not part of the verdict a stamp writes.
+ */
+export const HOST_KEPT_SHAPE_FIELDS = [
+  "placement_fallback_accepted",
+  "placement_wait",
+] as const satisfies readonly (keyof WorkShape)[];
+
+/** Derived at every read and never stored. */
+export const DERIVED_SHAPE_FIELDS = [
+  "basis_verified",
+] as const satisfies readonly (keyof WorkShape)[];
+
+/** The host's stamp: only the fields a stamp owns, each optional so a quiet tier write can pass none. */
+export type HostStamp = Partial<Pick<WorkShape, (typeof HOST_STAMP_FIELDS)[number]>>;
+
+/** Writes a host stamp onto the shape as it stands. A field the stamp omits stays, including one a person cleared. */
+export function stampOnto(current: WorkShape, stamp: HostStamp): WorkShape {
+  const next: WorkShape = { ...current };
+  for (const field of HOST_STAMP_FIELDS) {
+    if (!Object.hasOwn(stamp, field)) continue;
+    const value = stamp[field];
+    if (value === undefined) continue;
+    (next as Record<string, unknown>)[field] = value;
+  }
+  return next;
+}
 
 /** The feed's note for a declared plan skip (`skipped_plan_because`): the Firstmate's reason, as given. */
 export function planSkippedText(reason: string): string {

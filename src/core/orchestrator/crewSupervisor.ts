@@ -79,7 +79,6 @@ import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
   AUTOMATIC_WORD,
-  type PlacementWait,
   placementCandidateLines,
   placementReason,
   UNCOMPARED_WAIT,
@@ -1658,9 +1657,6 @@ export class CrewSupervisor {
     return target === AUTOMATIC_COMPUTER ? null : target;
   }
 
-  /** Each Automatic task that waits to start, with the latest words that say why. */
-  private readonly automaticWaits = new Map<string, PlacementWait>();
-
   automaticFor(record: PlacementRecord): boolean {
     return Boolean(
       this.options.automaticPlacement &&
@@ -1679,8 +1675,9 @@ export class CrewSupervisor {
    * reading can change the words, and every line is a row in Activity.
    */
   private sayAutomaticWait(record: TaskRecord, wait = UNCOMPARED_WAIT): void {
-    const said = this.automaticWaits.get(record.id);
-    this.automaticWaits.set(record.id, wait);
+    // The record, not this process: a restart still knows what was said.
+    const said = this.options.tasks.get(record.id)?.shape?.placement_wait;
+    this.options.tasks.setPlacementWait(record.id, wait);
     if (said?.kind === wait.kind) return;
     this.options.broadcastEvent({
       type: "firstmate_note",
@@ -1868,7 +1865,7 @@ export class CrewSupervisor {
           ? {
               reason:
                 record.startPolicy === "when-ready"
-                  ? (this.automaticWaits.get(record.id) ?? UNCOMPARED_WAIT).words
+                  ? (record.shape?.placement_wait ?? UNCOMPARED_WAIT).words
                   : "Your first mate chooses a computer when this task starts. It stays there.",
             }
           : {}),
@@ -4033,7 +4030,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const bucket = tierFor(shape).bucket ?? null;
     if (!record || record.difficulty === bucket) return;
-    this.options.tasks.recordShape(taskId, record.shape ?? shape, bucket);
+    this.options.tasks.recordShape(taskId, {}, bucket);
   }
 
   /** Whether a named basis really carries a spec, a plan or a reproduction. */
@@ -5037,11 +5034,7 @@ export class CrewSupervisor {
     // A quiet write, like the kind stamp (S3): the rigor explains what the
     // crewmate was told, it is not a state change, and the facts it was
     // derived from - posture, ask, repo rigor - are all on the record.
-    const stamped: WorkShape = {
-      ...(shape ?? { kind: "unclear", kind_source: "none" }),
-      rigor: decision.rigor,
-    };
-    this.options.tasks.recordShape(taskId, stamped, record.difficulty);
+    this.options.tasks.recordShape(taskId, { rigor: decision.rigor }, record.difficulty);
     return decision.rigor;
   }
 
@@ -5073,11 +5066,7 @@ export class CrewSupervisor {
     }
     if (shape?.autonomy !== undefined) return;
     const autonomy = this.policiesOf(record)?.autonomy.value ?? false;
-    this.options.tasks.recordShape(
-      taskId,
-      { ...(shape ?? { kind: "unclear", kind_source: "none" }), autonomy },
-      record.difficulty,
-    );
+    this.options.tasks.recordShape(taskId, { autonomy }, record.difficulty);
   }
 
   /**
@@ -8874,12 +8863,13 @@ export class CrewSupervisor {
    * sorted keeps its kind. The stamp is a quiet write - no timeline event,
    * no feed line: it explains a routing decision, it is not one.
    *
-   * The verdict is stamped on the row as it stands when the call returns
-   * (INF-83): a model or basis named or cleared while the classifier ran
-   * stays, and the tier is computed from it, so the shape the classifier
-   * was asked about is never written back over that edit. A skip asks
-   * nothing, so one whose named model was cleared meanwhile classifies the
-   * row as it now stands.
+   * The verdict is written as the host's stamp onto the row as it stands
+   * when the call returns (INF-83, INF-416 piece F): a model, a basis or
+   * any other field a person owns, named or cleared while the classifier
+   * ran, stays, and the tier is computed from that row. The shape the
+   * classifier was asked about is never written back. A skip asks nothing,
+   * so one whose named model was cleared meanwhile classifies the row as
+   * it now stands.
    */
   private async classifyQueued(record: TaskRecord): Promise<void> {
     const shape = this.queuedShape(record);
@@ -8894,15 +8884,15 @@ export class CrewSupervisor {
     const now = this.queuedShape(current);
     if (classified.kind_source === `${KIND_SOURCE.skipped}override` && !now.override_model_id)
       return this.classifyQueued(current);
-    const stamped: WorkShape = {
-      ...now,
+    const stamp = {
       kind: classified.kind,
       kind_source: classified.kind_source,
       ...(classified.kind_detail ? { kind_detail: classified.kind_detail } : {}),
       deliverable: classified.deliverable,
     };
+    const stamped: WorkShape = { ...now, ...stamp };
     if (stamped.kind_source === now.kind_source && stamped.deliverable === now.deliverable) return;
-    this.options.tasks.recordShape(record.id, stamped, tierFor(stamped).bucket ?? null);
+    this.options.tasks.recordShape(record.id, stamp, tierFor(stamped).bucket ?? null);
   }
 
   /**
@@ -8988,7 +8978,7 @@ export class CrewSupervisor {
       // A task that waits for its computer chooses its model once that
       // computer is back, among its own subscriptions.
       const automatic = this.automaticFor(record);
-      if (!automatic) this.automaticWaits.delete(taskId);
+      if (!automatic) this.options.tasks.setPlacementWait(taskId, null);
       const ignoreAsk = options.ignoreAsk || record.shape?.placement_fallback_accepted === true;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
       const choice =
@@ -9008,7 +8998,8 @@ export class CrewSupervisor {
         if (moved()) return this.dispatchQueuedTask(taskId, options);
         // A wait whose computers were compared says why; another keeps what was said.
         const waiting = choice && "wait" in choice ? choice : undefined;
-        const wait = waiting?.wait ?? this.automaticWaits.get(taskId) ?? UNCOMPARED_WAIT;
+        const wait =
+          waiting?.wait ?? this.options.tasks.get(taskId)?.shape?.placement_wait ?? UNCOMPARED_WAIT;
         this.options.tasks.waitForPlacement(taskId, ignoreAsk, wait.words);
         this.sayAutomaticWait(record, wait);
         // No computer serves the level it asked for: held on that level's
@@ -9019,7 +9010,7 @@ export class CrewSupervisor {
         }
         return;
       }
-      if (selected) this.automaticWaits.delete(taskId);
+      if (selected) this.options.tasks.setPlacementWait(taskId, null);
       const target = selected ? selected.computerId : this.placementOf(record);
       const ready = !target || this.options.machines?.ready(target, taskId) === true;
       // One that waits for its own sign-in there tries nothing until it
@@ -9194,7 +9185,7 @@ export class CrewSupervisor {
       this.options.tasks.clearStartAttempt(now.id);
       return;
     }
-    if (this.automaticWaits.has(record.id)) {
+    if (now.shape?.placement_wait) {
       this.options.tasks.clearStartAttempt(now.id);
       return;
     }
@@ -9293,7 +9284,7 @@ export class CrewSupervisor {
         return updateStartRefusal(handle, place?.who ?? "the computer it runs on");
       }
     }
-    const automaticWait = this.automaticWaits.get(record.id)?.words;
+    const automaticWait = now?.shape?.placement_wait?.words;
     if (now?.status !== "active" && automaticWait) return `${handle}: ${automaticWait}`;
     if (now?.status !== "active") {
       const notice = readStartNotice(now?.startNotice);

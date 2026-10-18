@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queued-edits-and-waits-stay",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A change you make while a task is being read stays",
+      "body": "Naming or clearing a model or a basis while a queued task is still being read no longer gets written back over. A task waiting for a computer with room also keeps the words that say why after you quit and reopen, and Activity does not repeat that line.",
+      "noPicture": "The same Details and Activity rows; the difference is that an edit and a restart no longer undo them, which one still of the open app does not show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

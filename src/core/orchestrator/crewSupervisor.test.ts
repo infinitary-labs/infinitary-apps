@@ -17591,8 +17591,9 @@ describe("the deliverable axis (Task B)", () => {
     const filed = tasks.discoveredFrom(found.taskId)[0];
     if (!filed) throw new Error("no follow-up was filed");
     const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
-    // Firstmate names the origin as the follow-up's basis.
-    tasks.recordShape(filed.id, { kind: "unclear", kind_source: "none", basis: originKey }, null);
+    // Firstmate names the origin as the follow-up's basis. The stamp writer
+    // no longer accepts a basis, so the edit goes through the field writer.
+    tasks.updateFields(filed.id, { basis: originKey }, "firstmate");
 
     await supervisor.startQueuedNow(filed.key);
     await tick();
@@ -21252,5 +21253,71 @@ describe("an Automatic wait in Activity", () => {
       expect(details()).toBe(wait.words);
     }
     expect(lines()).toEqual([`"Fix the ledger totals": ${waits[0]?.words}`]);
+  });
+
+  // INF-416 piece F (T5): the words lived in supervisor memory, so a restart
+  // forgot them and said the line again. They are not the could-not-start notice.
+  it("keeps one line and its words across a restart", async () => {
+    const dir = scratchDir("infinitary-automatic-restart-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const wait = compared({
+      rejections: ["cpu-busy"],
+      capacity: { cpu: 0.2, memoryBytes: 5 * 1024 ** 3 },
+    });
+    const { supervisor, repos, tasks, events, db, paths, workspace } = setup(fakeCrewmate(), {
+      automatic: { choose: async () => ({ wait }) },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "restart-wait",
+      title: "Fix the ledger header",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "when-ready",
+    });
+    const lines = () =>
+      events.flatMap((event) =>
+        event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
+      );
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);
+    expect(tasks.get(task.id)?.startNotice ?? null).toBeNull();
+
+    await supervisor.disposeAll();
+    const restartedEvents: FmEvent[] = [];
+    const restartedTasks = new TaskService({ db, strict: true });
+    const restarted = new CrewSupervisor({
+      ...crewSessions(paths, async () => fakeCrewmate()),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: restartedTasks,
+      cardStore: new CardStore(db),
+      inbox: new InboxStore(db),
+      paths,
+      broadcastEvent: (event) => {
+        restartedEvents.push(event);
+      },
+      broadcastCards: () => {},
+      automaticPlacement: { choose: async () => ({ wait }) } as unknown as AutomaticPlacement,
+      machines: {} as CrewMachines,
+      router: { dynamicEnabled: () => true } as unknown as import("../routing/router").Router,
+    });
+    const restartedRecord = restartedTasks.get(task.id);
+    if (!restartedRecord) throw new Error("the waiting task did not survive the restart");
+    expect(restartedRecord.shape?.placement_wait).toEqual(wait);
+    expect(restartedRecord.startNotice ?? null).toBeNull();
+    expect(restarted.runsOnFact(restartedRecord)?.reason).toBe(wait.words);
+    await restarted.dispatchQueuedTask(task.id);
+    expect(
+      restartedEvents.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : [])),
+    ).toEqual([]);
+    expect(restartedTasks.get(task.id)?.shape?.placement_wait).toEqual(wait);
+    expect(restarted.runsOnFact(restartedTasks.get(task.id) as TaskRecord)?.reason).toBe(
+      wait.words,
+    );
+    expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);
+    await restarted.disposeAll();
   });
 });

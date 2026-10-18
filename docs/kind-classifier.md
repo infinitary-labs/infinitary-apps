@@ -8,7 +8,8 @@ S3 is what fills that hole - one bounded call on the cheapest slotted model that
 
 `CrewSupervisor.classifyShape` is the only caller.
 It runs in the spawn path before routing - at `commission` for an immediate spawn, at `dispatchQueuedTask` for a queued row when its gate opens - so a queued row is sorted against what it was commissioned with, as late as that can still change the outcome.
-A queued row's verdict is stamped on the row as it stands when the call returns, so a model or basis named or cleared while the classifier ran stays, and the tier is computed from it (`CrewSupervisor.classifyQueued`, INF-83).
+A queued row's verdict is written as the host's stamp fields onto the row as it stands when the call returns (`TaskService.recordShape`, `HOST_STAMP_FIELDS`).
+A model, a basis or any other field a person owns (`CAPTAIN_OWNED_SHAPE_FIELDS`), named or cleared while the classifier ran, stays, and the tier is computed from that row (`CrewSupervisor.classifyQueued`, INF-83, INF-416 piece F).
 
 Three shapes are never classified, because the captain's table decides them *above* the kind and a call could only cost quota:
 

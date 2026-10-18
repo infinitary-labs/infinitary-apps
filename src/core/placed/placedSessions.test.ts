@@ -1858,12 +1858,12 @@ describe("a task that runs on a computer that runs work", () => {
   });
 
   // INF-97: INF-40 started on the Mac mini before its home moved Firstmate
-  // 3000's folder into Infinitary's. The move re-pointed the project but
-  // kept the record of a task on another computer as it was, and its
-  // reviewed open_change read the branch in the older folder's copy of the
-  // project, which never received it: "git -C .../firstmate-3000/fleet/
-  // infinitary rev-parse fm/task-68b12f57 ... unknown revision".
-  it("opens a reviewed change from the project's folder once the home's folder has moved, never from the older copy its record names (INF-97)", async () => {
+  // 3000's folder into Infinitary's. A reviewed open_change read the branch
+  // in the older folder's copy of the project, which never received it:
+  // "git -C .../firstmate-3000/fleet/infinitary rev-parse fm/task-68b12f57
+  // ... unknown revision". The move now rewrites the task's record of this
+  // Mac's project folder, and the open still reads the project's folder now.
+  it("opens a reviewed change from the project's folder once the home's folder has moved, never from the older copy (INF-97)", async () => {
     const project = await gitProject();
     const at = await world((repo) => project.forge(Buffer.alloc(0), repo?.path));
     const { repo } = await adoptHere(at.home().repos, project.home);
@@ -1882,9 +1882,9 @@ describe("a task that runs on a computer that runs work", () => {
 
     const moved = await moveProjectFolder(at, repo.path);
     const home = at.home();
-    // As the move leaves them: the project in its new folder, the task's record naming the older one.
+    // The project and the task's record of it both name the new folder.
     expect(home.repos.get(repo.id)?.path).toBe(moved);
-    expect(home.tasks.get("t-moved")?.repoDir).toBe(repo.path);
+    expect(home.tasks.get("t-moved")?.repoDir).toBe(moved);
     const requests = api.requests.length;
     await home.supervisor.steerCrewmate("t-moved", "Open the change.");
     // This turn: open_change, then its answer.
@@ -1913,7 +1913,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     const moved = await moveProjectFolder(at, repo.path);
     const home = at.home();
-    expect(home.tasks.get("t-land")?.repoDir).toBe(repo.path);
+    expect(home.tasks.get("t-land")?.repoDir).toBe(moved);
     await at.inReach("t-land");
     const landed = await home.supervisor.settleTaskDetailed(
       "t-land",
@@ -2657,7 +2657,8 @@ function recordOf(home: PlacedHome, taskId: string) {
  * The home's one-time move into Infinitary's folder (docs/saved-data-compatibility.md,
  * "The one-time move"), for a project's folder: with the home stopped, the
  * folder is copied to a new one, the older one staying as it was, and the
- * move's own rewrite re-points the home's records. Answers the new folder.
+ * move's own rewrite re-points the home's records, including a task held on
+ * another computer. Answers the new folder.
  */
 async function moveProjectFolder(
   at: Awaited<ReturnType<typeof world>>,

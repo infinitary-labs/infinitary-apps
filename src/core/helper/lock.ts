@@ -15,6 +15,13 @@ import { join } from "node:path";
  * One process at a time works from a data folder (docs/helper.md): the one
  * that holds `running.lock`, which names its process. A lock whose process
  * is gone, or that was written before this computer last started, is taken over. The folder is made 0700 and the file 0600.
+ *
+ * Whether a holder is still the process that wrote a lock is one rule
+ * (`holderAlive`): the process is running, and the lock was written since
+ * this computer last started (`bootedAt`). The move lock and the older
+ * app's window lock read it. The route lock does not: a write takes
+ * milliseconds, so a lock older than ten seconds is stale without reading
+ * a process number (`helper/route.ts`).
  */
 
 const LOCK_FILE = "running.lock";
@@ -41,6 +48,11 @@ export function processAlive(pid: number): boolean {
   }
 }
 
+/** When this computer last started, in milliseconds since the epoch. */
+export function bootedAt(now = Date.now()): number {
+  return now - uptime() * 1000;
+}
+
 function holderIn(path: string): number | null {
   try {
     const pid = Number(readFileSync(path, "utf8").trim());
@@ -61,17 +73,32 @@ function holderIn(path: string): number | null {
  */
 export function predatesBoot(path: string): boolean {
   try {
-    return lstatSync(path).mtimeMs < Date.now() - uptime() * 1000 - 2000;
+    // Two seconds of slack, so a lock written as the computer starts is not
+    // read as older than the start.
+    return lstatSync(path).mtimeMs < bootedAt() - 2000;
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether `pid` still holds the lock at `path`: the process is running, and
+ * the lock was written since this computer last started. A lock from before
+ * that start names a process that ended with it, whoever has its number now.
+ */
+export function holderAlive(
+  path: string,
+  pid: number,
+  alive: (pid: number) => boolean = processAlive,
+): boolean {
+  return !predatesBoot(path) && alive(pid);
 }
 
 /** The process that holds the folder now, or null when none does. */
 export function folderHolder(dir: string, alive = processAlive): number | null {
   const path = join(dir, LOCK_FILE);
   const pid = holderIn(path);
-  return pid !== null && !predatesBoot(path) && alive(pid) ? pid : null;
+  return pid !== null && holderAlive(path, pid, alive) ? pid : null;
 }
 
 /**
@@ -95,7 +122,7 @@ export function lockFolder(
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       const holder = holderIn(path);
       if (holder === pid && heldHere.has(path)) throw new FolderBusyError(pid);
-      if (holder !== null && holder !== pid && !predatesBoot(path) && alive(holder))
+      if (holder !== null && holder !== pid && holderAlive(path, holder, alive))
         throw new FolderBusyError(holder);
       // Left by a process that is gone, or by an earlier one that had this
       // process's number: take it over.

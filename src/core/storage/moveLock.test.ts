@@ -3,12 +3,12 @@ import { uptime } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { processAlive } from "../helper/lock";
 import {
   acquireMoveLock,
   moveLockHeld,
   moveLockPathFor,
   moveLockRunning,
-  processAlive,
   releaseMoveLock,
 } from "./moveLock";
 

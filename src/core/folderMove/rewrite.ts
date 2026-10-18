@@ -11,6 +11,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import Database from "better-sqlite3";
 import { KNOWLEDGE_DB_FILE } from "../storage/knowledgeStore";
 import type { OutsideChange } from "./record";
+import { rewriteTaskFolders } from "./taskFolders";
 import type { GitLink } from "./tree";
 
 /**
@@ -96,11 +97,10 @@ export class DatabaseCheckError extends Error {
  * The whole-path columns of the main database (docs/saved-data-compatibility.md,
  * "The one-time move"): a project's folder, a task's project and working
  * copy and a Pi crewmate's session file. A task held on another computer
- * keeps its row as it is, for its session file names that computer's file;
- * its project folder names this Mac's, which the row is left naming in the
- * older folder, so this Mac reads such a task's branch in its project's
- * folder, never in the one its row names (`PlacedCopies.bringBranchHome`,
- * docs/helper.md "Reading its branch here").
+ * keeps its conversation file, which names that computer's file. Its project
+ * folder and working copy name this Mac's, so they are rewritten with every
+ * other task's (`rewriteTaskFolders`). A home that already moved is repaired
+ * the next time it opens (`repairMovedTaskFolders`).
  */
 function rewriteMainDatabase(db: Database.Database, froms: Froms, to: string): void {
   const update = (table: string, column: string, where = "1") => {
@@ -112,8 +112,7 @@ function rewriteMainDatabase(db: Database.Database, froms: Froms, to: string): v
     for (const from of froms) statement.run({ from, to, prefix: `${from}${sep}` });
   };
   update("repos", "path");
-  const here = columns(db, "tasks").has("device_id") ? "device_id IS NULL" : "1";
-  for (const column of ["repo_dir", "worktree_dir", "session_file"]) update("tasks", column, here);
+  rewriteTaskFolders(db, froms, to);
   if (columns(db, "plugins").has("source")) update("plugins", "spec", "source = 'path'");
   // Settings hold JSON: the Firstmate's own session file is one.
   const settings = db.prepare("SELECT key, value FROM settings").all() as {

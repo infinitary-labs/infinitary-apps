@@ -314,12 +314,12 @@ export class PlacedCopies {
    * commits this Mac lacks cross, as a bundle, into `refs/heads/<branch>`
    * of the task's repository here. Answers that repository, where this
    * Mac's git reads the branch: the project's folder now, or this Mac's
-   * default workspace for a task with no project, never the folder the
-   * record named when the task started, which the one-time folder move
-   * leaves behind for a task on another computer. Out of reach, this Mac
-   * reads what it brought last. Ordinary reads log failures; a source
-   * handoff passes `strict` to refuse a stale or missing branch before
-   * briefing its successor.
+   * default workspace for a task with no project. The record names that
+   * folder too, including after this Mac's folder moved; the read uses the
+   * project's folder as it stands, which can have moved again since the
+   * task started. Out of reach, this Mac reads what it brought last.
+   * Ordinary reads log failures; a source handoff passes `strict` to refuse
+   * a stale or missing branch before briefing its successor.
    */
   bringBranchHome(taskId: string, strict = false): Promise<string | undefined> {
     return this.serial(taskId, async () => {

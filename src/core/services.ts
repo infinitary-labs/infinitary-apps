@@ -1,5 +1,5 @@
 import { mkdir, readdir } from "node:fs/promises";
-import { uptime, userInfo } from "node:os";
+import { userInfo } from "node:os";
 import { join } from "node:path";
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { CONNECTION_PORT } from "@shared/connection";
@@ -105,6 +105,7 @@ import { readGitLabOpenChanges } from "./forge/providers/gitlab/changes";
 import { gitlabApiBaseFor } from "./forge/providers/gitlab/client";
 import { GitLabForge } from "./forge/providers/gitlab/gitlabForge";
 import { appLauncher } from "./helper/launcher";
+import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
@@ -2177,7 +2178,7 @@ export async function createServices(
     emit: (list) => emit("inf:devices", list),
     onProblem: (text) => broadcastEvent({ type: "firstmate_note", text }),
     now: ticker.now,
-    bootedAt: () => Date.now() - uptime() * 1000,
+    bootedAt,
   });
   olderComputers = computers;
   devicesChanged = () => {

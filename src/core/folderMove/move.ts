@@ -10,14 +10,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { folderHolder, predatesBoot } from "../helper/lock";
+import { folderHolder, holderAlive, processAlive } from "../helper/lock";
 import { assertSavedDataCompatible } from "../storage/db";
-import {
-  acquireMoveLock,
-  moveLockPathFor,
-  processAlive,
-  releaseMoveLock,
-} from "../storage/moveLock";
+import { acquireMoveLock, moveLockPathFor, releaseMoveLock } from "../storage/moveLock";
 import { isProfileRetired } from "../storage/retiredProfile";
 import { readStartAtLogin } from "../storage/startAtLoginRecord";
 import { mapClaudeSessions } from "./claudeSessions";
@@ -157,7 +152,7 @@ function lastOpened(dir: string): number | undefined {
 /**
  * Whether Chromium's single-instance lock in `dir` names a live process on
  * this computer. A lock written before this computer last started names a
- * window that ended with that start, whoever has its number now (`predatesBoot`).
+ * window that ended with that start, whoever has its number now (`holderAlive`).
  */
 export function chromiumHolds(
   dir: string,
@@ -171,9 +166,8 @@ export function chromiumHolds(
   } catch {
     return false;
   }
-  if (predatesBoot(lock)) return false;
   const match = /^(.*)-(\d+)$/.exec(target);
-  return Boolean(match && match[1] === hostname && alive(Number(match[2])));
+  return Boolean(match && match[1] === hostname && holderAlive(lock, Number(match[2]), alive));
 }
 
 function copyOptionsOf(deps: MoveDeps): CopyOptions {

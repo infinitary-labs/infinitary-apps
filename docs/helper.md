@@ -614,7 +614,8 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **Reading its branch here.**
   Before this Mac's own git reads a placed task's branch - to open its change, to check a declared repair, to merge it, to merge it locally - the branch is brought home as a bundle of only the commits this Mac lacks, into `refs/heads/<branch>` of the task's repository here (`bringBranchHome`, called by `PrCiService` and `SettleService`).
   This Mac's git reads it in that repository: the project's folder now, or this Mac's default workspace for a task with no project (`bringBranchHome` answers it).
-  The folder the record named when the task started can be another: the one-time move leaves a placed task's record naming the older folder (`docs/saved-data-compatibility.md`, "The one-time move").
+  The record names this Mac's project folder, including after this Mac's folder moved (`docs/saved-data-compatibility.md`, "The one-time move").
+  The read uses the project's folder as it stands, which can have moved again since the task started.
   Out of reach, this Mac reads what it brought last.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").

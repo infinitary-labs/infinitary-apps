@@ -71,10 +71,11 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
    In `work/`, what a live run, its service manager or a controller may still write while the copy is made stays behind too: Electron's own `chromium/`, `service.log`, `work.log`, the route and its lock, `running.lock`, the display's key, `worktree-trash` and `task-channel` (`WORK_LEFT_BEHIND`); the next run makes each again.
 5. It checks the copy file by file: the same names, kinds, sizes, permissions and link targets, and every file's SHA-256.
 6. It rewrites the app's own paths in the copy, only where a whole value is a path into the older folder, by either name of it (as the app named it, and as the disk resolves it): the projects' and tasks' folders, a Pi crewmate's session file and the settings' JSON in the database, `work/installed.json` and `work/left.json`, links whose target is absolute, and git's links between working copies and repositories in the folder.
-   A task held on another computer keeps its row as it is, for its session file names that computer's file.
-   That computer's own move leaves the row naming its older folder until the conversation's next turn there ends, and the computer names its new folder in its place each time the home opens the conversation there (`docs/helper.md`, "Holding a conversation").
+   A task held on another computer keeps its conversation file, which names that computer's file.
+   Its project folder and working copy name this Mac's, and the move rewrites them with every other task's.
+   A home that already moved, and so still names the older folder on those rows, is repaired the next time it opens, from the move's record.
+   That computer's own move leaves its conversation naming the older folder until the next turn there ends, and the computer names its new folder in its place each time the home opens the conversation there (`docs/helper.md`, "Holding a conversation").
    Before its Pi conversation resumes there, the computer brings into its copy any turns an earlier version wrote to the older folder's copy after the move (`docs/helper.md`, "Holding a conversation").
-   Its project folder names this Mac's, and the row is left naming it in the older folder, so this Mac reads such a task's branch in its project's folder, never in the one its row names (`docs/helper.md`, "Reading its branch here").
    Prose keeps the paths it was written with, and Claude's transcript copies stay byte for byte.
    Opening the copied database replays its committed write-ahead log, so work the older app had not folded in comes over; the move then folds it in and checks every table keeps its rows and SQLite's own check passes.
 7. It writes the record `verified`, writes `retired-profile.json` into the older folder, and renames the staged copy into place in one rename.

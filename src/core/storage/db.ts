@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { type CardAction, migrateLegacyActions } from "@shared/cards";
 import { forgeOf } from "@shared/forge";
 import Database from "better-sqlite3";
+import { repairMovedTaskFolders } from "../folderMove/taskFolders";
 import { INBOX_GRACE_MS, inboxContentHash } from "./inboxStore";
 import { migrateGpt6Slots, migrateModelSlots } from "./migrateModelSlots";
 import { ensureRepoProject, ensureScratchProject, SCRATCH_PROJECT_ID } from "./projectStore";
@@ -1694,6 +1695,10 @@ export function openDatabase(userDataDir: string, throughVersion?: number): AppD
   db.pragma("foreign_keys = ON");
   registerViewFunctions(db);
   migrate(db, throughVersion);
+  // A home that already moved still names the older folder on a task held
+  // elsewhere. The rewrite is idempotent, and a folder with no move record
+  // is left alone (folderMove/taskFolders.ts).
+  repairMovedTaskFolders(userDataDir, db);
   recordPersistedFormat(userDataDir);
   return db;
 }

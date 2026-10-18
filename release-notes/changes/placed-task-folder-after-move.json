@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-task-folder-after-move",
+      "reason": "A task held on another computer keeps its conversation file when this Mac's folder moves, and its project folder is rewritten with every other task's. A home that already moved is repaired the next time it opens. Opening and merging that task already read the project's current folder, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
-import { predatesBoot } from "../helper/lock";
+import { holderAlive, predatesBoot, processAlive } from "../helper/lock";
 
 /**
  * The lock a one-time move of a data folder holds (a later step writes it).
@@ -31,16 +31,6 @@ export function moveLockPathFor(dataRoot: string): string {
   return join(dirname(dataRoot), `${basename(dataRoot)}${MOVE_LOCK_SUFFIX}`);
 }
 
-/** Whether a process with this id exists; a process we may not signal still exists. */
-export function processAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
 /**
  * True while a move holds the lock: the file is there, written since this
  * computer last started, and it is unreadable or names a live process.
@@ -52,9 +42,10 @@ export function moveLockHeld(lockPath: string, alive: (pid: number) => boolean =
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
   }
-  if (predatesBoot(lockPath)) return false;
   const lock = raw === undefined ? undefined : parseMoveLock(raw);
-  return lock === undefined || alive(lock.pid);
+  if (lock) return holderAlive(lockPath, lock.pid, alive);
+  // Unreadable, and not from before this computer last started: still held.
+  return !predatesBoot(lockPath);
 }
 
 /**
@@ -86,12 +77,11 @@ export function moveLockRunning(
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
   }
-  if (predatesBoot(lockPath)) return false;
   const lock = raw === undefined ? undefined : parseMoveLock(raw);
   if (lock) {
-    if (!alive(lock.pid)) return false;
+    if (!holderAlive(lockPath, lock.pid, alive)) return false;
     began = Date.parse(lock.startedAt);
-  }
+  } else if (predatesBoot(lockPath)) return false;
   // Unreadable: held, and counted from the file's own time.
   if (Number.isNaN(began)) {
     try {

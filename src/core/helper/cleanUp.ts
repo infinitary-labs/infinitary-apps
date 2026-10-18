@@ -76,10 +76,17 @@ const CLONES = ["repos", "default-workspace"] as const;
 
 /**
  * What a finished removal also takes, beside the route the home's SSH
- * connection published: the logs, and Electron's own files. None of it is
- * the person's.
+ * connection published: the logs, Electron's own files, and the
+ * `launch-fact.json` protocol 9.0 kept, which nothing reads now. None of it
+ * is the person's.
  */
-const LEFTOVERS = ["work.log", "service.log", "chromium", "display.auth"] as const;
+const LEFTOVERS = [
+  "work.log",
+  "service.log",
+  "chromium",
+  "display.auth",
+  "launch-fact.json",
+] as const;
 
 export type CleanUpOptions = {
   dataDir: string;

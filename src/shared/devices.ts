@@ -636,6 +636,13 @@ export const deviceGrantSchema = z.strictObject({
   cert: z.string().min(1).max(8192),
   /** How it reaches its home; absent, at `at`. */
   via: homeViaSchema.optional(),
+  /**
+   * For a computer that runs work: whether it runs on its home's own Mac, as
+   * the home found where it joined from (`onThisMac` on the home's list) and
+   * says in each welcome (docs/helper.md, "In the background"). Absent until
+   * the home has said it.
+   */
+  onHomeMac: z.boolean().optional(),
 });
 export type DeviceGrant = z.infer<typeof deviceGrantSchema>;
 

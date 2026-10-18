@@ -9,6 +9,7 @@ import {
   parsePairingLink,
   splitDialAddress,
 } from "@shared/devices";
+import type { WebSocket } from "ws";
 import { isLoopback, isThisMachine, LOOPBACK_ADDRESS } from "../connection/addresses";
 import {
   claimLink,
@@ -324,9 +325,14 @@ async function findWithLink(
     return joinWithLink(options, link, place, { probed: true, asked: false });
   }
   joinedHome.dialAt(grant.at, grant.via);
-  const name = await hearName(grant, options);
-  if (name) joinedHome.name(name);
-  return { ok: true, grant, name: name ?? joined.name, kept: null, again: true };
+  const heard = await hearHome(grant, joinHearing(options));
+  return {
+    ok: true,
+    grant: keepHeard(joinedHome, grant, heard),
+    name: heard?.name ?? joined.name,
+    kept: null,
+    again: true,
+  };
 }
 
 /**
@@ -516,10 +522,16 @@ async function joinWithLink(
   const joinedHome = new JoinedHome(dataDir, () => {});
   joinedHome.join(grant, (options.now ?? Date.now)());
 
-  // Once, to hear the home say its own name.
-  const name = await hearName(grant, options);
-  if (name) joinedHome.name(name);
-  return { ok: true, grant, name, kept, again: false };
+  // Once, to hear the home say its own name, and where this computer runs,
+  // before its background is set up.
+  const heard = await hearHome(grant, joinHearing(options));
+  return {
+    ok: true,
+    grant: keepHeard(joinedHome, grant, heard),
+    name: heard?.name ?? null,
+    kept,
+    again: false,
+  };
 }
 
 /** How a dial with the link goes: within the join's time, where the join was told to dial. */
@@ -635,26 +647,69 @@ export function fetchedLauncher(kept: string | null): Launcher | null {
   return { executable: join(kept, "Contents", "MacOS", basename(kept, ".app")), args: [] };
 }
 
-/** Dials the home once with a fresh grant and answers the name its welcome says, if any. */
-async function hearName(grant: DeviceGrant, options: JoinOptions): Promise<string | null> {
+/**
+ * What the home's welcome says to a computer that runs work: its own name,
+ * and whether this computer runs on the home's own Mac; null for what it
+ * did not say.
+ */
+export type HomeHeard = { name: string | null; onHomeMac: boolean | null };
+
+/** How a dial only to hear the home goes: the dial, the contract it speaks, and its time. */
+export type Hearing = {
+  dial: (grant: DeviceGrant) => Promise<WebSocket>;
+  protocolVersion?: string;
+  timeoutMs?: number;
+};
+
+/** The join's one dial goes where the join was told to dial, within the join's time. */
+function joinHearing(options: JoinOptions): Hearing {
+  return {
+    dial: (dialed) => dialHome(dialed, linkDial(options)),
+    ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
+    ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+  };
+}
+
+/**
+ * Dials the home once with `grant`, only to hear its welcome, and answers
+ * what it said; null when it did not answer. Its hello says so, and the home
+ * counts the dial as nothing of the work here in reach.
+ */
+export async function hearHome(grant: DeviceGrant, hearing: Hearing): Promise<HomeHeard | null> {
   return new Promise((resolve) => {
     let settled = false;
     const link = new HomeLink({
       grant,
       as: "work",
-      dial: (dialed) => dialHome(dialed, linkDial(options)),
-      ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
+      dial: hearing.dial,
+      ...(hearing.protocolVersion ? { protocolVersion: hearing.protocolVersion } : {}),
       onPush: () => {},
-      ...(options.timeoutMs === undefined ? {} : { welcomeTimeoutMs: options.timeoutMs }),
-      // Only the name: the home counts this dial as nothing of the work here in reach.
+      ...(hearing.timeoutMs === undefined ? {} : { welcomeTimeoutMs: hearing.timeoutMs }),
       nameOnly: true,
       onState: (state) => {
         if (settled || state.contact === "reaching") return;
         settled = true;
         link.close();
-        resolve(state.contact === "in-reach" ? state.name : null);
+        resolve(
+          state.contact === "in-reach" ? { name: state.name, onHomeMac: state.onHomeMac } : null,
+        );
       },
     });
     link.start();
   });
+}
+
+/**
+ * Keeps what the home's welcome said - its name, and where this computer
+ * runs - and answers `grant` as kept.
+ */
+export function keepHeard(
+  joinedHome: JoinedHome,
+  grant: DeviceGrant,
+  heard: HomeHeard | null,
+): DeviceGrant {
+  if (heard?.name) joinedHome.name(heard.name);
+  if (heard?.onHomeMac == null) return grant;
+  joinedHome.onHomeMac(heard.onHomeMac);
+  return { ...grant, onHomeMac: heard.onHomeMac };
 }

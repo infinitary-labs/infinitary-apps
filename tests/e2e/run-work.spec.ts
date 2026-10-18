@@ -1097,11 +1097,12 @@ test("a Mac added by its address over Remote Login: the copy joins through the h
   expect(readFileSync(installed.service?.file ?? "", "utf8")).toContain(
     them.background.holds(programOf(kept)),
   );
-  // Another user here, added at this Mac's own address: the home's SSH session
-  // comes from this Mac, so its agent keeps the low priority (captain on INF-255).
+  // Another user here, added at this Mac's own address: the home's look found
+  // it on this Mac and its welcome says so, so its agent keeps the low
+  // priority (captain on INF-255), and its grant keeps that word.
   expect(readFileSync(installed.service?.file ?? "", "utf8")).not.toContain("ProcessType");
   const grant = new JoinedHome(them.dataDir, () => {}).read()?.grant;
-  expect(grant).toMatchObject({ deviceId: device.id, via: "ssh" });
+  expect(grant).toMatchObject({ deviceId: device.id, via: "ssh", onHomeMac: true });
   if (!grant) throw new Error("Nothing joined there.");
   // The home's SSH connection runs the copy's own controller, which keeps its route there.
   await expect

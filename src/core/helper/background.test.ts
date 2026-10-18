@@ -101,14 +101,12 @@ describe("running in the background", () => {
   // INF-247 and the captain on INF-255 ("Keep low priority for another user
   // on your own Mac"): a separate Mac's run starts as an app, never as a
   // throttled daemon, while another user's on the home's own Mac keeps the
-  // low priority it always had.
+  // low priority it always had. The captain's pick on INF-460 ("Carry the
+  // separate-Mac fact from your Mac on the work grant as a typed field"):
+  // what the home said decides, kept on the grant.
   it("starts a separate Mac's run as an app, and another user's on the home's own Mac as before", async () => {
-    const agentFor = async (
-      grant: Pick<DeviceGrant, "kind" | "at" | "via">,
-      homeSshFrom?: string,
-    ) => {
-      const { ctx: plain } = context();
-      const ctx = homeSshFrom ? { ...plain, homeSshFrom } : plain;
+    const agentFor = async (grant: Pick<DeviceGrant, "kind" | "at" | "via" | "onHomeMac">) => {
+      const { ctx } = context();
       const own = createKeyIdentity("Firstmate device");
       new JoinedHome(ctx.dataDir, () => {}).join(
         {
@@ -131,10 +129,19 @@ describe("running in the background", () => {
     // Another user on the home's own Mac, joined by the command for one.
     expect(await agentFor({ kind: "work", at: "127.0.0.1:47623" })).not.toContain("ProcessType");
     // A Mac added by its address, which the home's own look found on another
-    // Mac, whatever address the home's SSH session comes from (review INF-255 S2).
+    // Mac (review INF-255 S2).
+    expect(await agentFor({ kind: "mac", at: "127.0.0.1:47623", via: "ssh" })).toContain(
+      "<key>ProcessType</key>\n\t<string>Interactive</string>",
+    );
+    // The Mac mini: `work` through the home's SSH connection, whose grant
+    // names only that connection's far end, as the home said it is
+    // elsewhere; and another user here added at this Mac's own address.
     expect(
-      await agentFor({ kind: "mac", at: "127.0.0.1:47623", via: "ssh" }, "127.0.0.1"),
+      await agentFor({ kind: "work", at: "127.0.0.1:47623", via: "ssh", onHomeMac: false }),
     ).toContain("<key>ProcessType</key>\n\t<string>Interactive</string>");
+    expect(
+      await agentFor({ kind: "work", at: "127.0.0.1:47623", via: "ssh", onHomeMac: true }),
+    ).not.toContain("ProcessType");
   });
 
   it("starts at the next login when the user has no login session to give it to", async () => {

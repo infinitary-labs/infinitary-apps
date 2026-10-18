@@ -496,7 +496,8 @@ describe("device pairing", () => {
     const outcome = claimWith(pairing, pairing.invite({ kind: "work" }).link, "work", "Mini", mini);
     if (!outcome.ok) throw new Error(outcome.reason);
     const { deviceId } = outcome.grant;
-    expect(pairing.admit(shown(mini))).toEqual({ id: deviceId, kind: "work" });
+    // With where it joined from, which its work hears in its welcome.
+    expect(pairing.admit(shown(mini))).toEqual({ id: deviceId, kind: "work", onThisMac: false });
     expect(pairing.holds(deviceId)).toBe(true);
     expect(pairing.admit(shown(null))).toBeNull();
     expect(pairing.admit(shown(createKeyIdentity("Firstmate device")))).toBeNull();

@@ -27,19 +27,20 @@ export function homePlace(
  * for another user on your own Mac"; docs/helper.md, "In the background" and
  * "Holding a conversation").
  *
- * The address the grant dials tells, whatever its kind: loopback or this
- * Mac's own is the home's own Mac, and another address a separate Mac, as
- * for a Mac that joined as `work` before a Mac could do both. Through the
- * home's SSH connection the grant names only that connection's far end, so
- * its kind is all it tells: the home's look makes a join from its own Mac
- * `work`, and an older `work` join over SSH reads the same. `separateMac`
- * (`./background.ts`) asks the home's SSH session, and the agent's file
- * that keeps its answer, before this.
+ * The home's own word decides: where its list found the computer joined
+ * from, which each welcome says and the grant keeps (`onHomeMac`). A grant
+ * that has not heard it yet reads the address it dials, whatever its kind:
+ * loopback or this Mac's own is the home's own Mac, and another address a
+ * separate Mac, as for a Mac that joined as `work` before a Mac could do
+ * both. Through the home's SSH connection the grant names only that
+ * connection's far end, so its kind is all it tells: the home's look makes
+ * a join from its own Mac `work`.
  */
 export function onHomeMac(
-  grant: Pick<DeviceGrant, "kind" | "at" | "via">,
+  grant: Pick<DeviceGrant, "kind" | "at" | "via" | "onHomeMac">,
   interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>,
 ): boolean {
+  if (grant.onHomeMac !== undefined) return grant.onHomeMac;
   const place = homePlace(grant, interfaces);
   return place.overSsh ? grant.kind === "work" : place.thisMac;
 }

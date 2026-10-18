@@ -59,6 +59,8 @@ function computer(
         kind: "work",
         key: own.key,
         cert: own.cert,
+        // What the home's welcome said and the grant keeps.
+        onHomeMac: false,
       },
       1_000,
     );
@@ -165,7 +167,7 @@ describe("Infinitary's run that finds its work in Firstmate 3000's folder", () =
   });
 
   // INF-247: the Mac mini joined as `work` through the home's SSH connection,
-  // and only its agent's file keeps that it is a separate Mac.
+  // and its grant keeps what the home said: that it is a separate Mac.
   it("keeps a separate Mac's agent starting its run as an app when the home reaches it over SSH", async () => {
     const at = computer({ separateOverSsh: true });
     expect(await at.run()).toEqual({ kind: "handed-over" });

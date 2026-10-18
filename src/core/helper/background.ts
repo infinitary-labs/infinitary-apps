@@ -5,7 +5,6 @@ import { basename, dirname, join } from "node:path";
 import { OWN_IDENTITY, type Spelling, workLabelOf, workLabels } from "@shared/codeNames";
 import type { BuildFlavor } from "@shared/userDataFolders";
 import { z } from "zod";
-import { isThisMachine } from "../connection/addresses";
 import { writePrivate } from "../devices/identity";
 import { JoinedHome } from "../devices/joinedHome";
 import { pathsOf } from "../folderMove/due";
@@ -68,13 +67,6 @@ export type BackgroundContext = {
   homeDir: string;
   /** The user's number: the agent runs in that user's own session. */
   uid: number;
-  /**
-   * Where the home's own SSH session comes from, for a command the home
-   * started over Remote Login: the client address `SSH_CONNECTION` names
-   * (`sshSessionFrom`). It tells a separate Mac from the home's own for a
-   * grant that reaches its home through that connection (`separateMac`).
-   */
-  homeSshFrom?: string;
 } & ServiceManager;
 
 /** The agent as `installed.json` records it: its label, and the file it is set up by. */
@@ -122,10 +114,9 @@ export function writeInstalled(dataDir: string, installed: Installed): void {
 
 export function forgetInstalled(dataDir: string): void {
   rmSync(join(dataDir, INSTALLED_FILE), { force: true });
-  rmSync(join(dataDir, LAUNCH_FACT), { force: true });
 }
 
-/** The lines that start an agent's run as an app, which also record that its Mac is a separate one. */
+/** The lines that start an agent's run as an app: a separate Mac's. */
 const STARTS_AS_APP = ["\t<key>ProcessType</key>", "\t<string>Interactive</string>"];
 
 const xml = (text: string) =>
@@ -298,7 +289,7 @@ const launchd: Adapter = {
       servicePlist({
         label: service.label,
         dataDir: context.dataDir,
-        interactive: separateMac(context.dataDir, context.homeSshFrom),
+        interactive: separateMac(context.dataDir),
         ...text,
       }),
     );
@@ -336,70 +327,16 @@ const launchd: Adapter = {
  * Whether the folder runs work for a home on a separate Mac: its agent then
  * starts the run as an app, and its crewmates' builds and tests run at the
  * run's own priority. On the home's own Mac, or with no grant to read, the
- * run keeps low priority (captain on INF-255).
- *
- * The address the grant dials tells (`onHomeMac`). A grant that reaches its
- * home through the home's SSH connection names only that connection's far
- * end: as `mac`, the home's own look found it on another Mac; as `work`, it
- * is another user here or a Mac that joined before a Mac could do both, so
- * the home's own SSH session tells when the home joins or updates it over
- * Remote Login (`homeSshFrom`): from this Mac's own address or loopback only
- * on the home's own Mac. Its installation record keeps that answer, so the run and a move to another label read the typed fact later.
+ * run keeps low priority (captain on INF-255). The grant tells
+ * (`onHomeMac`): what the home's welcome said and the grant keeps, read
+ * each time the agent's file is written and each time the run starts.
  */
 export function separateMac(
   dataDir: string,
-  homeSshFrom?: string,
   interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>,
 ): boolean {
   const joined = new JoinedHome(dataDir, () => {}).read();
-  if (!joined) return false;
-  const { grant } = joined;
-  if (grant.via !== "ssh") return !onHomeMac(grant, interfaces);
-  // A `mac` grant the home's own look already found on another Mac.
-  if (grant.kind !== "work") return true;
-  if (homeSshFrom !== undefined) {
-    const separate = !isThisMachine(homeSshFrom, interfaces?.());
-    keepLaunchFact(dataDir, separate);
-    return separate;
-  }
-  return launchFact(dataDir);
-}
-
-const LAUNCH_FACT = "launch-fact.json";
-const launchFactSchema = z.strictObject({ version: z.literal(1), separateMac: z.boolean() });
-
-function keepLaunchFact(dataDir: string, separateMac: boolean): void {
-  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-  writePrivate(join(dataDir, LAUNCH_FACT), `${JSON.stringify({ version: 1, separateMac })}\n`);
-}
-
-/** Import the old installation's app-owned launch fact once, never at every run. */
-function launchFact(dataDir: string): boolean {
-  const file = join(dataDir, LAUNCH_FACT);
-  try {
-    return launchFactSchema.parse(JSON.parse(readFileSync(file, "utf8"))).separateMac;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-  const { service } = readInstalled(dataDir);
-  if (!service) return false;
-  let separate = false;
-  try {
-    separate = readFileSync(service.file, "utf8").includes(STARTS_AS_APP.join("\n"));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
-  keepLaunchFact(dataDir, separate);
-  return separate;
-}
-
-/**
- * Where the home's own SSH session that started this command comes from:
- * the client address `SSH_CONNECTION` begins with ("client port server
- * port"); none outside an SSH session.
- */
-export function sshSessionFrom(env: NodeJS.ProcessEnv): string | undefined {
-  return env.SSH_CONNECTION?.trim().split(/\s+/)[0] || undefined;
+  return joined ? !onHomeMac(joined.grant, interfaces) : false;
 }
 
 /** The states in which this user's systemd holds the service as running or about to. */
@@ -547,7 +484,6 @@ export async function moveInBackground(
     app: string | null;
   },
 ): Promise<MovedInBackground> {
-  keepLaunchFact(context.dataDir, separateMac(context.dataDir, context.homeSshFrom));
   const adapter = adapterOf(context);
   const service = adapter.service(context, options.label);
   const text = { launcher: options.launcher, env: options.env };
@@ -616,7 +552,6 @@ export function rewriteInBackground(
   service: Service,
   options: { launcher: Launcher; env: Readonly<Record<string, string>>; app: string | null },
 ): void {
-  keepLaunchFact(context.dataDir, separateMac(context.dataDir, context.homeSshFrom));
   adapterOf(context).write(context, service, { launcher: options.launcher, env: options.env });
   writeInstalled(context.dataDir, {
     service,

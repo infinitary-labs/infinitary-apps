@@ -59,8 +59,9 @@ The home answers `welcome` with its own contract version, its journal's `epoch` 
   A first connection is always a reload.
 
 A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/ipc.ts`; `docs/helper.md`, "Versions").
+It carries `onHomeMac` too, from protocol 9.1: whether that computer joined from this Mac itself, as the home's list found it (`onThisMac`, `docs/devices.md`, "Where a computer joins from"), which the computer keeps on its grant and its work's priority follows (`docs/helper.md`, "In the background"); absent while the list does not say.
 Whatever it says, the home hears what a `work` device said of its versions (`onWorkVersion`), and may ask it the update order, and from protocol 8.15 the download order and how far that download got (`docs/devices.md`, "Updating over the connection" and "Downloading over the connection").
-A computer's join dials once only to hear the home's name, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
+A computer's join dials once only to hear the home's name and `onHomeMac`, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
 
 A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
 These waits are sequential, not a single 10-second first-connection limit.

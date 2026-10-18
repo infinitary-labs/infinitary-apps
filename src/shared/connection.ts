@@ -341,6 +341,14 @@ export const homeFrameSchema = z.union([
      * docs/helper.md). Absent for a view.
      */
     takesWork: z.boolean().optional(),
+    /**
+     * For a computer that runs work: whether it runs on the home's own Mac,
+     * as the home found where it joined from (`onThisMac` on its list), which
+     * decides the priority its work runs at (docs/helper.md, "In the
+     * background"). Absent for a view, and while the home's list does not
+     * say (protocol 9.1).
+     */
+    onHomeMac: z.boolean().optional(),
     spellings: spellingsSchema,
   }),
   z.object({

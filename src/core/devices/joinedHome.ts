@@ -116,6 +116,17 @@ export class JoinedHome {
   }
 
   /**
+   * The home said whether this computer runs on the home's own Mac; kept on
+   * the grant, which its background and its run read while the home is out
+   * of reach (docs/helper.md, "In the background").
+   */
+  onHomeMac(onHomeMac: boolean): void {
+    const joined = this.read();
+    if (!joined || joined.grant.onHomeMac === onHomeMac) return;
+    this.write(HOME_FILE, { ...joined, grant: { ...joined.grant, onHomeMac } });
+  }
+
+  /**
    * Stops controlling it: the grant and its key are deleted, and one note says
    * which Mac and why. With `unfinished`, a computer that runs work notes too
    * that removing what Firstmate set up here has begun and not finished; with

@@ -228,6 +228,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   const resources = new ResourceSampler({ memory: options.resourceMemory });
   if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
   let name = joined.name;
+  let onHomeMac = joined.grant.onHomeMac ?? null;
   let said: HomeLinkState | null = null;
   let finish: (how: HelperEnded) => void = () => {};
   const ended = new Promise<HelperEnded>((resolve) => {
@@ -311,7 +312,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
           // The contract its home said in its welcome, which decides whether it keeps project fonts.
           homeVersion: () => link.state().homeVersion,
-          belowUi: !separateMac(dataDir, undefined, options.interfaces),
+          belowUi: !separateMac(dataDir, options.interfaces),
         }),
       )
       .then((held) => {
@@ -523,6 +524,16 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       if (state.name && state.name !== name) {
         name = state.name;
         joinedHome.name(state.name);
+      }
+      // Where the home says this computer runs, kept on the grant for the
+      // next time its agent is set up and its run starts.
+      if (state.onHomeMac !== null && state.onHomeMac !== onHomeMac) {
+        onHomeMac = state.onHomeMac;
+        try {
+          joinedHome.onHomeMac(state.onHomeMac);
+        } catch (error) {
+          log(`could not keep where the home says this computer runs: ${String(error)}`);
+        }
       }
       if (state.removed) {
         // Noted as not finished until the removal says what it could not remove.

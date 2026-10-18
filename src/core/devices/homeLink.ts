@@ -67,6 +67,12 @@ export type HomeLinkState = {
    */
   readonly takesWork: boolean | null;
   /**
+   * For a computer that runs work: whether the home says it runs on the
+   * home's own Mac, from the newest welcome that said it (docs/helper.md,
+   * "In the background"). Null until one has.
+   */
+  readonly onHomeMac: boolean | null;
+  /**
    * The last moment the device heard from the home, in ms since the epoch,
    * as of the newest change of contact: what "as of" says once it is gone.
    */
@@ -183,6 +189,7 @@ export class HomeLink {
     homeVersion: null,
     name: null,
     takesWork: null,
+    onHomeMac: null,
     heardAt: null,
     removed: false,
   };
@@ -476,6 +483,7 @@ export class HomeLink {
       homeVersion: frame.protocolVersion,
       name: frame.name ?? this.current.name,
       takesWork: frame.takesWork ?? null,
+      onHomeMac: frame.onHomeMac ?? this.current.onHomeMac,
     });
     try {
       this.options.onCaughtUp?.(frame.catchUp);
@@ -638,6 +646,7 @@ export class HomeLink {
       next.homeVersion === this.current.homeVersion &&
       next.name === this.current.name &&
       next.takesWork === this.current.takesWork &&
+      next.onHomeMac === this.current.onHomeMac &&
       next.heardAt === this.current.heardAt &&
       next.removed === this.current.removed
     )

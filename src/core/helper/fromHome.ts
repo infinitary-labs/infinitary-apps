@@ -2,6 +2,7 @@ import { rmSync } from "node:fs";
 import type { DeviceGrant } from "@shared/devices";
 import type { WorkOutcome } from "@shared/remoteLogin";
 import type { ExpectedHome } from "@shared/sshConnection";
+import { dialHome } from "../devices/dial";
 import { JoinedHome } from "../devices/joinedHome";
 import {
   type BackgroundContext,
@@ -15,8 +16,9 @@ import {
 } from "./background";
 import { cleanUp } from "./cleanUp";
 import { homePlace } from "./homePlace";
-import { fetchedLauncher, keepApp } from "./join";
+import { fetchedLauncher, hearHome, keepApp, keepHeard } from "./join";
 import { STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
+import { homeDialOptions } from "./route";
 import { homeLabel } from "./words";
 
 /**
@@ -79,6 +81,7 @@ export async function updateFromHome(
     return { firstmate: "refused", reason: "not-kept" };
   }
   const launcher = fetchedLauncher(kept);
+  if (background && launcher) await hearWhereItRuns(context, joined.grant);
   const state =
     background && launcher
       ? await startInBackground(background, {
@@ -116,6 +119,7 @@ export async function restartInstalled(
   const release = await takeFolder(context, before.service);
   if (!release) return { firstmate: "refused", reason: "busy" };
   release();
+  if (background) await hearWhereItRuns(context, joined.grant);
   const state = background
     ? await startInBackground(background, {
         launcher,
@@ -173,6 +177,22 @@ export async function removeFromHome(context: FromHomeContext): Promise<WorkOutc
   // that and finishes the removal, or does at the next login.
   if (claudeLater && service && background) await resumeInBackground(background, service);
   return outcome;
+}
+
+/**
+ * Hears the home once, before the agent is set up anew, when the grant has
+ * not kept where this computer runs (docs/helper.md, "In the background"):
+ * one that joined before its home said it, updated here before its run
+ * heard a welcome. A home that does not answer leaves the grant as it was.
+ */
+async function hearWhereItRuns(context: FromHomeContext, grant: DeviceGrant): Promise<void> {
+  if (grant.onHomeMac !== undefined) return;
+  const { dataDir, now } = context;
+  // Over the route the home's SSH connection keeps, or at the grant's address.
+  const heard = await hearHome(grant, {
+    dial: (dialed) => dialHome(dialed, homeDialOptions(dataDir, dialed, now)),
+  }).catch(() => null);
+  keepHeard(new JoinedHome(dataDir, () => {}), grant, heard);
 }
 
 /** Whether the folder runs work for the home the home expects, as that computer. */

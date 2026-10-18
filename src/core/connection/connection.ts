@@ -67,7 +67,16 @@ import {
  * controls this Firstmate and runs work, a `view` only controls, a `work`
  * device only runs work. Each connection says which it is (`DeviceRole`).
  */
-export type PairedDevice = { readonly id: string; readonly kind: DeviceKind };
+export type PairedDevice = {
+  readonly id: string;
+  readonly kind: DeviceKind;
+  /**
+   * Whether it joined from this Mac itself, as pairing found it; absent
+   * when its entry does not say. A computer that runs work hears it in its
+   * welcome (`onHomeMac`).
+   */
+  readonly onThisMac?: boolean;
+};
 
 /** How pairing answered a device using its link at `PAIR_PATH`. */
 export type PairOutcome =
@@ -577,6 +586,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           // A computer that runs work takes new work only on this home's own
           // major (docs/helper.md); a view is never sent work.
           ...(role === "work" ? { takesWork: takes } : {}),
+          // Where its work runs decides that work's priority there: the home
+          // says what its list found, and the computer keeps it on its grant.
+          ...(role === "work" && client.device.onThisMac !== undefined
+            ? { onHomeMac: client.device.onThisMac }
+            : {}),
           spellings: SPELLINGS,
         }),
       );

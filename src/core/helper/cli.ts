@@ -27,7 +27,6 @@ import {
   readInstalled,
   resumeInBackground,
   type ServiceManager,
-  sshSessionFrom,
   startInBackground,
 } from "./background";
 import { cleanUp } from "./cleanUp";
@@ -156,17 +155,6 @@ function backgroundOf(
 }
 
 /**
- * The background as a command the home started over Remote Login sees it:
- * with where the home's own SSH session comes from, which tells a separate
- * Mac from the home's own (`separateMac`).
- */
-function fromHomeBackground(context: CliContext, uid: number): BackgroundContext | null {
-  const background = backgroundOf(context, uid);
-  const from = sshSessionFrom(context.env);
-  return background && from ? { ...background, homeSshFrom: from } : background;
-}
-
-/**
  * The words after a command: `--fetched <app>`, the copy of Firstmate the
  * home sent; `--from-home`, started by the home over Remote Login;
  * `--home <pin> --device <id>`, the home and computer the home expects this
@@ -291,7 +279,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       const text = fromHome ? (sent?.link ?? "") : (flags.words[0] ?? "");
       const user = userInfo();
       const uid = process.getuid?.() ?? user.uid;
-      const background = fromHome ? fromHomeBackground(context, uid) : backgroundOf(context, uid);
+      const background = backgroundOf(context, uid);
       const outcome = await joinHome({
         text,
         platform: hostPlatform(),
@@ -350,7 +338,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
             {
               dataDir: place.dataDir,
               expected: flags.expected,
-              background: fromHomeBackground(context, uid),
+              background: backgroundOf(context, uid),
               backgroundEnv: context.backgroundEnv,
             },
             context.launcher,
@@ -361,7 +349,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       const fromHomeContext = {
         dataDir: place.dataDir,
         expected: flags.expected,
-        background: fromHomeBackground(context, uid),
+        background: backgroundOf(context, uid),
         backgroundEnv: context.backgroundEnv,
       };
       return answerHome(

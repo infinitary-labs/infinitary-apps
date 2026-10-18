@@ -718,6 +718,25 @@ describe("the home's connection", () => {
     expect(view.welcome.takesWork).toBeUndefined();
   });
 
+  // INF-463, the captain's pick on INF-460: "Carry the separate-Mac fact from
+  // your Mac on the work grant as a typed field". The home's list knows where
+  // a computer joined from; its welcome says it to that computer's work.
+  it("tells a computer that runs work whether it runs on the home's own Mac, and tells a view nothing", async () => {
+    const here = await home();
+    const user = await connectClient(await here.join("work", "Builder"));
+    expect(user.welcome.onHomeMac).toBe(true);
+    const view = await connectClient(await here.join("view"));
+    expect(view.welcome.onHomeMac).toBeUndefined();
+
+    const elsewhere = await home({ pairing: { joinsFromAnotherMac: true } });
+    const { link } = elsewhere.pairing.invite({ kind: "mac", at: elsewhere.at });
+    await elsewhere.connection.settled();
+    const mini = await claimLink(link, { kind: "mac", name: "Mini", user: ANOTHER_USER });
+    expect((await connectClient(mini, { as: "work" })).welcome.onHomeMac).toBe(false);
+    // The same Mac's window, controlling the home, is told nothing of it.
+    expect((await connectClient(mini, { as: "view" })).welcome.onHomeMac).toBeUndefined();
+  });
+
   it("gives work only to a computer whose version can hold a conversation", async () => {
     const at = await home();
     const grant = await at.join("work", "Mini");

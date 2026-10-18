@@ -1104,7 +1104,11 @@ export class DevicePairing implements PairedDevices {
     const entry = this.entries.find((candidate) => candidate.keyPin === devicePin);
     if (entry) {
       this.noteReached(entry.id, reachedOn(request.socket));
-      return { id: entry.id, kind: entry.kind };
+      return {
+        id: entry.id,
+        kind: entry.kind,
+        ...(entry.onThisMac !== undefined ? { onThisMac: entry.onThisMac } : {}),
+      };
     }
     const farewell = this.farewells.get(devicePin);
     if (farewell) {

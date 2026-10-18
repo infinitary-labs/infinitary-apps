@@ -272,6 +272,9 @@
             "takesWork": {
               "type": "boolean"
             },
+            "onHomeMac": {
+              "type": "boolean"
+            },
             "spellings": {
               "maxItems": 16,
               "type": "array",

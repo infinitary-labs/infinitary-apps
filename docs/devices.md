@@ -436,6 +436,7 @@ So the user Infinitary runs as on this Mac is still refused (`same-user`), anoth
 It guards a mistake, as `same-user` always has: code already running as the captain could answer either way.
 A link made any other way reads the socket, as before.
 A computer keeps where it joined from when it finds this Mac again, and on every connection after.
+The welcome to its work says it (`onHomeMac`, `docs/connection.md`), and the computer keeps it on its grant: that decides the priority its work runs at there (`docs/helper.md`, "In the background").
 
 ### Kept with the device
 

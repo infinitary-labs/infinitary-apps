@@ -356,6 +356,7 @@ They are demand-only, kept in memory, and never load accounts or sign-ins just t
   The sampler awaits that read.
   A failed system read omits those facts and keeps Electron's.
   The sampler does not add the Mac figures or claim they are Linux's available-memory estimate.
+  The home's receiver works out one memory-used figure from those facts as each fresh reading arrives (`docs/routing.md`).
   Missing or invalid memory makes the whole observation unknown.
 - Every answer names the sampler's random lifetime epoch and an increasing sequence, not a remote timestamp or a permanent hardware identifier.
   The home measures age on its own monotonic clock, from before the request, so network travel and sampling both consume the ten-second freshness allowance.
@@ -381,7 +382,8 @@ A panel must declare that read in its manifest; the frame controller and persona
 An authenticated paired view may read it, but a work connection cannot ask it.
 Its `computers` array contains the home (`computerId: null`) and each paired work computer, with a label and the shared `ComputerResourceReading` shape from `src/shared/resources.ts`.
 Control-only devices are absent; an unreachable or older work computer stays present with an explicit unknown reason.
-A fresh reading carries receiver-owned `ageMs`, CPU idle fraction and logical CPU count, and the OS's separate memory observations.
+A fresh reading carries receiver-owned `ageMs`, the one memory-used figure when the reading has one, CPU idle fraction and logical CPU count, and the OS's separate memory observations.
+A panel is handed installed memory, that figure and Mac pressure, not the raw counts (`docs/personal-panels.md`).
 A failed refresh retains its refusal in memory, so a cached reader sees the same unknown reason as the reader that requested it.
 An expired refusal or observation reads stale; no raw history is kept.
 

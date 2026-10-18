@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PanelComputerResources } from "./personal/contracts";
+import type { PanelComputerResourceReading, PanelComputerResources } from "./personal/contracts";
 
 /** Resource facts are observations, never a promise or an enforced process limit. */
 export const RESOURCE_SAMPLE_MS = 250;
@@ -10,15 +10,15 @@ export const RESOURCE_OBSERVATIONS_SINCE = "6.3.0";
 export const RESOURCE_ORDER = "inf:computer:resources";
 
 const bytes = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-/** macOS `kern.memorystatus_vm_pressure_level`: normal counts inactive memory, the others do not. */
+/** macOS `kern.memorystatus_vm_pressure_level`. The one memory figure counts inactive memory only while this is normal. */
 export const macMemoryPressureSchema = z.enum(["normal", "warning", "critical"]);
 export type MacMemoryPressure = z.infer<typeof macMemoryPressureSchema>;
 export const resourceMemorySchema = z.object({
   totalBytes: bytes.positive(),
   freeBytes: bytes,
-  /** Linux MemAvailable; absent where the system supplies no such estimate. */
+  /** Linux MemAvailable. A reading with this is Linux to the one memory figure. */
   availableBytes: bytes.optional(),
-  /** macOS facts kept separately: none of these is added to free memory here. */
+  /** macOS facts. A reading with either of these is a Mac to the one memory figure. */
   purgeableBytes: bytes.optional(),
   fileBackedBytes: bytes.optional(),
   /** macOS inactive and speculative pages. Absent on Linux, an older computer, or a failed read. */
@@ -61,6 +61,12 @@ export const computerResourceReadingSchema = z.discriminatedUnion("status", [
     status: z.literal("fresh"),
     observation: sampledResourceObservationSchema,
     ageMs: z.number().nonnegative().max(RESOURCE_MAX_AGE_MS),
+    /**
+     * Installed memory the home counts as used, once, by Automatic's rule.
+     * Absent when the reading has no figure. At most `totalBytes`
+     * (`validMemoryUsedBytes`).
+     */
+    memoryUsedBytes: bytes.optional(),
   }),
   z.object({
     status: z.literal("unknown"),
@@ -116,4 +122,54 @@ export function validResourceMemory(memory: ResourceMemory): boolean {
       memory.speculativeBytes,
     ].every((value) => value === undefined || value <= memory.totalBytes)
   );
+}
+
+/** The one memory figure, when present, is a whole number of bytes at most installed memory. */
+export function validMemoryUsedBytes(
+  totalBytes: number,
+  memoryUsedBytes: number | undefined,
+): boolean {
+  return (
+    memoryUsedBytes === undefined ||
+    (Number.isSafeInteger(memoryUsedBytes) && memoryUsedBytes >= 0 && memoryUsedBytes <= totalBytes)
+  );
+}
+
+/**
+ * What a panel is given for `computers.resources`: installed memory, the one
+ * figure and Mac pressure. The raw counts stay on the published reading and
+ * never reach a panel, so a panel cannot compute its own RAM used.
+ */
+export function panelComputerResources(view: ComputerResourcesView): PanelComputerResources {
+  return {
+    computers: view.computers.map((computer) => ({
+      computerId: computer.computerId,
+      label: computer.label,
+      reading: panelReading(computer.reading),
+    })),
+  };
+}
+
+function panelReading(reading: ComputerResourceReading): PanelComputerResourceReading {
+  if (reading.status !== "fresh") return reading;
+  const { memoryPressure } = reading.observation.memory;
+  return {
+    status: "fresh",
+    ageMs: reading.ageMs,
+    ...(reading.memoryUsedBytes === undefined ? {} : { memoryUsedBytes: reading.memoryUsedBytes }),
+    observation: {
+      status: "sampled",
+      epoch: reading.observation.epoch,
+      sequence: reading.observation.sequence,
+      sampleMs: reading.observation.sampleMs,
+      cpu: {
+        logicalCpus: reading.observation.cpu.logicalCpus,
+        idleFraction: reading.observation.cpu.idleFraction,
+      },
+      memory: {
+        totalBytes: reading.observation.memory.totalBytes,
+        ...(memoryPressure === undefined ? {} : { memoryPressure }),
+      },
+    },
+  };
 }

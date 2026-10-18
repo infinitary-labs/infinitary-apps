@@ -1,4 +1,6 @@
 import type { Card } from "@shared/cards";
+import { macBookResourcesView } from "@shared/macBookResourceReading";
+import { panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskView } from "@shared/tasks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -130,5 +132,16 @@ describe("the shell's shared task projection", () => {
     expect(projects[0]?.counts.waitingOnYou).toBe(0);
     expect(projects[0]?.counts.needsYou).toBe(0);
     expect(api.present?.("tasks.board", older)).toMatchObject({ seq: 3, tasks: [] });
+  });
+});
+
+/** INF-396: the read executor is what hands a panel the narrowed memory reading. */
+describe("the app read executor's computer readings", () => {
+  it("hands panels the figure projection of the 11:32:53 PM MacBook reading", async () => {
+    vi.stubGlobal("window", { infinitary: {} });
+    const { firstmateReadApi } = await import("./appExecutor");
+    expect(firstmateReadApi().present?.("computers.resources", macBookResourcesView)).toEqual(
+      panelComputerResources(macBookResourcesView),
+    );
   });
 });

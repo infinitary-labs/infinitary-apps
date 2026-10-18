@@ -10,6 +10,7 @@ import { TaskService } from "../tasks/taskService";
 import { AutomaticPlacement } from "./automaticPlacement";
 import { ComputerResourceFeed } from "./computerResourceFeed";
 import { ComputerResources } from "./computerResources";
+import { memoryUsedBytes } from "./memoryUsed";
 import type { WorkDevices } from "./workDevices";
 
 /**
@@ -169,6 +170,14 @@ describe("AutomaticPlacement's room set aside for starting tasks", () => {
       expect(w.tasks.get(footer.id)?.placement?.reservation).toBe("observed");
       expect(w.tasks.get(totals.id)?.placement?.reservation).toBe("observed");
       expect(w.tasks.get(header.id)?.placement?.reservation).toBe("pending");
+      // INF-396: the placement record saves the figure already on the reading.
+      const saved = w.tasks
+        .get(footer.id)
+        ?.placement?.snapshot.candidates.find((row) => row.computerId === null)?.reading;
+      expect(saved?.status).toBe("fresh");
+      if (saved?.status === "fresh") {
+        expect(saved.memoryUsedBytes).toBe(memoryUsedBytes(saved.observation.memory));
+      }
     } finally {
       w.dispose();
     }

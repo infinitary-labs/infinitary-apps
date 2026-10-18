@@ -6,6 +6,7 @@ import {
   placementWait,
 } from "@shared/placement";
 import { describe, expect, it } from "vitest";
+import { memoryUsedBytes } from "../placed/memoryUsed";
 import {
   evaluatePlacement,
   type PlacementCandidate,
@@ -13,6 +14,15 @@ import {
   resolvePlacementRequirements,
 } from "./placementEngine";
 import type { RoutePreview } from "./router";
+
+/** INF-396: a hand-built reading takes its figure from the core function, never a typed number. */
+function figured(candidate: PlacementCandidate): PlacementCandidate {
+  const reading = candidate.resources;
+  if (reading.status !== "fresh") return candidate;
+  const used = memoryUsedBytes(reading.observation.memory);
+  if (used === undefined) return candidate;
+  return { ...candidate, resources: { ...reading, memoryUsedBytes: used } };
+}
 
 const KIB = 1024;
 
@@ -23,7 +33,7 @@ const KIB = 1024;
  * in KiB (SCR-380): macOS keeps almost no page empty, and hands back cached
  * file pages and purgeable memory without compressing or swapping.
  */
-const thisMac: PlacementCandidate = {
+const thisMac: PlacementCandidate = figured({
   computerId: null,
   inReach: true,
   workEnabled: true,
@@ -59,7 +69,7 @@ const thisMac: PlacementCandidate = {
     preferenceRank: 0,
     requiresReasoningWait: false,
   } satisfies RoutePreview,
-};
+});
 
 /** A paired computer too old to report what it can run: no facts at all. */
 const olderMacMini: PlacementCandidate = {
@@ -105,17 +115,18 @@ describe("placementWait names the check that refused a start", () => {
   const busy = (
     cpu: Partial<typeof fresh.observation.cpu>,
     memory: Partial<typeof fresh.observation.memory> = {},
-  ): PlacementCandidate => ({
-    ...thisMac,
-    resources: {
-      ...fresh,
-      observation: {
-        ...fresh.observation,
-        cpu: { ...fresh.observation.cpu, ...cpu },
-        memory: { ...fresh.observation.memory, ...memory },
+  ): PlacementCandidate =>
+    figured({
+      ...thisMac,
+      resources: {
+        ...fresh,
+        observation: {
+          ...fresh.observation,
+          cpu: { ...fresh.observation.cpu, ...cpu },
+          memory: { ...fresh.observation.memory, ...memory },
+        },
       },
-    },
-  });
+    });
   /** A standard start already committed to this Mac and not yet seen running. */
   const starting = (orderId: string): PlacementReservation => ({
     orderId,
@@ -239,32 +250,31 @@ describe("evaluatePlacement counts inactive memory until macOS warns", () => {
     fileBacked: 265_899,
   };
   const bytes = (count: number) => count * MACBOOK_PAGE;
-  const macBook = (
-    pressure: "normal" | "warning" | "critical" | undefined,
-  ): PlacementCandidate => ({
-    ...thisMac,
-    resources: {
-      status: "fresh",
-      ageMs: 50,
-      observation: {
-        ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
-          .observation,
-        memory: {
-          totalBytes: MACBOOK_TOTAL,
-          freeBytes: bytes(pages.free),
-          purgeableBytes: bytes(pages.purgeable),
-          fileBackedBytes: bytes(pages.fileBacked),
-          ...(pressure
-            ? {
-                inactiveBytes: bytes(pages.inactive),
-                speculativeBytes: bytes(pages.speculative),
-                memoryPressure: pressure,
-              }
-            : {}),
+  const macBook = (pressure: "normal" | "warning" | "critical" | undefined): PlacementCandidate =>
+    figured({
+      ...thisMac,
+      resources: {
+        status: "fresh",
+        ageMs: 50,
+        observation: {
+          ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
+            .observation,
+          memory: {
+            totalBytes: MACBOOK_TOTAL,
+            freeBytes: bytes(pages.free),
+            purgeableBytes: bytes(pages.purgeable),
+            fileBackedBytes: bytes(pages.fileBacked),
+            ...(pressure
+              ? {
+                  inactiveBytes: bytes(pages.inactive),
+                  speculativeBytes: bytes(pages.speculative),
+                  memoryPressure: pressure,
+                }
+              : {}),
+          },
         },
       },
-    },
-  });
+    });
   const room = (candidate: PlacementCandidate) => {
     const decision = evaluatePlacement({
       requirements: standard,
@@ -331,31 +341,32 @@ describe("evaluatePlacement does not shrink the Mac mini's room", () => {
     fileBacked: 1_101_024,
   };
   const bytes = (count: number) => count * page;
-  const mini = (withFacts: boolean): PlacementCandidate => ({
-    ...thisMac,
-    computerId: "mac-mini",
-    resources: {
-      status: "fresh",
-      ageMs: 40,
-      observation: {
-        ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
-          .observation,
-        memory: {
-          totalBytes: 68_719_476_736,
-          freeBytes: bytes(reading.free),
-          purgeableBytes: bytes(reading.purgeable),
-          fileBackedBytes: bytes(reading.fileBacked),
-          ...(withFacts
-            ? {
-                inactiveBytes: bytes(reading.inactive),
-                speculativeBytes: bytes(reading.speculative),
-                memoryPressure: "normal" as const,
-              }
-            : {}),
+  const mini = (withFacts: boolean): PlacementCandidate =>
+    figured({
+      ...thisMac,
+      computerId: "mac-mini",
+      resources: {
+        status: "fresh",
+        ageMs: 40,
+        observation: {
+          ...(thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>)
+            .observation,
+          memory: {
+            totalBytes: 68_719_476_736,
+            freeBytes: bytes(reading.free),
+            purgeableBytes: bytes(reading.purgeable),
+            fileBackedBytes: bytes(reading.fileBacked),
+            ...(withFacts
+              ? {
+                  inactiveBytes: bytes(reading.inactive),
+                  speculativeBytes: bytes(reading.speculative),
+                  memoryPressure: "normal" as const,
+                }
+              : {}),
+          },
         },
       },
-    },
-  });
+    });
   const memoryOf = (candidate: PlacementCandidate) =>
     evaluatePlacement({
       requirements: resolvePlacementRequirements({
@@ -371,5 +382,43 @@ describe("evaluatePlacement does not shrink the Mac mini's room", () => {
     const counted = memoryOf(mini(true));
     expect(today).toBeGreaterThan(0);
     expect(counted).toBeGreaterThanOrEqual(today ?? 0);
+  });
+});
+
+/**
+ * INF-396: Automatic's room starts from the figure on the reading. A missing
+ * figure is refused, and a figure above installed memory is not a reading.
+ */
+describe("evaluatePlacement reads the one memory figure", () => {
+  const requirements = resolvePlacementRequirements({
+    home: { system: "macos", chip: "arm64" },
+    workingCopy: true,
+  });
+  const evaluated = (candidate: PlacementCandidate) =>
+    evaluatePlacement({ requirements, candidates: [candidate], reservations: [] }).candidates[0];
+  const fresh = thisMac.resources as Extract<PlacementCandidate["resources"], { status: "fresh" }>;
+
+  it("takes room from the stamped figure, not a second sum of the raw counts", () => {
+    expect(evaluated(thisMac)?.remaining?.memoryBytes).toBeGreaterThan(0);
+    const full = evaluated({
+      ...thisMac,
+      resources: { ...fresh, memoryUsedBytes: fresh.observation.memory.totalBytes },
+    });
+    expect(full?.rejections).toEqual(["memory-busy"]);
+    expect(full?.remaining?.memoryBytes).toBe(0);
+  });
+
+  it("refuses a fresh reading that has no figure", () => {
+    const { memoryUsedBytes: _dropped, ...resources } = fresh;
+    expect(evaluated({ ...thisMac, resources })?.rejections).toContain("memory-unavailable");
+  });
+
+  it("refuses a figure above installed memory", () => {
+    expect(
+      evaluated({
+        ...thisMac,
+        resources: { ...fresh, memoryUsedBytes: fresh.observation.memory.totalBytes + 1 },
+      })?.rejections,
+    ).toContain("resources-invalid");
   });
 });

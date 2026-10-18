@@ -1,5 +1,5 @@
 import type { CorePushChannel } from "@shared/ipc";
-import type { ComputerResourcesView } from "@shared/resources";
+import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskDetail, TaskView } from "@shared/tasks";
 import { presentBoard, presentProjects, presentTask } from "@shared/taskWaiting";
 import { useShellStore } from "../../app/store";
@@ -140,6 +140,11 @@ export function firstmateReadApi(): ReadApi {
       if (name === "projects.list" && board) {
         return presentProjects(value as ProjectView[], projectBoard(board).tasks);
       }
+      // Panels receive installed memory, the one figure and pressure. The
+      // published reading keeps the raw counts; this projection is what
+      // stops a panel from computing its own RAM used.
+      if (name === "computers.resources")
+        return panelComputerResources(value as ComputerResourcesView);
       return value;
     },
     onPresentation: (listener) =>

@@ -131,6 +131,11 @@ An older home ignores the marker and reads the plain fallback error; ordinary cl
 Protocol 8.15 also adds the optional `interrupted` to a background job's end (`inf:work:job-exit`): `quit` or `crash`, sent at a computer's next start for a job its last run's end cut off, so the home tells the crewmate the job never exited (`docs/helper.md`, "Holding a conversation").
 A home on an older minor drops the field and words it as an exit by signal, which still ends the crewmate's wait.
 
+Protocol 8.16 adds optional `memoryUsedBytes` to a fresh computer resource reading: installed memory the home counts as used, by the one figure in `docs/routing.md`.
+A panel on this version is handed installed memory, that figure, and Mac pressure, and loses the raw counts.
+A Mac on an older minor ignores the field.
+The published reading keeps every raw count, so an older paired Mac still sends the same observation.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

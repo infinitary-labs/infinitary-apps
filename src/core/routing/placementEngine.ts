@@ -12,6 +12,7 @@ import {
 import {
   RESOURCE_MAX_AGE_MS,
   resourceObservationSchema,
+  validMemoryUsedBytes,
   validResourceMemory,
 } from "@shared/resources";
 import type { ComputerResourceReading } from "../placed/computerResources";
@@ -297,68 +298,21 @@ function resourceRejection(reading: ComputerResourceReading): PlacementRejection
     return "resources-stale";
   if (
     !resourceObservationSchema.safeParse(reading.observation).success ||
-    !validResourceMemory(reading.observation.memory)
+    !validResourceMemory(reading.observation.memory) ||
+    !validMemoryUsedBytes(reading.observation.memory.totalBytes, reading.memoryUsedBytes)
   )
     return "resources-invalid";
   return null;
 }
 
-/**
- * Free, purgeable and file-backed bytes, the memory macOS hands back without
- * compressing or swapping. A Mac in ordinary use keeps almost no page free.
- */
-function macHandedBackBytes(memory: {
-  totalBytes: number;
-  freeBytes: number;
-  purgeableBytes?: number;
-  fileBackedBytes?: number;
-}): number {
-  return Math.min(
-    memory.totalBytes,
-    memory.freeBytes + (memory.purgeableBytes ?? 0) + (memory.fileBackedBytes ?? 0),
-  );
-}
-
-/**
- * At normal pressure, the larger of that sum and free, speculative and inactive
- * memory, capped at installed memory. Warning or critical pressure has no room.
- * A reading without the new facts keeps the handed-back sum.
- */
-function macUsableBytes(memory: {
-  totalBytes: number;
-  freeBytes: number;
-  purgeableBytes?: number;
-  fileBackedBytes?: number;
-  inactiveBytes?: number;
-  speculativeBytes?: number;
-  memoryPressure?: "normal" | "warning" | "critical";
-}): number {
-  const handedBack = macHandedBackBytes(memory);
-  if (memory.memoryPressure === "warning" || memory.memoryPressure === "critical") return 0;
-  if (
-    memory.memoryPressure !== "normal" ||
-    memory.inactiveBytes === undefined ||
-    memory.speculativeBytes === undefined
-  )
-    return handedBack;
-  return Math.min(
-    memory.totalBytes,
-    Math.max(handedBack, memory.freeBytes + memory.speculativeBytes + memory.inactiveBytes),
-  );
-}
-
-/** OS-specific usable-memory guidance, never a claim that a Mac reports Linux's estimate. */
+/** Room starts from installed memory minus the one figure on the reading. */
 function capacityOf(candidate: PlacementCandidate): PlacementDemand | null {
   const reading = candidate.resources;
   if (resourceRejection(reading) || reading.status !== "fresh") return null;
+  const used = reading.memoryUsedBytes;
+  if (used === undefined) return null;
   const { cpu, memory } = reading.observation;
-  const usable =
-    candidate.system === "linux"
-      ? memory.availableBytes
-      : candidate.system === "macos"
-        ? macUsableBytes(memory)
-        : undefined;
-  if (usable === undefined) return null;
+  const usable = memory.totalBytes - used;
   return {
     // Leave 20% of observed idle CPU and at least 512 MiB/10% of RAM untouched.
     cpu: cpu.logicalCpus * cpu.idleFraction * 0.8,

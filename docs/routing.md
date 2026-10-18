@@ -124,14 +124,18 @@ The profile is independent of model-routing kind: a research task may use a brow
 The default is `standard`; an explicit `conversation` profile requests 0.25 logical CPU and 512 MiB, `standard` requests 0.5 logical CPU and 2 GiB, and `heavy` requests 2 logical CPUs and 4 GiB.
 These are initial admission allowances, not measured peaks, process-enforced limits or a guarantee about later work.
 CPU capacity is 80% of the observed idle logical CPUs.
-Memory capacity keeps the larger of 512 MiB and 10% of installed RAM untouched, then subtracts pending demand.
-Linux starts from MemAvailable and refuses a missing estimate.
-Mac starts from free, purgeable and file-backed bytes together, capped at installed RAM: the memory macOS hands back without compressing or swapping.
-When that reading also carries inactive memory, speculative memory and a normal pressure level, room starts from the larger of that sum and free, speculative and inactive memory, still capped at installed RAM.
-At warning or critical pressure, a Mac has no memory room, and a waiting task still says it is short of spare memory.
-A reading without those facts, from an older computer or a failed read, keeps the free, purgeable and file-backed sum.
+Memory room starts from installed memory minus the one memory-used figure, then keeps the larger of 512 MiB and 10% of installed RAM untouched, then subtracts pending demand.
+The home's receiver works that figure out once for each fresh reading (`memoryUsedBytes` in `src/core/placed/memoryUsed.ts`).
+A reading with no figure is refused, as a missing Linux estimate is.
+Linux is a reading that carries its available-memory estimate: the figure counts installed memory minus that estimate as used.
+A Mac is a reading that carries purgeable or file-backed bytes.
+At normal pressure the figure counts free, speculative and inactive memory as free, and also free, purgeable and file-backed bytes, and keeps the larger free part, capped at installed memory.
+At warning or critical pressure nothing counts as free, so the figure reads all installed memory as used and the Mac has no memory room.
+A waiting task still says it is short of spare memory.
+A Mac reading without pressure, or without inactive and speculative bytes, counts free, purgeable and file-backed bytes as free, as a reading from an older computer or a failed read does.
+Anything else has no figure.
 A Mac in ordinary use keeps almost no page free, so free bytes alone would read a Mac with room as full.
-The observation still carries the Mac figures separately, and neither sum claims to be Linux's MemAvailable.
+The observation still carries every raw count, and the figure is the only number a reader uses.
 `tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, from that computer's own readings, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request and in the full suite's Mac lane, and the hosted Linux virtual machines in the full suite.
 The Mac mini also runs the crew's own work, so its processor can stay too busy to start a task for minutes.
 The journey waits up to six minutes while the task waits for that computer's spare processing capacity, and one sweep while the task has not compared computers yet.

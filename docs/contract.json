@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.15.0",
+  "protocolVersion": "8.16.0",
   "versionRule": {
     "majorsBehind": 1,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -2129,6 +2129,11 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 10000
+                        },
+                        "memoryUsedBytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -22796,6 +22801,11 @@
                               "type": "number",
                               "minimum": 0,
                               "maximum": 10000
+                            },
+                            "memoryUsedBytes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -48614,6 +48624,11 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 10000
+                        },
+                        "memoryUsedBytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [

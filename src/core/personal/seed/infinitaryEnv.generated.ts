@@ -83,13 +83,18 @@ declare module "@infinitary/contracts" {
 
   /**
    * Physical-system observations, not task limits or available scheduling capacity.
-   * Unknown never means zero usage. Ages come from the home's receiver, not a
-   * computer's wall clock. Live readings stay in memory and are not history.
+   * A panel sees installed memory, the one memory-used figure and Mac pressure.
+   * It does not see the raw counts, so it cannot compute its own RAM used.
+   * Unknown never means zero usage. A missing figure is unknown, never zero.
+   * Ages come from the home's receiver, not a computer's wall clock.
+   * Live readings stay in memory and are not history.
    */
   export type PanelComputerResourceReading =
     | {
         status: "fresh";
         ageMs: number;
+        /** Bytes of installed memory counted as used. Absent means unknown, never zero. */
+        memoryUsedBytes?: number;
         observation: {
           status: "sampled";
           epoch: string;
@@ -98,15 +103,7 @@ declare module "@infinitary/contracts" {
           cpu: { logicalCpus: number; idleFraction: number };
           memory: {
             totalBytes: number;
-            freeBytes: number;
-            /** Linux MemAvailable; absent on Mac. */
-            availableBytes?: number;
-            /** Mac facts; never add these to freeBytes. */
-            purgeableBytes?: number;
-            fileBackedBytes?: number;
-            /** Optional Mac facts from a newer computer. Absent is not zero. */
-            inactiveBytes?: number;
-            speculativeBytes?: number;
+            /** Absent when this reading did not carry a Mac pressure level. */
             memoryPressure?: "normal" | "warning" | "critical";
           };
         };

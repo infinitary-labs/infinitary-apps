@@ -82,9 +82,9 @@ module has no reads.
 
 `computers.resources` is the shared live CPU and RAM read: declare it in `reads`, then call `reads.subscribe("computers.resources", listener)`.
 Its `computers` array names the home with `computerId: null` and each paired work computer by id and label.
-A fresh `reading` carries `ageMs` and an `observation` with CPU idle fraction, logical CPU count and separate RAM facts; an unknown reading carries its reason.
-Show unknown as unavailable, never as zero usage or free capacity.
-Linux `availableBytes` and Mac `freeBytes` are different facts; never add Mac `purgeableBytes`, `fileBackedBytes`, `inactiveBytes` or `speculativeBytes` to free RAM.
+A fresh `reading` carries `ageMs`, `memoryUsedBytes` when the reading has a figure, and an `observation` with CPU idle fraction, logical CPU count, installed memory and Mac pressure.
+Show `memoryUsedBytes` divided by installed memory as RAM used, and installed memory minus the figure as free.
+A missing figure is unknown: show RAM as unavailable, never as zero and never by adding the raw counts.
 `memoryPressure` is an optional Mac fact (`normal`, `warning` or `critical`); absent is not zero and not a capacity number.
 These are computer readings, not task limits or guaranteed capacity.
 All screens and panels share one sampling source; do not add a server poller or write live refreshes to the store.

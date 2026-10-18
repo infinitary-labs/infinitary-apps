@@ -8,6 +8,7 @@ import {
   resourceObservationSchema,
   validResourceMemory,
 } from "@shared/resources";
+import { memoryUsedBytes } from "./memoryUsed";
 import type { ResourceSampler } from "./resourceSampler";
 import type { WorkDevices } from "./workDevices";
 
@@ -67,7 +68,13 @@ export class ComputerResources {
     // Age starts before the ask, conservatively including network travel and sampling.
     if (ageMs < 0 || ageMs > RESOURCE_MAX_AGE_MS) return { status: "unknown", reason: "stale" };
     if (held.observation.status === "unknown") return { status: "unknown", reason: "unavailable" };
-    return { status: "fresh", observation: held.observation, ageMs };
+    const used = memoryUsedBytes(held.observation.memory);
+    return {
+      status: "fresh",
+      observation: held.observation,
+      ageMs,
+      ...(used === undefined ? {} : { memoryUsedBytes: used }),
+    };
   }
 
   /**

@@ -85,7 +85,10 @@ These are read-time projections, not stored readiness or permission to start hel
 `computers.resources` reads current CPU and memory observations for the home and each paired work computer, including receiver-owned age or an explicit unavailable reason (`PanelComputerResources`, `docs/helper.md`, "Shared live readings").
 A panel declares it in `reads` and calls `reads.subscribe("computers.resources", listener)`; no server module or polling background task is needed.
 All subscribing screens and panels use the same core source and cache, not one sampler per panel.
-Render unknown as unavailable, never zero usage or spare capacity, and never add Mac purgeable or file-backed bytes to free RAM.
+A fresh reading gives a panel installed memory, the one memory-used figure and, on a Mac, pressure.
+Show the figure as RAM used, and installed memory minus the figure as free.
+A missing figure is unknown, never zero and never a panel's own math.
+Render unknown as unavailable, never zero usage or spare capacity.
 The values are physical-system facts rather than process limits or scheduling capacity, and must not be written into the panel store as live history.
 
 `tasks.detail` (FI3-1014 piece 4) reads one task in full by the id the board gave it, `reads.subscribe("tasks.detail", { id }, listener)`: its row, brief, latest report, and while Drop task applies the `dropEffects` a drop sends back as its review.

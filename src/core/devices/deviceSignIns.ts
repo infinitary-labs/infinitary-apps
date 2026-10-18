@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { HERE } from "@shared/deviceNames";
-import { type DeviceSsh, type DeviceView, deviceConnecting, deviceRunsWork } from "@shared/devices";
+import { type ComputerReach, type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { speaksCustomApi } from "@shared/ipc";
 import { catalogEntry } from "@shared/providers";
@@ -67,8 +67,8 @@ export type DeviceSignInsOptions = {
    * computer's Codex and Grok lists stay as Pi's catalog serves them.
    */
   protectedIds?: (providerId: string) => readonly string[];
-  /** Where this Mac's SSH connection to a computer stands, when it is reached over SSH. */
-  ssh?: (deviceId: string) => DeviceSsh | undefined;
+  /** The one reach value (`reachFrom`). Absent, out of reach. */
+  reachOf?: (deviceId: string) => ComputerReach;
   now?: () => number;
 };
 
@@ -95,9 +95,7 @@ export class DeviceSignIns {
         ...(device.user ? { user: device.user } : {}),
         onThisMac: device.onThisMac === true,
         inReach,
-        ...(deviceConnecting({ inReach, ssh: this.options.ssh?.(device.id) })
-          ? { connecting: true }
-          : {}),
+        ...(this.options.reachOf?.(device.id) === "connecting" ? { connecting: true } : {}),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         signIns: this.narrowed(said?.signIns ?? null),
         ...(said?.asOf !== undefined ? { asOf: said.asOf } : {}),

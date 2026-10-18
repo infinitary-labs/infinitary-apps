@@ -125,43 +125,38 @@ export function joinedNoticeClears(
   return own.accounts.length > 0 || (own.forges?.signIns.length ?? 0) > 0;
 }
 
-/** Whether the row says this computer is connected: over its SSH, in reach, or in reach on another version. */
-export function deviceConnected(device: DeviceView): boolean {
-  return device.ssh?.state === "connected" || device.inReach === true || !!device.otherVersion;
-}
-
 /**
  * A "could not reach" refusal, kept with the computer (and the address it
- * tried, for Change address) it was about. It is stale once the row says that
- * computer is connected after the row had said it was not, or when the
- * computer is gone; every other refusal stays until the captain's next action.
+ * tried, for Change address) it was about. It is stale once that computer's
+ * connection began after the refusal (`connectedAt`), or when the computer
+ * is gone; every other refusal stays until the captain's next action.
  */
 export type ReachRefusal = {
   deviceId: string;
   line: string;
   /** The address the refusal tried; the row has to reconnect at it for the line to go. */
   address?: string;
-  /** The row has said the computer is not connected since the refusal. */
-  seenOut: boolean;
+  /** When the refusal was recorded, in milliseconds since the epoch. */
+  at: number;
 };
 
 /** What to keep of a refusal: the reach refusal's record, or nothing for any other refusal, which stays until the next action. */
 export function reachRefusalOf(
   answer: RemoteLoginRefusedAnswer,
   deviceId: string,
-  device: DeviceView | undefined,
+  at: number,
   address?: string,
 ): ReachRefusal | null {
   if (!refusalIsAboutReach(answer.refused)) return null;
-  const there = address === undefined || device?.remoteLogin === address;
   return {
     deviceId,
     line: answer.lines.join("\n"),
     ...(address === undefined ? {} : { address }),
-    seenOut: !(device && there && deviceConnected(device)),
+    at,
   };
 }
 
+/** Clears when a connection at the tried address began after the refusal. */
 export function reachRefusalAfter(
   refusal: ReachRefusal,
   devices: readonly DeviceView[],
@@ -169,10 +164,8 @@ export function reachRefusalAfter(
   const device = devices.find((each) => each.id === refusal.deviceId);
   if (!device) return { clears: true, next: refusal };
   const there = refusal.address === undefined || device.remoteLogin === refusal.address;
-  const connected = there && deviceConnected(device);
-  if (connected && refusal.seenOut) return { clears: true, next: refusal };
-  const seenOut = refusal.seenOut || !connected;
-  return { clears: false, next: seenOut === refusal.seenOut ? refusal : { ...refusal, seenOut } };
+  const later = there && device.connectedAt !== undefined && device.connectedAt > refusal.at;
+  return { clears: later, next: refusal };
 }
 
 type PanelStore = {
@@ -596,11 +589,9 @@ function HomeDevicesTab() {
   devicesNow.current = devices;
   useEffect(() => {
     if (!problemAbout) return;
-    const { clears, next } = reachRefusalAfter(problemAbout, devices);
-    if (clears) {
-      setProblem((line) => (line === problemAbout.line ? null : line));
-      setProblemAbout(null);
-    } else if (next !== problemAbout) setProblemAbout(next);
+    if (!reachRefusalAfter(problemAbout, devices).clears) return;
+    setProblem((line) => (line === problemAbout.line ? null : line));
+    setProblemAbout(null);
   }, [problemAbout, devices]);
 
   /** A refusal of an update or an address change, answered as data so a reach refusal is told from the rest. */
@@ -608,7 +599,7 @@ function HomeDevicesTab() {
     (deviceId: string, answer: RemoteLoginRefusedAnswer, address?: string) => {
       setProblem(answer.lines.join("\n"));
       const device = devicesNow.current.find((each) => each.id === deviceId);
-      setProblemAbout(reachRefusalOf(answer, deviceId, device, address));
+      setProblemAbout(reachRefusalOf(answer, deviceId, Date.now(), address));
     },
     [],
   );

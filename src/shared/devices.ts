@@ -357,16 +357,53 @@ export const deviceSshSchema = z.strictObject({
 export type DeviceSsh = z.infer<typeof deviceSshSchema>;
 
 /**
+ * A computer's reach, worked out once from the facts the home already holds
+ * (`inReach`, and the SSH state `SshConnections.state` reads, whose connecting
+ * limit is that read). Every reader takes this value. `connecting` on a
+ * published shape stays until an older view no longer needs it.
+ *
+ * - `in-reach`: its work said hello, so it takes work.
+ * - `connecting`: out of reach only because its connection is being made.
+ * - `reconnecting`: it dropped or a try failed, and this Mac tries again.
+ *   A computer never seen still says "connecting using SSH…" on its line
+ *   (design skill `components/devices/DevicesTab`, "Reached over your SSH").
+ * - `out-of-reach`: stopped, not started, waiting for a login, or not reached over SSH.
+ */
+export const computerReachSchema = z.enum([
+  "in-reach",
+  "connecting",
+  "reconnecting",
+  "out-of-reach",
+]);
+export type ComputerReach = z.infer<typeof computerReachSchema>;
+
+/** The one reach value. A reader injects `reachOf(deviceId)`, which calls this. */
+export function reachFrom(device: {
+  inReach?: boolean | undefined;
+  ssh?: Pick<DeviceSsh, "state"> | undefined;
+}): ComputerReach {
+  if (device.inReach) return "in-reach";
+  switch (device.ssh?.state) {
+    case "connecting":
+      return "connecting";
+    case "reconnecting":
+      return "reconnecting";
+    default:
+      return "out-of-reach";
+  }
+}
+
+/**
  * Whether a computer is out of reach only because its connection is being
  * made, such as one just updated: every surface that names a computer out of
  * reach says "connecting" for it instead. One whose connection stopped, failed
- * or dropped is out of reach.
+ * or dropped is out of reach. The published flag, read from `reachFrom`.
  */
 export function deviceConnecting(device: {
   inReach?: boolean | undefined;
-  ssh?: DeviceSsh | undefined;
+  ssh?: Pick<DeviceSsh, "state"> | undefined;
 }): boolean {
-  return !device.inReach && device.ssh?.state === "connecting";
+  return reachFrom(device) === "connecting";
 }
 
 /** What a computer not in reach reads as: connecting while its connection is being made (`deviceConnecting`), out of reach otherwise. */
@@ -418,6 +455,12 @@ export const deviceViewSchema = z.strictObject({
   otherVersion: deviceOtherVersionSchema.optional(),
   /** When it was last in reach, in milliseconds since the epoch. */
   seenAt: z.number().int().nonnegative().optional(),
+  /**
+   * When the connection the row calls connected began, in milliseconds
+   * since the epoch. Absent while it is not connected. A "could not reach"
+   * line goes when this is newer than the line (protocol 8.17).
+   */
+  connectedAt: z.number().int().nonnegative().optional(),
   /** Firstmate is open on it, controlling this Firstmate now. */
   controlling: z.boolean().optional(),
   /** Another user on this Mac, out of reach since this Mac restarted: nobody has logged in as it since. */

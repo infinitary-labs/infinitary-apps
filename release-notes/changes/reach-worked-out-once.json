@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "reach-worked-out-once",
+      "reason": "A computer's reach is worked out once and every screen reads that value. The Devices words stay the same, and a stale could-not-reach line still goes once the computer connects again."
+    }
+  ]
+}

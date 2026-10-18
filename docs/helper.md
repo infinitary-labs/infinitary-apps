@@ -694,6 +694,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary; "Mac mini is connecting", with the mark as it was, while its connection is being made), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
   The crew summary's Project row reads "website · on Mac mini", and the record names the computer in Details (below, "A task's own Runs on").
   A computer going out of reach or catching up writes no record, so the placed sessions say so (`reachMoved`) and the board is published again at once (`TaskProtocol.refreshPresentation`); so does a change of its connection, out of reach to connecting and back (`devicesChanged` calls `scheduleWorkPresentation`).
+  The connecting limit is read when reach is read, and the host clock publishes the board again once that read has moved.
 
 ## Independent reviews
 

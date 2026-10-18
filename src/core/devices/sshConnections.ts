@@ -177,10 +177,8 @@ class DeviceLine {
    * moved: until an attempt fails it is connecting, not reconnecting.
    */
   fresh = false;
-  /** When it began reading connecting, for `CONNECTING_MS`. */
+  /** When it began reading connecting, for `CONNECTING_MS`, read when state is read. */
   connectingSince = 0;
-  /** The push that says the limit passed: one a line, replaced on a restart, ended with the line. */
-  connectingTimer: ReturnType<typeof setTimeout> | null = null;
   upAt: number | null = null;
   master: SshMaster | null = null;
   timer: ReturnType<typeof setTimeout> | null = null;
@@ -216,6 +214,8 @@ export class SshConnections {
   >();
   private setups = 0;
   private stopHearing: (() => void) | null = null;
+  /** The states last compared by `due`, so a passing limit pushes once. */
+  private dueStates = "";
 
   constructor(private readonly options: SshConnectionsOptions) {}
 
@@ -236,6 +236,20 @@ export class SshConnections {
     };
     this.reconcile();
     return () => this.stop();
+  }
+
+  /**
+   * Whether a read of every line's state differs from the last time this
+   * was asked. The connecting limit is that read, so the host clock asks
+   * this and pushes only when a line has flipped.
+   */
+  due(): boolean {
+    const next = [...this.lines.keys()]
+      .map((id) => `${id}:${this.state(id)?.state ?? ""}`)
+      .join(",");
+    if (next === this.dueStates) return false;
+    this.dueStates = next;
+    return true;
   }
 
   /**
@@ -472,9 +486,6 @@ export class SshConnections {
   private async close(line: DeviceLine): Promise<void> {
     line.phase = "closed";
     this.clearTimer(line);
-    // Not in `clearTimer`: every attempt calls that, and would lose the push.
-    if (line.connectingTimer) clearTimeout(line.connectingTimer);
-    line.connectingTimer = null;
     await line.master?.stop();
   }
 
@@ -813,19 +824,13 @@ export class SshConnections {
    * It begins reading connecting now - made for the first time, tried again
    * by design, or its work's folder moved - unless it has been reading it
    * already (unless `restart`, a new operation), so a far end that keeps
-   * ending that way times out as one. Says
-   * so once the limit passes, since nothing else changes then.
+   * ending that way times out as one. The limit is read when `state` is
+   * read (`timedOut`); the host clock re-reads the list, so no timer flips it.
    */
   private startConnecting(line: DeviceLine, fresh: boolean, restart = false): void {
     if (line.fresh && fresh && !restart) return;
     line.fresh = fresh;
     line.connectingSince = this.now();
-    if (line.connectingTimer) clearTimeout(line.connectingTimer);
-    line.connectingTimer = setTimeout(
-      () => this.options.changed(),
-      (this.options.connectingMs ?? CONNECTING_MS) + 1,
-    );
-    line.connectingTimer.unref?.();
   }
 
   private now(): number {

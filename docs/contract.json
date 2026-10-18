@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.16.0",
+  "protocolVersion": "8.17.0",
   "versionRule": {
     "majorsBehind": 1,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -2297,6 +2297,11 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
+            "connectedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
             "controlling": {
               "type": "boolean"
             },
@@ -2605,6 +2610,11 @@
                 ]
               },
               "seenAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "connectedAt": {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
@@ -2977,6 +2987,11 @@
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
+              "connectedAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
               "controlling": {
                 "type": "boolean"
               },
@@ -3273,6 +3288,11 @@
             "minimum": 0,
             "maximum": 9007199254740991
           },
+          "connectedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
           "controlling": {
             "type": "boolean"
           },
@@ -3465,6 +3485,11 @@
             ]
           },
           "seenAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "connectedAt": {
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
@@ -3707,6 +3732,11 @@
                 ]
               },
               "seenAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "connectedAt": {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
@@ -48535,6 +48565,11 @@
               ]
             },
             "seenAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "connectedAt": {
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991

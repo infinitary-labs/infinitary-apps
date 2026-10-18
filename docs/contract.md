@@ -135,6 +135,10 @@ Like the update order, their names and shapes never change across majors, and a 
 Protocol 8.15 also adds the optional `copy` and `run` to a `device_update` event, the optional `downloads` to a computer's `otherVersion`, and the optional `check` to what a command sends `/firstmate`, which only that home's own command sends.
 A client on an older minor ignores each of them.
 
+Protocol 8.17 adds optional `connectedAt` to a device on the list: when the connection the row calls connected began.
+A view on an older minor ignores it.
+The Devices tab clears a stale "could not reach" line when that time is newer than the line.
+
 Protocol 8.16 adds optional `memoryUsedBytes` to a fresh computer resource reading: installed memory the home counts as used, by the one figure in `docs/routing.md`.
 A panel on this version is handed installed memory, that figure, and Mac pressure, and loses the raw counts.
 A Mac on an older minor ignores the field.

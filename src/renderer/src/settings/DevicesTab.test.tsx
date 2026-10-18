@@ -1099,66 +1099,71 @@ describe("Settings -> Devices", () => {
 /**
  * INF-318, the captain's "my wifi went down for a bit, but now this screen
  * shows a conflicting state": a refusal that says a computer did not answer
- * goes once that computer's row says connected again, and no other refusal does.
+ * goes once a later connection began, and no other refusal does.
+ * Piece D of INF-416: the line clears on `connectedAt` newer than the
+ * refusal, not on a flag the screen kept of what it had seen.
  */
 describe("a refusal after a network drop", () => {
+  const at = 1_700_000_000_000;
   const MAC: DeviceView = {
     ...MINI,
     remoteLogin: "kunchen@mac-home",
     ssh: { state: "reconnecting" },
   };
-  const back: DeviceView = { ...MAC, inReach: true, ssh: { state: "connected" } };
+  const back: DeviceView = {
+    ...MAC,
+    inReach: true,
+    ssh: { state: "connected" },
+    connectedAt: at + 1,
+  };
   const answer = (refused: RemoteLoginRefusedAnswer["refused"]): RemoteLoginRefusedAnswer => ({
     refused,
     lines: [...remoteLoginWords.refused(refused, { address: "kunchen@mac-home", doing: "update" })],
   });
-
-  it("goes when the row says connected again, after the row said it was not", () => {
-    const kept = reachRefusalOf(answer("unreachable"), MAC.id, MAC);
+  const keptOf = (refused: RemoteLoginRefusedAnswer["refused"], address?: string) => {
+    const kept = reachRefusalOf(answer(refused), MAC.id, at, address);
     if (!kept) throw new Error("a reach refusal is kept");
-    expect(kept.seenOut).toBe(true);
+    return kept;
+  };
+
+  it("clears the line on a later connection", () => {
+    const kept = keptOf("unreachable");
     expect(reachRefusalAfter(kept, [MAC]).clears).toBe(false);
+    expect(reachRefusalAfter(kept, [{ ...back, connectedAt: at }]).clears).toBe(false);
     expect(reachRefusalAfter(kept, [back]).clears).toBe(true);
   });
 
-  it("goes for a computer on another version that takes no new work, which the row also calls connected", () => {
-    const kept = reachRefusalOf(answer("out-of-reach"), MAC.id, MAC);
-    if (!kept) throw new Error("a reach refusal is kept");
+  it("goes for a computer on another version once that connection began after the refusal", () => {
+    const kept = keptOf("out-of-reach");
     const older: DeviceView = {
       ...MAC,
       ssh: { state: "reconnecting" },
       otherVersion: { takesWork: false, updateBy: "command" } as DeviceView["otherVersion"],
+      connectedAt: at + 1,
     };
     expect(reachRefusalAfter(kept, [older]).clears).toBe(true);
   });
 
-  it("waits for the drop when the row still said connected as the refusal came", () => {
-    const kept = reachRefusalOf(answer("unreachable"), MAC.id, back);
-    if (!kept) throw new Error("a reach refusal is kept");
-    expect(kept.seenOut).toBe(false);
-    const still = reachRefusalAfter(kept, [back]);
-    expect(still.clears).toBe(false);
-    const out = reachRefusalAfter(still.next, [MAC]);
-    expect(out.clears).toBe(false);
-    expect(reachRefusalAfter(out.next, [back]).clears).toBe(true);
+  it("stays while the connection that was up when the refusal came is still the one connected", () => {
+    const kept = keptOf("unreachable");
+    const same = { ...back, connectedAt: at - 1 };
+    expect(reachRefusalAfter(kept, [same]).clears).toBe(false);
+    expect(reachRefusalAfter(kept, [MAC]).clears).toBe(false);
+    expect(reachRefusalAfter(kept, [back]).clears).toBe(true);
   });
 
   it("goes when the computer is removed from the list", () => {
-    const kept = reachRefusalOf(answer("unreachable"), MAC.id, MAC);
-    if (!kept) throw new Error("a reach refusal is kept");
-    expect(reachRefusalAfter(kept, [AIR]).clears).toBe(true);
+    expect(reachRefusalAfter(keptOf("unreachable"), [AIR]).clears).toBe(true);
   });
 
   it("keeps no record of a refusal that is not about reaching it, so it stays until the next action", () => {
     for (const refusal of ["busy", "cannot-send", "current", "not-updatable", "failed"] as const)
-      expect(reachRefusalOf(answer(refusal), MAC.id, MAC), refusal).toBeNull();
+      expect(reachRefusalOf(answer(refusal), MAC.id, at), refusal).toBeNull();
   });
 
-  it("for Change address, goes only when the row reconnects at the address that was tried", () => {
-    const kept = reachRefusalOf(answer("unreachable"), MAC.id, back, "kunchen@studio.local");
-    if (!kept) throw new Error("a reach refusal is kept");
-    // The row stays connected at its old address: the tried one still did not answer.
-    expect(kept.seenOut).toBe(true);
+  it("for Change address, goes only when a later connection is at the address that was tried", () => {
+    const kept = keptOf("unreachable", "kunchen@studio.local");
+    // Connected again at the old address: the tried one still did not answer.
     expect(reachRefusalAfter(kept, [back]).clears).toBe(false);
     const moved: DeviceView = { ...back, remoteLogin: "kunchen@studio.local" };
     expect(reachRefusalAfter(kept, [moved]).clears).toBe(true);

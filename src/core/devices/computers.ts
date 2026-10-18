@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import {
   awayWord,
+  type ComputerReach,
   type DeviceOtherVersion,
   type DeviceRemovalStage,
   type DeviceRemoveWhen,
   type DeviceSsh,
   type DeviceView,
-  deviceConnecting,
   deviceControls,
   deviceLabel,
   deviceRunsWork,
@@ -137,6 +137,8 @@ export type ComputersOptions = {
    * such connection is kept.
    */
   ssh?: (deviceId: string) => DeviceSsh | undefined;
+  /** The one reach value (`reachFrom`), for Remove's words. Absent, out of reach. */
+  reachOf?: (deviceId: string) => ComputerReach;
   /** How long an update waits for the computer to come back on this Mac's version. */
   updateWaitMs?: number;
   /** The list, whole, after any change. */
@@ -160,6 +162,8 @@ export class Computers {
   private readonly removing = new Map<string, Removing>();
   /** Computers being updated over the connection now. */
   private readonly updating = new Set<string>();
+  /** When the connection the row calls connected began, cleared once it is not. */
+  private readonly connectedSince = new Map<string, number>();
   private said = "";
 
   constructor(private readonly options: ComputersOptions) {
@@ -167,7 +171,9 @@ export class Computers {
     options.work.onWorkDevice((contact) => this.contact(contact));
     options.work.onViewDevice((contact) => this.viewContact(contact));
     // Connected on any version, it is seen; its version is on the list.
-    options.work.onVersion((deviceId) => {
+    options.work.onVersion((deviceId, version) => {
+      if (version) this.noteConnected(deviceId);
+      else this.connectedSince.delete(deviceId);
       options.pairing.seen(deviceId, options.now());
       this.changed();
     });
@@ -206,6 +212,10 @@ export class Computers {
       const ssh = this.options.ssh?.(device.id);
       const otherVersion = version ? this.otherVersion(device, version) : undefined;
       const seenAt = pairing.lastSeen(device.id);
+      const connectedAt = this.connectedAt(
+        device.id,
+        inReach || !!otherVersion || ssh?.state === "connected",
+      );
       const removing = this.removing.get(device.id);
       const removal: DeviceRemovalStage | undefined =
         removing?.stage ?? (pairing.removingWhenBack(device.id) ? "when-back" : undefined);
@@ -215,6 +225,7 @@ export class Computers {
         inReach,
         ...(otherVersion ? { otherVersion } : {}),
         ...(seenAt !== undefined ? { seenAt } : {}),
+        ...(connectedAt !== undefined ? { connectedAt } : {}),
         ...(!inReach && !version && device.onThisMac && (seenAt ?? device.pairedAt) < booted
           ? { restartedSince: true }
           : {}),
@@ -254,7 +265,7 @@ export class Computers {
       return this.viewOf(deviceId) ?? device;
     }
     if (when === "now") return this.removeNow(device);
-    const away = awayWord(deviceConnecting({ inReach: false, ssh: this.options.ssh?.(deviceId) }));
+    const away = awayWord(this.options.reachOf?.(deviceId) === "connecting");
     throw new Error(
       `${label} is ${away}. Choose to remove it when it is back, with its work, or now.`,
     );
@@ -693,6 +704,8 @@ export class Computers {
 
   private contact(contact: WorkDeviceContact): void {
     const { pairing } = this.options;
+    if (contact.contact === "in-reach") this.noteConnected(contact.deviceId);
+    else this.connectedSince.delete(contact.deviceId);
     pairing.seen(contact.deviceId, this.options.now());
     if (
       contact.contact === "in-reach" &&
@@ -716,6 +729,28 @@ export class Computers {
 
   private viewOf(deviceId: string): DeviceView | undefined {
     return this.list().find((device) => device.id === deviceId);
+  }
+
+  /** Records the start of the connection the row calls connected, once per connection. */
+  private noteConnected(deviceId: string): number {
+    const had = this.connectedSince.get(deviceId);
+    if (had !== undefined) return had;
+    const at = this.options.now();
+    this.connectedSince.set(deviceId, at);
+    return at;
+  }
+
+  /**
+   * When the connection the row calls connected began. A reach event records
+   * it; a read that finds the row not connected forgets it, so the next
+   * connection is newer than a refusal about the last.
+   */
+  private connectedAt(deviceId: string, connected: boolean): number | undefined {
+    if (!connected) {
+      this.connectedSince.delete(deviceId);
+      return undefined;
+    }
+    return this.noteConnected(deviceId);
   }
 
   /** Pushes the list when what it says changed. */

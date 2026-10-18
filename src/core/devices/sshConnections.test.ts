@@ -626,7 +626,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)(
       expect(state(at.connections, device.id)).toEqual({ state: "reconnecting" });
     });
 
-    it("stopping ends the connecting timer: nothing pushes after the limit passes", async () => {
+    it("stopping pushes nothing after the connecting limit, which is read when state is read", async () => {
       const sshd = await server();
       const them = otherUser();
       const limit = 800;

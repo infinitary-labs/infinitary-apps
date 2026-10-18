@@ -216,7 +216,7 @@ function startHome(
       ...(extra.claude ? { claude: extra.claude.factory.controlProfile } : {}),
     },
     ...(forgeFor ? { forgeFor } : {}),
-    connecting: (deviceId) => connectingNow.has(deviceId),
+    reachOf: (deviceId) => (connectingNow.has(deviceId) ? "connecting" : "out-of-reach"),
     ...(extra.routing ? { routing: extra.routing } : {}),
     ...(extra.runsForAnotherFirstmate
       ? { runsForAnotherFirstmate: extra.runsForAnotherFirstmate }

@@ -64,6 +64,7 @@ import {
   updateStartRefusal,
   updateWaitLine,
 } from "@shared/deviceSetup";
+import type { ComputerReach } from "@shared/devices";
 import {
   noNewWorkDayLine,
   noNewWorkStartRefusal,
@@ -499,8 +500,8 @@ export type CrewSupervisorOptions = {
    * waiting for it says so, not that it is out of reach.
    */
   takesNoWorkUntilUpdated?: (deviceId: string) => boolean;
-  /** Whether a computer is out of reach only because its connection is being made (`deviceConnecting`). */
-  connecting?: (deviceId: string) => boolean;
+  /** The one reach value (`reachFrom`). Absent, out of reach. */
+  reachOf?: (deviceId: string) => ComputerReach;
   /** A task began waiting for that computer's update: its Update card returns, even after Not now. */
   recallUpdateCard?: (deviceId: string) => void;
   /**
@@ -1890,7 +1891,7 @@ export class CrewSupervisor {
     const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
     // Still connecting says so, with no warn mark where `connecting` is read;
     // `outOfReach` stays beside it, so a paired view on protocol 8.5 keeps its marker.
-    const connecting = away && !older && this.options.connecting?.(device) === true;
+    const connecting = away && !older && this.options.reachOf?.(device) === "connecting";
     return {
       name: label,
       where,

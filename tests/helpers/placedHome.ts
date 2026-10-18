@@ -1,3 +1,4 @@
+import type { ComputerReach } from "@shared/devices";
 import { devicePlace } from "@shared/signIns";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
 import { DeviceSetup } from "../../src/core/devices/deviceSetup";
@@ -133,8 +134,8 @@ export function startPlacedHome(options: {
   };
   /** Whether Firstmate on a computer runs work for another Firstmate now, as this Mac's own SSH connection found. */
   runsForAnotherFirstmate?: (deviceId: string) => boolean;
-  /** Whether a computer is out of reach only because its connection is being made. */
-  connecting?: (deviceId: string) => boolean;
+  /** The one reach value. Absent, out of reach. */
+  reachOf?: (deviceId: string) => ComputerReach;
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -219,7 +220,7 @@ export function startPlacedHome(options: {
     ...(options.runsForAnotherFirstmate
       ? { runsForAnotherFirstmate: options.runsForAnotherFirstmate }
       : {}),
-    ...(options.connecting ? { connecting: options.connecting } : {}),
+    ...(options.reachOf ? { reachOf: options.reachOf } : {}),
     broadcastEvent: (event) => events.push(event),
     now,
     schedule: options.scheduleCopy,
@@ -270,7 +271,7 @@ export function startPlacedHome(options: {
       claude: { ...nothingHere, backend: "claude" },
     },
     machines: placed,
-    ...(options.connecting ? { connecting: options.connecting } : {}),
+    ...(options.reachOf ? { reachOf: options.reachOf } : {}),
     bind: async () => options.binding,
     ...(router ? { router } : {}),
     workspace,

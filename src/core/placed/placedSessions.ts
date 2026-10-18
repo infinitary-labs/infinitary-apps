@@ -16,7 +16,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { standingCutOff } from "@shared/accounts";
 import type { CutOffClass } from "@shared/authFailure";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import { awayWord } from "@shared/devices";
+import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import {
   type InvokeRequest,
@@ -319,11 +319,10 @@ export type PlacedSessionsOptions = {
    */
   runsForAnotherFirstmate?: (deviceId: string) => boolean;
   /**
-   * Whether a computer is out of reach only because its connection is being
-   * made (`deviceConnecting`): the minute's line waits until it is really out
-   * of reach, and an open refused meanwhile says connecting.
+   * The one reach value (`reachFrom`): the minute's line waits while it is
+   * connecting, and an open refused meanwhile says connecting.
    */
-  connecting?: (deviceId: string) => boolean;
+  reachOf?: (deviceId: string) => ComputerReach;
   /**
    * Where what a task's browser on a computer tells this Mac goes
    * (docs/task-browser.md, "On another computer"): its fact, its pictures
@@ -734,7 +733,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     for (const deviceId of this.devicesWithWork()) {
       if (this.options.devices.inReach(deviceId)) continue;
       // Still connecting is not an absence yet: the line is held until it is out of reach.
-      if (this.options.connecting?.(deviceId)) continue;
+      if (this.options.reachOf?.(deviceId) === "connecting") continue;
       const device = this.device(deviceId);
       if (device.saidGone || now - device.goneSince < OUT_OF_REACH_LINE_MS) continue;
       device.saidGone = true;
@@ -786,7 +785,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const device = this.device(deviceId);
     if (!this.options.devices.inReach(deviceId) || !device.roster)
       throw new Error(
-        `${this.nameOf(deviceId)} is ${awayWord(this.options.connecting?.(deviceId))}, so the conversation waits.`,
+        `${this.nameOf(deviceId)} is ${awayWord(this.options.reachOf?.(deviceId) === "connecting")}, so the conversation waits`,
       );
     const resume = crewmateResumeToken(spec.shape.record.resume);
     const version = this.options.devices.version(deviceId)?.contract;

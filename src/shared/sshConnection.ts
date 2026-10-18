@@ -5,6 +5,7 @@ import {
   type DeviceView,
   deviceLabel,
   KEY_TEXT_PATTERN,
+  reachFrom,
   type SshStopReason,
   userDisplayName,
 } from "./devices";
@@ -158,14 +159,21 @@ function nextLogin(device: Named): string {
 export const sshConnectionWords = {
   /** The end of a row's mono line, after the address. */
   detail(ssh: DeviceSsh, device: Named & Pick<DeviceView, "seenAt">): string {
+    const reach = reachFrom({ inReach: false, ssh });
+    // Design skill `components/devices/DevicesTab`, "Reached over your SSH":
+    // a computer never seen says "connecting using SSH…" for every try,
+    // including once its reach is reconnecting. "reconnecting using SSH…"
+    // only once it has been seen. The right side still says out of reach.
+    if (reach === "connecting" || (reach === "reconnecting" && device.seenAt === undefined))
+      return "connecting using SSH…";
+    if (reach === "reconnecting") return "reconnecting using SSH…";
     switch (ssh.state) {
       case "connected":
         return "connected using SSH";
       case "connecting":
         return "connecting using SSH…";
       case "reconnecting":
-        // One that never connected keeps trying as it was, though Devices says out of reach once connecting timed out.
-        return device.seenAt === undefined ? "connecting using SSH…" : "reconnecting using SSH…";
+        return "reconnecting using SSH…";
       case "at-login":
         return `starts ${nextLogin(device)}`;
       case "not-started":

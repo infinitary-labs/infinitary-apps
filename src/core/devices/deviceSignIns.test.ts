@@ -1,4 +1,4 @@
-import type { DeviceSsh, DeviceView } from "@shared/devices";
+import { type DeviceSsh, type DeviceView, reachFrom } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { DeviceSignIns } from "./deviceSignIns";
 
@@ -23,7 +23,7 @@ function view(inReach: boolean, ssh: DeviceSsh | undefined) {
     },
     emit: () => {},
     broadcastEvent: () => {},
-    ssh: () => ssh,
+    reachOf: () => reachFrom({ inReach, ssh }),
   });
   const [only] = signIns.view();
   signIns.dispose();

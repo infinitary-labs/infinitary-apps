@@ -14,6 +14,8 @@ Work already running there goes on."
 While it still takes work it says "It still takes work.
 Updating keeps the two in step."
 Second paragraph: how Update it reaches it, over Remote Login with your own SSH key, over your network, or on this computer's own Infinitary for another user on this computer; its running work stops for a moment and goes on after.
+A Mac a command added that downloads its update itself reads "It downloads this computer's version of Infinitary, or this computer sends its own copy over your network, with a count."
+(`AddAMac.prompt.md`, "Updating any other computer").
 A computer too old to update from here says "Its version of Infinitary is too old to update from here, so it needs a new command.", and its button reads Make the command.
 After a refused update the card returns once with a third paragraph carrying the refusal.
 

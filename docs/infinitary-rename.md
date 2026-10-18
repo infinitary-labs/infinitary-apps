@@ -14,7 +14,7 @@ The app's identity as a system knows it - its bundle id, data folders, backgroun
 | --- | --- | --- |
 | A setting | `INFINITARY_<NAME>` | `FM3000_<NAME>`; the newer name wins (`src/shared/envSettings.ts`) |
 | A channel on the connection | `inf:` to a side that reads it | `fm:`, and `fm:` is written to a side from before the rename (`docs/connection.md`, "Two spellings") |
-| The update order | `fm:firstmate:update` in every spelling | - |
+| The update and download orders | `fm:firstmate:update`, `fm:firstmate:update-download` and `fm:firstmate:update-progress` in every spelling (`FROZEN_CHANNELS`) | - |
 | A card's hooks | `data-inf-*`, the `inf-*` classes, `inf.action`, `inf.stage`, `window.infAction` | `data-fm-*`, `fm-*`, `window.fm`, `window.fmAction` (`docs/ui-plugins.md`, the bridge's hooks) |
 | The window's API | `window.infinitary` | `window.firstmate`, the same frozen API |
 | A panel's modules | `@infinitary/ui`, `@infinitary/contracts` | `@firstmate/ui`, `@firstmate/contracts` (`docs/personal-panels.md`) |

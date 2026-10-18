@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { chmodSync, createWriteStream, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { createInterface } from "node:readline";
 import type { Writable } from "node:stream";
 import { type Spelling, spellingOfMacApp, workLabelOf } from "@shared/codeNames";
 import { FETCH_APP_TYPES } from "@shared/connection";
@@ -9,10 +10,16 @@ import { COMPUTER } from "@shared/deviceNames";
 import type { DeviceGrant } from "@shared/devices";
 import { readsFetchAppSystem } from "@shared/ipc";
 import { spellingOfUserDataFolder, userDataFolderOf } from "@shared/userDataFolders";
-import type { WorkUpdateAnswer } from "@shared/work";
+import type { UpdateDownload, UpdateProgress, WorkUpdateAnswer } from "@shared/work";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { type DialOptions, fetchFirstmate } from "../devices/dial";
 import { LINUX_APP_FILE } from "../devices/farSystems";
+import {
+  DOWNLOAD_FETCHED,
+  DOWNLOAD_IDLE_SECONDS,
+  MAC_DOWNLOAD,
+  readDownloadCount,
+} from "../devices/remoteDownload";
 import type { MoveDeps } from "../folderMove/move";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform, thisDeviceSystem } from "../platform";
@@ -113,16 +120,141 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
           ? { system, chip }
           : undefined,
       );
-      // The background starts the copy at its path, which names the app.
-      if (basename(bundle) === basename(installed.app)) keepApp(bundle, dataDir);
-      else if (otherSpelling(basename(installed.app), basename(bundle)))
-        afterRun = await keepRenamed(options, installed, bundle);
-      else throw new Error("The home sent another app than the one kept here, so nothing changed.");
+      afterRun = await keepHere(options, installed, bundle);
     } finally {
       rmSync(into, { recursive: true, force: true });
     }
   }
   return { restarts: installed.service !== null, ...(afterRun ? { afterRun } : {}) };
+}
+
+/**
+ * Keeps an app got for this computer in place of the one here, and answers
+ * what follows once the run let the folder go, if anything. The background
+ * starts the copy at its path, which names the app.
+ */
+async function keepHere(
+  options: UpdateHereOptions,
+  installed: ReturnType<typeof readInstalled>,
+  bundle: string,
+): Promise<(() => Promise<void>) | undefined> {
+  const kept = installed.app as string;
+  if (basename(bundle) === basename(kept)) {
+    keepApp(bundle, options.dataDir);
+    return undefined;
+  }
+  if (otherSpelling(basename(kept), basename(bundle)))
+    return keepRenamed(options, installed, bundle);
+  throw new Error("The home sent another app than the one kept here, so nothing changed.");
+}
+
+export type DownloadHereOptions = UpdateHereOptions & {
+  /** Where the home's version is published, and its SHA-256. */
+  download: UpdateDownload;
+  /** Each count the download says, about once a second, then that what arrived is being kept. */
+  onProgress: (progress: UpdateProgress) => void;
+  /** Stops the download, leaving nothing of it. */
+  signal: AbortSignal;
+  /** No byte moving this long stops it (`DOWNLOAD_IDLE_SECONDS`). */
+  idleSeconds?: number;
+  /** How long checking and unpacking what arrived may take (`CHECK_MS`). */
+  checkMs?: number;
+  /** The program that checks the publisher; this Mac's own codesign unless a development run stands in its own. */
+  verifier?: string;
+};
+
+/** How a download here ended, with its last count. */
+export type DownloadedHere = DownloadCount & (UpdatedHere | { fallback: "failed" | "mismatch" });
+type DownloadCount = { received: number; total?: number };
+
+/** Checking and unpacking what arrived ends within the update's own backstop. */
+const CHECK_MS = 30 * 60_000;
+/** The system's own publisher check, which `MAC_DOWNLOAD` names. */
+const CODESIGN = "/usr/bin/codesign";
+
+/**
+ * Downloaded by itself (docs/helper.md, "Updated by its home"; docs/devices.md,
+ * "Downloading over the connection"): the home's download order names where
+ * its version is published and its SHA-256, and this Mac gets it over HTTPS
+ * with the instructions a Mac reached by its address runs (`MAC_DOWNLOAD`):
+ * its own curl, the checksum, its own ditto, and its own codesign against
+ * the release's publisher. Only a checked, completely unpacked app is kept,
+ * as the update order keeps the home's.
+ *
+ * Anything short of that changes nothing here and answers `fallback`, so the
+ * home sends its own copy at once: a download that failed, stopped with no
+ * byte moving for `idleSeconds`, or was stopped (`signal`, as when its run
+ * stops), or one that did not match its checksum or publisher
+ * (`mismatch`). A Linux computer, which keeps getting its copy from its
+ * home, answers `fallback` at once; one that runs its Mac's own app has
+ * nothing to get, as with the update order.
+ */
+export async function downloadHere(options: DownloadHereOptions): Promise<DownloadedHere> {
+  const { dataDir } = options;
+  const installed = readInstalled(dataDir);
+  if (!installed.app) return { ...(await updateHere(options)), received: 0 };
+  if (!installed.app.endsWith(".app")) return { fallback: "failed", received: 0 };
+  const into = mkdtempSync(join(dataDir, "update-"));
+  let last: DownloadCount = { received: 0 };
+  try {
+    const code = await runDownload(into, options, (count) => {
+      last = count;
+      options.onProgress({ ...count, state: "downloading" });
+    });
+    if (code !== 0) {
+      options.log?.(`could not download Infinitary here (${code ?? "stopped"})`);
+      return { fallback: code === 7 ? "mismatch" : "failed", ...last };
+    }
+    const bundle = readdirSync(into).find((entry) => entry.endsWith(".app"));
+    if (!bundle) return { fallback: "failed", ...last };
+    options.onProgress({ ...last, state: "updating" });
+    const afterRun = await keepHere(options, installed, join(into, bundle));
+    return { restarts: installed.service !== null, ...last, ...(afterRun ? { afterRun } : {}) };
+  } finally {
+    rmSync(into, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Runs the download instructions into `into` and answers how they ended:
+ * 0 once a checked app is there, 7 when it did not match, another exit for
+ * any other failure, or null when it was stopped. Stopping it - the signal,
+ * or checking past its backstop - ends the instructions, whose own exit
+ * takes the downloader and its partial file with them.
+ */
+function runDownload(
+  into: string,
+  options: DownloadHereOptions,
+  onCount: (count: DownloadCount) => void,
+): Promise<number | null> {
+  const verifier = options.verifier ?? CODESIGN;
+  const script = verifier === CODESIGN ? MAC_DOWNLOAD : MAC_DOWNLOAD.split(CODESIGN).join(verifier);
+  const { url, sha256 } = options.download;
+  const idle = String(options.idleSeconds ?? DOWNLOAD_IDLE_SECONDS);
+  return new Promise((resolve) => {
+    const child = spawn("/bin/sh", ["-c", script, "infinitary", into, sha256, url, idle], {
+      env: hostEnv(),
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let checking: NodeJS.Timeout | undefined;
+    const stop = () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+    };
+    if (options.signal.aborted) stop();
+    options.signal.addEventListener("abort", stop, { once: true });
+    createInterface({ input: child.stdout }).on("line", (line) => {
+      // The bytes are all here: checking and unpacking them has the update's backstop.
+      if (line === DOWNLOAD_FETCHED) checking ??= setTimeout(stop, options.checkMs ?? CHECK_MS);
+      const count = readDownloadCount(line);
+      if (count) onCount(count);
+    });
+    child.once("error", () => resolve(null));
+    child.once("close", (code) => {
+      clearTimeout(checking);
+      options.signal.removeEventListener("abort", stop);
+      resolve(options.signal.aborted ? null : code);
+    });
+  });
 }
 
 /** Whether two Mac apps are this app in two spellings, of the same flavor. */

@@ -345,7 +345,7 @@ const actionLines = {
           title: name ? `Add your ${name} by a command` : `Add a ${COMPUTER.one} by a command`,
           paragraphs: [
             `Make the command here, then run it once in Terminal on ${name ? `your ${name}` : `that ${COMPUTER.one}`}.`,
-            "It works once, for ten minutes. Only your click can make it, so I never see it.",
+            "It works once, for ten minutes, or thirty when it downloads Infinitary there. Only your click can make it, so I never see it.",
           ],
           label: "Make the command",
           decline: "Not now",
@@ -488,7 +488,9 @@ const actionLines = {
         paragraphs: [
           hereAsUser
             ? `I start it again on ${HERE.this}'s own Infinitary.`
-            : `I send ${HERE.this}'s Infinitary to it over your network, and it starts again.`,
+            : other.downloads
+              ? remoteLoginWords.updateConnectionDownloadOffer()
+              : `I send ${HERE.this}'s Infinitary to it over your network, and it starts again.`,
           stops,
         ],
         label: "Update it",

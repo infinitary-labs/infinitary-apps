@@ -283,6 +283,14 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     stage: z.enum(["updating", "done", "refused"]),
     text: z.string(),
     tone: z.enum(["info", "warn"]),
+    /**
+     * How far Firstmate has gone there (docs/devices.md, "Downloading over
+     * the connection"): its download's count, this computer's send's, or
+     * starting it again.
+     */
+    copy: remoteLoginCopySchema.optional(),
+    /** The run of lines this one belongs to (`feedRunSchema`): each later count rewrites the line before it. */
+    run: feedRunSchema.optional(),
   }),
   /**
    * A device's person chose Leave on it, and it is off the home's list

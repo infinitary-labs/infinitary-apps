@@ -8,11 +8,18 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { type Spelling, workLabelOf } from "@shared/codeNames";
-import type { DeviceView } from "@shared/devices";
-import { PLACED_WORK_SINCE, PROTOCOL_VERSION, WORK_UPDATE_SINCE } from "@shared/ipc";
+import { type DeviceView, deviceLabel } from "@shared/devices";
+import {
+  PLACED_WORK_SINCE,
+  PROTOCOL_VERSION,
+  WORK_DOWNLOAD_SINCE,
+  WORK_UPDATE_SINCE,
+} from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
+import type { UpdateDownload } from "@shared/work";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freePort } from "../../../tests/helpers/connectionClient";
+import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket } from "../../../tests/helpers/socketForward";
 import { startConnection } from "../connection/connection";
@@ -26,7 +33,7 @@ import {
 } from "../helper/background";
 import { fetchedLauncher, joinHome, keepApp } from "../helper/join";
 import { HomeRoute } from "../helper/route";
-import { type HelperRun, startHelper } from "../helper/run";
+import { type HelperRun, type StartHelperOptions, startHelper } from "../helper/run";
 import { updateHere } from "../helper/update";
 import { helperWords } from "../helper/words";
 import { WorkDevices } from "../placed/workDevices";
@@ -51,8 +58,10 @@ import { DevicePairing } from "./pairing";
 
 // Integration budget (docs/test-cohorts.md): real TLS on loopback and the
 // Mac's own tar, the slowest case 0.47 s at its fastest of three runs on an
-// Apple silicon Mac. A poll waits for a computer that crosses the
-// connection and starts again, so it waits up to 5 s.
+// Apple silicon Mac; on a Mac, a download from a local HTTPS release with
+// curl, shasum, ditto and a stand-in codesign, the slowest 3.7 s (a paced
+// download, and one that stalls for its two seconds). A poll waits for a
+// computer that crosses the connection and starts again, so it waits up to 5 s.
 vi.setConfig({ testTimeout: 10_000, expect: { poll: { timeout: 5_000 } } });
 
 /** This Mac's version of Firstmate in these tests. */
@@ -104,6 +113,10 @@ async function world(
     speaks?: Spelling;
     /** Its work folder is in Firstmate 3000's data folder, as an installed app keeps it, not one a test named. */
     inDataFolder?: boolean;
+    /** It joined from another Mac, as a command run there joins, so this Mac does not run its app. */
+    fromAnotherMac?: boolean;
+    /** Where this Mac's version is published for a Mac to download itself; none for an unpublished one. */
+    download?: UpdateDownload;
   } = {},
 ) {
   const userData = scratchDir("infinitary-update-home-");
@@ -112,6 +125,7 @@ async function world(
     onProblem: () => {},
     interfaces: () => ({}),
     ownUid: 501,
+    ...(options.fromAnotherMac ? { joinsFromAnotherMac: true } : {}),
   });
   stops.push(() => pairing.dispose());
   const db = openDatabase(userData);
@@ -123,20 +137,23 @@ async function world(
   const work = new WorkDevices();
   const port = await freePort();
   const homeApp = options.app === undefined ? bundle("the home's own copy") : options.app;
-  const connection = startConnection({
-    dispatch: (async (channel: string) => {
-      throw new Error(`Rejected ${channel}`);
-    }) as CoreDispatch,
-    events: new CoreEventBus(),
-    devices: pairing,
-    port,
-    name: () => "MacBook Pro",
-    app: () => homeApp,
-    ...(options.speaks ? { speaks: options.speaks } : {}),
-  });
+  const listen = () =>
+    startConnection({
+      dispatch: (async (channel: string) => {
+        throw new Error(`Rejected ${channel}`);
+      }) as CoreDispatch,
+      events: new CoreEventBus(),
+      devices: pairing,
+      port,
+      name: () => "MacBook Pro",
+      app: () => homeApp,
+      ...(options.speaks ? { speaks: options.speaks } : {}),
+    });
+  let connection = listen();
   stops.push(() => connection.close());
   // Detached first, so nothing the closing connection says reaches the record.
-  stops.push(work.attach(connection));
+  let detach = work.attach(connection);
+  stops.push(() => detach());
   const said: DeviceUpdateEvent[] = [];
   const overRemoteLogin: string[] = [];
   const pushed: DeviceView[][] = [];
@@ -149,6 +166,9 @@ async function world(
     bringHome: async () => {},
     home: { app: HOME_APP, contract: PROTOCOL_VERSION },
     canSend: () => homeApp !== null,
+    download: async () => options.download ?? null,
+    // Every count is said and asked for at once, so a short download shows some.
+    countEveryMs: 50,
     emitUpdate: (event) => said.push(event),
     updateWaitMs: options.waitMs ?? 5_000,
     // Remote Login's own update is RemoteLogin's (remoteLogin.test.ts); this
@@ -206,7 +226,10 @@ async function world(
    * when one is given, from its work folder or the one named.
    */
   const start = (
-    versions: { protocolVersion?: string; appVersion?: string },
+    versions: Pick<
+      StartHelperOptions,
+      "protocolVersion" | "appVersion" | "verifier" | "downloadIdleSeconds"
+    >,
     background?: BackgroundContext,
     from: string = dataDir,
   ) => {
@@ -242,6 +265,16 @@ async function world(
         ? readFileSync(join(app, "Contents", "Resources", "marker"), "utf8").trim()
         : null,
     feed: () => said.map((event) => event.text),
+    /** The home's own connection, which asks the computer its orders. */
+    work,
+    /** The connection drops under every computer and this Mac listens again at once, as on a flaky network. */
+    drop: async () => {
+      detach();
+      await connection.close();
+      connection = listen();
+      detach = work.attach(connection);
+      await connection.settled();
+    },
   };
 }
 
@@ -310,8 +343,18 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(updated).toMatchObject({ id: at.deviceId, inReach: true });
     expect(updated.otherVersion).toBeUndefined();
     const builder = { name: "Mac mini", user: "builder", onThisMac: true };
-    expect(at.feed()).toEqual([
+    const label = deviceLabel(builder);
+    // What this Mac sent it is counted as it goes, in one line rewritten in place.
+    const sent = at.said.filter((event) => event.copy?.state === "sending");
+    expect(sent.length).toBeGreaterThan(0);
+    expect(new Set(sent.map((event) => event.run?.id)).size).toBe(1);
+    expect(sent.at(-1)?.text).toBe(
+      remoteLoginWords.sendingRow(label, sent.at(-1)?.copy?.sent ?? 0),
+    );
+    expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(0);
+    expect(at.said.filter((event) => !sent.includes(event)).map((event) => event.text)).toEqual([
       remoteLoginWords.updating(builder),
+      remoteLoginWords.starting(label),
       remoteLoginWords.updated(builder, "running"),
     ]);
     // Nothing of the copy it got is left beside the one it kept.
@@ -339,6 +382,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     const builder = { name: "Mac mini", user: "builder", onThisMac: true };
     expect(late.said.map(({ text, tone }) => [text, tone])).toEqual([
       [remoteLoginWords.updating(builder), "info"],
+      [remoteLoginWords.starting(deviceLabel(builder)), "info"],
       ...remoteLoginWords.notBack(builder).map((line) => [line, "warn"]),
     ]);
 
@@ -411,6 +455,349 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(running.state().contact).toBe("in-reach");
   });
 });
+
+/**
+ * A Mac a command added downloads its update itself (INF-322, the captain's
+ * direction B: every work computer, its count in Devices and the feed, and
+ * this Mac's own copy at once when it cannot): the home names where its
+ * version is published, and the computer's own run fetches it over HTTPS
+ * from a stand-in release with the Mac's own curl, checks its SHA-256,
+ * unpacks it with ditto and checks its publisher - a stand-in for codesign,
+ * since no stand-in app carries the release's signature - then keeps it.
+ * A computer on an older contract keeps the update order alone.
+ */
+describe.runIf(process.platform === "darwin")(
+  "a Mac a command added, on a contract that takes the download order",
+  () => {
+    const mini = { name: "Mac mini", user: "builder", onThisMac: false };
+    const label = deviceLabel(mini);
+
+    /** This Mac's version as its release publishes it: a real zip over local HTTPS, trusted by curl here alone. */
+    async function published(paceMs = 0) {
+      const release = await macRelease(bundle("the published copy"), "0.13.0", paceMs);
+      stops.push(() => release.stop());
+      vi.stubEnv("CURL_CA_BUNDLE", release.cert);
+      stops.push(() => {
+        vi.unstubAllEnvs();
+      });
+      const url = release.downloads[release.publicUrl] ?? "";
+      return { ...release, download: { url, sha256: release.sha256 } };
+    }
+
+    /** Each line the feed said, but the counts. */
+    const lines = (said: DeviceUpdateEvent[]) =>
+      said
+        .filter((event) => !event.copy?.download && event.copy?.state !== "sending")
+        .map((event) => event.text);
+    const leftovers = (dataDir: string) =>
+      readdirSync(dataDir).filter((entry) => entry.startsWith("update-"));
+
+    it("downloads this Mac's version itself, counts it in one line rewritten in place, keeps it and starts again", async () => {
+      const release = await published(100);
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const verifier = release.programs["/usr/bin/codesign"];
+      const before = at.start({ appVersion: "0.1.20", verifier });
+      await expect
+        .poll(() => at.view()?.otherVersion)
+        .toMatchObject({ updateBy: "connection", downloads: true });
+      // Its publisher is checked once the whole download arrived: held there,
+      // the count it reaches is the release's own size.
+      release.signature("hold");
+      const updating = at.computers.update(at.deviceId);
+      await expect.poll(() => existsSync(release.verificationReady), { timeout: 8_000 }).toBe(true);
+      await expect
+        .poll(() => at.said.filter((event) => event.copy?.download).at(-1)?.copy?.download)
+        .toEqual({ received: release.size, total: release.size });
+      release.signature("valid");
+      expect(await before.ended).toBe("updated");
+      expect(at.kept()).toBe("the published copy");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+
+      const counts = at.said.filter((event) => event.copy?.download);
+      expect(counts.length).toBeGreaterThan(1);
+      expect(new Set(counts.map((event) => event.run?.id)).size).toBe(1);
+      for (const { text, copy } of counts)
+        expect(text).toBe(
+          remoteLoginWords.downloading(label, copy?.download?.received ?? 0, release.size),
+        );
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        remoteLoginWords.starting(label),
+        remoteLoginWords.updated(mini, "running"),
+      ]);
+      // Nothing was sent from here, and nothing of the download is left there.
+      expect(at.said.some((event) => event.copy?.state === "sending")).toBe(false);
+      expect(release.requests()).toBe(1);
+      expect(leftovers(at.dataDir)).toEqual([]);
+    });
+
+    it.each([
+      ["does not match its checksum", "corrupt", true],
+      ["cannot be downloaded", "fail", false],
+    ] as const)(
+      "sends this Mac's own copy at once, counted, when the download %s",
+      async (_, mode, mismatch) => {
+        const release = await published();
+        release.mode(mode);
+        const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+        const before = at.start({
+          appVersion: "0.1.20",
+          verifier: release.programs["/usr/bin/codesign"],
+        });
+        await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+        const updating = at.computers.update(at.deviceId);
+        expect(await before.ended).toBe("updated");
+        expect(at.kept()).toBe("the home's own copy");
+        at.start({ appVersion: HOME_APP });
+        await updating;
+        expect(lines(at.said)).toEqual([
+          remoteLoginWords.updating(mini),
+          remoteLoginWords.downloadFallback(label, mismatch),
+          remoteLoginWords.starting(label),
+          remoteLoginWords.updated(mini, "running"),
+        ]);
+        const sent = at.said.filter((event) => event.copy?.state === "sending");
+        expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(0);
+        expect(sent.at(-1)?.text).toBe(
+          remoteLoginWords.sendingRow(label, sent.at(-1)?.copy?.sent ?? 0),
+        );
+        expect(leftovers(at.dataDir)).toEqual([]);
+      },
+    );
+
+    it("sends this Mac's own copy when what it downloaded is not the release's publisher's", async () => {
+      const release = await published();
+      release.signature("wrong-team");
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      const updating = at.computers.update(at.deviceId);
+      expect(await before.ended).toBe("updated");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(at.kept()).toBe("the home's own copy");
+      expect(release.verifications()).toHaveLength(1);
+      expect(lines(at.said)).toContain(remoteLoginWords.downloadFallback(label, true));
+    });
+
+    it("stops a download with nothing moving, leaves nothing of it there, and sends this Mac's copy", async () => {
+      const release = await published();
+      release.mode("hang");
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+        downloadIdleSeconds: 2,
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      const updating = at.computers.update(at.deviceId);
+      expect(await before.ended).toBe("updated");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(at.kept()).toBe("the home's own copy");
+      expect(lines(at.said)).toContain(remoteLoginWords.downloadFallback(label, false));
+      // The stalled transfer's connection closed with its downloader.
+      await expect.poll(() => release.active()).toBe(0);
+      expect(leftovers(at.dataDir)).toEqual([]);
+    });
+
+    // INF-369 F1, the captain's choice: this computer reconnects and follows the running download until the new version is up.
+    it("followed through a dropped connection, its download goes on and the home waits for its new version", async () => {
+      const release = await published();
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      // Held where it checks the publisher, the whole download arrived.
+      release.signature("hold");
+      const updating = at.computers.update(at.deviceId);
+      await expect.poll(() => existsSync(release.verificationReady)).toBe(true);
+      await at.drop();
+      // Its link redials at once, so it never says it was out of reach; this Mac welcomes it again.
+      await expect.poll(() => at.view()?.inReach).toBe(true);
+      // Asked again while it downloads, it says so, and changes nothing.
+      expect(
+        await at.work.ask(at.deviceId, "fm:firstmate:update-download", [release.download], {
+          anyVersion: true,
+        }),
+      ).toEqual({ updating: true });
+      release.signature("valid");
+      expect(await before.ended).toBe("updated");
+      expect(at.kept()).toBe("the published copy");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        remoteLoginWords.updated(mini, "running"),
+      ]);
+      expect(at.said.at(-2)?.copy?.download).toEqual({
+        received: release.size,
+        total: release.size,
+      });
+      expect(release.requests()).toBe(1);
+      expect(leftovers(at.dataDir)).toEqual([]);
+    });
+
+    it("asked to update while a download runs there, follows that download without falling back", async () => {
+      const release = await published();
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      // An earlier update whose answer this Mac never heard, as after it restarted.
+      release.signature("hold");
+      const earlier = at.work.ask(at.deviceId, "fm:firstmate:update-download", [release.download], {
+        anyVersion: true,
+      });
+      await expect.poll(() => existsSync(release.verificationReady)).toBe(true);
+      const updating = at.computers.update(at.deviceId);
+      await expect
+        .poll(() => at.said.filter((event) => event.copy?.download).at(-1)?.copy?.download)
+        .toEqual({ received: release.size, total: release.size });
+      release.signature("valid");
+      expect(await earlier).toMatchObject({ restarts: true });
+      expect(await before.ended).toBe("updated");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        remoteLoginWords.updated(mini, "running"),
+      ]);
+      expect(at.said.some((event) => event.copy?.state === "sending")).toBe(false);
+      expect(release.requests()).toBe(1);
+    });
+
+    // INF-369 N2: a home that could not look its version up asks the update order while an earlier download still runs there.
+    it.each([
+      ["kept its copy, answers as that download ended", "valid", "the published copy"],
+      ["ended with nothing changed, goes on with the update", "invalid", "the home's own copy"],
+    ] as const)(
+      "asked the update order while a download runs there, waits for it: one that %s",
+      async (_, signature, kept) => {
+        const release = await published();
+        // This Mac's lookup answers nothing now, as offline or past its limit on a slow hotspot.
+        const at = await world({ kept: true, fromAnotherMac: true });
+        const before = at.start({
+          appVersion: "0.1.20",
+          verifier: release.programs["/usr/bin/codesign"],
+        });
+        await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+        release.signature("hold");
+        const earlier = at.work.ask(
+          at.deviceId,
+          "fm:firstmate:update-download",
+          [release.download],
+          {
+            anyVersion: true,
+          },
+        );
+        await expect.poll(() => existsSync(release.verificationReady)).toBe(true);
+        const updating = at.computers.update(at.deviceId);
+        await expect.poll(() => lines(at.said)).toEqual([remoteLoginWords.updating(mini)]);
+        release.signature(signature);
+        await earlier;
+        expect(await before.ended).toBe("updated");
+        expect(at.kept()).toBe(kept);
+        at.start({ appVersion: HOME_APP });
+        await updating;
+        expect(lines(at.said)).toEqual([
+          remoteLoginWords.updating(mini),
+          remoteLoginWords.starting(label),
+          remoteLoginWords.updated(mini, "running"),
+        ]);
+      },
+    );
+
+    it("whose run stopped part way comes back with nothing changed, and is sent this Mac's copy at once", async () => {
+      const release = await published();
+      release.mode("hang");
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      const updating = at.computers.update(at.deviceId);
+      await expect.poll(() => release.active()).toBe(1);
+      await before.stop();
+      // Its download went with the run, and left nothing.
+      await expect.poll(() => release.active()).toBe(0);
+      expect(leftovers(at.dataDir)).toEqual([]);
+      // Its background starts it again on its old version: nothing is under way there.
+      const again = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      expect(await again.ended).toBe("updated");
+      expect(at.kept()).toBe("the home's own copy");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        remoteLoginWords.downloadFallback(label, false),
+        remoteLoginWords.starting(label),
+        remoteLoginWords.updated(mini, "running"),
+      ]);
+    });
+
+    it("not heard from again within the wait, says it may already have updated, never that nothing changed", async () => {
+      const release = await published();
+      release.mode("hang");
+      const at = await world({
+        kept: true,
+        fromAnotherMac: true,
+        download: release.download,
+        waitMs: 300,
+      });
+      const before = at.start({
+        appVersion: "0.1.20",
+        verifier: release.programs["/usr/bin/codesign"],
+      });
+      await expect.poll(() => at.view()?.otherVersion?.downloads).toBe(true);
+      const updating = at.computers.update(at.deviceId);
+      await expect.poll(() => release.active()).toBe(1);
+      await before.stop();
+      await expect(updating).rejects.toThrow(remoteLoginWords.uncertain(label).join(" "));
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        ...remoteLoginWords.uncertain(label),
+      ]);
+      expect(at.kept()).toBe("the copy it kept");
+    });
+
+    it("on an older contract, keeps the update order alone: it is sent this Mac's copy, counted, and never told of the download", async () => {
+      const release = await published();
+      const [major, minor] = WORK_DOWNLOAD_SINCE.split(".").map(Number);
+      const at = await world({ kept: true, fromAnotherMac: true, download: release.download });
+      const before = at.start({
+        appVersion: "0.1.20",
+        protocolVersion: `${major}.${(minor ?? 1) - 1}.0`,
+      });
+      await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+      expect(at.view()?.otherVersion?.downloads).toBeUndefined();
+      const updating = at.computers.update(at.deviceId);
+      expect(await before.ended).toBe("updated");
+      at.start({ appVersion: HOME_APP });
+      await updating;
+      expect(at.kept()).toBe("the home's own copy");
+      expect(release.requests()).toBe(0);
+      expect(lines(at.said)).toEqual([
+        remoteLoginWords.updating(mini),
+        remoteLoginWords.starting(label),
+        remoteLoginWords.updated(mini, "running"),
+      ]);
+      expect(at.said.some((event) => event.copy?.state === "sending")).toBe(true);
+    });
+  },
+);
 
 /**
  * The Infinitary rename (FI3-1780 step 2): a home that moved to Infinitary

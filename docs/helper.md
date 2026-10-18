@@ -341,6 +341,22 @@ On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update or
 A turn running here is cut off, as when this computer restarts (below, "That computer restarts").
 The order's name and shape never change across majors, so a home on any later major can still ask it.
 
+From `WORK_DOWNLOAD_SINCE` on, on any major, a Mac's run also answers the download order, `fm:firstmate:update-download`, which names where the home's version is published and its SHA-256 (`downloadHere`, `src/core/helper/update.ts`; `docs/devices.md`, "Downloading over the connection"):
+
+1. Where a Mac's copy is kept here, it downloads that version itself into a temporary folder inside the data folder with the instructions a Mac reached by its address runs (`MAC_DOWNLOAD`): its own curl over HTTPS, the SHA-256, its own ditto and its own codesign against the release's publisher.
+   Only a checked, completely unpacked app is kept, as in step 1 above, under the other name of the rename too.
+2. While it runs, it answers the home's `fm:firstmate:update-progress` with the bytes received, the size the release stated and what is under way: `downloading`, then `updating` once it is keeping what it got (also while the update order runs), or `failed` or `mismatch` once a download ended with nothing changed; `idle` in a run with none of those.
+   The state is open text: a home reads one a later version adds as under way.
+3. Kept, it answers `{ restarts }` with its last count, says the updated lines, and its run ends as `updated`, as above.
+4. Anything short of that changes nothing here and answers `fallback`, `mismatch` for a download that did not match its checksum or publisher, or `failed`: a download that failed, stopped after two minutes with no byte moving, or did not finish checking within the update's thirty-minute backstop.
+   The home then asks the update order at once.
+   A Linux computer answers `failed` at once, and another user on the home's Mac runs the home's app, so it answers as the update order does.
+5. A home that goes out of reach does not stop it: the home follows it by its progress once it is back (`docs/devices.md`, "Downloading over the connection").
+   The run stopping stops it, and the run lets the folder go only once what it fetched is gone.
+
+One update runs at a time: the download order asked while either runs answers `{ updating }` and changes nothing, and the update order asked while a download runs waits for it, as a home that could not look its version up asks it: a download that kept its copy answers that update's `{ restarts }`, and one that ended with nothing changed lets the update go on.
+A development run may stand in the publisher check with `INFINITARY_CODESIGN`; an installed app never reads it.
+
 ## Resource observations
 
 The home can ask a work-enabled computer for current CPU and memory facts through the read-only `inf:computer:resources` order (`src/shared/resources.ts`), from protocol 6.3 on.

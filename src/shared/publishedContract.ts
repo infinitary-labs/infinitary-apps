@@ -31,6 +31,7 @@ import {
   pushContract,
   SIGN_INS_SINCE,
   TASK_BROWSERS_THERE_SINCE,
+  WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./ipc";
 import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";
@@ -38,6 +39,8 @@ import { SIGN_IN_ORDER_CHANNELS, signInOrders } from "./signIns";
 import {
   BROWSER_ORDER_CHANNELS,
   browserOrders,
+  DOWNLOAD_ORDER_CHANNELS,
+  downloadOrders,
   UPDATE_ORDER_CHANNELS,
   updateOrders,
   WORK_ORDER_CHANNELS,
@@ -259,7 +262,7 @@ export function publishedContract() {
         },
       },
     },
-    // The one order a home asks a computer that runs work whatever its
+    // The update order a home asks a computer that runs work whatever its
     // version, from `since` on (`src/shared/work.ts`): bring Firstmate there
     // to the home's own. Its name and shape never change across majors.
     updateOrders: {
@@ -267,6 +270,25 @@ export function publishedContract() {
       requests: Object.fromEntries(
         UPDATE_ORDER_CHANNELS.map((channel) => {
           const declared = updateOrders[channel];
+          return [
+            channel,
+            {
+              effect: declared.effect,
+              request: received(`The ${channel} order`, declared.request),
+              response: sent(`The ${channel} answer`, declared.response),
+            },
+          ];
+        }),
+      ),
+    },
+    // The orders a home asks a Mac that runs work to download its update
+    // itself, from `since` on (`src/shared/work.ts`): the download, and how
+    // far it got. Their names and shapes never change across majors either.
+    downloadOrders: {
+      since: WORK_DOWNLOAD_SINCE,
+      requests: Object.fromEntries(
+        DOWNLOAD_ORDER_CHANNELS.map((channel) => {
+          const declared = downloadOrders[channel];
           return [
             channel,
             {

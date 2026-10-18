@@ -112,7 +112,7 @@ Pick the one that suits it.", with three small secondary Buttons and a ghost "Ca
 
 **The link and the command.**
 A link or a command exists only after the captain's own click, here or on the first mate's card, and it lives in its panel alone: never in a card, a thread, a feed line, a task record or a crewmate's notes.
-A command carries a link inside it, with the same rules: it works once, for ten minutes.
+A command carries a link inside it, with the same rules: it works once, for ten minutes, or thirty for a command that downloads Infinitary on another Mac.
 While one is open the panel stands at the top of the tab: `--bg-1`, a 1px `--accent` hairline, `--radius-m`.
 In it a micro label, one `--text-sm --fg-2` line, the link or command on one line in a mono `--text-xs` box on `--bg-0`, cut with an ellipsis, and a small primary Button:
 - a link: `NEW LINK`, "Your first mate stays on this computer.
@@ -172,7 +172,7 @@ Out of reach, a row says nothing of its version: this computer cannot tell it.
 Connected on another version, a row is in reach, so it never shows the old-address line or its way back ("Bringing a computer back").
 
 **Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no state and no Update or Remove until it is done (`AddAMac.prompt.md`).
-For a Mac reached by its address, Add and Update first let it download this computer's published version itself.
+For a Mac reached by its address, Add and Update first let it download this computer's published version itself, and so does Update for a Mac a command added, once it runs a version that takes the download.
 Its summary and the feed read "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size.
 The count changes in place at most once a second; it has no bar, percentage or time remaining.
 If the download fails or its checksum does not match, the feed explains that this computer is sending its own copy instead, and the row and feed count "Sending Infinitary to Mac mini… 42.3 MB sent".
@@ -185,6 +185,8 @@ A failed check or unpack keeps its definite failure; sending the last byte alone
 Silent start work uses its existing backstop, not the transfer's two-minute deadline.
 If the outcome is lost after starting, the warning says the computer may already have updated and to check Devices before starting another update.
 Another user on this computer uses its local copy and makes no public download lookup.
+Updated over your network, a computer that is sent this computer's copy - an older one, or one whose download failed - counts it the same way, "Sending Infinitary to Mac mini… 42.3 MB sent", and once it answers that it starts again, its row reads "Starting Infinitary on Mac mini…" until it is back on this computer's version.
+A download over your network goes on when the connection drops: once that computer is back, the row picks its count up again and follows it until it runs this computer's version, never saying it was out of reach while it may still be downloading.
 A stop names inactivity, not a failure to reach the computer.
 The row keeps its existing type, spacing, focus and disabled controls.
 Remove on a computer that takes no new work asks as for one out of reach, with its own first line: "Remove Mac mini?
@@ -226,7 +228,7 @@ Each card's button is the captain's own click on the card's chrome; it opens thi
 - "connect my MacBook Air so it can control you" yields one decision from the first mate, "Connect your MacBook Air": "Your first mate stays on this computer.
   Your MacBook Air will show it and can run work for it.", "Make a link here, then paste it into Infinitary on your MacBook Air." and "It works once, for ten minutes.
   Only your click can make it, so I never see it.", with "Make a link" and "Not now".
-- "add my mini by a command" yields "Add a computer by a command": "Make the command here, then run it once in Terminal on that computer." and "It works once, for ten minutes.
+- "add my mini by a command" yields "Add a computer by a command": "Make the command here, then run it once in Terminal on that computer." and "It works once, for ten minutes, or thirty when it downloads Infinitary there.
   Only your click can make it, so I never see it.", with "Make the command" and "Not now".
 - "run work as another user on this computer" and "add my mini at sam@mini.local" are in `AddAMac.prompt.md`.
 - "remove the mini" yields "Remove Mac mini?": "Its task on website stops, and its unmerged work comes here first." and "Then I remove what I set up there, with its sign-ins.

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   awayWord,
   type DeviceOtherVersion,
@@ -11,14 +12,21 @@ import {
   deviceRunsWork,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import { PROTOCOL_VERSION, takesUpdate } from "@shared/ipc";
+import { PROTOCOL_VERSION, takesDownload, takesUpdate } from "@shared/ipc";
 import {
   type RemoteLoginPasswordQuestion,
   type RemoteLoginRefusal,
   remoteLoginWords,
 } from "@shared/remoteLogin";
 import { devicePlace } from "@shared/signIns";
-import { updateOrders, WORK_UPDATE_ORDER } from "@shared/work";
+import {
+  downloadOrders,
+  type UpdateDownload,
+  updateOrders,
+  WORK_DOWNLOAD_ORDER,
+  WORK_PROGRESS_ORDER,
+  WORK_UPDATE_ORDER,
+} from "@shared/work";
 import {
   DeviceOutOfReachError,
   type ViewDeviceContact,
@@ -29,6 +37,7 @@ import type { WorkDevices } from "../placed/workDevices";
 import { TaskService } from "../tasks/taskService";
 import { compareSemver } from "../update/semver";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { copyCount } from "./appArchive";
 import type { DevicePairing } from "./pairing";
 import { RemoteLoginRefusedError } from "./remoteLogin";
 
@@ -60,6 +69,16 @@ import { RemoteLoginRefusedError } from "./remoteLogin";
  * its own key, keeps it, and starts again. One too old to take the update
  * order is updated by a new command run there.
  */
+
+/**
+ * Whether an update over the connection has the computer download this
+ * Mac's published version itself first (docs/devices.md, "Downloading over
+ * the connection"): a Mac elsewhere, which keeps its own copy, on a
+ * contract that takes the download order.
+ */
+function downloadsThere(device: DeviceView, contract: string): boolean {
+  return device.onThisMac !== true && device.system === "macos" && takesDownload(contract);
+}
 
 /** One step of an update over the connection, as the feed says it. */
 export type DeviceUpdateEvent = Extract<FmEvent, { type: "device_update" }>;
@@ -101,6 +120,15 @@ export type ComputersOptions = {
    * not, or null.
    */
   prepare?: (device: DeviceView) => Promise<RemoteLoginRefusal | null>;
+  /**
+   * Where this computer's version is published for a Mac to download itself
+   * (docs/devices.md, "Downloading over the connection"), with its SHA-256,
+   * looked up without downloading it here; null for a development or
+   * unpublished version, or a lookup that did not answer.
+   */
+  download?: (device: DeviceView) => Promise<UpdateDownload | null>;
+  /** How often a download's count is asked over the connection, and a send's said; a second unless a test says. */
+  countEveryMs?: number;
   /** One step of an update over the connection, for the feed. */
   emitUpdate?: (event: DeviceUpdateEvent) => void;
   /**
@@ -124,6 +152,8 @@ type Removing = { stage: DeviceRemovalStage; runs: string[] };
 
 /** How long an update waits for the computer to start again on this Mac's version. */
 const UPDATE_WAIT_MS = 3 * 60_000;
+/** A count is said at most this often (docs/devices.md, "How far the copy has gone"). */
+const COUNT_EVERY_MS = 1_000;
 
 export class Computers {
   /** Removals under way, with the projects each computer ran when it began. */
@@ -333,11 +363,20 @@ export class Computers {
    * connection"): the computer takes the update order whatever its major,
    * gets this Mac's Firstmate with its own key when it keeps a copy, and
    * starts again; this waits for it to come back on this Mac's version.
+   * A Mac that keeps its own copy and takes the download order first gets
+   * this Mac's published version itself, its count said as it goes
+   * ("Downloading over the connection"); one that could not is sent this
+   * Mac's copy at once, with the count of what was sent.
    */
   private async updateOverConnection(device: DeviceView): Promise<DeviceView> {
     const { work } = this.options;
     const label = deviceLabel(device);
-    const say = (stage: DeviceUpdateEvent["stage"], text: string, tone: "info" | "warn" = "info") =>
+    const say = (
+      stage: DeviceUpdateEvent["stage"],
+      text: string,
+      tone: "info" | "warn" = "info",
+      extra: Pick<DeviceUpdateEvent, "copy" | "run"> = {},
+    ) =>
       this.options.emitUpdate?.({
         type: "device_update",
         deviceId: device.id,
@@ -345,16 +384,17 @@ export class Computers {
         stage,
         text,
         tone,
+        ...extra,
       });
-    const refuse = (refusal: RemoteLoginRefusal): never => {
-      const lines = remoteLoginWords.refused(refusal, {
-        address: label,
-        name: label,
-        doing: "update",
-      });
+    const refused = (refusal: RemoteLoginRefusal, lines: readonly [string, string]): never => {
       for (const line of lines) say("refused", line, "warn");
       throw new RemoteLoginRefusedError(refusal, lines, lines.join(" "));
     };
+    const refuse = (refusal: RemoteLoginRefusal): never =>
+      refused(
+        refusal,
+        remoteLoginWords.refused(refusal, { address: label, name: label, doing: "update" }),
+      );
     if (this.updating.has(device.id)) throw new Error(`${label} is being updated already.`);
     const version = work.version(device.id);
     if (!version) return refuse("out-of-reach");
@@ -365,52 +405,235 @@ export class Computers {
     if (!runsThisApp && !(this.options.canSend?.(device) ?? false)) return refuse("cannot-send");
 
     this.updating.add(device.id);
+    // Listening before it is asked, so its return is never missed.
+    const back = this.backOnThisVersion(device);
     try {
       say("updating", remoteLoginWords.updating(device));
-      if (!runsThisApp) {
-        const unready = await this.options.prepare?.(device);
-        if (unready) return refuse(unready);
+      let starting = false;
+      const start = () => {
+        if (starting) return;
+        starting = true;
+        say("updating", remoteLoginWords.starting(label), "info", { copy: { state: "starting" } });
+      };
+      // A Mac elsewhere that keeps its own copy downloads this Mac's
+      // published version itself first, when it takes that order.
+      const published = downloadsThere(device, version.contract)
+        ? ((await this.options.download?.(device)) ?? null)
+        : null;
+      let answer: { restarts: boolean } | undefined;
+      if (published) {
+        const got = await this.downloadThere(device, published, say);
+        // Followed until it came back on this Mac's version.
+        if ("back" in got) {
+          say("done", remoteLoginWords.updated(device, "running"));
+          return this.viewOf(device.id) ?? device;
+        }
+        // Not heard from again in the wait, with its download possibly
+        // still running: it may update by itself, so nothing says it did not.
+        if ("lost" in got) return refused("failed", remoteLoginWords.uncertain(label));
+        if ("restarts" in got) answer = got;
+        else
+          say(
+            "updating",
+            remoteLoginWords.downloadFallback(label, got.fallback === "mismatch"),
+            "info",
+            {
+              copy: { state: "preparing" },
+            },
+          );
       }
-      // Listening before it is asked, so its return is never missed.
-      const back = this.backOnThisVersion(device);
-      let answer: { restarts: boolean };
-      try {
-        answer = updateOrders[WORK_UPDATE_ORDER].response.parse(
-          await work.ask(device.id, WORK_UPDATE_ORDER, [], { anyVersion: true }),
+      if (!answer) {
+        if (!runsThisApp) {
+          const unready = await this.options.prepare?.(device);
+          if (unready) return refuse(unready);
+        }
+        // What this Mac sends it, counted as it goes: only a computer that
+        // keeps a copy gets one.
+        const run = { id: `copy-${randomUUID()}` };
+        const copy = copyCount(
+          (sent) =>
+            say("updating", remoteLoginWords.sendingRow(label, sent), "info", {
+              copy: { state: "sending", sent },
+              run,
+            }),
+          this.options.countEveryMs ?? COUNT_EVERY_MS,
         );
-      } catch (caught) {
-        back.cancel();
-        console.warn(`[devices] could not update ${label}:`, caught);
-        return refuse(caught instanceof DeviceOutOfReachError ? "out-of-reach" : "failed");
+        const stopCounting = work.onAppSent((deviceId, bytes) => {
+          if (deviceId === device.id) copy.add(bytes);
+        });
+        // Its last count is said before whatever follows it.
+        const counted = () => {
+          stopCounting();
+          copy.end();
+        };
+        try {
+          answer = updateOrders[WORK_UPDATE_ORDER].response.parse(
+            await work.ask(device.id, WORK_UPDATE_ORDER, [], { anyVersion: true }),
+          );
+        } catch (caught) {
+          counted();
+          console.warn(`[devices] could not update ${label}:`, caught);
+          return refuse(caught instanceof DeviceOutOfReachError ? "out-of-reach" : "failed");
+        }
+        counted();
       }
       if (!answer.restarts) {
-        back.cancel();
         say("done", remoteLoginWords.updatedByHand(device));
-      } else if (await back.came) say("done", remoteLoginWords.updated(device, "running"));
+        return this.viewOf(device.id) ?? device;
+      }
+      start();
+      if (await back.came()) say("done", remoteLoginWords.updated(device, "running"));
       else for (const line of remoteLoginWords.notBack(device)) say("done", line, "warn");
       return this.viewOf(device.id) ?? device;
     } finally {
+      back.cancel();
       this.updating.delete(device.id);
     }
   }
 
-  /** Resolves true once the computer is connected on this Mac's version, false after the wait. */
-  private backOnThisVersion(device: DeviceView): { came: Promise<boolean>; cancel: () => void } {
+  /**
+   * Asks a Mac to download this Mac's published version itself and keep it
+   * (docs/devices.md, "Downloading over the connection"), asking how far it
+   * got once every count's interval and saying each count as one run of feed
+   * lines. Answers the computer's own answer: kept (`restarts`), or a
+   * fallback with nothing changed there - also for any other failure it
+   * answers. A connection that dropped while it was asked, or a computer
+   * already updating, is followed instead: by its progress once it is back,
+   * until it is on this Mac's version (`back`), its download ended with
+   * nothing changed (a fallback), or it was not heard from for the update's
+   * wait (`lost`), its download possibly still running there.
+   */
+  private downloadThere(
+    device: DeviceView,
+    published: UpdateDownload,
+    say: (
+      stage: DeviceUpdateEvent["stage"],
+      text: string,
+      tone?: "info" | "warn",
+      extra?: Pick<DeviceUpdateEvent, "copy" | "run">,
+    ) => void,
+  ): Promise<
+    { restarts: boolean } | { fallback: "failed" | "mismatch" } | { back: true } | { lost: true }
+  > {
+    const { work } = this.options;
+    const label = deviceLabel(device);
+    const run = { id: `download-${randomUUID()}` };
+    const everyMs = this.options.countEveryMs ?? COUNT_EVERY_MS;
+    let said = -1;
+    // The first empty count stays unsaid until bytes or a stated total arrive.
+    const count = ({ received, total }: { received: number; total?: number }) => {
+      if ((received === 0 && total === undefined) || received === said) return;
+      said = received;
+      const download = { received, ...(total !== undefined && received <= total ? { total } : {}) };
+      say("updating", remoteLoginWords.downloading(label, received, download.total), "info", {
+        copy: { state: "preparing", download },
+        run,
+      });
+    };
+    return new Promise((resolve) => {
+      let settled = false;
+      // Its own answer is lost, or it was updating already: its progress decides.
+      let following = false;
+      let asking: NodeJS.Timeout | undefined;
+      let away: NodeJS.Timeout | undefined;
+      const settle = (outcome: Parameters<typeof resolve>[0]) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(asking);
+        clearTimeout(away);
+        stopVersion();
+        resolve(outcome);
+      };
+      // On this Mac's version, it updated, whatever its answer said.
+      const stopVersion = work.onVersion((deviceId, version) => {
+        if (deviceId === device.id && version && !this.otherVersion(device, version))
+          settle({ back: true });
+      });
+      const missing = () => {
+        away ??= setTimeout(
+          () => settle({ lost: true }),
+          this.options.updateWaitMs ?? UPDATE_WAIT_MS,
+        );
+      };
+      const ask = async () => {
+        try {
+          const progress = downloadOrders[WORK_PROGRESS_ORDER].response.parse(
+            await work.ask(device.id, WORK_PROGRESS_ORDER, [], { anyVersion: true }),
+          );
+          // A count that arrives after the download's own answer is older than its last.
+          if (settled) return;
+          clearTimeout(away);
+          away = undefined;
+          count(progress);
+          // A state this Mac does not know, from a later version, is under way.
+          if (following && progress.state === "mismatch") settle({ fallback: "mismatch" });
+          else if (following && progress.state === "failed") settle({ fallback: "failed" });
+          // Nothing under way there, on its old version: the download ended
+          // with the run it ran in, and nothing changed.
+          else if (following && progress.state === "idle") settle({ fallback: "failed" });
+        } catch (caught) {
+          if (following && caught instanceof DeviceOutOfReachError) missing();
+        }
+        if (!settled) asking = setTimeout(ask, everyMs);
+      };
+      asking = setTimeout(ask, everyMs);
+      work
+        .ask(device.id, WORK_DOWNLOAD_ORDER, [published], { anyVersion: true })
+        .then((answered) => {
+          const answer = downloadOrders[WORK_DOWNLOAD_ORDER].response.parse(answered);
+          if ("updating" in answer) {
+            following = true;
+            return;
+          }
+          // Its last count, which the asking may not have caught.
+          count(answer);
+          settle(
+            "restarts" in answer ? { restarts: answer.restarts } : { fallback: answer.fallback },
+          );
+        })
+        .catch((caught: unknown) => {
+          if (caught instanceof DeviceOutOfReachError) {
+            following = true;
+            missing();
+            return;
+          }
+          // It answered, so nothing there changed: it is sent this Mac's copy.
+          console.warn(`[devices] ${label} could not download its update:`, caught);
+          settle({ fallback: "failed" });
+        });
+    });
+  }
+
+  /**
+   * Resolves true once the computer is connected on this Mac's version,
+   * false after the wait, which starts once its answer is in: a download
+   * may take longer than the wait.
+   */
+  private backOnThisVersion(device: DeviceView): {
+    came: () => Promise<boolean>;
+    cancel: () => void;
+  } {
     let settle: (came: boolean) => void = () => {};
     const came = new Promise<boolean>((resolve) => {
       settle = resolve;
     });
+    let timer: NodeJS.Timeout | undefined;
     const stop = this.options.work.onVersion((deviceId, version) => {
       if (deviceId === device.id && version && !this.otherVersion(device, version)) done(true);
     });
-    const timer = setTimeout(() => done(false), this.options.updateWaitMs ?? UPDATE_WAIT_MS);
-    timer.unref?.();
     const done = (value: boolean) => {
       clearTimeout(timer);
       stop();
       settle(value);
     };
-    return { came, cancel: () => done(false) };
+    return {
+      came: () => {
+        timer ??= setTimeout(() => done(false), this.options.updateWaitMs ?? UPDATE_WAIT_MS);
+        timer.unref?.();
+        return came;
+      },
+      cancel: () => done(false),
+    };
   }
 
   /**
@@ -441,15 +664,19 @@ export class Computers {
     const order = apps
       ? compareSemver(version.app as string, home.app as string)
       : compareSemver(version.contract, home.contract);
+    const updateBy = device.remoteLogin
+      ? "remote-login"
+      : takesUpdate(version.contract)
+        ? "connection"
+        : "command";
     return {
       ...(version.app !== undefined ? { app: version.app } : {}),
       ...(order ? { than: order < 0 ? ("older" as const) : ("newer" as const) } : {}),
       takesWork: version.takesWork,
-      updateBy: device.remoteLogin
-        ? "remote-login"
-        : takesUpdate(version.contract)
-          ? "connection"
-          : "command",
+      updateBy,
+      ...(updateBy === "connection" && downloadsThere(device, version.contract)
+        ? { downloads: true as const }
+        : {}),
     };
   }
 

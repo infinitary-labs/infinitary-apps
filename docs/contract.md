@@ -130,6 +130,10 @@ An older home ignores the marker and reads the plain fallback error; ordinary cl
 
 Protocol 8.15 also adds the optional `interrupted` to a background job's end (`inf:work:job-exit`): `quit` or `crash`, sent at a computer's next start for a job its last run's end cut off, so the home tells the crewmate the job never exited (`docs/helper.md`, "Holding a conversation").
 A home on an older minor drops the field and words it as an exit by signal, which still ends the crewmate's wait.
+Protocol 8.15 adds the download orders a home asks a Mac that runs work (`downloadOrders`, `docs/devices.md`, "Downloading over the connection"): `fm:firstmate:update-download`, which downloads the home's published version there and keeps it, answers a fallback, or answers `updating` while an update already runs there, and `fm:firstmate:update-progress`, how far that download has got and what is under way, which a home follows a download by after its connection dropped.
+Like the update order, their names and shapes never change across majors, and a home asks them only of a computer on 8.15 or later (`WORK_DOWNLOAD_SINCE`), on any major; an older computer keeps the update order alone.
+Protocol 8.15 also adds the optional `copy` and `run` to a `device_update` event, the optional `downloads` to a computer's `otherVersion`, and the optional `check` to what a command sends `/firstmate`, which only that home's own command sends.
+A client on an older minor ignores each of them.
 
 Protocol 8.16 adds optional `memoryUsedBytes` to a fresh computer resource reading: installed memory the home counts as used, by the one figure in `docs/routing.md`.
 A panel on this version is handed installed memory, that figure, and Mac pressure, and loses the raw counts.

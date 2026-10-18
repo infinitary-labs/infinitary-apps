@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "command-mac-download",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Macs added with a command download their own update too",
+      "body": "A Mac you added by running a command now downloads this computer's version on its own connection when you update it, once it runs this version or later. Devices and the feed count how much it has against the download's size. It checks the file and its publisher before keeping it. If it cannot download or check it, this computer sends its own copy at once and counts what it sends. The command for another Mac downloads Infinitary there first too, with its count in Terminal, and gets it from this computer when it cannot.",
+      "noPicture": "The live count and fallback change over time; the verification records them as a demo rather than a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

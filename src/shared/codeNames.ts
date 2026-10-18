@@ -40,12 +40,17 @@ export const LONG_SPELLING: Readonly<Record<Spelling, string>> = {
 // --- the connection ---------------------------------------------------------
 
 /**
- * Names that keep one spelling for good: the order a home of any version
+ * Names that keep one spelling for good: the orders a home of any version
  * asks a computer to bring it up to date (docs/devices.md, "Updating over the
- * connection"). `/firstmate`, where that computer then gets the home's app,
- * is a path rather than a channel and keeps its name the same way.
+ * connection" and "Downloading over the connection"). `/firstmate`, where
+ * that computer then gets the home's app, is a path rather than a channel
+ * and keeps its name the same way.
  */
-export const FROZEN_CHANNELS: ReadonlySet<string> = new Set(["fm:firstmate:update"]);
+export const FROZEN_CHANNELS: ReadonlySet<string> = new Set([
+  "fm:firstmate:update",
+  "fm:firstmate:update-download",
+  "fm:firstmate:update-progress",
+]);
 
 function spellingOfChannel(channel: string): Spelling | undefined {
   return SPELLINGS.find((spelling) => channel.startsWith(`${spelling}:`));

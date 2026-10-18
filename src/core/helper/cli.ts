@@ -1,5 +1,6 @@
 import { homedir, hostname, userInfo } from "node:os";
 import { createInterface } from "node:readline";
+import { settingFrom } from "@shared/envSettings";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { type WorkOutcome, workOutcomeLine } from "@shared/remoteLogin";
 import type { ResourceMemory } from "@shared/resources";
@@ -436,11 +437,15 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       });
       if (finished === "busy") return 1;
       if (finished) return finished.unremoved ? 1 : 0;
+      // A development run may stand in the publisher check a download here
+      // runs, for a stand-in release a test serves; an installed app never does.
+      const verifier = place.packaged ? undefined : settingFrom(context.env, "CODESIGN")?.trim();
       const started = startHelper({
         dataDir,
         say: io.say,
         packaged: place.packaged,
         appVersion: context.version,
+        ...(verifier ? { verifier } : {}),
         background: inBackground ? { context: inBackground, env: context.backgroundEnv } : null,
         ...(context.gitAskpass ? { gitAskpass: context.gitAskpass } : {}),
         ...(context.keychain ? { keychain: context.keychain } : {}),

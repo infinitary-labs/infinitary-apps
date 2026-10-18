@@ -13,6 +13,7 @@ import {
   type DeviceInviteRequest,
   type DeviceSystem,
   type DeviceView,
+  DOWNLOAD_COMMAND_LINK_TTL_MS,
   deviceConnecting,
   deviceLabel,
   deviceRunsWork,
@@ -1387,7 +1388,20 @@ export async function createServices(
           ? `This copy of Infinitary cannot send itself to another ${COMPUTER.one}: the command adds a Mac. Paste a link into Infinitary on the other ${COMPUTER.one} instead.`
           : `This copy of Infinitary cannot send itself to another ${COMPUTER.one}; only an installed one can.`,
       );
-    const invite = devices.invite(request);
+    // A command for another Mac downloads this computer's published version
+    // there first, looked up without downloading it here, and its link lasts
+    // long enough for that download and the copy from here it falls back to
+    // (docs/devices.md, "Joining by a command"); a development or
+    // unpublished one gets it from here, with a link of the usual lifetime.
+    const mac = farSystemNamed("macos");
+    const download =
+      request.command === "another-mac" && mac
+        ? await farBuilds.downloadFor(mac, Object.values(mac.chips)[0] ?? "arm64")
+        : null;
+    const invite = devices.invite(
+      request,
+      download ? { lastsMs: DOWNLOAD_COMMAND_LINK_TTL_MS } : {},
+    );
     if (!request.command) return invite;
     return {
       ...invite,
@@ -1398,6 +1412,7 @@ export async function createServices(
           link: invite.link,
           homeName: await ownComputerName({ packaged: host.app.packaged, env: process.env }),
           launcher,
+          ...(download ? { download: { ...download, expiresAt: invite.expiresAt } } : {}),
         }),
       },
     };
@@ -2145,6 +2160,14 @@ export async function createServices(
       if (!far || !chip || !farBuilds.fetches(far, chip)) return null;
       const build = await farBuilds.for(far, chip);
       return "refusal" in build ? build.refusal : null;
+    },
+    // Where a Mac updated over the connection downloads this computer's
+    // version itself, looked up without downloading it here
+    // (docs/devices.md, "Downloading over the connection").
+    download: async (device) => {
+      const far = farSystemNamed(device.system);
+      const chip = far ? (device.chip ?? Object.values(far.chips)[0]) : undefined;
+      return far && chip ? farBuilds.downloadFor(far, chip) : null;
     },
     emitUpdate: (event) => {
       broadcastEvent(event);

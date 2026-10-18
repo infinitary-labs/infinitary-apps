@@ -134,7 +134,13 @@ A computer added by a command, and running as another user on this computer, upd
 Devices' Update does it on a row that says the computer has another version (`DevicesTab.prompt.md`, "Another version"), and "update Infinitary on the mini" yields one decision from the first mate, "Update Infinitary on Mac mini": "I send this computer's Infinitary to it over your network, and it starts again." and "Its running work stops for a moment and goes on after.
 Only your click can update it.", with a ghost "Not now" and a primary "Update it".
 For running as another user it reads "I start it again on this computer's own Infinitary.", since that user runs this computer's own app.
-The click opens Devices, whose row reads "Updating Infinitary on Mac mini…", and the feed says "Updating Infinitary on Mac mini." then, once it is back, "Mac mini runs this computer's version of Infinitary now."
+For a Mac a command added that runs a version that takes the download, the first line reads "It downloads this computer's version of Infinitary, or this computer sends its own copy over your network, with a count."
+(the captain's direction B on INF-322: every work computer).
+The click opens Devices, whose row reads "Updating Infinitary on Mac mini…", and the feed says "Updating Infinitary on Mac mini.".
+Such a Mac then downloads this computer's published version on its own connection, and the row and one feed line rewritten in place count it, "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", as for a Mac reached by its address.
+When it cannot download it, or the download does not match, the feed says so in one line, "Mac mini could not download Infinitary, so this computer is sending its copy." or "Mac mini's download did not match, so this computer is sending its copy.", and this computer sends its copy at once.
+Any copy this computer sends is counted the same way, "Sending Infinitary to Mac mini… 42.3 MB sent", and then the row and the feed say "Starting Infinitary on Mac mini…".
+Once it is back, the feed says "Mac mini runs this computer's version of Infinitary now."
 When it is not back within three minutes, two warning lines take that line's place: "Mac mini has this computer's version of Infinitary now, and has not started again yet." and "Check that it is awake.
 If it stays out of reach, remove it, then add it again."
 When nothing starts it again there by itself, as when its work was started by hand in Terminal, the feed says "Mac mini has this computer's version of Infinitary now, and runs it once it is started there again."
@@ -156,7 +162,8 @@ What it says there goes to the log its work keeps, never to a screen: "MacBook P
 **By a command.**
 For a computer with no screen, or one this computer cannot reach over Remote Login.
 The command panel in Devices carries the link inside the command.
-The command gets Infinitary from this computer with that link (captain's pick), so the two computers always run the same version and need no internet, only the same network.
+The command gets Infinitary from this computer with that link (captain's pick), so the two computers always run the same version and need only the same network.
+When this computer's version is published, the command on a Mac first downloads that same version there on its own connection, and checks it, and gets it from this computer only when it cannot (the captain's direction B on INF-322, with Add as well as Update).
 The person runs it once in Terminal there, as the macOS user who should run the work.
 Terminal shows, before anything is fetched, written or sent:
 ```
@@ -171,6 +178,19 @@ Getting Infinitary from MacBook Pro… done.
 Joined. This computer runs work for MacBook Pro now, whenever sam is logged in.
 Open Infinitary here any time to control it from this computer, with no new link.
 ```
+When it downloads, the count rewrites one line in place about once a second, "Downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size, never a percentage or a time left, and the line ends once the copy is checked:
+```
+Downloading Infinitary… 401.1 MB of 401.1 MB, done.
+Joined. This computer runs work for MacBook Pro now, whenever sam is logged in.
+```
+A download that fails, stops after two minutes with nothing moving or once what is left of the command's thirty minutes - a command that downloads lasts that long from the start - is only what this computer's copy needs on a slow network (a minute to join, plus the download's size at 1 MB a second), or does not match, says so on a line of its own and gets this computer's copy instead:
+```
+Downloading Infinitary… 12.0 MB of 401.1 MB
+Could not download Infinitary, so getting it from MacBook Pro instead.
+Getting Infinitary from MacBook Pro… done.
+```
+or "The download did not match, so getting Infinitary from MacBook Pro instead.".
+A used or expired command says so before anything is downloaded.
 Refusals:
 - run on a system Infinitary does not run on, before anything else: "Infinitary does not run on this computer's system.", "It runs on Macs, and on Linux computers with an x64 chip." and "Nothing changed on this computer."
   Run on a Linux computer with an x64 chip, the command gets the Infinitary made for Linux, as it gets a Mac's on a Mac; a Linux computer with no curl says "This command needs curl to get Infinitary from MacBook Pro.", "Install curl, then run it again." and "Nothing changed on this computer."
@@ -179,7 +199,8 @@ Refusals:
 - used: "That command was used already.
   Make a new one on MacBook Pro." and "Nothing changed on this computer."
 - expired: "That command expired.
-  It lasts ten minutes; make a new one on MacBook Pro." and "Nothing changed on this computer."
+  It lasts ten minutes; make a new one on MacBook Pro."
+  ("It lasts thirty minutes" for a command that downloads) and "Nothing changed on this computer."
 - unreachable, before the question, because the command cannot get Infinitary: "Could not reach MacBook Pro at 192.168.1.20." and "Both computers need the same network, or the same private network."
 - something else answered: "Something answered at 192.168.1.20, but not the computer that made this command." and "Nothing was sent to it."
 

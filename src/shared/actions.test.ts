@@ -210,3 +210,36 @@ it("offers counted downloads for another Mac and the local copy for another user
   });
   expect(nudge).toContain(remoteLoginWords.updateLocalCopyOffer());
 });
+
+// INF-322 direction B: a Mac a command added downloads over its own connection, or is sent this computer's copy.
+it("offers a counted download to a Mac a command added that takes it, and the send to one that does not", () => {
+  const device = {
+    id: "mini",
+    kind: "work" as const,
+    name: "Mac mini",
+    pairedAt: 1,
+    system: "macos" as const,
+    inReach: true,
+  };
+  const makeOffer = ACTIONS["device-update"].offer;
+  if (!makeOffer) throw new Error("No update offer.");
+  const other = { app: "0.0.1", than: "older", takesWork: true, updateBy: "connection" } as const;
+  const downloads = makeOffer(
+    { deviceId: device.id },
+    [{ ...device, otherVersion: { ...other, downloads: true } }],
+    { platform: "darwin" },
+  );
+  expect(downloads.paragraphs[0]).toBe(remoteLoginWords.updateConnectionDownloadOffer());
+  expect(
+    deviceUpdateBody({ ...device, deviceId: device.id, other: { ...other, downloads: true } }),
+  ).toContain(remoteLoginWords.updateConnectionDownloadOffer());
+  const sends = makeOffer({ deviceId: device.id }, [{ ...device, otherVersion: other }], {
+    platform: "darwin",
+  });
+  expect(sends.paragraphs[0]).toBe(
+    "I send this computer's Infinitary to it over your network, and it starts again.",
+  );
+  expect(deviceUpdateBody({ ...device, deviceId: device.id, other })).not.toContain(
+    remoteLoginWords.updateConnectionDownloadOffer(),
+  );
+});

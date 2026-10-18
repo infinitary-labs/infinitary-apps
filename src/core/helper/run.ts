@@ -8,9 +8,14 @@ import { PLACEMENT_FACTS_ORDER, placementFactsRequestSchema } from "@shared/plac
 import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/resources";
 import { isSignInOrderChannel } from "@shared/signIns";
 import {
+  downloadOrders,
   isBrowserOrderChannel,
+  type UpdateProgress,
   updateOrders,
+  WORK_DOWNLOAD_ORDER,
+  WORK_PROGRESS_ORDER,
   WORK_UPDATE_ORDER,
+  type WorkDownloadAnswer,
   type WorkUpdateAnswer,
   workOrders,
 } from "@shared/work";
@@ -34,7 +39,7 @@ import { FolderBusyError, folderHolder, lockFolder } from "./lock";
 import { PlacedTasks } from "./placedTasks";
 import { homeDialOptions } from "./route";
 import type { HeldSignIns } from "./signIns";
-import { type UpdatedHere, updateHere } from "./update";
+import { type DownloadedHere, downloadHere, type UpdatedHere, updateHere } from "./update";
 import { helperWords, homeLabel } from "./words";
 
 /**
@@ -156,6 +161,14 @@ export type StartHelperOptions = {
    * (`updateHere`), unless a test stands in its own.
    */
   update?: (grant: DeviceGrant) => Promise<UpdatedHere>;
+  /**
+   * The program a download here checks its publisher with (`downloadHere`):
+   * this Mac's own codesign unless a development run or a test stands in
+   * its own.
+   */
+  verifier?: string;
+  /** No byte moving this long stops a download here; two minutes unless a test says. */
+  downloadIdleSeconds?: number;
   /**
    * How the one-time move runs here when the home sends an app that keeps
    * its work in another folder (`updateHere`); this computer's own unless a
@@ -312,10 +325,13 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     if (ending) return ending;
     stopped = true;
     clearInterval(alive);
-    // Every conversation lets go and writes what it holds before the link
-    // and the folder go.
+    downloading?.abort();
+    // Every conversation lets go and writes what it holds, and a download
+    // stopped part way takes what it fetched away, before the link and the
+    // folder go.
     const letGo = Promise.all([
       leftSignedOut,
+      fetching,
       conversations?.then((held) => held.close()).catch(() => undefined),
       signIns?.then((held) => held.close()).catch(() => undefined),
     ]);
@@ -350,6 +366,13 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   let afterUpdate: (() => Promise<void>) | undefined;
   const update = async (args: unknown): Promise<WorkUpdateAnswer> => {
     updateOrders[WORK_UPDATE_ORDER].request.parse(args);
+    // A download running here is waited for, as a home that could not look
+    // its version up asks this order: one that kept its copy updated this
+    // computer, and answers the same; one that ended with nothing changed
+    // lets this update go on.
+    while (downloading) await fetching;
+    if (downloaded) return downloaded;
+    progress = { received: 0, state: "updating" };
     updating ??= (
       options.update ??
       ((grant) =>
@@ -371,11 +394,73 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       afterUpdate = afterRun;
     } catch (error) {
       updating = undefined;
+      progress = { received: 0, state: "idle" };
       log(`could not update Infinitary here: ${String(error)}`);
       throw error;
     }
     say(helperWords.updated(place, name, answer.restarts));
     // The answer is written before the connection closes.
+    setImmediate(() => void end("updated"));
+    return answer;
+  };
+
+  // Downloaded by itself (docs/helper.md, "Updated by its home"): the home
+  // names where its version is published, and this Mac gets and checks it
+  // itself, saying how far it got to the home's progress order. One that
+  // could not answers `fallback` with nothing changed, and the home sends
+  // its own copy with the update order. A home gone out of reach does not
+  // stop it: it follows it by its progress once it is back. One asked while
+  // an update runs answers that it is updating already.
+  let progress: UpdateProgress = { received: 0, state: "idle" };
+  let downloading: AbortController | undefined;
+  let fetching: Promise<unknown> = Promise.resolve();
+  let downloaded: WorkUpdateAnswer | undefined;
+  const download = async (args: unknown): Promise<WorkDownloadAnswer> => {
+    const [published] = downloadOrders[WORK_DOWNLOAD_ORDER].request.parse(args);
+    if (updating || downloading) return { updating: true };
+    const stopping = new AbortController();
+    downloading = stopping;
+    progress = { received: 0, state: "downloading" };
+    let got: DownloadedHere;
+    try {
+      const getting = downloadHere({
+        dataDir,
+        grant: joined.grant,
+        now: options.now,
+        homeProtocol: link.state().homeVersion,
+        background: options.background ?? null,
+        ...(options.moveDeps ? { moveDeps: options.moveDeps } : {}),
+        log,
+        download: published,
+        signal: stopping.signal,
+        onProgress: (count) => {
+          progress = count;
+        },
+        ...(options.verifier ? { verifier: options.verifier } : {}),
+        ...(options.downloadIdleSeconds ? { idleSeconds: options.downloadIdleSeconds } : {}),
+      });
+      fetching = getting.catch(() => undefined);
+      got = await getting;
+    } catch (error) {
+      progress = { received: 0, state: "idle" };
+      log(`could not update Infinitary here: ${String(error)}`);
+      throw error;
+    } finally {
+      downloading = undefined;
+    }
+    if ("fallback" in got) {
+      progress = {
+        received: got.received,
+        ...(got.total ? { total: got.total } : {}),
+        state: got.fallback,
+      };
+      return got;
+    }
+    const { afterRun, ...answer } = got;
+    afterUpdate = afterRun;
+    updating = Promise.resolve(got);
+    downloaded = { restarts: answer.restarts };
+    say(helperWords.updated(place, name, answer.restarts));
     setImmediate(() => void end("updated"));
     return answer;
   };
@@ -407,6 +492,11 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     onInvoke: async (channel, args) => {
       if (stopped) throw new Error("This computer is stopping.");
       if (channel === WORK_UPDATE_ORDER) return update(args);
+      if (channel === WORK_DOWNLOAD_ORDER) return download(args);
+      if (channel === WORK_PROGRESS_ORDER) {
+        downloadOrders[WORK_PROGRESS_ORDER].request.parse(args);
+        return progress;
+      }
       if (channel === PLACEMENT_FACTS_ORDER) {
         const [request] = workOrders[PLACEMENT_FACTS_ORDER].request.parse(args);
         const [facts, accounts] = await Promise.all([

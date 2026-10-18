@@ -19,7 +19,9 @@ import {
 
 /** What the core needs of the home's connection. */
 export type WorkDeviceLink = Pick<HomeConnection, "ask" | "onWorkDevice" | "onViewDevice"> &
-  Partial<Pick<HomeConnection, "settled" | "listening" | "onWorkVersion" | "onListening">>;
+  Partial<
+    Pick<HomeConnection, "settled" | "listening" | "onWorkVersion" | "onListening" | "onAppSent">
+  >;
 
 export class WorkDevices {
   private link: WorkDeviceLink | null = null;
@@ -33,6 +35,7 @@ export class WorkDevices {
   >();
   private readonly versions = new Map<string, WorkDeviceVersion>();
   private readonly listeningListeners = new Set<() => void>();
+  private readonly sentListeners = new Set<(deviceId: string, bytes: number) => void>();
 
   /**
    * The connection listens now: asks go through it and its contacts are
@@ -45,11 +48,15 @@ export class WorkDevices {
     const stopViews = link.onViewDevice((contact) => this.see(contact));
     const stopVersion = link.onWorkVersion?.((deviceId, version) => this.heard(deviceId, version));
     const stopListening = link.onListening?.(() => this.moved());
+    const stopSent = link.onAppSent?.((deviceId, bytes) => {
+      for (const listener of [...this.sentListeners]) listener(deviceId, bytes);
+    });
     this.stopHearing = () => {
       stopWork();
       stopViews();
       stopVersion?.();
       stopListening?.();
+      stopSent?.();
     };
     return () => {
       if (this.link === link) this.detach();
@@ -58,8 +65,8 @@ export class WorkDevices {
 
   /**
    * Asks a computer in reach one order (src/shared/work.ts); refused at once
-   * when none is. With `anyVersion` - the update order alone - one connected
-   * that takes no work is asked too.
+   * when none is. With `anyVersion` - the update and download orders alone -
+   * one connected that takes no work is asked too.
    */
   ask(
     deviceId: string,
@@ -133,6 +140,18 @@ export class WorkDevices {
    */
   version(deviceId: string): WorkDeviceVersion | undefined {
     return this.versions.get(deviceId);
+  }
+
+  /**
+   * Hears each piece of Firstmate this home sends a computer on its list, by
+   * that computer's id and the piece's bytes, across attaches; answers its
+   * own unsubscribe.
+   */
+  onAppSent(listener: (deviceId: string, bytes: number) => void): () => void {
+    this.sentListeners.add(listener);
+    return () => {
+      this.sentListeners.delete(listener);
+    };
   }
 
   /** Hears each computer's version at each welcome, and null once it went; answers its own unsubscribe. */

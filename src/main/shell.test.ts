@@ -229,6 +229,7 @@ function shell(
       onViewDevice: () => () => {},
       onWorkVersion: () => () => {},
       onListening: () => () => {},
+      onAppSent: () => () => {},
     }),
   );
   const made = new Shell({

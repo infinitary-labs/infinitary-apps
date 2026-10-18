@@ -189,7 +189,11 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
  * it sent so far (docs/devices.md, "How far the copy has gone").
  */
 export function feedRunOf(event: FmEvent): { id: string; withdrawn?: boolean } | undefined {
-  return event.type === "personalized" || event.type === "device_setup" ? event.run : undefined;
+  return event.type === "personalized" ||
+    event.type === "device_setup" ||
+    event.type === "device_update"
+    ? event.run
+    : undefined;
 }
 
 /**

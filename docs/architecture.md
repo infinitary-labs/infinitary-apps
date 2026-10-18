@@ -23,6 +23,7 @@ House references this architecture deliberately stays consistent with:
   Native evidence uploads for future github.com changes additionally reach `https://uploads.github.com/user-attachments/assets` through the task-scoped forge capability and the app's own sign-in, with redirects refused (`docs/forge.md`, "Saved change stories").
   Future gitlab.com merge requests upload theirs to the same `https://gitlab.com/api/v4` with that host's sign-in, as multipart `POST /projects/<id>/uploads`, with redirects refused; a self-hosted server's own host sends none.
   When the person presses Add or Update for a Mac reached by its address, that Mac may download this computer's published version from the public tap's GitHub release, following HTTPS redirects to its release-asset storage and checking the published SHA-256 and the release publisher's signature before starting the app.
+  The same download, with the same checks, is made by a Mac a command added when the person presses Update and it takes the download order, and by the command for another Mac after the person there types yes (`docs/devices.md`, "Downloading over the connection" and "Joining by a command").
   No other program's GitHub sign-in is ever read.
   A project kept on this Mac reaches no host.
 - **A task's browser reaches public websites over https** (rev-10; `docs/task-browser.md`, "Where a page may go"): the sites a task needs, chosen by its crewmate's instructions, never by the host.

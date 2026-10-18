@@ -510,6 +510,9 @@ export const remoteLoginWords = {
     `${HERE.This} copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again.`,
   updateDownloadOffer: () =>
     `It downloads ${HERE.this}'s version of Infinitary, or ${HERE.this} sends its own copy, with a count. Remote Login uses your own SSH key.`,
+  /** A Mac a command added, which downloads its update itself over its own connection (docs/devices.md, "Downloading over the connection"). */
+  updateConnectionDownloadOffer: () =>
+    `It downloads ${HERE.this}'s version of Infinitary, or ${HERE.this} sends its own copy over your network, with a count.`,
   updating: (device: Named) => `Updating Infinitary on ${deviceLabel(device)}.`,
   removing: (device: Named) =>
     `Removing what Infinitary set up on ${deviceLabel(device)}, ${overSsh(device)}.`,

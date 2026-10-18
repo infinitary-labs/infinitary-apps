@@ -503,6 +503,25 @@ export function takesUpdate(deviceVersion: string): boolean {
 }
 
 /**
+ * The first contract a computer that runs work downloads its own update on
+ * (docs/devices.md, "Downloading over the connection"): it takes the
+ * download order (`fm:firstmate:update-download`, src/shared/work.ts)
+ * whatever its major, gets the home's published version itself and checks
+ * it, and answers how far it got (`fm:firstmate:update-progress`). One that
+ * speaks an older one is updated with the update order alone.
+ */
+export const WORK_DOWNLOAD_SINCE = "8.15.0";
+
+/**
+ * Whether a computer that runs work takes the download order: on any major,
+ * from `WORK_DOWNLOAD_SINCE` on, because that order's name and shape never
+ * change across majors either.
+ */
+export function takesDownload(deviceVersion: string): boolean {
+  return speaksSince(deviceVersion, WORK_DOWNLOAD_SINCE);
+}
+
+/**
  * The first contract whose home reads the asking computer's `system` and
  * `chip` where it gets Firstmate (`fetchAppRequestSchema`, src/shared/connection.ts):
  * it answers the Firstmate published for them. An older home refuses them as

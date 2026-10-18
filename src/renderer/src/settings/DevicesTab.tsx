@@ -270,6 +270,11 @@ const useSetups = create<SetupStore>((set, get) => {
   const hear = () => {
     if (get().stopListening) return;
     const stopListening = window.infinitary.events.on((event) => {
+      // An update's count, over Remote Login or the connection, reads the same in its row.
+      if (event.type === "device_update") {
+        if (event.copy) set({ updateCopy: { ...get().updateCopy, [event.deviceId]: event.copy } });
+        return;
+      }
       if (event.type !== "device_setup") return;
       if (event.doing === "update" && event.deviceId && event.copy) {
         set({ updateCopy: { ...get().updateCopy, [event.deviceId]: event.copy } });

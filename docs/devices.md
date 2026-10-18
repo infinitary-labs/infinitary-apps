@@ -102,7 +102,7 @@ A device never joins because a page or a document opened a link.
 | 409 `paired` | That key is on the list already, and the device did not ask `again`. One entry per key keeps Remove whole. |
 | 409 `same-user` | A computer that runs work dialed from this Mac as the macOS user the home runs as (`docs/helper.md`, "The home's side") |
 | 410 `used` | The link was used already |
-| 410 `expired` | The link is older than ten minutes |
+| 410 `expired` | The link is past its lifetime: ten minutes, or thirty for a command that downloads (below, "Joining by a command") |
 | 410 `removed` | A device finding its home again showed a key the list no longer holds: the home removed it while it was out of reach |
 
 Only a link used well is spent.
@@ -147,6 +147,8 @@ So the moment one joins, the host files one card, "Finish setting up Mac mini" o
 
 A computer that runs work joins by one command, run once in Terminal as the macOS user who should run the work (design skill `components/devices/AddAMac`).
 The command carries a link inside it, with the link's rules: it works once, for ten minutes, it exists only after the captain's own click, and it lives in Settings -> Devices' panel alone.
+A command for another Mac that downloads this computer's published version there has a link that lasts thirty minutes from the start instead (`DOWNLOAD_COMMAND_LINK_TTL_MS`, captain's choice on INF-369), so on a slow network both the download and the copy from this Mac it falls back to fit: for today's 401 MB app at 1 MB a second, about 6.7 minutes each and a minute to join, which leaves the person about 15 minutes to run it.
+A command that gets Infinitary from this Mac alone keeps ten minutes, and the expired words name the lifetime its link had.
 `inf:devices:invite` with `command` (`another-mac` or `another-user`) answers the link and the command (`joinCommand`, `src/core/devices/joinCommand.ts`): the command for another Mac carries a link for kind `mac`, and the one for another user a link for kind `work`.
 A Mac joined by its command can open Infinitary there any time to control this one, with no new link (`docs/view.md`, "A Mac that runs work"), and its Terminal says so.
 A Linux computer joins a Mac or a Linux home by a link pasted into its own Infinitary at its first launch (`docs/view.md`, "Joining"), and a Mac joins a Linux home the same way: each runs its own system's Infinitary, and its work runs in that system's background (`docs/helper.md`, "In the background").
@@ -163,11 +165,17 @@ A home with no Infinitary to send for any system - a development run, or an inst
   On Linux it stops there too where that user cannot make a user namespace, as Ubuntu 24.04 and later keep an app with no profile of its own from doing, asked with the AppImage launcher's own probe (`SANDBOX_PROBE`, `unshare -Ur true`): the AppImage it gets would start with Chromium's sandbox off each time its work starts, with nobody there to ask (`docs/linux-packages.md`, "The sandbox").
   It says "Infinitary would run on this computer without its sandbox: its system keeps apps from making one.", "Install the Infinitary package for this system, then paste a link from MacBook Pro at its first launch instead." and "Nothing changed on this computer.", as adding that computer by its address refuses `sandbox-off` (below, "Adding, step by step"); the command has no Ubuntu package way, so Ubuntu 24.04 and 26.04 stop too.
   It checks this Mac's key with the system's own curl (a Mac's `/usr/bin/curl`, Linux's on its search path, `--pinnedpubkey`), saying "Could not reach MacBook Pro at 192.168.1.20." or "Something answered at 192.168.1.20, but not the computer that made this command." before anything else, then asks its yes; a Linux computer with no curl says "This command needs curl to get Infinitary from MacBook Pro." and "Install curl, then run it again."
-  Only after a yes does it get Infinitary from this Mac with the link's code, naming its own system and chip ("Getting Infinitary from MacBook Pro… done."), unpack it in a temporary folder - a Mac the home's gzipped tar, or a published zip with its own ditto; Linux keeps the AppImage as it came, in its own cache folder rather than a shared `/tmp` - and start that copy as `work join --fetched <app> <link>`, which joins without asking again and keeps the copy (`docs/helper.md`, "Joining").
-  The temporary folder is deleted whatever the join answered.
+  Only after a yes does it get Infinitary.
+  On a Mac, when this Mac's version is published, the command first asks this Mac whether its code is still open, which sends nothing and spends nothing (`check`, below), then downloads that version there itself from its public release over HTTPS with the instructions a Mac reached by its address runs (`MAC_DOWNLOAD`, below, "Downloading on a Mac reached by its address"): its own curl, the published SHA-256, its own ditto and its own codesign against the release's publisher.
+  Its count rewrites one Terminal line in place, "Downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size, and the line ends ", done." once the copy is checked and unpacked.
+  The download stops after two minutes with no byte moving, or once what is left of the link is only what a copy from this Mac needs on a slow network, so that copy and the join still finish in time (captain's choice on INF-369): a minute to unpack it and join, plus the download's stated size at 1 MB a second, since this Mac's copy is the same app, compressed alike.
+  One that failed or stopped says "Could not download Infinitary, so getting it from MacBook Pro instead.", and one that did not match its checksum or publisher "The download did not match, so getting Infinitary from MacBook Pro instead.".
+  Otherwise - a development or unpublished version, Linux, or after that line - it gets Infinitary from this Mac with the link's code, naming its own system and chip ("Getting Infinitary from MacBook Pro… done."), unpacks it in a temporary folder - a Mac the home's gzipped tar, or a published zip with its own ditto; Linux keeps the AppImage as it came, in its own cache folder rather than a shared `/tmp`.
+  Either way it starts that copy as `work join --fetched <app> <link>`, which joins without asking again and keeps the copy (`docs/helper.md`, "Joining").
+  The temporary folder is deleted whatever the join answered, and when the command is stopped part way.
   A used, expired or stopped command says so ("That command was used already.
-  Make a new one on MacBook Pro.") and gets nothing.
-  Both computers then run the same version, and need only the same network.
+  Make a new one on MacBook Pro.") and gets nothing, before any download.
+  Both computers then run the same version - the download is this Mac's own version as its release published it - and need only the same network.
 
 ### Getting Infinitary from this Mac
 
@@ -175,6 +183,8 @@ A home with no Infinitary to send for any system - a development run, or an inst
 The body is `{ "code" }`: pairing answers whether that code is an open link for a device that may run work (`DevicePairing.opened`), and reading it never spends it, so only `/pair` joins.
 From protocol 5.1 (`FETCH_APP_SYSTEM_SINCE`) the body may also name the asking computer's `system` and `chip`, and the home answers Infinitary for them (below, "Infinitary for another system"), by its `Content-Type` (`FETCH_APP_TYPES`): a Mac's bundle as before (`application/gzip`), a Mac's published zip from a home that is not a Mac (`application/zip`), or a Linux AppImage itself (`application/octet-stream`).
 A computer that names no system is a Mac asking as Macs always have, and gets this home's own bundle or `none`; a computer names its system only to a home whose welcome says 5.1 or later, since an older home refuses the field as `malformed`.
+From protocol 8.15 the body may say `check: true`: the home answers 204 when the code is open, and sends nothing; only this home's own command asks it, before it downloads Infinitary from the published release.
+A computer on the list that gets the app with its own key is heard as it is sent: the connection tells `WorkDevices` each piece it sends that computer (`onAppSent`), which an update counts (below, "Updating over the connection"); a command's get names no computer yet, and is not heard.
 A refusal is `/pair`'s, with the same statuses - `malformed` 400, `unknown` 401, `kind` 409, `used` and `expired` 410 - or `none` 404 from a home that cannot send itself; none echoes the code.
 Like `/pair`, it refuses an `Origin` (403), another method (405), another body type (415) and a body over 4 KiB (413).
 The bundle is the installed app this runs from (`appBundleOf`): a Mac's `.app`, or the AppImage an installed Linux app runs from; a development run has none, so its command for another computer is refused at once ("This copy of Infinitary cannot send itself to another computer"), unless `INFINITARY_APP_BUNDLE` names one, a `.app` or an `.AppImage`, as a test's stand-in does.
@@ -341,7 +351,7 @@ This Mac counts each piece of the archive as it hands it to that Mac's SSH sessi
 The count is said at its first bytes, then at most once a second while it moves, and once more at its end with all it sent: "Sending Infinitary to Mac mini: 42.3 MB sent.", in the size words a file's chip uses (`fileSizeWords`).
 Each count is one run of feed lines (`feedRunSchema`, `src/shared/events.ts`): it rewrites the line before it in place while that line is still Activity's newest, the same way the captain's settled runs do (`docs/orchestrator-contract.md`, "Settled runs"), and a count after any other line starts a line of its own.
 A copy that stops is refused as before, with its last count left in the feed above the two lines.
-Updating a Mac by its address counts a send the same way, or shows its own download count (below, "Downloading on a Mac reached by its address").
+Updating a Mac by its address counts a send the same way, or shows its own download count (below, "Downloading on a Mac reached by its address"), and so does updating any computer over the connection (below, "Updating over the connection" and "Downloading over the connection").
 After either transfer, the row says "Starting Infinitary on Mac mini…" while the update starts.
 
 ### Infinitary for another system
@@ -589,7 +599,7 @@ No address is ever guessed, and no key is ever trusted anew.
 A computer that runs work says in its hello the contract it speaks and, from `WORK_UPDATE_SINCE` on, the version of Infinitary it runs (`appVersion`, `docs/connection.md`).
 The connection tells the home's `WorkDevices` both at each welcome, whether or not the computer takes work, and that it went once its last connection did (`onWorkVersion`).
 Settings -> Devices' list (`Computers.list`) measures them against this Mac's own: the versions of Infinitary when both are known, otherwise the contracts.
-A computer connected on another version carries `otherVersion` on its entry - the version it said, `older` or `newer` when both read as versions (`compareSemver`), whether it still takes work, and how this Mac would update it - and one out of reach carries none, because the home cannot tell (design skill `components/devices/DevicesTab`, "Another version").
+A computer connected on another version carries `otherVersion` on its entry - the version it said, `older` or `newer` when both read as versions (`compareSemver`), whether it still takes work, how this Mac would update it, and `downloads` when it would download this Mac's published version itself over the connection - and one out of reach carries none, because the home cannot tell (design skill `components/devices/DevicesTab`, "Another version").
 One that takes no work is still connected, so it reads "seen just now" and "no new work", never out of reach, and a task waiting for it says so too ("It takes no new work until it is updated.", `docs/helper.md`, "Runs on"), recalls its Update card, and Automatic's compared computers name it "has an older Infinitary".
 
 ### Updating
@@ -631,20 +641,49 @@ Closing a session stops the packing process and the downloader, and removes part
 For Update from a direct download, the remote instructions wait for the home's acknowledgement after checking and unpacking, before starting `work update`.
 The home commits to that start before sending the acknowledgement, so a lost reply cannot trigger a second update.
 Only download/check/unpack failure retries; once that start is acknowledged, its result is never retried as a fetch failure.
-Linux and the existing no-argument connection update order keep their current delivery path.
+Linux keeps its current delivery path, and a Mac a command added downloads over the connection instead (below, "Downloading over the connection").
 
 ### Updating over the connection
 
 1. "Updating Infinitary on Mac mini.": the home asks the update order, `fm:firstmate:update` (`updateOrders`, `src/shared/work.ts`), of a connected computer whatever its version (`ask` with `anyVersion`).
    The order takes no arguments and answers `{ restarts }`, and its name and shape never change across majors, so a home on any later major can still ask it.
 2. A computer that keeps a copy of Infinitary - another Mac added by a command - gets this Mac's at `/firstmate` with its own key and no code (below, "Getting Infinitary by its own key"), unpacks it beside its own and keeps it in its place; another user on this Mac runs this Mac's own app, so it gets nothing.
+   This Mac counts what it sends that computer as it goes (`onAppSent`), and the row and one feed line rewritten in place say "Sending Infinitary to Mac mini… 42.3 MB sent", as for a Mac reached by its address (above, "How far the copy has gone").
    Nothing there changes if the copy does not arrive whole.
 3. It answers, then its run ends, and its background, which keeps it running while it is joined, starts it again from what is kept (`docs/helper.md`, "Updated by its home").
+   The feed says "Starting Infinitary on Mac mini.", and the row "Starting Infinitary on Mac mini…" until it is back.
 4. "Mac mini runs this computer's version of Infinitary now." once it is back on this Mac's version.
    Not back within three minutes, the feed says so in two warning lines instead ("Mac mini has this computer's version of Infinitary now, and has not started again yet."), and one with no background to start it again says it runs it once it is started there again.
 
-Each step is a `device_update` feed line, and each refusal two `warn` lines that `inf:devices:update` rejects with too (`remoteLoginWords.refused`): `out-of-reach`, `current` (it runs this Mac's version already), `not-updatable`, `cannot-send` (another Mac, from a copy of Infinitary with no bundle to send), and `failed` (the computer could not get or keep the copy).
+Each step is a `device_update` feed line, a count with its `copy` and its `run`, and each refusal two `warn` lines that `inf:devices:update` rejects with too (`remoteLoginWords.refused`): `out-of-reach`, `current` (it runs this Mac's version already), `not-updatable`, `cannot-send` (another Mac, from a copy of Infinitary with no bundle to send), and `failed` (the computer could not get or keep the copy).
 A turn running there is cut off, as when that computer restarts.
+
+### Downloading over the connection
+
+A Mac a command added - a Mac elsewhere that keeps its own copy - on a contract from `WORK_DOWNLOAD_SINCE` on, whatever its major (`takesDownload`), downloads this Mac's published version itself before it is sent anything; its entry's `otherVersion` says so with `downloads`.
+One on an older contract keeps the update order alone, now counted, and takes the download order only from the update after (captain's direction B on INF-322: every work computer).
+
+1. After "Updating Infinitary on Mac mini.", this Mac looks up its version in the published builds without downloading it here, with the five-second lookup a Mac reached by its address uses (`FarBuilds.downloadFor`); a development, unpublished or offline version is sent at once, as above.
+2. It asks the download order, `fm:firstmate:update-download`, with the address and the published SHA-256 (`downloadOrders`, `src/shared/work.ts`), whatever that computer's major (`anyVersion`).
+   Its name and shape never change across majors, nor in either spelling (`FROZEN_CHANNELS`), as the update order's do not.
+3. That computer downloads it with the instructions a Mac reached by its address runs (`MAC_DOWNLOAD`; `downloadHere`, `src/core/helper/update.ts`): its own curl over HTTPS, the published SHA-256, its own ditto and its own codesign against the release's publisher, into a private folder in its work folder that goes whatever happens.
+4. While it runs, this Mac asks `fm:firstmate:update-progress` once a second: the bytes received, the size the release states, never a redirect's, and what is under way there (`state`: `idle`, `downloading`, `updating` while it keeps what it got or the update order runs, or `failed` and `mismatch` once a download ended with nothing changed).
+   The answer's shape never changes across majors, so a state a later computer adds is read, as under way.
+   The row and one feed line rewritten in place say "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" with no stated size; the first empty count says nothing.
+   The download order's own answer carries the last count, so the line ends on it even when a second's asking missed it, and a count that arrives after that answer is not said.
+5. Checked and unpacked, the copy is kept as the update order keeps this Mac's, and that computer answers `{ restarts }` with its last count; only that answer has the feed say "Starting Infinitary on Mac mini.", and its run ends for its background to start it again, as above.
+6. A download that failed, stopped after two minutes with no byte moving, or did not match its checksum or publisher answers `fallback` with nothing there changed, and so does any other failure the download order answers.
+   Heartbeats never renew the two minutes; checking and unpacking what arrived have the update's thirty-minute backstop instead.
+   The feed says "Mac mini could not download Infinitary, so this computer is sending its copy." or "Mac mini's download did not match, so this computer is sending its copy.", the row returns to updating, and this Mac asks the update order at once, its send counted as above.
+7. A connection that drops while the download runs does not stop it (captain's choice on INF-369: this Mac reconnects and follows the running download until the new version is up).
+   This Mac follows it by its progress once that computer is back: it says each count as before, and the update is done once that computer is on this Mac's version, whatever became of the answer it could not hear.
+   A download that ended there with nothing changed - `failed` or `mismatch`, or nothing under way there on its old version, as after its run stopped part way and took the download with it - has this Mac send its own copy at once, counted, after the line that says why.
+8. Asked the download order while a download or an update already runs there, as after this Mac restarted, that computer answers `{ updating }` and changes nothing; this Mac follows that one the same way, and never says it could not download it, or that nothing changed.
+9. Not heard from again within the update's three-minute wait, it may still be downloading or may have updated: the feed says "Mac mini may already have updated Infinitary." and "Check Devices for its version.
+   Do not start another update while it may still be running.", never that nothing changed.
+
+Another user on this Mac, a Mac a command added on this Mac itself, and a Linux computer keep the update order alone.
+A development run may stand in the publisher check of a computer's own download with `INFINITARY_CODESIGN`, as a test's stand-in release needs; an installed app never reads it.
 
 ### Getting Infinitary by its own key
 
@@ -1031,5 +1070,9 @@ A link that expires with nothing paired stops the listener.
 - `src/core/devices/pairing.test.ts`, "follows this Mac's network": a move told once two looks agree and only once, a moment off the network not told, a new address beside the one in use told, the captain's choice told once by the choice, and nothing looking once stopped; `src/main/shell.test.ts`: only a development build follows it, and stops with the connection.
 - `src/core/devices/computers.test.ts`: the real pairing following a stand-in network, the real `WorkDevices` and `Computers`, and a computer out of reach that last reached the old address, said on the list only once the connection listens at the new one.
 - `src/core/connection/connection.test.ts`: what a computer says of its version, taking work or not, and the update order reaching one that takes none; `src/core/devices/pairing.test.ts`: `/firstmate` by a computer's own key.
-- `src/core/devices/computerUpdate.test.ts`: the list saying another version, and Update over the real connection, pairing and work mode composition - the copy got with the computer's own key and kept, another user here getting nothing, the run started again on this Mac's version, not back in time or by hand, and every refusal.
+- `src/core/devices/computerUpdate.test.ts`: the list saying another version, and Update over the real connection, pairing and work mode composition - the copy got with the computer's own key and kept, its send counted, another user here getting nothing, the run started again on this Mac's version, not back in time or by hand, and every refusal.
+  On a Mac it also holds a Mac a command added downloading from a stand-in release over local HTTPS: its count in one line toward the release's size, the downloaded copy kept; a download that does not match its checksum or publisher, cannot be got, or stops with nothing moving falls back to a counted send with nothing left of it; a dropped connection followed to the new version, with the order asked again answering `updating`; an update asked while a download runs following it with no fallback; a run stopped part way coming back on its old version and sent this Mac's copy; one not heard from again said to have maybe updated; and an older contract kept on the update order.
+- `src/core/devices/joinCommand.test.ts`, "when this Mac's version is published": the command downloads it there with its count rewriting one line and joins with it, getting nothing from this Mac; falls back to this Mac's copy when the download does not match or cannot be got, or once only the time a copy of its size needs is left of the link, and downloads while more is left even under two minutes; and says a used or expired command before it downloads anything.
 - `tests/e2e/devices.spec.ts`, "a computer on another version": Devices says so and Update brings it to this Mac's version, and one too old gets the command; `tests/e2e/run-work.spec.ts`, "updated over the connection": the built app gets the home's Infinitary with its own key, keeps it and ends for its background.
+- `tests/e2e/devices.spec.ts`, "a Mac a command added downloads its update": Devices' command names the published download, and Update from the keyboard counts the download in its row and one rewritten feed line, or falls back to a counted send when it does not match.
+  `tests/e2e/run-work.spec.ts`, "the command for another Mac downloads the published version" and "updated over the connection, the copy a command kept downloads": the built app joins with the copy the command downloaded, and keeps the one its work mode downloaded, after a mismatch changed nothing.

@@ -112,8 +112,8 @@ export const RULES: readonly Rule[] = [
   },
   {
     class: "reader",
-    why: "the update order and the /firstmate route keep one name in every spelling",
-    name: /^fm:firstmate:update$/,
+    why: "the update and download orders (FROZEN_CHANNELS) and the /firstmate route keep one name in every spelling",
+    name: /^fm:firstmate:update(-download|-progress)?$/,
   },
   {
     class: "reader",

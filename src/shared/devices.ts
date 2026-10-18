@@ -66,6 +66,21 @@ export type DeviceChip = z.infer<typeof deviceChipSchema>;
 /** How long a link stays good after the home makes it. */
 export const PAIRING_LINK_TTL_MS = 10 * 60 * 1000;
 
+/**
+ * How long the link inside a command for another Mac stays good when that
+ * command downloads this computer's version there first (INF-369 N1, the
+ * captain's choice: such links last longer from the start). Both the
+ * download and the copy from here it falls back to must fit on a slow
+ * network, at the 1 MB a second its reserve assumes (`joinCommand`): for
+ * today's 401 MB app that is about 6.7 minutes each, and a minute to join,
+ * about 14.4 minutes. Thirty minutes leaves the person about 15 minutes to
+ * carry the command to that Mac and type yes, more than the 2.3 a ten-minute
+ * link left them at that rate, and keeps both fitting, with five minutes to
+ * run it, until the app passes about 700 MB. A command that gets Infinitary from here alone keeps
+ * `PAIRING_LINK_TTL_MS`.
+ */
+export const DOWNLOAD_COMMAND_LINK_TTL_MS = 30 * 60 * 1000;
+
 /** The link's scheme and path, as this build writes it; nothing in a browser answers it. */
 export const PAIRING_LINK_PREFIX = "infinitary://join?";
 
@@ -270,13 +285,17 @@ export type DeviceUpdateBy = z.infer<typeof deviceUpdateBySchema>;
  * than this Mac's (docs/devices.md, "Another version"): the version it said
  * it runs, when it said one; whether that is older or newer than this Mac's,
  * when both read as versions; whether it still takes new work; and how this
- * Mac brings it to its own version.
+ * Mac brings it to its own version. `downloads`, updated over the
+ * connection: a Mac elsewhere that keeps its own copy and takes the
+ * download order (`takesDownload`), so it downloads this Mac's published
+ * version itself first, with this Mac's own copy as the fallback.
  */
 export const deviceOtherVersionSchema = z.strictObject({
   app: z.string().min(1).max(64).optional(),
   than: z.enum(["older", "newer"]).optional(),
   takesWork: z.boolean(),
   updateBy: deviceUpdateBySchema,
+  downloads: z.literal(true).optional(),
 });
 export type DeviceOtherVersion = z.infer<typeof deviceOtherVersionSchema>;
 

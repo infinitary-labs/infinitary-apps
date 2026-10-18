@@ -78,6 +78,14 @@ export const fetchAppRequestSchema = z.strictObject({
    */
   system: deviceSystemSchema.optional(),
   chip: deviceChipSchema.optional(),
+  /**
+   * Asks only whether the code is still open, and sends nothing (from
+   * protocol 8.15): the home answers 204, or the same refusal. A command
+   * asks it before it downloads Firstmate from its published release
+   * (docs/devices.md, "Joining by a command"), and only this home's own
+   * command does, so no older home is ever asked it.
+   */
+  check: z.literal(true).optional(),
 });
 export type FetchAppRequest = z.infer<typeof fetchAppRequestSchema>;
 

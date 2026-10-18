@@ -384,7 +384,8 @@ export class DevicePairing implements PairedDevices {
   }
 
   /**
-   * Makes a one-use link for one device of `kind`, good for ten minutes.
+   * Makes a one-use link for one device of `kind`, good for ten minutes, or
+   * for `lastsMs` when the caller says, as a command that downloads does.
    * The answer is for this Mac's own window and nothing else. A link the
    * home hands a Mac it reached over Remote Login keeps that address, which
    * the device that uses it is listed with, and where that Mac is, as the
@@ -401,7 +402,7 @@ export class DevicePairing implements PairedDevices {
    */
   invite(
     request: DeviceInviteRequest,
-    options: { remoteLogin?: string; via?: "ssh"; locality?: Locality } = {},
+    options: { remoteLogin?: string; via?: "ssh"; locality?: Locality; lastsMs?: number } = {},
   ): DeviceInvite {
     this.refuseWhileUnreadable();
     if (options.via && (!deviceRunsWork(request.kind) || !options.remoteLogin || request.command))
@@ -411,7 +412,8 @@ export class DevicePairing implements PairedDevices {
     const { pin } = this.identity();
     const code = randomBytes(32).toString("base64url");
     const id = randomUUID();
-    const expiresAt = this.now() + PAIRING_LINK_TTL_MS;
+    const lasts = options.lastsMs ?? PAIRING_LINK_TTL_MS;
+    const expiresAt = this.now() + lasts;
     this.forgetOldLinks();
     this.links.set(hash(code), {
       id,
@@ -422,7 +424,7 @@ export class DevicePairing implements PairedDevices {
       ...(options.via ? { via: options.via } : {}),
       ...(options.locality ? { locality: options.locality } : {}),
     });
-    const cancel = this.schedule(PAIRING_LINK_TTL_MS, () => {
+    const cancel = this.schedule(lasts, () => {
       this.timers.delete(cancel);
       this.changed();
     });

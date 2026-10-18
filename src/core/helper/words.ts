@@ -1,6 +1,6 @@
 import type { MachineLoginOutcome } from "@shared/accounts";
 import { anotherUserHere, COMPUTER, HERE } from "@shared/deviceNames";
-import { type LeftReason, userDisplayName } from "@shared/devices";
+import { type LeftReason, PAIRING_LINK_TTL_MS, userDisplayName } from "@shared/devices";
 
 /**
  * What a person reads in Terminal when this Mac, or another user on it,
@@ -405,16 +405,36 @@ export function sandboxOff(home: string): string[] {
   ];
 }
 
+/**
+ * The command's own download (docs/devices.md, "Joining by a command"):
+ * what its count stands after, rewritten in place as it moves.
+ */
+export const COMMAND_DOWNLOADING = "Downloading Infinitary…";
+
+/** The command could not download Firstmate, or what it downloaded did not match: it gets it from its home. */
+export function commandDownloadFallback(home: string, mismatch: boolean): string {
+  return mismatch
+    ? `The download did not match, so getting Infinitary from ${home} instead.`
+    : `Could not download Infinitary, so getting it from ${home} instead.`;
+}
+
 /** A command used already, named by where it came from. */
 export function commandUsed(home: string): string[] {
   return [`That command was used already. Make a new one on ${home}.`, NOTHING_CHANGED];
 }
 
-export function commandExpired(home: string): string[] {
+/** A used-up command's words, with how long its link lasted: ten minutes, or longer for one that downloads. */
+export function commandExpired(home: string, lastsMs: number = PAIRING_LINK_TTL_MS): string[] {
   return [
-    `That command expired. It lasts ten minutes; make a new one on ${home}.`,
+    `That command expired. It lasts ${minutesWords(lastsMs)}; make a new one on ${home}.`,
     NOTHING_CHANGED,
   ];
+}
+
+/** A link's lifetime as the words say it: "ten minutes", "thirty minutes". */
+function minutesWords(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  return `${({ 10: "ten", 30: "thirty" } as Record<number, string>)[minutes] ?? minutes} minutes`;
 }
 
 export function commandClosed(home: string): string[] {

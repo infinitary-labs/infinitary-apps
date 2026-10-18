@@ -59,7 +59,7 @@ The home answers `welcome` with its own contract version, its journal's `epoch` 
   A first connection is always a reload.
 
 A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/ipc.ts`; `docs/helper.md`, "Versions").
-Whatever it says, the home hears what a `work` device said of its versions (`onWorkVersion`), and may ask it the one update order (`docs/devices.md`, "Updating over the connection").
+Whatever it says, the home hears what a `work` device said of its versions (`onWorkVersion`), and may ask it the update order, and from protocol 8.15 the download order and how far that download got (`docs/devices.md`, "Updating over the connection" and "Downloading over the connection").
 A computer's join dials once only to hear the home's name, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
 
 A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
@@ -142,7 +142,7 @@ A side writes a channel in its own spelling when the other side said it reads it
 Each side reads either spelling as its own at the edge (`ownChannel`), so the core, a view and the work mode see only their own names, and a request in a spelling it does not know is refused as any unknown name is.
 This build writes `inf` (step 8 of the rename), so it writes Infinitary's names to every side that said it reads them - Firstmate 3000 from the bridge release on says so - and Firstmate 3000's `fm:` names to a side from before the rename; it reads both.
 A push is numbered once and written once in the journal, and respelled for a device that reads the other spelling at the moment it is sent (`pushFrameIn`), so every device still gets the same push under the same number.
-The update order, `fm:firstmate:update`, keeps its one name in every spelling (`FROZEN_CHANNELS`), as the paths `/connection`, `/pair` and `/firstmate` keep theirs, so a home on either side of the rename can still update a computer on the other (`docs/devices.md`, "Updating over the connection").
+The update order, `fm:firstmate:update`, keeps its one name in every spelling (`FROZEN_CHANNELS`), as do the download order, `fm:firstmate:update-download`, and `fm:firstmate:update-progress`, and as the paths `/connection`, `/pair` and `/firstmate` keep theirs, so a home on either side of the rename can still update a computer on the other (`docs/devices.md`, "Updating over the connection").
 A spelling covers channel names alone: a shape's fields and values - an event's type, a work outcome's `firstmate` key, an SSH message - are the contract's, and change only under the version rule (`docs/contract.md`).
 A development run may stand in either spelling for the home's connection with `INFINITARY_WIRE_SPELLING` (`fm` or `inf`), so two development runs rehearse a home and a device on two sides of the rename; a packaged app ignores it.
 

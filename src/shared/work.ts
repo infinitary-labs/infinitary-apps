@@ -1340,7 +1340,7 @@ export function isBrowserOrderChannel(channel: string): channel is BrowserOrderC
 }
 
 /**
- * The one order a home asks a computer that runs work whatever version it
+ * The update order a home asks a computer that runs work whatever version it
  * runs (docs/helper.md, "Updated by its home"): bring Firstmate there to the
  * home's own version. A computer that keeps a copy of Firstmate gets the
  * home's at `FETCH_APP_PATH` with its own key and keeps it in place of its
@@ -1368,3 +1368,94 @@ export const UPDATE_ORDER_CHANNELS = Object.keys(updateOrders) as UpdateOrderCha
 /** The update order's channel. */
 export const WORK_UPDATE_ORDER: UpdateOrderChannel = "fm:firstmate:update";
 export type WorkUpdateAnswer = z.infer<(typeof updateOrders)[typeof WORK_UPDATE_ORDER]["response"]>;
+
+/** Where the home's version is published for a Mac, and the SHA-256 it is checked against. */
+export const updateDownloadSchema = z.object({
+  url: z
+    .string()
+    .max(2048)
+    .regex(/^https:\/\/\S+$/),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+export type UpdateDownload = z.infer<typeof updateDownloadSchema>;
+
+const downloadCountShape = {
+  received: z.number().int().nonnegative(),
+  total: z.number().int().positive().optional(),
+};
+/**
+ * What is under way where a home asked a download: `idle`, nothing in this
+ * run; `downloading`; `updating`, what arrived is checked and being kept, or
+ * the update order runs, so it starts again from the new copy; `failed` or
+ * `mismatch`, the last download ended with nothing there changed. The
+ * progress order's shape never changes across majors, so a state a later
+ * version adds is still read: a home reads one it does not know as under way.
+ */
+export const UPDATE_PROGRESS_STATES = [
+  "idle",
+  "downloading",
+  "updating",
+  "failed",
+  "mismatch",
+] as const;
+export type UpdateProgressState = (typeof UPDATE_PROGRESS_STATES)[number];
+
+/**
+ * How far a download the home asked for has got: the bytes received, the
+ * size its release stated (only when it stated one, and never a redirect's),
+ * and what is under way there (`UPDATE_PROGRESS_STATES`). A home whose
+ * connection dropped while it asked reads it to follow that download
+ * (docs/devices.md, "Downloading over the connection").
+ */
+export const updateProgressSchema = z.object({
+  ...downloadCountShape,
+  state: z.string().min(1).max(64),
+});
+/** How far a download has got, as a computer of this version says it: one of the states it knows. */
+export type UpdateProgress = Omit<z.infer<typeof updateProgressSchema>, "state"> & {
+  state: UpdateProgressState;
+};
+
+/**
+ * The orders a home asks a Mac that runs work to download its update itself
+ * (docs/devices.md, "Downloading over the connection"), of a computer on
+ * any major from `WORK_DOWNLOAD_SINCE` on, so their names and shapes never
+ * change either. `fm:firstmate:update-download` gets the home's published
+ * version over HTTPS, checks its SHA-256 and its publisher, keeps it in
+ * place of the copy there and answers as the update order does; or answers
+ * `fallback` with nothing there changed - the download failed, stopped with
+ * nothing moving, or did not match (`mismatch`) - and the home sends its own
+ * copy with the update order. Either answer carries the download's last
+ * count. One asked while a download or an update already runs there answers
+ * `updating`, and the home follows that one. `fm:firstmate:update-progress`
+ * answers how far that download has got, which the home asks while it runs.
+ */
+export const downloadOrders = {
+  "fm:firstmate:update-download": {
+    effect: "change",
+    request: z.tuple([updateDownloadSchema]),
+    response: z.union([
+      z.object({ restarts: z.boolean(), ...downloadCountShape }),
+      z.object({ fallback: z.enum(["failed", "mismatch"]), ...downloadCountShape }),
+      z.object({ updating: z.literal(true) }),
+    ]),
+  },
+  "fm:firstmate:update-progress": {
+    effect: "read",
+    request: z.tuple([]),
+    response: updateProgressSchema,
+  },
+} as const satisfies Record<
+  `fm:firstmate:${string}`,
+  { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
+>;
+
+export type DownloadOrderChannel = keyof typeof downloadOrders;
+export const DOWNLOAD_ORDER_CHANNELS = Object.keys(downloadOrders) as DownloadOrderChannel[];
+/** The download order's channel. */
+export const WORK_DOWNLOAD_ORDER = "fm:firstmate:update-download" satisfies DownloadOrderChannel;
+/** The order that reads how far the download has got. */
+export const WORK_PROGRESS_ORDER = "fm:firstmate:update-progress" satisfies DownloadOrderChannel;
+export type WorkDownloadAnswer = z.infer<
+  (typeof downloadOrders)[typeof WORK_DOWNLOAD_ORDER]["response"]
+>;

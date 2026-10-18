@@ -42,6 +42,7 @@ import { keptRefFor } from "../../src/core/workspace/workspaceService";
 import { HERE } from "../../src/shared/deviceNames";
 import { deviceChipOf } from "../../src/shared/platform";
 import { freePort } from "../helpers/connectionClient";
+import { macRelease } from "../helpers/macRelease";
 import { type PlacedHome, startPlacedHome } from "../helpers/placedHome";
 import { scratchDir, socketScratchDir } from "../helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../helpers/socketForward";
@@ -840,6 +841,77 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
   );
 });
 
+/**
+ * INF-322 direction B, adding by a command (INF-330). Promise: the command
+ * for another Mac downloads this computer's published version there, checks
+ * it and joins with it, so the copy it downloaded is the one kept and run in
+ * the background. Data: a real universal zip of a bundle whose program starts
+ * the built app, served over local HTTPS which curl trusts here alone, its
+ * publisher check stood in where the command names codesign; the home's own
+ * copy is another bundle that is never sent. Completion: the command exits,
+ * the computer is on the home's list, and its background starts the
+ * downloaded copy. macOS only: the command downloads a Mac's app.
+ */
+test("the command for another Mac downloads the published version, and the copy it downloaded joins and runs in the background", async () => {
+  test.skip(process.platform !== "darwin", "the command downloads a Mac's app");
+  const program = (bundle: string) => join(bundle, "Contents", "MacOS", "Firstmate 3000");
+  const app = (marker: string) => {
+    const bundle = join(scratchDir("infinitary-run-work-bundle-"), "Firstmate 3000.app");
+    mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
+    mkdirSync(join(bundle, "Contents", "Resources"), { recursive: true });
+    writeFileSync(
+      program(bundle),
+      `#!/bin/sh\nexec ${shellWord(electronPath as unknown as string)} ${shellWord(builtAppDir())} "$@"\n`,
+    );
+    chmodSync(program(bundle), 0o755);
+    writeFileSync(join(bundle, "Contents", "Resources", "marker"), `${marker}\n`);
+    return bundle;
+  };
+  const release = await macRelease(app("the published copy"), "0.13.0");
+  try {
+    const at = await home(ME.uid + 1, app("the home's own copy"));
+    const me = user();
+    let command = joinCommand({
+      for: "another-mac",
+      link: await at.link(),
+      homeName: "MacBook Pro",
+      launcher: { executable: "/unused", args: [] },
+      download: {
+        url: release.downloads[release.publicUrl] ?? "",
+        sha256: release.sha256,
+        expiresAt: Date.now() + 10 * 60_000,
+      },
+    });
+    for (const [from, to] of Object.entries(release.programs))
+      command = command.split(from).join(to);
+    const ran = terminal(command, { ...me.env, CURL_CA_BUNDLE: release.cert }, "yes\n");
+    expect(await ran.exited).toBe(0);
+    // Asked once, before anything was downloaded; each count rewrote the line it stands on.
+    const shown = ran.lines().map((line) => line.split("\r").at(-1)?.replace("\x1b[K", "") ?? "");
+    expect(shown).toEqual([
+      ...macAsk("MacBook Pro", ME.name),
+      expect.stringMatching(/^Downloading Infinitary… \S+ [KMG]?B of \S+ [KMG]?B, done\.$/),
+      ...helperWords.joined(THIS_MAC, "MacBook Pro", ME.name, "running"),
+    ]);
+    expect(at.pairing.list()).toEqual([
+      expect.objectContaining({ kind: "work", name: "Studio Mac", user: ME.name }),
+    ]);
+    // It keeps the copy it downloaded, and the background starts that copy.
+    const kept = join(me.dataDir, "app", "Firstmate 3000.app");
+    expect(readInstalled(me.dataDir).app).toBe(kept);
+    expect(readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8")).toBe(
+      "the published copy\n",
+    );
+    expect(readFileSync(readInstalled(me.dataDir).service?.file ?? "", "utf8")).toContain(
+      `<string>${program(kept)}</string>`,
+    );
+    expect(release.requests()).toBe(1);
+    expect(release.verifications()).toHaveLength(1);
+  } finally {
+    await release.stop();
+  }
+});
+
 test("updated over the connection: the copy a command kept gets the home's Firstmate with its own key, keeps it, and ends for its background to start it again", async () => {
   // The home sends a bundle whose program starts the built app, as an
   // installed Firstmate's own program is the app itself.
@@ -894,6 +966,100 @@ test("updated over the connection: the copy a command kept gets the home's First
   // Its background starts the same path again, now this Mac's version.
   const after = started();
   await expect.poll(after.lines).toContain(inReach);
+});
+
+/**
+ * INF-322 direction B, Update over the connection (INF-330). Promise: the
+ * built app's work mode, asked the download order, downloads the published
+ * version itself, says how far it got, keeps it in place of its copy and
+ * ends for its background to start it again; asked again with a download
+ * that does not match, it changes nothing and answers the fallback. Data: a
+ * real universal zip over local HTTPS which curl trusts here alone, and a
+ * development run's stand-in publisher check (`INFINITARY_CODESIGN`), as an
+ * installed app never reads. Completion: the run exits, and the copy kept
+ * there is the downloaded one. macOS only: it downloads a Mac's app.
+ */
+test("updated over the connection, the copy a command kept downloads the published version itself, keeps it, and ends", async () => {
+  test.skip(process.platform !== "darwin", "a Mac downloads a Mac's app");
+  const program = (bundle: string) => join(bundle, "Contents", "MacOS", "Firstmate 3000");
+  const app = (marker: string) => {
+    const bundle = join(scratchDir("infinitary-run-work-bundle-"), "Firstmate 3000.app");
+    mkdirSync(join(bundle, "Contents", "MacOS"), { recursive: true });
+    mkdirSync(join(bundle, "Contents", "Resources"), { recursive: true });
+    writeFileSync(
+      program(bundle),
+      `#!/bin/sh\nexec ${shellWord(electronPath as unknown as string)} ${shellWord(builtAppDir())} "$@"\n`,
+    );
+    chmodSync(program(bundle), 0o755);
+    writeFileSync(join(bundle, "Contents", "Resources", "marker"), `${marker}\n`);
+    return bundle;
+  };
+  const release = await macRelease(app("the published copy"), "0.13.0");
+  try {
+    const at = await home(ME.uid + 1, app("the copy the command got"));
+    const me = user();
+    const command = joinCommand({
+      for: "another-mac",
+      link: await at.link(),
+      homeName: "MacBook Pro",
+      launcher: { executable: "/unused", args: [] },
+    });
+    expect(await terminal(command, onAMac(me.env), "yes\n").exited).toBe(0);
+    const [device] = at.pairing.list();
+    const kept = join(me.dataDir, "app", "Firstmate 3000.app");
+    const marker = () => readFileSync(join(kept, "Contents", "Resources", "marker"), "utf8").trim();
+    const env = {
+      ...me.env,
+      CURL_CA_BUNDLE: release.cert,
+      INFINITARY_CODESIGN: release.programs["/usr/bin/codesign"] ?? "",
+    };
+    const started = () => terminal(`${shellWord(program(kept))} work run`, env, "");
+    const inReach = helperWords.inReach(THIS_MAC, "MacBook Pro")[0];
+    const ask = (channel: string, args: unknown) =>
+      at.connection().ask(device?.id ?? "", channel, args, { anyVersion: true });
+    const download = {
+      url: release.downloads[release.publicUrl] ?? "",
+      sha256: release.sha256,
+    };
+
+    // A download that does not match changes nothing, and it runs on.
+    const first = started();
+    await expect.poll(first.lines).toContain(inReach);
+    release.mode("corrupt");
+    expect(await ask("fm:firstmate:update-download", [download])).toEqual({
+      fallback: "mismatch",
+      received: release.size,
+      total: release.size,
+    });
+    expect(marker()).toBe("the copy the command got");
+    expect(await ask("fm:firstmate:update-progress", [])).toEqual({
+      received: release.size,
+      total: release.size,
+      state: "mismatch",
+    });
+
+    // One that matches is kept in its place; the run answers and ends.
+    release.mode("success");
+    expect(await ask("fm:firstmate:update-download", [download])).toEqual({
+      restarts: true,
+      received: release.size,
+      total: release.size,
+    });
+    expect(await first.exited).toBe(0);
+    expect(first.lines()).toEqual(
+      expect.arrayContaining(helperWords.updated(THIS_MAC, "MacBook Pro", true)),
+    );
+    expect(marker()).toBe("the published copy");
+    expect(readInstalled(me.dataDir).app).toBe(kept);
+    expect(readdirSync(me.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
+    expect(release.verifications()).toHaveLength(1);
+
+    // Its background starts the same path again, now the downloaded copy.
+    const after = started();
+    await expect.poll(after.lines).toContain(inReach);
+  } finally {
+    await release.stop();
+  }
 });
 
 test("a Mac added by its address over Remote Login: the copy joins through the home's own SSH connection, runs in the background over it, is updated, stays in reach when the home moves, and is removed", async () => {

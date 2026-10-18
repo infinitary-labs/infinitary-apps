@@ -13,6 +13,7 @@ import {
   PROTOCOL_VERSION,
   parseInvokeRequest,
   SIGN_INS_SINCE,
+  WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./ipc";
 import {
@@ -22,7 +23,14 @@ import {
 } from "./publishedContract";
 import { resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS } from "./signIns";
-import { BROWSER_ORDER_CHANNELS, UPDATE_ORDER_CHANNELS, WORK_ORDER_CHANNELS } from "./work";
+import {
+  BROWSER_ORDER_CHANNELS,
+  DOWNLOAD_ORDER_CHANNELS,
+  downloadOrders,
+  UPDATE_ORDER_CHANNELS,
+  WORK_ORDER_CHANNELS,
+  WORK_PROGRESS_ORDER,
+} from "./work";
 
 /**
  * The published contract (docs/contract.md) is generated: the committed file
@@ -63,6 +71,7 @@ const shapes: [string, unknown][] = [
   ...pairsOf("orders.requests", published.orders.requests),
   ...pairsOf("signInOrders.requests", published.signInOrders.requests),
   ...pairsOf("updateOrders.requests", published.updateOrders.requests),
+  ...pairsOf("downloadOrders.requests", published.downloadOrders.requests),
   ...pairsOf("browserOrders.requests", published.browserOrders.requests),
   ...pairsOf("resourceOrders.requests", published.resourceOrders.requests),
   ["connection.clientFrame", published.connection.clientFrame],
@@ -112,6 +121,8 @@ describe("the published contract", () => {
     expect(published.signInOrders.customSince).toBe(CUSTOM_API_SIGN_INS_SINCE);
     expect(Object.keys(published.updateOrders.requests)).toEqual(UPDATE_ORDER_CHANNELS);
     expect(published.updateOrders.since).toBe(WORK_UPDATE_SINCE);
+    expect(Object.keys(published.downloadOrders.requests)).toEqual(DOWNLOAD_ORDER_CHANNELS);
+    expect(published.downloadOrders.since).toBe(WORK_DOWNLOAD_SINCE);
   });
 
   describe("gives a standard validator a schema for every shape, on its own", () => {
@@ -122,6 +133,7 @@ describe("the published contract", () => {
           2 * WORK_ORDER_CHANNELS.length +
           2 * SIGN_IN_ORDER_CHANNELS.length +
           2 * UPDATE_ORDER_CHANNELS.length +
+          2 * DOWNLOAD_ORDER_CHANNELS.length +
           2 * BROWSER_ORDER_CHANNELS.length +
           2 * Object.keys(resourceOrders).length +
           5,
@@ -192,6 +204,16 @@ describe("the published contract", () => {
     const order = { orderId: "rows:1", task: "t1", text: "Go." };
     expect(prompt.safeParse([{ ...order, addedLater: true }]).success).toBe(true);
     expect(prompt.safeParse([{ task: "t1", text: "Go." }]).success).toBe(false);
+  });
+
+  // INF-369 N3: the progress answer's shape never changes across majors, so a
+  // home following a download reads a state a later computer adds, as under way.
+  it("reads a download's progress with a state a later computer adds, as this home and the file both do", () => {
+    const later = { received: 104_857_600, total: 420_615_960, state: "resuming" };
+    expect(downloadOrders[WORK_PROGRESS_ORDER].response.safeParse(later).success).toBe(true);
+    const progress = validator(published.downloadOrders.requests[WORK_PROGRESS_ORDER]?.response);
+    expect(progress.safeParse(later).success).toBe(true);
+    expect(progress.safeParse({ received: 104_857_600 }).success).toBe(false);
   });
 
   it("lets a computer that runs work answer the home's request with the client frame", () => {

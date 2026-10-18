@@ -2009,7 +2009,7 @@ describe("FirstmateAgent", () => {
     );
     const command = card("Add your Mac mini by a command");
     expect(command.body).toBe(
-      "<p>Make the command here, then run it once in Terminal on your Mac mini.</p>\n<p>It works once, for ten minutes. Only your click can make it, so I never see it.</p>",
+      "<p>Make the command here, then run it once in Terminal on your Mac mini.</p>\n<p>It works once, for ten minutes, or thirty when it downloads Infinitary there. Only your click can make it, so I never see it.</p>",
     );
     expect(command.actions.find((action) => action.default)).toMatchObject({
       label: "Make the command",

@@ -117,6 +117,7 @@ function how(facts: DeviceUpdateNudgeFacts): string {
     return facts.system === "linux"
       ? `Update it gets ${HERE.this}'s version of Infinitary there over Remote Login, with your own SSH key, and starts it again. ${stops}`
       : `${remoteLoginWords.updateDownloadOffer()} ${stops}`;
+  if (facts.other.downloads) return `${remoteLoginWords.updateConnectionDownloadOffer()} ${stops}`;
   return `Update it sends ${HERE.this}'s Infinitary to it over your network, and it starts again. ${stops}`;
 }
 

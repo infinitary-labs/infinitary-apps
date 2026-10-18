@@ -217,8 +217,8 @@ export type HomeConnection = {
   /**
    * Asks a connected computer that runs work one order (src/shared/work.ts)
    * and resolves with its answer, or rejects with its refusal. With
-   * `anyVersion` - the update order alone, whose shape never changes - it
-   * reaches one that takes no work too. Refused at
+   * `anyVersion` - the update and download orders alone, whose shapes never
+   * change - it reaches one that takes no work too. Refused at
    * once with `DeviceOutOfReachError` when the device is not connected or
    * its welcome said it takes no work, and with it too when the connection
    * goes before the answer; never asked again here.
@@ -253,6 +253,14 @@ export type HomeConnection = {
    * `listening()`'s answer; answers its own unsubscribe.
    */
   onListening(listener: (listening: string[]) => void): () => void;
+  /**
+   * Hears each piece of Firstmate this home sends a computer on its list at
+   * `FETCH_APP_PATH`, as it goes, by that computer's id and the piece's
+   * bytes (docs/devices.md, "Downloading over the connection"); a command's
+   * get, which carries a code, names no computer and is not heard. Answers
+   * its own unsubscribe.
+   */
+  onAppSent(listener: (deviceId: string, bytes: number) => void): () => void;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -363,6 +371,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   let tail = Promise.resolve();
   let nextAsk = 1;
   const workListeners = new Set<(contact: WorkDeviceContact) => void>();
+  const sentListeners = new Set<(deviceId: string, bytes: number) => void>();
+  const tellSent = (deviceId: string, bytes: number) => {
+    for (const listener of [...sentListeners]) {
+      try {
+        listener(deviceId, bytes);
+      } catch (error) {
+        onProblem(`a send listener failed: ${(error as Error).message}`);
+      }
+    }
+  };
   const versionListeners = new Set<(deviceId: string, version: WorkDeviceVersion | null) => void>();
   const tellVersion = (deviceId: string, version: WorkDeviceVersion | null) => {
     for (const listener of [...versionListeners]) {
@@ -819,11 +837,24 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       const why = devices.opened ? devices.opened(body, request) : "unknown";
       if (why) return refused(why, FETCH_APP_REASONS[why]);
+      const want = fetchAppRequestSchema.safeParse(body).data;
+      // A command asks first whether its code is open, before it downloads
+      // Firstmate elsewhere: nothing is sent, and the code is not spent.
+      if (want?.check) return void response.writeHead(204, { Connection: "close" }).end();
+      // A computer on the list, proven by its key, is heard as it is sent
+      // Firstmate; a command's get names no computer yet.
+      let sentTo: string | null = null;
+      if (want && want.code === undefined) {
+        try {
+          sentTo = (await devices.admit(request))?.id ?? null;
+        } catch {
+          sentTo = null;
+        }
+      }
       // A computer that names its system gets the Firstmate for it; one that
       // names none is a Mac that asks as Macs always have, and gets this
       // home's own bundle, or nothing from a home that is not a Mac. A home
       // wired with no builds answers its own bundle to every computer.
-      const want = fetchAppRequestSchema.safeParse(body).data;
       const bundle = options.app?.() ?? null;
       const ownBundle: FarBuild | null = bundle?.endsWith(".app")
         ? { form: "bundle", path: bundle }
@@ -858,6 +889,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         "Cache-Control": "no-store",
         Connection: "close",
       });
+      if (sentTo !== null) {
+        const deviceId = sentTo;
+        stream.on("data", (piece: Buffer) => tellSent(deviceId, piece.length));
+      }
       stream.pipe(response);
       response.once("close", stop);
     };
@@ -1029,6 +1064,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     onWorkVersion: (listener) => {
       versionListeners.add(listener);
       return () => versionListeners.delete(listener);
+    },
+    onAppSent: (listener) => {
+      sentListeners.add(listener);
+      return () => sentListeners.delete(listener);
     },
     onListening: (listener) => {
       listeningListeners.add(listener);

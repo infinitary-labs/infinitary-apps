@@ -19,6 +19,7 @@ import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, STUB_USER_CODE, startGitHubStub } from "./githubStub";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type LaunchedApp, launchApp } from "./launch";
 import { feedLine } from "./rails";
 import { expectNoCard, shownCard } from "./stack";
@@ -111,7 +112,9 @@ async function homeAndComputer() {
   });
   if (!started.ok) throw new Error(started.reason);
   runs.push(started.run);
-  await expect.poll(() => started.run.state().contact).toBe("in-reach");
+  await expect
+    .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+    .toBe("in-reach");
   return { page, deviceId: joined.grant.deviceId };
 }
 

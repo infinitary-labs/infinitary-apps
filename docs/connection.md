@@ -62,6 +62,10 @@ A `work` connection's welcome also carries `takesWork`: whether its version may 
 Whatever it says, the home hears what a `work` device said of its versions (`onWorkVersion`), and may ask it the one update order (`docs/devices.md`, "Updating over the connection").
 A computer's join dials once only to hear the home's name, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
 
+A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
+These waits are sequential, not a single 10-second first-connection limit.
+A journey waiting for first contact allows both phases, rather than failing a still-pending attempt after the default 5-second poll.
+
 Either way the device's cursor is then the welcome's `epoch` with the newest `seq` it holds.
 
 `access` is `full` when the hello's major is the home's own or the one before it, and `read` for any other major, older or newer (`contractAccess`, `docs/contract.md`).

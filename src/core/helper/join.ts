@@ -645,7 +645,7 @@ async function hearName(grant: DeviceGrant, options: JoinOptions): Promise<strin
       dial: (dialed) => dialHome(dialed, linkDial(options)),
       ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
       onPush: () => {},
-      welcomeTimeoutMs: options.timeoutMs ?? 10_000,
+      ...(options.timeoutMs === undefined ? {} : { welcomeTimeoutMs: options.timeoutMs }),
       // Only the name: the home counts this dial as nothing of the work here in reach.
       nameOnly: true,
       onState: (state) => {

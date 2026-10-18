@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "first-contact-poll",
+      "reason": "Align the device journey's first-contact wait with the existing dial and welcome limits; runtime behavior is unchanged."
+    }
+  ]
+}

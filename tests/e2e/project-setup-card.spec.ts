@@ -15,6 +15,7 @@ import {
 import { devicePlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   MOCK_PROPOSED_WORK,
@@ -95,7 +96,9 @@ test("Firstmate proposes a project after a crewmate's report, and Add project se
     const started = startHelper({ dataDir, say: () => {}, retryMs: [50], log: () => {} });
     if (!started.ok) throw new Error(started.reason);
     runs.push(started.run);
-    await expect.poll(() => started.run.state().contact).toBe("in-reach");
+    await expect
+      .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+      .toBe("in-reach");
     return joined.grant.deviceId;
   });
 

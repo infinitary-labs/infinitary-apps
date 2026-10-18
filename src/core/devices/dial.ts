@@ -93,7 +93,8 @@ export class HomeRouteMissingError extends Error {
   }
 }
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+/** Default limit for one pinned TLS dial, before the WebSocket welcome wait starts. */
+export const HOME_DIAL_TIMEOUT_MS = 10_000;
 const ANSWER_MAX_BYTES = 16 * 1024;
 
 /**
@@ -154,7 +155,7 @@ export function pinnedSocket(
     const timer = setTimeout(() => {
       socket.destroy();
       reject(new Error(`${HOME.The} did not answer.`));
-    }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    }, options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS);
     const failed = (error: Error) => {
       clearTimeout(timer);
       socket.destroy();
@@ -379,7 +380,7 @@ async function pair(
           "content-length": Buffer.byteLength(body),
         },
         createConnection: () => socket,
-        timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        timeout: options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS,
       },
       (response) => {
         const chunks: Buffer[] = [];
@@ -470,7 +471,7 @@ export async function fetchFirstmate(
             "content-length": Buffer.byteLength(body),
           },
           createConnection: () => socket,
-          timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+          timeout: options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS,
         },
         (response) => {
           response.once("error", reject);

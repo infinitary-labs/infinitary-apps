@@ -122,7 +122,7 @@ export type HomeLinkOptions = {
   retryMs?: readonly number[];
   /** How often the device pings the home; a ping unanswered by the next one drops it. */
   pingMs?: number;
-  /** How long a dial may take from the first byte to the welcome. */
+  /** How long the WebSocket upgrade and welcome may take after the pinned TLS dial. */
   welcomeTimeoutMs?: number;
   /**
    * A join's one dial, only to hear the home's name: its hello says so, and
@@ -142,6 +142,9 @@ export type HomeLinkOptions = {
    */
   system?: { system?: DeviceSystem; chip?: DeviceChip };
 };
+
+/** Default wait for the WebSocket upgrade and welcome, after the pinned TLS dial. */
+export const HOME_WELCOME_TIMEOUT_MS = 10_000;
 
 const DEFAULT_RETRY_MS = [1_000, 2_000, 3_000, 5_000] as const;
 /** Why a work request ended unanswered. */
@@ -209,7 +212,7 @@ export class HomeLink {
     this.now = options.now ?? Date.now;
     this.retryMs = options.retryMs?.length ? options.retryMs : DEFAULT_RETRY_MS;
     this.pingMs = options.pingMs ?? 10_000;
-    this.welcomeTimeoutMs = options.welcomeTimeoutMs ?? 10_000;
+    this.welcomeTimeoutMs = options.welcomeTimeoutMs ?? HOME_WELCOME_TIMEOUT_MS;
   }
 
   state(): HomeLinkState {

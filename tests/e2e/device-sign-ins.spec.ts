@@ -24,6 +24,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { customApiBlock, fillCustomApi, saveCustomApi } from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
 import { type GitHubStub, STUB_USER_CODE, seedGitHubSignIn, startGitHubStub } from "./githubStub";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import {
@@ -348,7 +349,9 @@ async function homeAndComputer(
   });
   if (!started.ok) throw new Error(started.reason);
   runs.push(started.run);
-  await expect.poll(() => started.run.state().contact).toBe("in-reach");
+  await expect
+    .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+    .toBe("in-reach");
   // The join raises the computer's setup card (device-setup.spec.ts is its
   // journey); this spec's subject is the sign-in itself, so Not now.
   const setup = deviceSetupTitle(

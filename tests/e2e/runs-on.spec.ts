@@ -14,6 +14,7 @@ import { RUNS_ON_SOURCE_WORDS } from "../../src/shared/taskPolicies";
 import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedCall } from "../helpers/scriptedCalls";
 import { waitForFirstmateIdle } from "./crew";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -86,7 +87,9 @@ async function homeAndComputer(): Promise<{ app: LaunchedApp; page: Page; device
   const started = startHelper({ dataDir, say: () => {}, retryMs: [50], log: () => {} });
   if (!started.ok) throw new Error(started.reason);
   runs.push(started.run);
-  await expect.poll(() => started.run.state().contact).toBe("in-reach");
+  await expect
+    .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+    .toBe("in-reach");
   return { app, page, deviceId: joined.grant.deviceId };
 }
 

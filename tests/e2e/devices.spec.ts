@@ -48,6 +48,7 @@ import {
   standInRecord,
 } from "../helpers/standInFirstmate";
 import { waitForFirstmateIdle } from "./crew";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -452,7 +453,9 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     await expect(page.locator('[data-panel-state="joined"]')).toContainText(set);
     await page.getByRole("button", { name: "Done", exact: true }).click();
     const helper = run();
-    await expect.poll(() => helper.state().contact).toBe("in-reach");
+    await expect
+      .poll(() => helper.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+      .toBe("in-reach");
 
     // Devices lists it with what it runs, its sign-ins, its tasks and when it was seen.
     const row = page.locator(`[data-device-row="${deviceId}"]`);
@@ -510,7 +513,9 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
 
     // Back in reach, Remove brings its work here, then takes it off the list.
     const again = run();
-    await expect.poll(() => again.state().contact).toBe("in-reach");
+    await expect
+      .poll(() => again.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+      .toBe("in-reach");
     await expect(row).toContainText(SEEN_WORDS.now);
     await row.getByRole("button", { name: "Remove Running as Builder", exact: true }).click();
     await expect(question).toContainText(removeLines({ ...builder, inReach: true })[0]);
@@ -773,7 +778,9 @@ test("this Mac's address changes: a computer added by a command says how it come
     const deviceId = joined.grant.deviceId;
     await app.page.getByRole("button", { name: "Done", exact: true }).click();
     const first = run();
-    await expect.poll(() => first.state().contact).toBe("in-reach");
+    await expect
+      .poll(() => first.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+      .toBe("in-reach");
     const { repo } = await app.page.evaluate(
       (path) => window.infinitary.repos.setup({ kind: "adopt", path }),
       projectWithOrigin(),
@@ -810,7 +817,9 @@ test("this Mac's address changes: a computer added by a command says how it come
     );
     await page.getByRole("button", { name: "Done", exact: true }).click();
     const back = run();
-    await expect.poll(() => back.state().contact).toBe("in-reach");
+    await expect
+      .poll(() => back.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+      .toBe("in-reach");
     await expect(row).toContainText(SEEN_WORDS.now);
     await expect(row.locator("[data-device-stranded]")).toHaveCount(0);
     expect(

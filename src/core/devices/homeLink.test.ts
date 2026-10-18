@@ -2,7 +2,7 @@ import { join } from "node:path";
 import type { Spelling } from "@shared/codeNames";
 import type { DeviceGrant, DeviceView } from "@shared/devices";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -11,8 +11,13 @@ import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { thisDeviceSystem } from "../platform";
 import { asDeviceName } from "./computerName";
-import { claimLink, dialHome } from "./dial";
-import { HomeLink, type HomeLinkState, HomeOutOfReachError } from "./homeLink";
+import { claimLink, dialHome, HOME_DIAL_TIMEOUT_MS } from "./dial";
+import {
+  HOME_WELCOME_TIMEOUT_MS,
+  HomeLink,
+  type HomeLinkState,
+  HomeOutOfReachError,
+} from "./homeLink";
 import { DevicePairing } from "./pairing";
 
 /**
@@ -179,6 +184,76 @@ function follow(
 }
 
 describe("the device's side of the connection", () => {
+  // INF-335: the journey's 5 s poll expired while a first attempt was still
+  // valid. Drive the two sequential phases on a fake clock, not runner load.
+  it.each(["welcome", "timeout"] as const)(
+    "keeps a slow first dial reaching until its separate welcome limit: %s",
+    async (outcome) => {
+      const at = await home();
+      const grant = await at.joinWork();
+      let socket: WebSocket | undefined;
+      let opened: () => void = () => {};
+      const opening = new Promise<void>((resolve) => {
+        opened = resolve;
+      });
+      let settled: () => void = () => {};
+      const settling = new Promise<void>((resolve) => {
+        settled = resolve;
+      });
+      const states: HomeLinkState["contact"][] = [];
+      const link = new HomeLink({
+        grant,
+        onPush: () => {},
+        onState: (state) => {
+          states.push(state.contact);
+          if (state.contact !== "reaching") settled();
+        },
+        dial: async (dialing) => {
+          // A pending dial, then the real pinned TLS and WebSocket. Pause
+          // incoming frames at open so the real home's welcome waits too.
+          await new Promise((resolve) => setTimeout(resolve, HOME_DIAL_TIMEOUT_MS - 1));
+          socket = await dialHome(dialing);
+          socket.once("open", () => {
+            socket?.pause();
+            opened();
+          });
+          return socket;
+        },
+      });
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        link.start();
+        await vi.advanceTimersByTimeAsync(HOME_DIAL_TIMEOUT_MS - 1);
+        await opening;
+        expect(link.state().contact).toBe("reaching");
+        // More than the old poll's entire allowance, after a slow dial.
+        await vi.advanceTimersByTimeAsync(5_001);
+        expect(link.state().contact).toBe("reaching");
+        expect(states).toEqual([]);
+        const welcomeWait = HOME_WELCOME_TIMEOUT_MS - (outcome === "welcome" ? 1 : 0);
+        await vi.advanceTimersByTimeAsync(welcomeWait - 5_001);
+        if (outcome === "welcome") {
+          expect(link.state().contact).toBe("reaching");
+          socket?.resume();
+          await settling;
+          expect(link.state()).toMatchObject({ contact: "in-reach", takesWork: true });
+          expect(states).toEqual(["in-reach"]);
+        } else {
+          await settling;
+          expect(link.state().contact).toBe("lost");
+          expect(states).toEqual(["lost"]);
+        }
+        console.info(
+          `[first-contact] dial wait=${HOME_DIAL_TIMEOUT_MS - 1}ms; welcome wait=${welcomeWait}ms; contact=${link.state().contact}`,
+        );
+      } finally {
+        socket?.resume();
+        link.close();
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("is welcomed with the home's name, asks what a view may, and hears every push", async () => {
     const at = await home();
     const air = follow(await at.join());

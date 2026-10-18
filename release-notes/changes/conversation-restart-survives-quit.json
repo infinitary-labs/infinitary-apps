@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "conversation-restart-survives-quit",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate still hears why its conversation restarted",
+      "body": "If you quit after a crewmate moves to a new conversation and before its next turn, it used to never hear why. It now hears that reason on the turn that brings it back.",
+      "noPicture": "Nothing on screen looks different: the change is in what the crewmate is told after a restart.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

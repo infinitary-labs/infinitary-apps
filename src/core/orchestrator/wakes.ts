@@ -46,6 +46,7 @@ import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import type { CardRefusal } from "../storage/taskStore";
 import type { SettleRefusal } from "../tasks/taskService";
 import { type CiReadingFact, ciFactWords } from "./ciFact";
+import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
 import { crewHoldWays, type HoldRefusal, type HoldWay, renderHold } from "./holds";
 import { REVIEW_FIX_RULES } from "./intentBrief";
 import { type NamedModel, namedModelWords } from "./namedModel";
@@ -876,6 +877,21 @@ export type WakeFacts =
       carried: boolean;
       /** The turns served elsewhere that this session has not seen, oldest first. */
       recent: SeatDigestTurn[];
+    }
+  | {
+      /**
+       * A conversation that replaced the task's earlier one (INF-416 piece B).
+       * Queued once per renewal, and served first on the turn that brings the
+       * crewmate back, so a quit before that turn ends clean still delivers it.
+       */
+      kind: "conversation-restart";
+      restart: CrewmateRestart;
+      /** The task's key, which `tasks` reads its record by. */
+      taskKey: string;
+      /** The brief its first turn served, when the record holds it. */
+      brief?: string;
+      /** Where the earlier conversation's transcript is saved, on the computer it runs on. */
+      earlier?: string;
     };
 
 /** What a check watch reports: the first red check, the finish, or the host stopping. */
@@ -1052,6 +1068,39 @@ export type SeatMoveReason = SeatPauseClass | "instructions";
  * queues a wake with that name about that task again (`enqueueWake`).
  */
 export type TypedWake = { facts: WakeFacts; ways?: HoldWay[]; once?: string };
+
+/** The once-name of one renewal: a later renewal, from a different conversation, is a new fact. */
+export function conversationRestartOnce(restart: CrewmateRestart): string {
+  const changed =
+    restart.changed === "unopenable" ? "unopenable" : [...restart.changed].sort().join("+");
+  return `conversation-restart:${restart.from}:${changed}`;
+}
+
+/**
+ * The reason a renewed conversation is told, as a once-named wake. `renderWake`
+ * draws it with `crewmateRestartText`, so the served words stay the same bytes.
+ */
+export function conversationRestartWake(input: {
+  restart: CrewmateRestart;
+  taskKey: string;
+  brief?: string;
+  earlier?: string;
+}): TypedWake {
+  const restart =
+    input.restart.changed === "unopenable"
+      ? input.restart
+      : { from: input.restart.from, changed: [...input.restart.changed] };
+  return {
+    facts: {
+      kind: "conversation-restart",
+      restart,
+      taskKey: input.taskKey,
+      ...(input.brief ? { brief: input.brief } : {}),
+      ...(input.earlier ? { earlier: input.earlier } : {}),
+    },
+    once: conversationRestartOnce(input.restart),
+  };
+}
 
 /** What the inbox holds: prose an agent wrote (the Firstmate's steer, a brief), or a typed wake. */
 export type WakeBody = string | TypedWake;
@@ -1522,6 +1571,13 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       }
       if (facts.browserGone) return renderBrowserGone(facts);
       return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
+    case "conversation-restart":
+      return crewmateRestartText({
+        restart: facts.restart,
+        taskKey: facts.taskKey,
+        ...(facts.brief ? { brief: facts.brief } : {}),
+        ...(facts.earlier ? { earlier: facts.earlier } : {}),
+      });
     case "card-closed":
       return `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.`;
     case "project-change":
@@ -1709,12 +1765,16 @@ export function laneText(rows: readonly InboxRow[]): string {
 }
 
 /**
- * A crewmate lane's rows as the turn that serves them: each row a quit or
- * crash cut a turn on opens with `RESTART_REPLAY_NOTE`, so the crewmate
- * reads a replay as one, never as new work.
+ * A crewmate lane's rows as the turn that serves them: a renewed
+ * conversation's reason comes first, so it rides the message that brought
+ * the crewmate back, and each row a quit or crash cut a turn on opens with
+ * `RESTART_REPLAY_NOTE`, so the crewmate reads a replay as one, never as
+ * new work.
  */
 export function laneTurnText(rows: readonly InboxRow[]): string {
-  return rows
+  const leading = rows.filter((row) => row.facts?.kind === "conversation-restart");
+  const rest = rows.filter((row) => row.facts?.kind !== "conversation-restart");
+  return [...leading, ...rest]
     .map((row) => {
       const body = renderWake(row);
       return row.cuts > 0 ? `${RESTART_REPLAY_NOTE}\n\n${body}` : body;

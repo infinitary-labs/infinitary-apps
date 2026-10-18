@@ -5336,6 +5336,86 @@ describe("CrewSupervisor", () => {
     expect(crewmate.promptCalls.at(-1)).toBe("and then this");
   });
 
+  it("serves a renewed conversation's reason once after a restart before a clean turn (INF-416 piece B)", async () => {
+    // INF-416 piece B: the reason is a once-named lane wake, not memory, so a
+    // quit before the turn ends clean still serves it, and only on that turn.
+    const earlier = join(scratchDir("infinitary-renewed-restart-"), "earlier.jsonl");
+    writeFileSync(earlier, "");
+    const renewal = { from: earlier, changed: ["prompt"] as const };
+    const crewmate = fakeCrewmate({
+      sessionId: "s-new",
+      resume: { backend: "pi", sessionFile: "/tmp/s-new.jsonl" },
+      renewal,
+    });
+    let now = Date.now();
+    const clock = () => now;
+    const { supervisor, tasks, db, paths, workspace, cardStore } = setup(crewmate, { now: clock });
+    seedTask(tasks, {
+      id: "t-renew-restart",
+      title: "Old task",
+      prompt: "old work",
+      repoId: null,
+      repoDir: "/tmp/repo",
+      worktreeDir: "/tmp/wt",
+      branch: "fm/task-t-renew-restart",
+      sessionFile: earlier,
+      status: "idle",
+      createdAt: now,
+    });
+    tasks.recordBrief("t-renew-restart", ["Goal: count the rivets."]);
+    const reason = crewmateRestartText({
+      restart: renewal,
+      taskKey: tasks.get("t-renew-restart")?.key ?? "",
+      brief: "Goal: count the rivets.",
+      earlier,
+    });
+
+    await supervisor.steerCrewmate("t-renew-restart", "carry on");
+    await tick();
+    // The words are the same as the in-memory prefix they replace.
+    expect(crewmate.promptCalls).toEqual([`${reason}\n\ncarry on`]);
+
+    // The app quits before that turn ends clean. A fresh supervisor over the
+    // same database is the next boot, and its session reports no renewal.
+    supervisor.disposeAll();
+    const bootCrewmate = fakeCrewmate();
+    const fresh = new CrewSupervisor({
+      now: clock,
+      ...crewSessions(
+        paths,
+        vi.fn(async () => bootCrewmate),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: new TaskService({ db, strict: true, now: clock }),
+      cardStore,
+      inbox: new InboxStore(db, { now: clock }),
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    fresh.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+    expect(new InboxStore(db, { now: clock }).resetInFlight()).toBe(2);
+    now += 120_000;
+    await fresh.sweepInbox(now);
+    await tick();
+
+    const served = bootCrewmate.promptCalls[0] ?? "";
+    expect(served).toBe(
+      `${RESTART_REPLAY_NOTE}\n\n${reason}\n\n${RESTART_REPLAY_NOTE}\n\ncarry on`,
+    );
+    expect(served.split(reason)).toHaveLength(2);
+
+    bootCrewmate.emit({ type: "turn_end", taskId: "t-renew-restart" });
+    bootCrewmate.finishPrompt();
+    await tick();
+    await fresh.steerCrewmate("t-renew-restart", "and then this");
+    await tick();
+    expect(bootCrewmate.promptCalls.at(-1)).toBe("and then this");
+    expect(bootCrewmate.promptCalls.at(-1)).not.toContain(reason);
+    fresh.disposeAll();
+  });
+
   it("refuses to start a crewmate on a backend nothing serves, rather than guessing", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, sessions } = setup(crewmate, {

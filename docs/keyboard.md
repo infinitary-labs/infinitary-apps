@@ -93,7 +93,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.maximize`, Maximize or restore card | window, run by the shell page | none: chosen by name (full, screen, enlarge, expand and bigger find it too) |
 | `cards.next-revision`, Go to the next revised area | window, run by the shell page | none: chosen by name; selected revision, otherwise newest released list |
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
-| `cards.show-info`, Show Info; `cards.show-crewmate`, Show Crewmate; `cards.show-browser`, Show Browser; `cards.next-tab`, Next tab; `cards.previous-tab`, Previous tab | window, run by the shell page | none: chosen by name |
+| `cards.show-info`, Show Info; `cards.show-crewmate`, Show Crewmate; `cards.show-browser`, Show Browser; `cards.next-tab`, Next tab; `cards.previous-tab`, Previous tab | window, run by the shell page | none: chosen by name (open and task record find Show Info too); on a card about a task, Show Info, Show Crewmate and Show Browser open that task's tab in front of the card |
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
@@ -262,6 +262,8 @@ The main process's own commands, the size keys, are never refused by the page.
 - `cards.show-info`, `cards.show-crewmate`, `cards.show-browser`, `cards.next-tab` and `cards.previous-tab` switch the shown task card's tab (`docs/task-card-tabs.md`).
   The card's strip lends itself to them while it is mounted, and they refuse when the shown card has no tabs, when it has no such tab, when the tab is already shown and when there is no other tab to go to.
   A tab a command chose takes focus, with its ring, on the strip the swap draws.
+  On a card about a task - a crewmate's, the first mate's or the app's own - Show Info, Show Crewmate and Show Browser open that task's tab in front of the card, which Hide or Esc returns to (`docs/task-card-tabs.md`, "From a card"); the key in the card's head is the same door for the pointer, and a Tab stop with Enter.
+  They refuse on a card about no task ("This card is not about a task"), and Show Crewmate while no crewmate has run the task.
   The Crewmate tab's prompt keeps two keys of its own, as a message field keeps Enter: Enter sends its line to the crewmate, and ⌃C stops the crewmate's running turn, with Stop beside the hint for the pointer; Esc still hides the card (`docs/task-card-tabs.md`, "Typing").
 - `cards.thread`, Show or hide the card's thread, is the thread head's Collapse thread and the collapsed card's latest line in one key (`docs/card-threads.md`, "Collapsing the thread"), lent by the card layer like the arrows.
   It refuses on a card that takes no reply or has no thread yet, and while a recording runs; a focused reply field keeps the focus, and otherwise focus lands, ringed, on what undoes it.

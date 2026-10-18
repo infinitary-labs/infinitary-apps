@@ -70,6 +70,25 @@ describe("the window's task key store", () => {
     expect(read).toHaveBeenCalledTimes(2);
     for (const done of [one, two, three, quiet]) done();
   });
+
+  it("holds the board for a card's head, answering a task by id and the row waiting on a card (INF-358)", () => {
+    const held = taskKeyIndex.hold();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    board([
+      row("t1", "SCR-1"),
+      { ...row("t-decision", "SCR-9"), waitingCardId: "card-fm-3" } as TaskView,
+    ]);
+    expect(taskKeyIndex.byId("t1")?.key).toBe("SCR-1");
+    expect(taskKeyIndex.byId("t-none")).toBeUndefined();
+    expect(taskKeyIndex.waitingOn("card-fm-3")?.key).toBe("SCR-9");
+    expect(taskKeyIndex.waitingOn("card-other")).toBeUndefined();
+    // A key asked for meanwhile keeps the board after the hold lets go.
+    const asking = taskKeyIndex.watch(["SCR-1"]);
+    held();
+    expect(stop).not.toHaveBeenCalled();
+    asking();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("which keys link", () => {

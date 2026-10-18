@@ -1,7 +1,7 @@
 import { CREWMATE_TAB_LABEL } from "@shared/crewTranscript";
 import { browserTabLabel, INFO_TAB_LABEL, type TaskBrowserFact } from "@shared/taskBrowser";
 import type { TaskView } from "@shared/tasks";
-import { useShellStore } from "../app/store";
+import { taskEntryFrom, useShellStore } from "../app/store";
 
 /**
  * The tabs of a task's card (docs/task-card-tabs.md): Info first, then
@@ -158,13 +158,18 @@ export function shownTaskTabs(taskId: string, shown: ShownTab): TaskTabsHandle |
   };
 }
 
-/** Shows `tab` of a task from the view `shown`; a key's choice has the strip the swap draws take focus. */
+/**
+ * Shows `tab` of a task from the view `shown`; a key's choice has the strip
+ * the swap draws take focus. The task's entry keeps the card it was opened
+ * from, so Hide on the next tab still returns to that card.
+ */
 export function goToTab(taskId: string, tab: TaskTab, shown: ShownTab, byKey: boolean): void {
   const shell = useShellStore.getState();
+  const from = taskEntryFrom(shell, taskId);
   if (byKey && tab.kind !== shown) askTabFocus();
-  if (tab.kind === "info") shell.openRecord(taskId);
-  else if (tab.kind === "crewmate") shell.openCrewmateView(taskId);
-  else if (shown !== "browser") shell.openBrowserView(taskId);
+  if (tab.kind === "info") shell.openRecord(taskId, from);
+  else if (tab.kind === "crewmate") shell.openCrewmateView(taskId, from);
+  else if (shown !== "browser") shell.openBrowserView(taskId, from);
   else void window.infinitary.browser.input(taskId, { kind: "page", page: tab.page });
 }
 

@@ -467,11 +467,12 @@ export function TaskBrowserView({
 }: {
   taskId: string;
   /**
-   * The browser a card's live attachment named, when a card opened the view
-   * (docs/task-browser.md, "From a card"): a line under the row says when it
-   * is no longer the task's.
+   * The card that opened the view (docs/task-card-tabs.md, "From a card"),
+   * and, from a card's live attachment, the browser it named
+   * (docs/task-browser.md, "From a card"): a line under the row says when
+   * that browser is no longer the task's.
    */
-  from?: { session: string; generation: number };
+  from?: { cardId: string; session?: string; generation?: number };
   onClose: () => void;
   onDrawn: () => void;
 }) {
@@ -535,10 +536,15 @@ export function TaskBrowserView({
   useEffect(() => {
     if (!asking) setRemember(false);
   }, [asking]);
-  const openRecord = () => useShellStore.getState().openRecord(taskId);
+  // The record keeps the card the view came from, so Hide on it returns there too.
+  const openRecord = () =>
+    useShellStore.getState().openRecord(taskId, from ? { cardId: from.cardId } : undefined);
   // A card's browser that is no longer the task's is said so, above
   // whatever the task's browser is now.
-  const standing = from && detail ? attachmentStanding(from, fact) : "same";
+  const standing =
+    from?.session !== undefined && from.generation !== undefined && detail
+      ? attachmentStanding({ session: from.session, generation: from.generation }, fact)
+      : "same";
   const noticeWords = standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing];
   const noticeFit = useOverflowTitle(noticeWords);
   const whoFit = useOverflowTitle(who ? `· ${who}` : undefined);

@@ -1,4 +1,4 @@
-import type { TaskView } from "@shared/tasks";
+import type { TaskDetail, TaskView } from "@shared/tasks";
 import { presentTask } from "@shared/taskWaiting";
 import { z } from "zod";
 import { useShellStore } from "../../app/store";
@@ -29,23 +29,41 @@ export function openTaskOn(value: unknown, target: OpenTaskTarget): OpenTaskOutc
 }
 
 /**
+ * A required action the captain put off with Not now, or one presented and
+ * since hidden (docs/task-record.md): its row stays under Waiting on you
+ * with no open card, and the one typed show-card operation puts its card
+ * up again, as the record's Show the card does. One still blocked by its
+ * prerequisites has no card to show, and the operation would refuse it.
+ */
+function showableRequiredAction(detail: Pick<TaskDetail, "status" | "requiredAction">): boolean {
+  const state = detail.requiredAction?.state;
+  return detail.status === "open" && (state === "ready" || state === "deferred");
+}
+
+/**
  * Opens a task the way a click on its Tasks row does (task-system P4): its
  * ready decision comes forward, or its record opens at the front of the
  * main stack. A panel's `point.openTask` and a card body's task key open a
- * task the same way (FI3-594). An explicit record gesture has no shortcut
- * and keeps that route; a shortcut to a decision may have aged since the
- * page painted it, so the task's associations are refreshed and reconciled
- * with the focusable local stack first.
+ * task the same way (FI3-594). A shortcut to a decision may have aged since
+ * the page painted it, so the task's associations are refreshed and
+ * reconciled with the focusable local stack first; a task with no reachable
+ * decision whose required action the captain deferred gets its card shown
+ * again (INF-358), and only a task with neither opens its record.
  */
 export async function openTask(value: OpenTaskValue): Promise<void> {
-  if (!value.cardId) {
-    openTaskOn(value, useShellStore.getState());
-    return;
+  let detail = await window.infinitary.tasks.detail(value.taskId);
+  let { waitingCardId } = presentTask(detail, useShellStore.getState().cards);
+  if (!waitingCardId && showableRequiredAction(detail)) {
+    const shown = await window.infinitary.task.run(value.taskId, "show-card");
+    if (shown.ok) {
+      detail = await window.infinitary.tasks.detail(value.taskId);
+      waitingCardId = presentTask(detail, useShellStore.getState().cards).waitingCardId;
+    }
   }
-  const detail = await window.infinitary.tasks.detail(value.taskId);
-  const shell = useShellStore.getState();
-  const { waitingCardId } = presentTask(detail, shell.cards);
-  openTaskOn({ ...value, cardId: waitingCardId ?? undefined }, shell);
+  openTaskOn(
+    { taskId: value.taskId, cardId: waitingCardId ?? undefined },
+    useShellStore.getState(),
+  );
 }
 
 /**

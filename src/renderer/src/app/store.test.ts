@@ -25,6 +25,7 @@ import {
   panelCardEntryId,
   reconcileStack,
   shownCard,
+  taskEntryFrom,
   unreadAround,
   useShellStore,
   visibleCards,
@@ -1162,6 +1163,37 @@ describe("a task's browser view on the card stack (docs/task-browser.md)", () =>
     shell().openBrowserView("t1", from);
     shell().openBrowserView("t1");
     expect(shell().records).toEqual([{ browserTaskId: "t1" }]);
+    shell().closeRecord();
+    expect(shown()?.id).toBe("first");
+  });
+
+  it("opens a task's record from its card, and Hide returns to that card from any of its tabs (INF-358)", () => {
+    const first = card({ id: "first", status: "ready", actions: DECIDE, title: "First" });
+    const about = card({ id: "about", status: "ready", actions: DECIDE, taskId: "t1" });
+    useShellStore.setState({ cards: [first, about], cardIndex: 1 });
+    // The key in the card's head, or Show Info on it: the record in front, from the card.
+    shell().openRecord("t1", { cardId: "about" });
+    expect(shown()?.recordTaskId).toBe("t1");
+    expect(shell().records).toEqual([{ taskId: "t1", from: { cardId: "about" } }]);
+    expect(taskEntryFrom(shell(), "t1")).toEqual({ cardId: "about" });
+    expect(taskEntryFrom(shell(), "t2")).toBeUndefined();
+    shell().closeRecord();
+    expect(shown()?.id).toBe("about");
+    // The task's next tab keeps the card it came from (`goToTab` hands it on).
+    shell().openCrewmateView("t1", { cardId: "about" });
+    expect(shown()?.crewmateTaskId).toBe("t1");
+    shell().openBrowserView("t1", taskEntryFrom(shell(), "t1"));
+    expect(shown()).toMatchObject({ browserTaskId: "t1", browserFrom: { cardId: "about" } });
+    shell().closeRecord();
+    expect(shown()?.id).toBe("about");
+    // Opened from a Tasks row, the record names no card and Hide reveals as any record does.
+    shell().openRecord("t1");
+    expect(shell().records).toEqual([{ taskId: "t1" }]);
+    shell().closeRecord();
+    expect(shown()?.id).toBe("first");
+    // The card gone meanwhile: Hide falls back to the stack's first card.
+    shell().openRecord("t1", { cardId: "about" });
+    useShellStore.setState({ cards: [first] });
     shell().closeRecord();
     expect(shown()?.id).toBe("first");
   });

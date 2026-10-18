@@ -8,6 +8,16 @@ One rule, one summary and one way of opening serve every place; a card body's ke
   Only a key that is exactly a recorded task's key: a word shaped like a key that names no task (`F13-572` where no project F13 exists), a lowercase key, or part of a longer word (`FI3-594-plan`) stays text.
   Nothing near is guessed.
   A task's own key on its own card, record, summary or task browser stays text: opening it would only bring the same task forward.
+  The one exception is the card's head (next), whose key is the card's door to the task's record.
+- **The card's own key (INF-358).**
+  A card about a task leads its head's meta line with that task's key, in the quiet look, then a middle dot and the meta words: `INF-358 · Open the waiting decision from the Tasks panel`.
+  Every card about a task has it the same way - a crewmate's card, the first mate's card (the task it named, or the decision row the app filed for a decision that named none) and the app's own cards about a task, the stuck-task card, a required action and a sign-in asked for a task; a note about a task reads like its decision.
+  A card about no task - a provider's or a forge's sign-in, a first mate note that named none - draws no key.
+  The key keeps its whole width; the meta words beside it give way.
+  Resting on it or focusing it opens the task's summary as any key does.
+  A click or Enter on it opens the task's record in front of the card, never the task's waiting decision - that is the card itself - and Hide or Esc on that record comes back to the card while it is still up (`../cards/TaskRecord`, "From a card").
+  Show Info on the card, by name in command search, opens the same record; Show Crewmate and Show Browser open the task's other tabs where it has them.
+  Everywhere else on the card - its title, its body, its thread - the card's own key stays text.
 - **Where a key stays text.**
   A key inside a control that already does one thing stays text, so the control keeps its one action: a button, a toggle's summary (an Activity line's, whose opened text links), a `role=button` element, a draft button, a link, a Tasks row or a board tile, a Knowledge list row, a Cards row title, an action label, a collapsed panel's newest line and a thread's collapsed cue.
   The last turn above the input is plain text, never a link, so its keys stay text too (`VoiceInput.prompt.md`).

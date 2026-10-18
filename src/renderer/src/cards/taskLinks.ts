@@ -29,11 +29,16 @@ const NO_KEYS: readonly string[] = [];
  * FI3-572 is.
  */
 let boardRows = new Map<string, TaskView>();
+/** The same rows by id, and the row waiting on each card (`waitingCardId`). */
+let boardById = new Map<string, TaskView>();
+let boardByCard = new Map<string, TaskView>();
 let boardSeen = false;
 let stopBoard: (() => void) | null = null;
 const earlier = new Map<string, TaskView>();
 const asked = new Set<string>();
 const wanted = new Map<string, number>();
+/** How many readers hold the board for its rows alone (`hold`), naming no key. */
+let holds = 0;
 const listeners = new Set<() => void>();
 let version = 0;
 
@@ -57,42 +62,75 @@ function lookUp(key: string): void {
     .catch(() => {});
 }
 
+/** The board is read while any key is wanted or any reader holds it. */
+function readBoard(): void {
+  if (stopBoard) return;
+  stopBoard = appReadExecutor().subscribe(
+    "tasks.board",
+    {},
+    {
+      onValue: (value) => {
+        const rows = (value as TaskBoard).tasks;
+        boardRows = new Map(rows.map((row) => [row.key, row]));
+        boardById = new Map(rows.map((row) => [row.id, row]));
+        boardByCard = new Map(
+          rows.flatMap((row) => (row.waitingCardId ? [[row.waitingCardId, row] as const] : [])),
+        );
+        boardSeen = true;
+        for (const key of wanted.keys()) lookUp(key);
+        changed();
+      },
+      onError: () => {},
+    },
+  );
+}
+
+/** Lets the board go once nothing wants a key and nothing holds it. */
+function releaseBoard(): void {
+  if (wanted.size > 0 || holds > 0 || !stopBoard) return;
+  stopBoard();
+  stopBoard = null;
+  boardSeen = false;
+}
+
 export const taskKeyIndex = {
   /** Asks for `keys` until the returned function lets them go. */
   watch(keys: readonly string[]): () => void {
     for (const key of keys) wanted.set(key, (wanted.get(key) ?? 0) + 1);
-    if (!stopBoard) {
-      stopBoard = appReadExecutor().subscribe(
-        "tasks.board",
-        {},
-        {
-          onValue: (value) => {
-            boardRows = new Map((value as TaskBoard).tasks.map((row) => [row.key, row]));
-            boardSeen = true;
-            for (const key of wanted.keys()) lookUp(key);
-            changed();
-          },
-          onError: () => {},
-        },
-      );
-    } else if (boardSeen) {
-      for (const key of keys) lookUp(key);
-    }
+    if (!stopBoard) readBoard();
+    else if (boardSeen) for (const key of keys) lookUp(key);
     return () => {
       for (const key of keys) {
         const left = (wanted.get(key) ?? 1) - 1;
         if (left > 0) wanted.set(key, left);
         else wanted.delete(key);
       }
-      if (wanted.size > 0 || !stopBoard) return;
-      stopBoard();
-      stopBoard = null;
-      boardSeen = false;
+      releaseBoard();
+    };
+  },
+  /**
+   * Keeps the board read for its rows (`byId`, `waitingOn`) until the
+   * returned function lets it go: a card's head asks for its task this way.
+   */
+  hold(): () => void {
+    holds += 1;
+    readBoard();
+    return () => {
+      holds -= 1;
+      releaseBoard();
     };
   },
   /** The recorded task with exactly this key, as last read, or undefined. */
   task(key: string): TaskView | undefined {
     return boardRows.get(key) ?? earlier.get(key);
+  },
+  /** The board's row for the task `id`, as last read, or undefined. */
+  byId(id: string): TaskView | undefined {
+    return boardById.get(id);
+  },
+  /** The board's row whose waiting decision is the card `cardId`, or undefined. */
+  waitingOn(cardId: string): TaskView | undefined {
+    return boardByCard.get(cardId);
   },
   subscribe(listener: () => void): () => void {
     listeners.add(listener);

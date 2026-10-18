@@ -299,8 +299,8 @@ export const KEYBOARD_COMMANDS = {
     searchWords: ["collapse", "expand", "chat", "replies", "messages"],
   },
   // The shown task card's tabs (docs/task-card-tabs.md): Info, the
-  // crewmate's session and the browser's pages. No key of their own yet:
-  // chosen by name.
+  // crewmate's session and the browser's pages, and on a card about a task
+  // its way to them (INF-358). No key of their own yet: chosen by name.
   "cards.show-info": {
     label: "Show Info",
     scope: "window",
@@ -308,7 +308,7 @@ export const KEYBOARD_COMMANDS = {
     repeat: false,
     risk: "navigate",
     keys: [],
-    searchWords: ["task", "record", "tab"],
+    searchWords: ["task", "record", "tab", "open"],
   },
   "cards.show-crewmate": {
     label: "Show Crewmate",

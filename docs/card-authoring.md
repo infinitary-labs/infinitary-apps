@@ -516,6 +516,11 @@ The host finds the keys: `taskKeysIn` (`src/shared/taskKeys.ts`) reads the body'
 The same store links the keys in the card's title, its action error line and its thread's lines (`KeyedText`, `src/renderer/src/cards/TaskKey.tsx`), the card's own task's key aside.
 A key gesture is navigation, never an action: it runs no effect, so it works on a past card too.
 
+The card's own task has one door on the card: its key leads the head's meta line (INF-358; the captain's "on all the decision cards we should figure out how we give the user a way to go to the task from there", and "let's make sure the task key is added to all decision cards about a task, so it's not inconsistent").
+`useCardTask` (`src/renderer/src/cards/cardTask.ts`) reads which task a card is about from the board the window holds: the card's `taskId`, which every crewmate card and every host card about a task carries, or for a first mate decision that named no task the decision row the app filed for it, the row whose waiting decision is the card; a card about no task draws none.
+`CardTaskKey` draws it in the quiet look: resting opens the task's summary, and the captain's click or Enter opens the task's record in front of the card (`openRecord` with `from`), never `openTask`, which would only bring the same card forward.
+Hide or Esc on that record, or on the task's other tabs opened from the card, returns to the card while it is still shown (`docs/task-card-tabs.md`, "From a card").
+
 ### Knowledge references
 
 In a build with knowledge to show, a concept's or a finding's id a body writes as text (`f-ejtt2f`, in `inf-mono` beside the claim it backs) becomes a compact reference to that entry, led by its standing's dot, with no markup from the author (FI3-1150; the design skill's ResponseCard, "Knowledge references in a body").

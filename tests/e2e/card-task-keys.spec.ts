@@ -522,6 +522,62 @@ test("a task key in a thread line or a card's title opens its summary on a rest 
   }
 });
 
+test("the key in a card's head opens its task's record, and Hide returns to the card", async () => {
+  // INF-358: the captain's "on all the decision cards we should figure out
+  // how we give the user a way to go to the task from there", built as the
+  // task's key leading the head, and "let's make sure the task key is added
+  // to all decision cards about a task".
+  const userDataDir = scratchDir("infinitary-card-head-key-");
+  const work = seedNamedWork(userDataDir);
+  const launched = await launchApp({ userDataDir, gpuBenchmarking: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1440, height: 900 });
+    const title = `${work.format.key} holds up the walrus ledger`;
+    await showCard(page, title);
+    const head = shownCard(page, title).locator("[data-card-head]");
+    const headKey = taskKeyLinks(head.locator("[data-card-key]"));
+
+    await test.step("the head leads with the card's own task's key, before the meta line and the model chip", async () => {
+      await expect(headKey).toHaveText([work.audit.key]);
+      await expect(head.locator("[data-card-meta]")).toHaveText("crewmate 1");
+      // The title still links only the other task's key; the card's own stays out of it.
+      await expect(taskKeyLinks(shownEntry(page).locator("[data-card-title]"))).toHaveText([
+        work.format.key,
+      ]);
+      await cardSurface(page).screenshot({ path: test.info().outputPath("card-head-key.png") });
+    });
+
+    await test.step("resting on it opens the task's summary beside the card", async () => {
+      await restOnTaskKey(page, headKey);
+      await expect(keySummary(page)).toHaveAttribute("data-key-summary", work.audit.id);
+      const off = { x: 4, y: 400 };
+      await slidePointer(page, off, off, 1);
+      await expect(keySummary(page)).toHaveCount(0);
+    });
+
+    await test.step("Enter on it opens the record in front of the card, and Hide comes back to the card", async () => {
+      await pressKey(headKey, "Enter");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", work.audit.id);
+      await expectRecordBody(page);
+      await expect(keySummary(page)).toHaveCount(0);
+      await hideRecord(page).click();
+      await expect(recordCard(page)).toHaveCount(0);
+      await expect(shownCard(page, title)).toBeVisible();
+    });
+
+    await test.step("Show Info from command search opens the same record, and Esc comes back too", async () => {
+      await runFromSearch(app, page, "cards.show-info");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", work.audit.id);
+      await page.keyboard.press("Escape");
+      await expect(recordCard(page)).toHaveCount(0);
+      await expect(shownCard(page, title)).toBeVisible();
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
 test("a task key in Activity opens its summary beside the panel, by pointer and by keys", async () => {
   const userDataDir = scratchDir("infinitary-activity-task-keys-");
   const work = seedNamedWork(userDataDir);

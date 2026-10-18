@@ -72,6 +72,7 @@ import {
   readingAnchor,
 } from "../cards/cardMaximize";
 import { useCardPresentation } from "../cards/cardPresentation";
+import { useCardTask } from "../cards/cardTask";
 import { choiceOrder, footerGroups } from "../cards/footerGroups";
 import { PanelCardView } from "../cards/PanelCardView";
 import {
@@ -110,7 +111,7 @@ import {
   slotRoles,
 } from "../cards/stageSlots";
 import { TaskBrowserView } from "../cards/TaskBrowserView";
-import { KeyedText } from "../cards/TaskKey";
+import { CardTaskKey, KeyedText } from "../cards/TaskKey";
 import {
   cardWidth,
   THREAD_CARD_MAX,
@@ -1874,6 +1875,9 @@ function StackedCard({
     collectRef.current?.(focusUnpicked) ??
     Promise.resolve(useShellStore.getState().cardAnswers[card.id]);
   const closeRef = useRef<HTMLButtonElement>(null);
+  // The task the card is about leads its head as the card's door to the
+  // task's record (INF-358); a card about no task draws no key.
+  const task = useCardTask(card);
   const footer =
     card.actions.length > 0 ? (
       <>
@@ -1964,6 +1968,7 @@ function StackedCard({
       kind={chrome}
       title={card.title}
       titleWords={<KeyedText text={card.title} own={card.taskId} />}
+      taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
       meta={cardMetaWords(card.meta)}
       place={card.place}
       model={card.model}

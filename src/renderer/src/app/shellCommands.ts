@@ -5,9 +5,11 @@ import {
   type ShellCommandId,
   type WindowCommandId,
 } from "@shared/keyboard";
+import { cardTaskOf } from "../cards/cardTask";
 import {
   shownTaskTabs,
   type TabCommand,
+  tabKindOf,
   tabShownOf,
   tabTargetOf,
   tabTaskOf,
@@ -21,7 +23,7 @@ import { cardStage } from "./cardStage";
 import { commandRefusal, shownEntry, type WindowFacts } from "./commandRefusals";
 import { available, modalOpen } from "./focusRecovery";
 import { enterCard, moveToRegion } from "./regions";
-import { type ShellState, useShellStore } from "./store";
+import { isHeldEntry, type ShellState, useShellStore } from "./store";
 import { markWindowKeys } from "./windowKeysMark";
 
 /**
@@ -46,7 +48,20 @@ function onShownCard(act: (stage: NonNullable<ReturnType<typeof cardStage>>) => 
 
 /** A tab command on the shown task card's strip, while the store still shows that card. */
 function toTab(command: TabCommand): void {
-  const entry = shownEntry(useShellStore.getState());
+  const shell = useShellStore.getState();
+  const entry = shownEntry(shell);
+  if (entry && !isHeldEntry(entry)) {
+    // A card about a task: its tab opens in front of the card, which Hide
+    // returns to (INF-358); the refusal already said when it cannot.
+    const task = cardTaskOf(entry);
+    const wanted = tabKindOf(command);
+    if (!task || !wanted) return;
+    const from = { cardId: entry.id };
+    if (wanted === "info") shell.openRecord(task.id, from);
+    else if (wanted === "crewmate") shell.openCrewmateView(task.id, from);
+    else shell.openBrowserView(task.id, from);
+    return;
+  }
   const taskId = entry && tabTaskOf(entry);
   const kind = entry && tabShownOf(entry);
   const handle = taskId && kind ? shownTaskTabs(taskId, kind) : undefined;

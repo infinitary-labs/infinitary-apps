@@ -28,6 +28,13 @@ Each shown tab points the first mate's turn at its task, as the record does.
 Another page than the browser's current one is the controller's to pick, as navigation is (`docs/task-browser.md`, "The view").
 While the captain only watches, those tabs are disabled and the current page's tab is selected.
 
+## From a card
+
+A card about a task is another way in (INF-358): the task's key in its head opens the record in front of the card (`docs/card-authoring.md`, "Task keys"), Show Info does the same by name, and Show Crewmate and Show Browser open the task's other tabs from the card where it has them; a card about no task refuses them with "This card is not about a task".
+A card's live attachment opens the browser view the same way (`docs/task-browser.md`, "From a card").
+The entry carries the card it came from (`EntryFrom` on the record, the Crewmate tab and the browser view, `src/renderer/src/app/store.ts`), and the task's next tab keeps it (`goToTab`), so Hide or Esc on any of its tabs returns to that card while it is still shown; once the card is gone, Hide reveals as any record does.
+A tab opened from a Tasks row, a board tile or a key in a body names no card.
+
 ## The Crewmate tab
 
 `CrewmateView` (`src/renderer/src/cards/CrewmateView.tsx`, its lines in `CrewmateLines.tsx`) draws the crewmate's own session as a transcript in Claude Code's shape, the captain's choice of dialect: a dot before each thing the crewmate said or did, an elbow before what a call answered, and a `>` before each line it was sent.
@@ -90,6 +97,7 @@ Five window commands in the catalog drive it, with command search and no default
 Each view lends its strip while it is mounted (`lendTaskTabs`), keyed by the tab it draws, and the commands act on the shown entry's own strip (`shownTaskTabs`).
 While the shown view's own read has not answered it has no strip yet, so they take the task's tabs from another view's strip, including one that left a moment ago, and work out the place and the way to a tab from the shown view; an outgoing view's strip never speaks for the shown one.
 They refuse in words when the shown card has no strip, no such tab, or no other tab to go to (`tabRefusal`, `src/renderer/src/app/commandRefusals.ts`).
+On a card about a task, Show Info, Show Crewmate and Show Browser open that task's tab in front of the card ("From a card"); Show Crewmate refuses while no crewmate has run the task, and a card about no task refuses all three.
 Inside the Crewmate tab the transcript is one Tab stop that scrolls by keys, each fold, Show the card and Stop are Tab stops, and the prompt takes Enter to send and ⌃C to interrupt.
 
 ## Tests

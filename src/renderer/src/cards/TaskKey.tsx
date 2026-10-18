@@ -1,5 +1,6 @@
 import type { TaskView } from "@shared/tasks";
 import { useRef } from "react";
+import { useShellStore } from "../app/store";
 import { TaskKey, type TaskKeyLook, TaskKeyWords } from "../design/panel/TaskKey";
 import { openTaskFromKey } from "../plugins/point/openTask";
 import { taskPeek } from "../plugins/point/taskPeek";
@@ -18,6 +19,28 @@ const boxOf = (element: Element) => {
 };
 
 /**
+ * Resting on a key the window draws, or focusing it, opens the task's
+ * summary beside the surface the key is on; letting go closes it.
+ */
+function useKeyRest(taskId: string): (anchor: HTMLElement | null) => void {
+  const held = useRef<HTMLElement | null>(null);
+  return (anchor) => {
+    if (!anchor) {
+      taskPeek.release(held.current);
+      held.current = null;
+      return;
+    }
+    held.current = anchor;
+    taskPeek.set({
+      taskId,
+      anchor,
+      key: boxOf(anchor),
+      card: boxOf(anchor.closest(KEY_SURFACE) ?? anchor),
+    });
+  };
+}
+
+/**
  * A task key the window itself draws, as a link to that task (FI3-1271; the
  * design skill's core rule "Task keys"): resting on it or focusing it opens
  * the task's summary beside its card, as a card body's key does; a click or
@@ -33,24 +56,11 @@ export function TaskKeyLink({
   children: string;
   look?: TaskKeyLook;
 }) {
-  const held = useRef<HTMLElement | null>(null);
+  const rest = useKeyRest(task.id);
   return (
     <TaskKey
       {...(look ? { look } : {})}
-      onRest={(anchor) => {
-        if (!anchor) {
-          taskPeek.release(held.current);
-          held.current = null;
-          return;
-        }
-        held.current = anchor;
-        taskPeek.set({
-          taskId: task.id,
-          anchor,
-          key: boxOf(anchor),
-          card: boxOf(anchor.closest(KEY_SURFACE) ?? anchor),
-        });
-      }}
+      onRest={rest}
       onOpen={(event) => {
         if (!event.nativeEvent.isTrusted) return;
         taskPeek.release(event.currentTarget);
@@ -58,6 +68,37 @@ export function TaskKeyLink({
       }}
     >
       {children}
+    </TaskKey>
+  );
+}
+
+/**
+ * The key in a card's head: the card's own task's key as its door to the
+ * task's record (INF-358; the design skill's core rule "Task keys", "The
+ * card's own key"). Resting on it opens the task's summary as any key does;
+ * a click or Enter - only the captain's own - opens the record in front of
+ * the card, never the task's waiting decision, which is this card, and Hide
+ * or Esc on the record returns to the card (`openRecord` with `from`).
+ */
+export function CardTaskKey({
+  task,
+  cardId,
+}: {
+  task: Pick<TaskView, "id" | "key">;
+  cardId: string;
+}) {
+  const rest = useKeyRest(task.id);
+  return (
+    <TaskKey
+      look="quiet"
+      onRest={rest}
+      onOpen={(event) => {
+        if (!event.nativeEvent.isTrusted) return;
+        taskPeek.release(event.currentTarget);
+        useShellStore.getState().openRecord(task.id, { cardId });
+      }}
+    >
+      {task.key}
     </TaskKey>
   );
 }

@@ -123,23 +123,31 @@ export type PanelCardEntry = {
  * each panel's cards, one per card id.
  */
 export type OpenRecord =
-  | { taskId: string }
+  | { taskId: string; from?: EntryFrom }
   | { pastCardId: string }
-  | { browserTaskId: string; from?: BrowserViewFrom }
-  | { crewmateTaskId: string }
+  | { browserTaskId: string; from?: EntryFrom | BrowserViewFrom }
+  | { crewmateTaskId: string; from?: EntryFrom }
   | { panelCard: PanelCardEntry };
+/**
+ * The card one of a task's tabs was opened from (docs/task-card-tabs.md,
+ * "From a card"): the key in the card's head, Show Info, Show Crewmate or
+ * Show Browser on it, or its live attachment. Hide or Esc on that tab
+ * returns to the card while it is still shown, and the task's next tab
+ * keeps it.
+ */
+export type EntryFrom = { cardId: string };
 /**
  * The card whose live attachment opened a browser view, and the browser it
  * names (docs/task-browser.md, "From a card"): the view says so when that
  * browser is no longer the task's, and Hide returns to the card.
  */
-export type BrowserViewFrom = { cardId: string; session: string; generation: number };
+export type BrowserViewFrom = EntryFrom & { session: string; generation: number };
 /** A local presentation entry reuses card sizing, paging and reconciliation. */
 export type StackEntry = Card & {
   recordTaskId?: string;
   pastCardId?: string;
   browserTaskId?: string;
-  browserFrom?: BrowserViewFrom;
+  browserFrom?: EntryFrom | BrowserViewFrom;
   crewmateTaskId?: string;
   panelCard?: PanelCardEntry;
 };
@@ -175,6 +183,19 @@ const isTaskTab = (held: OpenRecord, taskId: string): boolean =>
   ("taskId" in held && held.taskId === taskId) ||
   ("browserTaskId" in held && held.browserTaskId === taskId) ||
   ("crewmateTaskId" in held && held.crewmateTaskId === taskId);
+
+/**
+ * The card the open tab of `taskId` came from, for the tab that replaces it
+ * (`goToTab`): one entry per task keeps one origin, so Hide on any of its
+ * tabs returns to that card.
+ */
+export function taskEntryFrom(
+  s: Pick<ShellState, "records">,
+  taskId: string,
+): EntryFrom | undefined {
+  const held = s.records.find((record) => isTaskTab(record, taskId));
+  return held && "from" in held && held.from ? { cardId: held.from.cardId } : undefined;
+}
 
 /** One of `panel`'s open cards with `patch` applied, where it is; nothing when it is not open. */
 function patchPanelCard(
@@ -873,22 +894,27 @@ export type ShellState = {
   clearPendingDeviceArrival: () => void;
   clearPendingDeviceSignIn: () => void;
   clearPendingDeviceForgeSignIn: () => void;
-  /** Opens or focuses one task's front stack entry. */
-  openRecord: (taskId: string) => void;
+  /**
+   * Opens or focuses one task's front stack entry, from the card `from`
+   * names when it was the card's key or its Show Info (docs/task-card-tabs.md,
+   * "From a card").
+   */
+  openRecord: (taskId: string, from?: EntryFrom) => void;
   /** Opens or focuses a closed card's front stack entry, read-only (FI3-579). */
   openPastCard: (cardId: string) => void;
   /**
    * Opens or focuses one task's browser view at the front (docs/task-browser.md),
    * from a card's live attachment when `from` names it ("From a card").
    */
-  openBrowserView: (taskId: string, from?: BrowserViewFrom) => void;
+  openBrowserView: (taskId: string, from?: EntryFrom | BrowserViewFrom) => void;
   /** Closes one task's browser view wherever it sits; its browser keeps running. */
   closeBrowserView: (taskId: string) => void;
   /**
    * Opens or focuses one task's Crewmate tab at the front, in place of its
-   * record or browser view (docs/task-card-tabs.md, "The Crewmate tab").
+   * record or browser view (docs/task-card-tabs.md, "The Crewmate tab"),
+   * from the card `from` names when it was the card's Show Crewmate.
    */
-  openCrewmateView: (taskId: string) => void;
+  openCrewmateView: (taskId: string, from?: EntryFrom) => void;
   /** Closes one task's Crewmate tab wherever it sits; its crewmate is never told. */
   closeCrewmateView: (taskId: string) => void;
   /**
@@ -1042,7 +1068,7 @@ function closeHeld(s: ShellState, match: (held: OpenRecord) => boolean): Partial
   const entry = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
   const records = s.records.filter((record) => !closing.includes(record));
   const shown = visibleStack(s.cards, s.collapsedCardIds, records);
-  // A browser view a card opened returns to that card while it is up.
+  // A tab a card opened returns to that card while it is up.
   const opener =
     "from" in first && first.from ? shown.findIndex((card) => card.id === first.from?.cardId) : -1;
   const cardIndex =
@@ -2068,10 +2094,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     ),
   openThread: (cardId) =>
     set((s) => ({ closedThreadIds: s.closedThreadIds.filter((id) => id !== cardId) })),
-  openRecord: (taskId) =>
+  openRecord: (taskId, from) =>
     set((s) => {
       const records = [
-        { taskId },
+        { taskId, ...(from ? { from } : {}) },
         // A task is one entry: its record's tab replaces its other tabs, as
         // the card's tab strip does.
         ...s.records.filter((record) => !isTaskTab(record, taskId)),
@@ -2111,11 +2137,11 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     set((s) =>
       closeHeld(s, (record) => "browserTaskId" in record && record.browserTaskId === taskId),
     ),
-  openCrewmateView: (taskId) =>
+  openCrewmateView: (taskId, from) =>
     set((s) => {
       // One entry per task: the Crewmate tab replaces its other tabs.
       const records = [
-        { crewmateTaskId: taskId },
+        { crewmateTaskId: taskId, ...(from ? { from } : {}) },
         ...s.records.filter((record) => !isTaskTab(record, taskId)),
       ];
       return {

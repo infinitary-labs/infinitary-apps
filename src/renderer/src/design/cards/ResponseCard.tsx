@@ -28,6 +28,13 @@ export type ResponseCardProps = {
    * links the task keys in it (FI3-1271). `title` still names the card.
    */
   titleWords?: React.ReactNode;
+  /**
+   * The task the card is about, as its key drawn as a link (design skill
+   * `components/core/TaskKey.prompt.md`, "The card's own key"): it leads
+   * the meta line, keeps its whole width, and is the card's door to the
+   * task's record. Absent on a card about no task.
+   */
+  taskKey?: React.ReactNode;
   /** Mono metadata line: relative time, crewmate ref. */
   meta?: string;
   /**
@@ -177,6 +184,7 @@ export function ResponseCard({
   recordTaskId,
   title,
   titleWords,
+  taskKey,
   meta,
   place,
   model,
@@ -251,7 +259,7 @@ export function ResponseCard({
                 {k.label}
               </Badge>
               {headExtra}
-              {(meta || place || model) && (
+              {(taskKey || meta || place || model) && (
                 // The meta line and the model chip share the room between the
                 // chip and close. A long meta line (crewmate ref carrying a repo
                 // name) truncates with an ellipsis instead of wrapping the card
@@ -267,8 +275,9 @@ export function ResponseCard({
                     flex: 1,
                   }}
                 >
-                  {(meta || place) && (
-                    // Where the task runs reads right after the meta line, in
+                  {(taskKey || meta || place) && (
+                    // The task's key leads the line and keeps its whole width;
+                    // where the task runs reads right after the meta line, in
                     // its voice, "Fix the footer · on Mac mini": the meta line
                     // gives way first, and the place keeps its words unless
                     // they are longer than all the room there is.
@@ -284,6 +293,12 @@ export function ResponseCard({
                         flex: model ? "0 1 auto" : 1,
                       }}
                     >
+                      {taskKey && (
+                        <span data-card-key="" style={{ flexShrink: 0, display: "inline-flex" }}>
+                          {taskKey}
+                        </span>
+                      )}
+                      {taskKey && meta && <span aria-hidden="true">·</span>}
                       {meta && (
                         <span
                           data-card-meta=""

@@ -1,8 +1,15 @@
 import type { Card, CardMessage } from "@shared/cards";
 import { panelCommandId } from "@shared/keyboard";
-import { describe, expect, it } from "vitest";
+import type { TaskView } from "@shared/tasks";
+import { describe, expect, it, vi } from "vitest";
 import { lendTaskTabs, taskTabsOf } from "../cards/taskTabs";
 import { commandRefusal, type RefusalState, type WindowFacts } from "./commandRefusals";
+
+/** The board as a card's head reads it: which task each card is about. */
+const cardTasks = new Map<string, Partial<TaskView>>();
+vi.mock("../cards/cardTask", () => ({
+  cardTaskOf: (card: { id: string }) => cardTasks.get(card.id),
+}));
 
 function card(id: string, overrides: Partial<Card> = {}): Card {
   return {
@@ -166,6 +173,27 @@ describe("why a window command cannot run now", () => {
       );
     } finally {
       unlend();
+    }
+  });
+
+  it("opens a task's tabs from a card about it, and refuses on a card about no task (INF-358)", () => {
+    cardTasks.set("a", { id: "t1", key: "SCR-1", startedAt: null });
+    cardTasks.set("b", { id: "t2", key: "SCR-2", startedAt: 5 });
+    try {
+      expect(commandRefusal("cards.show-info", HOME, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-browser", HOME, CLEAR)).toBeNull();
+      // No crewmate has run the task: it has no Crewmate tab to show.
+      expect(commandRefusal("cards.show-crewmate", HOME, CLEAR)).toBe("This card has no such tab");
+      expect(commandRefusal("cards.show-crewmate", { ...HOME, cardIndex: 1 }, CLEAR)).toBeNull();
+      // Next and Previous tab stay the strip's own.
+      expect(commandRefusal("cards.next-tab", HOME, CLEAR)).toBe("This card has no tabs");
+      const none = { ...HOME, cards: [card("c")] };
+      expect(commandRefusal("cards.show-info", none, CLEAR)).toBe("This card is not about a task");
+      expect(commandRefusal("cards.show-info", { ...HOME, view: "settings" }, CLEAR)).toBe(
+        "Settings is open",
+      );
+    } finally {
+      cardTasks.clear();
     }
   });
 

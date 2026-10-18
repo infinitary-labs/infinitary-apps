@@ -8,7 +8,9 @@ import {
   type WindowCommandId,
 } from "@shared/keyboard";
 import { HOME } from "../../../shared/deviceNames";
+import { cardTaskOf } from "../cards/cardTask";
 import {
+  hasCrewmateTab,
   shownTaskTabs,
   type TabCommand,
   tabKindOf,
@@ -80,11 +82,31 @@ function cardRefusal(s: RefusalState): string | null {
   return shownEntry(s) ? null : NO_CARD;
 }
 
+const NOT_ABOUT_A_TASK = "This card is not about a task";
+
+/**
+ * Show Info, Show Crewmate or Show Browser on a card about a task opens that
+ * task's tab in front of the card (INF-358): Info always, Crewmate once a
+ * crewmate has run the task, and Browser the task's browser view, which
+ * itself says when the task has no browser (the board row the card's task
+ * is read from carries no browser fact). Empty when the command may run;
+ * the reason when not.
+ */
+function cardTabRefusal(entry: StackEntry, command: TabCommand): string {
+  const wanted = tabKindOf(command);
+  if (!wanted) return "This card has no tabs";
+  const task = cardTaskOf(entry);
+  if (!task) return NOT_ABOUT_A_TASK;
+  if (wanted === "crewmate" && !hasCrewmateTab(task)) return "This card has no such tab";
+  return "";
+}
+
 /** A tab command: the shown card is a task's with tabs, and the tab is somewhere to go. */
 function tabRefusal(s: RefusalState, command: TabCommand): string | null {
   const refused = cardRefusal(s);
   if (refused) return refused;
   const entry = shownEntry(s);
+  if (entry && !isHeldEntry(entry)) return cardTabRefusal(entry, command) || null;
   const taskId = entry && tabTaskOf(entry);
   const kind = entry && tabShownOf(entry);
   const handle = taskId && kind ? shownTaskTabs(taskId, kind) : undefined;

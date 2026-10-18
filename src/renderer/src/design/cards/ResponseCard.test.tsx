@@ -43,6 +43,36 @@ describe("ResponseCard chrome", () => {
     );
   });
 
+  it("leads the head with the task's key when the card is about a task, and draws none otherwise (INF-358)", () => {
+    const title = "Fix the footer links on the pricing page";
+    const keyed = renderToStaticMarkup(
+      <ResponseCard
+        kind="decision"
+        title="Footer fixed"
+        taskKey={<span data-task-key="SCR-7">SCR-7</span>}
+        meta={title}
+        model="GPT-6 Sol"
+      >
+        Done.
+      </ResponseCard>,
+    );
+    // The key first, whole, then the separator, then the meta line as its own
+    // words, so what reads the meta line still reads the title alone.
+    const head = keyed.match(
+      /<span data-card-key="" style="([^"]*)"><span data-task-key="SCR-7">SCR-7<\/span><\/span><span aria-hidden="true">·<\/span><span data-card-meta="" style="[^"]*">([^<]*)<\/span>/,
+    );
+    expect(head?.[1]).toContain("flex-shrink:0");
+    expect(head?.[2]).toBe(title);
+    expect(keyed.indexOf("data-card-key")).toBeLessThan(keyed.indexOf("data-model-chip"));
+    const plain = renderToStaticMarkup(
+      <ResponseCard kind="note" title="Quota note" meta="firstmate">
+        All steady.
+      </ResponseCard>,
+    );
+    expect(plain).not.toContain("data-card-key");
+    expect(plain).not.toContain(">·<");
+  });
+
   it("keeps real footer actions next to the close control", () => {
     const html = renderToStaticMarkup(
       <ResponseCard

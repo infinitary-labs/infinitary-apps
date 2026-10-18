@@ -11,7 +11,7 @@ The PR checks (`ci.yml`) run the same projects on separate machines: `unit-tests
 | Project | Files | Rule |
 | --- | --- | --- |
 | `pure` | `src/shared/**/*.test.ts` | Shared contracts and math. One module cache (`isolate: false`) with per-test guards against mutated globals (`tests/helpers/pureProject.ts`). In memory, like `unit`. |
-| `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; 44 module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
+| `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; 47 module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
 | `integration` | the list below | Real git, pnpm, a shell, a stub executable or the installed Claude client. Eight workers on macOS, four elsewhere, in a group that starts after `pure` and `unit` finish, so the suite does not load the host it measures. Each file carries a budget sized to its measured work. |
 | `probe` | the files of the list below that `PROBE_FILES` names | Integration files that can fail with no code change ("Probes" below). The same workers and budgets as `integration`, in a group that starts after it finishes. |
 

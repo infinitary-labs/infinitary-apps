@@ -42,6 +42,7 @@ import {
   type ServedSegmentInput,
   type ServedWakeOrigin,
 } from "@shared/servedFrame";
+import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { encode } from "@toon-format/toon";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
@@ -2763,6 +2764,12 @@ export class FirstmateAgent {
                 );
             }
             this.asks.attach(record.id, "update_task");
+            const beforePolicies = input.policies
+              ? effectiveTaskPolicies(
+                  record,
+                  record.repoId ? this.options.repos.get(record.repoId) : undefined,
+                )
+              : null;
             const runsOn = input.runsOn;
             // What updateFields applies first - a reopening, a move to another
             // project or under another parent - lands before where it runs is
@@ -2822,7 +2829,7 @@ export class FirstmateAgent {
               ref: record.id,
             });
             const policyNote = input.policies
-              ? supervisor.policiesChanged(record.id, input.policies)
+              ? supervisor.policiesChanged(record.id, input.policies, beforePolicies)
               : "";
             // A task under another parent or in another project, or told
             // where it runs, goes there.

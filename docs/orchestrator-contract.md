@@ -9,7 +9,7 @@ Card authoring is `docs/card-authoring.md`; threads are `docs/card-threads.md`.
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Contract revisions live in `src/core/prompts/contract-revisions/`, one file each; `FIRSTMATE_CONTRACT_VERSION` counts them, and that folder's README keeps the ledger through 4.72.
-  The first mate persona holds 25 typed tools (`FIRSTMATE_TOOLS` in `src/core/session/tools.ts` is the pin, which `scripts/generate-self-source.mjs` reads and its test holds to the live tools) - no bash, no read/ls/grep/find.
+  The first mate persona's pin lists 23 typed tools (`FIRSTMATE_TOOLS` in `src/core/session/tools.ts`, which `scripts/generate-self-source.mjs` reads and its test holds to the live tools), and the seat also serves `emote`, so a seat serves 24 - no bash, no read/ls/grep/find.
   The tools come from the one tool spec (`src/core/session/tools.ts`, runtime-neutral): each factory returns a bound tool (name, label, description, parameters, `run`), `FirstmateAgent.buildTools` binds them to the host, and each runtime generates its own tool from that one list - `piToolOf` (`src/core/pi/toolSpec.ts`) at the Pi session factory's boundary, `claudeToolsOf` (`src/core/claude/claudeTaskTools.ts`) for a Claude seat - so a new first mate tool is one entry both seats and the pin pick up.
   The offline readers keep their own lists of those tools, which the same change updates (`docs/dispatch-extractor.md` "Tests", `docs/replay-harness.md` "What it replays").
   The self-source test reads the live agent's list (`tests/helpers/firstmateTools.ts`) and holds both runtimes' generated names to the pin plus `emote`, and the stamp's `toolsSha` fingerprints every tool's name, description and schema (`firstmateAgent.test.ts` holds that each moves it), so a change to the tool words always shows in the record.
@@ -140,15 +140,20 @@ A rule that the core, a tool description and a parameter each stated is said onc
 - **emit_card describes only its top-level parameters.**
   The Claude client never served a nested description, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 
-`tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past its 18,000-token ceiling.
-The ceiling has room for several revisions, so it moves rarely: a change that would cross it trims first, or raises it in a revision that says what the new words buy, and each revision file says what its words cost.
+`tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past the boundary it derives: the 65,536-token floor, minus the 12,288 reserve, minus the promised 33,476-token conversation, which is 19,772.
+A change that would cross it trims first.
+The boundary is not a second number a revision raises.
+Each revision file says what its words cost, and names the one home of each rule it adds.
 The test's ledger names, for every rule taken out of one text, the text that still says it.
 
 ## An answer's closing receipt
 
 Every `answer-closed` receipt carries a `read` naming the exact `tasks` key; only the `next` instruction to use it is conditional.
 That instruction covers any choice that files, starts or saves work by meaning, not by label: Approve and build, Start the next step and Save and defer are examples, not an allowlist.
-The first mate judges the choice under HANDOFF: before filing or starting authorized work it reads the full report, closing offer and submitted answers; routine acknowledgements and Abandon need no read.
+The first mate judges what the choice authorizes under HANDOFF.
+Before filing or starting authorized work it reads the saved plan with tasks by key, the standing rule in the core.
+The answer-closed wake names that read when a choice just closed.
+Routine acknowledgements and Abandon need no read.
 The host does not parse action ids or labels into authorization.
 The report may never have reached the first mate while its planner's decision card was open, so the receipt cannot assume an earlier report wake.
 The context's recent choice line is a summary, not the full offer; the keyed task read remains the durable source.

@@ -21,6 +21,7 @@ Every decision record stamps the version beside the served prompt's sha and the 
 - A change that revises the contract adds one file here in the same pull request.
 - Name the file with a short kebab-case slug for the change, such as `pairing-actions.md`, never with a version number.
 - Write what changed and why: the task and the captain's choice it came from, what the Firstmate is now told, and, when the fixed context grows, about how many tokens the new words cost (`tests/firstmate-fixed-context.test.ts`).
+- Each rule the revision adds names its one home: the core, one tool description, a top-level parameter, a wake, or the builder's brief. A rule already said in that home is not said again.
 - Never delete a revision file: the version counts them, so a deletion would move it backwards.
 
 ## The ledger through 4.72

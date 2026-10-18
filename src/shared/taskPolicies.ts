@@ -111,3 +111,52 @@ export const POLICY_MERGING_WORDS = { on: "Merges on its own", off: "Asks first"
 export const POLICY_HELPER = "Ask your first mate to change these for this task.";
 export const POLICY_CARE_BOUND =
   "Local merge uses Default care; Careful remains requested for pull requests.";
+
+const CARE_RANK = { quick: 0, standard: 1, reviewed: 2 } as const;
+
+/**
+ * What the host did because of a policy edit, said in `update_task`'s answer
+ * and only for the edit that happened. The tool description no longer
+ * restates it on every turn (INF-416 piece H).
+ */
+export function policyEditConsequences(input: {
+  edits: TaskPolicyEdits;
+  now: Pick<EffectiveTaskPolicies, "autonomy" | "rigor">;
+  before?: Pick<EffectiveTaskPolicies, "rigor"> | null;
+  mergeSent: boolean;
+}): string {
+  const parts: string[] = [];
+  if (input.edits.autonomy !== undefined && input.now.autonomy.value === false) {
+    parts.push("Asks first cancels unsent merges.");
+  }
+  if (input.edits.delivery !== undefined) {
+    parts.push("A destination change cancels the old approval.");
+  }
+  if (input.edits.autonomy !== undefined && input.now.autonomy.value === true) {
+    parts.push(
+      "Self-merging rechecks requirements. Unrelated decisions and a withdrawn approval stay held.",
+    );
+  }
+  if (input.edits.rigor !== undefined && input.before) {
+    const next = CARE_RANK[input.now.rigor.value];
+    const previous = CARE_RANK[input.before.rigor.value];
+    if (next > previous) {
+      parts.push(
+        "Higher care requires missing validation or review before the next push or merge.",
+      );
+    } else if (next < previous) {
+      parts.push(
+        "A lower care removes only policy-owned requirements and keeps counts and history.",
+      );
+    }
+  }
+  parts.push(
+    "Published work, evidence and the pull request stay. Rules keep this task's overrides.",
+  );
+  parts.push(
+    input.mergeSent
+      ? "A merge already sent cannot be stopped; this policy applies to future actions, including a retry if it fails."
+      : "Queued work stays queued; existing work and unrelated holds stay in place.",
+  );
+  return parts.join(" ");
+}

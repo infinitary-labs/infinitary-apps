@@ -296,7 +296,6 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
 
   it("serves only the reader-specific rules to the reader that acts on them", () => {
     const firstmateOnly = [
-      "On approval, read original user words",
       "reuses the plan's planned successor, or else files one with create_task",
       "Once implementation is authorized, the first mate starts the builder",
       "Before any start call, the first mate finds the existing successor",
@@ -323,6 +322,37 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
         else expect(served).toContain(fact);
       }
     }
+    // INF-416 piece H: reading the saved plan by key stays in the core, not a second time in HANDOFF.
+    const [, firstmate] = agents[0];
+    expect(firstmate).toContain(
+      "Read saved plans with tasks by key and file accepted work yourself",
+    );
+    expect(firstmate).not.toContain("On approval, read original user words");
+    expect(firstmate).not.toContain("Successful basis edit precedes separate start_now");
+    expect(firstmate).not.toContain("Ask-first always cancels unsent merges");
+  });
+
+  it("keeps update_task's host consequences out of the description (INF-416 piece H)", () => {
+    const unavailable = (): never => {
+      throw new Error("only the served words are read");
+    };
+    const update = createTaskTools({
+      plan: unavailable,
+      update: unavailable,
+      drop: unavailable,
+      withdrawMerge: unavailable,
+      startNow: unavailable,
+      startAgain: unavailable,
+      link: unavailable,
+      query: unavailable,
+    }).find((tool) => tool.name === "update_task");
+    expect(update?.description).not.toContain("Successful basis edit precedes separate start_now");
+    expect(update?.description).not.toContain("Ask-first always cancels unsent merges");
+    expect(update?.description).not.toContain("destination changes cancel old approval");
+    expect(update?.description).not.toContain("Sent merges cannot stop");
+    expect(FIRSTMATE_HANDOFF).toContain(
+      "call update_task basis first, read success, then call update_task start_now separately",
+    );
   });
 
   it("sends an ask for a prototype to a plan with a preview, and grounds its builder", () => {
@@ -1496,6 +1526,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   expect(hash(CARD_AUTHORING)).toBe(
     "024fc749c97058a0f6190dc1f3333d267b66504c3307ac3410941f7d2b454318",
   );
-  // A practical wait is recorded; the hold line no longer says to chain only real prerequisites.
-  expect(hash(HANDOFF)).toBe("bf8375961440f4a3d2571c939a3c90d7322dca94e85431f96ab756b274e28bd7");
+  // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
+  expect(hash(HANDOFF)).toBe("c743e70be54f1254e53cc65080b6e3c3c1cb562dc06c3c031ecb73abe7b3ce4e");
 });

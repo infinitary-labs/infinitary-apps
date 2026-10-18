@@ -148,6 +148,7 @@ import { type PlanItem, readPlanItems } from "@shared/taskPlan";
 import {
   type EffectiveTaskPolicies,
   effectiveTaskPolicies,
+  policyEditConsequences,
   RUNS_ON_SOURCE_WORDS,
   type TaskPolicyEdits,
   type TaskRunsOn,
@@ -5100,7 +5101,11 @@ export class CrewSupervisor {
   }
 
   /** Called after the atomic record edit; never dispatches or restarts work. */
-  policiesChanged(taskId: string, edits: TaskPolicyEdits): string {
+  policiesChanged(
+    taskId: string,
+    edits: TaskPolicyEdits,
+    before?: EffectiveTaskPolicies | null,
+  ): string {
     const record = this.options.tasks.get(taskId);
     const policies = this.policiesOf(record);
     if (!record || !policies) return "";
@@ -5142,9 +5147,12 @@ export class CrewSupervisor {
         );
     }
     this.broadcastCrewCounts();
-    return this.settle.mergeWasSent(taskId)
-      ? "The merge already sent may still complete; this policy applies to future actions, including a retry if it fails."
-      : "Queued work stays queued; existing work and unrelated holds stay in place.";
+    return policyEditConsequences({
+      edits,
+      now: policies,
+      before,
+      mergeSent: this.settle.mergeWasSent(taskId),
+    });
   }
 
   /** A spawn that failed before the crewmate ran leaves nothing behind. */

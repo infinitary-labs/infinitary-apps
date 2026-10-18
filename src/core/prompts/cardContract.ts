@@ -165,9 +165,6 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "Declare asking true on a question card and design_only true for design-only exploration. Do not guess either from sentences, and repeat it on a revision.",
   ),
-  firstmateOnly(
-    "On approval, read original user words, offered action and submitted answers via tasks key.",
-  ),
   "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, repair, permission change or merge. Backlog (on-request) waits for the captain's word; do not requeue a piece he moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
   `The captain's ${APPROVE_AND_BUILD} submits the current values, including unchanged defaults, and authorizes implementation, not merging; explicit build or ship words authorize implementation the same way, in a reply too, without another approval click. No prior capture or second approval is required.`,
   "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Record their facts if needed, then stop; a closed answer is acknowledgement, not build permission. Do not reinterpret old offers or start unrelated backlog work.",

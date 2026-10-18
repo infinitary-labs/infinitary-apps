@@ -6,7 +6,7 @@ import { OLLAMA_MIN_CONTEXT } from "../src/core/pi/ollamaProfile";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "../src/core/pi/ollamaStream";
 import { buildFirstmateSystemPrompt, FIRSTMATE_PROMPT_CORE } from "../src/core/pi/piResources";
 import { piToolsOf } from "../src/core/pi/toolSpec";
-import { FIRSTMATE_CARD_AUTHORING } from "../src/core/prompts/cardContract";
+import { FIRSTMATE_CARD_AUTHORING, FIRSTMATE_HANDOFF } from "../src/core/prompts/cardContract";
 import { firstmateTools } from "./helpers/firstmateTools";
 
 /**
@@ -46,74 +46,22 @@ function conversation(tokens: number): Parameters<typeof localInputFits>[0]["mes
 }
 
 /**
- * The ceiling, in the app's count: the fixed part measured 19,851 before the
- * trim, 17,190 after it, 17,485 at contract 4.72 and 18,142 once FI3-868
- * taught it selective filing and the after-merge check. Knowledge (FI3-1141,
- * docs/knowledge.md) adds about 950 for the knowledge pair, which only an
- * alpha or development build serves and this census includes: 19,446, while a
- * stable build's fixed part stays at 18,497. The ceiling sits above
- * that with room for several revisions, so a change that adds a few words
- * does not move it and two such changes never edit the same number. One
- * that would cross it trims first, or raises it in a contract revision
- * that says what the new words buy: a rule that a tool, the core and a
- * parameter would each state is written once, where it is used. A revision
- * file says what its words cost (src/core/prompts/contract-revisions/).
+ * The boundary for the fixed part, derived rather than kept by hand
+ * (INF-416 piece H, findings P1 and P2). It is the smallest local window's
+ * floor, minus the reserve, minus the conversation that window promises:
+ * ten status blocks of the size FI3-539 recorded, plus the recent tokens
+ * shortening always keeps. A change that would cross it trims first. The
+ * boundary is not a second number a revision raises.
  */
-// FI3-1238 spends about 100 tokens on faithful bounded retrieval guidance.
-// The conversation-space assertion below still holds at this ceiling, and
-// fails past 19,772, so the ceiling has no more room to rise. Merged beside
-// the all-card demo wording, the two measured 19,710 together; FI3-1253's
-// tighter update_task wording left 19,695, and FI3-1268 took three tool
-// sentences the core or a parameter already says to 19,659. Back at 19,700,
-// FI3-1345's runs_on words were paid for by saying update_task's start_policy
-// once, on create_task's, which left 19,676. FI3-1333 retired check_pr_ci
-// (about 120 tokens) for the recorded reading in crew_status.
-// FI3-566: approved card, sequences and reader-specific handoff cuts left
-// 18,541; its cut C moved the reviewed-work steps to the builder's brief and
-// the review wakes, leaving 18,243.
-// Automation drafts and the setup card, merged a minute apart, measured
-// 18,252 together; FI3-1539 said schedule_prompt's prompt rule in fewer
-// words, leaving 18,250.
-// FI3-1543's request_merge effect on emit_card measured 18,302.
-// FI3-1559 direction C adds the personal routing guide and lesson-aware tool
-// words: 18,805. The unchanged conversation-space promise still fits.
-// Its piece 2 (FI3-1569) adds the game line's play-test in the task browser
-// and its finishing note with Play: 18,863.
-// FI3-1626's approved required-action declarations and correction field add
-// 534 tokens in the real served surface: 19,043, within the 19,401 budget.
-// The existing conversation-
-// space assertion and its 19,772 hard boundary are unchanged.
-// FI3-1307's pull request link rule in the card authoring adds 64: 19,107.
-// FI3-1684's casual-project line, measured with the core sentence and the
-// personal_ui words: 19,113. The budget is untouched.
-// FI3-1718's captain-start rule, the direction field and the self-merge
-// handling add 177 tokens: 19,578. The 19,772 hard boundary is unchanged.
-// FI3-1776's rule for a project's development practices is paid for by three
-// phrases the core said twice (what its tools are for, personal_ui for
-// lessons and panels, and who is standalone): 19,599. The budget is
-// untouched.
-// FI3-1761's always-answer thread rule, merged beside it, measured 19,616
-// together. FI3-1805 took three core phrases a tool or the core already says
-// (what an escalation does to the rejected attempt, whose thread a card is,
-// and whose the fleet is to operate): 19,581. The budget is untouched.
-// The plan step's split rule, the corrected pieces line and the feature plan
-// pointer (FI3-1801) measured 19,713; the budget rises to 19,720, inside the
-// 19,772 hard boundary.
-// FI3-1792 names the agent the first mate aboard Infinitary: the persona line,
-// "the first mate" where the words said Firstmate, and the development
-// signer's new folder beside its old one in spawn_crewmate measured 19,741;
-// the budget rises to 19,745, inside the 19,772 hard boundary.
-// INF-19, the captain's step titles (recreated from FI3-1819), puts one title rule,
-// with its example, on create_task's title, and paid for it by saying
-// spawn_crewmate's and update_task's title, and create_task's goal and
-// user_words, once where they already live: 19,736. The budget is untouched.
-// A practical wait is a blocked-by link, paid for by a shorter related-link
-// sentence: 19,770. The budget rises to 19,770, inside the 19,772 hard boundary.
-const FIXED_CONTEXT_BUDGET = 19_770;
+const PROMISED_CONVERSATION = 10 * 2_938 + 4_096;
+const FIXED_CONTEXT_BOUNDARY = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - PROMISED_CONVERSATION;
 
 describe("the Firstmate's fixed context (contract v4.59)", () => {
   it("stays inside its budget by the app's own count", async () => {
-    expect(fixedTokens(await fixedContext())).toBeLessThanOrEqual(FIXED_CONTEXT_BUDGET);
+    // 65,536 - 12,288 - 33,476. The pin is the derivation, not a ceiling kept beside it.
+    expect(PROMISED_CONVERSATION).toBe(33_476);
+    expect(FIXED_CONTEXT_BOUNDARY).toBe(19_772);
+    expect(fixedTokens(await fixedContext())).toBeLessThanOrEqual(FIXED_CONTEXT_BOUNDARY);
   });
 
   it("names a prototype only where it sends the ask to a plan (FI3-872)", async () => {
@@ -136,11 +84,11 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
     // model: the fixed part, then ten status blocks the size of the one
     // FI3-539 recorded (2,938 tokens) beside the 4,096 recent tokens that
     // shortening always keeps.
-    expect(fits(10 * 2_938 + 4_096)).toBe(true);
-    // So does a fixed part grown to the ceiling.
-    expect(
-      OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BUDGET,
-    ).toBeGreaterThanOrEqual(10 * 2_938 + 4_096);
+    expect(fits(PROMISED_CONVERSATION)).toBe(true);
+    // The boundary leaves exactly that conversation, no separately kept slack.
+    expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(
+      PROMISED_CONVERSATION,
+    );
     // The check is the real one: it refuses what cannot fit.
     const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens({ systemPrompt, tools });
     expect(fits(room)).toBe(true);
@@ -157,6 +105,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
 type Home =
   | "core"
   | "authoring"
+  | "handoff"
   | "sequences"
   | "reviewed brief"
   | { wake: keyof typeof REVIEW_WAKES }
@@ -576,6 +525,18 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: "authoring",
     says: "<details> holds only what a reader who digs would want: evidence, exact code paths, qualifications",
   },
+  // INF-416 piece H: the handoff no longer restates the core's read-by-key rule.
+  {
+    rule: "on approval, read the saved plan by key before filing",
+    home: "core",
+    says: "Read saved plans with tasks by key and file accepted work yourself",
+  },
+  // The same piece: update_task no longer restates the separate basis-then-start call.
+  {
+    rule: "a missing basis is set, and read back, before a separate start",
+    home: "handoff",
+    says: "call update_task basis first, read success, then call update_task start_now separately",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {
@@ -586,6 +547,7 @@ describe("every rule the trim took out of one text is still served (contract v4.
     const textOf = (home: Home): string => {
       if (home === "core") return FIRSTMATE_PROMPT_CORE;
       if (home === "authoring") return FIRSTMATE_CARD_AUTHORING;
+      if (home === "handoff") return FIRSTMATE_HANDOFF;
       if (home === "sequences") return SEQUENCES_SEED;
       if (home === "reviewed brief") return renderRigorSection("reviewed");
       if ("wake" in home) return renderWake({ facts: REVIEW_WAKES[home.wake] });
@@ -610,6 +572,7 @@ describe("every rule the trim took out of one text is still served (contract v4.
     const { systemPrompt, served } = await fixedContext();
     expect(systemPrompt).toContain(FIRSTMATE_PROMPT_CORE);
     expect(systemPrompt).toContain(FIRSTMATE_CARD_AUTHORING);
+    expect(systemPrompt).toContain(FIRSTMATE_HANDOFF);
     expect(systemPrompt).toContain(SEQUENCES_SEED.trim());
     const tools = new Set(served.map((tool) => tool.name));
     for (const { home } of LEDGER) {

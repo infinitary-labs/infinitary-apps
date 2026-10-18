@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "job-end-outside-tool-signal",
+      "reason": "Sends a background job's end from a computer that runs work outside any tool's give-up signal, so a job a tool starts in a later change still reports its end after that tool is cancelled. Today every job ends outside a tool, so no shipped behavior changed."
+    }
+  ]
+}

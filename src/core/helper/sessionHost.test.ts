@@ -12,6 +12,7 @@ import {
   type WorkOrderChannel,
   type WorkOrderResponse,
 } from "@shared/work";
+import { Type } from "typebox";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   beginAnthropicStream,
@@ -43,6 +44,7 @@ import { crewmateMovedText } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
+import { type CrewmateTool, crewmateTool } from "../session/tools";
 import { joinHome } from "./join";
 import { PlacedTasks } from "./placedTasks";
 import { type HelperRun, startHelper } from "./run";
@@ -291,6 +293,8 @@ async function placed(
     retryMs?: readonly number[];
     /** A filtered Claude give-up signal, injected at the bound-tool seam independently of the test model. */
     toolSignal?: AbortSignal;
+    /** Tools of the test's own, in place of the crewmate's; the spec names them too. */
+    tools?: readonly CrewmateTool[];
   } = {},
 ) {
   const home = standInHome();
@@ -366,6 +370,7 @@ async function placed(
               : { backend: "pi", runtime },
           ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
           ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
+          ...(options.tools ? { tools: options.tools } : {}),
           ...(options.homeVersion
             ? { homeVersion: () => options.homeVersion as string }
             : homeVersion
@@ -402,7 +407,14 @@ async function placed(
     model: { provider: PROVIDER, id: MODEL },
     thinking: { level: "off" },
     instructions: "You are a crewmate on another Mac.",
-    tools: ["emit_card", "report", "note_progress", "file_followup", "tasks", "github_write"],
+    tools: options.tools?.map((tool) => tool.name) ?? [
+      "emit_card",
+      "report",
+      "note_progress",
+      "file_followup",
+      "tasks",
+      "github_write",
+    ],
   };
   return {
     home,
@@ -1370,6 +1382,85 @@ describe("a conversation held on a computer that runs work", () => {
       callId: "job:job1",
       request: { task: TASK, exit: { jobId: "job1", exitCode: 0, tail: "passed" } },
     });
+  });
+
+  // Intent: INF-389, review INF-381's I1 on PR #66: a job's end is its own
+  // fact, not part of the tool it ran under, so a cancelled tool never
+  // withdraws the end its crewmate waits for.
+  it("tells the home a job's end that arrives in a cancelled tool's scope, and forgets its row only once the home answers (INF-389)", async () => {
+    const controller = new AbortController();
+    let exits!: () => void;
+    const exited = new Promise<void>((resolve) => {
+      exits = resolve;
+    });
+    let host: () => SessionHost = () => {
+      throw new Error("No conversation was opened.");
+    };
+    // A tool that starts a job here and then asks the home: the job's end
+    // arrives on a callback registered inside the tool, as a spawned
+    // child's close does.
+    const startJob = crewmateTool({
+      name: "start_job",
+      label: "Start a job",
+      description: "Start a background job and note it.",
+      parameters: Type.Object({}),
+      bind: (delegate) => {
+        const onProgress = delegate.onProgress;
+        if (!onProgress) return undefined;
+        return async () => {
+          void exited.then(() =>
+            host().jobExit({
+              jobId: "9b2e4f61",
+              ownerId: TASK,
+              command: "pnpm test:ios",
+              exitCode: 0,
+              durationMs: 95_000,
+              tail: "Test Suites: 12 passed",
+            }),
+          );
+          await onProgress("Started pnpm test:ios in the background.");
+          return { text: "Started." };
+        };
+      },
+    });
+    const at = await placed({ toolSignal: controller.signal, tools: [startJob] });
+    host = at.host;
+    await at.open();
+    const progress = at.home.hold("inf:work:progress");
+    const told = at.home.hold("inf:work:job-exit");
+    const tasks = new PlacedTasks(at.dataDir);
+    model([{ tools: [{ name: "start_job", args: {} }] }, { text: "Waiting for the job." }]);
+    try {
+      await at.order("inf:session:prompt", [
+        { orderId: "job-in-tool", task: TASK, text: "Run the iOS tests." },
+      ]);
+      await progress.reached;
+      controller.abort(new Error("Claude stopped waiting"));
+      await at.ended(1);
+      exits();
+      await expect
+        .poll(() => at.home.asked.some((ask) => ask.callId === "job:9b2e4f61"))
+        .toBe(true);
+      expect(tasks.jobs(TASK).map((job) => job.id)).toEqual(["9b2e4f61"]);
+      told.open();
+      await expect.poll(() => tasks.jobs(TASK)).toEqual([]);
+      expect(
+        at.home.effects
+          .filter((effect) => effect.channel === "inf:work:job-exit")
+          .map((effect) => effect.request.exit),
+      ).toEqual([
+        {
+          jobId: "9b2e4f61",
+          command: "pnpm test:ios",
+          exitCode: 0,
+          durationMs: 95_000,
+          tail: "Test Suites: 12 passed",
+        },
+      ]);
+    } finally {
+      progress.open();
+      told.open();
+    }
   });
 
   // INF-367: a restart here tells the home of each background job's end it

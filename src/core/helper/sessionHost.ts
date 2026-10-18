@@ -335,24 +335,30 @@ export class SessionHost {
       forget();
       return;
     }
-    void this.call(held, "inf:work:job-exit", {
-      callId: `job:${job.id}`,
-      exit: {
-        jobId: job.id,
-        command: job.command,
-        ...(job.exit ?? {
-          exitCode: null,
-          durationMs: Math.max(0, (job.stoppedAt ?? job.startedAt) - job.startedAt),
-          tail: "",
-          interrupted: job.stoppedAt === undefined ? "crash" : "quit",
+    // A job's end is its own fact: one started under a tool ends in that
+    // tool's scope, and that tool's cancellation must not withdraw it.
+    void this.toolSignal
+      .exit(() =>
+        this.call(held, "inf:work:job-exit", {
+          callId: `job:${job.id}`,
+          exit: {
+            jobId: job.id,
+            command: job.command,
+            ...(job.exit ?? {
+              exitCode: null,
+              durationMs: Math.max(0, (job.stoppedAt ?? job.startedAt) - job.startedAt),
+              tail: "",
+              interrupted: job.stoppedAt === undefined ? "crash" : "quit",
+            }),
+          },
         }),
-      },
-    }).then(forget, (error: unknown) => {
-      // Stopping first: its row stays for the next start.
-      if (this.stopped) return;
-      this.log(`a job's end was refused: ${messageOf(error)}`);
-      forget();
-    });
+      )
+      .then(forget, (error: unknown) => {
+        // Stopping first: its row stays for the next start.
+        if (this.stopped) return;
+        this.log(`a job's end was refused: ${messageOf(error)}`);
+        forget();
+      });
   }
 
   /**

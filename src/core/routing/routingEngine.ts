@@ -8,6 +8,7 @@ import {
   servedModelKey,
   servedProviderOf,
 } from "@shared/quota";
+import type { RoutingCandidateFact } from "../storage/decisionStore";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 
 /**
@@ -111,6 +112,12 @@ export type RoutingDecision = {
   /** Pi provider id + model id, ready for session creation. */
   choice?: PiModelRef;
   reasons: string[];
+  /**
+   * Every catalog model the router weighed, with the reading and score
+   * behind it and what became of it (pinned choices score nothing, so a pin
+   * leaves this empty). The record keeps them; nothing reads them to rank.
+   */
+  candidates: RoutingCandidateFact[];
 };
 
 const BUCKET_RANK: Record<Slot, number> = {
@@ -217,11 +224,34 @@ export function route(input: RoutingInput): RoutingDecision {
     if (!isOfferedProvider(piProvider) && !isCustomApiProvider(piProvider)) continue;
     if (availableKeys.has(servedModelKey(pin))) {
       reasons.push(`pinned ${pin.provider}/${pin.id}`);
-      return { bucket, choice: { provider: piProvider, id: pin.id }, reasons };
+      return { bucket, choice: { provider: piProvider, id: pin.id }, reasons, candidates: [] };
     }
   }
 
   const skipped: string[] = [];
+  // Each available catalog model's reading and what became of it; a model the
+  // ladder never reached stays "other slot" (or "not reached").
+  const facts = new Map<string, RoutingCandidateFact>();
+  for (const model of input.catalog) {
+    const ref = toPiRef(model);
+    const key = `${ref.provider}/${ref.id}`;
+    if (!availableKeys.has(servedModelKey(model)) || facts.has(key)) continue;
+    facts.set(key, {
+      provider: ref.provider,
+      model: ref.id,
+      ...(typeof model.effectivePercentRemaining === "number"
+        ? { percentRemaining: model.effectivePercentRemaining }
+        : {}),
+      ...(model.paceStatus ? { pace: model.paceStatus } : {}),
+      ...(typeof model.spendPriority === "number" ? { spendPriority: model.spendPriority } : {}),
+      status: "not reached",
+    });
+  }
+  const mark = (ref: PiModelRef, status: string) => {
+    const fact = facts.get(`${ref.provider}/${ref.id}`);
+    if (fact) fact.status = status;
+  };
+  const candidates = () => [...facts.values()];
   const empty = [...input.available, ...(input.unowned ?? [])].some((ref) =>
     slotsOf(ref)?.includes(bucket),
   )
@@ -239,6 +269,7 @@ export function route(input: RoutingInput): RoutingDecision {
       const memberSlots = slotsOf(ref);
       if (memberSlots === undefined) {
         skipped.push(`skipped ${ref.provider}/${ref.id}: not in a slot`);
+        mark(ref, "skipped: not in a slot");
         return [];
       }
       if (!memberSlots.includes(candidateSlot)) return [];
@@ -246,6 +277,7 @@ export function route(input: RoutingInput): RoutingDecision {
         typeof model.effectivePercentRemaining === "number" &&
         model.effectivePercentRemaining <= 0
       ) {
+        mark(ref, `skipped: exhausted at ${candidateSlot}`);
         return [];
       }
       const miss = capabilityMiss({
@@ -255,8 +287,10 @@ export function route(input: RoutingInput): RoutingDecision {
       });
       if (miss) {
         skipped.push(miss);
+        mark(ref, "skipped: cannot serve this turn");
         return [];
       }
+      mark(ref, `eligible at ${candidateSlot}`);
       return [{ model, ref, slot: candidateSlot }];
     });
     // Checked connection-owned models, and a computer's models the quota
@@ -294,6 +328,11 @@ export function route(input: RoutingInput): RoutingDecision {
           : `rule R9: no other signed-in provider could serve ${candidateSlot}; falling back to ${input.avoidProvider}`,
       );
     }
+    for (const entry of inSlot) {
+      if (!elsewhere.includes(entry) && elsewhere.length > 0) {
+        mark(entry.ref, `eligible at ${candidateSlot}, avoided for the reviewer`);
+      }
+    }
     const pool = elsewhere.length > 0 ? elsewhere : inSlot;
     const ranked = [...pool].sort((a, b) => {
       const aKnown = typeof a.model.spendPriority === "number";
@@ -312,6 +351,7 @@ export function route(input: RoutingInput): RoutingDecision {
         recencyOverride = true;
       }
     }
+    mark(chosen.ref, `picked at ${candidateSlot}`);
     reasons.push(...skipped);
     if (candidateSlot !== bucket) {
       reasons.push(`no serveable ${bucket} model; fell back to ${candidateSlot}`);
@@ -327,6 +367,7 @@ export function route(input: RoutingInput): RoutingDecision {
       ...(candidateSlot !== bucket ? { servedBucket: candidateSlot, ...empty } : {}),
       choice: chosen.ref,
       reasons,
+      candidates: candidates(),
     };
   }
 
@@ -336,5 +377,6 @@ export function route(input: RoutingInput): RoutingDecision {
     bucket,
     ...(input.catalog.length > 0 ? { unserveable: true as const, ...empty } : {}),
     reasons,
+    candidates: candidates(),
   };
 }

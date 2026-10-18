@@ -7,7 +7,7 @@ import {
 } from "@shared/quota";
 import type { RuleId, WorkShape } from "@shared/routingPolicy";
 import type { QuotaService } from "../quota/quotaService";
-import type { DecisionStore } from "../storage/decisionStore";
+import type { DecisionStore, RoutingCandidateFact } from "../storage/decisionStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import {
   estimateTokens,
@@ -69,6 +69,8 @@ export type RoutePreview = {
   reasons: string[];
   preferenceRank: number;
   requiresReasoningWait: boolean;
+  /** Every candidate weighed, with its score and reading; saved with the decision. */
+  candidates?: RoutingCandidateFact[];
 };
 
 export type RouteOptions = {
@@ -147,7 +149,7 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons } = evaluation;
+    const { result, reasons, candidates } = evaluation;
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -156,6 +158,9 @@ export class Router {
       rule: result.rule,
       served: result.choice ? (result.servedBucket ?? result.bucket) : null,
       reasons,
+      ...(candidates && candidates.length > 0
+        ? { facts: { kind: "routing-candidates" as const, candidates } }
+        : {}),
     });
     return result;
   }
@@ -252,6 +257,7 @@ export class Router {
       reasons: decision.reasons,
       preferenceRank,
       requiresReasoningWait: requiresReasoningWait(shape, result),
+      candidates: decision.candidates,
     };
   }
 

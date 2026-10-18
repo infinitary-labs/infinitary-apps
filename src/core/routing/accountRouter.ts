@@ -65,6 +65,7 @@ export class AccountSelector {
       provider: piProviderId,
       accountId: decision.accountId ?? null,
       reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
+      facts: { kind: "account-candidates", candidates: decision.candidates },
     });
     if (decision.accountId) {
       this.options.pool.markSelected(decision.accountId);

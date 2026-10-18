@@ -84,6 +84,35 @@ describe("AccountSelector", () => {
     expect(JSON.parse(row.reasons_json).join(" ")).toContain("most headroom");
   });
 
+  // INF-443 piece 2: the record shows each account's reading and fate.
+  it("saves every account's reading and what became of it", () => {
+    const db = openInMemoryDatabase();
+    const selector = new AccountSelector({
+      pool: pool([{ id: "acct_a" }, { id: "acct_b" }, { id: "acct_c", enabled: false }]),
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 20 },
+            { accountId: "acct_b", percent: 70 },
+          ]),
+      },
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(db),
+    });
+    selector.selectForSpawn("task-1", "openai-codex");
+    const row = db
+      .prepare("SELECT facts_json FROM decisions WHERE kind = 'account' AND task_id = ?")
+      .get("task-1") as { facts_json: string };
+    expect(JSON.parse(row.facts_json)).toEqual({
+      kind: "account-candidates",
+      candidates: [
+        { accountId: "acct_a", label: "acct_a", percentRemaining: 20, status: "eligible" },
+        { accountId: "acct_b", label: "acct_b", percentRemaining: 70, status: "picked" },
+        { accountId: "acct_c", label: "acct_c", status: "skipped: disabled" },
+      ],
+    });
+  });
+
   it("returns undefined when the provider has no accounts (base runtime serves)", () => {
     const selector = new AccountSelector({
       pool: pool([]),

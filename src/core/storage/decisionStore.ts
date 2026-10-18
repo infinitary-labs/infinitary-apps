@@ -70,6 +70,40 @@ export type SupervisionOutcomeInput = {
   wakeKind?: string | null;
 };
 
+/**
+ * One candidate of a routing decision as the router scored it: the allowance
+ * reading behind it (`percentRemaining`, `pace`) and its `spendPriority`
+ * score, whatever became of it. Models the router skipped are here too.
+ */
+export type RoutingCandidateFact = {
+  provider: string;
+  model: string;
+  percentRemaining?: number;
+  pace?: string;
+  spendPriority?: number;
+  /** What became of it: picked, eligible (ranked, not picked), or why it was skipped. */
+  status: string;
+};
+
+/** One candidate of an account selection, with the reading behind it. */
+export type AccountCandidateFact = {
+  accountId: string;
+  label: string;
+  percentRemaining?: number;
+  pace?: string;
+  spendPriority?: number;
+  status: string;
+};
+
+/**
+ * The typed facts a routing or account row saves in `facts_json`, beside its
+ * reasons. They live in the record only: no screen reads them
+ * (docs/decision-models.md, "Candidate facts").
+ */
+export type CandidateFacts =
+  | { kind: "routing-candidates"; candidates: RoutingCandidateFact[] }
+  | { kind: "account-candidates"; candidates: AccountCandidateFact[] };
+
 export type RoutingDecisionInput = {
   taskId: string;
   provider: string | null;
@@ -81,6 +115,7 @@ export type RoutingDecisionInput = {
   /** The slot actually served (S5); null only when nothing was chosen. */
   served: string | null;
   reasons: readonly string[];
+  facts?: CandidateFacts;
 };
 
 /** A routing row as its readers use it; its reasons stay in the ledger. */
@@ -100,6 +135,7 @@ export type AccountDecisionInput = {
   provider: string;
   accountId: string | null;
   reasons: readonly string[];
+  facts?: CandidateFacts;
 };
 
 type SortRow = {
@@ -216,8 +252,8 @@ export class DecisionStore {
   recordRouting(input: RoutingDecisionInput): number {
     const info = this.db
       .prepare(
-        `INSERT INTO decisions (kind, task_id, at, rule, reasons_json, provider, model, bucket, served)
-         VALUES ('routing', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO decisions (kind, task_id, at, rule, reasons_json, provider, model, bucket, served, facts_json)
+         VALUES ('routing', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.taskId,
@@ -228,6 +264,7 @@ export class DecisionStore {
         input.model,
         input.bucket,
         input.served,
+        input.facts ? JSON.stringify(input.facts) : null,
       );
     return Number(info.lastInsertRowid);
   }
@@ -236,8 +273,8 @@ export class DecisionStore {
   recordAccount(input: AccountDecisionInput): number {
     const info = this.db
       .prepare(
-        `INSERT INTO decisions (kind, task_id, at, reasons_json, provider, account_id)
-         VALUES ('account', ?, ?, ?, ?, ?)`,
+        `INSERT INTO decisions (kind, task_id, at, reasons_json, provider, account_id, facts_json)
+         VALUES ('account', ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.taskId,
@@ -245,6 +282,7 @@ export class DecisionStore {
         JSON.stringify(input.reasons),
         input.provider,
         input.accountId,
+        input.facts ? JSON.stringify(input.facts) : null,
       );
     return Number(info.lastInsertRowid);
   }

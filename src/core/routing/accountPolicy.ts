@@ -1,3 +1,5 @@
+import type { AccountCandidateFact } from "../storage/decisionStore";
+
 /**
  * The account-selection policy (broker phase 3): after routing has chosen a
  * provider/model, this pure function picks WHICH account of that provider
@@ -62,12 +64,50 @@ export type AccountSelectionInput = {
 export type AccountSelectionDecision = {
   accountId?: string;
   reasons: string[];
+  /** Every candidate with the reading behind it and what became of it. */
+  candidates: AccountCandidateFact[];
 };
 
 /** Headroom within this many points counts as a tie for tiebreak purposes. */
 const TIE_DELTA = 3;
 
 export function selectAccount(input: AccountSelectionInput): AccountSelectionDecision {
+  const decision = choose(input);
+  const picked = decision.accountId;
+  return {
+    ...decision,
+    candidates: input.candidates.map((candidate) => ({
+      accountId: candidate.accountId,
+      label: candidate.label,
+      ...(typeof candidate.effectivePercentRemaining === "number"
+        ? { percentRemaining: candidate.effectivePercentRemaining }
+        : {}),
+      ...(candidate.paceStatus ? { pace: candidate.paceStatus } : {}),
+      ...(typeof candidate.spendPriority === "number"
+        ? { spendPriority: candidate.spendPriority }
+        : {}),
+      status: statusOf(candidate, picked, input),
+    })),
+  };
+}
+
+/** What became of one candidate, in a word the record can be searched by. */
+function statusOf(
+  candidate: AccountCandidate,
+  picked: string | undefined,
+  input: AccountSelectionInput,
+): string {
+  if (candidate.accountId === picked) return "picked";
+  if (!candidate.enabled) return "skipped: disabled";
+  if (candidate.connected === false) return "skipped: needs sign in";
+  if (candidate.withheld) return `skipped: withheld (${candidate.withheld})`;
+  if (isExhausted(candidate)) return "skipped: exhausted";
+  if (candidate.accountId === input.protect?.accountId)
+    return "skipped: reserved for the first mate";
+  return "eligible";
+}
+
+function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "candidates"> {
   const reasons: string[] = [];
   const eligible: AccountCandidate[] = [];
   for (const candidate of input.candidates) {

@@ -171,6 +171,14 @@ Every decision about a task - which model and tier a spawn is routed to, which a
 One shape: the task, the time, the `rule` that decided (a routing policy row R0-R9, or the whose-turn or idle rule of a sort; none for an account pick or a retired triage verdict, whose judging model sits in `model`), the reasons for a routing or account pick, and each kind's own columns - routing's provider, model, asked and served slot; the account; a sort's wake, verdict, summary, provenance stamps and the write-once missed-escalation label.
 A sort row that recorded a typed wake carries its facts (`facts_json`; `docs/inbox.md`, "The wake envelope") beside the text it was served as.
 
+### Candidate facts
+
+A routing row and an account row save every candidate they weighed in `facts_json` too (`CandidateFacts`, `decisionStore.ts`; no migration).
+Each candidate carries the allowance reading behind it (`percentRemaining`, `pace`), its `spendPriority` score and what became of it (`status`: picked, eligible, or why it was skipped).
+The skipped ones are there: a model at 0%, one in no slot, one that cannot serve the turn; an account that is disabled, signed out, withheld, exhausted or reserved for the first mate.
+A pinned choice scores nothing, so its row saves none.
+They live in the record only: no screen reads them and nothing ranks by them, so an investigation reads them with a query over `decisions` (the old views do not carry the column).
+
 The three old table names are read-only views over the ledger, each kind's rows in its old columns (`LEDGER_VIEWS`, `src/core/storage/views.ts`): `routing_decisions`, `account_decisions` and `supervision_outcomes`, where a rule's sort reads `model` as its `rule:<id>` stamp and gains `facts_json`.
 So the published views, Observe, the exporters, the miss deriver and the replay scorer read the same rows from an old database and a new one, and nothing writes through them.
 No plugin's query reaches them.

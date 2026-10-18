@@ -604,4 +604,73 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       id: "gpt-5.5",
     });
   });
+
+  // INF-443 piece 2: the captain asked why so many tasks went to one
+  // provider whose allowance was tight; the record must show every
+  // candidate's score and reading, the 0% ones the router skips included.
+  it("saves every candidate's score and reading with the decision, skipped ones too", () => {
+    const db = openInMemoryDatabase();
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings: new SettingsStore(db),
+      quota: fakeQuota({
+        generatedAt: "now",
+        models: [
+          {
+            provider: "grok",
+            id: "grok-4.6",
+            label: "Grok 4.6",
+            effectivePercentRemaining: 12,
+            paceStatus: "ahead",
+            spendPriority: 3.5,
+          },
+          {
+            provider: "codex",
+            id: "gpt-5.5",
+            label: "gpt-5.5",
+            effectivePercentRemaining: 80,
+            paceStatus: "on_pace",
+            spendPriority: 0.4,
+          },
+          { provider: "claude", id: "opus", label: "Opus", effectivePercentRemaining: 0 },
+        ],
+      }),
+      availableModels: () => [
+        { provider: "xai", id: "grok-4.6" },
+        { provider: "openai-codex", id: "gpt-5.5" },
+        { provider: "anthropic-claude", id: "opus" },
+      ],
+    });
+    router.decide("task-1", "add a settings row", UNCLEAR);
+    const row = db
+      .prepare("SELECT facts_json FROM decisions WHERE kind = 'routing' AND task_id = ?")
+      .get("task-1") as { facts_json: string };
+    expect(JSON.parse(row.facts_json)).toEqual({
+      kind: "routing-candidates",
+      candidates: [
+        {
+          provider: "xai",
+          model: "grok-4.6",
+          percentRemaining: 12,
+          pace: "ahead",
+          spendPriority: 3.5,
+          status: "picked at medium",
+        },
+        {
+          provider: "openai-codex",
+          model: "gpt-5.5",
+          percentRemaining: 80,
+          pace: "on_pace",
+          spendPriority: 0.4,
+          status: "eligible at medium",
+        },
+        {
+          provider: "anthropic-claude",
+          model: "opus",
+          percentRemaining: 0,
+          status: "skipped: exhausted at medium",
+        },
+      ],
+    });
+  });
 });

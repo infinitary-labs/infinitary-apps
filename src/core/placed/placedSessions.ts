@@ -73,7 +73,7 @@ import type {
   SessionSpec,
 } from "../session/session";
 import { CardRefusedError, type DeclaredCardInput } from "../session/tools";
-import { CHANGE_RECOVERY } from "../session/workRecovery";
+import { ASSET_CHANNELS, CHANGE_RECOVERY, changeRecoveryCheck } from "../session/workRecovery";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
@@ -1657,9 +1657,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   ): void {
     if (
       invokeContract[channel].effect !== "change" ||
-      channel === "inf:work:picture" ||
-      channel === "inf:work:media" ||
-      channel === "inf:work:typeface" ||
+      ASSET_CHANNELS.has(channel) ||
       channel === "inf:work:record-knowledge"
     )
       return;
@@ -1685,12 +1683,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
     const callId = request.callId as string;
     if (placed.begun.has(callId)) {
-      const [action, result, check] = CHANGE_RECOVERY[channel] ?? [
+      const [action, result] = CHANGE_RECOVERY[channel] ?? [
         "updating this task",
         "the change may already be recorded",
-        "Check your task with tasks before asking for the change again.",
       ];
-      throw new Error(`${HOME.The} stopped while ${action}, so ${result}. ${check}`);
+      throw new Error(
+        `${HOME.The} stopped while ${action}, so ${result}. ${changeRecoveryCheck(channel)}`,
+      );
     }
     mkdirSync(dir, { recursive: true });
     const fd = openSync(path, "a");

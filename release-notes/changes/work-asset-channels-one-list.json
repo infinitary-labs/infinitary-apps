@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-asset-channels-one-list",
+      "reason": "Internal: the home's begun marks and the work computer's unanswered-request words read one list of card pictures, demo pieces and fonts, and the begun-mark warning takes its fallback check from the same table; no message for any current request changes."
+    }
+  ]
+}

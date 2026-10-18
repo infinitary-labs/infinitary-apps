@@ -1,5 +1,16 @@
 import type { WorkInvokeChannel } from "@shared/ipc";
 
+/**
+ * A card's pictures, demo pieces and fonts, sent before its final request: they
+ * repeat safely, so the home marks none begun, and sending one alone never means
+ * the change may already be done.
+ */
+export const ASSET_CHANNELS: ReadonlySet<WorkInvokeChannel> = new Set<WorkInvokeChannel>([
+  "inf:work:picture",
+  "inf:work:media",
+  "inf:work:typeface",
+]);
+
 /** What to inspect when a begun change has no kept answer, in the operation's own words. */
 export const CHANGE_RECOVERY: Partial<
   Record<WorkInvokeChannel, readonly [string, string, string]>

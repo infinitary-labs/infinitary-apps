@@ -55,7 +55,7 @@ import {
   type CrewmateTool,
   type CrewmateToolDelegate,
 } from "../session/tools";
-import { changeRecoveryCheck } from "../session/workRecovery";
+import { ASSET_CHANNELS, changeRecoveryCheck } from "../session/workRecovery";
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
@@ -1128,10 +1128,7 @@ export class SessionHost {
       return await this.options.ask(channel, [{ task: held.task, ...fields }], signal);
     } catch (error) {
       if (!(error instanceof WorkRequestAbortedError)) throw error;
-      const finalRequest =
-        channel !== "inf:work:picture" &&
-        channel !== "inf:work:media" &&
-        channel !== "inf:work:typeface";
+      const finalRequest = !ASSET_CHANNELS.has(channel);
       throw new WorkRequestAbortedError(finalRequest && error.everSent, error.cause);
     }
   }

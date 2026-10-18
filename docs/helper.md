@@ -448,7 +448,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   A background completion-refusal record runs outside that scope, so it is still sent after the card's callback is cancelled.
   A background job's end runs outside it too, so a job started under a callback still tells its end after that callback is cancelled.
   Its answer says the change was not sent if the final change request never went on a connection, or may already be done if it did, even if that connection dropped.
-  Sending a picture, demo piece or font alone never implies the change may be done.
+  Sending a picture, demo piece or font alone never implies the change may be done, and the home marks none of them begun; both computers read that one list (`ASSET_CHANNELS` in `src/core/session/workRecovery.ts`).
   Sending proves only that the home may have received it; it cannot prove receipt or completion.
   A change that may have acted names the same operation-specific check as a begun-mark warning (`src/core/session/workRecovery.ts`); a read is called a request, and can be asked again when its answer never arrives.
   Claude's client would give up on an app tool after about 28 hours, so a conversation here runs it with `MCP_TOOL_TIMEOUT` at the longest a timer holds, about 24.8 days, above our own deadline (`PLACED_CLAUDE_ENV`; `claudeToolWait.integration.test.ts` measures both).

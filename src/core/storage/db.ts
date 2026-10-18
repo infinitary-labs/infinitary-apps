@@ -1015,6 +1015,14 @@ const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX tasks_pending_placement ON tasks(id) WHERE json_extract(placement_json, '$.reservation') = 'pending'",
     );
   },
+  // 85: a recorded wait holds the start, never the merge (INF-416 piece E).
+  // Every blocks edge already in place keeps holding the close, so no hold
+  // changes under an existing row. A new link holds the close only where
+  // someone promised it.
+  (db) => {
+    addColumn(db, "task_links", "holds_merge", "INTEGER NOT NULL DEFAULT 0");
+    db.exec("UPDATE task_links SET holds_merge = 1 WHERE type = 'blocks'");
+  },
 ];
 
 /** The migration that published the views; every later one re-creates them. */

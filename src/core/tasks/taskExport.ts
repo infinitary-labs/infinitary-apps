@@ -148,6 +148,8 @@ const linkLineSchema = z.object({
   type: taskLinkTypeSchema,
   actor: taskEventActorSchema,
   createdAt: z.number(),
+  /** Absent on an export from before the mark: a blocks edge was holding. */
+  holdsMerge: z.boolean().optional(),
 });
 
 const askLineSchema = z.object({
@@ -329,8 +331,11 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
         break;
       }
       case "link": {
-        const { kind: _kind, ...rest } = line;
-        bundle.links.push(rest);
+        const { kind: _kind, holdsMerge, ...rest } = line;
+        bundle.links.push({
+          ...rest,
+          holdsMerge: holdsMerge ?? rest.type === "blocks",
+        });
         break;
       }
       case "ask": {

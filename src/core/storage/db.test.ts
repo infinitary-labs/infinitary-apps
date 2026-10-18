@@ -78,7 +78,7 @@ const PROVENANCE_COLUMNS = [
 const LABEL_COLUMNS = ["missed_escalation", "missed_note", "missed_at"] as const;
 
 /** Every migration shipped today; the head moves as migrations are added. */
-const ALL_VERSIONS = Array.from({ length: 84 }, (_, index) => index + 1);
+const ALL_VERSIONS = Array.from({ length: 85 }, (_, index) => index + 1);
 /** Migration 68's reply line, undone: the `captain_asks` column. */
 const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
 /** Migration 80's delivery columns, undone. */
@@ -3103,5 +3103,28 @@ describe("migration 77 (declared card continuity)", () => {
     expect(columnNames(reopened, "cards")).toEqual(columns);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM cards").get()).toEqual({ n: 2 });
     reopened.close();
+  });
+});
+
+describe("migration 85 (a recorded wait holds the start)", () => {
+  it("marks every existing blocks edge as holding the close, and leaves other edges unmarked", () => {
+    const dir = tmpUserData();
+    const old = openDatabase(dir, 84);
+    expect(columnNames(old, "task_links")).not.toContain("holds_merge");
+    const insert = old.prepare(
+      "INSERT INTO task_links (from_id, to_id, type, actor, created_at) VALUES (?, ?, ?, 'firstmate', 1)",
+    );
+    insert.run("waiter", "ship", "blocks");
+    insert.run("note", "ship", "related");
+    old.close();
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    expect(
+      upgraded.prepare("SELECT type, holds_merge FROM task_links ORDER BY type").all(),
+    ).toEqual([
+      { type: "blocks", holds_merge: 1 },
+      { type: "related", holds_merge: 0 },
+    ]);
+    upgraded.close();
   });
 });

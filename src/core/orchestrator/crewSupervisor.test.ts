@@ -13078,6 +13078,35 @@ describe("the task graph (task-system P2)", () => {
     ]);
   });
 
+  it("lands past a recorded wait", async () => {
+    // INF-416 piece E, the captain's "the start only": a practical wait the
+    // first mate records holds the start and draws the arrow, and landTask
+    // merges past it. blocks_me is the promise that still refuses.
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    const waiter = supervisor.plan({
+      title: "Wait for the fixture",
+      intent: intentOf("the fixture"),
+      startPolicy: "on-request",
+    });
+    expect(
+      supervisor.linkTasks(waiter.key ?? waiter.id, tasks.get(taskId)?.key ?? taskId, "blocks"),
+    ).toMatch(/^Recorded:/);
+    expect(tasks.blockers(taskId).map((row) => row.id)).toEqual([waiter.id]);
+    expect(tasks.linksTo(taskId).find((link) => link.type === "blocks")?.holdsMerge).toBe(false);
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.landTask(taskId, "captain")).toBe(
+      'Merged "Fix the keychain prompt" into main.',
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
+  });
+
   it("a blocks_me follow-up does hold the merge, and says which task and how to clear it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(crewmate);
@@ -19226,7 +19255,7 @@ describe("closing an answer task another task builds on", () => {
     const harness = setup(checker, { crewmates: [builder, lateChecker], classifier: byTitle });
     const { supervisor, tasks } = harness;
     // FI3-417's shape: a check run for a build already under way, which
-    // names no basis of the check, linked as blocking the build's merge.
+    // names no basis of the check, linked as a recorded wait.
     const check = await supervisor.commission({
       title: "Reproduce the live cases on the meter",
       intent: intentOf("run the live cases"),
@@ -19242,7 +19271,9 @@ describe("closing an answer task another task builds on", () => {
     await reportAndIdle(checker, check.taskId, "checks: pass - ten of ten.");
     const checkKey = tasks.get(check.taskId)?.key ?? check.taskId;
     const buildKey = tasks.get(build.taskId)?.key ?? build.taskId;
-    expect(tasks.blockerRefusal(build.taskId)?.text).toContain(checkKey);
+    // A recorded wait holds the start, not the merge (INF-416 piece E).
+    expect(tasks.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
+    expect(tasks.blockerRefusal(build.taskId)).toBeUndefined();
 
     const result = await supervisor.closeAnswerUsedAsBasis(checkKey);
     expect(result).toMatchObject({ ok: true });

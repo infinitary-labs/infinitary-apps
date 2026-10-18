@@ -607,6 +607,7 @@ export class TaskProtocol {
     const byId = new Map(all.map((record) => [record.id, record]));
     const blockersOf = new Map<string, TaskRecord[]>();
     const blockingOf = new Map<string, TaskRecord[]>();
+    const mergeHolds = new Set<string>();
     for (const link of links) {
       if (link.type !== "blocks") continue;
       const from = byId.get(link.fromId);
@@ -614,6 +615,7 @@ export class TaskProtocol {
       if (!from || !to) continue;
       push(blockersOf, link.toId, from);
       push(blockingOf, link.fromId, to);
+      if (link.holdsMerge) mergeHolds.add(`${link.toId}\0${link.fromId}`);
     }
     const children = new Map<string, { total: number; closed: number }>();
     for (const record of all) {
@@ -657,6 +659,7 @@ export class TaskProtocol {
       links,
       blockersOf,
       blockingOf,
+      mergeHolds,
       children,
       filedFrom,
       decisionCards,
@@ -693,13 +696,17 @@ export class TaskProtocol {
             )
         : [];
     const open = record.status === "open";
-    // An active row shows the blockers that still hold its CLOSE - what a
-    // `blocks_me` follow-up files against the task a crewmate is holding
-    // (TaskService.flagsOf). A dropped blocker holds no close, so it is no
-    // dead wait there either.
+    // An active row shows the blockers that still hold its CLOSE - a
+    // marked edge, what a `blocks_me` follow-up files against the task a
+    // crewmate is holding (TaskService.flagsOf). A recorded wait keeps its
+    // place in blockedBy and draws the arrow, and holds no close. A dropped
+    // blocker holds no close, so it is no dead wait there either.
+    const holdingClose = liveBlockers.filter((blocker) =>
+      graph.mergeHolds.has(`${record.id}\0${blocker.id}`),
+    );
     const blocked = open
       ? waiting.length > 0
-      : record.status === "active" && liveBlockers.length > 0;
+      : record.status === "active" && holdingClose.length > 0;
     // A gate holds an active row as it holds an open one (TaskService.flagsOf).
     const held = (open || record.status === "active") && record.gate !== null;
     const deadBlocker = open && waiting.some((blocker) => blocker.status === "dropped");
@@ -864,6 +871,8 @@ type Graph = {
   links: TaskLink[];
   blockersOf: Map<string, TaskRecord[]>;
   blockingOf: Map<string, TaskRecord[]>;
+  /** `${toId}\0${fromId}` for a blocks edge that holds the close. */
+  mergeHolds: Set<string>;
   children: Map<string, { total: number; closed: number }>;
   filedFrom: Map<string, TaskLink>;
   decisionCards: Map<string, Card>;

@@ -1241,7 +1241,7 @@ export class TaskService {
         const waiting = this.get(link.toId);
         if (!waiting || TaskService.isClosed(waiting)) continue;
         this.unlink(id, waiting.id, "blocks", input.actor);
-        this.link(fresh.id, waiting.id, "blocks", input.actor);
+        this.link(fresh.id, waiting.id, "blocks", input.actor, link.holdsMerge);
       }
       this.note(id, `Started again as ${fresh.key}.`, {
         actor: input.actor,
@@ -1276,10 +1276,11 @@ export class TaskService {
 
   /**
    * Derived flags for a live row; everything false once it is closed.
-   * `blocked` and `deadBlocker` hold for ACTIVE work too: a follow-up filed
-   * with `blocks_me` lands on a task a crewmate is holding, and that is the
-   * one row that must show it - a blocked flag that only ever described
-   * open work left the origin looking free right up to the merge refusal.
+   * `blocked` and `deadBlocker` hold for ACTIVE work too, and only for a
+   * marked edge: a follow-up filed with `blocks_me` lands on a task a
+   * crewmate is holding, and that is the one row that must show it. A
+   * recorded wait holds the start and draws the arrow, and the origin
+   * stays free to merge.
    * `ready` stays a property of open, unstarted work.
    */
   flagsOf(record: TaskRecord): TaskFlags {
@@ -1374,9 +1375,22 @@ export class TaskService {
     return blocker.status === "open" || blocker.status === "active";
   }
 
-  /** The blockers that still hold this task's close; empty when none do. */
+  /**
+   * The blockers that still hold this task's close; empty when none do.
+   * Only a marked edge holds the close (INF-416 piece E): a `blocks_me`
+   * filing, the host's review edge, or a required action's prerequisite.
+   * A recorded wait keeps the edge, and the start, and holds nothing here.
+   */
   blockersHoldingClose(id: string): TaskRecord[] {
-    return this.blockers(id).filter(TaskService.blockerHoldsClose);
+    const marked = new Set(
+      this.links
+        .listTo(id, "blocks")
+        .filter((link) => link.holdsMerge)
+        .map((link) => link.fromId),
+    );
+    return this.blockers(id).filter(
+      (blocker) => marked.has(blocker.id) && TaskService.blockerHoldsClose(blocker),
+    );
   }
 
   /**
@@ -1755,7 +1769,7 @@ export class TaskService {
             TaskService.isClosed(child)
           )
             continue;
-          if (next.rigor.value === "reviewed") this.link(child.id, id, "blocks", actor);
+          if (next.rigor.value === "reviewed") this.link(child.id, id, "blocks", actor, true);
           else this.unlink(child.id, id, "blocks", actor);
         }
         // Cancel pending attempts in this same transaction. The revision also
@@ -1991,7 +2005,7 @@ export class TaskService {
         ref: origin.id,
         feed: false,
       });
-      if (input.blocksOrigin) this.insertLink(record.id, origin.id, "blocks", actor, at);
+      if (input.blocksOrigin) this.insertLink(record.id, origin.id, "blocks", actor, at, true);
       return { record: this.mustGet(record.id), duplicate: false };
     });
     return run();
@@ -3481,7 +3495,7 @@ export class TaskService {
       for (const prerequisite of action.prerequisites) {
         if (!this.get(prerequisite))
           throw new Error(`Required action prerequisite ${prerequisite} does not exist.`);
-        this.insertLink(prerequisite, id, "blocks", "host", this.now());
+        this.insertLink(prerequisite, id, "blocks", "host", this.now(), true);
       }
       this.addEvent({
         taskId: id,
@@ -3575,10 +3589,20 @@ export class TaskService {
     run();
   }
 
-  /** A typed edge; `blocks` carries readiness. Idempotent. */
-  link(fromId: string, toId: string, type: TaskLinkType, actor: TaskEventActor): boolean {
+  /**
+   * A typed edge; `blocks` carries readiness. `holdsMerge` is the close
+   * mark, and only a caller that promised the hold passes it. Idempotent;
+   * a repeat that promises the hold sets the mark and never clears one.
+   */
+  link(
+    fromId: string,
+    toId: string,
+    type: TaskLinkType,
+    actor: TaskEventActor,
+    holdsMerge = false,
+  ): boolean {
     const at = this.now();
-    const run = this.write(() => this.insertLink(fromId, toId, type, actor, at));
+    const run = this.write(() => this.insertLink(fromId, toId, type, actor, at, holdsMerge));
     return run();
   }
 
@@ -4593,6 +4617,7 @@ export class TaskService {
     type: TaskLinkType,
     actor: TaskEventActor,
     at: number,
+    holdsMerge = false,
   ): boolean {
     const from = this.mustGet(fromId);
     const to = this.mustGet(toId);
@@ -4610,7 +4635,14 @@ export class TaskService {
       const cycle = liveWaitCycle(this, toId, fromId, TaskService.blockerHoldsClose);
       if (cycle) throw new TaskGraphRefusal(`Refused: ${waitCycleWords(this, cycle)}`);
     }
-    const created = this.links.insert({ fromId, toId, type, actor, createdAt: at });
+    const created = this.links.insert({
+      fromId,
+      toId,
+      type,
+      actor,
+      createdAt: at,
+      holdsMerge: type === "blocks" && holdsMerge,
+    });
     if (created) {
       // Both ends' views change (blockedBy on one, blocks on the other).
       this.touch(fromId);

@@ -80,7 +80,8 @@ Whether the captain read something is the crewmate's call, never the first mate'
 **A wait on work nobody has started is the first mate's turn** (FI3-671, captain-approved 2026-10-03).
 Two typed waits stand on a task.
 A `baseline-blocked` diagnosis at its change's current head, while the checks are not green, names its `dependencyTask` (`standingDependencyWaits` in `src/core/tasks/dependencyWaits.ts`: derived, never stored, so a new head or a passing reading ends the wait by itself).
-A `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing or a link the first mate made).
+A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing, the host's review, or a required action's prerequisite).
+A link the first mate records holds the start only.
 When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own - or a named dependency was dropped (`TaskService.awaitsStart`), only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
 The wake names each such task and whether it was dropped (`waits` on the report's facts, `IdleLadder.unstartedWaits`); the first mate's prompt says what to do with it: start it, steer the waiting crewmate to fold the fix into its own branch when that is smaller, or one decision card.
 Host delivery machinery (a review) never counts.

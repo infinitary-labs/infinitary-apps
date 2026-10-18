@@ -3,7 +3,9 @@ import type { TaskEventActor } from "./taskEventStore";
 
 /**
  * Typed edges between tasks (task-system design section 4.3). `blocks`:
- * `to` is not ready until `from` closes; `related` is informational;
+ * `to` is not ready until `from` closes. `holdsMerge` is the separate mark
+ * that the same edge also holds `to`'s close, set only where someone
+ * promised that hold (INF-416 piece E). `related` is informational;
  * `discovered-from` is provenance with no readiness effect; `replaced-by`:
  * `from` was dropped for `to`, which does its work (FI3-1189's rule 1), with
  * no readiness effect either. P0 carries the after-task wait on `blocks`;
@@ -18,6 +20,8 @@ export type TaskLink = {
   type: TaskLinkType;
   actor: TaskEventActor;
   createdAt: number;
+  /** A blocks edge holds the waiter's close. Absent on every other type. */
+  holdsMerge: boolean;
 };
 
 type Row = {
@@ -26,6 +30,7 @@ type Row = {
   type: TaskLinkType;
   actor: TaskEventActor;
   created_at: number;
+  holds_merge: number;
 };
 
 function fromRow(row: Row): TaskLink {
@@ -35,19 +40,31 @@ function fromRow(row: Row): TaskLink {
     type: row.type,
     actor: row.actor,
     createdAt: row.created_at,
+    holdsMerge: row.holds_merge === 1,
   };
 }
 
 export class TaskLinkStore {
   constructor(private readonly db: AppDatabase) {}
 
-  /** Idempotent: the same edge twice is one row. Returns whether it was new. */
+  /**
+   * Idempotent: the same edge twice is one row. A repeat that promises a
+   * merge hold sets the mark; a repeat never clears one. Returns whether
+   * the edge was new.
+   */
   insert(link: TaskLink): boolean {
     const result = this.db
       .prepare(
-        "INSERT OR IGNORE INTO task_links (from_id, to_id, type, actor, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO task_links (from_id, to_id, type, actor, created_at, holds_merge) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .run(link.fromId, link.toId, link.type, link.actor, link.createdAt);
+      .run(link.fromId, link.toId, link.type, link.actor, link.createdAt, link.holdsMerge ? 1 : 0);
+    if (result.changes === 0 && link.holdsMerge) {
+      this.db
+        .prepare(
+          "UPDATE task_links SET holds_merge = 1 WHERE from_id = ? AND to_id = ? AND type = ? AND holds_merge = 0",
+        )
+        .run(link.fromId, link.toId, link.type);
+    }
     return result.changes === 1;
   }
 

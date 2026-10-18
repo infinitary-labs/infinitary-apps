@@ -855,9 +855,13 @@ describe("the task protocol (task-system P3)", () => {
     expect(shown()).toHaveLength(2);
     for (const task of shown()) {
       expect(task.blockedBy).toEqual(["SCR-4", "SCR-5"]);
-      expect(task.flags.blocked).toBe(true);
       expect(protocol.detail(task.id).blockedBy).toEqual(task.blockedBy);
     }
+    // A recorded wait holds the start. On work already under way it draws
+    // the same arrow and holds no close (INF-416 piece E).
+    expect(protocol.detail("open-dependent").flags.blocked).toBe(true);
+    expect(protocol.detail("active-dependent").flags.blocked).toBe(false);
+    expect(tasks.blockerRefusal("active-dependent")).toBeUndefined();
     tasks.close("planned", { status: "done", reason: "landed", actor: "captain" });
     tasks.close("working", { status: "dropped", reason: "discarded", actor: "captain" });
     for (const task of shown()) {

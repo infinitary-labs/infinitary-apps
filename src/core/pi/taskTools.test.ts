@@ -53,7 +53,8 @@ describe("task tools", () => {
       startNow: async () => "started",
     }).find((tool) => tool.name === "link_tasks");
     expect(link?.description).toContain("related: work neither task is waiting on");
-    expect(link?.description).toContain("cannot merge or close until");
+    expect(link?.description).toContain("cannot start until");
+    expect(link?.description).not.toContain("cannot merge or close until");
     expect(link?.description).toContain("a cycle is refused as text");
     expect(link?.description).not.toContain("use it, not blocks");
   });

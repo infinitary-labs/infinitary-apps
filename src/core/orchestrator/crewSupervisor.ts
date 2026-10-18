@@ -2949,7 +2949,7 @@ export class CrewSupervisor {
     // The parent edge deliberately does not carry it - a child out of the
     // close gate holds nothing, and the blocks rule has no
     // `proceed_with_open` override.
-    this.options.tasks.link(taskId, builder.id, "blocks", "host");
+    this.options.tasks.link(taskId, builder.id, "blocks", "host", true);
     this.options.tasks.recordDelivery(
       builder.id,
       {},

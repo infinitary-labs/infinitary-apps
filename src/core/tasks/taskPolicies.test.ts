@@ -183,7 +183,9 @@ describe("live task policies", () => {
       ciCapAt: 124,
     });
     tasks.updateFields(task.id, { policies: { rigor: "quick" } }, "firstmate");
-    expect(tasks.blockersHoldingClose(task.id).map((row) => row.id)).toEqual([dependency.id]);
+    // The review edge goes. A recorded wait stays on the graph and holds no close.
+    expect(tasks.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
+    expect(tasks.blockersHoldingClose(task.id)).toEqual([]);
     expect(tasks.get(task.id)?.delivery).toMatchObject({
       reviewVerdict: "findings",
       reviewRounds: 3,
@@ -193,9 +195,10 @@ describe("live task policies", () => {
       ciCapAt: 124,
     });
     tasks.updateFields(task.id, { policies: { rigor: "reviewed" } }, "firstmate");
+    expect(tasks.blockersHoldingClose(task.id).map((row) => row.id)).toEqual([review.id]);
     expect(
       tasks
-        .blockersHoldingClose(task.id)
+        .blockers(task.id)
         .map((row) => row.id)
         .sort(),
     ).toEqual([dependency.id, review.id].sort());

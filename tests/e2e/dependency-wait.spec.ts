@@ -87,7 +87,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
       )
       .not.toBe("");
     await expect
-      .poll(() => tasks.blockersHoldingClose(waitingId).map((task) => task.id), {
+      .poll(() => tasks.blockers(waitingId).map((task) => task.id), {
         timeout: 30_000,
       })
       .toEqual([owner.id]);

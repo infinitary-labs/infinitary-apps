@@ -620,6 +620,87 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
     });
 
+    it("a recorded wait on running work draws the arrow and holds no merge", () => {
+      // INF-416 piece E. The captain chose the start only: link_tasks blocks
+      // keeps the edge, and only a promised hold (blocks_me here) refuses close.
+      const { tasks, work } = setup();
+      work("origin", { repoId: "r1", status: "active" });
+      work("waiter");
+      const queued = work("queued");
+      tasks.link("waiter", "origin", "blocks", "firstmate");
+      tasks.link("waiter", queued.id, "blocks", "firstmate");
+      expect(tasks.blockers("origin").map((row) => row.id)).toEqual(["waiter"]);
+      expect(tasks.linksTo("origin").find((link) => link.fromId === "waiter")).toMatchObject({
+        type: "blocks",
+        holdsMerge: false,
+      });
+      expect(tasks.blockerRefusal("origin")).toBeUndefined();
+      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
+      // The same edge still holds the start of work that has not begun.
+      expect(tasks.listReady().map((row) => row.id)).not.toContain(queued.id);
+
+      const { record: blocking } = tasks.fileFollowup({
+        id: "fu",
+        originId: "origin",
+        title: "Must land first",
+        goal: "g",
+        why: "w",
+        prompt: "brief",
+        blocksOrigin: true,
+      });
+      expect(tasks.linksTo("origin").find((link) => link.fromId === blocking.id)?.holdsMerge).toBe(
+        true,
+      );
+      expect(tasks.blockerRefusal("origin")?.tasks.map((row) => row.key)).toEqual([blocking.key]);
+      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
+    });
+
+    it("copies a merge mark when dropped work starts again, and a required action's prerequisite holds", () => {
+      const { tasks, work } = setup();
+      const old = work("old", { status: "active" });
+      const waiting = work("waiting", { status: "active" });
+      tasks.link(old.id, waiting.id, "blocks", "host", true);
+      tasks.close(old.id, { status: "dropped", reason: "discarded", actor: "captain" });
+      const fresh = tasks.startAgain(old.id, {
+        id: "fresh",
+        shape: { kind: "unclear" },
+        actor: "captain",
+      });
+      expect(tasks.linksTo(waiting.id).find((link) => link.fromId === fresh.id)?.holdsMerge).toBe(
+        true,
+      );
+      expect(tasks.blockerRefusal(waiting.id)?.tasks.map((row) => row.id)).toEqual([fresh.id]);
+
+      const source = work("source");
+      const prerequisite = work("prerequisite");
+      tasks.declareRequiredActions(
+        source.id,
+        {
+          cardId: "card-source",
+          offerId: "offer-1",
+          actions: [
+            {
+              id: "install",
+              target: "this Mac",
+              title: "Install the update",
+              consequence: "Until then the old copy stays.",
+              instructions: ["Choose Update now."],
+              criterion: "The new version is running.",
+              prerequisites: [prerequisite.id],
+              completion: { kind: "manual", label: "I installed it" },
+            },
+          ],
+        },
+        true,
+      );
+      const action = tasks.listOpen().find((row) => row.delivery?.captainAction);
+      expect(action).toBeDefined();
+      expect(
+        tasks.linksTo(action?.id ?? "").find((link) => link.fromId === prerequisite.id)?.holdsMerge,
+      ).toBe(true);
+      expect(tasks.blockerRefusal(action?.id ?? "")).toBeDefined();
+    });
+
     it("dedupes an open filing that names the same test, and refuses a test failure with no path", () => {
       const { tasks, work } = setup();
       work("origin", { repoId: "r1", status: "active" });

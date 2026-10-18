@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "recorded-wait-holds-start",
+      "kind": "fix",
+      "title": "A recorded wait no longer holds a merge",
+      "body": "A wait recorded between two tasks holds when the waiting one starts. It no longer stops a merge once that work is under way. A filing that must merge first, a review, and a required action still hold the merge.",
+      "area": "tasks",
+      "noPicture": "The change is whether a merge goes through. The activity line is the same shape as any other merge, and no screen shows the hold by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

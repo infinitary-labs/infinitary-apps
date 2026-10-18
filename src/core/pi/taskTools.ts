@@ -45,7 +45,7 @@ export type TaskToolsDelegate = {
     parent?: string;
     project?: string;
     startPolicy?: TaskStartPolicy;
-    /** Confirmation of current unmet blockers; link_tasks owns edits to them. */
+    /** Prerequisites to add. Already-linked ones stay; none are removed. */
     declaredBlockers?: string[];
     verdict?: string | null;
     basis?: string;
@@ -85,7 +85,7 @@ const START_POLICY = stringEnum(START_POLICY_VALUES, {
 
 function undeclaredPrerequisites(verb: "filed" | "changed") {
   return {
-    text: `Nothing was ${verb}. Follow HANDOFF. Queued work requires every prerequisite in blocked_by ([] only if none). For update_task, link the prerequisites first and declare the current unmet blockers from tasks.`,
+    text: `Nothing was ${verb}. Follow HANDOFF. Queued work must declare blocked_by in this call, as create_task's blocked_by.`,
     details: { refusal: { kind: "undeclared-prerequisites" } },
   };
 }
@@ -95,7 +95,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     name: "create_task",
     label: "Create task",
     description: [
-      "when-ready can start now; declare blocked_by ([] none).",
+      "Record project work without starting: saved plans, waits or containers.",
+      "when-ready can start now; declare blocked_by.",
       "Basis checked at start.",
     ].join(" "),
     parameters: Type.Object({
@@ -203,8 +204,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
-          description:
-            "Required when-ready: unmet blockers from tasks (ids/keys; [] none). Link first.",
+          description: "As create_task's blocked_by. Adds any not yet linked; never removes.",
         }),
       ),
       parent: Type.Optional(

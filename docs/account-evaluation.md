@@ -212,7 +212,7 @@ The scorer rejects a redundant first-mate approval card during filing, not a cre
 The scorer requires a task read in a later model request than the last creation, link or queue-policy change, rather than requiring starts to wait for that read.
 Atomic declarations record the supplied blockers, but do not verify that they capture the plan's complete dependencies.
 A wrong declaration can start work before the read-back; the evaluation rejects wrong dependencies rather than claiming a runtime read-before-start barrier.
-The existing successor's declared unmet links are checked before its queue-policy update.
+A queued update of the existing successor adds any declared prerequisite that is not linked yet; the declaration does not have to echo the current links, and it removes none.
 This fixture grants no autonomy choice, so the scorer also rejects an explicit autonomy field on a create or update, independently of the review judgment.
 Call-array order alone cannot show that the model inspected a tool result before choosing its next action.
 The runner records the observed request number on each executed call; the scorer cross-checks it against the client record's tool-end frames and uses those frames for older records without that field.

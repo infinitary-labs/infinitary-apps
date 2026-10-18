@@ -6533,8 +6533,9 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     ]);
   });
 
-  // INF-188 F2: declare the existing graph before a policy update can sweep it.
-  it("refuses an automatic update until its declared prerequisites match the linked graph", async () => {
+  // INF-416 piece I, captain's retype-test yes: a queued update adds a declared
+  // prerequisite that is not linked yet. INF-143's omitted list stays refused.
+  it("adds a declared prerequisite that is not linked yet and never removes one", async () => {
     const { agent, specs, tasks } = setup();
     await agent.converse(
       "file the ADR and its implementation; enable automatic work after linking",
@@ -6556,37 +6557,59 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const piece = tasks.byKey("SCR-2")!;
     const before = tasks.get(piece.id);
     const eventsBefore = tasks.timeline(piece.id);
-    // A declared but not yet linked prerequisite must not be silently ignored.
     expect(
       await text("update_task", {
         task: piece.key,
         start_policy: "when-ready",
-        blocked_by: [prerequisite.key],
         title: "Must not change",
-        start_now: true,
       }),
-    ).toContain("do not match");
+    ).toContain("must declare blocked_by");
     expect(tasks.get(piece.id)).toEqual(before);
     expect(tasks.timeline(piece.id)).toEqual(eventsBefore);
-    await text("link_tasks", { from: prerequisite.key, to: piece.key, type: "blocks" });
+    const added = await text("update_task", {
+      task: piece.key,
+      start_policy: "when-ready",
+      blocked_by: [prerequisite.key],
+      title: "Build it",
+      start_now: true,
+    });
+    expect(added).toContain("waits for SCR-1");
+    expect(added).toContain("Cannot start");
+    expect(tasks.get(piece.id)).toMatchObject({
+      status: "open",
+      startPolicy: "when-ready",
+      title: "Build it",
+    });
+    expect(tasks.waitingOn(piece.id).map((row) => row.key)).toEqual(["SCR-1"]);
+    // An empty declaration does not remove the link the update just added.
     expect(
       await text("update_task", {
         task: piece.key,
-        start_policy: "when-ready",
         blocked_by: [],
+        goal: "The ADR is implemented",
       }),
-    ).toContain("do not match");
-    expect(tasks.get(piece.id)).toMatchObject({ status: "open", startPolicy: "on-request" });
-    // Ids and keys name the same prerequisite; duplicate references count once.
+    ).toMatch(/^Updated SCR-2: goal /);
+    expect(tasks.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
+    // Ids and keys name the same prerequisite; duplicate references add nothing.
     expect(
       await text("update_task", {
         task: piece.key,
-        start_policy: "when-ready",
         blocked_by: [prerequisite.id, prerequisite.key.toLowerCase()],
       }),
-    ).toMatch(/^Updated SCR-2:/);
-    expect(tasks.get(piece.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
+    ).toBe("SCR-2 is unchanged.");
     expect(tasks.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
+    expect(
+      await text("update_task", {
+        task: prerequisite.key,
+        blocked_by: [piece.key],
+        title: "Must not cycle",
+      }),
+    ).toMatch(/would close a cycle/);
+    expect(tasks.get(prerequisite.id)).toMatchObject({
+      title: "Write the ADR",
+      startPolicy: "on-request",
+    });
+    expect(tasks.blockers(prerequisite.id)).toEqual([]);
     // Explicit independence keeps the existing automatic-start capability.
     expect(
       await text("update_task", {
@@ -6596,6 +6619,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       }),
     ).toMatch(/^Updated SCR-1:/);
     expect(tasks.get(prerequisite.id)?.status).toBe("active");
+    expect(tasks.get(piece.id)?.status).toBe("open");
   });
 
   it("says a crewmate starts now on a when-ready row nothing waits on", async () => {

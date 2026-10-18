@@ -115,9 +115,11 @@ The first mate (`src/core/pi/taskTools.ts`): `create_task` (plan without startin
 The first mate's `create_task` and `update_task` calls setting `start_policy: "when-ready"` must declare `blocked_by` in that same call; `[]` explicitly declares none.
 An omitted list is undeclared, not independent: either tool returns the same typed refusal before any write or combined `start_now`.
 Creation records its declared prerequisites atomically with the new row.
-An update instead confirms the current unmet blockers already linked to the row, as returned by `tasks`; it does not add, remove or replace links.
-The update resolves ids and keys to the same tasks and refuses a mismatched declaration before changing fields or dispatching; complete or repair the links through `link_tasks`, read them back and declare them again.
-Cleared blockers are not part of this current unmet list, and duplicate references to the same task count once.
+An update adds each declared prerequisite that is not linked yet, in the same step as its field edits, and never compares the list with the current links or removes one.
+Ids and keys name the same task, and duplicate references count once.
+A cycle refuses the whole update, so its field edits and the new link do not remain.
+An already linked prerequisite is left as it is, including one whose task has closed.
+`link_tasks` remains the way to remove a wait.
 On-request creation and updates still need no declaration, so the first mate can file related work safely, add its links, read back the graph, then start ready work within the captain's authorization.
 This is a generic input requirement, not a rule over plans, titles, parents or sequence labels; automatic scheduling and explicit independent work otherwise behave as before.
 `spawn_crewmate` gained `parent`, `blocked_by`, and `priority`; `after_task` stays as an alias of `blocked_by`.

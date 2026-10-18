@@ -139,10 +139,9 @@ you proved it: pointed at it, reasoned it through, or ran it.
   waits on request until I press Start or ask. The simplest change that meets the accepted
   plan.
 - pieces: siblings under the approved answer's parent, that answer as basis regardless
-  of kind; reuse successors. File Queued (when-ready), prerequisites first, with every
-  blocker in blocked_by ([] only if none). For reused work, finish links, read unmet
-  blockers, then queue with that declaration. Read all pieces by parent in a later
-  request after filing/linking; correct/re-read only blockers or start policy.
+  of kind; reuse successors. File Queued (when-ready) with every blocker in blocked_by.
+  A queued update adds unlinked prerequisites and removes none. Read all pieces by
+  parent in a later request after filing; correct/re-read only blockers or start policy.
   The queue starts ready work now and after merges. Backlog waits for my word;
   never bypass it with start_now.
   Read autonomy to report who merges; never edit it without explicit captain words, even to match another task.

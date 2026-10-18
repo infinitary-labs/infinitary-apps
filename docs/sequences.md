@@ -84,8 +84,8 @@ The seeded document supplies the objective skip test.
 A declared direct build is the whole ask and has no parent; the host prints its reason in the feed and stores it in the task shape without checking whether the reason is sound.
 
 `start_policy` is worded in the host's terms: `when-ready` means the host starts a crewmate on the task once nothing blocks or holds it, and a parent stays on request.
-`create_task` requires an explicit `blocked_by` list before admitting automatic creation; `[]` declares no prerequisites, whereas omission makes no declaration (`docs/task-graph.md`, "Tools").
-Its description names the immediate start rather than promising that creation never starts work; approved pieces carry all prerequisites at creation.
+`create_task` requires an explicit `blocked_by` list before admitting automatic creation; what `[]` declares, and what an update adds, is `docs/task-graph.md`, "Tools".
+Its description names the purpose, recording project work without starting, and the immediate start rather than promising that creation never starts work; approved pieces carry all prerequisites at creation.
 `create_task`'s answer for an admitted `when-ready` row nothing waits on says a crewmate starts on it now, and the queued-started wake says a crewmate is working on the task.
 The host judges nothing: no dispatch rule reads a row's children.
 `spawn_crewmate` does not offer `plan-first`; a recorded spawn or stored intent that names it still parses as a free constraint with the same words.
@@ -169,8 +169,8 @@ Basis briefs retain full report and thread history alongside these facts.
 Legacy resolutions without capture retain their stored card.
 For an approved multi-piece plan, the first mate reuses existing successors and files the other pieces Queued (`when-ready`), under the approved answer's parent with that answer as basis.
 The answer's kind need not be `plan`; the existing basis check and briefing path remain the owners of grounding.
-It files prerequisites first and declares every blocker atomically in `blocked_by`, with `[]` only for independent roots; list order is not a dependency.
-For a reused successor it finishes the links and reads the current unmet blockers before setting `when-ready` with that exact declaration.
+It files prerequisites first and declares every blocker atomically in `blocked_by`; list order is not a dependency.
+A queued update of a reused successor adds any declared prerequisite that is not linked yet and does not require the declaration to echo the current links.
 After filing, linking or changing queue policy, it reads every piece by parent in a later model request and corrects and re-reads blocker or start-policy mismatches.
 Queued work can start before that read; an incorrectly declared blocker list can therefore start a piece before the first mate discovers the mistake.
 The host's existing queue starts each ready piece, including multiple independent roots, and rechecks the remaining pieces when blockers merge; no further first-mate turn or special dependent wake is required.

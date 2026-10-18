@@ -2752,17 +2752,13 @@ export class FirstmateAgent {
         try {
           const text = (() => {
             const record = resolve(input.task);
-            if (input.declaredBlockers !== undefined) {
-              const declared = new Set(input.declaredBlockers.map((ref) => resolve(ref).id));
-              const blockers = tasks.waitingOn(record.id);
-              if (
-                declared.size !== blockers.length ||
-                blockers.some((row) => !declared.has(row.id))
-              )
-                throw new TaskGraphRefusal(
-                  `The declared prerequisites do not match ${record.key}'s current unmet blockers. Use link_tasks to finish its links, read tasks, then declare that blocked_by list ([] if none). Nothing changed.`,
-                );
-            }
+            // Resolve before any write. An unknown prerequisite is a tool error,
+            // and two references to one task count once. INF-416 piece I: add
+            // what is not linked yet; never compare the list or remove a link.
+            const declared =
+              input.declaredBlockers === undefined
+                ? undefined
+                : [...new Set(input.declaredBlockers.map((ref) => resolve(ref).id))];
             this.asks.attach(record.id, "update_task");
             const beforePolicies = input.policies
               ? effectiveTaskPolicies(
@@ -2807,6 +2803,18 @@ export class FirstmateAgent {
                 const refused =
                   runsOn !== undefined ? supervisor.runsOnRefusal(record.id, runsOn) : undefined;
                 if (refused) throw new TaskGraphRefusal(refused);
+                const added: string[] = [];
+                if (declared) {
+                  const linked = new Set(tasks.blockers(record.id).map((row) => row.id));
+                  for (const blockerId of declared) {
+                    if (linked.has(blockerId)) continue;
+                    // A cycle throws inside this transaction, so the field edits
+                    // above and below roll back with the link.
+                    if (!tasks.link(blockerId, record.id, "blocks", "firstmate")) continue;
+                    const blocker = tasks.get(blockerId);
+                    added.push(`waits for ${blocker?.key || blockerId}`);
+                  }
+                }
                 const where =
                   runsOn !== undefined
                     ? { runsOn: { ask: runsOn, words: supervisor.runsOnWords(record.id, runsOn) } }
@@ -2814,6 +2822,7 @@ export class FirstmateAgent {
                 return [
                   ...moved,
                   ...tasks.updateFields(record.id, { ...rest, ...where }, "firstmate"),
+                  ...added,
                 ];
               },
               () => {},

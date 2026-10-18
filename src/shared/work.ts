@@ -671,7 +671,9 @@ export const workRequests = {
    * is `job:<id>`. With `interrupted`, from protocol 8.15, it never exited:
    * that computer's run ended first, and its next start says so once -
    * `quit` when the run's own stop killed it, `crash` when the run ended
-   * without one, so the command may have run on.
+   * without one, so the command may have run on. A background task its
+   * Claude client ran there comes only so, by the id its model was given,
+   * with its description as the command.
    */
   "inf:work:job-exit": {
     effect: "change",

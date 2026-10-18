@@ -1442,7 +1442,11 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       event?: { type?: unknown };
     };
     if (this.spec.builtins === "coding" && result.backgroundJobs !== undefined) {
-      this.emit({ type: "background_work_changed", count: result.backgroundJobs });
+      this.emit({
+        type: "background_work_changed",
+        count: result.backgroundJobs,
+        tasks: result.backgroundTasks ?? [],
+      });
     }
     if (record.type === "system" && record.subtype === "init" && typeof record.model === "string") {
       // A session that named no model keeps the one it opened on.

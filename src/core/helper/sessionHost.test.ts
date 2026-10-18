@@ -1583,6 +1583,81 @@ describe("a conversation held on a computer that runs work", () => {
     ]);
   });
 
+  // INF-379: a Claude conversation's background work runs inside its
+  // client, which this computer's stop ends with it; only what the client
+  // still ran then is told, once, at the next start.
+  it("keeps a row for each background task a Claude client runs, none for one it finished or once its client ended, and tells the home once at the next start that the stop ended the rest (INF-379)", async () => {
+    const claude = await scriptedClaudeWorld();
+    const at = await placed({ claude });
+    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+    const tasks = new PlacedTasks(at.dataDir);
+    const rows = () => tasks.jobs(TASK).map(({ id, command }) => ({ id, command }));
+    const told = () => at.home.effects.filter((effect) => effect.channel === "inf:work:job-exit");
+    const suite = { id: "bybac1mss", description: "Run the long suite" };
+    const lint = { id: "b7rk2q0zt", description: "Lint the project" };
+    try {
+      claude.answer({ text: "Both run in the background." });
+      await at.order("inf:session:open", [{ orderId: "open:tasks", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        {
+          orderId: "rows:tasks",
+          task: TASK,
+          text: "Run the suite and the lint in the background.",
+        },
+      ]);
+      await at.ended(1);
+      claude.listBackgroundTasks([suite, lint]);
+      await expect.poll(rows).toEqual([
+        { id: suite.id, command: suite.description },
+        { id: lint.id, command: lint.description },
+      ]);
+      // The lint finished: the client tells its own model, and its row goes.
+      claude.listBackgroundTasks([suite]);
+      await expect.poll(rows).toEqual([{ id: suite.id, command: suite.description }]);
+      // The home hears how many, as before, and nothing of the tasks themselves
+      // (the client's attach says it runs none it knows of yet).
+      await expect
+        .poll(() =>
+          at.home.events.flatMap(({ event: { type, ...said } }) =>
+            type === "background_work_changed" ? [said] : [],
+          ),
+        )
+        .toEqual([{}, { count: 2 }, { count: 1 }]);
+      expect(told()).toEqual([]);
+
+      await at.restartComputer();
+      await expect.poll(rows).toEqual([]);
+      expect(told().map((effect) => effect.request.exit)).toEqual([
+        {
+          jobId: suite.id,
+          command: suite.description,
+          exitCode: null,
+          durationMs: expect.any(Number),
+          tail: "",
+          interrupted: "quit",
+        },
+      ]);
+
+      // A client that ends while this computer runs on takes its tasks with
+      // it, and leaves no row for a later start to tell as cut off.
+      claude.answer({ text: "The suite runs again." });
+      await at.order("inf:session:open", [{ orderId: "open:tasks:2", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:tasks:2", task: TASK, text: "Run the suite again." },
+      ]);
+      await at.ended(2);
+      claude.listBackgroundTasks([{ id: "bq4w8n1xe", description: "Run the long suite" }]);
+      await expect.poll(rows).toEqual([{ id: "bq4w8n1xe", command: "Run the long suite" }]);
+      claude.endClient();
+      await expect.poll(rows).toEqual([]);
+      await at.restartComputer();
+      await at.inReach();
+      expect(told()).toHaveLength(1);
+    } finally {
+      claude.endClient();
+    }
+  });
+
   it("keeps a crewmate's builds and tests below the UI as another user on the home's own Mac", async () => {
     // Captain on INF-255. This world joins by a link for another user here (`work`).
     const at = await placed();

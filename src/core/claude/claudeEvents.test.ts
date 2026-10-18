@@ -248,6 +248,33 @@ describe("client background membership", () => {
     expect(signal([{}]).backgroundJobs).toBeUndefined();
     expect(signal(undefined).backgroundJobs).toBeUndefined();
   });
+
+  // INF-379: a computer that runs work keeps the tasks that end with the
+  // client, so its next start can tell a crewmate which its stop cut off.
+  it("names the tasks that run inside the client by the id its model was given, and leaves out a remote one", () => {
+    const listed = fmEventsFromClaudeMessage(
+      {
+        type: "system",
+        subtype: "background_tasks_changed",
+        // As 2.1.234 lists a background shell, beside a cloud agent and a
+        // task its model gave no description.
+        tasks: [
+          { task_id: "bybac1mss", task_type: "local_bash", description: "Run the long suite" },
+          { task_id: "r5k2", task_type: "remote_agent", description: "Review in the cloud" },
+          { task_id: "a9x3", task_type: "local_agent", description: "" },
+        ],
+        uuid: "5d83894d-397d-4c6d-9d49-92b4c04b39a2",
+        session_id: "a56ed764-fe4e-4e12-9398-da919edd5ed2",
+      },
+      "t",
+      createNormalizerState(),
+    );
+    expect(listed.backgroundJobs).toBe(3);
+    expect(listed.backgroundTasks).toEqual([
+      { id: "bybac1mss", description: "Run the long suite" },
+      { id: "a9x3", description: "local_agent" },
+    ]);
+  });
 });
 
 describe("Claude Code's refusal fallback", () => {

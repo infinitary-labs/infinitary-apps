@@ -39,6 +39,7 @@ import {
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
+  type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
   type ModelSession,
   type SessionBackend,
@@ -88,7 +89,8 @@ import type { WorkingCopies } from "./workingCopies";
  * the home keeps it. A turn this computer quit in the middle of ends as
  * `interrupted` at its next start, as a turn on the home ends when the home
  * quits, and each background job's end it had not told yet - an exit the
- * home had not answered, or a job its end cut off - is told to its home once.
+ * home had not answered, or a job its end cut off, a Claude client's
+ * background tasks among them - is told to its home once.
  */
 
 export type SessionHostOptions = {
@@ -203,6 +205,12 @@ type Held = {
   backend: SessionBackend | null;
   /** The last Pi shell count sent, so another task's job does not repeat it. */
   jobs: number | undefined;
+  /**
+   * The background tasks the open conversation's own client runs now (a
+   * Claude conversation's), each with its row in the task's job rows, so a
+   * stop that ends the client with them is told at the next start.
+   */
+  clientTasks: Set<string>;
   /** The account of this computer's own the open conversation is bound to, if it is one. */
   account: string | undefined;
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
@@ -302,6 +310,33 @@ export class SessionHost {
   }
 
   /**
+   * The background tasks the conversation's own client runs now (a Claude
+   * conversation's), as its client lists them: each new one gets a row,
+   * and one the client no longer lists loses its row, since the client
+   * tells its own model how it ended. A client that ended (`count`
+   * unknown) runs none. A row the last run left is told at this start and
+   * never touched here.
+   */
+  private keepClientTasks(held: Held, tasks: readonly ClientBackgroundTask[]): void {
+    const live = new Set(tasks.map((task) => task.id));
+    for (const id of held.clientTasks) {
+      if (live.has(id)) continue;
+      held.clientTasks.delete(id);
+      this.options.tasks.forgetJob(held.task, id);
+    }
+    if (held.state.closed) return;
+    for (const task of tasks) {
+      if (held.clientTasks.has(task.id)) continue;
+      held.clientTasks.add(task.id);
+      this.options.tasks.keepJob(held.task, {
+        id: task.id,
+        command: task.description,
+        startedAt: this.now(),
+      });
+    }
+  }
+
+  /**
    * A background job a crewmate's shell started here ended: its home hears
    * it as a wake. Its row keeps the exit until the home answers, so a stop
    * before then tells it at the next start.
@@ -381,6 +416,11 @@ export class SessionHost {
       this.interruptContinuation(held);
       held.unsubscribe?.();
       held.unsubscribe = null;
+      // The client's background tasks end with it: their rows say this stop
+      // killed them, for the next start to tell.
+      for (const id of held.clientTasks)
+        this.options.tasks.jobRows.markStoppedByQuit(id, held.task, this.now());
+      held.clientTasks.clear();
       if (held.session) sessions.push(held.session);
       held.session = null;
       this.writeOut(held);
@@ -762,6 +802,12 @@ export class SessionHost {
         // computer's own, kept in its own store and never the home's.
         if (event.type === "turn_failed" && event.cutOff && held.account)
           this.options.accounts?.noteCutOff(held.account, event.cutOff);
+        if (event.type === "background_work_changed") {
+          this.keepClientTasks(held, event.tasks ?? []);
+          // The home hears the count, as before; the tasks stay here.
+          this.record(held, { type: "background_work_changed", count: event.count });
+          return;
+        }
         this.record(held, event);
       });
       this.recordJobs(held, true);
@@ -863,6 +909,8 @@ export class SessionHost {
     const session = held.session;
     held.session = null;
     this.options.killJobs?.(held.task);
+    // Its client's background tasks end with it, and nobody waits on them.
+    this.keepClientTasks(held, []);
     // Its browser goes with it, copying a saved sign-in back as any stop does.
     this.options.browsers?.close(held.task);
     if (session) {
@@ -1162,6 +1210,7 @@ export class SessionHost {
       speed: false,
       backend: null,
       jobs: undefined,
+      clientTasks: new Set(),
       account: undefined,
       renewal: undefined,
       opening: null,

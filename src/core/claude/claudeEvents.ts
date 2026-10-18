@@ -1,5 +1,6 @@
 import { type ClaudeSignal, type CutOff, classifyClaudeSignal } from "@shared/authFailure";
 import type { FmEvent, FmModelUsage, FmUsage } from "@shared/events";
+import type { ClientBackgroundTask } from "../session/session";
 
 /**
  * Normalizes Claude's session messages into the FmEvent union, the same job
@@ -83,6 +84,12 @@ export type ClaudeModelFallback = {
 export type ClaudeNormalizeResult = {
   events: FmEvent[];
   backgroundJobs?: number;
+  /**
+   * With `backgroundJobs`, the client's background tasks that end with it
+   * (`background_tasks_changed`, measured on 2.1.234): each by the id the
+   * model was given, with the description the model gave it.
+   */
+  backgroundTasks?: ClientBackgroundTask[];
   /** A plan-window reading the session pushed, for the quota surface. */
   rateLimit?: ClaudeRateLimit;
   /** The turn's final assistant text, for the task-result card body. */
@@ -113,7 +120,30 @@ export function fmEventsFromClaudeMessage(
             typeof task.task_type === "string",
         )
       ) {
-        return { events: [], backgroundJobs: message.tasks.length };
+        const tasks = message.tasks as {
+          task_id: string;
+          task_type: string;
+          description?: unknown;
+        }[];
+        return {
+          events: [],
+          backgroundJobs: tasks.length,
+          // A remote task runs where the client started it, so the client's
+          // end is not its end; every other one runs inside the client.
+          backgroundTasks: tasks.flatMap((task) =>
+            task.task_type.startsWith("remote_")
+              ? []
+              : [
+                  {
+                    id: task.task_id,
+                    description:
+                      typeof task.description === "string" && task.description.trim()
+                        ? task.description.trim()
+                        : task.task_type,
+                  },
+                ],
+          ),
+        };
       }
       if (
         message.subtype === "model_refusal_fallback" &&

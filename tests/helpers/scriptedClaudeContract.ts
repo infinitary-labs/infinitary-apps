@@ -139,7 +139,13 @@ const lingering: { stores: SessionRecordStore[]; mcps: Promise<Client | undefine
 
 export async function scriptedClaudeWorld(
   controls: { beforeTool?: () => Promise<void>; beforeToolRecord?: () => Promise<void> } = {},
-): Promise<ContractWorld & { continueTurn: () => void; endClient: (error?: Error) => void }> {
+): Promise<
+  ContractWorld & {
+    continueTurn: () => void;
+    listBackgroundTasks: (tasks: { id: string; type?: string; description: string }[]) => void;
+    endClient: (error?: Error) => void;
+  }
+> {
   const root = scratchDir("infinitary-claude-scripted-contract-");
   const configDir = join(root, "claude-config");
   const homeDir = join(root, "home");
@@ -449,6 +455,23 @@ export async function scriptedClaudeWorld(
       client.turn = { steers: [], toolDone: false, requests: 0 };
       attachment.emit(says.running);
       void request(client);
+    },
+    // INF-379: the client's whole list of the background tasks it runs, each
+    // time it changes, in the shape measured on 2.1.234.
+    listBackgroundTasks: (tasks) => {
+      const attachment = attachments.at(-1);
+      if (!attachment) throw new Error("No client is attached.");
+      attachment.emit({
+        type: "system",
+        subtype: "background_tasks_changed",
+        tasks: tasks.map(({ id, type, description }) => ({
+          task_id: id,
+          task_type: type ?? "local_bash",
+          description,
+        })),
+        uuid: randomUUID(),
+        session_id: clientOf(attachment).sessionId,
+      });
     },
     endClient: (error) => {
       const attachment = attachments.at(-1);

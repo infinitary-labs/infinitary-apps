@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-crewmate-restart-cut-off-tasks",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A crewmate on Claude carries on after the computer running it restarts in the middle of work it started in the background",
+      "body": "When a computer that runs work for you restarts while a crewmate there on Claude waits on work it started in the background, such as a test run, the crewmate is now told once that the work did not finish, and picks the task up again. Before, it could wait for a result that would never come.",
+      "noPicture": "Nothing new appears on screen: the task simply moves on after the restart instead of waiting.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

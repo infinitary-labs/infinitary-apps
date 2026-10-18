@@ -217,12 +217,26 @@ export type SessionSpec = {
   callbacks?: CrewmateToolDelegate;
 };
 
+/** A background task a backend's own client runs (`background_work_changed`). */
+export type ClientBackgroundTask = { id: string; description: string };
+
 /**
  * What a session tells its owner. Only the `FmEvent`s are ever broadcast;
  * the rest stay with the owner.
  */
 export type SessionEvent =
-  | { type: "background_work_changed"; count: number | undefined }
+  | {
+      type: "background_work_changed";
+      count: number | undefined;
+      /**
+       * The background tasks the backend's own client runs now and ends
+       * with it, when it names them (a Claude session's): each by the id
+       * its model was given and what the model said it is. A computer that
+       * runs work keeps them, so its next start can tell the home of any
+       * its stop cut off (`SessionHost`).
+       */
+      tasks?: readonly ClientBackgroundTask[];
+    }
   | FmEvent
   /** One model turn closed, with its closing words when it said any. */
   | { type: "turn_closed"; text?: string }

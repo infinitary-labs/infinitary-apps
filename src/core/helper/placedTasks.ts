@@ -72,7 +72,10 @@ const EMPTY_STATE: PlacedTaskState = { turn: 0, seq: 0, kept: 0, closed: false }
 
 const orderLineSchema = z.object({ orderId: z.string(), answer: z.unknown() });
 
-/** A background job its crewmate's shell started here, kept in `jobs.json` while it runs. */
+/**
+ * A background job its crewmate's shell started here, or a background task
+ * its Claude client runs (`SessionHost`), kept in `jobs.json` while it runs.
+ */
 const placedJobSchema = z.object({
   id: z.string(),
   command: z.string(),

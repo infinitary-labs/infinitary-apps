@@ -227,9 +227,8 @@ export class AutomaticPlacement {
         this.options.takesNoWorkUntilUpdated?.(computer.computerId)
           ? { olderFirstmate: true }
           : {}),
-        ...(computer.computerId !== null &&
-        this.options.reachOf?.(computer.computerId) === "connecting"
-          ? { connecting: true }
+        ...(computer.computerId !== null && this.options.reachOf
+          ? { reach: this.options.reachOf(computer.computerId) }
           : {}),
         workEnabled: true,
         ...(valid ? { system: read.facts.system, chip: read.facts.chip } : {}),
@@ -287,7 +286,7 @@ export class AutomaticPlacement {
             decision.candidates.map((row) => ({
               name: nameOf(row.computerId),
               rejections: row.rejections,
-              ...(row.connecting ? { reach: "connecting" as const } : {}),
+              ...(row.reach ? { reach: row.reach } : {}),
               capacity: row.capacity,
             })),
             requirements.demand,
@@ -338,7 +337,7 @@ export class AutomaticPlacement {
             name: nameOf(row.computerId),
             physicalComputerId: row.physicalComputerId,
             rejections: row.rejections,
-            ...(row.connecting ? { reach: "connecting" as const } : {}),
+            ...(row.reach ? { reach: row.reach } : {}),
             missingTools: row.missingTools,
             reading: row.resources,
             factsAgeMs: read ? Math.max(0, now - read.started) : null,

@@ -194,7 +194,7 @@ describe("placementWait names the check that refused a start", () => {
 });
 
 describe("a computer refused for its connection", () => {
-  it("is out of reach either way, marked connecting only while its connection is being made", () => {
+  it("is out of reach either way, carrying its reach as it came", () => {
     const evaluated = (candidate: PlacementCandidate) =>
       evaluatePlacement({
         requirements: resolvePlacementRequirements({
@@ -204,12 +204,12 @@ describe("a computer refused for its connection", () => {
         candidates: [thisMac, candidate],
         reservations: [],
       }).candidates[1];
-    const connecting = evaluated({ ...olderMacMini, inReach: false, connecting: true });
+    const connecting = evaluated({ ...olderMacMini, inReach: false, reach: "connecting" });
     expect(connecting?.rejections).toContain("out-of-reach");
-    expect(connecting?.connecting).toBe(true);
-    const gone = evaluated({ ...olderMacMini, inReach: false });
+    expect(connecting?.reach).toBe("connecting");
+    const gone = evaluated({ ...olderMacMini, inReach: false, reach: "reconnecting" });
     expect(gone?.rejections).toContain("out-of-reach");
-    expect(gone?.connecting).toBeUndefined();
+    expect(gone?.reach).toBe("reconnecting");
   });
 
   it("reads connecting in a waiting start's words for a computer whose connection is being made", () => {

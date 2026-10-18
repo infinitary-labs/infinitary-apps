@@ -1,4 +1,4 @@
-import type { DeviceChip, DeviceSystem } from "@shared/devices";
+import type { ComputerReach, DeviceChip, DeviceSystem } from "@shared/devices";
 import {
   PLACEMENT_DEMANDS,
   type PlacementDemand,
@@ -74,8 +74,8 @@ export type PlacementCandidate = {
   inReach: boolean;
   /** Connected on an older Firstmate, so it takes no new work: not out of reach. */
   olderFirstmate?: boolean;
-  /** Out of reach only because its connection is being made: still refused as out of reach, and marked so it reads connecting. */
-  connecting?: boolean;
+  /** The core's one reach value (`reachFrom`), absent for this Mac: a connecting one is still refused as out of reach, and reads connecting. */
+  reach?: ComputerReach;
   workEnabled: boolean;
   system?: DeviceSystem;
   /** Execution architecture, not a guess about the underlying hardware. */
@@ -111,8 +111,8 @@ export type PlacementEvaluation = {
   computerId: string | null;
   physicalComputerId: string | null;
   rejections: PlacementRejection[];
-  /** Refused as out of reach only because its connection was being made. */
-  connecting?: true;
+  /** The candidate's reach, as it came. */
+  reach?: ComputerReach;
   /** Exact tool identities for the typed missing-tool reasons. */
   missingTools: string[];
   resources: ComputerResourceReading;
@@ -212,9 +212,7 @@ export function evaluatePlacement(input: {
       computerId: candidate.computerId,
       physicalComputerId: candidate.physicalComputerId,
       rejections,
-      ...(candidate.connecting && !candidate.inReach && !candidate.olderFirstmate
-        ? { connecting: true as const }
-        : {}),
+      ...(candidate.reach ? { reach: candidate.reach } : {}),
       missingTools,
       resources: candidate.resources,
       model: candidate.model,

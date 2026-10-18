@@ -106,6 +106,7 @@ A preview made while dynamic routing is off is absent, not a claim that a comput
 
 `evaluatePlacement` (`src/core/routing/placementEngine.ts`) is the pure computer-policy seam beside that model owner.
 It consumes declared requirements, receiver-owned observations, per-computer model previews and pending reservations and returns a choice or a wait with typed candidate reasons.
+Each computer comes with the core's one reach value (`reachFrom`), which its evaluation carries as it came: a connecting computer is still refused as out of reach, and its wait and saved explanation read connecting.
 It performs no sampling, preparation, account access, database writes or task starts.
 `AutomaticPlacement` calls it inside `TaskService.commitPlacement` before a new Automatic task starts; explicit selections keep their existing start path.
 

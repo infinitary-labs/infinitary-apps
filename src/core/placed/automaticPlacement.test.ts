@@ -1,5 +1,11 @@
 import { HERE } from "@shared/deviceNames";
-import { AUTOMATIC_COMPUTER, PLACEMENT_HELD_WAIT, type PlacementFacts } from "@shared/placement";
+import type { ComputerReach, DeviceView } from "@shared/devices";
+import {
+  AUTOMATIC_COMPUTER,
+  PLACEMENT_HELD_WAIT,
+  type PlacementFacts,
+  placementCandidateLines,
+} from "@shared/placement";
 import type { RepoView } from "@shared/repos";
 import type { ResourceObservation } from "@shared/resources";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -84,11 +90,23 @@ const opus: RoutePreview = {
   requiresReasoningWait: false,
 };
 
+/** Another Mac paired with this one to run work, out of reach. */
+const macMini: DeviceView = {
+  id: "mac-mini",
+  kind: "mac",
+  name: "Mac mini",
+  pairedAt: Date.parse("2026-10-01T09:00:00Z"),
+};
+
 /**
  * One clock for the feed, its receiver and placement, moved by the fake
- * timers: by default it reads the same until they move it on.
+ * timers: by default it reads the same until they move it on. `more` names
+ * the rest of placement's world, such as another computer and its reach.
  */
-function world(now: () => number = () => Date.now()) {
+function world(
+  now: () => number = () => Date.now(),
+  more: Partial<ConstructorParameters<typeof AutomaticPlacement>[0]> = {},
+) {
   const tasks = new TaskService({ db: freshDatabase(), strict: true });
   const work = {
     onWorkDevice: () => () => {},
@@ -127,6 +145,7 @@ function world(now: () => number = () => Date.now()) {
     now,
     running: (task) => running.has(task.id),
     localFacts: async () => facts,
+    ...more,
   });
   const task = (id: string, title: string) =>
     seedTask(tasks, { id, title, repoId: ledger.id, status: "queued" });
@@ -229,6 +248,64 @@ describe("AutomaticPlacement's room set aside for starting tasks", () => {
       expect(w.tasks.get(footer.id)?.placement?.reservation).toBe("pending");
       expect(w.tasks.get(totals.id)?.placement?.reservation).toBe("pending");
       expect(w.tasks.get(header.id)?.placement).toBeNull();
+    } finally {
+      w.dispose();
+    }
+  });
+});
+
+/**
+ * INF-464, the captain's pick on INF-460: placement carries the core's one
+ * reach value (`reachFrom`) as it is, with no connecting flag made from it.
+ * A computer whose connection is being made reads connecting; one this Mac
+ * tries again after a drop reads out of reach.
+ */
+describe("AutomaticPlacement's words for a computer out of reach", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T08:00:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const reaches = [
+    ["connecting", "connecting"],
+    ["reconnecting", "out of reach"],
+  ] as const satisfies readonly (readonly [ComputerReach, string])[];
+
+  it.each(reaches)(
+    "saves a %s computer's reach as it is on the start's explanation, which reads %s",
+    async (reach, words) => {
+      const w = world(undefined, { devices: () => [macMini], reachOf: () => reach });
+      try {
+        const footer = w.task("footer", "Fix the ledger footer");
+        expect(await w.start(footer)).toMatchObject({ computerId: null });
+        const snapshot = w.tasks.get(footer.id)?.placement?.snapshot;
+        if (!snapshot) throw new Error("The start saved no explanation.");
+        expect(snapshot.candidates.find((row) => row.computerId === macMini.id)?.reach).toBe(reach);
+        expect(
+          placementCandidateLines(snapshot).find((line) => line.startsWith("Mac mini: ")),
+        ).toMatch(new RegExp(`^Mac mini: ${words}; `));
+      } finally {
+        w.dispose();
+      }
+    },
+  );
+
+  it.each(reaches)("names a %s computer %s in a waiting start's words", async (reach, words) => {
+    const w = world(undefined, {
+      devices: () => [macMini],
+      reachOf: () => reach,
+      // This Mac cannot clone the project, so the start waits for a computer.
+      localFacts: async () => ({ ...facts, projectAccess: "unavailable" }),
+    });
+    try {
+      const footer = w.task("footer", "Fix the ledger footer");
+      const waited = await w.start(footer);
+      expect(waited).toMatchObject({ wait: { kind: "other" } });
+      expect(waited && "wait" in waited ? waited.wait.words : "").toContain(
+        `${HERE.This}: project unavailable. Mac mini: ${words}; `,
+      );
     } finally {
       w.dispose();
     }

@@ -131,7 +131,7 @@ export const placementSnapshotSchema = z.object({
           .regex(/^[a-f0-9]{64}$/)
           .nullable(),
         rejections: z.array(placementRejectionSchema).max(32),
-        /** With `out-of-reach`: its connection was being made, so it reads connecting. */
+        /** The core's one reach reading when it was compared; absent for this Mac and on a historical row. Out of reach reads connecting while it was connecting. */
         reach: computerReachSchema.optional(),
         missingTools: z.array(z.string().max(80)).max(RESOLVED_TOOL_LIMIT),
         reading: computerResourceReadingSchema,
@@ -205,7 +205,7 @@ export type PlacementWaitRow = {
   /** The computer's name, as Task Details writes it. */
   name: string;
   rejections: readonly PlacementRejection[];
-  /** With `out-of-reach`: its connection was being made, so it reads connecting. */
+  /** The core's one reach reading; absent for this Mac. Out of reach reads connecting while it is connecting. */
   reach?: ComputerReach | undefined;
   /** Its own room before pending starts are taken off; null when unknown. */
   capacity: PlacementDemand | null;

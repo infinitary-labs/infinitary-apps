@@ -621,15 +621,20 @@ export const workRequests = {
     request: asked({ input: knowledgeReadInputSchema }),
     response: toolTextSchema,
   },
-  /** record_knowledge: the home writes its own knowledge for the crewmate, under the same rules. */
+  /**
+   * record_knowledge: the home writes its own knowledge for the crewmate, under the same rules.
+   * It repeats safely: knowledge keeps its own request id, so a cut-off is asked again.
+   */
   "inf:work:record-knowledge": {
     effect: "change",
+    repeats: "safe",
     request: asked({ input: recordKnowledgeInputSchema }),
     response: toolTextSchema,
   },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {
     effect: "change",
+    repeats: "safe",
     request: asked({
       id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$/),
       extension: z.enum(["png", "jpg", "webp"]),
@@ -644,6 +649,7 @@ export const workRequests = {
    */
   "inf:work:media": {
     effect: "change",
+    repeats: "safe",
     request: asked({
       id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$/),
       extension: z.enum(CARD_MEDIA_KINDS),
@@ -659,6 +665,7 @@ export const workRequests = {
    */
   "inf:work:typeface": {
     effect: "change",
+    repeats: "safe",
     request: asked({
       id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$/),
       extension: z.enum(CARD_TYPEFACE_KINDS),
@@ -757,8 +764,28 @@ export const workRequests = {
   },
 } as const satisfies Record<
   `inf:work:${string}`,
-  { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
+  {
+    effect: "read" | "change";
+    /** A change that may be asked again: a cut-off is safe, and the home marks none begun. */
+    repeats?: "safe";
+    request: z.ZodType;
+    response: z.ZodType;
+  }
 >;
+
+/** The declaration as the invoke contract publishes it: the repeat rule stays off the wire. */
+export function workRequestWire<C extends keyof typeof workRequests>(channel: C) {
+  const declared = workRequests[channel];
+  if (!("repeats" in declared)) return declared;
+  const { repeats: _repeats, ...wire } = declared;
+  return wire;
+}
+
+/** Whether a cut-off of this request is safe to ask again, from its own declaration. */
+export function requestRepeatsSafely(channel: string): boolean {
+  const declared = workRequests[channel as keyof typeof workRequests];
+  return declared !== undefined && "repeats" in declared && declared.repeats === "safe";
+}
 
 /** One order's task and id: every order that acts carries both. */
 function ordered<T extends z.ZodRawShape>(shape: T) {

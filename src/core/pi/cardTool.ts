@@ -22,6 +22,7 @@ import {
   CardRefusedError,
   type CrewmateTool,
   type CrewmateToolDelegate,
+  callWithSignal,
   cardRefusalOf,
   crewmateTool,
   type DeclaredAction,
@@ -687,13 +688,13 @@ function crewmateEmitCard(
   delegate: CrewmateToolDelegate,
   onCard: NonNullable<CrewmateToolDelegate["onCard"]>,
   browserButton: boolean,
-): (params: EmitCardParams) => Promise<ToolOutput> {
+): (params: EmitCardParams, signal?: AbortSignal) => Promise<ToolOutput> {
   const pictures = cardPictureRoot(delegate);
-  return async (params) => {
+  return async (params, signal) => {
     try {
       return {
         text: await emitCard(params, {
-          onCard,
+          onCard: (card) => callWithSignal(onCard, [card], signal),
           cardBodiesDir: delegate.cardBodiesDir,
           browserButton,
           ...(pictures ? { pictures } : {}),
@@ -802,11 +803,17 @@ export const CLOSE_CARD_TOOL = crewmateTool({
   }),
   bind: ({ onCloseCard }) =>
     onCloseCard &&
-    (async (params) => ({
-      text: await onCloseCard({
-        cardId: params.card_id,
-        ...(params.reason !== undefined ? { reason: params.reason } : {}),
-      }),
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onCloseCard,
+        [
+          {
+            cardId: params.card_id,
+            ...(params.reason !== undefined ? { reason: params.reason } : {}),
+          },
+        ],
+        signal,
+      ),
     })),
 });
 

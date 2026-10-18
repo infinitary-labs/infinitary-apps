@@ -225,8 +225,8 @@ export type KnowledgeReadInput = {
  * words the model reads.
  */
 export type KnowledgeBinding = {
-  read: (input: KnowledgeReadInput) => Awaitable<string>;
-  record: (input: RecordInput) => Awaitable<string>;
+  read: (input: KnowledgeReadInput, signal?: AbortSignal) => Awaitable<string>;
+  record: (input: RecordInput, signal?: AbortSignal) => Awaitable<string>;
 };
 
 /**
@@ -235,7 +235,9 @@ export type KnowledgeBinding = {
  * field is optional; a tool binds only when the callbacks it needs are
  * there. A callback may answer later - a conversation held on a computer
  * that runs work asks its home for each (src/core/helper/sessionHost.ts) -
- * and every tool awaits it.
+ * and every tool awaits it. A callback that asks the home takes that
+ * tool's own cancellation last, and only when the runtime gave this call
+ * one; a refusal record is not that request.
  */
 export type CrewmateToolDelegate = {
   /** A request policy read from the home, not an agent tool or transported credential. */
@@ -278,7 +280,10 @@ export type CrewmateToolDelegate = {
    * merge decision may clear a live CI gate first (the standing CI rule's
    * host-side counterpart), so this may return a promise.
    */
-  onCard?: (card: DeclaredCardInput) => string | undefined | Promise<string | undefined>;
+  onCard?: (
+    card: DeclaredCardInput,
+    signal?: AbortSignal,
+  ) => string | undefined | Promise<string | undefined>;
   /**
    * A card declaring a settle effect - the completion card - that the card
    * tool refused, at whatever step refused it, so the host records the
@@ -286,31 +291,42 @@ export type CrewmateToolDelegate = {
    */
   onCardRefused?: (refusal: Omit<CardRefusal, "at">) => void;
   /** Dismiss a card this crewmate emitted. Unknown or foreign ids must throw. */
-  onCloseCard?: (input: { cardId: string; reason?: string }) => Awaitable<string>;
+  onCloseCard?: (
+    input: { cardId: string; reason?: string },
+    signal?: AbortSignal,
+  ) => Awaitable<string>;
   /** File a follow-up under this crewmate's task (P2). Returns the tool text. */
-  onFollowup?: (input: FollowupInput) => Awaitable<string>;
+  onFollowup?: (input: FollowupInput, signal?: AbortSignal) => Awaitable<string>;
   /**
    * One progress line onto this crewmate's own timeline (P2), with the
    * whole plan when the note carries one (FI3-734). Returns the tool text.
    */
-  onProgress?: (text: string, plan?: unknown) => Awaitable<string>;
+  onProgress?: (text: string, plan?: unknown, signal?: AbortSignal) => Awaitable<string>;
   /**
    * The crewmate's explicit report for the turn in flight (WI-1), with its
    * own one-line headline when it gave one. Returns the tool text.
    */
-  onReport?: (text: string, summary?: string, declared?: ReportDeclaration) => Awaitable<string>;
+  onReport?: (
+    text: string,
+    summary?: string,
+    declared?: ReportDeclaration,
+    signal?: AbortSignal,
+  ) => Awaitable<string>;
   /**
    * The crewmate's answer in one of its own cards' threads (cards-as-threads
    * phase 1): prose the host renders as a message under the card, never a
    * second card. Returns the tool text, refusals included.
    */
-  onReply?: (input: { cardId: string; text: string }) => Awaitable<string>;
+  onReply?: (input: { cardId: string; text: string }, signal?: AbortSignal) => Awaitable<string>;
   /**
    * The read-only tasks query (cards/tasks/agents P0, WI-4): every crewmate
    * can search the backlog before filing, the way every engineer can read
    * the tracker. Reads only; the crewmate still writes nothing on the graph.
    */
-  onQueryTasks?: (input: TaskQueryInput) => Awaitable<{ rows: TaskQueryRow[]; total: number }>;
+  onQueryTasks?: (
+    input: TaskQueryInput,
+    signal?: AbortSignal,
+  ) => Awaitable<{ rows: TaskQueryRow[]; total: number }>;
   /**
    * The live-build checks (talk-to-personalize Step 4), handed only to a
    * crewmate on the personal workspace: the adherence lint over the extension's
@@ -325,15 +341,19 @@ export type CrewmateToolDelegate = {
    */
   onPrepareChange?: (
     input: import("@shared/changePresentation").StagedChangePresentation,
+    signal?: AbortSignal,
   ) => Promise<string>;
-  onOpenChange?: (input: import("@shared/changePresentation").OpenChangeInput) => Promise<string>;
-  onCheckChange?: (input?: CheckChangeInput) => Promise<string>;
+  onOpenChange?: (
+    input: import("@shared/changePresentation").OpenChangeInput,
+    signal?: AbortSignal,
+  ) => Promise<string>;
+  onCheckChange?: (input?: CheckChangeInput, signal?: AbortSignal) => Promise<string>;
   /** Read-only evidence through the project's forge and the app's sign-in. */
-  onReadWorkflow?: (input: ReadWorkflowInput) => Promise<string>;
-  onDownloadArtifact?: (input: DownloadArtifactInput) => Promise<string>;
+  onReadWorkflow?: (input: ReadWorkflowInput, signal?: AbortSignal) => Promise<string>;
+  onDownloadArtifact?: (input: DownloadArtifactInput, signal?: AbortSignal) => Promise<string>;
   /** Project-scoped JSON REST through the app's sign-in; the write is for a change-shipping task. */
-  onGithubRead?: (input: GithubReadInput) => Promise<string>;
-  onGithubWrite?: (input: GithubWriteInput) => Promise<string>;
+  onGithubRead?: (input: GithubReadInput, signal?: AbortSignal) => Promise<string>;
+  onGithubWrite?: (input: GithubWriteInput, signal?: AbortSignal) => Promise<string>;
   /**
    * This task's own browser (docs/task-browser.md), handed to a crewmate
    * whose task runs on this Mac when the host has one.
@@ -438,6 +458,19 @@ export type CrewmateTool<N extends string = string, T extends TObject = TObject>
   bind: (delegate: CrewmateToolDelegate) => BoundTool<N, T> | undefined;
 };
 
+/**
+ * Call a host callback with this tool's cancellation only when the runtime
+ * gave one, so a call with no signal keeps the arguments the host expects.
+ */
+export function callWithSignal<R>(
+  // biome-ignore lint/suspicious/noExplicitAny: a trailing optional signal is not a tuple the checker accepts.
+  fn: (...args: any[]) => R,
+  args: readonly unknown[],
+  signal?: AbortSignal,
+): R {
+  return signal === undefined ? fn(...args) : fn(...args, signal);
+}
+
 /** Declare a crewmate tool: a bound tool once a crewmate's callbacks bind it. */
 export function crewmateTool<const N extends string, T extends TObject>(spec: {
   name: N;
@@ -446,7 +479,7 @@ export function crewmateTool<const N extends string, T extends TObject>(spec: {
   parameters: T;
   bind: (
     delegate: CrewmateToolDelegate,
-  ) => ((params: Static<T>) => ToolOutput | Promise<ToolOutput>) | undefined;
+  ) => ((params: Static<T>, signal?: AbortSignal) => ToolOutput | Promise<ToolOutput>) | undefined;
 }): CrewmateTool<N, T> {
   return {
     name: spec.name,

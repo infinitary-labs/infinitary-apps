@@ -4,7 +4,7 @@ import type { WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
 import { Type } from "typebox";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
-import { bindTool, boundTool, crewmateTool, stringEnum } from "../session/tools";
+import { bindTool, boundTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskStartPolicy, TaskStatus } from "../storage/taskStore";
 import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
@@ -546,15 +546,21 @@ export const TASKS_QUERY_TOOL = crewmateTool({
   }),
   bind: ({ onQueryTasks }) =>
     onQueryTasks &&
-    (async (params) => {
-      const result = await onQueryTasks({
-        ...(params.project ? { project: params.project } : {}),
-        ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
-        ...(params.key ? { key: params.key } : {}),
-        ...(params.text ? { text: params.text } : {}),
-        ...(params.parent ? { parent: params.parent } : {}),
-        ...(params.limit !== undefined ? { limit: params.limit } : {}),
-      });
+    (async (params, signal) => {
+      const result = await callWithSignal(
+        onQueryTasks,
+        [
+          {
+            ...(params.project ? { project: params.project } : {}),
+            ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
+            ...(params.key ? { key: params.key } : {}),
+            ...(params.text ? { text: params.text } : {}),
+            ...(params.parent ? { parent: params.parent } : {}),
+            ...(params.limit !== undefined ? { limit: params.limit } : {}),
+          },
+        ],
+        signal,
+      );
       return { text: renderTasksQueryResult(result) };
     }),
 });

@@ -1442,6 +1442,61 @@ describe("a conversation held on a computer that runs work", () => {
     });
   });
 
+  // Intent: INF-416 piece A (audit R6): a cut-off knowledge write is safe to
+  // ask again on the work computer, as the home already treats it, instead of
+  // reading as though the change may already be done.
+  it("calls a cut-off knowledge write safe to ask again (INF-416 A)", async () => {
+    const controller = new AbortController();
+    const at = await placed({ toolSignal: controller.signal });
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "record_knowledge"] },
+      },
+    ]);
+    const knowledge = at.home.hold("inf:work:record-knowledge");
+    model([
+      {
+        tools: [
+          {
+            name: "record_knowledge",
+            args: {
+              action: "publish",
+              request_id: "cut-off-1",
+              kind: "concept",
+              title: "Idle ladder",
+              text: "How an idle crewmate is nudged.",
+            },
+          },
+        ],
+      },
+      { text: "Asked again." },
+    ]);
+    const from = api.requests.length;
+    try {
+      await at.order("inf:session:prompt", [
+        { orderId: "knowledge-cut", task: TASK, text: "Save it." },
+      ]);
+      await knowledge.reached;
+      controller.abort(new Error("Claude stopped waiting"));
+      await expect
+        .poll(() =>
+          JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
+        )
+        .toContain("You can ask again");
+      const transcript = JSON.stringify(
+        api.requests.slice(from).map((request) => request.body.messages),
+      );
+      expect(transcript).not.toContain("may already be done");
+      console.info("Cut-off knowledge write:", transcript.slice(-500));
+      knowledge.open();
+      await at.ended(1);
+    } finally {
+      knowledge.open();
+    }
+  });
+
   // Intent: INF-389, review INF-381's I1 on PR #66: a job's end is its own
   // fact, not part of the tool it ran under, so a cancelled tool never
   // withdraws the end its crewmate waits for.
@@ -1465,7 +1520,7 @@ describe("a conversation held on a computer that runs work", () => {
       bind: (delegate) => {
         const onProgress = delegate.onProgress;
         if (!onProgress) return undefined;
-        return async () => {
+        return async (_params, signal) => {
           void exited.then(() =>
             host().jobExit({
               jobId: "9b2e4f61",
@@ -1476,7 +1531,9 @@ describe("a conversation held on a computer that runs work", () => {
               tail: "Test Suites: 12 passed",
             }),
           );
-          await onProgress("Started pnpm test:ios in the background.");
+          await (signal
+            ? onProgress("Started pnpm test:ios in the background.", undefined, signal)
+            : onProgress("Started pnpm test:ios in the background."));
           return { text: "Started." };
         };
       },

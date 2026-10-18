@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import type { CrewmateTool, KnowledgeBinding, KnowledgeReadInput } from "../session/tools";
-import { crewmateTool, stringEnum } from "../session/tools";
+import { callWithSignal, crewmateTool, stringEnum } from "../session/tools";
 import { renderDirection } from "./directions";
 import {
   type KnowledgeActor,
@@ -82,16 +82,22 @@ export const KNOWLEDGE_TOOL = crewmateTool({
   }),
   bind: ({ knowledge }) =>
     knowledge &&
-    (async (params) => ({
-      text: await knowledge.read({
-        action: params.action,
-        ...(params.query !== undefined ? { query: params.query } : {}),
-        ...(params.ids !== undefined ? { ids: params.ids } : {}),
-        ...(params.id !== undefined ? { id: params.id } : {}),
-        ...(params.revision !== undefined ? { revision: params.revision } : {}),
-        ...(params.scope !== undefined ? { scope: params.scope } : {}),
-        ...(params.cursor !== undefined ? { cursor: params.cursor } : {}),
-      }),
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        knowledge.read,
+        [
+          {
+            action: params.action,
+            ...(params.query !== undefined ? { query: params.query } : {}),
+            ...(params.ids !== undefined ? { ids: params.ids } : {}),
+            ...(params.id !== undefined ? { id: params.id } : {}),
+            ...(params.revision !== undefined ? { revision: params.revision } : {}),
+            ...(params.scope !== undefined ? { scope: params.scope } : {}),
+            ...(params.cursor !== undefined ? { cursor: params.cursor } : {}),
+          },
+        ],
+        signal,
+      ),
     })),
 });
 
@@ -168,7 +174,7 @@ export const RECORD_KNOWLEDGE_TOOL = crewmateTool({
   }),
   bind: ({ knowledge }) =>
     knowledge &&
-    (async (params) => {
+    (async (params, signal) => {
       const sources = params.sources?.map((source): SourceInput => {
         if (source.path !== undefined) {
           return {
@@ -237,7 +243,7 @@ export const RECORD_KNOWLEDGE_TOOL = crewmateTool({
             : { reason: params.reason }
           : {}),
       };
-      return { text: await knowledge.record(input) };
+      return { text: await callWithSignal(knowledge.record, [input], signal) };
     }),
 });
 

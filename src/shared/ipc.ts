@@ -343,7 +343,7 @@ import {
   voiceDownloadProgressSchema,
   voiceStatusSchema,
 } from "./voice";
-import { workRequests } from "./work";
+import { workRequests, workRequestWire } from "./work";
 
 /**
  * The typed IPC contract. Every invoke channel is declared here with zod
@@ -2597,13 +2597,21 @@ export const invokeContract = {
   // The home's knowledge (docs/knowledge.md, "Who has it").
   "inf:work:knowledge": { ...workRequests["inf:work:knowledge"], surface: "core", reach: "work" },
   "inf:work:record-knowledge": {
-    ...workRequests["inf:work:record-knowledge"],
+    ...workRequestWire("inf:work:record-knowledge"),
     surface: "core",
     reach: "work",
   },
-  "inf:work:picture": { ...workRequests["inf:work:picture"], surface: "core", reach: "work" },
-  "inf:work:media": { ...workRequests["inf:work:media"], surface: "core", reach: "work" },
-  "inf:work:typeface": { ...workRequests["inf:work:typeface"], surface: "core", reach: "work" },
+  "inf:work:picture": {
+    ...workRequestWire("inf:work:picture"),
+    surface: "core",
+    reach: "work",
+  },
+  "inf:work:media": { ...workRequestWire("inf:work:media"), surface: "core", reach: "work" },
+  "inf:work:typeface": {
+    ...workRequestWire("inf:work:typeface"),
+    surface: "core",
+    reach: "work",
+  },
   "inf:work:job-exit": { ...workRequests["inf:work:job-exit"], surface: "core", reach: "work" },
   "inf:work:events": { ...workRequests["inf:work:events"], surface: "core", reach: "work" },
   // A task's browser on that computer (docs/task-browser.md, "On another computer").

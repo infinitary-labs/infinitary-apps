@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
-import { type CrewmateTool, crewmateTool, stringEnum } from "../session/tools";
+import { type CrewmateTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
 import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
 import {
   CHECK_CHANGE_TOOL,
@@ -123,15 +123,21 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
   }),
   bind: ({ onFollowup }) =>
     onFollowup &&
-    (async (params) => ({
-      text: await onFollowup({
-        title: params.title,
-        goal: params.goal,
-        why: params.why,
-        ...(params.blocks_me ? { blocksMe: true } : {}),
-        ...(params.test_failure ? { testFailure: true } : {}),
-        ...(params.test_path ? { testPath: params.test_path } : {}),
-      }),
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onFollowup,
+        [
+          {
+            title: params.title,
+            goal: params.goal,
+            why: params.why,
+            ...(params.blocks_me ? { blocksMe: true } : {}),
+            ...(params.test_failure ? { testFailure: true } : {}),
+            ...(params.test_path ? { testPath: params.test_path } : {}),
+          },
+        ],
+        signal,
+      ),
     })),
 });
 
@@ -180,21 +186,31 @@ export const REPORT_TOOL = crewmateTool({
   }),
   bind: ({ onReport }) =>
     onReport &&
-    (async (params) => ({
-      text: await onReport(params.text, params.summary, {
-        ...(params.waiting_on_captain
-          ? {
-              wait: {
-                reason: params.waiting_on_captain.reason,
-                ...(params.waiting_on_captain.card_id
-                  ? { cardId: params.waiting_on_captain.card_id }
-                  : {}),
-              },
-            }
-          : {}),
-        ...(params.finished ? { finished: true } : {}),
-        ...(params.needs_firstmate !== undefined ? { needsFirstmate: params.needs_firstmate } : {}),
-      }),
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onReport,
+        [
+          params.text,
+          params.summary,
+          {
+            ...(params.waiting_on_captain
+              ? {
+                  wait: {
+                    reason: params.waiting_on_captain.reason,
+                    ...(params.waiting_on_captain.card_id
+                      ? { cardId: params.waiting_on_captain.card_id }
+                      : {}),
+                  },
+                }
+              : {}),
+            ...(params.finished ? { finished: true } : {}),
+            ...(params.needs_firstmate !== undefined
+              ? { needsFirstmate: params.needs_firstmate }
+              : {}),
+          },
+        ],
+        signal,
+      ),
     })),
 });
 
@@ -223,7 +239,10 @@ export const NOTE_PROGRESS_TOOL = crewmateTool({
     ),
   }),
   bind: ({ onProgress }) =>
-    onProgress && (async (params) => ({ text: await onProgress(params.text, params.plan) })),
+    onProgress &&
+    (async (params, signal) => ({
+      text: await callWithSignal(onProgress, [params.text, params.plan], signal),
+    })),
 });
 
 /**
@@ -243,7 +262,9 @@ export const REPLY_TOOL = crewmateTool({
   }),
   bind: ({ onReply }) =>
     onReply &&
-    (async (params) => ({ text: await onReply({ cardId: params.card_id, text: params.text }) })),
+    (async (params, signal) => ({
+      text: await callWithSignal(onReply, [{ cardId: params.card_id, text: params.text }], signal),
+    })),
 });
 
 /**

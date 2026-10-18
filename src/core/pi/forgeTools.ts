@@ -7,7 +7,7 @@ import {
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "@shared/checkRepair";
 import { Type } from "typebox";
 import { z } from "zod";
-import { crewmateTool, stringEnum } from "../session/tools";
+import { callWithSignal, crewmateTool, stringEnum } from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
 import { stageChangePresentation } from "./changePresentation";
 
@@ -90,11 +90,11 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
     const prepare = delegate.onPrepareChange;
     return (
       prepare &&
-      (async ({ story }) => {
+      (async ({ story }, signal) => {
         const root = cardPictureRoot(delegate);
         if (!root) throw new Error("This task has no retained-evidence folder.");
         const prepared = await stageChangePresentation(story, root);
-        return { text: await prepare(prepared) };
+        return { text: await callWithSignal(prepare, [prepared], signal) };
       })
     );
   },
@@ -128,7 +128,8 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
     ),
   }),
   bind: ({ onOpenChange }) =>
-    onOpenChange && (async (params) => ({ text: await onOpenChange(params) })),
+    onOpenChange &&
+    (async (params, signal) => ({ text: await callWithSignal(onOpenChange, [params], signal) })),
 });
 
 export const CHECK_CHANGE_TOOL = crewmateTool({
@@ -236,7 +237,8 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
     ),
   }),
   bind: ({ onCheckChange }) =>
-    onCheckChange && (async (params) => ({ text: await onCheckChange(params) })),
+    onCheckChange &&
+    (async (params, signal) => ({ text: await callWithSignal(onCheckChange, [params], signal) })),
 });
 
 export const READ_WORKFLOW_TOOL = crewmateTool({
@@ -266,7 +268,8 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
     limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 500 })),
   }),
   bind: ({ onReadWorkflow }) =>
-    onReadWorkflow && (async (params) => ({ text: await onReadWorkflow(params) })),
+    onReadWorkflow &&
+    (async (params, signal) => ({ text: await callWithSignal(onReadWorkflow, [params], signal) })),
 });
 
 export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
@@ -284,7 +287,10 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
     artifactId: Type.Integer({ minimum: 1 }),
   }),
   bind: ({ onDownloadArtifact }) =>
-    onDownloadArtifact && (async (params) => ({ text: await onDownloadArtifact(params) })),
+    onDownloadArtifact &&
+    (async (params, signal) => ({
+      text: await callWithSignal(onDownloadArtifact, [params], signal),
+    })),
 });
 
 const GITHUB_GATEWAY_RULES =
@@ -311,7 +317,8 @@ export const GITHUB_READ_TOOL = crewmateTool({
     method: Type.Optional(stringEnum(["GET", "HEAD"])),
   }),
   bind: ({ onGithubRead }) =>
-    onGithubRead && (async (params) => ({ text: await onGithubRead(params) })),
+    onGithubRead &&
+    (async (params, signal) => ({ text: await callWithSignal(onGithubRead, [params], signal) })),
 });
 
 export const GITHUB_WRITE_TOOL = crewmateTool({
@@ -330,5 +337,6 @@ export const GITHUB_WRITE_TOOL = crewmateTool({
     ),
   }),
   bind: ({ onGithubWrite }) =>
-    onGithubWrite && (async (params) => ({ text: await onGithubWrite(params) })),
+    onGithubWrite &&
+    (async (params, signal) => ({ text: await callWithSignal(onGithubWrite, [params], signal) })),
 });

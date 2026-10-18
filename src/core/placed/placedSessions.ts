@@ -39,6 +39,7 @@ import {
   type PlacedState,
   placedSpecSchema,
   placedTaskFolders,
+  requestRepeatsSafely,
   type WorkingCopyBase,
   type WorkOrderChannel,
   type WorkOrderResponse,
@@ -73,7 +74,7 @@ import type {
   SessionSpec,
 } from "../session/session";
 import { CardRefusedError, type DeclaredCardInput } from "../session/tools";
-import { ASSET_CHANNELS, CHANGE_RECOVERY, changeRecoveryCheck } from "../session/workRecovery";
+import { CHANGE_RECOVERY, changeRecoveryCheck, sameNames } from "../session/workRecovery";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
@@ -1655,12 +1656,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     channel: WorkInvokeChannel,
     request: Record<string, unknown>,
   ): void {
-    if (
-      invokeContract[channel].effect !== "change" ||
-      ASSET_CHANNELS.has(channel) ||
-      channel === "inf:work:record-knowledge"
-    )
-      return;
+    if (invokeContract[channel].effect !== "change" || requestRepeatsSafely(channel)) return;
     const dir = crewmatePlacedDir(this.options.paths, placed.task);
     const path = join(dir, "begun.jsonl");
     if (!placed.begun) {
@@ -1885,10 +1881,4 @@ export function instructionsForContract(
       ? stored.replace(OLD_BROWSER_LINE, CREWMATE_BROWSER_LINE)
       : stored;
   return instructionsThere(homeForm, to);
-}
-
-function sameNames(left: readonly string[], right: readonly string[]): boolean {
-  if (left.length !== right.length) return false;
-  const names = new Set(left);
-  return right.every((name) => names.has(name));
 }

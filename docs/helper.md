@@ -450,7 +450,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   A callback asks under one `callId` and asks again under it after every drop until the home answers or the callback's deadline expires (`HomeLink.ask`); the home keeps each answer and answers a repeat from it.
   Before a change, once its conversation or receiving service is ready, the home appends that id to `crewmates/<task>/placed/begun.jsonl` and syncs the file to disk.
   A repeat with a begun mark but no kept answer does nothing: it keeps and returns a warning that the change may already be done, naming the operation and what to check before trying again, never a raw channel id.
-  Reads, pictures, demo pieces, fonts and knowledge writes repeat safely without a begun mark; knowledge keeps its own request id.
+  Reads, and a change whose request declares that it repeats safely, leave no begun mark; a picture, a demo piece, a font and a knowledge write are those changes, and knowledge keeps its own request id.
   A begun-only report is never replayed into an adopting turn.
   The sync protects against a process crash or quit, not every sudden power loss: it does not request macOS `F_FULLFSYNC`.
   Older homes ignore the separate file; the request and answer formats are unchanged.
@@ -463,12 +463,12 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   At the deadline the work computer withdraws the request permanently, including from reconnect retries.
   Claude's typed handler timeout also withdraws a waiting request, even when sleep has paused the work computer's own timer.
   Ordinary home-stopped turns and Pi turn cancellations leave the request waiting for its real answer.
-  Claude carries the give-up signal through its runtime adapter, and the work computer keeps it scoped to that invocation across asynchronous callbacks.
-  A background completion-refusal record runs outside that scope, so it is still sent after the card's callback is cancelled before its card request went out.
-  A background job's end runs outside it too, so a job started under a callback still tells its end after that callback is cancelled.
+  Claude carries the give-up signal through its runtime adapter, and each tool passes that signal to the requests it makes, so one tool's cancellation never reaches another's.
+  A completion-refusal record is not one of those requests, so it is still sent after the card's callback is cancelled before its card request went out.
+  A background job's end is not one of those requests either, so a job started under a callback still tells its end after that callback is cancelled.
   Its answer says the change was not sent if the final change request never went on a connection, or may already be done if it did, even if that connection dropped.
   A completion card whose card request went out that way records no refusal, since the home may already show it (`OutcomeUnknownError`; `docs/card-authoring.md`, "A refused completion card").
-  Sending a picture, demo piece or font alone never implies the change may be done, and the home marks none of them begun; both computers read that one list (`ASSET_CHANNELS` in `src/core/session/workRecovery.ts`).
+  A request declared to repeat safely never implies the change may be done, and the home marks none of them begun; both computers read that declaration on the request (`repeats` in `src/shared/work.ts`).
   Sending proves only that the home may have received it; it cannot prove receipt or completion.
   A change that may have acted names the same operation-specific check as a begun-mark warning (`src/core/session/workRecovery.ts`); a read is called a request, and can be asked again when its answer never arrives.
   Claude's client would give up on an app tool after about 28 hours, so a conversation here runs it with `MCP_TOOL_TIMEOUT` at the longest a timer holds, about 24.8 days, above our own deadline (`PLACED_CLAUDE_ENV`; `claudeToolWait.integration.test.ts` measures both).

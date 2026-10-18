@@ -1,15 +1,14 @@
 import type { WorkInvokeChannel } from "@shared/ipc";
 
 /**
- * A card's pictures, demo pieces and fonts, sent before its final request: they
- * repeat safely, so the home marks none begun, and sending one alone never means
- * the change may already be done.
+ * Opened tool lists match when they name the same tools, in any order.
+ * Both sides of a placed conversation compare them this way.
  */
-export const ASSET_CHANNELS: ReadonlySet<WorkInvokeChannel> = new Set<WorkInvokeChannel>([
-  "inf:work:picture",
-  "inf:work:media",
-  "inf:work:typeface",
-]);
+export function sameNames(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const names = new Set(left);
+  return right.every((name) => names.has(name));
+}
 
 /** What to inspect when a begun change has no kept answer, in the operation's own words. */
 export const CHANGE_RECOVERY: Partial<

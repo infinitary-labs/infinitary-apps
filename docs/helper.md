@@ -541,7 +541,8 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.
   The reopen names the tools and the instruction rewrite that computer's contract allows now, not the ones it allowed when the conversation opened, so a version-gated tool such as `prepare_change` arrives without this Mac restarting.
   A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
-  The task's timeline notes the move, its record names the new conversation at once, and the crewmate's next prompt says why, gives its brief, and says where its earlier transcript is saved on that computer.
+  The task's timeline notes the move, and its record names the new conversation at once.
+  Why, the brief and where the earlier transcript is saved on that computer are a once-named wake on the task's lane, served first on the next prompt, so a quit before that turn ends clean still delivers it (`docs/claude-client.md`).
 - **The record's copy.**
   The home copies the conversation's record into `crewmates/<task>/sessions/` as model requests start and tools start or finish, and at model turn ends, coalescing live copies to at most one start per second and keeping a trailing copy when events arrive during a transfer.
   For Claude on a computer that supports record refresh (protocol 8.15 or later), the same throttled copy keeps checking while any call is open for a client transcript written after the call was announced, even if no further event arrives.

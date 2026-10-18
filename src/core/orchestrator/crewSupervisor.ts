@@ -296,7 +296,6 @@ import {
   type CrewmateSpec,
   crewmateProcedureFor,
   crewmateRenewedNote,
-  crewmateRestartText,
   crewmateResumeToken,
   crewmateSessionSpec,
 } from "./crewSession";
@@ -351,6 +350,7 @@ import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } fro
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
+  conversationRestartWake,
   laneText,
   laneTurnText,
   outageFailedWake,
@@ -880,11 +880,6 @@ type TaskRuntime = {
   lastTurnError?: string;
   /** The typed cut-off behind `lastTurnError`, when the backend reported one. */
   lastTurnCutOff?: CutOff;
-  /**
-   * What the first prompt of a conversation that replaced the task's
-   * earlier one opens with (`crewmateRestartText`), until a turn takes it.
-   */
-  restartText?: string;
 };
 
 /**
@@ -1439,13 +1434,16 @@ export class CrewSupervisor {
   /** A task lane's due rows. */
   private deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    // A renewed conversation's reason rides the next full turn (`runTurn`),
+    // never a turn of its own and never a mid-turn steer.
+    const rest = rows.filter((row) => row.facts?.kind !== "conversation-restart");
     // A policy notice alone is guidance, not permission to resume or start.
     if (
       this.tasks.get(taskId)?.state !== "streaming" &&
-      rows.every((row) => row.facts?.kind === "task-policies-changed")
+      rest.every((row) => row.facts?.kind === "task-policies-changed")
     )
       return [];
-    return rows;
+    return rest;
   }
 
   /** The lane rows whose pictures were already said to be unavailable. */
@@ -4524,7 +4522,7 @@ export class CrewSupervisor {
    * (`placedReopened`) - or the earlier one, `unopenable`, could not be
    * reopened. A renewal is noted, and the record names the one it moved to
    * now, so a quit before its first turn ends does not reopen the earlier
-   * one again; either way its first prompt says why.
+   * one again; either way the lane keeps why, and the next turn serves it.
    */
   private carryRestart(
     task: TaskRuntime,
@@ -4543,16 +4541,18 @@ export class CrewSupervisor {
     }
     const restart: CrewmateRestart | undefined =
       renewal ?? (unopenable ? { from: unopenable, changed: "unopenable" } : undefined);
-    if (restart) task.restartText = this.restartText(task, machine, restart);
+    if (restart) this.recordRestart(task, machine, restart);
   }
 
   /**
    * What a crewmate whose conversation replaced its task's earlier one is
-   * told first: the brief its first turn served, read back off the record,
-   * and where its earlier conversation's transcript is saved on the
-   * computer it runs on.
+   * told first, queued once on its lane: the brief its first turn served,
+   * read back off the record, and where its earlier conversation's
+   * transcript is saved on the computer it runs on. The turn that brings it
+   * back serves the wake first, and a quit before that turn ends clean
+   * still has the row.
    */
-  private restartText(task: TaskRuntime, machine: string, restart: CrewmateRestart): string {
+  private recordRestart(task: TaskRuntime, machine: string, restart: CrewmateRestart): void {
     const briefed = this.options.tasks
       .timeline(task.id)
       .filter((event) => event.kind === "briefed")
@@ -4570,12 +4570,31 @@ export class CrewSupervisor {
       const folders = this.options.machines?.folders(machine, task.id);
       if (folders) earlier = named(folders.sessions);
     }
-    return crewmateRestartText({
-      restart,
-      taskKey: task.key,
-      ...(brief ? { brief } : {}),
-      ...(earlier ? { earlier } : {}),
-    });
+    this.options.inbox.enqueueWake(
+      task.id,
+      conversationRestartWake({
+        restart,
+        taskKey: task.key,
+        ...(brief ? { brief } : {}),
+        ...(earlier ? { earlier } : {}),
+      }),
+      "agent",
+      task.id,
+    );
+  }
+
+  /**
+   * A renewed conversation's reason still waiting on the lane, claimed for
+   * the turn about to start so it rides that turn and a clean end acks it.
+   */
+  private claimConversationRestart(taskId: string, already: readonly number[]): InboxRow[] {
+    const claimed = new Set(already);
+    const leading = this.options.inbox
+      .pending(taskId, this.now(), { maxAttempts: INBOX_ATTEMPT_MAX })
+      .filter((row) => row.facts?.kind === "conversation-restart" && !claimed.has(row.id));
+    if (leading.length === 0) return [];
+    this.options.inbox.markDelivered(leading.map((row) => row.id));
+    return leading;
   }
 
   /** What a crewmate's tools run on: this task's callbacks into the host. */
@@ -5168,13 +5187,15 @@ export class CrewSupervisor {
     inboxIds: number[] = [],
     images?: TurnImage[],
   ): Promise<void> {
-    this.beginTurn(task, inboxIds);
+    // A new conversation hears why first, on this turn, even when the row
+    // was queued after the message it rides.
+    const leading = this.claimConversationRestart(task.id, inboxIds);
+    const ids = [...leading.map((row) => row.id), ...inboxIds];
+    this.beginTurn(task, ids);
     // The rows it delivers name the turn, so a conversation on another
     // computer starts it once however often it is asked.
-    const order = laneOrder(inboxIds);
-    // A new conversation hears why first, and the message after.
-    const restart = task.restartText;
-    let served = restart ? `${restart}\n\n${text}` : text;
+    const order = laneOrder(ids);
+    let served = leading.length > 0 ? `${laneTurnText(leading)}\n\n${text}` : text;
     try {
       // The one place a crewmate is told its project's directions: the
       // brief holds none, so a first turn carries them once, and a brief
@@ -5196,11 +5217,6 @@ export class CrewSupervisor {
       if (images?.length) await task.session?.prompt(served, images, order);
       else if (order) await task.session?.prompt(served, undefined, order);
       else await task.session?.prompt(served);
-      // A turn the provider failed may not have reached the model: the
-      // next one says it again.
-      if (restart && task.restartText === restart && !task.lastTurnError) {
-        task.restartText = undefined;
-      }
       if (this.disposed) return;
       if (task.cancelled) {
         this.finish(task, "cancelled");

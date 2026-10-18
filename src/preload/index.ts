@@ -190,9 +190,9 @@ const api: FirstmateApi = {
     keep: (deviceId) => invoke("inf:devices:keep", deviceId),
     tryAgain: (deviceId) =>
       readableRequest("inf:devices:try-again", () => invoke("inf:devices:try-again", deviceId)),
-    changeAddress: (deviceId, address) =>
+    changeAddress: (deviceId, address, options) =>
       readableRequest("inf:devices:change-address", () =>
-        invoke("inf:devices:change-address", deviceId, address),
+        invoke("inf:devices:change-address", deviceId, address, options),
       ),
     onDevices: (listener) => subscribe("inf:devices", listener),
     onResources: (listener) => subscribe("inf:computers:resources", listener),

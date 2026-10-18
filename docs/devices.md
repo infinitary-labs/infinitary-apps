@@ -599,6 +599,11 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 - **Any other computer that takes the update order** (`takesUpdate`, a contract from `WORK_UPDATE_SINCE` on, whatever its major): over the connection, below.
 - **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
+Devices asks for its refusals as data (`answerRefusals`, also on `inf:devices:change-address`) and shows the two lines in one error line above the list.
+A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`deviceConnected`: connected over SSH, in reach, or in reach on another version), after the row had said it was not.
+For Change address the row has to reconnect at the address that was tried.
+Any other refusal stays until the captain's next action.
+
 ### Updating over the connection
 
 1. "Updating Infinitary on Mac mini.": the home asks the update order, `fm:firstmate:update` (`updateOrders`, `src/shared/work.ts`), of a connected computer whatever its version (`ask` with `anyVersion`).

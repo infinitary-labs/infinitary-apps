@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "devices-refusal-clears-on-reconnect",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Devices no longer keeps a stale \"could not reach\" line above a computer that is back",
+      "body": "When an update failed because a computer stopped answering, the red line stayed above its row even after the row said connected again. That line now goes once the computer's row says connected.",
+      "noPicture": "The fix removes a line from Settings, Devices; there is no new view to show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

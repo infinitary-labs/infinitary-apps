@@ -244,10 +244,12 @@ import {
   type RemoteLoginAddAnswer,
   type RemoteLoginAddOptions,
   type RemoteLoginPasswordQuestion,
+  type RemoteLoginRefusedAnswer,
   remoteLoginAddAnswerSchema,
   remoteLoginAddOptionsSchema,
   remoteLoginAddressSchema,
   remoteLoginPasswordQuestionSchema,
+  remoteLoginRefusedAnswerSchema,
 } from "./remoteLogin";
 import {
   type ProjectsFolderView,
@@ -388,7 +390,7 @@ import { workRequests } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.13.0";
+export const PROTOCOL_VERSION = "8.14.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -903,9 +905,18 @@ export const invokeContract = {
     reach: "home",
     request: z.tuple([
       z.string().min(1).max(64),
-      z.strictObject({ password: z.string().min(1).max(1024).optional() }).optional(),
+      z
+        .strictObject({
+          password: z.string().min(1).max(1024).optional(),
+          answerRefusals: z.literal(true).optional(),
+        })
+        .optional(),
     ]),
-    response: z.union([deviceViewSchema, remoteLoginPasswordQuestionSchema]),
+    response: z.union([
+      deviceViewSchema,
+      remoteLoginPasswordQuestionSchema,
+      remoteLoginRefusedAnswerSchema,
+    ]),
   },
   // A computer that runs work out of reach is removed when it is back, or
   // now, as the captain chose; with neither it is refused, so he is asked
@@ -941,8 +952,12 @@ export const invokeContract = {
     effect: "change",
     surface: "core",
     reach: "home",
-    request: z.tuple([z.string().min(1).max(64), remoteLoginAddressSchema]),
-    response: deviceViewSchema,
+    request: z.tuple([
+      z.string().min(1).max(64),
+      remoteLoginAddressSchema,
+      z.strictObject({ answerRefusals: z.literal(true).optional() }).optional(),
+    ]),
+    response: z.union([deviceViewSchema, remoteLoginRefusedAnswerSchema]),
   },
   // Whether Settings -> Devices and Firstmate's device cards are offered
   // here: every build's home answers yes (docs/devices.md). `phone` is
@@ -2903,8 +2918,8 @@ export type FirstmateApi = {
      */
     update: (
       deviceId: string,
-      options?: { password?: string },
-    ) => Promise<DeviceView | RemoteLoginPasswordQuestion>;
+      options?: { password?: string; answerRefusals?: true },
+    ) => Promise<DeviceView | RemoteLoginPasswordQuestion | RemoteLoginRefusedAnswer>;
     /**
      * Takes a device off the list; it is cut off before this answers. A
      * computer that runs work has its unmerged work brought here first; one
@@ -2919,7 +2934,11 @@ export type FirstmateApi = {
      */
     tryAgain: (deviceId?: string) => Promise<{ tried: number }>;
     /** Change address: this Mac reaches a computer it added by its address at another one. */
-    changeAddress: (deviceId: string, address: string) => Promise<DeviceView>;
+    changeAddress: (
+      deviceId: string,
+      address: string,
+      options?: { answerRefusals?: true },
+    ) => Promise<DeviceView | RemoteLoginRefusedAnswer>;
     /** Your devices, whole, after any change. */
     onDevices: (listener: (devices: DeviceView[]) => void) => () => void;
     onResources: (listener: (resources: ComputerResourcesView) => void) => () => void;

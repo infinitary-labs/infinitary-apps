@@ -271,6 +271,23 @@ export const remoteLoginPasswordQuestionSchema = z.strictObject({
 });
 
 /**
+ * A refusal answered as data, for a caller that asks for it (`answerRefusals`):
+ * which refusal it was and the two lines the feed said, so Settings can tell a
+ * refusal that is about reaching a computer from the rest. Without the ask the
+ * request rejects with the same two lines, as it always did.
+ */
+export const remoteLoginRefusedAnswerSchema = z.strictObject({
+  refused: remoteLoginRefusalSchema,
+  lines: z.array(z.string().max(1024)).max(4),
+});
+export type RemoteLoginRefusedAnswer = z.infer<typeof remoteLoginRefusedAnswerSchema>;
+
+/** Whether a refusal says the computer did not answer, so it is stale once it answers again. */
+export function refusalIsAboutReach(refusal: RemoteLoginRefusal): boolean {
+  return refusal === "unreachable" || refusal === "out-of-reach";
+}
+
+/**
  * What Add it answers: the computer once it joined, or, when that user runs
  * work for another Firstmate, the question the captain is asked once before
  * anything is sent there (`leave`), naming the Mac by its own name when it

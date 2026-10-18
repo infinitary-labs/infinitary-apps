@@ -29,6 +29,8 @@ import {
   type RemoteLoginCopy,
   type RemoteLoginLeaveQuestion,
   type RemoteLoginPasswordQuestion,
+  type RemoteLoginRefusedAnswer,
+  refusalIsAboutReach,
   remoteLoginRefusalLines,
   remoteLoginWords,
 } from "@shared/remoteLogin";
@@ -121,6 +123,56 @@ export function joinedNoticeClears(
   const own = signIns.find((entry) => entry.deviceId === panel.deviceId)?.signIns;
   if (!own) return false;
   return own.accounts.length > 0 || (own.forges?.signIns.length ?? 0) > 0;
+}
+
+/** Whether the row says this computer is connected: over its SSH, in reach, or in reach on another version. */
+export function deviceConnected(device: DeviceView): boolean {
+  return device.ssh?.state === "connected" || device.inReach === true || !!device.otherVersion;
+}
+
+/**
+ * A "could not reach" refusal, kept with the computer (and the address it
+ * tried, for Change address) it was about. It is stale once the row says that
+ * computer is connected after the row had said it was not, or when the
+ * computer is gone; every other refusal stays until the captain's next action.
+ */
+export type ReachRefusal = {
+  deviceId: string;
+  line: string;
+  /** The address the refusal tried; the row has to reconnect at it for the line to go. */
+  address?: string;
+  /** The row has said the computer is not connected since the refusal. */
+  seenOut: boolean;
+};
+
+/** What to keep of a refusal: the reach refusal's record, or nothing for any other refusal, which stays until the next action. */
+export function reachRefusalOf(
+  answer: RemoteLoginRefusedAnswer,
+  deviceId: string,
+  device: DeviceView | undefined,
+  address?: string,
+): ReachRefusal | null {
+  if (!refusalIsAboutReach(answer.refused)) return null;
+  const there = address === undefined || device?.remoteLogin === address;
+  return {
+    deviceId,
+    line: answer.lines.join("\n"),
+    ...(address === undefined ? {} : { address }),
+    seenOut: !(device && there && deviceConnected(device)),
+  };
+}
+
+export function reachRefusalAfter(
+  refusal: ReachRefusal,
+  devices: readonly DeviceView[],
+): { clears: boolean; next: ReachRefusal } {
+  const device = devices.find((each) => each.id === refusal.deviceId);
+  if (!device) return { clears: true, next: refusal };
+  const there = refusal.address === undefined || device.remoteLogin === refusal.address;
+  const connected = there && deviceConnected(device);
+  if (connected && refusal.seenOut) return { clears: true, next: refusal };
+  const seenOut = refusal.seenOut || !connected;
+  return { clears: false, next: seenOut === refusal.seenOut ? refusal : { ...refusal, seenOut } };
 }
 
 type PanelStore = {
@@ -510,6 +562,9 @@ function HomeDevicesTab() {
   const [passwording, setPasswording] = useState<RemoteLoginPasswordQuestion | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The "could not reach" refusal in `problem`, with what it was about: that line goes when the computer answers again. */
+  const [problemAbout, setProblemAbout] = useState<ReachRefusal | null>(null);
+  const devicesNow = useRef<DeviceView[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const { panel, show, clear } = usePanel();
   // The joined note says "no sign-ins yet" until that Mac has one, even if the
@@ -520,6 +575,26 @@ function HomeDevicesTab() {
   const { adding, updating, moving } = useSetups();
   const arrival = useShellStore((s) => s.pendingDeviceArrival);
   const phone = useShellStore((s) => s.phoneShown);
+
+  devicesNow.current = devices;
+  useEffect(() => {
+    if (!problemAbout) return;
+    const { clears, next } = reachRefusalAfter(problemAbout, devices);
+    if (clears) {
+      setProblem((line) => (line === problemAbout.line ? null : line));
+      setProblemAbout(null);
+    } else if (next !== problemAbout) setProblemAbout(next);
+  }, [problemAbout, devices]);
+
+  /** A refusal of an update or an address change, answered as data so a reach refusal is told from the rest. */
+  const refused = useCallback(
+    (deviceId: string, answer: RemoteLoginRefusedAnswer, address?: string) => {
+      setProblem(answer.lines.join("\n"));
+      const device = devicesNow.current.find((each) => each.id === deviceId);
+      setProblemAbout(reachRefusalOf(answer, deviceId, device, address));
+    },
+    [],
+  );
 
   const refresh = useCallback(() => {
     void window.infinitary.devices.list().then(setDevices, () => undefined);
@@ -695,27 +770,34 @@ function HomeDevicesTab() {
     }
   }, []);
 
-  const update = useCallback(async (deviceId: string, password?: string) => {
-    setProblem(null);
-    setPasswording(null);
-    const setups = useSetups.getState();
-    if (setups.updating.includes(deviceId)) return;
-    setups.updateFrom(deviceId);
-    try {
-      const answer = await window.infinitary.devices.update(
-        deviceId,
-        password ? { password } : undefined,
-      );
-      if ("asks" in answer && answer.asks === "password") {
-        setPasswording(answer);
-        return;
+  const update = useCallback(
+    async (deviceId: string, password?: string) => {
+      setProblem(null);
+      setPasswording(null);
+      const setups = useSetups.getState();
+      if (setups.updating.includes(deviceId)) return;
+      setups.updateFrom(deviceId);
+      try {
+        const answer = await window.infinitary.devices.update(deviceId, {
+          ...(password ? { password } : {}),
+          answerRefusals: true,
+        });
+        if ("refused" in answer) {
+          refused(deviceId, answer);
+          return;
+        }
+        if ("asks" in answer && answer.asks === "password") {
+          setPasswording(answer);
+          return;
+        }
+      } catch (caught) {
+        setProblem(caught instanceof Error ? caught.message : "Could not update Infinitary there.");
+      } finally {
+        useSetups.getState().updateDone(deviceId);
       }
-    } catch (caught) {
-      setProblem(caught instanceof Error ? caught.message : "Could not update Infinitary there.");
-    } finally {
-      useSetups.getState().updateDone(deviceId);
-    }
-  }, []);
+    },
+    [refused],
+  );
 
   // Try again: this Mac's own SSH connection to it, tried once now.
   const tryAgain = useCallback(async (deviceId: string) => {
@@ -728,24 +810,30 @@ function HomeDevicesTab() {
   }, []);
 
   // Change address: its row says where this Mac looks; a refusal is said here too.
-  const changeAddress = useCallback(async (deviceId: string, address: string) => {
-    setProblem(null);
-    setChanging(null);
-    const setups = useSetups.getState();
-    if (setups.moving.some((each) => each.deviceId === deviceId)) return;
-    setups.moveFrom({ deviceId, address });
-    try {
-      await window.infinitary.devices.changeAddress(deviceId, address);
-    } catch (caught) {
-      setProblem(
-        caught instanceof Error
-          ? caught.message
-          : `Could not change where this ${COMPUTER.one} is reached.`,
-      );
-    } finally {
-      useSetups.getState().moveDone(deviceId);
-    }
-  }, []);
+  const changeAddress = useCallback(
+    async (deviceId: string, address: string) => {
+      setProblem(null);
+      setChanging(null);
+      const setups = useSetups.getState();
+      if (setups.moving.some((each) => each.deviceId === deviceId)) return;
+      setups.moveFrom({ deviceId, address });
+      try {
+        const answer = await window.infinitary.devices.changeAddress(deviceId, address, {
+          answerRefusals: true,
+        });
+        if ("refused" in answer) refused(deviceId, answer, address);
+      } catch (caught) {
+        setProblem(
+          caught instanceof Error
+            ? caught.message
+            : `Could not change where this ${COMPUTER.one} is reached.`,
+        );
+      } finally {
+        useSetups.getState().moveDone(deviceId);
+      }
+    },
+    [refused],
+  );
 
   const keep = useCallback(
     async (deviceId: string) => {

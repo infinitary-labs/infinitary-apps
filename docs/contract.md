@@ -118,6 +118,10 @@ Only this Mac's own window asks that request, and a client on an older minor ign
 Protocol 8.13 adds `inf:work:prepare-change` and optional saved-story revisions on change publication and completion cards (`docs/forge.md`, "Saved change stories").
 A home and work computer use these only when the other speaks 8.13 or later (`CHANGE_PRESENTATIONS_SINCE`); an 8.12 computer has the phone-button flag, not saved change stories.
 
+Protocol 8.14 adds the optional `answerRefusals` to `inf:devices:update` and `inf:devices:change-address`: a caller that sets it gets a refusal over Remote Login back as `{ refused, lines }`, the refusal's kind and its two lines, instead of a rejection that carries only the words.
+Settings -> Devices uses it to tell a "could not reach" refusal, which goes once that computer's row says connected again, from every other refusal (`docs/devices.md`, "Updating").
+A caller that does not set it, such as a client on an older minor, is rejected as before.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

@@ -39,10 +39,12 @@ import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { Layout } from "@shared/preferences";
 import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
+import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import type { RepoPolicyPatch, RepoSetupResult } from "@shared/repos";
 import { type RepoView, repoConfiguredEvent, repoRemovalRefusal } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import { type AppPanelGates, RAIL_MOUNT_CAP } from "@shared/surfaces";
+import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
@@ -86,6 +88,24 @@ export const SETTLE_MS = 10_000;
  * the target's state before and after the step.
  */
 type SettingStep = { target: string; from: unknown; to: unknown };
+
+/**
+ * A request that asked for its refusals as data (`answerRefusals`) gets the
+ * refusal and its two lines back instead of a rejection that carries only
+ * words; any other failure, and any caller that did not ask, rejects as before.
+ */
+async function refusalAsAnswer<T>(
+  asked: true | undefined,
+  run: () => Promise<T>,
+): Promise<T | RemoteLoginRefusedAnswer> {
+  try {
+    return await run();
+  } catch (caught) {
+    if (asked && caught instanceof RemoteLoginRefusedError)
+      return { refused: caught.refusal, lines: [...caught.lines] };
+    throw caught;
+  }
+}
 
 /**
  * The gates open now, for the app panels that wait on one: Knowledge's while
@@ -315,8 +335,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:devices:try-again": (deviceId) => ({
       tried: services.sshConnections.tryAgain(deviceId),
     }),
-    "inf:devices:change-address": (deviceId, address) =>
-      services.remoteLogin.changeAddress(deviceId, address),
+    "inf:devices:change-address": (deviceId, address, options) =>
+      refusalAsAnswer(options?.answerRefusals, () =>
+        services.remoteLogin.changeAddress(deviceId, address),
+      ),
     // Every build offers them on the Mac where Firstmate lives, + A phone
     // included (docs/devices.md, "Settings -> Devices").
     "inf:devices:shown": () => ({ shown: true, phone: true }),
@@ -328,7 +350,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // captain's own SSH (docs/devices.md, "Adding a computer by its address").
     // Another Firstmate's Mac is asked about once; `leave` is the captain's yes.
     "inf:devices:add": (address, options) => services.remoteLogin.addOrAsk(address, options),
-    "inf:devices:update": (deviceId, options) => services.computers.update(deviceId, options),
+    "inf:devices:update": (deviceId, options) =>
+      refusalAsAnswer(options?.answerRefusals, () => services.computers.update(deviceId, options)),
     // Macs nearby while "By its address" is open (docs/devices.md, "Macs nearby").
     "inf:devices:nearby": (watching) => services.nearbyMacs.ask(watching),
     // Devices reads where devices find this computer: a Linux home looks at

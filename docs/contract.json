@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "8.13.0",
+  "protocolVersion": "8.14.0",
   "versionRule": {
     "majorsBehind": 1,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -2845,6 +2845,10 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 1024
+              },
+              "answerRefusals": {
+                "type": "boolean",
+                "const": true
               }
             },
             "additionalProperties": false
@@ -3068,6 +3072,58 @@
             "required": [
               "asks",
               "address"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "refused": {
+                "type": "string",
+                "enum": [
+                  "key-locked",
+                  "agent-declined",
+                  "agent-not-running",
+                  "key-refused",
+                  "password-off",
+                  "password-wrong",
+                  "key-not-taken",
+                  "remote-login-off",
+                  "unreachable",
+                  "host-unknown",
+                  "host-changed",
+                  "other-system",
+                  "needs-tools",
+                  "sandbox-off",
+                  "cannot-install",
+                  "no-build",
+                  "build-unverified",
+                  "already-joined",
+                  "still-answers",
+                  "in-reach",
+                  "same-user",
+                  "cannot-send",
+                  "not-set-up",
+                  "busy",
+                  "forwarding-refused",
+                  "another-computer",
+                  "failed",
+                  "out-of-reach",
+                  "not-updatable",
+                  "current"
+                ]
+              },
+              "lines": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                }
+              }
+            },
+            "required": [
+              "refused",
+              "lines"
             ]
           }
         ]
@@ -3508,185 +3564,251 @@
             "minLength": 1,
             "maxLength": 255,
             "pattern": "^(?:[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}@)?[A-Za-z0-9_[][A-Za-z0-9_.:%[\\]-]{0,190}$"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "answerRefusals": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "additionalProperties": false
           }
         ],
         "minItems": 2,
         "items": false
       },
       "response": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "mac",
-              "work",
-              "view"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[^\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]+$"
-          },
-          "pairedAt": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "user": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
-          },
-          "onThisMac": {
-            "type": "boolean"
-          },
-          "remoteLogin": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          },
-          "system": {
-            "type": "string",
-            "enum": [
-              "macos",
-              "linux",
-              "windows",
-              "ios"
-            ]
-          },
-          "chip": {
-            "type": "string",
-            "enum": [
-              "arm64",
-              "x64"
-            ]
-          },
-          "inReach": {
-            "type": "boolean"
-          },
-          "otherVersion": {
+        "anyOf": [
+          {
             "type": "object",
             "properties": {
-              "app": {
+              "id": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 64
               },
-              "than": {
+              "kind": {
                 "type": "string",
                 "enum": [
-                  "older",
-                  "newer"
+                  "mac",
+                  "work",
+                  "view"
                 ]
               },
-              "takesWork": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[^\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]+$"
+              },
+              "pairedAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "user": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
+              },
+              "onThisMac": {
                 "type": "boolean"
               },
-              "updateBy": {
+              "remoteLogin": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "system": {
                 "type": "string",
                 "enum": [
-                  "remote-login",
-                  "connection",
-                  "command"
+                  "macos",
+                  "linux",
+                  "windows",
+                  "ios"
+                ]
+              },
+              "chip": {
+                "type": "string",
+                "enum": [
+                  "arm64",
+                  "x64"
+                ]
+              },
+              "inReach": {
+                "type": "boolean"
+              },
+              "otherVersion": {
+                "type": "object",
+                "properties": {
+                  "app": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "than": {
+                    "type": "string",
+                    "enum": [
+                      "older",
+                      "newer"
+                    ]
+                  },
+                  "takesWork": {
+                    "type": "boolean"
+                  },
+                  "updateBy": {
+                    "type": "string",
+                    "enum": [
+                      "remote-login",
+                      "connection",
+                      "command"
+                    ]
+                  }
+                },
+                "required": [
+                  "takesWork",
+                  "updateBy"
+                ]
+              },
+              "seenAt": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "controlling": {
+                "type": "boolean"
+              },
+              "restartedSince": {
+                "type": "boolean"
+              },
+              "addressChanged": {
+                "type": "boolean"
+              },
+              "heldOnLocalNetwork": {
+                "type": "boolean"
+              },
+              "reachedOn": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "private"
+                ]
+              },
+              "tasks": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "runs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "ssh": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "connected",
+                      "connecting",
+                      "reconnecting",
+                      "at-login",
+                      "not-started",
+                      "stopped"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "host-unknown",
+                      "host-changed",
+                      "key-refused",
+                      "key-locked",
+                      "agent-declined",
+                      "agent-not-running",
+                      "forwarding-refused",
+                      "not-set-up",
+                      "other-home"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              "removal": {
+                "type": "string",
+                "enum": [
+                  "when-back",
+                  "bringing-work",
+                  "cleaning-up"
                 ]
               }
             },
             "required": [
-              "takesWork",
-              "updateBy"
+              "id",
+              "kind",
+              "name",
+              "pairedAt"
             ]
           },
-          "seenAt": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "controlling": {
-            "type": "boolean"
-          },
-          "restartedSince": {
-            "type": "boolean"
-          },
-          "addressChanged": {
-            "type": "boolean"
-          },
-          "heldOnLocalNetwork": {
-            "type": "boolean"
-          },
-          "reachedOn": {
-            "type": "string",
-            "enum": [
-              "local",
-              "private"
-            ]
-          },
-          "tasks": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "runs": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "ssh": {
+          {
             "type": "object",
             "properties": {
-              "state": {
+              "refused": {
                 "type": "string",
                 "enum": [
-                  "connected",
-                  "connecting",
-                  "reconnecting",
-                  "at-login",
-                  "not-started",
-                  "stopped"
-                ]
-              },
-              "reason": {
-                "type": "string",
-                "enum": [
-                  "host-unknown",
-                  "host-changed",
-                  "key-refused",
                   "key-locked",
                   "agent-declined",
                   "agent-not-running",
-                  "forwarding-refused",
+                  "key-refused",
+                  "password-off",
+                  "password-wrong",
+                  "key-not-taken",
+                  "remote-login-off",
+                  "unreachable",
+                  "host-unknown",
+                  "host-changed",
+                  "other-system",
+                  "needs-tools",
+                  "sandbox-off",
+                  "cannot-install",
+                  "no-build",
+                  "build-unverified",
+                  "already-joined",
+                  "still-answers",
+                  "in-reach",
+                  "same-user",
+                  "cannot-send",
                   "not-set-up",
-                  "other-home"
+                  "busy",
+                  "forwarding-refused",
+                  "another-computer",
+                  "failed",
+                  "out-of-reach",
+                  "not-updatable",
+                  "current"
                 ]
+              },
+              "lines": {
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                }
               }
             },
             "required": [
-              "state"
-            ]
-          },
-          "removal": {
-            "type": "string",
-            "enum": [
-              "when-back",
-              "bringing-work",
-              "cleaning-up"
+              "refused",
+              "lines"
             ]
           }
-        },
-        "required": [
-          "id",
-          "kind",
-          "name",
-          "pairedAt"
         ]
       }
     },

@@ -162,8 +162,9 @@ export class RemoteLoginRefusedError extends Error {
   constructor(
     readonly refusal: RemoteLoginRefusal,
     readonly lines: readonly [string, string],
+    message: string = lines.join("\n"),
   ) {
-    super(lines.join("\n"));
+    super(message);
     this.name = "RemoteLoginRefusedError";
   }
 }

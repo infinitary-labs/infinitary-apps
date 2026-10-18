@@ -89,6 +89,12 @@ export type SshServer = {
    * (`quit-left`). It runs until told.
    */
   agentRuns: (state: "open" | "quit" | "quit-left") => Promise<void>;
+  /**
+   * The network drops: this server and every session it holds stop answering,
+   * with nothing refused on the wire, as when Wi-Fi goes away. `thaw` brings it back.
+   */
+  freeze: () => void;
+  thaw: () => void;
   stop: () => Promise<void>;
 };
 
@@ -108,6 +114,14 @@ function stopAgent(pid: number, signal: NodeJS.Signals = "SIGTERM"): void {
   }
 }
 
+function signalIfAlive(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(pid, signal);
+  } catch {
+    // Already gone.
+  }
+}
+
 function running(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -115,6 +129,21 @@ function running(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+/** A process and everything under it. */
+function processTree(pid: number): number[] {
+  let kids: number[] = [];
+  try {
+    kids = execFileSync("/usr/bin/pgrep", ["-P", String(pid)], { encoding: "utf8" })
+      .trim()
+      .split("\n")
+      .map(Number)
+      .filter((each) => each > 0);
+  } catch {
+    // pgrep exits 1 when nothing is under it.
+  }
+  return [pid, ...kids.flatMap(processTree)];
 }
 
 function keygen(path: string, passphrase = ""): string {
@@ -224,6 +253,7 @@ export async function startSshServer(
     stdio: ["ignore", "ignore", "pipe"],
   });
   servers.add(server);
+  let frozen: number[] = [];
   await new Promise<void>((resolve, reject) => {
     let said = "";
     const timer = setTimeout(() => reject(new Error(`sshd did not start: ${said}`)), 10_000);
@@ -407,7 +437,17 @@ export async function startSshServer(
         : [],
     agentAnswers: (said) => writeFileSync(answer, `${said}\n`),
     agentRuns,
+    freeze: () => {
+      frozen = server.pid === undefined ? [] : processTree(server.pid);
+      for (const pid of frozen) signalIfAlive(pid, "SIGSTOP");
+    },
+    thaw: () => {
+      for (const pid of frozen) signalIfAlive(pid, "SIGCONT");
+      frozen = [];
+    },
     stop: async () => {
+      for (const pid of frozen) signalIfAlive(pid, "SIGCONT");
+      frozen = [];
       if (agent) stopAgent(agent.pid);
       servers.delete(server);
       if (server.exitCode !== null) return;

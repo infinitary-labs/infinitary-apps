@@ -30,6 +30,7 @@ import { TaskService } from "../tasks/taskService";
 import { compareSemver } from "../update/semver";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { DevicePairing } from "./pairing";
+import { RemoteLoginRefusedError } from "./remoteLogin";
 
 /**
  * Your devices as Settings -> Devices lists them, and Remove for a computer
@@ -352,7 +353,7 @@ export class Computers {
         doing: "update",
       });
       for (const line of lines) say("refused", line, "warn");
-      throw new Error(lines.join(" "));
+      throw new RemoteLoginRefusedError(refusal, lines, lines.join(" "));
     };
     if (this.updating.has(device.id)) throw new Error(`${label} is being updated already.`);
     const version = work.version(device.id);

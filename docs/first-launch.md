@@ -12,8 +12,12 @@ See `docs/saved-data-compatibility.md` for the guard.
 
 ## What a fresh install shows
 
-The null state is unchanged - the character greets, the pill sits below - except for one caption under the character while **no model can answer the first mate**: "Set up your first mate on this computer", then "Your first mate lives on one computer.
-Its tasks and conversation stay here."
+The null state is unchanged - the character greets, the pill sits below - except for one caption under the character while **no model can answer the first mate**: "Welcome aboard Infinitary, Captain", then the first mate's own line.
+That line reads "I'm your first mate.
+I'll help you manage the rest of the crew.
+Set me up on a computer that stays on as much as possible.
+Your other devices need me awake."
+A subscription that is connected and still cannot answer keeps the older heading, "Set up your first mate on this computer", and its remaining-need line.
 The same provider chip row the Intelligence tab has sits below, in catalog order, one group.
 Sign-in happens right there: a chip runs the provider's own flow (Pi's select, a browser bounce or a device code, a pasted key) through the same aside the tab renders, anchored under the row.
 The input is disabled meanwhile, dimmed, with its own line ("connect a subscription first"), and hold-to-talk is ignored in the same state.
@@ -43,8 +47,9 @@ The renderer reads it over `inf:app:first-run` (a core channel on the frozen `ap
 ## Joining the first mate on another Mac
 
 Under the provider chips a second group, a hairline apart, offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` and "+ Paste its link", which joins the first mate on a Mac the person already has instead (`docs/view.md`).
-Above the subscription chips, "Pick a computer that stays on.
-Other computers need it awake." helps the person choose before signing in.
+Above the subscription chips, the first mate's line asks to be set up on a computer that stays on, and says other devices need the first mate awake.
+When a connected subscription still cannot answer, that place keeps "Pick a computer that stays on.
+Other computers need it awake."
 These explanations stay visible in a short window, where the band scrolls.
 After this app stops controlling that Mac it returns here, and one line under the chip says which Mac it left, or that the Mac removed it.
 The gate itself stays derived; the line only says what happened.
@@ -65,7 +70,7 @@ The captain selected **compact orientation** and **skip a late, uncreated welcom
 The captain's redesign of 2026-10-06 (FI3-1164, direction C, the interactive presentation) replaced its copy and drawing, after a new person found the old tiles looked pressable and the next step unclear.
 This one introductory note is explicitly allowed to suggest a starter without footer actions; other cards retain the normal action rule.
 
-The note is titled “Welcome aboard”, and everything in it is app copy in `src/shared/welcome.ts`, never a model's.
+The note is titled “How we work”, and everything in it is app copy in `src/shared/welcome.ts`, never a model's.
 Its body is a picture of the window, 520 by 190 units drawn at its pixel width, that shows one part per press, each with its words inside the picture beside the thing it names; no sentence sits above or below the picture.
 
 1. At rest: the first mate, drawn the way the real character draws itself - the tesseract projected the same way, wires shaded from the far cell to the near one, a faint glow, and its two soft-light eyes, a little larger and closer than the real ones, each with a highlight - large in the middle over the lit message box, and under the box “Type what you want done in the message box under this card.”

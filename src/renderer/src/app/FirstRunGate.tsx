@@ -1,5 +1,4 @@
 import type { AccountView } from "@shared/accounts";
-import { COMPUTER, HERE } from "@shared/deviceNames";
 import type { FreshCheck } from "@shared/firstRun";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { useCallback, useEffect, useState } from "react";
@@ -24,7 +23,12 @@ import {
   freshCheckLine,
   freshCheckThere,
   freshCheckTitle,
+  GATE_HOME_TITLE,
+  GATE_STILL_NEEDS,
   GATE_TITLE,
+  gateIntro,
+  gateRecoveryTitle,
+  gateStaysOn,
 } from "./firstRunGateWords";
 import { useShellStore } from "./store";
 import "./firstRunGate.css";
@@ -207,7 +211,9 @@ export function FirstRunGate() {
             ? freshCheckTitle(fresh.label)
             : view
               ? GATE_TITLE
-              : `Set up your first mate on ${HERE.this}`}
+              : accounts.length > 0
+                ? gateRecoveryTitle()
+                : GATE_HOME_TITLE}
         </p>
         {!connecting && view && (
           <p className="fm-gate-sub">
@@ -239,11 +245,15 @@ export function FirstRunGate() {
         )}
         {!connecting && !joining && !view && !fresh && (
           <p className="fm-gate-sub" data-mac-choice="">
-            {accounts.length > 0
-              ? "Your first mate still needs a subscription that answers - Codex, Grok, Claude, or OpenRouter with an API key."
-              : `Your first mate lives on one ${COMPUTER.one}. Its tasks and conversation stay here.`}
-            <br />
-            Pick a {COMPUTER.one} that stays on. Other {COMPUTER.many} need it awake.
+            {accounts.length > 0 ? (
+              <>
+                {GATE_STILL_NEEDS}
+                <br />
+                {gateStaysOn()}
+              </>
+            ) : (
+              gateIntro()
+            )}
           </p>
         )}
         {!connecting && !joining && !view && (

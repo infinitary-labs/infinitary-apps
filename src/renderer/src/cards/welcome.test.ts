@@ -40,7 +40,8 @@ describe("approved welcome document", () => {
     "pins its title, words, labels and starters in %s",
     (theme) => {
       const document = welcome(theme, { script: true });
-      expect(WELCOME_TITLE).toBe("Welcome to Infinitary, captain. I'm your first mate.");
+      // Captain, INF-417: the first screen already welcomes, so this card is titled How we work.
+      expect(WELCOME_TITLE).toBe("How we work");
       expect(WELCOME_WORDS).toEqual({
         box: "Type what you want done in the message box under this card.",
         card: "I bring back answers and choices as cards like this one.",

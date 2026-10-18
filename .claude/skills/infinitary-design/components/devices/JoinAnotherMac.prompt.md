@@ -9,11 +9,11 @@ The link comes from that computer's Settings → Devices (`DevicesTab.prompt.md`
 ```
 **The chip.**
 On the first-launch stage, under the provider chips (`components/core/ConnectChips`), a second group follows a `--line-1` hairline apart: the micro label `YOUR FIRST MATE IS ON ANOTHER COMPUTER` and one chip in the provider chips' shape, "+ Paste its link".
-It is not a provider: it never appears on the Intelligence tab's foot, and the existing subscription chips above it remain under "Set up your first mate on this computer".
-The caption explains "Your first mate lives on one computer.
-Its tasks and conversation stay here."
-Above the subscription chips, "Pick a computer that stays on.
-Other computers need it awake." helps the pick.
+It is not a provider: it never appears on the Intelligence tab's foot, and the existing subscription chips above it remain under "Welcome aboard Infinitary, Captain".
+The caption is the first mate: "I'm your first mate.
+I'll help you manage the rest of the crew.
+Please set me up on a computer that stays on as much as possible.
+Your other computers need me awake."
 The words stay visible in short windows, within the stage's scrolling band.
 
 **Paste.**

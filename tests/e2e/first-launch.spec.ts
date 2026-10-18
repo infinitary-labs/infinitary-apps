@@ -4,6 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { WELCOME_STARTERS, WELCOME_TITLE, WELCOME_WORDS } from "@shared/welcome";
+import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunGateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { claudeSeatRequests, NO_CLAUDE_LOGIN_USER, otherSeatRequests } from "./claudeSeat";
 import { DICTATION_KEY, firstRunHintOnThisComputer, hintOnThisComputer } from "./dictation";
@@ -92,6 +93,11 @@ test.afterEach(async () => {
 
 test("first-launch cards stay reachable with collapsed, expanded or one-sided panels", async () => {
   const { app, page } = launched;
+  const gate = page.locator("[data-first-run-gate]");
+  await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
+  // Captain, INF-417: the first screen's heading and the first mate's introduction.
+  await expect(gate.locator("[data-gate-title]")).toHaveText(GATE_HOME_TITLE);
+  await expect(gate.locator("[data-mac-choice]")).toHaveText(gateIntro());
   await connectThroughGate(page);
   await expect(shownCard(page, WELCOME_TITLE)).toBeVisible();
   const layer = page.locator("[data-card-layer]");

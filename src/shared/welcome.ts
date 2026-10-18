@@ -6,7 +6,8 @@ import { COMPUTER } from "./deviceNames";
  * thing it names, then three starters that put the start of an ask in the
  * message box. App copy, never a model's.
  */
-export const WELCOME_TITLE = "Welcome to Infinitary, captain. I'm your first mate.";
+/** Captain, INF-417: the previous screen already says welcome, so this card does not. */
+export const WELCOME_TITLE = "How we work";
 
 /** Each chapter's words, beside the part of the picture they name. */
 export const WELCOME_WORDS = {

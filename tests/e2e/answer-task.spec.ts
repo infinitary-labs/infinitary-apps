@@ -304,6 +304,7 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
     await heroShot(page, {
       region: shownEntry(page),
       name: "answer-card-stays",
+      dir: test.info().outputPath("hero"),
     });
   } finally {
     await own.close();

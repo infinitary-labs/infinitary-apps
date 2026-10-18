@@ -3,6 +3,7 @@ import { quotaEntryForPiProvider } from "../quota/auth";
 import { effectiveFromProvider } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
 import { type AccountCandidate, selectAccount } from "./accountPolicy";
+import type { PlacedWorkScores } from "./placedWork";
 
 /**
  * Binds the pure account-selection policy to live inputs (the vault's
@@ -36,6 +37,7 @@ export type AccountPool = {
 
 export type AccountSelectorOptions = {
   pool: AccountPool;
+  placedWork?: PlacedWorkScores;
   quota: { latest(): QuotaSnapshotView | undefined };
   /** The Firstmate flagship account to protect, when one is pinned. */
   flagshipAccountId: () => string | null;
@@ -132,6 +134,7 @@ export class AccountSelector {
         (provider) => provider.accountId === account.id && provider.provider === quotaId,
       );
       const effective = effectiveFromProvider(row, now);
+      const score = row ? this.options.placedWork?.score(row, now) : undefined;
       const connected = this.options.pool.connectedSync(account.id);
       const withheld = this.options.pool.withheldReason(account.id);
       return {
@@ -147,6 +150,7 @@ export class AccountSelector {
         ...(effective.spendPriority !== undefined
           ? { spendPriority: effective.spendPriority }
           : {}),
+        ...score,
         ...(account.lastSelectedAt !== undefined ? { lastSelectedAt: account.lastSelectedAt } : {}),
       };
     });

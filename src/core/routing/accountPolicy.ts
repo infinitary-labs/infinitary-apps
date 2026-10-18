@@ -1,4 +1,5 @@
 import type { AccountCandidateFact } from "../storage/decisionStore";
+import type { ChargeFact } from "./placedWork";
 
 /**
  * The account-selection policy (broker phase 3): after routing has chosen a
@@ -49,6 +50,7 @@ export type AccountCandidate = {
    * absent means unmeasurable, which is never ranked as zero.
    */
   spendPriority?: number;
+  charge?: ChargeFact;
 };
 
 export type AccountSelectionInput = {
@@ -86,6 +88,7 @@ export function selectAccount(input: AccountSelectionInput): AccountSelectionDec
       ...(typeof candidate.spendPriority === "number"
         ? { spendPriority: candidate.spendPriority }
         : {}),
+      ...(candidate.charge ? { charge: candidate.charge } : {}),
       status: statusOf(candidate, picked, input),
     })),
   };

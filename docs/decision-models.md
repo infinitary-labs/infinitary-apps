@@ -245,3 +245,10 @@ The kind-of-work question remains the only consumer.
 `INFINITARY_OPENROUTER_DECISIONS_BASE_URL` redirects only this classifier's request address inside Pi's request callback in unpackaged dev/e2e runs; packaged builds ignore it.
 Hermetic tests use a stand-in System One server and fake account credentials, never a real OpenRouter login.
 Live paid-model accuracy and optional-confidence compatibility remain unscored.
+
+### Learned charge facts
+
+INF-443 piece 3 adds an optional `charge` to routing and account candidate facts: the sign-in, source computer (`home` for this computer), measurement time, uncharged spend priority and each window's raw percentage, reset, learned points per dollar and outstanding charge in points.
+The candidate's `spendPriority` is the charged ranking score, while its `percentRemaining` stays the meter's value.
+Routing facts also retain `accountId` for the chosen model's score, including a pin, so a committed task can count before its session attaches to an account.
+No new surface displays these facts; investigators read `decisions.facts_json` directly.

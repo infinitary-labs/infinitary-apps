@@ -170,3 +170,29 @@ A computer id breaks an exact tie deterministically, independently of input orde
 The result includes the candidate readings and their ages, capacity, reserved demand, remaining room, missing tools, model preview and typed rejection reasons.
 Automatic placement saves at most 64 candidate explanations, including the chosen computer, in one task-owned commitment snapshot.
 That snapshot is historical, never a fresh observation after restart; `docs/helper.md`, "Automatic starts", owns the commitment and recovery rules.
+
+## Placed work in the ranking
+
+`PlacedWorkScores` (`src/core/routing/placedWork.ts`, INF-443 piece 3) adjusts the spend-priority score for work already placed, without changing the allowance reading.
+The router uses it for the home and each computer's pool, and account selection uses it too.
+The settings meters, 0% eligibility check, flagship reserve, pins, requested tier and reset waits still read the unadjusted meter.
+An unpriced allowance takes no charge, as the captain selected in question 7; there is no one-task restriction or shipped starting price.
+
+Task size is the average of at least five finished tasks from the last fourteen days: the same model and served level first, then that model at any level, then that provider.
+A task already beyond that average uses the average of finished tasks costing at least as much as its logged usage, or its own logged spend when it exceeds every sample.
+Missing costs do not become zero-cost samples.
+Each allowance window learns points per listed-price dollar from its cycle's drop and the same sign-in's usage between those readings, once the pooled drop reaches three points.
+Grok and Codex sign-ins pool by provider, while Claude pools by provider-reported login, falling back to the individual sign-in when it names no login.
+Drops and usage are summed across those sign-ins, including the first mate's calls in usage; this deliberately counts shared Grok/Codex meters twice when two sign-ins report the same drop, as accepted in question 6.
+Each window has its own price, and a model-specific window counts only matching model usage.
+A reset or top-up begins a new observation interval; the last learned price remains available across resets and restarts.
+Duplicate, older, stale and failed readings do not advance learning.
+Only learned prices persist; local and other computers' observation intervals stay in memory.
+
+A charge is the expected task cost minus its usage logged through the reading's measurement time, converted to points by that window's price.
+It includes open tasks with a committed routing choice, including an Automatic placement still preparing, and closed tasks until the first reading strictly after closure.
+The newest route's saved account identity attributes pre-attachment work to the login behind that score; an attached task's recorded account takes precedence.
+Older decisions without that identity fall back to the first observed sign-in for that provider on the task's computer.
+The first mate's own calls are not placed-task charges.
+The router recomputes spend priority over charged windows, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
+Automatic placement commits its chosen route in the existing transaction, so the next start sees that choice without an additional allowance reservation.

@@ -206,6 +206,7 @@ export function computerPool(
   return {
     available: offered.map((model) => ({ provider: model.provider, id: model.id })),
     catalog,
+    readings: quota?.providers,
     accounts,
     note: `${who}'s own sign-ins (${providers.length > 0 ? providers.join(", ") : "none"}): ${count}`,
     unowned: extra

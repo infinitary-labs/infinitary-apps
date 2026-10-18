@@ -80,6 +80,18 @@ export type LaunchRecord = z.infer<typeof launchRecordSchema>;
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
+  /** Learned points per listed-price dollar, keyed by login pool and window (INF-443). */
+  getAllowancePrices(): Record<string, number> {
+    const parsed = z
+      .record(z.string(), z.number().positive().finite())
+      .safeParse(this.get("allowance-prices"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setAllowancePrices(prices: Record<string, number>): void {
+    this.set("allowance-prices", prices);
+  }
+
   constructor(
     private readonly db: AppDatabase,
     /**

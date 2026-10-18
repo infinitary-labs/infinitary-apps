@@ -184,6 +184,7 @@ import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
 import { modelAddedNote, modelGoneNote } from "./routing/modelNews";
 import { modelReasonOf } from "./routing/modelReason";
 import { ModelSlots } from "./routing/modelSlots";
+import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { Router, servedSlots } from "./routing/router";
 import { resolveSelfSourceDir } from "./selfSource/resolve";
@@ -1021,6 +1022,7 @@ export async function createServices(
   let reconcileFirstRun: () => void = () => {};
   let onCardsChanged: () => void = () => {};
   let onCaptainTurnAccepted: () => void = () => {};
+  const placedWork = new PlacedWorkScores(db, settings);
   const quota = new QuotaService({
     refresh: quotaRefresh,
     db,
@@ -1033,11 +1035,14 @@ export async function createServices(
             buildModelsCatalog(quotaCatalogModels(), snapshot.providers, snapshot.generatedAt),
         }),
     broadcast: (snapshot) => {
+      placedWork.observe("home", snapshot);
       onQuotaRefreshed();
       reconcileFirstRun();
       emit("inf:quota", snapshot);
     },
   });
+  const savedQuota = quota.latest();
+  if (savedQuota) placedWork.observe("home", savedQuota);
   // The routing pool: account-served models plus base-runtime custom
   // providers (models.json). Provider credentials live only in the vault.
   const availableModels = () => {
@@ -1164,6 +1169,7 @@ export async function createServices(
     availableModels().filter((model) => model.provider !== "anthropic");
   const router = new Router({
     quota,
+    placedWork,
     settings,
     decisions: ledger,
     availableModels,
@@ -1173,6 +1179,7 @@ export async function createServices(
   });
   const accounts = new AccountSelector({
     pool: vault,
+    placedWork,
     quota,
     flagshipAccountId: () => settings.getFirstmateAccount(),
     decisions: ledger,
@@ -2535,6 +2542,8 @@ export async function createServices(
   // setup card reads them too, and a task waiting for a sign-in there
   // starts now rather than at the next tick.
   onDeviceSignIns = (deviceId) => {
+    const reading = deviceSignIns.lastSaid(deviceId)?.quota;
+    if (reading) placedWork.observe(deviceId, reading);
     scheduleWorkPresentation();
     supervisor.reconcileCutOffs();
     deviceSetup?.signInsChanged(deviceId);

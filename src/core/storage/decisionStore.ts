@@ -1,4 +1,5 @@
 import type { WakeFacts } from "../orchestrator/wakes";
+import type { ChargeFact } from "../routing/placedWork";
 import type { AppDatabase } from "./db";
 
 /**
@@ -83,6 +84,7 @@ export type RoutingCandidateFact = {
   spendPriority?: number;
   /** What became of it: picked, eligible (ranked, not picked), or why it was skipped. */
   status: string;
+  charge?: ChargeFact;
 };
 
 /** One candidate of an account selection, with the reading behind it. */
@@ -93,6 +95,7 @@ export type AccountCandidateFact = {
   pace?: string;
   spendPriority?: number;
   status: string;
+  charge?: ChargeFact;
 };
 
 /**
@@ -101,7 +104,7 @@ export type AccountCandidateFact = {
  * (docs/decision-models.md, "Candidate facts").
  */
 export type CandidateFacts =
-  | { kind: "routing-candidates"; candidates: RoutingCandidateFact[] }
+  | { kind: "routing-candidates"; candidates: RoutingCandidateFact[]; accountId?: string }
   | { kind: "account-candidates"; candidates: AccountCandidateFact[] };
 
 export type RoutingDecisionInput = {

@@ -15,6 +15,7 @@ import {
   PROMPT_CONTEXT_HEADROOM_TOKENS,
 } from "./capability";
 import type { ModelSlots } from "./modelSlots";
+import type { PlacedWorkScores, RankedModel } from "./placedWork";
 import { tierFor } from "./policy";
 import {
   fallbackRank,
@@ -59,12 +60,17 @@ export type RoutingPool = {
   catalog: CatalogModelView[];
   /** Whose sign-ins these are, for the record. */
   note: string;
+  readings?: import("@shared/quota").QuotaProviderView[];
+  /** The computer's existing account-binding policy, before session attachment. */
+  modelAccounts?: ReadonlyMap<string, string>;
+  accounts?: ReadonlyMap<string, string>;
   /** Models the quota catalog does not list, admitted only by slot membership. */
   unowned?: PiModelRef[];
 };
 
 /** A read-only evaluation: smaller rank preserves the stronger requested preference. */
 export type RoutePreview = {
+  accountId?: string;
   result: RouteResult;
   reasons: string[];
   preferenceRank: number;
@@ -101,6 +107,7 @@ export class Router {
   constructor(
     private readonly options: {
       quota: QuotaService;
+      placedWork?: PlacedWorkScores;
       settings: SettingsStore;
       /** The decision ledger every routing decision is recorded in. */
       decisions: DecisionStore;
@@ -149,7 +156,7 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates } = evaluation;
+    const { result, reasons, candidates, accountId } = evaluation;
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -158,8 +165,14 @@ export class Router {
       rule: result.rule,
       served: result.choice ? (result.servedBucket ?? result.bucket) : null,
       reasons,
-      ...(candidates && candidates.length > 0
-        ? { facts: { kind: "routing-candidates" as const, candidates } }
+      ...((candidates && candidates.length > 0) || accountId
+        ? {
+            facts: {
+              kind: "routing-candidates" as const,
+              candidates: candidates ?? [],
+              ...(accountId ? { accountId } : {}),
+            },
+          }
         : {}),
     });
     return result;
@@ -173,9 +186,17 @@ export class Router {
   preview(prompt: string, shape: WorkShape, options: RouteOptions = {}): RoutePreview | undefined {
     const settings = this.options.settings.getRoutingSettings();
     if (!settings.dynamicRouting) return undefined;
-    const catalog = options.pool
+    const rawCatalog = options.pool
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
+    const catalog =
+      this.options.placedWork?.catalog(
+        rawCatalog,
+        options.pool
+          ? (options.pool.readings ?? [])
+          : (this.options.quota.latest()?.providers ?? []),
+        Date.now(),
+      ) ?? rawCatalog;
     const available = options.pool?.available ?? this.options.availableModels();
     const routable = this.options.slots?.routable(available);
     const tier = tierFor(shape);
@@ -254,10 +275,22 @@ export class Router {
             fallbackRank(decision.bucket, decision.servedBucket ?? decision.bucket);
     return {
       result,
+      accountId: decision.choice
+        ? (options.pool?.modelAccounts?.get(servedModelKey(decision.choice)) ??
+          options.pool?.accounts?.get(decision.choice.provider) ??
+          (catalog as RankedModel[]).find(
+            (model) => servedModelKey(model) === servedModelKey(decision.choice!),
+          )?.charge?.accountId)
+        : undefined,
       reasons: decision.reasons,
       preferenceRank,
       requiresReasoningWait: requiresReasoningWait(shape, result),
-      candidates: decision.candidates,
+      candidates: decision.candidates.map((candidate) => {
+        const charge = (catalog as RankedModel[]).find(
+          (model) => servedModelKey(model) === `${candidate.provider}/${candidate.model}`,
+        )?.charge;
+        return { ...candidate, ...(charge ? { charge } : {}) };
+      }),
     };
   }
 

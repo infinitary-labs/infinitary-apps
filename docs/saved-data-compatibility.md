@@ -225,3 +225,10 @@ The home keeps what each device said it is in its hello - its system and chip - 
 The list itself keeps its shape, so an older build reads it as before and never reads the new file.
 A `systems.json` this build cannot read is left as it is, and every device reads as a computer until it can.
 The format revision therefore stays at 1.
+
+## Learned allowance prices
+
+INF-443 piece 3 keeps learned points per dollar in the existing settings row `allowance-prices`, keyed by login pool and window.
+Older builds ignore that setting and the additional candidate charge facts in `decisions.facts_json`.
+The optional `usage_events_account_at` index on `(account_id, at)` is installed on opening the current schema, without a migration version or changed table shape.
+The observation intervals themselves are not saved.

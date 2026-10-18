@@ -1767,6 +1767,9 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
     });
     run();
   });
+  // An optional query index adds no saved-data format or migration version.
+  if (through === MIGRATIONS.length)
+    db.exec("CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at)");
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.
   if (through >= VIEWS_VERSION && !viewsCurrent(db)) db.transaction(() => createViews(db))();

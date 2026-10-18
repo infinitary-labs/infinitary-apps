@@ -111,6 +111,9 @@ describe("continuation instructions served at the seven moments", () => {
     expect(FIRSTMATE_PROMPT_CORE).toContain("steer the crewmate to emit its completion decision");
     expect(FIRSTMATE_PROMPT_CORE).toContain("no button on it can");
     expect(FIRSTMATE_PROMPT_CORE).toContain("It starts after origin closes.");
+    expect(FIRSTMATE_PROMPT_CORE).toContain(
+      "A practical wait, such as another's commit or fix, is link_tasks blocks from the work waited on to the waiter that turn, even when not a strict prerequisite, so Tasks draws it.",
+    );
   });
 });
 
@@ -1493,6 +1496,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   expect(hash(CARD_AUTHORING)).toBe(
     "024fc749c97058a0f6190dc1f3333d267b66504c3307ac3410941f7d2b454318",
   );
-  // INF-87 P1/P4: Queued owns later starts; the shared authorization boundary remains.
-  expect(hash(HANDOFF)).toBe("733f2b6184f3e39bda6fdbaf180447d4f99d5e6c7a0f5a6a54e71c7f70f5d3a1");
+  // A practical wait is recorded; the hold line no longer says to chain only real prerequisites.
+  expect(hash(HANDOFF)).toBe("bf8375961440f4a3d2571c939a3c90d7322dca94e85431f96ab756b274e28bd7");
 });

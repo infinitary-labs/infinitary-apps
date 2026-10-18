@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "practical-wait-shows-in-tasks",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Tasks shows a wait that is not a strict prerequisite",
+      "body": "When one task is waiting on another, including on its commit or fix, Tasks draws the line to it. The wait does not have to be a strict prerequisite.",
+      "noPicture": "The line Tasks already draws is unchanged. This change is when that wait is recorded, which does not draw a new screen by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

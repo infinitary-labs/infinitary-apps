@@ -41,6 +41,23 @@ function toolset(overrides: Partial<TaskToolsDelegate> = {}) {
 }
 
 describe("task tools", () => {
+  it("records a practical wait as blocks, and keeps related for work neither task waits on", () => {
+    const link = createTaskTools({
+      plan: () => ({ taskId: "ab12cd34", key: "SCR-3", text: "planned" }),
+      update: () => ({ text: "updated", ok: true }),
+      drop: () => "dropped",
+      withdrawMerge: () => "withdrew",
+      link: () => "linked",
+      query: () => ({ rows: [], total: 0 }),
+      startAgain: async () => "again",
+      startNow: async () => "started",
+    }).find((tool) => tool.name === "link_tasks");
+    expect(link?.description).toContain("related: work neither task is waiting on");
+    expect(link?.description).toContain("cannot merge or close until");
+    expect(link?.description).toContain("a cycle is refused as text");
+    expect(link?.description).not.toContain("use it, not blocks");
+  });
+
   it("start_again returns the replacement and refuses mixed edits before any delegate writes", async () => {
     const { delegate, byName } = toolset();
     const tool = byName.get("update_task");

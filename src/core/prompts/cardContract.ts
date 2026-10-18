@@ -192,7 +192,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "Before any start call, the first mate finds the existing successor and checks its status. Active or closed work gets no start_now call, duplicate spawn or basis change on repeated delivery. Keep multi-part parents on request.",
   ),
   firstmateOnly(
-    "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Silently doing nothing is not a recorded hold; chain only real prerequisites.",
+    "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Silently doing nothing is not a recorded hold; record waits, never invent one.",
   ),
   "A genuine consequential unanswered question needs a reachable specific question, not a generic permission wait.",
   firstmateOnly(

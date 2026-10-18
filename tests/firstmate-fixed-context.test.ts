@@ -107,7 +107,9 @@ function conversation(tokens: number): Parameters<typeof localInputFits>[0]["mes
 // with its example, on create_task's title, and paid for it by saying
 // spawn_crewmate's and update_task's title, and create_task's goal and
 // user_words, once where they already live: 19,736. The budget is untouched.
-const FIXED_CONTEXT_BUDGET = 19_745;
+// A practical wait is a blocked-by link, paid for by a shorter related-link
+// sentence: 19,770. The budget rises to 19,770, inside the 19,772 hard boundary.
+const FIXED_CONTEXT_BUDGET = 19_770;
 
 describe("the Firstmate's fixed context (contract v4.59)", () => {
   it("stays inside its budget by the app's own count", async () => {

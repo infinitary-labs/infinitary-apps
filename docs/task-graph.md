@@ -73,7 +73,11 @@ The parent edge is the only stored review-to-builder join: which review a builde
 A task also does not close while something it waits on is still live work - open or active (`TaskService.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`SettleService.closeGateRefusal`).
-A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewSupervisor.addCrewmateCard`; open children stay a click-time choice because the captain can override them), the `link_tasks` description says a blocks link on started work holds its merge and that `related` is the link for tracking, and a click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
+A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewSupervisor.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
+The `link_tasks` description says a blocks link on started work holds its merge.
+It says `related` is for work neither task is waiting on.
+The first mate records a practical wait as `blocks` that turn, even when it is not a strict prerequisite, so Tasks draws the arrow.
+A click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
 Because a blocks edge gates closing, `flagsOf` reports `blocked` for **active** rows too: the task a `blocks_me` follow-up is filed against is exactly the one a crewmate is holding, and it must say it is held rather than look free until the merge refuses.
 
 A task whose deliverable is an answer closes on a third path (captain F2 A): the captain's choice on its own crewmate's card closes the row `done/answered`, and `merge-pr` and `land` are refused on it outright, because it ships nothing.

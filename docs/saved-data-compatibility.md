@@ -61,7 +61,7 @@ While a move is due, Chromium runs on a throwaway profile, `<folder>.hand-over`,
 
 The move runs in this order, and writes its record, `folder-move.json`, before each step that depends on it:
 
-1. It checks, changing nothing: the older app is not open (Chromium's `SingletonLock` in the older folder names no live process on this computer), its background work does not hold `work/running.lock`, and `assertSavedDataCompatible` reads the older folder.
+1. It checks, changing nothing: the older app is not open (Chromium's `SingletonLock` in the older folder names no live process on this computer, or was written before this computer last started, `predatesBoot`), its background work does not hold `work/running.lock`, and `assertSavedDataCompatible` reads the older folder.
    When the app's own folder holds saved work too, it asks which work to open instead (below).
 2. It takes the move locks beside both folders, so the older app and a second launch both wait.
 3. It counts the older folder and checks the disk has room: the bytes it copies, plus a margin of a twentieth (at least 256 MB), or the margin alone on APFS, where the copy clones its files.

@@ -1,11 +1,11 @@
 import {
   chmodSync,
   closeSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
   rmSync,
-  statSync,
   writeSync,
 } from "node:fs";
 import { uptime } from "node:os";
@@ -54,11 +54,14 @@ function holderIn(path: string): number | null {
  * Whether a lock was written before this computer last started. Its
  * process died with that start, and its number may belong to anything now,
  * including a process of another user that `processAlive` counts as running.
- * The move lock reads it too (`storage/moveLock.ts`).
+ * It reads the lock's own time, never a link's target, so Chromium's
+ * `SingletonLock`, a link to nothing, reads too. The move lock and the move's
+ * check that the older app is open read it too (`storage/moveLock.ts`,
+ * `folderMove/move.ts` `chromiumHolds`).
  */
 export function predatesBoot(path: string): boolean {
   try {
-    return statSync(path).mtimeMs < Date.now() - uptime() * 1000 - 2000;
+    return lstatSync(path).mtimeMs < Date.now() - uptime() * 1000 - 2000;
   } catch {
     return false;
   }

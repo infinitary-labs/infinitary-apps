@@ -4,6 +4,7 @@ import {
   copyFileSync,
   existsSync,
   lstatSync,
+  lutimesSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -13,7 +14,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { hostname } from "node:os";
+import { hostname, uptime } from "node:os";
 import { join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { build } from "vite";
@@ -21,7 +22,7 @@ import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { openDatabase } from "../storage/db";
-import { acquireMoveLock, moveLockHeld, moveLockPathFor } from "../storage/moveLock";
+import { acquireMoveLock, moveLockHeld, moveLockPathFor, processAlive } from "../storage/moveLock";
 import { isProfileRetired } from "../storage/retiredProfile";
 import { recordStartAtLogin } from "../storage/startAtLoginRecord";
 import { seedTask } from "../tasks/seedTask";
@@ -476,6 +477,25 @@ describe("the one-time move of a data folder", () => {
     });
     expect(lstatSync(newer.from).isDirectory()).toBe(true);
     expect(isProfileRetired(newer.from)).toBe(false);
+  });
+
+  /**
+   * INF-295 (found in INF-276): a restart that stops Firstmate 3000's window
+   * without a quit leaves its SingletonLock naming the window's process, and
+   * after the restart that number may belong to any process, another user's
+   * included. Every process a lock written before this computer last started
+   * could name ended with that start, so the window is gone and the move goes on.
+   */
+  it("moves when Firstmate 3000's window lock was left before this computer last started", async () => {
+    const world = olderFolder();
+    const lock = join(world.from, "SingletonLock");
+    const beforeStart = new Date(Date.now() - uptime() * 1000 - 15 * 60 * 1000);
+    // The system's first process: running now, and never Firstmate 3000's window.
+    expect(processAlive(1)).toBe(true);
+    symlinkSync(`${hostname()}-1`, lock);
+    lutimesSync(lock, beforeStart, beforeStart);
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "moved" });
+    expect(isProfileRetired(world.from)).toBe(true);
   });
 });
 

@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { folderHolder } from "../helper/lock";
+import { folderHolder, predatesBoot } from "../helper/lock";
 import { assertSavedDataCompatible } from "../storage/db";
 import {
   acquireMoveLock,
@@ -154,18 +154,24 @@ function lastOpened(dir: string): number | undefined {
   return undefined;
 }
 
-/** Whether Chromium's single-instance lock in `dir` names a live process on this computer. */
+/**
+ * Whether Chromium's single-instance lock in `dir` names a live process on
+ * this computer. A lock written before this computer last started names a
+ * window that ended with that start, whoever has its number now (`predatesBoot`).
+ */
 export function chromiumHolds(
   dir: string,
   hostname: string,
   alive: (pid: number) => boolean,
 ): boolean {
+  const lock = join(dir, "SingletonLock");
   let target: string;
   try {
-    target = readlinkSync(join(dir, "SingletonLock"));
+    target = readlinkSync(lock);
   } catch {
     return false;
   }
+  if (predatesBoot(lock)) return false;
   const match = /^(.*)-(\d+)$/.exec(target);
   return Boolean(match && match[1] === hostname && alive(Number(match[2])));
 }

@@ -859,11 +859,24 @@ describe("a conversation held on a computer that runs work", () => {
       const start = Date.now();
       const advanceToDay = (number: number) =>
         vi.advanceTimersByTimeAsync(Math.max(0, start + number * day - Date.now()));
+      // The home opens again, and the computer reaches it at its next retry,
+      // which only the advance here fires. The clock holds still meanwhile:
+      // left advancing with real time, under load it can fire a retry due just
+      // after the return first, and the advance then fires that attempt's own
+      // dial or welcome timeout instead, a day before the next retry (INF-435).
+      const returnHome = async () => {
+        vi.setTimerTickMode("manual");
+        try {
+          await at.startHome();
+          await vi.advanceTimersToNextTimerAsync();
+          await at.inReach();
+        } finally {
+          vi.setTimerTickMode("interval");
+        }
+      };
       await at.stopHome();
       await advanceToDay(9);
-      await at.startHome();
-      await vi.advanceTimersToNextTimerAsync();
-      await at.inReach();
+      await returnHome();
       await advanceToDay(10);
       first.open();
       const second = at.home.hold("inf:work:picture");
@@ -883,9 +896,7 @@ describe("a conversation held on a computer that runs work", () => {
         JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
       ).not.toContain("may already be done");
       await advanceToDay(29);
-      await at.startHome();
-      await vi.advanceTimersToNextTimerAsync();
-      await at.inReach();
+      await returnHome();
       await advanceToDay(30);
       second.open();
       await at.ended(1);

@@ -74,7 +74,10 @@ it("shows a placed Claude tool result in the Crewmate tab before its prompt ends
   const asking = session.prompt("Read the footer on Mac mini.");
   try {
     await expect.poll(() => inner.served().length).toBe(2);
-    expect(events).toContain("tool_end");
+    // The client serves its next request in the computer's own process, and
+    // tool_end reaches the home over the connection after that, so wait for
+    // the home to hear it (INF-435).
+    await expect.poll(() => events).toContain("tool_end");
     expect(events).not.toContain("turn_end");
     const recordDirOf = (id: string) => crewmateSessionsDir(paths, id);
     const resolver = createCrewmateTranscriptResolver({

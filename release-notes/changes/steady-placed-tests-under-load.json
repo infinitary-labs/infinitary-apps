@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "steady-placed-tests-under-load",
+      "reason": "Two unit tests of conversations held on another computer wait on the event they need, and hold the fake clock still while the computer reconnects, so they stop failing on a loaded CI runner. No shipped behavior changed."
+    }
+  ]
+}

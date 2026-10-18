@@ -687,6 +687,35 @@ describe("CardService", () => {
     expect(tasks.openCardTaskFor("card-fm-move-back")).toBeUndefined();
   });
 
+  // The design skill's footer rule: the card's one primary is its default,
+  // drawn at the right edge, so ⌘1 finds it (INF-404).
+  it("marks each paused-seat card's one primary as its default", () => {
+    const { make } = setup();
+    const cards = make();
+    cards.addFirstmatePauseCard({
+      pause: "refused",
+      body: "Claude is not answering your first mate right now.",
+      accountId: "acct_claude",
+      providerName: "Claude",
+    });
+    cards.addFirstmatePauseCard({
+      pause: "signed_out",
+      body: "Move?",
+      accountId: "acct_claude",
+      providerName: "Claude",
+      move: { providerId: "openai-codex", providerName: "Codex" },
+    });
+    cards.addFirstmatePauseCard({ pause: "no_headroom", body: "Out.", providerName: "Codex" });
+    const defaults = (id: string) =>
+      cards
+        .get(id)
+        ?.actions.filter((action) => action.default)
+        .map((action) => [action.id, action.variant]);
+    expect(defaults("card-fm-refused")).toEqual([["try-again", "primary"]]);
+    expect(defaults("card-fm-flagship-move")).toEqual([["move-flagship", "primary"]]);
+    expect(defaults("card-fm-no-headroom")).toEqual([["open-settings", "primary"]]);
+  });
+
   it("revises a paused-seat card in place when its words change, and never re-raises a dismissed one on revise (review S3)", () => {
     const { tasks, make } = setup();
     const cards = make();

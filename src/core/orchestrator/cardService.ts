@@ -1683,8 +1683,9 @@ export class CardService {
    * carries the class's own way back: "Sign in" for a lost sign-in (a
    * captain click only; nothing signs in on its own) and "Try again" for a
    * refusal (`try-again`, the only way a refusal clears on the captain's
-   * word). Nothing moves or retries until a click. A card already up under
-   * the id is revised in place when its words or actions differ;
+   * word). Nothing moves or retries until a click. Its one primary is its
+   * default, so the footer draws it at the right edge. A card already up
+   * under the id is revised in place when its words or actions differ;
    * `reviseOnly` leaves a card the captain dismissed down.
    */
   addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
@@ -1702,6 +1703,7 @@ export class CardService {
               id: "try-again",
               label: `Try ${input.providerName} again`,
               variant: input.move ? "secondary" : "primary",
+              ...(input.move ? {} : { default: true }),
               effect: { kind: "host", op: "try-again", arg: input.accountId },
             },
           ]
@@ -1711,6 +1713,7 @@ export class CardService {
                 id: "sign-in",
                 label: "Sign in",
                 variant: input.move ? "secondary" : "primary",
+                ...(input.move ? {} : { default: true }),
                 effect: restoreAccountEffect(input.accountId),
               },
             ]
@@ -1721,6 +1724,7 @@ export class CardService {
             id: "move-flagship",
             label: `Move to ${input.move.providerName}`,
             variant: "primary",
+            default: true,
             effect: { kind: "host", op: "move-flagship", arg: input.move.providerId },
           },
           ...wayBack,
@@ -1733,6 +1737,7 @@ export class CardService {
                   id: "open-settings",
                   label: "Open settings",
                   variant: wayBack.length === 0 ? ("primary" as const) : ("secondary" as const),
+                  ...(wayBack.length === 0 ? { default: true } : {}),
                   effect: { kind: "open" as const, target: "settings" as const },
                 },
               ]

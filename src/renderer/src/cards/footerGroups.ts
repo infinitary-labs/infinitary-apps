@@ -3,13 +3,23 @@ import type { CardAction } from "@shared/cards";
 /**
  * A card footer's two groups, in order: the quiet actions (ghost: explain
  * more) and the choices ending in the default. An empty group is dropped.
+ * The default is drawn last whatever order the card lists it in, so a card
+ * the app builds itself reads like an agent's (design skill ResponseCard).
  */
-export function footerGroups<A extends Pick<CardAction, "variant">>(actions: readonly A[]) {
+export function footerGroups<A extends Pick<CardAction, "variant" | "default">>(
+  actions: readonly A[],
+) {
   const quiet = actions.filter((action) => action.variant === "ghost");
   const choices = actions.filter((action) => action.variant !== "ghost");
   return [
     { key: "quiet", actions: quiet },
-    { key: "choices", actions: choices },
+    {
+      key: "choices",
+      actions: [
+        ...choices.filter((action) => !action.default),
+        ...choices.filter((action) => action.default),
+      ],
+    },
   ].filter((group) => group.actions.length > 0);
 }
 

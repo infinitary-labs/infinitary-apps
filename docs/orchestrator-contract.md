@@ -143,6 +143,7 @@ A rule that the core, a tool description and a parameter each stated is said onc
 `tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past the boundary it derives: the 65,536-token floor, minus the 12,288 reserve, minus the promised 33,476-token conversation, which is 19,772.
 A change that would cross it trims first.
 The boundary is not a second number a revision raises.
+`tests/crewmate-fixed-context.test.ts` holds a crewmate's fixed part, for each runtime and kind of work, to a boundary derived from the same floor and reserve: the conversation is promised at least as much room as the fixed part takes, so the boundary is half of what the floor leaves after the reserve.
 Each revision file says what its words cost, and names the one home of each rule it adds.
 The test's ledger names, for every rule taken out of one text, the text that still says it.
 

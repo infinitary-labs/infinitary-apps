@@ -95,14 +95,15 @@ function standingText(): string {
 }
 
 /**
- * Measured 23,582 after INF-416 piece J's trim, on the largest case (unknown
- * facts, Claude note). The audit's earlier reading was about 24,955, before
- * this trim and before later main. The ceiling sits above the measurement
- * with room for a few sentences, so a change that adds a few words does not
- * move it. One that would cross it trims first. The conversation-space check
- * below is the app's own pre-send check, not this number.
+ * The boundary for the fixed part, derived rather than kept by hand, the way
+ * the first mate's is (INF-416 pieces H and J, INF-462). It is the smallest
+ * local window's floor, minus the reserve, minus the conversation that window
+ * promises a crewmate: at least as much room as the fixed part takes, so the
+ * boundary is half of what the floor leaves after the reserve. A change that
+ * would cross it trims first. The boundary is not a second number a revision
+ * raises.
  */
-const FIXED_CONTEXT_BUDGET = 23_800;
+const FIXED_CONTEXT_BOUNDARY = (OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE) / 2;
 
 const SIGNED_IN_RULE = "the captain signs in, never you";
 
@@ -113,7 +114,7 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
         const tokens = fixedTokens(promptFor(runtime, kind));
         return { label: label(runtime, kind), tokens };
       }),
-    ).filter((row) => row.tokens > FIXED_CONTEXT_BUDGET);
+    ).filter((row) => row.tokens > FIXED_CONTEXT_BOUNDARY);
     expect(over).toEqual([]);
   });
 
@@ -166,7 +167,7 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
     expect(toolsText).not.toContain("If not signed in, report a blocker");
   });
 
-  it("leaves the smallest local window room the app's own check can prove", () => {
+  it("leaves the smallest local window room for the conversation it promises", () => {
     const systemPrompt = buildCrewmateSystemPrompt("claude");
     const fits = (tokens: number) =>
       localInputFits(
@@ -177,8 +178,11 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
         },
         OLLAMA_MIN_CONTEXT,
       );
+    // The app's own pre-send check, beside the largest case (unknown facts,
+    // Claude note): a conversation as large as the boundary still fits.
+    expect(fits(FIXED_CONTEXT_BOUNDARY)).toBe(true);
+    // The check is the real one: it refuses what cannot fit.
     const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
-    expect(room).toBeGreaterThan(0);
     expect(fits(room)).toBe(true);
     expect(fits(room + 1)).toBe(false);
   });

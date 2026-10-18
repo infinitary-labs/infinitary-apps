@@ -19,8 +19,9 @@ type ModelTag = { name: string; digest: string };
 type RunningModel = { name: string; context_length: number; size: number; size_vram: number };
 
 // 64k is the floor, not an assumption about available memory, and not a
-// guess at the fixed part's size. That part is held under the boundary
-// tests/firstmate-fixed-context.test.ts derives from this floor.
+// guess at the fixed part's size. The first mate's and a crewmate's fixed
+// parts are held under the boundaries tests/firstmate-fixed-context.test.ts
+// and tests/crewmate-fixed-context.test.ts derive from this floor.
 // Ollama's loader admits each candidate against its OWN GPU/Metal memory;
 // /ps must confirm the allocation.
 export const OLLAMA_MIN_CONTEXT = 65_536;

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-fixed-context-boundary",
+      "reason": "The crewmate's instruction budget is derived from the smallest local window, as the first mate's is, instead of a number kept by hand. Nothing a person sees or receives changes."
+    }
+  ]
+}

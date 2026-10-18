@@ -11,9 +11,11 @@ import {
   type ForgeLocation,
   type ForgePull,
   type ForgeReadiness,
+  ForgeWriteError,
   overallOfChecks,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
+import { GitLabAttachments } from "./attachments";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
 import { GitLabProjects } from "./projects";
 import { GitLabWorkflows } from "./workflows";
@@ -92,6 +94,8 @@ export class GitLabForge implements Forge {
   readonly workflows: GitLabWorkflows;
   /** The gateway's raw call under GitLab's policy for this project. */
   readonly api: ForgeApi;
+  /** Native story uploads (INF-132), on gitlab.com alone: a server's own host keeps its delivery. */
+  readonly attachments?: GitLabAttachments;
   private readonly client: GitLabClient;
   private readonly projects: GitLabProjects;
 
@@ -113,6 +117,16 @@ export class GitLabForge implements Forge {
       releaseUpload: (raw) => gitLabReleaseUpload(raw, project),
       upload: (route, file) => this.client.upload(route.path, file),
     };
+    if (this.host === "gitlab.com" && project) {
+      this.attachments = new GitLabAttachments({
+        fullName: project,
+        apiBaseUrl: options.apiBaseUrl,
+        token: options.token,
+        readProject: () => this.read(this.projectPath()),
+        fetch: options.fetch,
+        unauthorized: () => this.client.unauthorized(),
+      });
+    }
   }
 
   listProjects(): Promise<ForgeProject[]> {
@@ -136,8 +150,14 @@ export class GitLabForge implements Forge {
   }
 
   async openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange> {
-    const target = await this.defaultBranch();
-    const opened = (await this.client.request(
+    const target = await this.defaultBranch().catch((error: unknown) => {
+      throw new ForgeWriteError(
+        "failed",
+        error instanceof ForgeError ? error.failure : "transient",
+        `Could not read the default branch on ${this.place}; no merge request was sent.${error instanceof Error ? ` ${error.message}` : ""}`,
+      );
+    });
+    const opened = (await this.client.write(
       "POST",
       `${this.projectPath()}/merge_requests`,
       {
@@ -146,9 +166,59 @@ export class GitLabForge implements Forge {
         title: input.title,
         description: input.body,
       },
-      GITLAB_READ_MAX_BYTES,
+      "opening the merge request",
     )) as MergeRequestJson;
     return this.changeOf(opened);
+  }
+
+  async branchHead(branch: string): Promise<string> {
+    let found: { commit?: { id?: unknown } } | null;
+    try {
+      found = (await this.read(
+        `${this.projectPath()}/repository/branches/${encodeURIComponent(branch)}`,
+      )) as { commit?: { id?: unknown } } | null;
+    } catch (caught) {
+      if (caught instanceof ForgeError && caught.failure === "sign-in") throw caught;
+      throw new ForgeError(
+        "refused",
+        `The story's branch has not been confirmed on ${this.place}. Push the reviewed version first.`,
+      );
+    }
+    const sha = found?.commit?.id;
+    if (typeof sha !== "string" || !/^[0-9a-f]{40,64}$/.test(sha))
+      throw new ForgeError("refused", `${this.place} did not confirm the branch's code version.`);
+    return sha;
+  }
+
+  /** GitLab has no conditional description write: reread first, and the caller reads it back after. */
+  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+    const iid = numbered(change, this.place);
+    let fresh: MergeRequestJson;
+    try {
+      fresh = await this.mergeRequest(iid);
+    } catch (error) {
+      throw new ForgeWriteError(
+        "failed",
+        error instanceof ForgeError ? error.failure : "transient",
+        `Could not reread merge request !${iid}; no description was sent.`,
+      );
+    }
+    if (
+      fresh.state !== "opened" ||
+      (fresh.sha ?? fresh.diff_refs?.head_sha) !== change.headSha ||
+      (fresh.description ?? "") !== (change.body ?? "")
+    )
+      throw new ForgeWriteError(
+        "failed",
+        "refused",
+        "The merge request changed while preparing its story. Read it again before updating.",
+      );
+    await this.client.write(
+      "PUT",
+      this.mergeRequestPath(iid),
+      { description: body },
+      "replacing the story",
+    );
   }
 
   async changeFor(branch: string): Promise<ForgeChange | null> {
@@ -187,7 +257,8 @@ export class GitLabForge implements Forge {
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
     const iid = numbered(change, this.place);
     const title = requireConventional(change.title ?? "", "pull request title");
-    const body = change.body?.trim() ?? "";
+    // A saved story squashes under its plain summary, never its rendered evidence (INF-228 F2).
+    const body = (change.squashMessage ?? change.body)?.trim() ?? "";
     // `sha` is GitLab's guard: the merge is refused (409) if the merge
     // request moved on after its checks were read.
     let answer = (await this.client.request(

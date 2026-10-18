@@ -40,6 +40,14 @@ import { join } from "node:path";
  * - every merge request the person opened (`GET /merge_requests`), each
  *   with the head pipeline its own read names;
  * - one other project (`acme/site`) whose issues the key may read.
+ *
+ * And what a saved change story needs on gitlab.com (INF-132): the project's
+ * numeric id, visibility, media protection and the key's role; a branch's
+ * pushed commit; a merge request's description replaced in place; and
+ * multipart project uploads, kept byte for byte and served back from the
+ * `/-/project/<id>/uploads/<secret>/<name>` address GitLab answers with; and
+ * the quick actions a description's own lines carry, run and removed from
+ * the saved text as GitLab does.
  */
 export const GITLAB_STUB_KEY = "glpat-hermetic-sign-in-key";
 export const GITLAB_STUB_LOGIN = "octo";
@@ -81,6 +89,30 @@ export type GitLabStubMerge = {
   message: string;
 };
 
+/** One project upload GitLab kept, as the app sent it. */
+export type GitLabStubUpload = {
+  secret: string;
+  filename: string;
+  contentType: string;
+  bytes: Buffer;
+};
+
+/**
+ * GitLab runs the quick actions a description's own lines carry when it is
+ * created or updated (`/label ~x`, `/merge`) and removes those lines from the
+ * saved text; `ran` records each command line, in order.
+ */
+function runQuickActions(description: string, ran: string[]): string {
+  return description
+    .split("\n")
+    .filter((line) => {
+      const command = /^\/[a-z_]+(?:\s.*)?$/.test(line);
+      if (command) ran.push(line);
+      return !command;
+    })
+    .join("\n");
+}
+
 type StubMergeRequest = {
   iid: number;
   branch: string;
@@ -119,8 +151,42 @@ export function seedGitLabSignIn(userDataDir: string, host: string): void {
   );
 }
 
+/** The one file a multipart form carries under `field`, as GitLab's upload reads it. */
+function formFile(
+  body: Buffer,
+  contentType: string | undefined,
+  field: string,
+): { filename: string; contentType: string; bytes: Buffer } | undefined {
+  const boundary = /boundary=(?:"([^"]+)"|([^;]+))/.exec(contentType ?? "");
+  const mark = boundary?.[1] ?? boundary?.[2];
+  if (!mark) return undefined;
+  const delimiter = Buffer.from(`--${mark}`);
+  let start = body.indexOf(delimiter);
+  while (start >= 0) {
+    const next = body.indexOf(delimiter, start + delimiter.length);
+    if (next < 0) return undefined;
+    const part = body.subarray(start + delimiter.length + 2, next - 2);
+    const split = part.indexOf("\r\n\r\n");
+    const headers = part.subarray(0, split).toString("utf8");
+    const named = /name="([^"]*)"(?:; filename="([^"]*)")?/.exec(headers);
+    if (named?.[1] === field && named[2] !== undefined) {
+      return {
+        filename: named[2],
+        contentType: /content-type:\s*([^\r\n]+)/i.exec(headers)?.[1]?.trim() ?? "",
+        bytes: Buffer.from(part.subarray(split + 4)),
+      };
+    }
+    start = next;
+  }
+  return undefined;
+}
+
 export async function startGitLabStub(host: string) {
   const requests: string[] = [];
+  const uploads: GitLabStubUpload[] = [];
+  const quickActions: string[] = [];
+  /** GitLab's "Require authentication to view media files"; off until a test turns it on. */
+  let mediaProtected = false;
   const merges: GitLabStubMerge[] = [];
   const mergeRequests = new Map<number, StubMergeRequest>();
   let nextIid = 1;
@@ -140,16 +206,17 @@ export async function startGitLabStub(host: string) {
     visibility: "private",
     last_activity_at: "2026-10-09T12:00:00Z",
     default_branch: "main",
+    permissions: { project_access: { access_level: 40 }, group_access: null },
   };
   const projectPath = `/api/v4/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`;
 
   const read = (req: IncomingMessage) =>
-    new Promise<string>((resolve) => {
-      let body = "";
-      req.on("data", (chunk) => {
-        body += chunk;
+    new Promise<Buffer>((resolve) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
       });
-      req.on("end", () => resolve(body));
+      req.on("end", () => resolve(Buffer.concat(chunks)));
     });
 
   /** A branch's commit now, or undefined when the repository has no such branch. */
@@ -305,7 +372,9 @@ export async function startGitLabStub(host: string) {
   });
 
   const server = createServer((req, res) => {
-    void read(req).then((raw) => {
+    void read(req).then((bytes) => {
+      const multipart = /^multipart\/form-data/i.test(req.headers["content-type"] ?? "");
+      const raw = multipart ? "" : bytes.toString("utf8");
       const url = new URL(req.url ?? "/", "http://localhost");
       const path = url.pathname;
       const method = req.method ?? "GET";
@@ -330,6 +399,22 @@ export async function startGitLabStub(host: string) {
       }
       if (req.headers.authorization !== `Bearer ${GITLAB_STUB_KEY}`) {
         send(401, { message: "401 Unauthorized" });
+        return;
+      }
+      // A kept upload at the address GitLab names it by: the project's number, its secret, its name.
+      const served = /^\/-\/project\/(\d+)\/uploads\/([0-9a-f]{32})\/([^/]+)$/.exec(path);
+      if (method === "GET" && served) {
+        const kept = uploads.find(
+          (upload) =>
+            Number(served[1]) === project.id &&
+            upload.secret === served[2] &&
+            upload.filename === served[3],
+        );
+        if (!kept) send(404, { message: "404 Not Found" });
+        else {
+          res.writeHead(200, { "Content-Type": kept.contentType });
+          res.end(kept.bytes);
+        }
         return;
       }
       if (method === "GET" && path === "/api/v4/user") {
@@ -382,7 +467,33 @@ export async function startGitLabStub(host: string) {
       const paged = <T>(rows: T[]) => rows.slice((page - 1) * perPage, page * perPage);
 
       if (method === "GET" && rest === "") {
-        send(200, project);
+        send(200, { ...project, enforce_auth_checks_on_uploads: mediaProtected });
+        return;
+      }
+      if (method === "POST" && rest === "/uploads") {
+        const file = multipart ? formFile(bytes, req.headers["content-type"], "file") : undefined;
+        if (!file) {
+          send(400, { message: "400 Bad request - file is missing" });
+          return;
+        }
+        const secret = createHash("md5").update(`${uploads.length}:${file.filename}`).digest("hex");
+        uploads.push({ secret, ...file });
+        const url = `/uploads/${secret}/${file.filename}`;
+        send(201, {
+          id: uploads.length,
+          alt: file.filename.replace(/\.[^.]+$/, ""),
+          url,
+          full_path: `/-/project/${project.id}/uploads/${secret}/${file.filename}`,
+          markdown: `![${file.filename}](${url})`,
+        });
+        return;
+      }
+      const branchRead = /^\/repository\/branches\/(.+)$/.exec(rest);
+      if (method === "GET" && branchRead) {
+        const branch = decodeURIComponent(branchRead[1] as string);
+        const head = branchHead(branch);
+        if (!head) send(404, { message: "404 Branch Not Found" });
+        else send(200, { name: branch, commit: { id: head } });
         return;
       }
       if (method === "POST" && rest === "/merge_requests") {
@@ -406,7 +517,7 @@ export async function startGitLabStub(host: string) {
           iid: nextIid++,
           branch,
           title: String(body.title ?? ""),
-          description: String(body.description ?? ""),
+          description: runQuickActions(String(body.description ?? ""), quickActions),
           state: "opened",
         };
         mergeRequests.set(request.iid, request);
@@ -446,6 +557,8 @@ export async function startGitLabStub(host: string) {
       }
       if (request && method === "PUT" && numbered?.[2] === undefined) {
         if (body.state_event === "close" && request.state === "opened") request.state = "closed";
+        if (typeof body.description === "string")
+          request.description = runQuickActions(body.description, quickActions);
         send(200, requestJson(request));
         return;
       }
@@ -571,6 +684,21 @@ export async function startGitLabStub(host: string) {
     requests: () => [...requests],
     /** Every merge GitLab accepted, in order; a refused one is only a request. */
     merges: () => [...merges],
+    /** Every project upload GitLab kept, in order, byte for byte. */
+    uploads: () => uploads.map((upload) => ({ ...upload, bytes: Buffer.from(upload.bytes) })),
+    /** Every quick action line GitLab ran from a description, in order. */
+    quickActions: () => [...quickActions],
+    /** Each merge request's description as GitLab holds it now, by its number. */
+    descriptions: () =>
+      new Map([...mergeRequests.values()].map((request) => [request.iid, request.description])),
+    /** Turn the project's "Require authentication to view media files" on or off. */
+    protectMedia: (on: boolean) => {
+      mediaProtected = on;
+    },
+    /** The project's audience, as its settings would change it. */
+    setVisibility: (visibility: "private" | "internal" | "public") => {
+      project.visibility = visibility;
+    },
     /** The version a branch carries where the project lives: every merge request's live head. */
     headOf: (reader: (branch: string) => string) => {
       headOf = reader;

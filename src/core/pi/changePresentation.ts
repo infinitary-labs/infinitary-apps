@@ -67,11 +67,11 @@ export async function stageChangePresentation(
         const demo = picture.demo;
         if (demo.kind !== "mp4")
           throw new Error(
-            "GitHub stories need an inspected MP4 recording; a GIF or still is not substituted.",
+            "Saved stories need an inspected MP4 recording; a GIF or still is not substituted.",
           );
         if (demo.bytes >= 10_000_000)
           throw new Error(
-            "GitHub recordings must be below 10 MB. Make and inspect a smaller copy before preparing again.",
+            "Story recordings must be below 10 MB. Make and inspect a smaller copy before preparing again.",
           );
         add({
           id: demo.id,

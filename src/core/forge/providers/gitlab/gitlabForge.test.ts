@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { GitLabForge } from "./gitlabForge";
 
@@ -135,6 +136,168 @@ describe("GitLabForge", () => {
       sha: "a".repeat(40),
       squash: true,
       squash_commit_message: "fix: the meter",
+    });
+  });
+
+  // INF-223 / accepted INF-132: the saved-story writes tell a refusal from a lost answer.
+  describe("saved-story writes", () => {
+    const change = {
+      number: 4,
+      url: null,
+      branch: "fm/task-1",
+      headSha: "a".repeat(40),
+      title: "fix: the meter",
+      body: "Why",
+    };
+
+    it("replaces a description only while the merge request is open at the read head and words", async () => {
+      for (const fields of [
+        { description: "Someone added words" },
+        { sha: "b".repeat(40) },
+        { state: "closed" },
+      ]) {
+        const { forge, fetcher } = forgeAnswering(() => Response.json(request(fields)));
+        await expect(forge.updateChangeBody(change, "The story")).rejects.toMatchObject({
+          outcome: "failed",
+        });
+        expect(fetcher.mock.calls.map(([, init]) => init?.method ?? "GET")).toEqual(["GET"]);
+      }
+      const { forge, fetcher } = forgeAnswering(() => Response.json(request()));
+      await forge.updateChangeBody(change, "The story");
+      const put = fetcher.mock.calls.find(([, init]) => init?.method === "PUT");
+      expect(new URL(String(put?.[0])).pathname).toBe(`/api/v4${PROJECT}/merge_requests/4`);
+      expect(JSON.parse(String(put?.[1]?.body))).toEqual({ description: "The story" });
+    });
+
+    it.each([
+      [
+        "a refusal GitLab answered",
+        () => Response.json({ message: "Invalid" }, { status: 422 }),
+        "failed",
+      ],
+      ["a server failure", () => Response.json({ message: "502" }, { status: 502 }), "uncertain"],
+      ["a lost connection", () => Promise.reject(new Error("socket hang up")), "uncertain"],
+    ] as const)("records %s on a description write as %s", async (_case, answer, outcome) => {
+      const { forge } = forgeAnswering((method) =>
+        method === "PUT" ? (answer() as Response) : Response.json(request()),
+      );
+      await expect(forge.updateChangeBody(change, "The story")).rejects.toMatchObject({ outcome });
+    });
+
+    it.each([
+      [
+        "already open for the branch",
+        () =>
+          Response.json(
+            { message: ["Another open merge request already exists"] },
+            { status: 409 },
+          ),
+        "failed",
+      ],
+      ["unanswered", () => Promise.reject(new Error("socket hang up")), "uncertain"],
+      ["answered unreadably", () => new Response("<html>", { status: 201 }), "uncertain"],
+    ] as const)("records an opening %s as %s", async (_case, answer, outcome) => {
+      const { forge } = forgeAnswering((method) =>
+        method === "POST" ? (answer() as Response) : Response.json({ default_branch: "main" }),
+      );
+      await expect(
+        forge.openChange({ branch: "fm/task-1", title: "fix: the meter", body: "Why" }),
+      ).rejects.toMatchObject({ outcome });
+    });
+
+    it("sends no opening when the default branch cannot be read", async () => {
+      const { forge, fetcher } = forgeAnswering(() =>
+        Response.json({ message: "503" }, { status: 503 }),
+      );
+      await expect(
+        forge.openChange({ branch: "fm/task-1", title: "fix: the meter", body: "Why" }),
+      ).rejects.toMatchObject({ outcome: "failed" });
+      expect(fetcher.mock.calls.every(([, init]) => (init?.method ?? "GET") === "GET")).toBe(true);
+    });
+
+    it("squashes a saved story under its title and plain summary, never its rendered description", async () => {
+      const { forge, fetcher } = forgeAnswering(() =>
+        Response.json(request({ state: "merged", merge_commit_sha: "b".repeat(40) })),
+      );
+      await forge.putIn(
+        {
+          ...change,
+          body: "<!-- infinitary-story:x:start -->\n## Why",
+          squashMessage: "The meter reads on time.",
+        },
+        change.headSha,
+      );
+      expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
+        squash_commit_message: "fix: the meter\n\nThe meter reads on time.",
+      });
+    });
+
+    it("confirms the pushed branch's version where the project lives", async () => {
+      const { forge, fetcher } = forgeAnswering((_method, path) =>
+        path.endsWith("/missing")
+          ? Response.json({ message: "404 Branch Not Found" }, { status: 404 })
+          : Response.json({ name: "fm/task-1", commit: { id: "c".repeat(40) } }),
+      );
+      expect(await forge.branchHead("fm/task-1")).toBe("c".repeat(40));
+      expect(new URL(String(fetcher.mock.calls[0]?.[0])).pathname).toBe(
+        `/api/v4${PROJECT}/repository/branches/fm%2Ftask-1`,
+      );
+      await expect(forge.branchHead("missing")).rejects.toMatchObject({ failure: "refused" });
+    });
+
+    // INF-290 F5: an upload's 401 is read the way the client reads every other 401.
+    it.each([
+      [true, "permission", 0],
+      [false, "sign-in", 1],
+    ] as const)(
+      "reads an upload's 401 with GitLab still answering for the key: %s",
+      async (keyAccepted, failure, asked) => {
+        const rejected = vi.fn();
+        const fetcher = vi.fn<typeof fetch>(async (input) => {
+          const path = new URL(String(input)).pathname;
+          if (path === "/api/v4/user")
+            return keyAccepted
+              ? Response.json({ username: "octo" })
+              : Response.json({ message: "401 Unauthorized" }, { status: 401 });
+          if (path.endsWith("/uploads"))
+            return Response.json({ message: "401 Unauthorized" }, { status: 401 });
+          return Response.json({
+            id: 7,
+            path_with_namespace: "group/subgroup/app",
+            visibility: "public",
+          });
+        });
+        const forge = new GitLabForge(
+          { kind: "gitlab", host: "gitlab.com", owner: "group/subgroup", name: "app", dir: "/r" },
+          {
+            token: async () => KEY,
+            apiBaseUrl: "https://gitlab.com/api/v4",
+            fetch: fetcher,
+            onSignInRejected: rejected,
+          },
+        );
+        const attachments = forge.attachments;
+        if (!attachments) throw new Error("gitlab.com offers native attachments");
+        const bytes = new Uint8Array([137, 80, 78, 71]);
+        await expect(
+          attachments.upload(await attachments.destination(), {
+            bytes,
+            mediaType: "image/png",
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          }),
+        ).rejects.toMatchObject({ outcome: "failed", failure });
+        expect(rejected).toHaveBeenCalledTimes(asked);
+      },
+    );
+
+    it("offers native story attachments on gitlab.com alone", () => {
+      const at = (host: string) =>
+        new GitLabForge(
+          { kind: "gitlab", host, owner: "group/subgroup", name: "app", dir: "/r" },
+          { token: async () => KEY, apiBaseUrl: `https://${host}/api/v4` },
+        ).attachments;
+      expect(at("gitlab.com")).toBeDefined();
+      expect(at(HOST)).toBeUndefined();
     });
   });
 

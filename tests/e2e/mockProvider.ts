@@ -2553,7 +2553,7 @@ export const MOCK_CONTINUE_CHANGE = {
   body: "## Intent\nStage the meter.",
 };
 
-/** INF-132: a scripted GitHub author prepares the same typed story as a real crewmate. */
+/** INF-132: a scripted github.com or gitlab.com author prepares the same typed story as a real crewmate. */
 export const MOCK_GITHUB_STORY: Omit<
   ChangePresentationDraft,
   "title" | "base" | "head" | "publishable"
@@ -7986,7 +7986,8 @@ export async function startMockProvider(): Promise<MockProviderServer> {
         }
         if (!isFirstmate && latestUserTail.includes(GITHUB_CHANGE_PROMPT_MARKER) && wantsStream) {
           const gitReading = sinceLastUser(body).results[0];
-          const savedStory = gitReading?.includes("https://github.com/") === true;
+          // INF-132: github.com and gitlab.com take a saved story; a server's own host keeps its body.
+          const savedStory = /https:\/\/(?:github|gitlab)\.com\//.test(gitReading ?? "");
           if (!hasToolResults) {
             streamToolCalls([
               {

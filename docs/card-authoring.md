@@ -132,7 +132,7 @@ On any card carrying a `settle` effect, the host appends its own fact strip (`Cr
   This is agent judgment, not a pixel threshold or a host refusal.
   What is left closes after After when it bears on the decision, otherwise in `<details>`, not a fifth heading.
   Answer cards, previews included, keep their own shape.
-  The report keeps its five evidence headings; future github.com PRs and their completion cards share the saved story (`docs/forge.md`, "Saved change stories"), while other hosts and existing PRs keep the five-heading description.
+  The report keeps its five evidence headings; future github.com pull requests, gitlab.com merge requests and their completion cards share the saved story (`docs/forge.md`, "Saved change stories"), while other hosts and existing PRs keep the five-heading description.
   The card never copies the host's strip.
 
 ## The risk chart
@@ -199,11 +199,11 @@ A refused card is never shown, and the refusal text names the fix:
   It does not measure the narrow card, and it does not refuse a small drawing stretched to 100 percent.
 
 The five headings are not asked of a completion card's open body.
-They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy or non-GitHub PR bodies.
+They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
 The host renders its body from the same version as the PR and keeps the risk chart, requirements and merge controls under their existing owners.
-Picture-only pairs may sit side by side; any pair containing a recording stacks in both outputs to fit GitHub's native players.
+Picture-only pairs may sit side by side; any pair containing a recording stacks in both outputs to fit GitHub's and GitLab's native players.
 
 The lint asks for shape, never for the absence of words: there is no progress-phrase ban list, and the merge-claim rule is a consistency check on an action, not a ban on what a body may say.
 The first mate's boundary adds attach-first (`task_id` or `standalone`), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`), the settle-needs-task rule, and the carded-task refusal below.

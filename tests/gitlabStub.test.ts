@@ -1,9 +1,21 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it } from "vitest";
+import { presentationCommitMessage, presentationRegionMarkers } from "../src/core/forge";
 import type { ForgeChange } from "../src/core/forge/forge";
+import { GITLAB_PRIVATE_MEDIA_REFUSAL } from "../src/core/forge/providers/gitlab/attachments";
 import { readGitLabOpenChanges } from "../src/core/forge/providers/gitlab/changes";
 import { GitLabForge } from "../src/core/forge/providers/gitlab/gitlabForge";
+import { ChangePresentations } from "../src/core/orchestrator/changePresentations";
+import type { MediaProbe } from "../src/core/pi/cardImages";
+import { stageChangePresentation } from "../src/core/pi/changePresentation";
+import { openDatabase } from "../src/core/storage/db";
+import { seedTask } from "../src/core/tasks/seedTask";
+import { TaskService } from "../src/core/tasks/taskService";
+import { readDemoVideo } from "../src/core/videoFormat";
+import { DEMO_POSTER, DEMO_RECORDING } from "./e2e/demoFixtures";
 import {
   GITLAB_STUB_KEY,
   GITLAB_STUB_PROJECT,
@@ -11,6 +23,8 @@ import {
   type GitLabStubPipeline,
   startGitLabStub,
 } from "./e2e/gitlabStub";
+import { expectBytesEqual } from "./helpers/expectBytes";
+import { scratchDir } from "./helpers/scratchDirs";
 
 /**
  * The GitLab stand-in the e2e journeys deliver through
@@ -369,3 +383,334 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
     });
   },
 );
+
+// INF-223 / accepted INF-132: a gitlab.com merge request and its completion card share one
+// saved story whose real pictures and recording reach GitLab's own project uploads first.
+describe("a saved story through the real GitLab forge and the stand-in", () => {
+  const TASK = "ab12cd34";
+  const STORY_BRANCH = `fm/task-${TASK}`;
+  const HEAD = sha("story head");
+  const risk = Object.fromEntries(
+    RISK_DIMENSIONS.map((dimension) => [
+      dimension,
+      { level: "low", why: `The ${dimension} assessment for this fixture.` },
+    ]),
+  ) as RiskDeclaration;
+
+  async function arrange() {
+    const { gitlab, forge } = await forgeOver("gitlab.com", { [STORY_BRANCH]: HEAD });
+    const root = scratchDir("infinitary-gitlab-story-");
+    const media = join(root, "cards");
+    const worktree = join(root, "work");
+    mkdirSync(media);
+    mkdirSync(join(worktree, "shots"), { recursive: true });
+    for (const theme of ["dark", "light"])
+      copyFileSync(
+        resolve(`release-notes/pictures/action-reply-line-${theme}.webp`),
+        join(worktree, `${theme}.webp`),
+      );
+    if (!DEMO_POSTER.bytes) throw new Error("The recording fixture needs its poster");
+    writeFileSync(join(worktree, DEMO_RECORDING.path), DEMO_RECORDING.bytes);
+    writeFileSync(join(worktree, DEMO_POSTER.path), DEMO_POSTER.bytes);
+    const db = openDatabase(join(root, "data"));
+    const tasks = new TaskService({ db, strict: true });
+    seedTask(tasks, {
+      id: TASK,
+      title: "Show the change",
+      prompt: "Share the evidence",
+      branch: STORY_BRANCH,
+      worktreeDir: worktree,
+      repoDir: worktree,
+      status: "idle",
+    });
+    const media0 = (path: string, alt: string) => ({
+      path,
+      alt,
+      captureHead: HEAD,
+      inspected: true as const,
+    });
+    const draft = {
+      title: "The merge request carries its pictures",
+      base: HEAD,
+      head: HEAD,
+      publishable: true as const,
+      why: ["The merge request should tell the same story as the merge card."],
+      whatChanged: ["The description carries the selected pictures and recording."],
+      before: ["The earlier description contained text alone."],
+      after: ["Both views show the same evidence."],
+      views: [
+        {
+          id: "completion",
+          caption: "Completion story",
+          kind: "changed" as const,
+          before: [media0("dark.webp", "The existing dark completion view")],
+          after: [media0("light.webp", "The inspected light completion view")],
+        },
+        {
+          id: "drag",
+          caption: "The box slides right",
+          kind: "new" as const,
+          before: [],
+          after: [{ ...media0(DEMO_RECORDING.path, DEMO_POSTER.alt), poster: DEMO_POSTER.path }],
+        },
+      ],
+      verification: ["Opened both pictures and played the recording."],
+      risk,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "Closes #24",
+    };
+    // The host's isolated player decodes what the recording's boxes state, as for a sound recording.
+    const probe: MediaProbe = async ({ bytes }) => {
+      const read = readDemoVideo(bytes);
+      return read.ok
+        ? { ok: true, ...read.video }
+        : { ok: false, reason: "the decoder could not open it" };
+    };
+    const stage = (input: typeof draft) =>
+      stageChangePresentation(input, { taskId: TASK, worktree, dir: media, probe });
+    const service = () =>
+      new ChangePresentations({ tasks, mediaDir: () => media, head: async () => HEAD });
+    return { gitlab, forge, db, tasks, draft, stage, service, worktree };
+  }
+
+  it("refuses a private project without media protection, then opens only after every upload", async () => {
+    const at = await arrange();
+    try {
+      const project = `/api/v4/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`;
+      const first = at.service();
+      const revision = await first.prepare(TASK, await at.stage(at.draft), at.forge);
+      await expect(
+        first.publish(TASK, revision, at.forge, STORY_BRANCH, "feat: carry the evidence"),
+      ).rejects.toThrow(GITLAB_PRIVATE_MEDIA_REFUSAL);
+      // Nothing left the app: no file, and no merge request, not even a draft.
+      expect(at.gitlab.uploads()).toEqual([]);
+      expect(at.gitlab.requests()).not.toContain(`POST ${project}/merge_requests`);
+      expect(at.gitlab.requests().some((line) => line.endsWith("/uploads"))).toBe(false);
+
+      // The project's maintainer turns the protection on in GitLab; the app never does.
+      at.gitlab.protectMedia(true);
+      const opened = await first.publish(
+        TASK,
+        revision,
+        at.forge,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+      );
+      const writes = at.gitlab
+        .requests()
+        .filter((line) => /^(POST|PUT) /.test(line))
+        .map((line) => line.replace(/\d+\/uploads$/, "<id>/uploads"));
+      expect(writes).toEqual([
+        "POST /api/v4/projects/<id>/uploads",
+        "POST /api/v4/projects/<id>/uploads",
+        "POST /api/v4/projects/<id>/uploads",
+        `POST ${project}/merge_requests`,
+      ]);
+      // Each upload is the exact retained file, served back from the address GitLab named.
+      const story = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+      if (!story) throw new Error("The prepared story is missing");
+      const uploads = at.gitlab.uploads();
+      expect(uploads.map((upload) => upload.filename)).toEqual([
+        "picture.webp",
+        "picture.webp",
+        "recording.mp4",
+      ]);
+      const description = at.gitlab.descriptions().get(1) ?? "";
+      expect(description).toBe(opened.body);
+      expect(description.startsWith("Closes #24\n\n")).toBe(true);
+      for (const [index, upload] of uploads.entries()) {
+        const reference = `/uploads/${upload.secret}/${upload.filename}`;
+        const alt = [
+          "The existing dark completion view",
+          "The inspected light completion view",
+          DEMO_POSTER.alt,
+        ][index];
+        expect(description.split("\n\n")).toContain(`![${alt}](${reference})`);
+        const served = await fetch(
+          `${new URL(at.gitlab.url).origin}/-/project/7/uploads/${upload.secret}/${upload.filename}`,
+          { headers: { Authorization: `Bearer ${GITLAB_STUB_KEY}` } },
+        );
+        expect(served.status).toBe(200);
+        const retained = story.assets.filter((asset) =>
+          story.views.some((view) =>
+            view.after.concat(view.before).some((m) => m.asset === asset.id),
+          ),
+        )[index];
+        expectBytesEqual(
+          new Uint8Array(await served.arrayBuffer()),
+          readFileSync(join(at.worktree, "..", "cards", retained?.file ?? "missing")),
+        );
+      }
+    } finally {
+      at.db.close();
+    }
+  });
+
+  // INF-290 F2/F3, the captain's ruling: a project template's quick actions are the
+  // project's choice and run; the story's own words never do, and the opening still confirms.
+  it("runs only the project template's quick actions and confirms the opening by its story region", async () => {
+    const at = await arrange();
+    try {
+      at.gitlab.protectMedia(true);
+      const service = at.service();
+      const revision = await service.prepare(
+        TASK,
+        await at.stage({
+          ...at.draft,
+          why: ["/merge"],
+          projectText: "Closes #24\n/label ~evidence",
+        }),
+        at.forge,
+      );
+      const opened = await service.publish(
+        TASK,
+        revision,
+        at.forge,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+      );
+      expect(at.gitlab.quickActions()).toEqual(["/label ~evidence"]);
+      const description = at.gitlab.descriptions().get(1) ?? "";
+      expect(description).toBe(opened.body);
+      expect(description.startsWith("Closes #24\n\n")).toBe(true);
+      expect(description.split("\n\n")).toContain("\\/merge");
+      expect(at.tasks.changePresentation(TASK)).toMatchObject({
+        publication: { state: "confirmed", revision },
+        published: { state: "confirmed", revision, number: 1 },
+      });
+    } finally {
+      at.db.close();
+    }
+  });
+
+  it("never resends an upload whose answer was lost, until a deliberate retry names it", async () => {
+    const at = await arrange();
+    try {
+      at.gitlab.protectMedia(true);
+      let lose = true;
+      // The file reaches GitLab, then the answer is lost on the way back.
+      const losing = new GitLabForge(
+        {
+          kind: "gitlab",
+          host: "gitlab.com",
+          owner: GITLAB_STUB_PROJECT.slice(0, GITLAB_STUB_PROJECT.lastIndexOf("/")),
+          name: GITLAB_STUB_PROJECT.slice(GITLAB_STUB_PROJECT.lastIndexOf("/") + 1),
+          dir: "/r",
+        },
+        {
+          token: async () => GITLAB_STUB_KEY,
+          apiBaseUrl: at.gitlab.url,
+          fetch: async (input, init) => {
+            const answer = await fetch(input, init);
+            if (lose && String(input).endsWith("/uploads")) {
+              lose = false;
+              throw new Error("socket hang up");
+            }
+            return answer;
+          },
+        },
+      );
+      const service = at.service();
+      const revision = await service.prepare(TASK, await at.stage(at.draft), losing);
+      const open = () =>
+        service.publish(TASK, revision, losing, STORY_BRANCH, "feat: carry the evidence");
+      await expect(open()).rejects.toThrow(/may have kept the attachment/);
+      await expect(open()).rejects.toThrow(/may already exist on GitLab/);
+      expect(at.gitlab.uploads()).toHaveLength(1);
+      expect(at.gitlab.descriptions().size).toBe(0);
+      const uncertain = at.tasks
+        .changePresentation(TASK)
+        ?.receipts.find((receipt) => receipt.state === "uncertain");
+      if (!uncertain) throw new Error("The lost upload is not kept as uncertain");
+      await service.publish(
+        TASK,
+        revision,
+        losing,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+        "pending",
+        { retryUploads: [uncertain.digest] },
+      );
+      // The deliberate retry sent that file once more; the possible orphan stays on its receipt.
+      expect(at.gitlab.uploads()).toHaveLength(4);
+      expect(
+        at.tasks
+          .changePresentation(TASK)
+          ?.receipts.find((receipt) => receipt.digest === uncertain.digest),
+      ).toMatchObject({ state: "confirmed", possibleOrphan: true });
+      expect(at.gitlab.descriptions().size).toBe(1);
+    } finally {
+      at.db.close();
+    }
+  });
+
+  it("replaces the story after a restart without another upload, keeps a person's words, and squashes its summary", async () => {
+    const at = await arrange();
+    try {
+      at.gitlab.protectMedia(true);
+      const before = at.service();
+      const first = await before.prepare(TASK, await at.stage(at.draft), at.forge);
+      const opened = await before.publish(
+        TASK,
+        first,
+        at.forge,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+      );
+      // A person adds words around the story on GitLab's own page.
+      await fetch(
+        `${at.gitlab.url}/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}/merge_requests/1`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${GITLAB_STUB_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ description: `Reviewer note: looks good.\r\n\r\n${opened.body}` }),
+        },
+      );
+      const uploaded = at.gitlab.uploads().length;
+
+      // A restart: a new service reads the same saved receipts.
+      const after = at.service();
+      const second = await after.prepare(
+        TASK,
+        await at.stage({ ...at.draft, verification: ["The pipeline passed for this version."] }),
+        at.forge,
+      );
+      const replaced = await after.publish(
+        TASK,
+        second,
+        at.forge,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+        "passed",
+      );
+      expect(at.gitlab.uploads()).toHaveLength(uploaded);
+      const description = at.gitlab.descriptions().get(1) ?? "";
+      expect(description).toBe(replaced.body);
+      expect(description.startsWith("Reviewer note: looks good.\n\nCloses #24\n\n")).toBe(true);
+      const { start, end } = presentationRegionMarkers(TASK);
+      expect(description.split(start)).toHaveLength(2);
+      expect(description.split(end)).toHaveLength(2);
+      expect(description).toContain("The pipeline passed for this version\\.");
+      expect(description).toContain(`Story ${second}`);
+
+      const change = await at.forge.changeFor(STORY_BRANCH);
+      if (!change) throw new Error("The merge request is not open");
+      const ready = await after.assertPublished(TASK, change, at.forge);
+      await at.forge.putIn(ready, ready.headSha);
+      expect(at.gitlab.merges()).toEqual([
+        {
+          iid: 1,
+          sha: HEAD,
+          squash: true,
+          message: `feat: carry the evidence\n\n${presentationCommitMessage({ whatChanged: at.draft.whatChanged, projectText: "Closes #24" })}`,
+        },
+      ]);
+    } finally {
+      at.db.close();
+    }
+  });
+});

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -186,6 +187,8 @@ export async function startGitHubStub(
 ): Promise<GitHubStub> {
   const webHost = options.host ?? "github.com";
   const log: string[] = [];
+  const evidenceProjects = new Set<number>();
+  const evidence = new Map<string, { bytes: Buffer; mediaType: string }>();
   const merges: StubMerge[] = [];
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
@@ -243,12 +246,12 @@ export async function startGitHubStub(
   let base = "";
 
   const read = (req: IncomingMessage) =>
-    new Promise<string>((resolve) => {
-      let body = "";
-      req.on("data", (chunk) => {
-        body += chunk;
+    new Promise<Buffer>((resolve) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
       });
-      req.on("end", () => resolve(body));
+      req.on("end", () => resolve(Buffer.concat(chunks)));
     });
 
   /** A change's head now: its branch's commit where the test reads one. */
@@ -269,7 +272,8 @@ export async function startGitHubStub(
 
   const server: Server = createServer((req, res) => {
     void read(req)
-      .then((raw) => {
+      .then((bytes) => {
+        const raw = bytes.toString("utf8");
         const url = new URL(req.url ?? "/", "http://stub");
         // A GitHub Enterprise Server's API lives under its own path.
         const path = url.pathname
@@ -351,6 +355,36 @@ export async function startGitHubStub(
         const auth = req.headers.authorization ?? "";
         if (!auth.startsWith("Bearer ") || rejected || ended.has(auth.slice("Bearer ".length))) {
           send(401, { message: "Bad credentials" });
+          return;
+        }
+        // INF-285 F4: native evidence uses the same local endpoint override as the API.
+        if (webHost === "github.com" && method === "POST" && path === "/user-attachments/assets") {
+          const projectId = Number(url.searchParams.get("repository_id"));
+          const mediaType = url.searchParams.get("content_type") ?? "";
+          if (
+            !evidenceProjects.has(projectId) ||
+            !bytes.length ||
+            !url.searchParams.get("name") ||
+            !["image/png", "image/jpeg", "image/webp", "video/mp4"].includes(mediaType)
+          ) {
+            send(422, {
+              message: "An evidence upload needs the confirmed project, name, media type and bytes",
+            });
+            return;
+          }
+          const id = randomUUID();
+          evidence.set(id, { bytes, mediaType });
+          send(201, { url: `https://github.com/user-attachments/assets/${id}` });
+          return;
+        }
+        const evidenceId = /^\/user-attachments\/assets\/([0-9a-f-]{36})$/.exec(path)?.[1];
+        if (method === "GET" && evidenceId) {
+          const file = evidence.get(evidenceId);
+          if (!file) send(404, { message: "Not Found" });
+          else {
+            res.writeHead(200, { "content-type": file.mediaType });
+            res.end(file.bytes);
+          }
           return;
         }
         if (method === "GET" && path === "/user") {
@@ -577,6 +611,7 @@ export async function startGitHubStub(
           const fullName = `${owner}/${name}`;
           const index = projects.findIndex((project) => project.fullName === fullName);
           const project = projects[index];
+          evidenceProjects.add(index + 2);
           send(200, {
             id: index + 2,
             full_name: fullName,

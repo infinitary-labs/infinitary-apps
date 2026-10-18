@@ -397,7 +397,7 @@ const crewmateCardParams = Type.Object({
     Type.Integer({
       minimum: 1,
       description:
-        "A current, fully published github.com story revision. The saved title wins. Give one settle merge action and no body, risk or required_actions; the host uses the saved story after checks pass.",
+        "A current, fully published github.com or gitlab.com story revision. The saved title wins. Give one settle merge action and no body, risk or required_actions; the host uses the saved story after checks pass.",
     }),
   ),
   actions: Type.Optional(

@@ -186,6 +186,7 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
 `GitLabForge` (`providers/gitlab/gitlabForge.ts`) reaches the project at `/projects/<encoded group/subgroup/name>`, so nested groups keep their whole path, through the same `GitLabClient` and per-host sign-in.
 
 - **Its change** is a merge request from the project's own branch onto the default branch (`POST /merge_requests`, `source_branch`, `target_branch`, `title`, `description`); a fork's merge request from a branch of the same name is never taken for it.
+  On gitlab.com a new merge request's description is its saved story, opened only after every selected upload is confirmed ("Saved change stories", "On gitlab.com" below); a self-hosted server's keeps the crewmate's body.
   It is named `!N` with GitLab's page, and recorded on the task as `changeLabel`, `prNumber` and `prUrl` like a pull request; surfaces keep the app's word, pull request.
   Its head is the merge request's `sha`.
 - **Its checks** are read for the head and nothing older (`checks()`):
@@ -201,6 +202,7 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
 - **Its readiness** (`pull`) reads `detailed_merge_status`: `mergeable` is clean; `conflict` (or `has_conflicts`) is a conflict; `need_rebase` is behind; a draft is a draft; an approval, a discussion, a required pipeline or another rule is blocked; GitLab still checking, or a status the app does not know, is computing.
   A server older than `detailed_merge_status` answers `merge_status`.
 - **Its merge** (`putIn`) checks the merge request's title is conventional, then asks `PUT /merge_requests/<N>/merge` with `sha` (GitLab refuses 409 when the merge request moved on), `squash: true` and the squash commit message `<title>`, a blank line and the description.
+  A saved story on gitlab.com ("Saved change stories" below) gives its plain summary and breaking-change footer in the description's place.
   A 200 is not a merge on its own: an answer that does not read merged is read back once; a merge request GitLab has locked while it merges is a transient answer the merge path reads back again, and anything else but merged is refused with GitLab's `merge_error`.
   A locked merge request reads open and computing, never closed.
   GitLab's 405, 409 and 422 are `refused`; the kept approval reads the merge request's own readiness for the cause, and the feed recognises 422 "Branch cannot be merged" as a conflict.
@@ -403,6 +405,7 @@ Evidence: `tests/e2e/forge-signin.spec.ts` - a write to another repository, a pr
 - **Writes** go at once only to `/projects/<the task's own URL-encoded path>/...`; one that names a project by its number, or any other project, the key's account or a group, asks like any other write, and the ask names the path to use when it is the task's own.
   Deleting a project itself is refused, as the app's GitHub sign-in cannot delete a repository (it holds no `delete_repo` scope).
   Raw merge-request merges, default-branch deletion, and file/commit writes on the default branch are refused with the same pointer to the merge card; writes on other branches still reach GitLab.
+  On gitlab.com, the task's own merge request is opened, and its saved description replaced, only through `open_change` ("Saved change stories", "On gitlab.com").
 - **Reruns**: `POST .../jobs/{id}/retry`, `.../jobs/{id}/play` and `.../pipelines/{id}/retry` are reruns: an accepted one records an existing reservation and arms the check watch as on GitHub.
 - **Its answers** carry GitLab's `x-request-id`, its `RateLimit-Remaining` and `RateLimit-Reset`, `Retry-After`, and `nextPath` whenever the next page stays under the server's own `/api/v4`.
   A redirect is refused, and a 401 asks GitLab who the key is before it asks the health service to look again.
@@ -608,12 +611,12 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 ## Saved change stories
 
-A future github.com pull request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
+A future github.com pull request or gitlab.com merge request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
 It records Why, What changed, Before, After, ordered view identities, captions, capture versions, verification, all seven risk explanations, required actions and unfinished work.
 Changed views have Before and After media; new views have only After; an invisible change has no views and an explicit no-picture reason.
 An author may group two media as an adjacent view, with the same ordering in both outputs.
-Picture-only pairs appear side by side; a pair containing a recording stacks in both outputs because GitHub's native players ignore the requested width and overflow a two-column table.
+Picture-only pairs appear side by side; a pair containing a recording stacks in both outputs because GitHub's and GitLab's native players ignore the requested width and overflow a two-column table.
 The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
 Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.
 Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication.
@@ -628,16 +631,17 @@ The existing image, total-size, duration and resolution limits still apply, and 
 Only the newest revision and the last published revision remain (or the unresolved opening revision while its outcome is unknown); replacing them removes their otherwise unreferenced copied media, while receipts remain reusable.
 Each receipt is scoped to the host, numeric project identity, full project name, visibility, content digest and media type.
 The paired computer transfers retained pictures and recordings through the existing picture and chunked-media routes before asking the home to prepare the story.
-`CHANGE_PRESENTATIONS_SINCE` gates that tool on work computers; an older computer must be updated before opening a new github.com PR, rather than bypassing the publication barrier.
+`CHANGE_PRESENTATIONS_SINCE` gates that tool on work computers; an older computer must be updated before opening a new github.com pull request or gitlab.com merge request, rather than bypassing the publication barrier.
 The home opens the PR using its own sign-in; no sign-in moves to the work computer.
 The work computer discards its staging copies after transfer; the home retains the newest and last published story copies.
 A refused preparation discards unretained staging copies even before host or legacy-PR validation, or when another story operation is running; it never removes that active operation's files.
 Completion cards receive independently named copies of the validated media in the task's `cards/` folder, so later story pruning leaves shown cards and their history intact.
 A staging refusal removes every newly minted picture and recording, and a refused completion card removes its new copies unless the card was already persisted.
 
-`open_change` takes the prepared `presentation` revision instead of `body` for a new github.com PR.
+`open_change` takes the prepared `presentation` revision instead of `body` for a new github.com pull request or gitlab.com merge request.
 The native GitHub attachment capability checks destination identity, public/private/internal visibility and write/maintain/admin permission before each upload.
 It sends raw bytes once to `https://uploads.github.com/user-attachments/assets`, with the short names `recording.mp4` or `picture.<format>` and the app's own sign-in; it refuses redirects, unsupported credentials and non-native returned URLs.
+In unpackaged tests, the existing API-base override also routes attachment uploads to the local GitHub stand-in, which retains and serves the actual bytes; packaged builds keep the native upload origin.
 GitHub shows an upload's name above its player, so the name is readable and never contains a source path or content hash.
 The digest still owns receipt identity; changing the display name never resends a confirmed attachment, whose original hosted name stays unchanged.
 Recordings always use bare attachment-URL paragraphs, not HTML video elements, so GitHub supplies its native player and rewrites private media to signed, temporary links.
@@ -645,10 +649,14 @@ An HTML `video src` would stay unsigned in a private project and require a signe
 Internal projects use the same sign-in-gated native media as private projects; the exact visibility remains in receipt identity so audience changes are refused.
 Saved receipts keep canonical GitHub attachment URLs, never the temporary links GitHub renders.
 Every selected file must have a confirmed receipt before the PR opens, including a draft, or an existing story is replaced.
-The publication barrier rereads the committed and pushed head, destination and retained hashes after uploading.
-Raw JSON gateway writes cannot create an own-project PR or replace this task's saved description around that barrier.
+Before uploading, the complete rendered description must fit the host's limit - GitHub's 65,536-character body, GitLab's 1,048,576-character description - including escaped prose, attachment links, project text and preserved human words.
+Sizing uses an address of each native receipt's own length without treating it as a receipt or publishing it.
+The publication barrier rereads the committed and pushed head, destination and retained hashes after uploading, and rechecks the final body size in case a person added text during the uploads.
+Raw JSON gateway writes cannot create an own-project PR or replace this task's saved description around that barrier, including percent-encoded paths, trailing slashes and the issues alias.
 No setting, repeated publication approval, evidence commit, public-storage fallback or Infinitary-hosted fallback exists.
 An access or validation failure before sending is a failed upload, not an uncertain write.
+An upload's 401 is a sign-in only when the host also refuses the key itself (GitHub's `GET /user`, GitLab's own 401 check); a key it still answers for makes the refusal a permission.
+A refused or uncertain upload reaches the crewmate in its own words, never as a reminder to push the branch; a permission refusal keeps the write-access note and its blocker words.
 A write whose response is lost stays uncertain across restart and is never automatically replayed.
 A matching PR body can resolve a lost publication response even after a later push; that confirmation retains the earlier demonstrated version and cannot qualify the new version for completion.
 GitHub offers no supported attachment lookup by digest for a lost receipt; the tool names the uncertain digest and discloses a possible orphan rather than inventing a URL or claiming absence proves failure.
@@ -656,7 +664,7 @@ The crewmate shows that disclosure on a card, and only after the captain chooses
 An uncertain opening is read first, then an explicit `recovery.retryOpening` can resend when no open PR exists, relying on GitHub's one-open-PR-per-head-and-base constraint.
 That deliberate retry also permits preparing a newer version while retaining the prior opening receipt, so a late first response or duplicate-opening refusal is reconciled rather than mistaken for a legacy PR.
 If an uncertain replacement left the exact last published region in place, the host restores that confirmed state and a deliberate later `open_change` retries its idempotent replacement.
-A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR on GitHub.
+A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR where the project lives.
 A task whose pull request was opened before saved stories and has since closed forgets it: its next `prepare_change` and `open_change` start a saved story like any new task, and only a pull request still open for the branch is refused as predating them.
 One that merged outside the app stops there like a merged published story: nothing more is opened for it.
 Hosted files can outlive a failed or abandoned opening, and local cleanup never deletes them.
@@ -670,15 +678,37 @@ The refusal returns the edited region as data: the crewmate shows it beside the 
 Missing or duplicated markers make the whole current description the review text, including an empty description.
 After that exact-text-bound choice, the host removes only this story's marker comments, preserves all existing prose (including the old unmarked story) and appends one restored generated section.
 A newer edit refuses the earlier choice; no ordinary raw body write through either `pulls/{number}` or `issues/{number}` bypasses this boundary.
-GitHub supplies no atomic conditional body write, so the adapter rereads before and after writing; a simultaneous human edit can still race those reads.
+Neither GitHub nor GitLab supplies an atomic conditional description write, so the adapter rereads before and after writing; a simultaneous human edit can still race those reads.
+The read after a write compares only the generated region, the one text the app owns, so words a person adds around it, or template lines the host removes, do not make a confirmed write uncertain.
 An ambiguous PR write is reconciled by branch, PR number when known, and exact generated region before any further write; a later push does not prevent confirming the earlier write.
 Missing or mismatched evidence holds the completion offer and the final own-task merge boundary independently of checks and merge authority.
 The completion call gives `emit_card presentation` and one merge action, without a second body, risk declaration or required-action list.
 CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.
 
+### On gitlab.com
+
+A gitlab.com project's forge offers the same story through GitLab's own project uploads (`providers/gitlab/attachments.ts`); a self-hosted server's forge offers none and keeps its delivery.
+Its destination is read from `GET /projects/<encoded group/subgroup/name>`: the numeric `id`, `path_with_namespace` (nested groups kept whole), `visibility`, and the key's role where GitLab lists it.
+A role GitLab lists below Developer is refused before sending; an inherited role it does not list leaves the decision to GitLab's own answer.
+Each upload rereads that project and sends the exact retained bytes once as multipart `file` to `POST /projects/<numeric id>/uploads`, the number the read confirmed, with the names `recording.mp4` or `picture.<format>`, the app's own sign-in and redirects refused.
+A private or internal project's upload is refused, with nothing sent, unless that read says `enforce_auth_checks_on_uploads` is exactly `true` ("Require authentication to view media files"); absent, null or false never passes, because GitLab otherwise serves the file to anyone with its link.
+The app never changes that setting; the refusal names it for a maintainer to turn on, and a story with no media publishes whatever the setting reads.
+A confirmed receipt is GitLab's project-relative `url`, `/uploads/<32 hex>/<name>`, checked against the name sent; its `full_path` must name the same file in the same project, as `/-/project/<id>/uploads/...` or the project's own path, or the answer is uncertain.
+Returned `markdown` is never used, and receipts keep only that reference, which GitLab resolves inside the merge request's project.
+Pictures are Markdown images and adjacent pictures use the same table as GitHub; a recording is an image link to its MP4, which GitLab renders in its own player with its alt text, never a bare reference.
+The merge request's description is replaced with `PUT /merge_requests/<N>` only after a fresh read still shows it open at the story's head with the words the publication read; `GET /repository/branches/<branch>` confirms the pushed version.
+Opening and replacing tell a refusal GitLab answered (a 4xx) from a lost connection, a redirect, a 5xx or an unreadable success, which stay uncertain and are read back, never replayed.
+An uncertain opening relies on GitLab permitting only one open merge request for a source and target branch.
+GitLab offers no lookup of an upload by digest either, so a lost upload receipt is disclosed as a possible orphan exactly as on GitHub.
+Raw gateway writes cannot open the task's own merge request (`POST .../merge_requests`) or replace its saved description (`PUT .../merge_requests/<N>` with `description` in the body or the query string, which GitLab also reads), however the path is encoded; its other fields and other merge requests stay writable.
+GitLab runs a description line that starts with a quick action (`/merge`, `/close`) when it saves the text, so every line of the author's prose and captions escapes its leading slash (`\/` reads as `/` on both hosts).
+A project template's own quick actions in `projectText` are the project's choice and run; GitLab removes their lines, which the region-only read-back allows.
+The squash is `<title>`, a blank line and the story's plain summary with any breaking-change footer, never the rendered description ("GitLab merge requests" above).
+
+Evidence: `providers/gitlab/attachments.test.ts` (the multipart upload, media protection, identity, role and returned-reference rules), `providers/gitlab/gitlabForge.test.ts` ("saved-story writes"), `presentation.test.ts` ("the layout GitLab can actually display"), `providers/gitlab/gateway.test.ts` (the raw-write refusals), `tests/gitlabStub.test.ts` ("a saved story through the real GitLab forge and the stand-in": a refused private upload, uploads before the opening read back byte for byte, a lost upload answer, a restart with a person's words and the squash), and `tests/e2e/gitlab-delivery.spec.ts`, whose gitlab.com journey opens the story and squashes its summary while the self-hosted one keeps its body.
+
 Existing PRs are not rewritten into this format.
-GitLab delivery, GitHub Enterprise Server, self-hosted GitLab, plain Git, local-only delivery, answer cards and release-note hero pictures are unchanged.
-The GitLab continuation adds its native capability and explicit private-media protection separately.
+GitHub Enterprise Server, self-hosted GitLab, plain Git, local-only delivery, answer cards and release-note hero pictures are unchanged.
 
 Preparation and ordinary publication reject tracked uncommitted changes, not untracked downloads such as `.infinitary-artifacts` archives.
 The completion card reads its local committed version and retained files once; merge checks compare the remote PR head with the published head, not a work computer's dirty copy or availability.

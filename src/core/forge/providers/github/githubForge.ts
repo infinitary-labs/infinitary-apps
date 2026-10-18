@@ -222,8 +222,15 @@ export class GitHubForge implements Forge {
             );
           return JSON.parse(answer.body) as unknown;
         },
+        uploadBaseUrl: this.uploadOrigin(),
         fetch: this.fetcher,
-        onSignInRejected: options.onSignInRejected,
+        // A key GitHub still answers for makes the upload's 401 a permission;
+        // the read's own 401 asks the health service to look again.
+        unauthorized: async () => {
+          const answer = await this.apiCall("GET", "/user").catch(() => undefined);
+          if (answer === undefined) options.onSignInRejected?.();
+          return answer?.status === 200 ? "permission" : "sign-in";
+        },
       });
     }
     this.workflows = new GitHubWorkflows(

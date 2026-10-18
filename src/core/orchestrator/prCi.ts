@@ -18,6 +18,7 @@ import { CI_ROUND_CAP } from "@shared/rigor";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import {
+  AttachmentUploadError,
   describeCheckState,
   type Forge,
   type ForgeChange,
@@ -1270,7 +1271,7 @@ export class PrCiService {
       const located = this.locate(taskId, "open");
       if ("said" in located) return located.said;
       if (!this.options.presentations || !located.forge.attachments)
-        return "Saved change stories are available only for future github.com pull requests.";
+        return "Saved change stories are available only for future github.com pull requests and gitlab.com merge requests.";
       try {
         // Only a pull request still open for the branch predates saved stories;
         // a recorded one that has closed is forgotten, as for any new task.
@@ -1418,6 +1419,10 @@ export class PrCiService {
       if (isSignInForgeFailure(caught)) {
         return crewSignInText(this.signInFact(forge, record.repoId));
       }
+      // An evidence upload says what stopped it; the branch is already pushed (INF-290 F4).
+      // A permission refusal keeps the write-access note and blocker words below (INF-290 G1).
+      if (caught instanceof AttachmentUploadError && caught.failure !== "permission")
+        return message;
       const place = forge.place ?? "the project's host";
       if (caught instanceof ForgeError && caught.failure === "permission") {
         const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;

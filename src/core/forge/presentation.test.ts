@@ -202,3 +202,92 @@ it("supplies the recording's measured duration and poster dimensions to the card
     images.map((image) => [Number(image.attribs.width), Number(image.attribs.height)]),
   ).toEqual(Array(4).fill([DEMO_POSTER.width, DEMO_POSTER.height]));
 });
+
+// INF-223 / accepted INF-132: gitlab.com plays an image link to an MP4 in its own player,
+// and its project-relative upload references resolve inside the merge request's project.
+describe("the layout GitLab can actually display", () => {
+  const gitlabUrls = new Map([
+    [image, "/uploads/66dbcd21ec5d24ed6ea225176098d52b/picture.png"],
+    [video, "/uploads/0a1b2c3d4e5f60718293a4b5c6d7e8f9/recording.mp4"],
+  ]);
+  const onGitLab = (selected: ChangePresentation): ChangePresentation => ({
+    ...selected,
+    destination: {
+      host: "gitlab.com",
+      projectId: 81234567,
+      fullName: "infinitary-labs/infinitary-test/infinitary-evidence-test-private",
+      visibility: selected.destination.visibility,
+    },
+  });
+
+  it("stacks each recording as an image link GitLab turns into its own player", () => {
+    for (const kinds of [
+      ["recording", "recording"],
+      ["picture", "recording"],
+      ["recording", "picture"],
+    ] as const) {
+      const selected = onGitLab(story([...kinds], "private"));
+      const blocks = presentationMarkdown(selected, gitlabUrls, "passed").split("\n\n");
+      const recordings = selected.views.flatMap((view) =>
+        [...view.before, ...view.after].filter((entry) => entry.asset === video),
+      );
+      // One image link per shown recording, each with its alt text and its own paragraph.
+      expect(blocks.filter((block) => block.includes(gitlabUrls.get(video) as string))).toEqual(
+        recordings.map((entry) => `![${entry.alt}](${gitlabUrls.get(video)})`),
+      );
+      // A bare reference would render as a link, never a player; tables would squeeze it.
+      expect(blocks).not.toContain(gitlabUrls.get(video));
+      expect(
+        DomUtils.findAll(
+          (node) => node.name === "video" || node.name === "table",
+          parseDocument(blocks.join("\n\n")).children,
+        ),
+      ).toEqual([]);
+      expect(inGrid(presentationCardBody(selected))).toEqual([]);
+    }
+  });
+
+  it("keeps picture-only pairs adjacent with project-relative references", () => {
+    const selected = onGitLab(story(["picture", "picture"], "public"));
+    const tables = DomUtils.findAll(
+      (node) => node.name === "table",
+      parseDocument(presentationMarkdown(selected, gitlabUrls, "passed")).children,
+    );
+    expect(
+      tables.map((table) =>
+        DomUtils.findAll((node) => node.name === "img", table.children).map(
+          (node) => node.attribs.src,
+        ),
+      ),
+    ).toEqual(Array(2).fill(Array(2).fill(gitlabUrls.get(image))));
+  });
+
+  // INF-290 F2: GitLab runs a description line that starts with a quick action when it saves it.
+  it("never starts a line with a quick action from the author's words", () => {
+    const selected = onGitLab(story(["picture"], "private"));
+    selected.why = ["/merge"];
+    selected.whatChanged = ["/close the old request"];
+    selected.unfinished = ["/approve once checks pass"];
+    selected.views = selected.views.map((view) => ({ ...view, caption: "/assign @octo" }));
+    const markdown = presentationMarkdown(selected, gitlabUrls, "pending");
+    expect(markdown.split("\n").filter((line) => line.startsWith("/"))).toEqual([]);
+    // The escape still reads as the author's words once rendered.
+    expect(markdown.split("\n\n")).toEqual(
+      expect.arrayContaining([
+        "\\/merge",
+        "\\/close the old request",
+        "\\/approve once checks pass",
+        "\\/assign @octo",
+      ]),
+    );
+  });
+
+  it("never renders one host's receipt in the other host's story", () => {
+    expect(() =>
+      presentationMarkdown(onGitLab(story(["picture"], "private")), urls, "pending"),
+    ).toThrow(/unconfirmed attachment/);
+    expect(() =>
+      presentationMarkdown(story(["picture"], "private"), gitlabUrls, "pending"),
+    ).toThrow(/unconfirmed attachment/);
+  });
+});

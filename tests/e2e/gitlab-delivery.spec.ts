@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { presentationCommitMessage, presentationRegionMarkers } from "../../src/core/forge";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -25,6 +26,7 @@ import {
   GITLAB_EVIDENCE_MARKER,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_STORY,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
@@ -43,6 +45,11 @@ import { factsStrip, shownCard } from "./stack";
  * moved, a conflict, a failed pipeline, a running job, a manual job nobody
  * started and a failed merged-results pipeline each stop the click with
  * nothing merged.
+ *
+ * On gitlab.com the merge request and its completion card tell one saved
+ * story (INF-132): the description is the story's generated region and the
+ * squash carries its plain summary; a self-hosted server keeps the body the
+ * crewmate wrote.
  *
  * A crewmate diagnosing a failed pipeline there lists the version's
  * pipelines and jobs with its API tool, reads the failed job's log and
@@ -201,8 +208,25 @@ for (const host of HOSTS) {
         }
       }
 
+      // gitlab.com's merge request carries the saved story's generated region;
+      // a server's own host keeps the description the crewmate gave.
+      const savedStory = host === "gitlab.com";
+      const description = gitlab.descriptions().get(1) ?? "";
+      if (savedStory) {
+        const { start, end } = presentationRegionMarkers(task.id);
+        expect(description.startsWith(start)).toBe(true);
+        expect(description.endsWith(end)).toBe(true);
+        expect(description).toContain("## Why");
+        expect(description).toContain(`No pictures: `);
+      } else {
+        expect(description).toBe(MOCK_GITHUB_CHANGE.body);
+      }
+      if (pictures)
+        writeFileSync(join(pictures, `${host}-merge-request-description.md`), description);
+
       // The captain's click: one squash of that merge request at the version
-      // the crewmate pushed, under the title and description it gave.
+      // the crewmate pushed, under its title and the story's plain summary
+      // (INF-228 F2), or the description it gave on a server's own host.
       await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
       await expect(putInLine(page, task.key)).toBeVisible({ timeout: 30_000 });
       expect(gitlab.merges()).toEqual([
@@ -210,7 +234,9 @@ for (const host of HOSTS) {
           iid: 1,
           sha: sentUp,
           squash: true,
-          message: `${MOCK_GITHUB_CHANGE.title}\n\n${MOCK_GITHUB_CHANGE.body}`,
+          message: `${MOCK_GITHUB_CHANGE.title}\n\n${
+            savedStory ? presentationCommitMessage(MOCK_GITHUB_STORY) : MOCK_GITHUB_CHANGE.body
+          }`,
         },
       ]);
       await expect

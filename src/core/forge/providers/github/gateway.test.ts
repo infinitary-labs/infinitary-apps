@@ -240,6 +240,37 @@ async function fixture(
 }
 
 describe("the GitHub gateway through crewmate tools and the app's sign-in", () => {
+  // INF-285 F2: equivalent GitHub paths cannot bypass the saved-story barrier.
+  it.each([
+    ["POST", "pulls/"],
+    ["POST", "%70ulls"],
+    ["PATCH", "pulls/36/"],
+    ["PATCH", "pulls/%33%36"],
+    ["PATCH", "issues/36/"],
+    ["PATCH", "issues/%33%36/"],
+    // INF-285 G1: GitHub reads pulls/036 as pull request 36.
+    ["PATCH", "pulls/036"],
+    ["PATCH", "issues/036"],
+  ] as const)("refuses a raw description write through %s %s", async (method, rest) => {
+    const f = await fixture();
+    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    const result = await f.write.run({
+      method,
+      path: `/repos/octo/meter/${rest}`,
+      body: JSON.stringify({
+        title: "fix: meter",
+        head: "fm/task-1",
+        base: "main",
+        body: "Raw replacement",
+      }),
+    });
+    expect(result.text).toContain(
+      method === "POST" ? "prepare_change and open_change" : "saved story with open_change",
+    );
+    expect(f.seen).toEqual([]);
+  });
+
   it("cannot bypass the saved-story publication barrier, while legacy descriptions remain writable (INF-92)", async () => {
     const f = await fixture();
     const opened = await f.write.run({

@@ -84,7 +84,8 @@ const savedPresentationShape = z.strictObject({
   taskId: z.string(),
   revision: z.number().int().positive(),
   destination: z.strictObject({
-    host: z.literal("github.com"),
+    /** INF-132: future github.com pull requests and gitlab.com merge requests, never a server's own host. */
+    host: z.enum(["github.com", "gitlab.com"]),
     projectId: z.number().int().positive().safe(),
     fullName: z.string().min(1),
     visibility: z.enum(["public", "private", "internal"]),

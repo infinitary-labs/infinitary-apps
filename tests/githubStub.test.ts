@@ -4,7 +4,9 @@ import { ForgeError } from "../src/core/forge/forge";
 import { readOpenChanges } from "../src/core/forge/providers/github/changes";
 import { GitHubForge } from "../src/core/forge/providers/github/githubForge";
 import { requestDeviceCode } from "../src/core/forge/providers/github/oauth";
+import { DEMO_POSTER, DEMO_RECORDING } from "./e2e/demoFixtures";
 import { type GitHubStub, STUB_USER_CODE, startGitHubStub } from "./e2e/githubStub";
+import { expectBytesEqual } from "./helpers/expectBytes";
 
 /**
  * The GitHub stand-in the e2e journeys put changes in through
@@ -46,6 +48,49 @@ const mergeRequests = (stub: GitHubStub) =>
   stub.requests().filter((line) => line.endsWith("/merge"));
 
 describe("the GitHub stand-in, through the app's forge", () => {
+  // INF-285 F4: the existing endpoint override keeps real evidence bytes off GitHub.
+  it("uploads and reads back pictures and recordings entirely through the local API override", async () => {
+    github = await startGitHubStub();
+    const stub = github;
+    const forge = new GitHubForge(
+      { kind: "github", host: "github.com", owner: "octo", name: "meterlab", dir: "/r" },
+      {
+        token: async () => "gho_e2e_sign_in",
+        apiBaseUrl: `${stub.url}/`,
+        fetch: (input, init) => {
+          // A red run fails here instead of contacting the production upload endpoint.
+          expect(new URL(String(input)).origin).toBe(stub.url);
+          return fetch(input, init);
+        },
+      },
+    );
+    const attachments = forge.attachments;
+    if (!attachments) throw new Error("GitHub must offer native attachments");
+    const destination = await attachments.destination();
+    for (const file of [
+      { bytes: DEMO_POSTER.bytes, mediaType: "image/png" },
+      { bytes: DEMO_RECORDING.bytes, mediaType: "video/mp4" },
+    ] as const) {
+      if (!file.bytes) throw new Error("The fixture needs real media bytes");
+      const receipt = await attachments.upload(destination, {
+        bytes: file.bytes,
+        mediaType: file.mediaType,
+        sha256: createHash("sha256").update(file.bytes).digest("hex"),
+      });
+      expect(receipt.url).toMatch(/^https:\/\/github\.com\/user-attachments\/assets\//);
+      const readback = await fetch(`${stub.url}${new URL(receipt.url).pathname}`, {
+        headers: { Authorization: "Bearer gho_e2e_sign_in" },
+      });
+      expect(readback.status).toBe(200);
+      expect(readback.headers.get("content-type")).toBe(file.mediaType);
+      expectBytesEqual(new Uint8Array(await readback.arrayBuffer()), file.bytes);
+    }
+    expect(stub.requests().filter((line) => line === "POST /user-attachments/assets")).toHaveLength(
+      2,
+    );
+    expect(stub.requests().some((line) => line.endsWith("/pulls"))).toBe(false);
+  });
+
   it("serves the current user-facing code through the real device-flow reader", async () => {
     github = await startGitHubStub();
     const options = { baseUrl: github.url };

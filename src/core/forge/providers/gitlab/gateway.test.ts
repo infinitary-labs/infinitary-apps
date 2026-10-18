@@ -175,6 +175,90 @@ async function fixture(
 }
 
 describe("the gateway on a GitLab project, through crewmate tools and the key made there", () => {
+  // INF-223 / accepted INF-132: on gitlab.com every planned attachment is confirmed before
+  // a merge request opens, and its saved description changes only through open_change.
+  it.each([
+    // GitLab's path policy already refuses a trailing slash before anything is sent.
+    ["POST", "merge_requests"],
+    ["POST", "%6Derge_requests"],
+    ["PUT", "merge_requests/36"],
+    ["PUT", "merge_requests/036"],
+    ["PUT", "merge_requests/%33%36"],
+  ] as const)(
+    "refuses a raw merge request write through %s %s on gitlab.com",
+    async (method, rest) => {
+      const f = await fixture();
+      f.tasks.recordDelivery("task-1", { prNumber: 36 });
+      f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+      const result = await f.write.run({
+        method,
+        path: `${OWN}/${rest}`,
+        body: JSON.stringify({
+          source_branch: "fm/task-1",
+          target_branch: "main",
+          title: "fix: notes",
+          description: "Raw replacement",
+        }),
+      });
+      expect(result.text).toContain(
+        method === "POST" ? "prepare_change and open_change" : "saved story with open_change",
+      );
+      expect(f.seen).toEqual([]);
+    },
+  );
+
+  // INF-290 F1: GitLab reads a field from the query string as well as the JSON body.
+  it.each([
+    ["merge_requests/36?description=Raw%20replacement", "{}"],
+    ["merge_requests/36?%64escription=Raw", undefined],
+    ["merge_requests/036?labels=evidence&description=Raw", "{}"],
+  ])("refuses a description named in the query string: %s", async (rest, body) => {
+    const f = await fixture();
+    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    const result = await f.write.run({
+      method: "PUT",
+      path: `${OWN}/${rest}`,
+      ...(body === undefined ? {} : { body }),
+    });
+    expect(result.text).toContain("saved story with open_change");
+    expect(f.seen).toEqual([]);
+  });
+
+  it("keeps a gitlab.com merge request's other writes and a server's own merge requests writable", async () => {
+    const f = await fixture();
+    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    // A title or label change is not the description; another merge request is not this task's.
+    await f.write.run({
+      method: "PUT",
+      path: `${OWN}/merge_requests/36`,
+      body: JSON.stringify({ labels: "evidence" }),
+    });
+    await f.write.run({
+      method: "PUT",
+      path: `${OWN}/merge_requests/37`,
+      body: JSON.stringify({ description: "Another change" }),
+    });
+    expect(f.seen.map((seen) => `${seen.method} ${seen.path}`)).toEqual([
+      `PUT /api/v4${OWN}/merge_requests/36`,
+      `PUT /api/v4${OWN}/merge_requests/37`,
+    ]);
+    const server = await fixture({ host: "gitlab.example.com" });
+    await server.write.run({
+      method: "POST",
+      path: `${OWN}/merge_requests`,
+      body: JSON.stringify({
+        source_branch: "fm/task-1",
+        target_branch: "main",
+        title: "fix: notes",
+      }),
+    });
+    expect(server.seen.map((seen) => `${seen.method} ${seen.path}`)).toEqual([
+      `POST /api/v4${OWN}/merge_requests`,
+    ]);
+  });
+
   it("reads the project by its encoded path with the key, and hands back GitLab's ids, allowance and next page", async () => {
     const { read, seen } = await fixture();
     const answer = JSON.parse(

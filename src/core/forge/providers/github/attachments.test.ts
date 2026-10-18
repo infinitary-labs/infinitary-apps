@@ -34,17 +34,18 @@ function arrange(
     options.response ?? (async () => Response.json({ url: receipt })),
   );
   const readRepository = vi.fn(async () => options.repo ?? repository);
-  const rejected = vi.fn();
+  // The forge's own read of the key after a 401: here GitHub no longer answers for it.
+  const unauthorized = vi.fn(async (): Promise<"sign-in" | "permission"> => "sign-in");
   return {
     fetcher,
     readRepository,
-    rejected,
+    unauthorized,
     client: new GitHubAttachments({
       fullName: repository.full_name,
       token: async () => options.token ?? "gho_test-only",
       readRepository,
       fetch: fetcher,
-      onSignInRejected: rejected,
+      unauthorized,
     }),
   };
 }
@@ -129,16 +130,29 @@ describe("GitHub native evidence", () => {
   it.each([401, 403, 404, 413, 422, 429])(
     "reports a confirmed refusal %s without retrying or exposing its body",
     async (status) => {
-      const { client, fetcher, rejected } = arrange({
+      const { client, fetcher, unauthorized } = arrange({
         response: async () => new Response("private response", { status }),
       });
       await expect(client.upload(destination, attachment())).rejects.toMatchObject({
         outcome: "failed",
+        ...(status === 401 ? { failure: "sign-in" } : {}),
       });
       expect(fetcher).toHaveBeenCalledTimes(1);
-      expect(rejected).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+      expect(unauthorized).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
     },
   );
+
+  // INF-290 F5: an upload's 401 is a sign-in only when GitHub refuses the key itself.
+  it("reads a 401 as a permission while GitHub still answers for the key", async () => {
+    const { client, unauthorized } = arrange({
+      response: async () => new Response("private response", { status: 401 }),
+    });
+    unauthorized.mockResolvedValueOnce("permission");
+    await expect(client.upload(destination, attachment())).rejects.toMatchObject({
+      outcome: "failed",
+      failure: "permission",
+    });
+  });
 
   it.each([
     async () => {

@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
+import type { AttachmentMediaType } from "./attachments";
 import { githubAttachmentUrl } from "./providers/github/attachments";
+import { gitlabAttachmentName, gitlabAttachmentUrl } from "./providers/gitlab/attachments";
 
 export function presentationRegionMarkers(taskId: string): { start: string; end: string } {
   if (!/^[A-Za-z0-9_-]+$/.test(taskId)) throw new Error("Invalid story task identity.");
@@ -20,18 +22,65 @@ export function presentationHtmlText(value: string): string {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
+/**
+ * Author prose as inert Markdown: no markup, and no line that GitLab runs as
+ * a quick action (`/merge`, `/close`) when it saves the description; `\/`
+ * renders as `/` on both hosts (INF-290 F2).
+ */
 function markdown(value: string): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replace(/[\\`*_{}[\]()#+.!|~-]/g, "\\$&")
+    .replace(/[\\`*_{}[\]()#+.!|~/-]/g, "\\$&")
     .replaceAll("\n", " ");
 }
 const versionWords = (story: ChangePresentation) =>
   `Story ${story.revision} · demonstrated version ${story.head}`;
 
-/** GitHub ignores video widths; only picture-only pairs can safely sit side by side. */
+/**
+ * Each host's own native forms (INF-132); a receipt never crosses hosts.
+ * GitHub plays a bare attachment URL in its own player and signs private
+ * media; GitLab plays an image link to an MP4 in its own player, and its
+ * project-relative reference resolves inside the merge request's project.
+ */
+const NATIVE = {
+  "github.com": {
+    url: githubAttachmentUrl,
+    /** The bare URL carries no words, so its alt text follows as its own paragraph. */
+    recording: (url: string) => url,
+    altParagraph: true,
+    /** GitHub's description limit, prose, links, project text and human words included. */
+    bodyLimit: 65_536,
+    // Only for sizing: every accepted receipt has this fixed-length UUID shape.
+    sizingUrl: (_mediaType: AttachmentMediaType) =>
+      "https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000",
+  },
+  "gitlab.com": {
+    url: gitlabAttachmentUrl,
+    recording: (url: string, alt: string) => `![${markdown(alt)}](${url})`,
+    altParagraph: false,
+    /** GitLab's merge request description limit. */
+    bodyLimit: 1_048_576,
+    sizingUrl: (mediaType: AttachmentMediaType) =>
+      `/uploads/${"0".repeat(32)}/${gitlabAttachmentName(mediaType)}`,
+  },
+} as const;
+
+/** The most characters the host keeps in a whole description. */
+export function presentationBodyLimit(host: ChangePresentation["destination"]["host"]): number {
+  return NATIVE[host].bodyLimit;
+}
+
+/** An address of a real receipt's length, for sizing a description before any upload. */
+export function presentationSizingUrl(
+  host: ChangePresentation["destination"]["host"],
+  mediaType: AttachmentMediaType,
+): string {
+  return NATIVE[host].sizingUrl(mediaType);
+}
+
+/** Native players ignore requested widths; only picture-only pairs can safely sit side by side. */
 function adjacentPictures(
   story: ChangePresentation,
   view: ChangePresentation["views"][number],
@@ -45,12 +94,13 @@ function adjacentPictures(
   );
 }
 
-/** Bare recording URLs use GitHub's native player and its private-media signing. */
+/** Recordings use each host's own native player; GitHub's also signs private media. */
 export function presentationMarkdown(
   story: ChangePresentation,
   urls: ReadonlyMap<string, string>,
   checks: "pending" | "passed",
 ): string {
+  const native = NATIVE[story.destination.host];
   const media = (
     entry: RetainedPresentationMedia,
     caption: string,
@@ -58,11 +108,11 @@ export function presentationMarkdown(
     adjacent = false,
   ) => {
     const asset = story.assets.find((candidate) => candidate.id === entry.asset);
-    const url = githubAttachmentUrl(urls.get(entry.asset));
+    const url = native.url(urls.get(entry.asset));
     if (!asset || !url) throw new Error("The story has an unconfirmed attachment.");
     const shown =
       asset.mediaType === "video/mp4"
-        ? url
+        ? native.recording(url, entry.alt)
         : adjacent
           ? `<a href="${url}"><img src="${url}" alt="${presentationHtmlText(entry.alt)}" width="320"></a>`
           : `![${markdown(entry.alt)}](${url})`;
@@ -70,7 +120,7 @@ export function presentationMarkdown(
       isNew ? "**New**" : "",
       shown,
       markdown(caption),
-      asset.mediaType === "video/mp4" ? markdown(entry.alt) : "",
+      asset.mediaType === "video/mp4" && native.altParagraph ? markdown(entry.alt) : "",
       entry.applicability ? `Evidence applicability: ${markdown(entry.applicability)}` : "",
     ]
       .filter(Boolean)
@@ -211,7 +261,7 @@ export function presentationCardBody(story: ChangePresentation): string {
     .join("\n");
 }
 
-/** GitHub’s web editor changes line endings, not the person’s words. */
+/** A host's web editor changes line endings, not the person's words. */
 export const presentationLines = (text: string): string => text.replaceAll("\r\n", "\n");
 
 /** Missing or duplicate boundaries make the whole body the text a person must review. */
@@ -239,7 +289,7 @@ export function readPresentationRegion(body: string, taskId: string): string {
   return bounds ? body.slice(bounds.first, bounds.end) : body;
 }
 
-/** Preserve surrounding words and normalize GitHub web-editor line endings. */
+/** Preserve surrounding words and normalize web-editor line endings. */
 export function replacePresentationRegion(
   body: string,
   previous: string,

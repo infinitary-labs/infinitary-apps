@@ -67,6 +67,7 @@ export {
   overallOfChecks,
 } from "./forge";
 export {
+  presentationBodyLimit,
   presentationCardBody,
   presentationCommitMessage,
   presentationContentHash,
@@ -74,12 +75,14 @@ export {
   presentationLines,
   presentationMarkdown,
   presentationRegionMarkers,
+  presentationSizingUrl,
   readPresentationRegion,
   replacePresentationRegion,
 } from "./presentation";
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";
 export { gitlabReleaseFileCalls } from "./providers/gitlab/api";
+export { GITLAB_PRIVATE_MEDIA_REFUSAL } from "./providers/gitlab/attachments";
 export type { LocatedReleaseFile } from "./releaseFile";
 export { PLACED_RELEASE_FILE_REFUSAL, releaseFileIn } from "./releaseFile";
 export type { SignInRefusal, SignInWay } from "./signInRefusal";

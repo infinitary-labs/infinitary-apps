@@ -2,7 +2,7 @@ import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { API_RESPONSE_MAX_BYTES, type ForgeApiResponse, type ReleaseUpload } from "../../api";
-import { ForgeError, type ForgeFailure, isSignInForgeFailure } from "../../forge";
+import { ForgeError, type ForgeFailure, ForgeWriteError, isSignInForgeFailure } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import { gitlabReleaseFileCalls } from "./api";
 
@@ -142,6 +142,50 @@ export class GitLabClient {
       return { body: JSON.parse(text) as unknown, total };
     } catch {
       throw new ForgeError("transient", `${this.place}'s answer could not be read.`);
+    }
+  }
+
+  /**
+   * A write its owner must tell from a lost answer (`ForgeWriteError`): with
+   * no key nothing is sent; an answer GitLab refused in words (a 4xx) is
+   * `failed`, nothing written; a lost connection, a redirect, a 5xx or a
+   * success that cannot be read may follow a write, so it is `uncertain` and
+   * is read back before any retry, never replayed.
+   */
+  async write(method: string, path: string, body: unknown, what: string): Promise<unknown> {
+    const token = await this.options.token();
+    if (!token)
+      throw new ForgeWriteError("failed", "sign-in", notSignedInText(this.place, this.host));
+    const uncertain = (answered = "gave no readable answer") =>
+      new ForgeWriteError(
+        "uncertain",
+        "transient",
+        `${this.place} ${answered} when ${what}; read it back before any retry.`,
+      );
+    let response: Response;
+    try {
+      response = await this.send(token, method, path, body, { redirect: "manual" });
+    } catch {
+      throw uncertain();
+    }
+    if (!response.ok) {
+      const said = await this.words(response);
+      if (![400, 401, 403, 404, 405, 409, 413, 415, 422, 429].includes(response.status))
+        throw uncertain(`answered ${response.status}${said ? ` (${said})` : ""}`);
+      const failure =
+        response.status === 401 ? await this.whoAmI(token) : failureOf(response.status);
+      if (response.status === 401 && failure === "sign-in") this.options.onSignInRejected?.();
+      throw new ForgeWriteError(
+        "failed",
+        failure,
+        `${this.place} answered ${response.status} to ${method} ${path.split("?")[0]}${said ? `: ${said}` : ""}`,
+      );
+    }
+    try {
+      const text = await this.bounded(response, GITLAB_READ_MAX_BYTES);
+      return text ? (JSON.parse(text) as unknown) : null;
+    } catch {
+      throw uncertain();
     }
   }
 
@@ -384,6 +428,18 @@ export class GitLabClient {
       redirect: options.redirect ?? "error",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+  }
+
+  /**
+   * Another route's 401, read the way this client reads its own: a key GitLab
+   * still answers for makes it a permission; only a refused key is a sign-in,
+   * which asks the health service to look again.
+   */
+  async unauthorized(): Promise<"sign-in" | "permission"> {
+    const token = await this.options.token();
+    const failure = token ? await this.whoAmI(token) : "sign-in";
+    if (failure === "sign-in") this.options.onSignInRejected?.();
+    return failure === "permission" ? "permission" : "sign-in";
   }
 
   /** After a 401: whether GitLab still answers for the key, which makes the refusal a permission. */

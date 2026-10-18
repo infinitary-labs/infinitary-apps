@@ -35,8 +35,8 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your task's branch as a pull request where the project lives: a pull request onto the default branch on GitHub, a merge request onto it on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
   "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes.",
-  "On github.com, prepare_change first, then pass its presentation revision, not body. Every selected attachment must upload before a new pull request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
-  "For GitLab and other hosts, keep body with the project's required headings; a pull request still open from before saved stories is answered unchanged.",
+  "On github.com and gitlab.com, prepare_change first, then pass its presentation revision, not body. Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
+  "For self-hosted GitLab, GitHub Enterprise and other hosts, keep body with the project's required headings; a pull or merge request still open from before saved stories is answered unchanged.",
   "A saved story is replaced whole, preserving surrounding text. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication; a pull request opened before saved stories and since closed without merging is forgotten, and a new story starts.",
   "Never squash your commits yourself (the merge does): bring the branch up to date with git rebase onto the default branch, never git reset --soft onto it, which would undo its newer work.",
   "If it answers that the app is not signed in, report that as a blocker: the captain signs in, never you.",
@@ -80,7 +80,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one saved story for a future github.com pull request and its completion card, without showing a card or uploading. Commit the demonstrated version first. Supply Why, What changed, Before, After, ordered views, inspected local pictures or MP4 recordings with posters, verification, seven risk lines, required actions and unfinished work. Picture-only pairs may sit side by side; pairs containing a recording stack in both outputs. Declare publishable only after reviewing the exact words and bytes for the project's audience. Never include private threads or secrets. Before names the original base; later After evidence is fresh or carries an explicit applicability declaration for the new head. A change with no visible surface gives noPicture and no views. The host validates and retains immutable copies in the task's card folder. Keep project-required public template text and issue references in projectText. The returned revision is passed to open_change and, after checks pass, emit_card as presentation. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. Not for open old PRs, GitLab, plain Git or local-only tasks.",
+    "Prepare one saved story for a future github.com pull request or gitlab.com merge request and its completion card, without showing a card or uploading. Commit the demonstrated version first. Supply Why, What changed, Before, After, ordered views, inspected local pictures or MP4 recordings with posters, verification, seven risk lines, required actions and unfinished work. Picture-only pairs may sit side by side; pairs containing a recording stack in both outputs. Declare publishable only after reviewing the exact words and bytes for the project's audience. Never include private threads or secrets. Before names the original base; later After evidence is fresh or carries an explicit applicability declaration for the new head. A change with no visible surface gives noPicture and no views. The host validates and retains immutable copies in the task's card folder. Keep project-required public template text and issue references in projectText. The returned revision is passed to open_change and, after checks pass, emit_card as presentation. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting. Not for open old PRs, self-hosted GitLab, GitHub Enterprise, plain Git or local-only tasks.",
   parameters: Type.Object({
     story: Type.Unsafe<ChangePresentationDraft>({
       ...z.toJSONSchema(changePresentationDraftSchema),
@@ -115,7 +115,7 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
       Type.Integer({
         minimum: 1,
         description:
-          "The current revision returned by prepare_change; uploads all selected evidence before opening or updating its github.com pull request.",
+          "The current revision returned by prepare_change; uploads all selected evidence before opening or updating its github.com pull request or gitlab.com merge request.",
       }),
     ),
     recovery: Type.Optional(

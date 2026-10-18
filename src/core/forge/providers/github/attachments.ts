@@ -3,6 +3,7 @@ import { notSignedInText } from "@shared/forges";
 import { z } from "zod";
 import {
   type AttachmentDestination,
+  type AttachmentUnauthorized,
   AttachmentUploadError,
   type ForgeAttachments,
   sameAttachmentDestination,
@@ -10,7 +11,7 @@ import {
 } from "../../attachments";
 import { ForgeError } from "../../forge";
 
-const UPLOAD_URL = "https://uploads.github.com/user-attachments/assets";
+const UPLOAD_BASE = "https://uploads.github.com";
 const RESPONSE_LIMIT = 16 * 1024;
 const TIMEOUT_MS = 60_000;
 /** Stay below GitHub's documented 10 MB video allowance, including on a free plan. */
@@ -53,8 +54,11 @@ export class GitHubAttachments implements ForgeAttachments {
       token: () => Promise<string | undefined>;
       /** The owning forge's redirect-refusing, bounded repository read. */
       readRepository: () => Promise<unknown>;
+      /** The owning forge's upload origin; its unpackaged API override keeps tests local. */
+      uploadBaseUrl?: string;
       fetch?: typeof fetch;
-      onSignInRejected?: () => void;
+      /** The owning forge's check of a 401: whether GitHub still answers for the key. */
+      unauthorized: AttachmentUnauthorized;
     },
   ) {}
 
@@ -136,7 +140,8 @@ export class GitHubAttachments implements ForgeAttachments {
         "GitHub access could not be checked before uploading. No file was sent.",
       );
     }
-    const url = new URL(UPLOAD_URL);
+    const base = (this.options.uploadBaseUrl ?? UPLOAD_BASE).replace(/\/+$/, "");
+    const url = new URL(`${base}/user-attachments/assets`);
     // GitHub shows this name above its player. Identity belongs to the receipt's digest,
     // not the display name; never expose a source path or a long hash in that header.
     url.searchParams.set(
@@ -162,14 +167,17 @@ export class GitHubAttachments implements ForgeAttachments {
       // Even a timeout can follow a successful write. Do not expose fetch errors or credentials.
       throw uncertain();
     }
-    if (response.status === 401) this.options.onSignInRejected?.();
     if (!response.ok) {
       await response.body?.cancel().catch(() => {});
       const rejected = [400, 401, 403, 404, 413, 415, 422, 429].includes(response.status);
       if (!rejected) throw uncertain();
       throw new AttachmentUploadError(
         "failed",
-        response.status === 401 ? "sign-in" : response.status === 403 ? "permission" : "refused",
+        response.status === 401
+          ? await this.options.unauthorized().catch(() => "sign-in" as const)
+          : response.status === 403
+            ? "permission"
+            : "refused",
         `GitHub refused the evidence upload (${response.status}). No pull request was opened; there is no fallback.`,
       );
     }

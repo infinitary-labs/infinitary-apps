@@ -9,12 +9,14 @@ import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
+  AttachmentUploadError,
   type Forge,
   type ForgeChange,
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
+  GITLAB_PRIVATE_MEDIA_REFUSAL,
   overallOfChecks,
   presentationCommitMessage,
   presentationContentHash,
@@ -1020,6 +1022,71 @@ describe("PrCiService and the sign-in where the project lives", () => {
       "conventional name",
     );
     expect(forge.calls).not.toContain("openChange fm/task-ab12cd34 Fix it");
+  });
+
+  // INF-290 F4: an evidence upload refusal is answered in its own words; the branch is pushed.
+  it.each([
+    new AttachmentUploadError("failed", "refused", GITLAB_PRIVATE_MEDIA_REFUSAL),
+    new AttachmentUploadError(
+      "uncertain",
+      "refused",
+      "GitLab may have kept the attachment, but no confirmed receipt returned.",
+    ),
+  ])("answers an evidence upload that stopped with its own words: $outcome", async (error) => {
+    const forge = new FakeForge({ kind: "gitlab", place: "GitLab" });
+    forge.change = null;
+    Object.assign(forge, {
+      attachments: {
+        destination: async () => {
+          throw new Error("No destination read expected");
+        },
+        upload: async () => {
+          throw new Error("No upload expected");
+        },
+      },
+    });
+    const { tasks, repos, service, presentations } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    vi.spyOn(presentations, "publish").mockRejectedValue(error);
+    const text = await service.open("ab12cd34", {
+      title: "fix: carry the evidence",
+      presentation: 1,
+    });
+    expect(text).toBe(error.message);
+  });
+
+  // INF-290 G1: an upload the host refused for permission still asks for write access as a blocker.
+  it("keeps the write-access note and blocker words for an evidence upload refused for permission", async () => {
+    const forge = new FakeForge({ kind: "gitlab", place: "GitLab" });
+    forge.change = null;
+    Object.assign(forge, {
+      attachments: {
+        destination: async () => {
+          throw new Error("No destination read expected");
+        },
+        upload: async () => {
+          throw new Error("No upload expected");
+        },
+      },
+    });
+    const onNote = vi.fn();
+    const { tasks, repos, service, presentations } = setup({ forge, onNote });
+    await insertDirectPrTask(tasks, repos);
+    const refused = new AttachmentUploadError(
+      "failed",
+      "permission",
+      "GitLab refused the evidence upload (403). No merge request was opened; there is no fallback.",
+    );
+    vi.spyOn(presentations, "publish").mockRejectedValue(refused);
+    const text = await service.open("ab12cd34", {
+      title: "fix: carry the evidence",
+      presentation: 1,
+    });
+    expect(text).toBe(
+      `GitLab did not allow opening the change: ${refused.message}. Report this as a blocker: the captain needs write access to the project there.`,
+    );
+    expect(onNote).toHaveBeenCalledTimes(1);
+    expect(String(onNote.mock.calls[0]?.[0])).toContain("ask its owner for write access");
   });
 
   it("opens the branch as a proposed change and records it once", async () => {

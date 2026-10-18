@@ -1,7 +1,8 @@
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
 import {
@@ -856,6 +857,56 @@ describe("a release file's upload address (INF-205)", () => {
       ),
     ).toThrow("accepted only on GitHub's upload address");
   });
+
+  // INF-290 F5: an evidence upload's 401 is a sign-in only when GitHub refuses the key itself.
+  it.each([
+    [true, "permission", 0],
+    [false, "sign-in", 1],
+  ] as const)(
+    "reads an evidence upload's 401 with GitHub still answering for the key: %s",
+    async (keyAccepted, failure, asked) => {
+      const rejected = vi.fn();
+      const fetch = (async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        const json = (value: unknown, status = 200) =>
+          new Response(JSON.stringify(value), {
+            status,
+            headers: { "content-type": "application/json" },
+          });
+        if (url.pathname === "/user")
+          return keyAccepted ? json({ login: "octo" }) : json({ message: "Bad credentials" }, 401);
+        if (url.pathname === "/user-attachments/assets")
+          return json({ message: "Bad credentials" }, 401);
+        return json({
+          id: 1422452335,
+          full_name: "octo/meter",
+          private: false,
+          visibility: "public",
+          permissions: { push: true },
+        });
+      }) as typeof globalThis.fetch;
+      const forge = new GitHubForge(
+        { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/unused" },
+        {
+          token: async () => "gho_test",
+          apiBaseUrl: "https://api.github.com",
+          fetch,
+          onSignInRejected: rejected,
+        },
+      );
+      const attachments = forge.attachments;
+      if (!attachments) throw new Error("github.com offers native attachments");
+      const bytes = new Uint8Array([137, 80, 78, 71]);
+      await expect(
+        attachments.upload(await attachments.destination(), {
+          bytes,
+          mediaType: "image/png",
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        }),
+      ).rejects.toMatchObject({ outcome: "failed", failure });
+      expect(rejected).toHaveBeenCalledTimes(asked);
+    },
+  );
 
   it("sends the bytes to the production upload address, including GitHub Enterprise Server", async () => {
     const sent: string[] = [];

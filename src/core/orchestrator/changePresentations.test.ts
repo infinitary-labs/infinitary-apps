@@ -23,6 +23,7 @@ import {
   type Forge,
   type ForgeChange,
   ForgeWriteError,
+  presentationMarkdown,
   presentationRegionMarkers,
   readPresentationRegion,
 } from "../forge";
@@ -31,7 +32,7 @@ import { CardStore } from "../storage/cardStore";
 import { openDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { ChangePresentations } from "./changePresentations";
+import { ChangePresentations, GITHUB_STORY_BODY_LIMIT } from "./changePresentations";
 
 // INF-92 / accepted INF-132 owns the upload barrier, saved story parity and recovery.
 // Real, already committed app photographs exercise the existing media reader.
@@ -216,6 +217,142 @@ async function arrange() {
 }
 
 describe("saved change publication", () => {
+  // INF-285 F3: the complete rendered description must fit before any upload.
+  it("refuses a valid story whose escaped Markdown exceeds GitHub's body limit before uploading", async () => {
+    const at = await arrange();
+    const staged = await stageChangePresentation(
+      {
+        ...at.draft,
+        whatChanged: Array.from(
+          { length: 12 },
+          (_, index) => `${index + 1}. ${"Compare <before> & <after> in [the view]. ".repeat(90)}`,
+        ),
+      },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    await at.service.prepare(TASK, staged, at.forge);
+    await expect(at.publish()).rejects.toThrow(/65,536/);
+    expect(at.upload).not.toHaveBeenCalled();
+    expect(at.open).not.toHaveBeenCalled();
+    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+  });
+
+  it.each([false, true])(
+    "counts surrounding human text before replacement uploads (edited markers: %s)",
+    async (editedMarkers) => {
+      const at = await arrange();
+      await at.prepare();
+      const previous = await at.publish();
+      const poster = DEMO_POSTER.bytes;
+      if (!poster) throw new Error("The fixture needs its inspected poster");
+      writeFileSync(join(at.worktree, "next.png"), poster);
+      const next = await stageChangePresentation(
+        {
+          ...at.draft,
+          whatChanged: Array.from({ length: 3 }, () =>
+            "The next view includes the inspected recording poster. ".repeat(50),
+          ),
+          views: at.draft.views.map((view) => ({
+            ...view,
+            after: view.after.map((media) => ({ ...media, path: "next.png" })),
+          })),
+        },
+        { taskId: TASK, worktree: at.worktree, dir: at.media },
+      );
+      const revision = await at.service.prepare(TASK, next, at.forge);
+      const oldBody = previous.body ?? "";
+      const note = `Human release notes: ${"Keep this detail. ".repeat(3300)}`;
+      const body = `${note}\n${editedMarkers ? oldBody.replace(presentationRegionMarkers(TASK).end, "") : oldBody}`;
+      // The already-published description fits; adding the replacement story does not.
+      expect(body.length).toBeLessThanOrEqual(GITHUB_STORY_BODY_LIMIT);
+      at.change = { ...previous, body };
+      at.upload.mockClear();
+      await expect(
+        at.publish(revision, editedMarkers ? { replaceRegion: body } : undefined),
+      ).rejects.toThrow(/65,536/);
+      expect(at.upload).not.toHaveBeenCalled();
+      expect(at.update).not.toHaveBeenCalled();
+      expect(at.change.body).toBe(body);
+      expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+    },
+  );
+
+  // INF-285 F3: count project text and actual Markdown expansion at the exact host boundary.
+  it.each([0, 1])(
+    "checks the complete rendered opening at the body limit plus %s characters",
+    async (extra) => {
+      const at = await arrange();
+      const staged = {
+        ...at.staged,
+        whatChanged: Array.from({ length: 10 }, () =>
+          "Compare <before> & <after> in [the view]. ".repeat(90),
+        ),
+        projectText: "",
+      };
+      await at.service.prepare(TASK, staged, at.forge);
+      const story = at.tasks.changePresentation(TASK)?.revisions[0];
+      if (!story) throw new Error("Missing prepared story");
+      const url = "https://github.com/user-attachments/assets/846dced7-16ad-44c0-b6f5-f0e5581165b2";
+      const region = presentationMarkdown(
+        story,
+        new Map(story.assets.map((asset) => [asset.id, url])),
+        "pending",
+      );
+      const projectText = "Release notes: ".padEnd(
+        GITHUB_STORY_BODY_LIMIT - region.length - 2 + extra,
+        ".",
+      );
+      const revision = await at.service.prepare(TASK, { ...staged, projectText }, at.forge);
+      if (extra) {
+        await expect(at.publish(revision)).rejects.toThrow(/65,536/);
+        expect(at.upload).not.toHaveBeenCalled();
+        expect(at.open).not.toHaveBeenCalled();
+      } else {
+        const published = await at.publish(revision);
+        expect(published.body).toHaveLength(GITHUB_STORY_BODY_LIMIT);
+        expect(published.body?.startsWith(projectText)).toBe(true);
+        for (const upload of at.upload.mock.results) {
+          const receipt = await upload.value;
+          expect(published.body).toContain(receipt.url);
+        }
+        expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(revision);
+      }
+    },
+  );
+
+  it("rechecks the description when a person adds text during upload (INF-285 F3)", async () => {
+    const at = await arrange();
+    await at.prepare();
+    const previous = await at.publish();
+    const poster = DEMO_POSTER.bytes;
+    if (!poster) throw new Error("The fixture needs its inspected poster");
+    writeFileSync(join(at.worktree, "next.png"), poster);
+    const next = await stageChangePresentation(
+      {
+        ...at.draft,
+        views: at.draft.views.map((view) => ({
+          ...view,
+          after: view.after.map((media) => ({ ...media, path: "next.png" })),
+        })),
+      },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    const revision = await at.service.prepare(TASK, next, at.forge);
+    const send = at.upload.getMockImplementation();
+    if (!send) throw new Error("Missing upload implementation");
+    at.upload.mockImplementationOnce(async () => {
+      at.change = {
+        ...previous,
+        body: `${"A person's new notes. ".repeat(3300)}\n${previous.body}`,
+      };
+      return send();
+    });
+    await expect(at.publish(revision)).rejects.toThrow(/65,536/);
+    expect(at.update).not.toHaveBeenCalled();
+    expect(at.change?.body).toContain("A person's new notes.");
+    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+  });
+
   it("opens only after every upload and uses the same ordered views, words and risks on the card", async () => {
     const at = await arrange();
     expect(await at.prepare()).toBe(1);

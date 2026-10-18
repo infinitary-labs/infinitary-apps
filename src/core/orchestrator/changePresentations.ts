@@ -15,11 +15,13 @@ import {
   type Forge,
   type ForgeChange,
   ForgeWriteError,
+  presentationBodyLimit,
   presentationCardBody,
   presentationCommitMessage,
   presentationContentHash,
   presentationLines,
   presentationMarkdown,
+  presentationSizingUrl,
   readPresentationRegion,
   replacePresentationRegion,
   sameAttachmentDestination,
@@ -32,6 +34,24 @@ export type PresentationLedger = Pick<
   "get" | "changePresentation" | "updateChangePresentation"
 >;
 const hash = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
+/** GitHub's body limit covers the rendered region and all surrounding project/human text. */
+export const GITHUB_STORY_BODY_LIMIT = presentationBodyLimit("github.com");
+
+/** The host's own words in a crewmate's tool text: GitHub's pull request, GitLab's merge request. */
+function hostWords(forge: Forge): { place: string; change: string; oneOpen: string } {
+  const place = forge.place ?? "the project's host";
+  return forge.kind === "gitlab"
+    ? {
+        place,
+        change: "merge request",
+        oneOpen: `${place} permits only one open merge request for this source and target branch`,
+      }
+    : {
+        place,
+        change: "pull request",
+        oneOpen: `${place} permits only one open pull request for this head and base`,
+      };
+}
 
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
 export class ChangePresentations {
@@ -150,6 +170,7 @@ export class ChangePresentations {
     const story = this.current(taskId, revision);
     if (!forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
+    const words = hostWords(forge);
     let ledger = this.ledger(taskId);
     if (ledger.publication && ledger.publication.state !== "confirmed") {
       // Recover a prior write by reading, even if a later push moved the code.
@@ -174,17 +195,46 @@ export class ChangePresentations {
       ledger = this.ledger(taskId);
     }
     if (existing && !ledger.published && !ledger.reconciled)
-      throw new Error("This pull request predates the saved story. It will not be rewritten.");
+      throw new Error(`This ${words.change} predates the saved story. It will not be rewritten.`);
     if (!existing && (ledger.published || ledger.reconciled))
       throw new Error(
-        "The published pull request is no longer open. Publication stops; close this task or deliberately reopen that same pull request on GitHub.",
+        `The published ${words.change} is no longer open. Publication stops; close this task or deliberately reopen that same ${words.change} on ${words.place}.`,
       );
     const knownNumber = ledger.published?.number ?? ledger.reconciled?.number;
     if (existing && knownNumber !== undefined && existing.number !== knownNumber)
       throw new Error(
-        "Another pull request is open for this branch. Publication stops rather than replacing the named pull request.",
+        `Another ${words.change} is open for this branch. Publication stops rather than replacing the named ${words.change}.`,
       );
     await this.validateCurrent(story, forge, branch, remoteOnly);
+    const previousRegion =
+      recovery?.replaceRegion ?? ledger.reconciled?.region ?? ledger.published?.region;
+    const bodyFor = (region: string, current: ForgeChange | null): string => {
+      const body =
+        current && previousRegion !== undefined
+          ? replacePresentationRegion(current.body ?? "", previousRegion, region, taskId)
+          : [story.projectText, region].filter(Boolean).join("\n\n");
+      const limit = presentationBodyLimit(story.destination.host);
+      if (Array.from(body).length > limit)
+        throw new Error(
+          `The complete ${words.change} description exceeds ${words.place}'s ${limit.toLocaleString("en-US")}-character limit. Shorten the story or surrounding text before publishing.`,
+        );
+      return body;
+    };
+    // Render the actual layout, escaping, links and recovery-preserved words before sending files.
+    bodyFor(
+      presentationMarkdown(
+        story,
+        // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
+        new Map(
+          this.uploadAssets(story).map((asset) => [
+            asset.id,
+            presentationSizingUrl(story.destination.host, asset.mediaType),
+          ]),
+        ),
+        existing ? checks : "pending",
+      ),
+      existing,
+    );
     const urls = new Map<string, string>();
     for (const asset of this.uploadAssets(story)) {
       let receipt = this.receipt(story, asset);
@@ -192,7 +242,7 @@ export class ChangePresentations {
         this.keepReceipt(story, { ...receipt, state: "uncertain" });
         if (!recovery?.retryUploads?.includes(asset.uploadSha256))
           throw new Error(
-            `An attachment may already exist on GitHub. Disclose this possible orphan on a card before asking for a deliberate new attempt; then pass recovery.retryUploads with digest ${asset.uploadSha256}. No upload was resent.`,
+            `An attachment may already exist on ${words.place}. Disclose this possible orphan on a card before asking for a deliberate new attempt; then pass recovery.retryUploads with digest ${asset.uploadSha256}. No upload was resent.`,
           );
         receipt = { ...receipt, possibleOrphan: true };
       }
@@ -244,15 +294,11 @@ export class ChangePresentations {
     const region = presentationMarkdown(story, urls, existing ? checks : "pending");
     const fresh = await forge.changeFor(branch);
     if (existing?.number !== fresh?.number)
-      throw new Error("The pull request changed during publication. Read it again.");
+      throw new Error(`The ${words.change} changed during publication. Read it again.`);
     if (fresh && fresh.headSha !== story.head)
       throw new Error("The pushed code does not match this story.");
-    const previousRegion =
-      recovery?.replaceRegion ?? ledger.reconciled?.region ?? ledger.published?.region;
-    const body =
-      fresh && previousRegion !== undefined
-        ? replacePresentationRegion(fresh.body ?? "", previousRegion, region, taskId)
-        : [story.projectText, region].filter(Boolean).join("\n\n");
+    // A person may have added words during upload. Recheck before any description write.
+    const body = bodyFor(region, fresh);
     if (fresh && body === fresh.body && ledger.published?.revision === revision) return fresh;
     const publication: PresentationPublication = {
       revision,
@@ -275,12 +321,14 @@ export class ChangePresentations {
         const opened = await forge.openChange({ branch, title, body });
         if (opened.number) publication.number = opened.number;
       }
-      // GitHub offers no atomic conditional body update. Reread both sides and disclose the race.
+      // Neither GitHub nor GitLab offers an atomic conditional body update. Reread both sides and disclose the race.
+      // Only the generated region is the app's: GitLab runs and strips a project
+      // template's own quick actions around it, and a person may add words (INF-290 F3).
       const read = await forge.changeFor(branch);
       if (
         !read ||
         read.headSha !== story.head ||
-        presentationLines(read.body ?? "") !== presentationLines(body)
+        readPresentationRegion(read.body ?? "", taskId) !== presentationLines(region)
       )
         throw new Error(
           "The story write did not read back exactly; a simultaneous edit or an uncertain write needs reconciliation.",
@@ -396,6 +444,7 @@ export class ChangePresentations {
   ): Promise<ForgeChange | undefined> {
     const found = observed ?? (await forge.changeFor(branch));
     const ledger = this.ledger(story.taskId);
+    const words = hostWords(forge);
     if (found && (publication.number === undefined || publication.number === found.number)) {
       const region = readPresentationRegion(found.body ?? "", story.taskId);
       if (region === presentationLines(publication.region)) {
@@ -415,7 +464,7 @@ export class ChangePresentations {
             ? "The last confirmed story"
             : "The reviewed edit";
         throw new Error(
-          `${restored} is still on GitHub. Its state is restored; call open_change deliberately to retry the replacement.`,
+          `${restored} is still on ${words.place}. Its state is restored; call open_change deliberately to retry the replacement.`,
         );
       }
       // A deliberate replacement is bound to the exact edit shown on the crewmate’s card.
@@ -440,11 +489,11 @@ export class ChangePresentations {
     }
     if (publication.number !== undefined || ledger.published) {
       throw new Error(
-        "The published pull request is no longer open. Publication stops; it will not be reopened or replaced. Close this task or reopen that pull request deliberately on GitHub before continuing.",
+        `The published ${words.change} is no longer open. Publication stops; it will not be reopened or replaced. Close this task or reopen that ${words.change} deliberately on ${words.place} before continuing.`,
       );
     }
     if (recovery?.retryOpening || publication.retryOpening) {
-      // GitHub permits only one open PR for the head/base; the fresh read above found none.
+      // The host permits only one open change for the branch and its target; the fresh read above found none.
       this.options.tasks.updateChangePresentation(story.taskId, (record) => ({
         ...this.required(record),
         publication: { ...publication, retryOpening: true },
@@ -452,7 +501,7 @@ export class ChangePresentations {
       return undefined;
     }
     throw new Error(
-      "The earlier pull request write remains uncertain; absence is not proof that it failed. No request was resent. A deliberate open_change with recovery.retryOpening may try opening again; GitHub permits only one open pull request for this head and base.",
+      `The earlier ${words.change} write remains uncertain; absence is not proof that it failed. No request was resent. A deliberate open_change with recovery.retryOpening may try opening again; ${words.oneOpen}.`,
     );
   }
 

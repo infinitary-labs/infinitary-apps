@@ -1,4 +1,4 @@
-import { ForgeWriteError } from "./forge";
+import { type ForgeFailure, ForgeWriteError } from "./forge";
 
 /** Destination facts read from the host, never inferred from a URL or a private-looking name. */
 export type AttachmentDestination = {
@@ -16,6 +16,13 @@ export type UploadAttachment = {
   sha256: string;
   mediaType: AttachmentMediaType;
 };
+
+/**
+ * After an upload's 401 (INF-290 F5): the owning forge asks the host whether it
+ * still answers for the key - `permission` when it does - and only a refused key
+ * is `sign-in`, which asks the health service to look again.
+ */
+export type AttachmentUnauthorized = () => Promise<Extract<ForgeFailure, "sign-in" | "permission">>;
 
 /** No generic retry can safely replay a POST once its outcome is uncertain. */
 export class AttachmentUploadError extends ForgeWriteError {

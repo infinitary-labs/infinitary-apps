@@ -257,24 +257,36 @@ export class GithubGatewayService {
     route: ApiRoute,
     body: unknown,
   ): void {
-    if (!route.own || forge.host !== "github.com" || !forge.attachments) return;
+    // Only github.com and gitlab.com forges publish saved stories (INF-132).
+    if (!route.own || !forge.attachments) return;
     const record = this.options.tasks.get(taskId);
     if (record?.shape?.deliverable === "answer") return;
-    if (route.method === "POST" && route.rest === "pulls")
+    const rest = route.rest
+      .split("/")
+      .map((part) => decodeURIComponent(part))
+      .join("/")
+      .replace(/\/+$/, "");
+    const gitlab = forge.kind === "gitlab";
+    if (route.method === "POST" && rest === (gitlab ? "merge_requests" : "pulls"))
       throw new ForgeError(
         "refused",
-        "Use prepare_change and open_change to open this task's pull request only after all selected attachments are confirmed.",
+        `Use prepare_change and open_change to open this task's ${gitlab ? "merge request" : "pull request"} only after all selected attachments are confirmed.`,
       );
     const ledger = record?.delivery?.presentation;
     const number =
       ledger?.publication?.number ?? ledger?.published?.number ?? record?.delivery?.prNumber;
+    // Compare by value: GitHub reads pulls/036 as pull request 36 (INF-285 G1). GitHub's
+    // issues route is an alias for a pull request's description; GitLab's issues are their own.
+    const named = (gitlab ? /^merge_requests\/(\d+)$/ : /^(?:pulls|issues)\/(\d+)$/).exec(rest);
+    // GitLab also reads a field from the query string (INF-290 F1), so either place names it.
+    const field = gitlab ? "description" : "body";
+    const query = new URLSearchParams(route.path.split("?")[1] ?? "");
     if (
       ledger &&
-      route.method === "PATCH" &&
-      (route.rest === `pulls/${number}` || route.rest === `issues/${number}`) &&
-      body &&
-      typeof body === "object" &&
-      "body" in body
+      route.method === (gitlab ? "PUT" : "PATCH") &&
+      named &&
+      Number(named[1]) === number &&
+      ((body !== null && typeof body === "object" && field in body) || query.has(field))
     )
       throw new ForgeError(
         "refused",

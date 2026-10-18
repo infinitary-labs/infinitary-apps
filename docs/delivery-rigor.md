@@ -71,7 +71,7 @@ Before opening or updating a PR the crewmate:
    Where the change is behavior a still cannot show - a drag, a keyboard journey, motion, progress, recovery from an error - the self-brief says so and why, and that view gets a demo recording in place of its pictures: the same action before the first edit and after the last, at the same window size, theme, data and crop, through the project's own isolated test launcher (this project's `startDemo`, `docs/testing.md` "Recording a demo"), shown on the card as `figure[data-inf-demo]` with its poster (`docs/card-authoring.md`, "Demo recordings").
    Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own.
    Keep every artifact in the task's evidence folder (`userData/crewmates/<taskId>/evidence/`, named in the crewmate's instructions), outside the working copy, and never commit or push one as project content.
-   Future github.com pull requests upload only selected, inspected, publishable pictures and recordings through their saved story (`docs/forge.md`, "Saved change stories"); existing PRs and other hosts keep evidence in prose, with no local paths.
+   Future github.com pull requests and gitlab.com merge requests upload only selected, inspected, publishable pictures and recordings through their saved story (`docs/forge.md`, "Saved change stories"); existing PRs and other hosts keep evidence in prose, with no local paths.
    Bulk working material whose destination the crewmate chooses, such as downloads, unpacked copies, throwaway environments and test-run output, goes in the task's temporary folder beside it, which the app removes when the task closes; evidence keeps its week (`docs/task-retention.md`).
    A picture the repository's own instructions keep with the change - this project's release-note hero pair (`docs/release-notes.md` "Hero pictures") - is part of the change, not evidence, and is committed where they say.
    Show image artifacts on the completion card by their path in that folder, and in Verified say in words what each artifact shows, or what stopped you gathering it.
@@ -83,7 +83,7 @@ Before opening or updating a PR the crewmate:
 4. updates every document the change makes stale.
 
 Then it reports under the evidence contract below.
-Future github.com pull requests and their completion cards use one saved story; legacy PRs and other hosts retain the five-heading PR description.
+Future github.com pull requests, gitlab.com merge requests and their completion cards use one saved story; legacy PRs and other hosts retain the five-heading PR description.
 Failed checks first require reading the failed step and logs and declaring an explicit diagnosis at the head/check via `check_change`.
 Initial diagnosis spends nothing.
 Own regressions are repaired on this task: declare a stable repair id, source head, new target head/check and fix evidence; only the unsuccessful result spends one of three attempts.
@@ -183,7 +183,7 @@ Queued or waiting work does not start merely because a policy changed, and activ
 
 ## The evidence contract
 
-A standard-tier report, and a legacy or non-GitHub PR body, carry five headings, in this order:
+A standard-tier report, and a legacy PR body or one on a host without saved stories, carry five headings, in this order:
 
 | Heading | What it holds |
 |---|---|
@@ -448,7 +448,7 @@ A change that never settled with a completion card is `null`, not a failure: it 
 
 Observe is the one surface in the app where any of this renders: the crewmate header carries the rigor, the review verdict and its risk, and the reviewers sit in their own **Review** group with each row's verdict on it (`docs/dev-observe.md`).
 
-For a saved GitHub story, a host-accepted conflict-only repair republishes the same content at its new head after checks pass, before the kept-approval merge.
+For a saved story on GitHub or GitLab, a host-accepted conflict-only repair republishes the same content at its new head after checks pass, before the kept-approval merge.
 It reuses confirmed attachments and the approved content hash; a separate story edit needs a new completion offer.
 The merge validates the published and PR heads without waking the work computer or inspecting its uncommitted files.
 

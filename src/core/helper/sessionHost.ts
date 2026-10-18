@@ -30,6 +30,7 @@ import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import type { JobExit } from "../jobs/jobManager";
 import {
   crewmateContractStamp,
+  crewmateMovedText,
   crewmateResume,
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
@@ -213,6 +214,8 @@ type Held = {
   copying: Map<string, Promise<unknown>>;
   /** Its folder was removed (`inf:session:remove`): nothing of it is written again. */
   removed: boolean;
+  /** What its crewmate is told ahead of its next prompt: its folders moved (`crewmateMovedText`). */
+  movedNotice: string | undefined;
 };
 
 export class SessionHost {
@@ -589,7 +592,18 @@ export class SessionHost {
       if (this.options.copies && !this.options.copies.has(held.task))
         throw new Error("This task has no working copy here yet.");
       const folders = this.options.tasks.ensure(held.task);
-      const resume = crewmateResume(spec.resume, binding.backend);
+      // What the home kept from before this computer's one-time move names
+      // this folder now: a Pi conversation resumes from, and writes to, its
+      // record here, and its instructions name its folders here.
+      const named = (text: string) => this.options.tasks.inThisFolder(text);
+      const instructions = named(spec.instructions);
+      const resume = crewmateResume(spec.resume && named(spec.resume), binding.backend);
+      // Its earlier turns and its brief may still name the older folder,
+      // whatever this open carries - a Claude conversation's token names no
+      // folder, and a restarted home names this one: a task whose folder
+      // the older folder holds too has its crewmate told once where its
+      // folders are now.
+      const moved = held.state.toldMoved ? undefined : this.options.tasks.movedFolders(held.task);
       // Its own browser, here beside its shell, when the home says it has one.
       const granted = spec.browser ? this.options.browsers?.grant(held.task) : undefined;
       const tools = bindTools(
@@ -632,7 +646,7 @@ export class SessionHost {
           level: spec.thinking.level,
           ...(spec.thinking.quick ? { quick: true } : {}),
         },
-        instructions: { base: spec.instructions },
+        instructions: { base: instructions },
         ...(spec.personalResources !== undefined
           ? { personalResources: spec.personalResources }
           : {}),
@@ -645,7 +659,7 @@ export class SessionHost {
             dir: folders.sessions,
             ...(resume ? { resume } : {}),
             // Stamped here, on the tools this computer serves.
-            stamp: crewmateContractStamp(spec.instructions, tools),
+            stamp: crewmateContractStamp(instructions, tools),
           },
         },
         bounds: { request: { retries: spec.retries ?? RETRIES } },
@@ -657,6 +671,7 @@ export class SessionHost {
       }
       held.session = session;
       held.backend = binding.backend;
+      held.movedNotice = moved ? crewmateMovedText(moved) : undefined;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
       held.unsubscribe = session.subscribe((event) => {
@@ -686,13 +701,20 @@ export class SessionHost {
     const session = this.conversation(held);
     if (held.state.running) throw new Error("A turn is already running here.");
     const turn = held.state.turn + 1;
-    held.state = { ...held.state, turn, running: { turn, orderId } };
+    const notice = held.movedNotice;
+    held.movedNotice = undefined;
+    held.state = {
+      ...held.state,
+      turn,
+      running: { turn, orderId },
+      ...(notice ? { toldMoved: true as const } : {}),
+    };
     this.record(held, { type: "turn_started", turn, orderId });
     this.writeOut(held);
     // Kept before the turn starts: asked again after a quit here, it is
     // answered and never started twice; that turn ended `interrupted`.
     this.remember(held, orderId, { turn });
-    session.prompt(text, images).then(
+    session.prompt(notice ? `${notice}\n\n${text}` : text, images).then(
       () => this.ended(held, turn, "done"),
       (error: unknown) => this.ended(held, turn, "failed", messageOf(error)),
     );
@@ -965,6 +987,7 @@ export class SessionHost {
       chain: Promise.resolve(),
       copying: new Map(),
       removed: false,
+      movedNotice: undefined,
     };
     this.held.set(task, held);
     return held;

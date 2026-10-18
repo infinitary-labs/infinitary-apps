@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-conversations-follow-the-move",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Crewmates on a computer you update to Infinitary work in its new folder",
+      "body": "The first time a computer that runs work for you updates to Infinitary, its saved work moves from Firstmate 3000's folder into Infinitary's. A crewmate working there now saves its work in the new folder instead of the old copy, and is told where its files moved. Its task's Crewmate tab keeps showing what it does after the update.",
+      "noPicture": "Nothing new appears on screen: the task's Crewmate tab keeps showing what the crewmate does after the update, as it did before.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

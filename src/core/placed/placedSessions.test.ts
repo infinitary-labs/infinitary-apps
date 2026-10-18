@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { AccountView } from "@shared/accounts";
 import {
   deviceForgeGateRef,
@@ -35,6 +35,7 @@ import {
   scriptedClaudeWorld,
 } from "../../../tests/helpers/scriptedClaudeContract";
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
+import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
@@ -51,7 +52,11 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
-import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
+import {
+  crewmateMovedText,
+  crewmateRenewedNote,
+  crewmateRestartText,
+} from "../orchestrator/crewSession";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -276,6 +281,11 @@ async function world(
     claude?: ContractWorld;
     /** Whether Firstmate there runs work for another Firstmate now, as the home's SSH connection found. */
     runsForAnotherFirstmate?: (deviceId: string) => boolean;
+    /**
+     * Its work starts in Firstmate 3000's folder, as a computer's does
+     * before its first update to Infinitary (`moveComputer`).
+     */
+    inOlderFolder?: boolean;
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -299,7 +309,11 @@ async function world(
     options.remoteLogin ? { remoteLogin: options.remoteLogin } : {},
   );
   await home.settled();
-  const dataDir = scratchDir("infinitary-placed-computer-");
+  // The application-data folder that holds both apps' folders, for a computer
+  // whose work starts in Firstmate 3000's.
+  const appData = options.inOlderFolder ? scratchDir("infinitary-placed-app-data-") : undefined;
+  let dataDir = appData ? olderWorkFolder(appData) : scratchDir("infinitary-placed-computer-");
+  if (appData) mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const joined = await joinHome({
     text: link,
     dataDir,
@@ -370,7 +384,10 @@ async function world(
   await inReach();
   return {
     deviceId,
-    dataDir,
+    /** The computer's work folder now: Infinitary's once `moveComputer` moved it. */
+    get dataDir() {
+      return dataDir;
+    },
     home: () => home,
     pairing: pairingNow,
     /** Whether the computer's own process still runs. */
@@ -412,6 +429,17 @@ async function world(
     /** The computer's own process quits, as when nobody is logged in there. */
     stopComputer: async () => {
       await run?.stop();
+    },
+    /**
+     * The computer's first update to Infinitary: its work stops, the
+     * one-time move brings Firstmate 3000's folder into Infinitary's, and its
+     * work runs again from there (docs/helper.md, "Under the other name").
+     */
+    moveComputer: async () => {
+      if (!appData) throw new Error("This computer's work is in no older folder.");
+      await run?.stop();
+      dataDir = await moveWorkFolder(appData);
+      startComputer();
     },
     /** The computer's folder for a task. */
     folders: (taskId: string) =>
@@ -887,6 +915,89 @@ describe("a task that runs on a computer that runs work", () => {
         .filter((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal)),
     ).toHaveLength(1);
   });
+
+  // INF-284: after its update moves Firstmate 3000's folder into
+  // Infinitary's, a conversation held there must go on in the new folder,
+  // never in the older one the move keeps as its recovery copy.
+  for (const restart of ["computer", "both"] as const) {
+    it(`goes on from the new folder once that computer's one-time move brought its work there, when ${restart === "both" ? "this Mac restarts too" : "only that computer restarts"} (INF-284)`, async () => {
+      const at = await world(undefined, { inOlderFolder: true });
+      model([
+        { text: "Started on the footer." },
+        {
+          tools: [
+            { name: "report", args: { text: "The header is fixed too.", summary: "Fixed." } },
+          ],
+        },
+        { text: "Reported." },
+        {
+          tools: [{ name: "report", args: { text: "The footer still holds.", summary: "Held." } }],
+        },
+        { text: "Reported." },
+      ]);
+      await at.start("t-moved");
+      await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
+      const older = at.folders("t-moved");
+      const before = at.home().tasks.get("t-moved")?.sessionFile ?? "";
+      expect(before.startsWith(`${older.sessions}/`)).toBe(true);
+      const kept = readFileSync(before, "utf8");
+
+      if (restart === "both") {
+        await at.stopComputer();
+        await at.restartHome(() => at.moveComputer());
+      } else await at.moveComputer();
+      await at.inReach("t-moved");
+      const requests = api.requests.length;
+      await at.home().supervisor.steerCrewmate("t-moved", "Fix the header too.");
+      await expect
+        .poll(() => at.home().tasks.get("t-moved")?.outcome)
+        .toBe("The header is fixed too.");
+
+      // It resumed from its record's copy in the new folder and wrote this turn there.
+      const moved = at.folders("t-moved");
+      const file = join(moved.sessions, relative(older.sessions, before));
+      const now = readFileSync(file, "utf8");
+      expect(now.startsWith(kept)).toBe(true);
+      expect(now).toContain("Fix the header too.");
+      // The older folder's record is as the move left it.
+      expect(readFileSync(before, "utf8")).toBe(kept);
+      // The task's record names the file there now, and this Mac's copy has the turn.
+      await expect.poll(() => at.home().tasks.get("t-moved")?.sessionFile).toBe(file);
+      const copy = join(
+        crewmateSessionsDir(at.home().paths, "t-moved"),
+        relative(moved.sessions, file),
+      );
+      await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
+      // It was told its folders in the new folder, none in the older one.
+      const system = JSON.stringify(api.requests[requests]?.body.system);
+      expect(system).toContain(moved.evidence);
+      expect(system).toContain(moved.cardBodies);
+      expect(system).toContain(moved.temp);
+      expect(system).not.toContain(`${join(older.root, "..", "..", "..")}/`);
+      // Its earlier turns name the older folder, so it was told once where its folders are now.
+      const notice = JSON.stringify(
+        crewmateMovedText({
+          work: { from: older.work, to: moved.work },
+          root: { from: older.root, to: moved.root },
+        }),
+      ).slice(1, -1);
+      expect(said(api.requests[requests])).toContain(notice);
+      expect(said(api.requests[requests]).indexOf(notice)).toBeLessThan(
+        said(api.requests[requests]).indexOf("Fix the header too."),
+      );
+
+      // That computer restarts again: its conversation opens there with the
+      // same paths mapped, and its crewmate is not told a second time.
+      await at.restartComputer();
+      await at.inReach("t-moved");
+      await at.home().supervisor.steerCrewmate("t-moved", "Check the footer again.");
+      await expect
+        .poll(() => at.home().tasks.get("t-moved")?.outcome)
+        .toBe("The footer still holds.");
+      expect(said(api.requests.at(-1)).split(notice)).toHaveLength(2);
+      expect(readFileSync(file, "utf8").split(notice)).toHaveLength(2);
+    });
+  }
 
   it("closes the conversation there when its record closes, now or once the computer is back", async () => {
     const at = await world();

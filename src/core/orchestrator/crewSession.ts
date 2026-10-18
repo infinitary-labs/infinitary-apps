@@ -142,6 +142,26 @@ export function crewmateRenewedNote(renewal: SessionRenewal): string {
 }
 
 /**
+ * What a crewmate on a computer that runs work is told once, ahead of its
+ * first prompt after the one-time move brought its task's folder into that
+ * computer's new folder (docs/helper.md, "Holding a conversation"): where its
+ * working copy and its task's folders were and are now, so a path it
+ * remembers from before - its earlier turns, its brief, its notes - is not
+ * used.
+ */
+export function crewmateMovedText(moved: {
+  work: { from: string; to: string };
+  root: { from: string; to: string };
+}): string {
+  return [
+    "The computer you run on moved its saved work into a new folder since your last turn, and your working copy and your task's folders moved with it.",
+    `Your working copy was ${moved.work.from} and is now ${moved.work.to}.`,
+    `Your task's folders - evidence, card bodies, temporary files, source cards - were under ${moved.root.from} and are now under ${moved.root.to}.`,
+    "The old folder stays only as a recovery copy and nothing reads it, so use the new paths, also in place of any old path in your earlier turns, your brief or your notes.",
+  ].join(" ");
+}
+
+/**
  * What a crewmate is told on the first prompt of a conversation that
  * replaced its task's earlier one: why, that it continues rather than
  * starts, where its record and its earlier conversation are, and the brief

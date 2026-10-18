@@ -189,7 +189,9 @@ test("accepts no device while nothing is paired", async () => {
   // The connection (docs/connection.md) is part of every launch and listens
   // only while a device is paired or a link to pair one is open
   // (docs/devices.md); a fresh launch has neither. The probe dials this
-  // app's own port, never the one an installed app on this Mac holds.
+  // app's own port, never the one an installed app on this Mac holds, and
+  // the launch claimed it for this worker, so no other process in the run
+  // can be listening there (INF-267).
   const { page, connectionPort } = launched;
   const health = await page.evaluate(() => window.infinitary.app.healthcheck());
   expect(health.capabilities).toContain("connection");

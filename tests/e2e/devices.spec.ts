@@ -38,7 +38,8 @@ import {
   SEEN_WORDS,
 } from "../../src/renderer/src/settings/devicesWords";
 import { aDevice, COMPUTER } from "../../src/shared/deviceNames";
-import { connectClient, freePort } from "../helpers/connectionClient";
+import { claimedPort } from "../helpers/claimedPort";
+import { connectClient } from "../helpers/connectionClient";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { macRelease } from "../helpers/macRelease";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -372,7 +373,7 @@ async function moveThisMac(app: LaunchedApp, env: Record<string, string> = {}) {
     userDataDir,
     homeDir,
     ...(mockProvider ? { reuseMockProvider: mockProvider } : {}),
-    env: { ...env, INFINITARY_CONNECTION_LOOPBACK_PORT: String(await freePort()) },
+    env: { ...env, INFINITARY_CONNECTION_LOOPBACK_PORT: String(await claimedPort()) },
   });
 }
 

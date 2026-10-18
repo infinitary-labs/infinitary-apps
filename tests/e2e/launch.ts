@@ -16,8 +16,8 @@ import {
   type Page,
 } from "@playwright/test";
 import { CONNECTION_PORT } from "@shared/connection";
+import { claimedPort } from "../helpers/claimedPort";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
-import { freePort } from "../helpers/freePort";
 import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
 import { readInMain } from "./mainProcess";
@@ -337,14 +337,15 @@ async function paintLikeAMac(app: ElectronApplication): Promise<void> {
  * a port kept per userData, so a relaunched home is where its devices left
  * it. A test never listens on this Mac's network, where a firewall can drop
  * the dial (release run 37185124664 timed out at the Mac's own address), or
- * on the port a real app holds.
+ * on the port a real app holds. The port is claimed for this worker, so no
+ * other process in the run can be listening there when a probe dials it.
  */
 const connectionPorts = new Map<string, number>();
 
 async function connectionPort(userDataDir: string): Promise<number> {
   const kept = connectionPorts.get(userDataDir);
   if (kept !== undefined) return kept;
-  const port = await freePort();
+  const port = await claimedPort();
   connectionPorts.set(userDataDir, port);
   return port;
 }

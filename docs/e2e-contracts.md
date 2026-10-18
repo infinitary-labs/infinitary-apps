@@ -262,7 +262,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `INFINITARY_GRAPHICS_CARD=present` stands in a graphics card for speech, which the hosted Linux runner lacks (`docs/architecture.md` section 8, "Where speech runs"); a spec names `absent` in `env` to see dictation hide.
   A voice journey presses the dictation key and reads its words through `tests/e2e/dictation.ts`: right ⌥ on a Mac and right Ctrl on Linux, from `desktopConventions`.
   Quota fixtures ride `INFINITARY_QUOTA_FIXTURE_DIR`.
-  Each home's connection stays on loopback at a free port kept per userData (`INFINITARY_CONNECTION_LOOPBACK_PORT`, `docs/devices.md`), so a relaunched home is where its devices left it, and no test listens on the Mac's own network or on the port a real app holds.
-  `connectionPort` on the launched app names that port, so a probe of whether a home listens dials that home.
+  Each home's connection stays on loopback at a port kept per userData (`INFINITARY_CONNECTION_LOOPBACK_PORT`, `docs/devices.md`), so a relaunched home is where its devices left it, and no test listens on the Mac's own network or on the port a real app holds.
+  The port comes from `claimedPort` (`tests/helpers/claimedPort.ts`): it lies below every ephemeral range, so the system never hands it to a listener that asks for port 0, and the worker holds a claim on it until it exits, so no other worker or run on the computer hands it out.
+  A launched home never takes a port from `freePort`: the port it frees can go to any port-0 listener in the run, and a probe would then read that listener as the home.
+  `connectionPort` on the launched app names that port, so a probe of whether a home listens dials that home and no other process.
   Claude credentials seed into that HOME's `.claude` (`prepareHome`), never a per-account vault store.
   Context/fixture maintenance and the shared request decoder: `docs/e2e-contracts.md`; current snapshots must never be unioned with conversation history.

@@ -15,6 +15,7 @@ import { approvalHost } from "../../../scripts/evals/host";
 import { sdkBundledClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import { answerText, startStubApi } from "../../../tests/helpers/anthropicDialect";
 import {
+  answersTool,
   answerTool,
   claudeSeatBox,
   seatBoxesFlushed,
@@ -22,12 +23,12 @@ import {
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { firstmateTools } from "../../../tests/helpers/firstmateTools";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
+import { readPagedTaskQuery } from "../../../tests/helpers/taskQueryText";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { createAppTools } from "../pi/appTools";
 import { EMIT_CARD_TOOL_DESCRIPTION } from "../pi/cardTool";
-import { createTasksQueryTool } from "../pi/taskTools";
+import { createTasksQueryTool, parseTasksFieldPage, parseTasksQueryText } from "../pi/taskTools";
 import { CLAUDE_TOOL_DESCRIPTION_CAP } from "../prompts/cardContract";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { type BoundTool, FIRSTMATE_TOOLS } from "../session/tools";
@@ -582,7 +583,7 @@ describe("the accepted plan through the real Claude client", () => {
               return { rows: captured, total: captured.length };
             })
           : undefined;
-        let nativeText: string | undefined;
+        const served: string[] = [];
         const tools = host.spec.tools.map((tool) =>
           tool.name !== "tasks"
             ? tool
@@ -590,16 +591,39 @@ describe("the accepted plan through the real Claude client", () => {
                 ...tool,
                 run: async (args: unknown) => {
                   const answer = await (capturedRead ?? tool).run(args);
-                  nativeText = answer.text;
+                  served.push(answer.text);
                   return answer;
                 },
               },
         );
-        api.answer((request, res) =>
-          request.n === 1
-            ? answerTool(request, res, "tasks", { key })
-            : answerText(request, res, "Read the accepted plan."),
-        );
+        const nextPage = (): { field: string; offset: number } | undefined => {
+          const index = served.find((text) => text.includes("does not fit one read"));
+          if (!index) return undefined;
+          const finished = new Set(
+            served.flatMap((text) => {
+              const page = parseTasksFieldPage(text);
+              return page?.nextOffset === null ? [page.field] : [];
+            }),
+          );
+          const open = served.flatMap((text) => {
+            const page = parseTasksFieldPage(text);
+            return page?.nextOffset ? [page] : [];
+          });
+          const continuing = open.findLast((page) => !finished.has(page.field));
+          if (continuing?.nextOffset)
+            return { field: continuing.field, offset: continuing.nextOffset };
+          const omitted = parseTasksQueryText(index).omitted.find(
+            (item) => !finished.has(item.field),
+          );
+          return omitted ? { field: omitted.field, offset: 1 } : undefined;
+        };
+        api.answer((request, res) => {
+          if (!answersTool(request)) return answerTool(request, res, "tasks", { key });
+          const page = nextPage();
+          return page
+            ? answerTool(request, res, "tasks", { key, ...page })
+            : answerText(request, res, "Read the accepted plan.");
+        });
         const session = await box.factory({
           cwd: box.cwd,
           sessionsDir: join(box.home, "firstmate", "sessions"),
@@ -621,30 +645,24 @@ describe("the accepted plan through the real Claude client", () => {
           typeof content === "string"
             ? content
             : content?.map((block: { text?: string }) => block.text ?? "").join("\n");
-        expect(nativeText).toBeDefined();
-        expect(text).toBe(nativeText);
-        if (captured) expect(readTaskQueryText(text ?? "")).toEqual(captured);
+        expect(served.length).toBeGreaterThan(0);
+        expect(text).toBe(served.at(-1));
+        if (captured) expect(readPagedTaskQuery(served)).toEqual(captured);
         else {
           const native = readSession(session.recordPath()!)
             .entries.filter((entry) => entry.type === "message")
             .map((entry) => entry.message as { role?: string; content?: unknown });
-          const result = { text: nativeText!, servedText: nativeText! };
-          const format = test === largeDesignCase ? "text-block" : "shared-json";
-          expect(scorePlanRead(test, format, result, native)).toEqual([]);
+          const reads = served.map((item) => ({ text: item, servedText: item }));
+          expect(scorePlanRead(test, reads, native)).toEqual([]);
           expect(
-            scorePlanRead(test, format, { ...result, servedText: "truncated" }, native),
+            scorePlanRead(test, [{ ...reads[0]!, servedText: "truncated" }], native),
           ).not.toEqual([]);
-          expect(scorePlanRead(test, format, result, [])).not.toEqual([]);
-          expect(
-            scorePlanRead(
-              test,
-              format === "text-block" ? "shared-json" : "text-block",
-              result,
-              native,
-            ),
-          ).not.toEqual([]);
+          expect(scorePlanRead(test, reads, [])).not.toEqual([]);
+          if (parseTasksQueryText(served[0]!).omitted.length > 0) {
+            expect(scorePlanRead(test, reads.slice(0, -1), native)).not.toEqual([]);
+          }
         }
-        expect(api.requests).toHaveLength(2);
+        expect(api.requests).toHaveLength(served.length + 1);
       } finally {
         await host.close();
         await api.close();

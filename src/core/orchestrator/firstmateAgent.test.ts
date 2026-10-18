@@ -36,7 +36,11 @@ import {
   type SDKUserMessage,
   scriptedClaudeQuery,
 } from "../../../tests/helpers/scriptedClaudeQuery";
-import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
+import {
+  pageTaskField,
+  readPagedTaskQuery,
+  readTaskQueryText,
+} from "../../../tests/helpers/taskQueryText";
 import { attachmentPath } from "../attachments";
 import { createClaudeSessionFactory } from "../claude/session";
 import { ForgeSignInStore, ForgeSignIns, type ForgeWhoAmI } from "../forge/signIns";
@@ -52,6 +56,7 @@ import {
   firstmatePromptSha,
   toolsFingerprint,
 } from "../pi/piResources";
+import { parseTasksQueryText } from "../pi/taskTools";
 import { piToolsOf } from "../pi/toolSpec";
 import type { ModelRuntime } from "../pi/types";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
@@ -73,6 +78,7 @@ import { ScheduleStore } from "../storage/scheduleStore";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { SettingsStore } from "../storage/settingsStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
+import { taskResolutionBody } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
@@ -6497,11 +6503,8 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     tasks.recordReport(adr?.id as string, { text: "Copy and race still unresolved." });
     const recovered = await text("tasks", { key: "SCR-1" });
     const recoveredRow = readTaskQueryText(recovered)[0]!;
-    expect(recoveredRow.resolution).toMatchObject({
-      action: "agree",
-      answers,
-      card: { body: "Agreement records design only." },
-    });
+    expect(recoveredRow.resolution).toMatchObject({ action: "agree", answers });
+    expect(taskResolutionBody(recoveredRow, "card")).toBe("Agreement records design only.");
     expect(recoveredRow.outcome).toBe("Copy and race still unresolved.");
     expect(await text("tasks", { status: "open" })).not.toContain('"resolution"');
     expect(tasks.get(impl?.id as string)?.status).toBe("open");
@@ -8077,12 +8080,21 @@ it("recovers the complete accepted plan through the answer-close wake's task rea
     expect(handoff.read).toEqual({ tool: "tasks", arguments: { key: tasks.get(taskId)!.key } });
     const query = specs[0]!.tools.find((tool) => tool.name === handoff.read.tool)!;
     const result = await query.run(handoff.read.arguments);
-    const text = result.text!;
-    const row = readTaskQueryText(text)[0]!;
+    const reads = [result.text!];
+    for (const omitted of parseTasksQueryText(result.text!).omitted) {
+      reads.push(
+        ...(await pageTaskField(
+          (args) => query.run(args),
+          handoff.read.arguments.key,
+          omitted.field,
+        )),
+      );
+    }
+    const row = readPagedTaskQuery(reads)[0]!;
     expect(row.outcome).toBe(fixture.report);
     expect(row.card).toBe(fixture.body);
     expect(row.resolution).toMatchObject({ action: "start-next", answers: fixture.answers });
-    expect(row.resolution?.offer?.body).toBe(fixture.body);
+    expect(taskResolutionBody(row, "offer")).toBe(fixture.body);
     expect(row.reports?.at(-1)?.text).toBe(fixture.report);
     expect(tasks.get(taskId)?.status).toBe("done");
     session.emitTurnEnd("Read the accepted specification.");

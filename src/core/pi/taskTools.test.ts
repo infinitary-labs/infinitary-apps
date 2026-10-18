@@ -1,13 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "../../../tests/helpers/claudeMcpLimit";
-import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
+import { pageTaskField, readPagedTaskQuery } from "../../../tests/helpers/taskQueryText";
 import { renderIntentBrief } from "../orchestrator/intentBrief";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
-import { queryTasks } from "../tasks/taskQuery";
+import { queryTasks, taskResolutionBody } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
-import { createTaskTools, renderTasksQueryResult, type TaskToolsDelegate } from "./taskTools";
+import {
+  assembleTasksReads,
+  createTasksQueryTool,
+  createTaskTools,
+  parseTasksQueryText,
+  renderTasksFieldPage,
+  renderTasksQueryResult,
+  TASK_QUERY_PAGE_CHARACTERS,
+  type TaskToolsDelegate,
+} from "./taskTools";
 import { piToolsOf } from "./toolSpec";
 
 /**
@@ -137,6 +146,7 @@ describe("task tools", () => {
         ...extra,
       });
       expect(refused).toHaveProperty("details.refusal.kind", "undeclared-prerequisites");
+      expect(refused?.content[0]?.text).toContain("[] declares none");
       expect(delegate.update).not.toHaveBeenCalled();
       expect(delegate.startNow).not.toHaveBeenCalled();
     }
@@ -412,9 +422,10 @@ describe("update_task runs_on", () => {
   });
 });
 
-// INF-113: identical accepted text must travel once, without changing any stored content.
+// INF-416 piece K (T4): a long by-key read pages by field and offset.
+// The retired $ref / $text format must not return, and a distinct closing card stays whole.
 it.each([false, true])(
-  "serves complete task text once and retains distinct closing cards (revised=%s)",
+  "pages a long accepted plan and keeps a distinct closing card (revised=%s)",
   (revised) => {
     const fixture = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8"));
     const db = openInMemoryDatabase();
@@ -461,13 +472,26 @@ it.each([false, true])(
       );
       const original = structuredClone(result.rows);
       const text = renderTasksQueryResult(result);
-      expect(readTaskQueryText(text)).toEqual(original);
+      expect(text).not.toContain("$ref");
+      expect(text).not.toContain("$text");
+      const reads = [text];
+      for (const omitted of parseTasksQueryText(text).omitted) {
+        let offset = 1;
+        while (offset) {
+          const page = renderTasksFieldPage(result.rows[0]!, omitted.field, offset);
+          expect(page.length).toBeLessThanOrEqual(TASK_QUERY_PAGE_CHARACTERS);
+          expect(Buffer.byteLength(page)).toBeLessThanOrEqual(TASK_QUERY_PAGE_CHARACTERS);
+          reads.push(page);
+          const next = page.match(/nextOffset (\d+|none)/)?.[1];
+          offset = next && next !== "none" ? Number(next) : 0;
+        }
+      }
+      const row = assembleTasksReads(reads)[0]!;
+      expect(row).toEqual(original[0]);
       expect(result.rows).toEqual(original);
-      expect(text.split(JSON.stringify(fixture.report)).length - 1).toBe(1);
-      expect(text.split(JSON.stringify(fixture.body)).length - 1).toBe(1);
-      const raw = JSON.parse(text.slice(text.indexOf("[")))[0];
-      expect(raw.resolution.card.body).toEqual(revised ? fixture.body : { $ref: "#/0/card" });
-      expect(raw.reports).toHaveLength(original[0]!.reports!.length);
+      expect(row.card).toBe(revised ? fixture.body + "<!-- current revision -->" : fixture.body);
+      expect(taskResolutionBody(row, "card")).toBe(fixture.body);
+      expect(row.reports).toHaveLength(original[0]!.reports!.length);
       expect(queryTasks(tasks, {}).rows).not.toHaveProperty("0.card");
     } finally {
       db.close();
@@ -475,14 +499,33 @@ it.each([false, true])(
   },
 );
 
-// Captain's production INF-91 read: 135,333 characters previously hid the whole plan.
-it("fits the large design record through Claude without losing the report, answers or offer", () => {
+// INF-416 piece K: the production INF-91 row is larger than one page. Paging keeps the
+// report, answers and offer, and INF-133's 100,000-token cap stays the outer limit.
+it("pages the large design record without losing the report, answers or offer", async () => {
+  expect(TASK_QUERY_PAGE_CHARACTERS).toBe(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
   const rows = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8"));
   const original = structuredClone(rows);
-  const text = renderTasksQueryResult({ rows, total: 1 });
-  expect(readTaskQueryText(text)).toEqual(original);
+  const tool = createTasksQueryTool(() => ({ rows, total: 1 }));
+  const first = await tool.run({ key: "182c1d82" });
+  expect(first.text.length).toBeLessThanOrEqual(TASK_QUERY_PAGE_CHARACTERS);
+  expect(first.text).not.toContain("$ref");
+  expect(first.text).not.toContain("$text");
+  const reads = [first.text];
+  for (const omitted of parseTasksQueryText(first.text).omitted) {
+    reads.push(...(await pageTaskField((args) => tool.run(args), "182c1d82", omitted.field)));
+  }
+  expect(readPagedTaskQuery(reads)).toEqual(original);
   expect(rows).toEqual(original);
-  expect(text.length).toBeLessThanOrEqual(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+  const row = readPagedTaskQuery(reads)[0]!;
+  expect(row.outcome).toBe(original[0].outcome);
+  expect(row.resolution?.offer?.body).toBe(original[0].resolution.offer.body);
+  expect(row.resolution?.answers).toEqual(original[0].resolution.answers);
+  expect((await tool.run({ field: "outcome", offset: 1 })).text).toBe(
+    "field and offset apply only with a key.",
+  );
+  expect((await tool.run({ key: "182c1d82", offset: 1 })).text).toBe(
+    "offset applies only with a field.",
+  );
 });
 
 // INF-133 F2: captain chose byte-for-byte compatibility for every read that already fits.

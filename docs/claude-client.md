@@ -219,9 +219,9 @@ The default unconditional acceptance band therefore holds 50,000 text characters
 A first mate has no file tool with which to recover the client’s saved file.
 First mate Claude sessions pin `MAX_MCP_OUTPUT_TOKENS=100000` through `CLAUDE_SEAT_ENV`, overriding an ambient value and taking precedence over the client’s remote configuration.
 The first mate’s explicit cap gives that client a 200,000-character unconditional band; coding and classifier sessions receive no such host override.
-The `tasks` tool also shares exact repeated values and uses compact metadata with verbatim text blocks for larger records instead of repeating and escaping card bodies (`docs/task-record.md`, “By-key closing resolution”); it never drops distinct content.
+The `tasks` tool pages a by-key read that does not fit one answer, by field and offset, instead of compressing it (`docs/task-record.md`, “By-key closing resolution”); it never drops distinct content.
 A read whose original heading and indented JSON fit 50,000 characters stays byte-for-byte unchanged on every provider.
-That shared formatting threshold remains independent of the first mate’s larger Claude cap.
-The original accepted-plan fixture and the larger INF-91 design record must fit that unconditional band (`tests/account-eval.test.ts` and `taskTools.test.ts`, with the verified client limit in `tests/helpers/claudeMcpLimit.ts`).
+That page size remains independent of the first mate’s larger Claude cap.
+Every page of the original accepted-plan fixture and the larger INF-91 design record must fit that unconditional band (`tests/account-eval.test.ts` and `taskTools.test.ts`, with the verified client limit in `tests/helpers/claudeMcpLimit.ts`).
 `claudeToolSurface.test.ts` sends both production-host evaluation reads and the captured INF-91 row through the installed client, boxed into a scratch HOME with a local provider stub, and requires the model-bound request to carry each byte for byte.
 This transport check calls no live model and does not establish that a model acts correctly on the plan; the approved account evaluation supplies that evidence.

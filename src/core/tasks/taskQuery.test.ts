@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { pngImage } from "../../../tests/helpers/images";
 import { attachmentPath, keepImages } from "../attachments";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
-import { queryTasks } from "./taskQuery";
+import { queryTasks, taskResolutionBody } from "./taskQuery";
 import { TaskService } from "./taskService";
 
 /**
@@ -206,3 +207,43 @@ describe("the tasks query by key (Task B)", () => {
     expect(query({ key: plan.key }).rows[0]?.resolution).not.toHaveProperty("answers");
   });
 });
+
+// INF-439: the by-key view must not repeat the offer body with the submitted answers.
+// Retained INF-91/INF-64 contents exercise matching, later and absent newest-card readings.
+it.each(["matching", "later", "absent"] as const)(
+  "shows closing bodies only where distinct, without changing the stored resolution (%s)",
+  (state) => {
+    const saved = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8"))[0];
+    const later = JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8")).body;
+    const db = openInMemoryDatabase();
+    try {
+      const tasks = new TaskService({ db });
+      const task = tasks.create({
+        id: "plan",
+        title: saved.title,
+        prompt: saved.brief,
+        repoId: null,
+      });
+      const resolution = structuredClone(saved.resolution);
+      const newestBody = state === "matching" ? saved.card : state === "later" ? later : undefined;
+      const [row] = queryTasks(
+        tasks,
+        { key: task.key },
+        () => undefined,
+        () => newestBody,
+        () => resolution,
+      ).rows;
+      expect(row?.card).toBe(newestBody);
+      expect(row?.resolution?.answers).toEqual(saved.resolution.answers);
+      expect(row?.resolution?.action).toBe(saved.resolution.action);
+      for (const part of ["card", "offer"] as const) {
+        expect(taskResolutionBody(row!, part)).toBe(saved.resolution[part].body);
+        if (state === "matching") expect(row?.resolution?.[part]).not.toHaveProperty("body");
+        else expect(row?.resolution?.[part]?.body).toBe(saved.resolution[part].body);
+      }
+      expect(resolution).toEqual(saved.resolution);
+    } finally {
+      db.close();
+    }
+  },
+);

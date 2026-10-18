@@ -252,6 +252,8 @@ describe("the Claude seat's options (the contract test)", () => {
     expect(s.harness().options.env?.MAX_MCP_OUTPUT_TOKENS).toBe(
       String(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS),
     );
+    // INF-416 piece K preserves INF-133's exact cap; this seat test owns that pin.
+    expect(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS).toBe(100_000);
     expect(CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS).toBeGreaterThan(CLAUDE_MCP_DEFAULT_OUTPUT_TOKENS);
     session.dispose();
     await session.closed();

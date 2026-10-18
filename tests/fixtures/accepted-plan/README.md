@@ -14,10 +14,10 @@ The full contents are available through the first mate's native `tasks` tool.
 
 `inf91.json` retains the complete keyed `tasks` response for INF-91 (`182c1d82`), captured from INF-87's own tool transcript without opening the app database.
 Its selected action is `continue-design`, with `look=story` and `storage=native`; it is not build approval.
-The transport regression expands the rendered response back to the entire captured row.
+The transport regression assembles the rendered field pages back to the entire captured row.
 The second live evaluation seeds its report, brief, goal, card and submitted answers through the production services on disposable identities.
 A pre-existing read-only continuation and a held implementation test successor reuse and the design boundary.
-The case must actually use length-framed text, not merely have a large fixture name.
+The case must actually page the fields omitted from its first read, not merely have a large fixture name.
 Neither evaluation touches the historical task or grants publication or merge permission.
 
 ## Early automatic starts

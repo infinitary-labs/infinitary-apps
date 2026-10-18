@@ -190,13 +190,13 @@ Use the same approval, account, isolation and foreground-Claude boundaries as ab
 INF-87's `scripts/evals/acceptedPlan.ts` module uses INF-86's original six-piece report, offer and non-default answer, with only the parent/successor identifiers mapped to disposable records (`tests/fixtures/accepted-plan/README.md`).
 Select it with `--module scripts/evals/acceptedPlan.ts`.
 Both first mate cases start with production-rendered answer-close receipts and compact indexes, requiring a native keyed task read before writing.
-The six-piece case exercises shared JSON.
-The larger case uses INF-91’s full report, brief, offer and actual `look=story` / `storage=native` answers, and must exercise verbatim `$text` blocks.
+The six-piece case fits one by-key read, with the submitted non-default answer and closing metadata inline.
+The larger case uses INF-91’s full report, brief, offer and actual `look=story` / `storage=native` answers; its remaining `card` page holds the unique design text.
 Its actual Continue design choice authorizes only reusing and starting the existing read-only design continuation, while the implementation and parent remain open and on request.
 It opens no builder model session; the explicit builder selection is still required by the shared run-sheet format.
 It requests twelve model calls for filing and six for continuing design; the per-case bound can only lower a role’s allowance, and the existing total ceilings may reduce either allowance on the approved sheet.
 The module reserves 65,536 bytes of tool results per model request on its approved sheet and within the same total input ceiling; this bounds the harness, not the Claude client’s separate cap.
-The native reads share repeated text by in-result references; both fixtures must stay within the original client’s unconditional acceptance band and reach a boxed real client’s model-bound request whole (`docs/claude-client.md`, “Complete task reads through the tool-result cap”).
+A by-key read that fits is indented JSON; a longer one names the fields still to page, and each page stays within the original client’s unconditional acceptance band and the module reservation, and reaches a boxed real client’s model-bound request whole (`docs/claude-client.md`, “Complete task reads through the tool-result cap”).
 Other modules retain the default 16,384-byte reservation; a result that fits is served whole, and an oversized result stays bounded.
 Usage refunds unused calls at that module’s approved reservation rate.
 A fixture whose closing choice never reaches the first mate fails after ten seconds and closes its isolated host instead of hanging preparation.
@@ -227,6 +227,6 @@ The same review file must also contain `large-design-continuation`, with `fullSp
 That review checks the selected story/native-attachment choices and preserves the unanswered publication-consent and host-scope questions without authorizing implementation, upload or merge.
 Score with `node scripts/evals/accepted-plan-score.ts --out SCORE_DIR --responses RUN_DIR/responses.json --reviews REVIEWS_JSON`.
 The scorer reads each case’s client record beside `responses.json` and requires the full host result to match the served result and a model-bound tool result in the client transcript.
-It expands the recorded representation and checks the complete report, brief, answers and offer, as well as the intended shared-JSON or text-block format.
+It assembles the recorded field pages and checks the complete report, brief, answers and offer without the retired pointer or text-block format.
 Both cases must pass; missing or bounded results, incomplete specifications, a wrong graph or missing independent review fail.
 The hermetic scorer proof is not evidence of model behavior.

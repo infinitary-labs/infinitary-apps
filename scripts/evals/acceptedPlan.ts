@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
-import { readTaskQueryText } from "../../tests/helpers/taskQueryText.ts";
+import { readPagedTaskQuery } from "../../tests/helpers/taskQueryText.ts";
+import { parseTasksQueryText } from "../../src/core/pi/taskTools.ts";
+import { taskResolutionBody } from "../../src/core/tasks/taskQuery.ts";
 import { renderWake } from "../../src/core/orchestrator/wakes.ts";
 import type { ApprovalCase, EvalRun, EvalTask } from "./approvalHandoff.ts";
 import { approvalHost } from "./host.ts";
@@ -117,8 +119,8 @@ export const evaluation = {
   name: "accepted-plan",
   cases: [acceptedPlanCase, largeDesignCase],
   host: approvalHost,
-  // A harness reservation, not the client cap: repeated native text is shared in-result.
-  // Both losslessly rendered fixtures fit; the production Claude seat separately pins its cap.
+  // A harness reservation, not the client cap. Each page of a by-key read fits it.
+  // The production Claude seat separately pins its 100,000-token cap.
   toolResultBytes: 65_536,
   // Read, queue the reused successor, file five pieces with dependencies and inspect the graph.
   // Do not require the model to batch unrelated tool calls to fit six requests.
@@ -338,15 +340,14 @@ export function scoreLargeDesign(run: EvalRun, review: LargeDesignReview): strin
   return failures;
 }
 
-/** Check the recorded client result, not merely the host's intended output. */
+/** Check the recorded client results, not merely the host's intended output. */
 export function scorePlanRead(
   test: ApprovalCase,
-  format: "shared-json" | "text-block",
-  result: { text: string; servedText: string } | undefined,
+  reads: { text: string; servedText: string }[],
   native: { role?: string; content?: unknown }[],
 ): string[] {
   const failures: string[] = [];
-  if (!result || result.text !== result.servedText)
+  if (reads.length === 0 || reads.some((read) => read.text !== read.servedText))
     return ["The harness did not serve the complete native read"];
   const textContent = (content: unknown): string =>
     typeof content === "string"
@@ -363,35 +364,25 @@ export function scorePlanRead(
             .map((block) => textContent(block.content))
         : [],
   );
-  if (!received.includes(result.servedText))
+  if (reads.some((read) => !received.includes(read.servedText)))
     failures.push("The client transcript does not contain the complete model-bound read");
+  if (reads.some((read) => read.text.includes("$ref") || read.text.includes("$text")))
+    failures.push("The live read used the retired pointer format");
   try {
-    const block = result.text.indexOf("\n\nText #/");
-    const metadata = JSON.parse(
-      result.text.slice(result.text.indexOf("["), block < 0 ? undefined : block),
-    );
-    const has = (value: unknown, key: string): boolean =>
-      !!value &&
-      typeof value === "object" &&
-      (Object.hasOwn(value, key) || Object.values(value).some((child) => has(child, key)));
-    if (
-      !has(metadata, "$ref") ||
-      (format === "text-block"
-        ? !has(metadata, "$text") || block < 0
-        : has(metadata, "$text") || block >= 0)
-    )
-      failures.push(`The live read did not exercise ${format}`);
-    const row = readTaskQueryText(result.text)[0];
+    const omitted = parseTasksQueryText(reads[0]!.text).omitted;
+    if (omitted.length > 0 && reads.length === 1)
+      failures.push("The live read named fields it did not page");
+    const row = readPagedTaskQuery(reads.map((read) => read.text))[0];
     const plan = test.tasks.PLAN!;
     if (
       row?.outcome !== plan.outcome ||
       row?.brief !== plan.brief ||
-      row?.resolution?.offer?.body !== plan.resolution?.offer.body ||
+      (row && taskResolutionBody(row, "offer")) !== plan.resolution?.offer.body ||
       JSON.stringify(row?.resolution?.answers) !== JSON.stringify(plan.resolution?.answers)
     )
       failures.push("The read did not retain the full report, brief, answers and offer");
   } catch {
-    failures.push("The task read could not be expanded without loss");
+    failures.push("The task read could not be paged without loss");
   }
   return failures;
 }

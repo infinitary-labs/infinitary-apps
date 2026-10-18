@@ -31,6 +31,32 @@ export type TaskQueryInput = {
   limit?: number;
 };
 
+/** Closing metadata keeps distinct bodies; a body equal to the newest card is not repeated. */
+type ClosingBody<T extends { body: string }> = Omit<T, "body"> & { body?: string };
+export type TaskQueryResolution = Omit<CardResolution, "card" | "offer"> & {
+  card: ClosingBody<CardResolution["card"]>;
+  offer?: ClosingBody<NonNullable<CardResolution["offer"]>>;
+};
+
+/** The body of a closing card or offer, including one shown only in the newest card. */
+export function taskResolutionBody(row: TaskQueryRow, part: "card" | "offer"): string | undefined {
+  const closing = row.resolution?.[part];
+  return closing ? (closing.body ?? row.card) : undefined;
+}
+
+function queryResolution(resolved: CardResolution, newestBody?: string): TaskQueryResolution {
+  const withoutRepeatedBody = <T extends { body: string }>(value: T): ClosingBody<T> => {
+    if (value.body !== newestBody) return value;
+    const { body: _body, ...rest } = value;
+    return rest;
+  };
+  return {
+    ...resolved,
+    card: withoutRepeatedBody(resolved.card),
+    ...(resolved.offer ? { offer: withoutRepeatedBody(resolved.offer) } : {}),
+  };
+}
+
 export type TaskQueryRow = {
   policies?: EffectiveTaskPolicies;
   required_action?: CaptainAction;
@@ -88,7 +114,7 @@ export type TaskQueryRow = {
    */
   card?: string;
   /** Persisted closing offer/action/answers, not the proposal defaults. By-key only. */
-  resolution?: CardResolution;
+  resolution?: TaskQueryResolution;
   /**
    * The captain's pictures that came with the task's messages, by name and
    * the app's own copy (`TaskService.pictures`). By-key only.
@@ -168,9 +194,10 @@ export function queryTasks(
     // compact index and never carries bodies in bulk.
     .map((record) => {
       const resolved = one ? resolution(record.id) : undefined;
+      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined);
       return {
-        ...toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined),
-        ...(resolved ? { resolution: resolved } : {}),
+        ...row,
+        ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
       };
     });
   return { rows, total: matched.length };

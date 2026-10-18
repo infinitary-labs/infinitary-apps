@@ -26,16 +26,14 @@ try {
   const cases = [
     {
       test: acceptedPlanCase,
-      format: "shared-json" as const,
       score: (run: EvalRun, review: unknown) =>
         scoreAcceptedPlan(run, review as AcceptedPlanReview),
     },
     {
       test: largeDesignCase,
-      format: "text-block" as const,
       score: (run: EvalRun, review: unknown) => scoreLargeDesign(run, review as LargeDesignReview),
     },
-  ].map(({ test, format, score }) => {
+  ].map(({ test, score }) => {
     const id = test.id;
     const path = join(dirname(values.responses!), `${id}.json`);
     const record = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : undefined;
@@ -62,11 +60,12 @@ try {
       failures.push("Missing or inconsistent tool request evidence");
     if (!record) failures.push("Missing live client record");
     else {
-      const read =
-        responses[id]?.calls.findIndex(
-          (call) => call.name === "tasks" && call.args.key === "PLAN",
-        ) ?? -1;
-      failures.push(...scorePlanRead(test, format, record.results?.[read], record.native ?? []));
+      const planReads = (responses[id]?.calls ?? []).flatMap((call, index) =>
+        call.name === "tasks" && call.args.key === "PLAN" && record.results?.[index]
+          ? [record.results[index]]
+          : [],
+      );
+      failures.push(...scorePlanRead(test, planReads, record.native ?? []));
     }
     return { id, failures };
   });

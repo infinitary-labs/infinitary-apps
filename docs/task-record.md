@@ -287,14 +287,19 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 A single `tasks` lookup includes `resolution` alongside the report/newest card: closing action, submitted answers, resolved time and stored card, plus an exact `offer` when interaction capture recorded it.
 Both the first mate and crewmates read the same fields.
+The query view omits a closing card or offer body only when it is identical to the newest `card` body.
+Its action, submitted answers and other closing metadata remain in `resolution`; a differing historical body stays there too.
+The stored resolution is unchanged, and `taskResolutionBody` reads a closing body from its own field or the identical newest body.
 The tool-text renderer returns the original heading and indented JSON byte for byte when the complete response fits 50,000 characters, on every provider.
-Only above that threshold, it shares identical values within each row when a local JSON Pointer such as `{ "$ref": "#/0/card" }` is shorter; this includes repeated bodies, reports, actions and answer arrays.
-The response explains these references: they point inside that same response and require no extra tool call.
-Above 50,000 characters it drops JSON indentation and, where that saves more space, serves strings as verbatim length-framed `Text #/…` blocks below the JSON metadata.
-A `{ "$text": N }` field names that block’s exact UTF-16 length; references still resolve inside the same result, without decoding compressed data or fetching files.
-This reduces serialization overhead, not the meaning or completeness of the plan; truly larger unique content can still exceed a client’s limit.
-The latest outcome and newest card are the first canonical texts; distinct historical reports and differing closing card/offer bodies remain whole, alongside every event id, answer, action and other metadata.
-This is a lossless presentation of the query, not a storage change, truncation, or change to authorization.
+A longer by-key read does not compress and does not cut unique content.
+It keeps every field that still fits and names each remaining field, whether that field is its own text or JSON, and that field's length.
+Read one named field from a 1-based character offset.
+The answer's nextOffset continues that field, and none ends it.
+The page index asks the reader to finish the remaining fields before acting.
+Each page fits the same 50,000-character band, in characters and in UTF-8 bytes, so the client does not replace it with a saved file.
+The first mate's 100,000-token cap stays the outer limit and is not this band.
+Distinct historical reports and differing closing card and offer bodies remain whole, alongside every event id, answer, action and other metadata.
+This is a paged presentation of the query, not a storage change or a change to authorization.
 Lists omit this material.
 This is evidence, not authorization interpreted by the host.
 The shared `HANDOFF` contract owns that agent judgment.

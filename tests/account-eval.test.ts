@@ -49,9 +49,16 @@ import { appPathsFor } from "../src/core/paths.ts";
 import { AccountVault } from "../src/core/pi/accountVault.ts";
 import { PiAccountBackend } from "../src/core/pi/piAccountBackend.ts";
 import { createPiSessionFactory } from "../src/core/pi/session.ts";
-import { renderTasksQueryResult } from "../src/core/pi/taskTools.ts";
+import {
+  assembleTasksReads,
+  parseTasksQueryText,
+  renderTasksFieldPage,
+  renderTasksQueryResult,
+  TASK_QUERY_PAGE_CHARACTERS,
+} from "../src/core/pi/taskTools.ts";
 import type { SessionBinding, SessionSpec } from "../src/core/session/session.ts";
 import { InboxStore } from "../src/core/storage/inboxStore.ts";
+import { taskResolutionBody } from "../src/core/tasks/taskQuery.ts";
 import { MOCK_CLAUDE_OAUTH_TOKEN, writeMockClaudeClient } from "./e2e/mockClaudeClient.ts";
 import { mockModelsJson, startMockProvider } from "./e2e/mockProvider.ts";
 import {
@@ -63,7 +70,7 @@ import {
 } from "./helpers/anthropicDialect.ts";
 import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "./helpers/claudeMcpLimit.ts";
 import { scratchDir } from "./helpers/scratchDirs.ts";
-import { readTaskQueryText } from "./helpers/taskQueryText.ts";
+import { pageTaskField, readTaskQueryText } from "./helpers/taskQueryText.ts";
 
 // Each independent case owns its boxed client and migrations; never put every cold start under one ceiling.
 vi.setConfig({ testTimeout: 30_000 });
@@ -1045,9 +1052,24 @@ it("keeps the accepted plan off the index and serves the entire native read with
     expect(host.prompt).not.toContain("Your Mac lets a phone join as a phone.");
     const read = host.spec.tools.find((tool) => tool.name === "tasks")!;
     const result = await read.run({ key: "PLAN" });
-    const row = readTaskQueryText(result.text)[0]!;
+    const first = parseTasksQueryText(result.text);
+    // INF-439 live failure: the small plan must expose its non-default answer in one read,
+    // rather than hiding it in an omitted resolution full of repeated card bodies.
+    expect(first.omitted).toEqual([]);
+    expect(first.rows[0]?.resolution?.answers).toEqual(
+      acceptedPlanCase.tasks.PLAN!.resolution!.answers,
+    );
+    expect(first.rows[0]?.resolution?.offer).not.toHaveProperty("body");
+    expect(first.rows[0]?.resolution?.card).not.toHaveProperty("body");
+    const reads = [result.text];
+    for (const omitted of first.omitted) {
+      reads.push(...(await pageTaskField((args) => read.run(args), "PLAN", omitted.field)));
+    }
+    const row = assembleTasksReads(reads)[0]!;
     expect(row.outcome).toBe(acceptedPlanCase.tasks.PLAN!.outcome);
-    expect(row.resolution?.offer?.body).toBe(acceptedPlanCase.tasks.PLAN!.resolution!.offer.body);
+    expect(taskResolutionBody(row, "offer")).toBe(
+      acceptedPlanCase.tasks.PLAN!.resolution!.offer.body,
+    );
     expect(row.resolution?.answers).toEqual(acceptedPlanCase.tasks.PLAN!.resolution!.answers);
     // No-loss contract: an older accepted offer may differ from the newest stored card.
     // Use the retained original offer, before the evaluation's task-key remapping.
@@ -1056,11 +1078,25 @@ it("keeps the accepted plan off the index and serves the entire native read with
       readFileSync("tests/fixtures/accepted-plan/inf64.json", "utf8"),
     ).body;
     expect(differingOffer.resolution!.offer!.body).not.toBe(differingOffer.card);
-    expect(readTaskQueryText(renderTasksQueryResult({ rows: [differingOffer], total: 1 }))).toEqual(
-      [differingOffer],
-    );
-    // INF-113: the real client rejected the repeated full record, despite our larger reservation.
-    expect(result.text.length).toBeLessThanOrEqual(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+    const rendered = renderTasksQueryResult({ rows: [differingOffer], total: 1 });
+    const renderedReads = [rendered];
+    for (const omitted of parseTasksQueryText(rendered).omitted) {
+      let offset = 1;
+      while (offset) {
+        const page = renderTasksFieldPage(differingOffer, omitted.field, offset);
+        renderedReads.push(page);
+        const next = page.match(/nextOffset (\d+|none)/)?.[1];
+        offset = next && next !== "none" ? Number(next) : 0;
+      }
+    }
+    expect(assembleTasksReads(renderedReads)).toEqual([differingOffer]);
+    // INF-416 piece K: each page fits the band and the module reservation. The plan itself
+    // is still larger than the default reservation, which is why the module reserves more.
+    for (const text of reads) {
+      expect(text.length).toBeLessThanOrEqual(TASK_QUERY_PAGE_CHARACTERS);
+      expect(boundedToolText(text, acceptedPlanEvaluation.toolResultBytes)).toBe(text);
+    }
+    expect(JSON.stringify(row).length).toBeGreaterThan(LIMITS.toolResultBytes);
     expect(result.text.length).toBeGreaterThan(LIMITS.toolResultBytes);
     expect(boundedToolText(result.text, acceptedPlanEvaluation.toolResultBytes)).toBe(result.text);
     // An oversized response remains bounded, including multibyte characters.
@@ -1450,9 +1486,9 @@ it("fails and disposes a missing acceptance wake instead of hanging preparation"
   }
 });
 
-// INF-133 F3: the second approved live case must serve actual length-framed text,
+// INF-416 piece K preserves INF-133 F3: the second approved live case pages its fields,
 // including the saved report, brief, selected answers and complete accepted offer.
-it("serves the large design through production task tools as lossless text blocks", async () => {
+it("serves the large design through production task tools as lossless field pages", async () => {
   const host = await approvalHost(
     largeDesignCase,
     scratchDir("large-design-eval-"),
@@ -1462,13 +1498,28 @@ it("serves the large design through production task tools as lossless text block
   try {
     const tool = host.spec.tools.find(({ name }) => name === "tasks")!;
     const result = await tool.run({ key: "PLAN" });
-    const row = readTaskQueryText(result.text)[0]!;
-    expect(result.text).toContain("\n\nText #/");
-    expect(boundedToolText(result.text, acceptedPlanEvaluation.toolResultBytes)).toBe(result.text);
+    const first = parseTasksQueryText(result.text);
+    // The remaining page now contains unique design text, not copies hidden with the choices.
+    expect(first.omitted.map(({ field }) => field)).toEqual(["card"]);
+    expect(first.rows[0]?.resolution?.answers).toEqual(
+      largeDesignCase.tasks.PLAN!.resolution!.answers,
+    );
+    const reads = [result.text];
+    for (const omitted of first.omitted) {
+      reads.push(...(await pageTaskField((args) => tool.run(args), "PLAN", omitted.field)));
+    }
+    const row = assembleTasksReads(reads)[0]!;
+    expect(result.text).not.toContain("$text");
+    expect(result.text).toContain("does not fit one read");
+    for (const text of reads) {
+      expect(boundedToolText(text, acceptedPlanEvaluation.toolResultBytes)).toBe(text);
+    }
     expect(row.outcome).toBe(largeDesignCase.tasks.PLAN!.outcome);
     expect(row.brief).toBe(largeDesignCase.tasks.PLAN!.brief);
     expect(row.resolution?.answers).toEqual(largeDesignCase.tasks.PLAN!.resolution!.answers);
-    expect(row.resolution?.offer?.body).toBe(largeDesignCase.tasks.PLAN!.resolution!.offer.body);
+    expect(taskResolutionBody(row, "offer")).toBe(
+      largeDesignCase.tasks.PLAN!.resolution!.offer.body,
+    );
     const calls: import("../scripts/evals/approvalHandoff.ts").EvalCall[] = [
       { name: "tasks", args: { key: "PLAN" }, result: "success" },
     ];

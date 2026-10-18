@@ -85,7 +85,7 @@ const START_POLICY = stringEnum(START_POLICY_VALUES, {
 
 function undeclaredPrerequisites(verb: "filed" | "changed") {
   return {
-    text: `Nothing was ${verb}. Follow HANDOFF. Queued work must declare blocked_by in this call, as create_task's blocked_by.`,
+    text: `Nothing was ${verb}. Follow HANDOFF. Queued work must declare blocked_by in this call; [] declares none.`,
     details: { refusal: { kind: "undeclared-prerequisites" } },
   };
 }
@@ -204,7 +204,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
-          description: "As create_task's blocked_by. Adds any not yet linked; never removes.",
+          description:
+            "Required for when-ready; [] declares none. Adds prerequisite ids/keys not yet linked; never removes.",
         }),
       ),
       parent: Type.Optional(
@@ -439,88 +440,204 @@ export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Resolution carries facts; HANDOFF governs authorization. History is evidence,",
   "not inferred approval; later reports do not erase earlier specifications. Lists carry no bodies.",
   "The context block's tasks index is a bounded view of the same record; this is the full one.",
+  "A by-key read that does not fit one answer names each remaining field and its length.",
+  "Closing bodies equal to card are not repeated in resolution.",
 ].join(" ");
 
-/** Keep task reads in the client's unconditional text band when formatting alone can do so. */
-const TASK_QUERY_TEXT_BAND = 50_000;
+/**
+ * A page fits the client's unconditional text band (docs/claude-client.md),
+ * in characters and in UTF-8 bytes. INF-416 piece K: a longer by-key read
+ * pages by field and offset instead of compressing. INF-133's 100,000-token
+ * cap stays the outer limit and is not this band.
+ */
+export const TASK_QUERY_PAGE_CHARACTERS = 50_000;
 
-function pointerChild(path: string, key: string | number): string {
-  return `${path}/${String(key).replaceAll("~", "~0").replaceAll("/", "~1")}`;
+const PAGE_NOTE =
+  "This record does not fit one read. Read remaining fields before acting; nextOffset continues.";
+const LIST_NOTE =
+  "This list does not fit one read. Narrow it with status, text, parent or a smaller limit.";
+
+type FieldAs = "text" | "json";
+
+type OmittedField = { field: string; as: FieldAs; length: number };
+
+function resultHeading(count: number, total: number): string {
+  return `${count} of ${total} matching task${total === 1 ? "" : "s"}:\n`;
 }
 
-/** The query result as tool text; identical content is served once, never removed from records. */
+function fitsPage(text: string): boolean {
+  return (
+    text.length <= TASK_QUERY_PAGE_CHARACTERS &&
+    Buffer.byteLength(text) <= TASK_QUERY_PAGE_CHARACTERS
+  );
+}
+
+/** A string field is its own text. Any other field is JSON, so an offset is stable. */
+export function taskFieldBody(value: unknown): { as: FieldAs; text: string } {
+  if (typeof value === "string") return { as: "text", text: value };
+  return { as: "json", text: JSON.stringify(value) };
+}
+
+function renderOversizedRow(head: string, row: TaskQueryRow): string {
+  const omitted: OmittedField[] = [];
+  const kept: Record<string, unknown> = { ...row };
+  const render = (): string => {
+    const lines = omitted.map((item) => `${item.field} as ${item.as}, ${item.length} characters`);
+    return `${head}${PAGE_NOTE}\n${lines.join("\n")}${lines.length ? "\n" : ""}${JSON.stringify([kept], null, 2)}`;
+  };
+  const sizes = Object.keys(row)
+    .map((field) => ({
+      field,
+      length: taskFieldBody(row[field as keyof TaskQueryRow]).text.length,
+    }))
+    .sort((a, b) => b.length - a.length || a.field.localeCompare(b.field));
+  for (const { field } of sizes) {
+    if (fitsPage(render())) break;
+    const body = taskFieldBody(kept[field]);
+    omitted.push({ field, as: body.as, length: body.text.length });
+    delete kept[field];
+  }
+  omitted.sort((a, b) => a.field.localeCompare(b.field));
+  return render();
+}
+
+/** The query result as tool text. A read that fits is unchanged. A longer one pages. */
 export function renderTasksQueryResult(result: { rows: TaskQueryRow[]; total: number }): string {
   if (result.rows.length === 0) return "No tasks match.";
-  const heading = `${result.rows.length} of ${result.total} matching task${result.total === 1 ? "" : "s"}:\n`;
-  const original = heading + JSON.stringify(result.rows, null, 2);
+  const head = resultHeading(result.rows.length, result.total);
+  const original = head + JSON.stringify(result.rows, null, 2);
   // INF-133 F2: fitting reads retain their exact format on every provider.
-  if (original.length <= TASK_QUERY_TEXT_BAND) return original;
-  let references = false;
-  const rows = result.rows.map((row, index) => {
-    const seen = new Map<string, string>();
-    // Keep the familiar latest report and newest card as the canonical text.
-    for (const key of ["outcome", "card"] as const) {
-      const value = row[key];
-      if (value !== undefined && !seen.has(JSON.stringify(value))) {
-        seen.set(JSON.stringify(value), `#/${index}/${key}`);
-      }
-    }
-    const share = (value: unknown, path: string): unknown => {
-      const encoded = JSON.stringify(value);
-      if (encoded === undefined) return value;
-      const ref = seen.get(encoded);
-      if (
-        ref !== undefined &&
-        ref !== path &&
-        JSON.stringify({ $ref: ref }).length < encoded.length
-      ) {
-        references = true;
-        return { $ref: ref };
-      }
-      if (ref === undefined) seen.set(encoded, path);
-      if (Array.isArray(value)) return value.map((item, at) => share(item, pointerChild(path, at)));
-      if (value !== null && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).map(([key, item]) => [key, share(item, pointerChild(path, key))]),
-        );
-      }
-      return value;
-    };
-    return share(row, `#/${index}`);
-  });
-  const note = references
-    ? "Repeated values use $ref JSON Pointers inside this result, not another tool call.\n"
-    : "";
-  const pretty = heading + note + JSON.stringify(rows, null, 2);
-  if (pretty.length <= TASK_QUERY_TEXT_BAND) return pretty;
-  const compact = heading + note + JSON.stringify(rows);
-  if (compact.length <= TASK_QUERY_TEXT_BAND) return compact;
-  // Large markup pays for every escaped quote and newline inside JSON. Serve
-  // only profitable strings as verbatim, length-framed blocks in this SAME read.
-  // Never summarize the accepted offer or silently cut any unique content.
-  const blocks: string[] = [];
-  const frameText = (value: unknown, path: string): unknown => {
-    if (typeof value === "string") {
-      const marker = { $text: value.length };
-      const block = `\n\nText ${path} (${value.length} UTF-16 units):\n${value}`;
-      if (JSON.stringify(marker).length + block.length < JSON.stringify(value).length) {
-        blocks.push(block);
-        return marker;
-      }
-    }
-    if (Array.isArray(value))
-      return value.map((item, at) => frameText(item, pointerChild(path, at)));
-    if (value !== null && typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, item]) => [key, frameText(item, pointerChild(path, key))]),
-      );
-    }
-    return value;
+  if (fitsPage(original)) return original;
+  if (result.rows.length !== 1) return head + LIST_NOTE;
+  return renderOversizedRow(head, result.rows[0]!);
+}
+
+/** One field of a by-key row, from a 1-based character offset. nextOffset continues. */
+export function renderTasksFieldPage(row: TaskQueryRow, field: string, offset: number): string {
+  if (!Object.hasOwn(row, field)) {
+    return `No field "${field}". Fields: ${Object.keys(row).join(", ")}.`;
+  }
+  const body = taskFieldBody(row[field as keyof TaskQueryRow]);
+  const past = body.text.length === 0 ? offset > 1 : offset > body.text.length;
+  if (past) return `offset ${offset} is past field ${field} (length ${body.text.length}).`;
+  let low = offset - 1;
+  let high = body.text.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const next = mid < body.text.length ? offset + (mid - (offset - 1)) : null;
+    const text =
+      fieldPageHeader(field, body.as, offset, next, body.text.length) +
+      body.text.slice(offset - 1, mid);
+    if (fitsPage(text)) low = mid;
+    else high = mid - 1;
+  }
+  if (low < offset && body.text.length >= offset) {
+    throw new Error("A task field page header does not fit");
+  }
+  const next = low < body.text.length ? offset + (low - (offset - 1)) : null;
+  return (
+    fieldPageHeader(field, body.as, offset, next, body.text.length) +
+    body.text.slice(offset - 1, low)
+  );
+}
+
+function fieldPageHeader(
+  field: string,
+  as: FieldAs,
+  offset: number,
+  nextOffset: number | null,
+  length: number,
+): string {
+  return `field ${field} as ${as}, offset ${offset}, nextOffset ${nextOffset ?? "none"}, length ${length}\n`;
+}
+
+const FIELD_PAGE =
+  /^field ([A-Za-z0-9_]+) as (text|json), offset (\d+), nextOffset (\d+|none), length (\d+)\n/;
+const OMITTED_FIELD = /^([A-Za-z0-9_]+) as (text|json), (\d+) characters$/;
+
+export type TasksFieldPage = {
+  field: string;
+  as: FieldAs;
+  offset: number;
+  nextOffset: number | null;
+  length: number;
+  text: string;
+};
+
+/** One field page, or undefined when the text is a row read or a refusal. */
+export function parseTasksFieldPage(text: string): TasksFieldPage | undefined {
+  const match = FIELD_PAGE.exec(text);
+  if (!match) return undefined;
+  const offset = Number(match[3]);
+  const nextOffset = match[4] === "none" ? null : Number(match[4]);
+  const length = Number(match[5]);
+  const body = text.slice(match[0].length);
+  const expected = nextOffset === null ? length - offset + 1 : nextOffset - offset;
+  if (body.length !== expected) throw new Error("A task field page must stay complete");
+  return {
+    field: match[1]!,
+    as: match[2] as FieldAs,
+    offset,
+    nextOffset,
+    length,
+    text: body,
   };
-  const metadata = rows.map((row, index) => frameText(row, `#/${index}`));
-  const blockNote = "$text names the length of its verbatim Text block below.\n";
-  const framed = heading + note + blockNote + JSON.stringify(metadata) + blocks.join("");
-  return framed.length < compact.length ? framed : compact;
+}
+
+export type ParsedTasksQuery = {
+  rows: TaskQueryRow[];
+  omitted: OmittedField[];
+};
+
+/** The row read: fitting JSON, or an index that names the fields still to page. */
+export function parseTasksQueryText(text: string): ParsedTasksQuery {
+  if (text === "No tasks match." || text.endsWith(LIST_NOTE)) return { rows: [], omitted: [] };
+  const jsonAt = text.indexOf("\n[");
+  if (jsonAt < 0) throw new Error("A task read must include its rows");
+  const notes = text.slice(0, jsonAt).split("\n").slice(1);
+  const omitted: OmittedField[] = [];
+  for (const line of notes) {
+    if (!line || line === PAGE_NOTE) continue;
+    const match = OMITTED_FIELD.exec(line);
+    if (!match) throw new Error("A task read note must name a field");
+    omitted.push({ field: match[1]!, as: match[2] as FieldAs, length: Number(match[3]) });
+  }
+  return { rows: JSON.parse(text.slice(jsonAt + 1)) as TaskQueryRow[], omitted };
+}
+
+/** The index read plus every field page, in any order, as the complete rows. */
+export function assembleTasksReads(reads: string[]): TaskQueryRow[] {
+  const index = reads.find((read) => parseTasksFieldPage(read) === undefined);
+  if (!index) throw new Error("A paged task read needs its row");
+  const parsed = parseTasksQueryText(index);
+  const pages = new Map<string, TasksFieldPage[]>();
+  for (const read of reads) {
+    const page = parseTasksFieldPage(read);
+    if (!page) continue;
+    pages.set(page.field, [...(pages.get(page.field) ?? []), page]);
+  }
+  return parsed.rows.map((row) => {
+    const filled: Record<string, unknown> = { ...row };
+    for (const omitted of parsed.omitted) {
+      const parts = (pages.get(omitted.field) ?? []).sort((a, b) => a.offset - b.offset);
+      if (omitted.length === 0) {
+        filled[omitted.field] = omitted.as === "text" ? "" : JSON.parse("null");
+        continue;
+      }
+      let at = 1;
+      let text = "";
+      for (const part of parts) {
+        if (part.offset !== at || part.as !== omitted.as || part.length !== omitted.length) {
+          throw new Error(`field ${omitted.field} page does not continue the index`);
+        }
+        text += part.text;
+        at = part.nextOffset ?? part.offset + part.text.length;
+      }
+      if (at !== omitted.length + 1) throw new Error(`field ${omitted.field} is incomplete`);
+      filled[omitted.field] = omitted.as === "json" ? JSON.parse(text) : text;
+    }
+    return filled as TaskQueryRow;
+  });
 }
 
 /**
@@ -540,6 +657,19 @@ export const TASKS_QUERY_TOOL = crewmateTool({
       }),
     ),
     key: Type.Optional(Type.String({ description: "One task by key or id" })),
+    field: Type.Optional(
+      Type.String({
+        description:
+          "On a by-key read, one field to page. A string is its text; any other field is JSON. Applies only with key.",
+      }),
+    ),
+    offset: Type.Optional(
+      Type.Integer({
+        minimum: 1,
+        description:
+          "1-based character offset into that field. Applies only with field. nextOffset continues.",
+      }),
+    ),
     text: Type.Optional(Type.String({ description: "Substring over title and goal" })),
     parent: Type.Optional(Type.String({ description: "List the children of this task" })),
     limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
@@ -547,6 +677,12 @@ export const TASKS_QUERY_TOOL = crewmateTool({
   bind: ({ onQueryTasks }) =>
     onQueryTasks &&
     (async (params, signal) => {
+      if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
+        return { text: "field and offset apply only with a key." };
+      }
+      if (params.offset !== undefined && !params.field) {
+        return { text: "offset applies only with a field." };
+      }
       const result = await callWithSignal(
         onQueryTasks,
         [
@@ -561,6 +697,11 @@ export const TASKS_QUERY_TOOL = crewmateTool({
         ],
         signal,
       );
+      if (params.field) {
+        const row = result.rows[0];
+        if (!row) return { text: "No tasks match." };
+        return { text: renderTasksFieldPage(row, params.field, params.offset ?? 1) };
+      }
       return { text: renderTasksQueryResult(result) };
     }),
 });

@@ -128,7 +128,10 @@ export const taskDeliveryViewSchema = z.object({
   reviewSha: z.string().optional(),
   /** The change reading taken when that review was assigned. */
   reviewChange: z.string().optional(),
-  /** A later head that pass covers, because the change lines matched. */
+  /**
+   * A later head a pass covered, because the change lines matched.
+   * No longer written. An older record's value still covers its head.
+   */
   reviewCarrySha: z.string().optional(),
   reviewRisk: reviewRiskSchema.optional(),
   reviewRiskNote: z.string().optional(),

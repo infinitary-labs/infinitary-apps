@@ -237,6 +237,10 @@ export type LineageFacts =
       approvedPaths: string[];
       /** The paths the repaired change touches, against the newer base. */
       repairedPaths: string[];
+      /** The approved head's change reading, when this computer could read it. */
+      approvedReading?: string | null;
+      /** The repaired head's change reading, when this computer could read it. */
+      repairedReading?: string | null;
     };
 
 /** The git questions a declaration asks; `PrCiService` answers them. */
@@ -311,6 +315,8 @@ export function declareMergeRepair(
       text: "Repair declaration refused: toHead must be the new head you pushed, not the one you started from.",
     };
   }
+  const repairedReading = facts.known ? (facts.repairedReading ?? undefined) : undefined;
+  const approvedReading = facts.known ? (facts.approvedReading ?? undefined) : undefined;
   const step: MergeRepairStep = {
     fromHead: input.fromHead.trim(),
     toHead: input.toHead.trim(),
@@ -321,10 +327,22 @@ export function declareMergeRepair(
     validation: input.validation.trim(),
     generation: authorization.generation,
     at: now,
+    ...(repairedReading ? { changeReading: repairedReading } : {}),
   };
   const patch = (next: Partial<MergeAuthorization>, note: string, feed = false) => {
+    const latest = tasks.get(taskId)?.delivery;
+    const versionReadings = { ...latest?.versionReadings };
+    if (approvedReading) versionReadings[authorization.approvedHead] = approvedReading;
+    if (repairedReading) versionReadings[step.toHead] = repairedReading;
     tasks.recordDelivery(taskId, {
-      mergeAuthorization: { ...authorization, ...next },
+      mergeAuthorization: {
+        ...authorization,
+        ...(approvedReading && !authorization.changeReading
+          ? { changeReading: approvedReading }
+          : {}),
+        ...next,
+      },
+      ...(approvedReading || repairedReading ? { versionReadings } : {}),
     });
     tasks.note(taskId, note, { news: true, feed, data: { mergeRepair: step } });
   };

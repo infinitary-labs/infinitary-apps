@@ -241,7 +241,11 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    A report with NO verdict line records nothing and spends no round - a reviewer's acknowledgment ("standing by") is not a verdict, and the hold stands regardless, so it still fails toward the human.
    A stated findings verdict whose findings are all info/no-op derives a `pass`: info never blocks (`findingsBlock` - blocking is an error or warning severity, or an ask-user action at any severity).
    The verdict, the head read, the change reading taken at assignment and the risk land on the builder's delivery facts (`reviewVerdict`, `reviewSha`, `reviewChange`, `reviewRisk`, `reviewRiskNote`, `reviewedAt`) as a `review` timeline event whose data also names the review task; which review a builder's verdict came from is otherwise read off the parent edge (`TaskService.verdictReviewOf`).
-   A pass holds for a later version whose change lines match that reading: opening the pull request, the captain's merge click and the kept merge all carry it, and a quiet timeline line on the builder records each carry.
+   A pass holds for a later version whose stored change reading matches the review's reading.
+   The approved head's reading is stored when the captain approves, and each repair's reading is stored when that repair is recorded, in the read that already brought the branch home.
+   Opening the pull request still carries a version that has no stored reading yet, by reading it once and storing that reading, and a quiet timeline line records that carry.
+   The kept merge compares the stored readings and does not read the branch again.
+   A carry recorded before the reading was stored with the version still covers its head.
    The reading keeps one neighboring line and drops where the lines sit.
    A main edit right next to the change asks for a fresh review, because that neighbor is part of the reading.
    A line moved beside the same neighbors still counts as the same change, and the pass carries.
@@ -350,6 +354,7 @@ The captain's merge click on a completion card is an approval of that change, an
   A new completion card supersedes any standing approval: the crewmate is asking again.
 - **The approval.**
   The captain's chrome click mints `delivery.mergeAuthorization` (version 1) in the card resolution's own transaction (`CardService.resolve`'s `alongside`): a fresh id and a generation, the card, lifecycle, offer, action and gesture ids, the GitHub repository, pull request and branch, squash, the approved head and an empty repair lineage.
+  On a reviewed task that click also stores the approved head's change reading on the approval, so a later kept merge compares it without reading the branch.
   It is minted only on a GitHub direct-pr task for an offer with a baseline on the pull request the task still names.
   A first mate card, a seeded card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
@@ -365,6 +370,7 @@ The captain's merge click on a completion card is an approval of that change, an
 - **Repairs.**
   The crewmate declares bringing the change up to date with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).
   The host checks the closed facts with git: the repair starts from the candidate head, `toHead` is a commit here, `newBase` is in it and was not already in `fromHead`, and every path that differs between the ORIGINAL approved change and the repaired one is named, so drift across several repairs adds up.
+  That same read stores the repaired head's change reading on the repair.
   `conflict-only` extends the lineage; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card; `unknown` holds the merge for an independent assessment (next).
   Whether the repaired change still does what was approved is the crewmate's judgment (the captain's guard = builder).
 - **An undecided repair (FI3-663).**
@@ -382,7 +388,8 @@ The captain's merge click on a completion card is an approval of that change, an
   The crewmate declares the newest mark it read with `check_change captainGuidance` (`mark`, `impact`, `evidence`): `none` lifts the hold through that mark, and a later mark still holds; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card.
   A mark no message named is refused.
 - **The gates.**
-  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, and boot) first checks the task and pull request are still the approved ones, no new completion card is up, no round cap holds, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed for this change (the candidate head, or a recorded carry of the same change lines).
+  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, and boot) first checks the task and pull request are still the approved ones, no new completion card is up, no round cap holds, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed for this change (the candidate head, or a stored change reading that matches the review's).
+  That attempt does not read the branch to carry the review.
   The kept-merge line on a checks reading asks the crewmate to bring the branch up to date only when the merge waits on a conflict or a moved version.
   Then every page of the checks (`GitHubForge.checks`; a suite past the pages it reads keeps a pending item), and GitHub's own readiness for the pinned pull request (`GitHubForge.pull`): only `clean` merges, so a sign-in that could bypass a required review or another branch rule never does.
   The captain's own click keeps today's single attempt and reads readiness only to classify a refusal.

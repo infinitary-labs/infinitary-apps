@@ -39,6 +39,7 @@ import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
 import { checkRepairWords, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
@@ -2375,6 +2376,12 @@ async function lineageFacts(dir: string, question: LineageQuestion): Promise<Lin
       .map((line) => line.trim())
       .filter(Boolean);
   const approvedBase = await git(dir, ["merge-base", approvedHead, newBase]);
+  // The branch is already home. Store both versions' readings with the
+  // repair so a kept merge compares stored facts and does not read again.
+  const [approvedReading, repairedReading] = await Promise.all([
+    readChangeReading(dir, approvedHead).catch(() => null),
+    readChangeReading(dir, toHead).catch(() => null),
+  ]);
   return {
     known: true,
     toHeadHere: true,
@@ -2382,6 +2389,8 @@ async function lineageFacts(dir: string, question: LineageQuestion): Promise<Lin
     baseInFrom: await ancestor(newBase, fromHead),
     approvedPaths: await paths(approvedBase, approvedHead),
     repairedPaths: await paths(newBase, toHead),
+    approvedReading,
+    repairedReading,
   };
 }
 

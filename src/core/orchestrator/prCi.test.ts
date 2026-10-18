@@ -32,6 +32,7 @@ import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import { ChangePresentations } from "./changePresentations";
 import { type MergeGuard, PrCiService } from "./prCi";
+import { reviewCoversHead } from "./reviewCarry";
 
 // Integration budget (docs/test-cohorts.md): real git plus the product's
 // own put-in backoff, the slowest test 1.3 s at its fastest measured run.
@@ -2016,8 +2017,11 @@ describe("a passed review covers the same change", () => {
     expect(
       await service.open("ab12cd34", { title: "feat: change line 20", body: "Why" }),
     ).toContain("Opened pull request #42");
-    expect(tasks.get("ab12cd34")?.delivery?.reviewSha).toBe(reviewed);
-    expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBe(updated);
+    const openedDelivery = tasks.get("ab12cd34")?.delivery;
+    expect(openedDelivery?.reviewSha).toBe(reviewed);
+    expect(openedDelivery?.reviewCarrySha).toBeUndefined();
+    expect(openedDelivery?.versionReadings?.[updated]).toBe(reading);
+    expect(reviewCoversHead(openedDelivery, updated)).toBe(true);
     expect(tasks.timeline("ab12cd34").some((event) => event.text.includes("the same change"))).toBe(
       true,
     );
@@ -2031,7 +2035,8 @@ describe("a passed review covers the same change", () => {
     const merged = await service.merge("ab12cd34", undefined, {
       unattended: false,
       beforeDispatch: (head) => {
-        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBe(head);
+        expect(reviewCoversHead(tasks.get("ab12cd34")?.delivery, head)).toBe(true);
+        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBeUndefined();
         return undefined;
       },
     });
@@ -2051,7 +2056,8 @@ describe("a passed review covers the same change", () => {
     const refused = await service.merge("ab12cd34", undefined, {
       unattended: false,
       beforeDispatch: () => {
-        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).not.toBe(edited);
+        expect(reviewCoversHead(tasks.get("ab12cd34")?.delivery, edited)).toBe(false);
+        expect(tasks.get("ab12cd34")?.delivery?.reviewCarrySha).toBeUndefined();
         return "the current version needs an independent review";
       },
     });

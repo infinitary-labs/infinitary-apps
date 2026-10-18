@@ -40,7 +40,7 @@ import {
   wakesFirstmate,
 } from "./mergeAuthorization";
 import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
-import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
+import { reviewCoversHead } from "./reviewCarry";
 import { cannotMergeText, discardedText, unlandedWorkText } from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
 
@@ -1364,6 +1364,7 @@ export class SettleService {
       mode === "merge-pr"
         ? standingAuthorization(this.host.tasks.get(taskId)?.delivery)
         : undefined;
+    if (authorization) await this.storeApprovalReading(taskId, authorization);
     let result: SettleOutcome;
     try {
       result = await this.settleTaskGuarded(
@@ -1462,6 +1463,9 @@ export class SettleService {
         method: "squash",
       },
       approvedHead: baseline.headSha,
+      ...(record.delivery?.versionReadings?.[baseline.headSha]
+        ? { changeReading: record.delivery.versionReadings[baseline.headSha] }
+        : {}),
       lineage: [],
       proceedWithOpen,
       status: "standing",
@@ -1723,6 +1727,48 @@ export class SettleService {
   }
 
   /**
+   * Store the approved head's change reading on the approval (INF-416 G).
+   * The click is the moment that version enters the record. A later kept
+   * merge compares this stored fact and does not read the branch again.
+   * An unreadable commit stores nothing.
+   */
+  private async storeApprovalReading(
+    taskId: string,
+    authorization: MergeAuthorization,
+  ): Promise<void> {
+    if (authorization.changeReading) return;
+    const record = this.host.tasks.get(taskId);
+    if (!record || this.policiesOf(record)?.rigor.value !== "reviewed") return;
+    const read = this.host.workspace.reviewChangeReading;
+    if (typeof read !== "function") return;
+    try {
+      const home = record.deviceId ? await this.host.placed?.bringBranchHome(taskId) : undefined;
+      const fresh = this.host.tasks.get(taskId) ?? record;
+      const repo = fresh.repoId ? this.host.repos.get(fresh.repoId) : undefined;
+      const dir = home ?? repo?.path ?? fresh.repoDir;
+      if (!dir) return;
+      const reading = await read.call(this.host.workspace, dir, authorization.approvedHead);
+      if (!reading) return;
+      const current = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+      if (
+        !current ||
+        current.id !== authorization.id ||
+        current.approvedHead !== authorization.approvedHead ||
+        current.changeReading
+      ) {
+        return;
+      }
+      const delivery = this.host.tasks.get(taskId)?.delivery;
+      this.host.tasks.recordDelivery(taskId, {
+        mergeAuthorization: { ...current, changeReading: reading },
+        versionReadings: { ...delivery?.versionReadings, [authorization.approvedHead]: reading },
+      });
+    } catch {
+      // An unreadable version stores nothing. Coverage then waits on review.
+    }
+  }
+
+  /**
    * Run the standing approval once, as the host on the captain's behalf: at
    * every crewmate idle boundary, on the tick when a timed wait comes due,
    * and at boot. It merges only the candidate head, only after the
@@ -1730,6 +1776,8 @@ export class SettleService {
    * last look before the request; what stops it is a wait on the approval
    * (a quiet timeline line, and one wake where someone else must move) or
    * an end that the feed and the Firstmate hear.
+   * A reviewed task's coverage is the reading stored with the candidate
+   * version. This run does not read the branch to carry a passed review.
    */
   async runMergeAuthorization(taskId: string): Promise<void> {
     const record = this.host.tasks.get(taskId);
@@ -1741,41 +1789,7 @@ export class SettleService {
       return;
     }
     const title = record.title;
-    let current = authorization;
-    if (this.policiesOf(record)?.rigor.value === "reviewed") {
-      const covered = reviewCoversHead(record.delivery, candidateHead(authorization));
-      if (!covered && record.deviceId) await this.host.placed?.bringBranchHome(taskId);
-      const fresh = this.host.tasks.get(taskId) ?? record;
-      const repo = fresh.repoId ? this.host.repos.get(fresh.repoId) : undefined;
-      await carryPassedReview({
-        tasks: this.host.tasks,
-        taskId,
-        record: fresh,
-        repoDir: repo?.path ?? fresh.repoDir,
-        head: candidateHead(authorization),
-      });
-      // A repair, guidance or a new click during that wait replaces the
-      // approval. Return and let the next run read it, rather than ending
-      // this one as withdrawn against the approval we started with.
-      const after = this.host.tasks.get(taskId);
-      const now = standingAuthorization(after?.delivery);
-      if (
-        !after ||
-        TaskService.isClosed(after) ||
-        this.settlingTasks.has(taskId) ||
-        after.pendingSettle ||
-        this.working(taskId) ||
-        !now ||
-        now.id !== authorization.id ||
-        now.generation !== authorization.generation ||
-        candidateHead(now) !== candidateHead(authorization) ||
-        now.attempt
-      ) {
-        return;
-      }
-      current = now;
-    }
-    const checked = this.preflight(this.host.tasks.get(taskId) ?? record, current);
+    const checked = this.preflight(this.host.tasks.get(taskId) ?? record, authorization);
     if (checked && "ended" in checked) {
       this.reportEnded(taskId, title);
       return;
@@ -1808,8 +1822,8 @@ export class SettleService {
         "merge-pr",
         undefined,
         "captain",
-        current.proceedWithOpen,
-        this.guardOf(taskId, current, true),
+        authorization.proceedWithOpen,
+        this.guardOf(taskId, authorization, true),
       );
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -1824,7 +1838,7 @@ export class SettleService {
       this.reportOutcome(taskId, title, "merge-pr", undefined, result, undefined);
       return;
     }
-    const kept = this.afterAttempt(taskId, current, result);
+    const kept = this.afterAttempt(taskId, authorization, result);
     if (!kept) {
       if (result.stop !== "withdrawn") this.reportEnded(taskId, title, result);
       return;

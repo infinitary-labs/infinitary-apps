@@ -11,8 +11,9 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { CardService } from "./cardService";
+import { declareMergeRepair } from "./mergeAuthorization";
 import type { MergeBoundary, MergeGuard } from "./prCi";
-import { carryPassedReview } from "./reviewCarry";
+import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 import { SettleService, type SettleServiceHost } from "./settleService";
 
 // Integration budget (docs/test-cohorts.md): real git for one pure update
@@ -25,8 +26,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
 
 /**
  * INF-148, the captain's words: a passed review should not start over only
- * because main moved. The kept merge's preflight is sync, so the carry is
- * recorded before it, and the merge click's boundary reads that fact.
+ * because main moved. INF-416 G: the reading is stored with the version, so
+ * the kept merge compares that fact and does not read the branch.
  */
 describe("a kept merge carries a passed review across a pure update", () => {
   async function reviewedUpdate() {
@@ -100,12 +101,32 @@ describe("a kept merge carries a passed review across a pure update", () => {
     });
     const reading = await readChangeReading(dir, reviewed);
     if (!reading) throw new Error("the reviewed commit has no change reading");
+    const updatedReading = await readChangeReading(dir, updated);
+    if (updatedReading !== reading) throw new Error("the pure update changed the reading");
     tasks.recordDelivery("review01", {
       prNumber: 23,
       reviewVerdict: "pass",
       reviewSha: reviewed,
       reviewChange: reading,
-      mergeAuthorization: authorization(updated),
+      versionReadings: { [reviewed]: reading, [updated]: reading },
+      mergeAuthorization: {
+        ...authorization(reviewed),
+        changeReading: reading,
+        lineage: [
+          {
+            fromHead: reviewed,
+            toHead: updated,
+            newBase: "main",
+            impact: "conflict-only",
+            changedPaths: [],
+            evidence: "the stored readings match",
+            validation: "the pure update kept the change",
+            generation: 1,
+            at: 1,
+            changeReading: reading,
+          },
+        ],
+      },
     });
     let merged = false;
     const host = {
@@ -144,43 +165,117 @@ describe("a kept merge carries a passed review across a pure update", () => {
     return { tasks, host: new SettleService(host), updated, run, dir, merged: () => merged };
   }
 
-  it("does not wait on review when the update did not edit the change", async () => {
-    const { tasks, host, updated, merged } = await reviewedUpdate();
+  it("does not read the branch when the stored readings match", async () => {
+    // INF-416 G: a kept merge brought up to date compares the reading stored
+    // with the repair. A branch read would fail once the checkout is gone.
+    const { tasks, host, updated, dir, merged } = await reviewedUpdate();
+    execFileSync("rm", ["-rf", join(dir, ".git")]);
     await host.runMergeAuthorization("review01");
-    expect(tasks.get("review01")?.delivery?.reviewCarrySha).toBe(updated);
-    expect(tasks.get("review01")?.delivery?.reviewSha).not.toBe(updated);
+    const delivery = tasks.get("review01")?.delivery;
+    expect(delivery?.reviewCarrySha).toBeUndefined();
+    expect(delivery?.reviewSha).not.toBe(updated);
+    expect(reviewCoversHead(delivery, updated)).toBe(true);
     expect(merged()).toBe(true);
-    expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("checks");
+    expect(delivery?.mergeAuthorization?.waiting?.on).toBe("checks");
   });
 
-  it("still waits on review when the update edited a line", async () => {
-    const { tasks, host, run, dir, merged } = await reviewedUpdate();
-    const lines = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
-    const editedBody = `${lines.join("\n")}\n`
-      .replace("line 1\n", "line 1 main\n")
-      .replace("line 20\n", "  line 20 changed\n");
-    writeFileSync(join(dir, "a.txt"), editedBody);
-    execFileSync("git", ["-C", dir, "-c", "user.name=T", "-c", "user.email=t@l", "add", "a.txt"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=T",
-      "-c",
-      "user.email=t@l",
-      "commit",
-      "-m",
-      "style: indent the changed line",
-    ]);
-    const edited = run("rev-parse", "HEAD");
-    const current = tasks.get("review01")?.delivery?.mergeAuthorization;
+  it("still waits on review when the stored reading does not match", async () => {
+    const { tasks, host, dir, merged } = await reviewedUpdate();
+    execFileSync("rm", ["-rf", join(dir, ".git")]);
+    const current = tasks.get("review01")?.delivery;
+    const step = current?.mergeAuthorization?.lineage[0];
+    if (!step || !current?.mergeAuthorization) throw new Error("the repair was not stored");
     tasks.recordDelivery("review01", {
-      mergeAuthorization: current ? { ...current, approvedHead: edited } : undefined,
+      versionReadings: { ...current.versionReadings, [step.toHead]: "edited-line" },
+      mergeAuthorization: {
+        ...current.mergeAuthorization,
+        lineage: [{ ...step, changeReading: "edited-line" }],
+      },
     });
     await host.runMergeAuthorization("review01");
     expect(merged()).toBe(false);
     expect(tasks.get("review01")?.delivery?.reviewCarrySha).toBeUndefined();
     expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("review");
+  });
+
+  it("stores the repaired head's reading when the repair is accepted", () => {
+    // INF-416 G: the reading is stored where the repair is recorded, so the
+    // kept merge can compare it without reading the branch.
+    const db = freshDatabase();
+    const tasks = new TaskService({ db, strict: true });
+    seedTask(tasks, {
+      id: "repair01",
+      title: "Repair",
+      prompt: "work",
+      repoId: null,
+      repoDir: "/tmp/repair",
+      worktreeDir: "/tmp/repair",
+      branch: "fm/task-repair01",
+      sessionFile: null,
+      accountId: null,
+      status: "idle",
+      createdAt: 1,
+    });
+    const approved = "a".repeat(40);
+    const repaired = "b".repeat(40);
+    tasks.recordDelivery("repair01", {
+      reviewVerdict: "pass",
+      reviewSha: approved,
+      reviewChange: "same-change",
+      mergeAuthorization: {
+        version: 1,
+        id: "auth-1",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "card-1", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: "repo",
+          host: "github.com",
+          owner: "x",
+          name: "y",
+          prNumber: 1,
+          branch: "fm/task-repair01",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: approved,
+        lineage: [],
+        proceedWithOpen: false,
+        status: "standing",
+      },
+    });
+    const declared = declareMergeRepair(
+      tasks,
+      "repair01",
+      {
+        fromHead: approved,
+        toHead: repaired,
+        newBase: "c".repeat(40),
+        impact: "conflict-only",
+        changedPaths: [],
+        evidence: "range-diff shows the same change",
+        validation: "the reading matched",
+      },
+      {
+        known: true,
+        toHeadHere: true,
+        baseInTo: true,
+        baseInFrom: false,
+        approvedPaths: ["a.txt"],
+        repairedPaths: ["a.txt"],
+        approvedReading: "same-change",
+        repairedReading: "same-change",
+      },
+      2,
+    );
+    expect(declared.read).toBe(true);
+    const delivery = tasks.get("repair01")?.delivery;
+    expect(delivery?.mergeAuthorization?.lineage[0]?.changeReading).toBe("same-change");
+    expect(delivery?.mergeAuthorization?.changeReading).toBe("same-change");
+    expect(delivery?.versionReadings?.[repaired]).toBe("same-change");
+    expect(delivery?.reviewCarrySha).toBeUndefined();
+    expect(reviewCoversHead(delivery, repaired)).toBe(true);
   });
 
   it("carries a pass from before the reading was stored when the commit is still here", async () => {
@@ -219,7 +314,11 @@ describe("a kept merge carries a passed review across a pure update", () => {
         read,
       }),
     ).toBe(true);
-    expect(tasks.get("oldpass")?.delivery?.reviewCarrySha).toBe(later);
+    const carried = tasks.get("oldpass")?.delivery;
+    expect(carried?.reviewCarrySha).toBeUndefined();
+    expect(carried?.reviewChange).toBe("same-change");
+    expect(carried?.versionReadings?.[later]).toBe("same-change");
+    expect(reviewCoversHead(carried, later)).toBe(true);
 
     tasks.setDevice("oldpass", "other-mac");
     tasks.recordDelivery("oldpass", { reviewCarrySha: undefined, reviewChange: undefined });

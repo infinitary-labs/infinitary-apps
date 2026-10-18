@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "review-reading-with-version",
+      "reason": "A passed review stays with a version through a change reading stored when that version is approved or repaired, so a kept merge no longer reads the branch again to carry it. Nothing a person sees changes."
+    }
+  ]
+}

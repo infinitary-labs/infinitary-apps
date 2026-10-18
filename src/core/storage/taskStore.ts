@@ -111,6 +111,11 @@ export type MergeRepairStep = MergeRepairDeclaration & {
    * judges.
    */
   paths?: { approved: string[]; repaired: string[] };
+  /**
+   * The repaired head's change reading, stored when the repair is recorded
+   * (INF-416 G). Absent when that commit could not be read.
+   */
+  changeReading?: string;
   /** The independent assessment that decides an unknown repair. */
   assessment?: MergeRepairAssessment;
 };
@@ -185,6 +190,11 @@ export type MergeAuthorization = {
   };
   /** The head the captain approved: the one the completion card's checks read. */
   approvedHead: string;
+  /**
+   * The approved head's change reading, stored at the captain's approval
+   * (INF-416 G). Absent when that commit could not be read.
+   */
+  changeReading?: string;
   /** Accepted conflict-only repairs, oldest first. */
   lineage: MergeRepairStep[];
   /** The captain's leave to merge with open children (`proceed_with_open`). */
@@ -259,8 +269,17 @@ export type TaskDelivery = {
    * be read, including a computer on an older app.
    */
   reviewChange?: string;
-  /** A later head the pass covers because its change reading matched. */
+  /**
+   * A later head a pass covered because its change reading matched.
+   * No longer written: the reading stored with that version covers it.
+   * An older record's value still covers its head.
+   */
   reviewCarrySha?: string;
+  /**
+   * Change readings stored with a version before it is an approval or a
+   * repair, keyed by head (INF-416 G). Not a published field.
+   */
+  versionReadings?: Record<string, string>;
   reviewRisk?: ReviewRisk;
   reviewRiskNote?: string;
   reviewedAt?: number;

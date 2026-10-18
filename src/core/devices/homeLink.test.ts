@@ -9,6 +9,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
+import { PLACED_REQUEST_WAIT_MS, PLACED_TOOL_WAIT_MS } from "../helper/toolWait";
 import { thisDeviceSystem } from "../platform";
 import { asDeviceName } from "./computerName";
 import { claimLink, dialHome, HOME_DIAL_TIMEOUT_MS } from "./dial";
@@ -401,6 +402,58 @@ describe("the device's side of the connection", () => {
 });
 
 describe("a computer that runs work, on its side of the connection", () => {
+  // Intent: INF-311's accepted window 3 guard withdraws both never-sent and previously-sent calls.
+  it.each([false, true])(
+    "withdraws an expired request permanently (sent before drop: %s) (INF-312)",
+    async (sent) => {
+      expect(PLACED_REQUEST_WAIT_MS).toBeLessThan(PLACED_TOOL_WAIT_MS);
+      const at = await home();
+      const grant = await at.joinWork();
+      const { link, states, until } = follow(grant);
+      link.start();
+      await until(() => states.at(-1)?.contact === "in-reach");
+      const controller = new AbortController();
+      if (!sent) {
+        await at.quit();
+        await until(() => states.at(-1)?.contact !== "in-reach");
+      }
+      const answer = link.ask(
+        "inf:work:progress",
+        [{ task: "t1", callId: "expired", text: "Hi." }],
+        controller.signal,
+      );
+      const reason = new Error("Caller withdrew its request");
+      const refused = expect(answer).rejects.toMatchObject({
+        name: "Error",
+        everSent: sent,
+        cause: reason,
+      });
+      if (sent) {
+        await until(() => at.asked.length === 1);
+        await at.quit();
+        await until(() => states.at(-1)?.contact !== "in-reach");
+      }
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        setTimeout(() => controller.abort(reason), PLACED_REQUEST_WAIT_MS);
+        await vi.advanceTimersByTimeAsync(PLACED_REQUEST_WAIT_MS);
+        await refused;
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(link.waiting()).toBe(0);
+      const requests = at.asked.length;
+      await at.listen();
+      await until(() => states.at(-1)?.contact === "in-reach");
+      expect(at.asked).toHaveLength(requests);
+      console.info("Window 3 recovery:", {
+        sent,
+        waiting: link.waiting(),
+        requestsAfterReturn: at.asked.length,
+      });
+    },
+  );
+
   it("asks a work request again on each new connection until the home answers it, and then once", async () => {
     const at = await home();
     const { link, states, until } = follow(await at.joinWork());

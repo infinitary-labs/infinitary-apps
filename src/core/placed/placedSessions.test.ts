@@ -646,6 +646,126 @@ it("carries only the opt-in to the running computer, which reads its own local f
 });
 
 describe("a task that runs on a computer that runs work", () => {
+  // Intent: the captain's accepted INF-311 plan, window 1: the effect survives but its answer does not.
+  it("does not repeat a begun change after a home restart without its answer (INF-312)", async () => {
+    const at = await world();
+    const slow = gate();
+    model([{ held: slow.held, text: "Finished after recovery." }]);
+    await at.start("t-begun");
+    // The restart cuts a real held turn, not dispatch's initial idle state.
+    await expect.poll(() => api.openRequests()).toBe(1);
+    const request = { task: "t-begun", callId: "progress-cut", text: "Progress before the cut." };
+    const dir = crewmatePlacedDir(at.home().paths, request.task);
+    const progress = at.home().tasks.noteProgress.bind(at.home().tasks);
+    const effect = vi.spyOn(at.home().tasks, "noteProgress").mockImplementation((...args) => {
+      // The persisted mark is already readable at the effect's owner.
+      expect(readFileSync(join(dir, "begun.jsonl"), "utf8")).toContain(
+        JSON.stringify(request.callId),
+      );
+      return progress(...args);
+    });
+    await at.home().placed.answer(at.deviceId, "inf:work:progress", request);
+    expect(effect).toHaveBeenCalledTimes(1);
+    effect.mockRestore();
+    expect(readFileSync(join(dir, "begun.jsonl"), "utf8")).toContain(
+      JSON.stringify(request.callId),
+    );
+    expect(
+      at
+        .home()
+        .tasks.timeline(request.task)
+        .filter((event) => event.kind === "progress"),
+    ).toHaveLength(1);
+    // Model the exact cut: the change happened, but calls.jsonl never kept its answer.
+    await at.restartHome(() => {
+      writeFileSync(join(dir, "calls.jsonl"), "");
+      // A report that began, but never answered, must not enter adoption's replay list.
+      writeFileSync(
+        join(dir, "begun.jsonl"),
+        `${readFileSync(join(dir, "begun.jsonl"), "utf8")}\n${JSON.stringify("report-cut")}\n${JSON.stringify("card-cut")}\n${JSON.stringify("reply-cut")}\n`,
+      );
+    });
+    await at.inReach(request.task);
+    const home = at.home();
+    const before = home.tasks
+      .timeline(request.task)
+      .filter((event) => event.kind === "progress").length;
+    for (let repeat = 0; repeat < 2; repeat++)
+      await expect(home.placed.answer(at.deviceId, "inf:work:progress", request)).rejects.toThrow(
+        "stopped while recording your progress",
+      );
+    expect(
+      home.tasks.timeline(request.task).filter((event) => event.kind === "progress"),
+    ).toHaveLength(before);
+    const kept = readFileSync(join(dir, "calls.jsonl"), "utf8");
+    expect(kept.trim().split("\n")).toHaveLength(1);
+    expect(JSON.parse(kept)).toMatchObject({
+      callId: request.callId,
+      error: expect.stringContaining("Read your task with tasks"),
+    });
+    expect(JSON.parse(kept).report).toBeUndefined();
+    expect(JSON.parse(kept).error).toContain("Read your task with tasks before continuing");
+    expect(JSON.parse(kept).error).not.toContain("timeline with tasks");
+    expect(JSON.parse(kept).error).not.toMatch(/inf:work:|the destination/);
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:report", {
+        task: request.task,
+        callId: "report-cut",
+        text: "Must not replay this report.",
+      }),
+    ).rejects.toThrow("the report may already be recorded");
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:card", {
+        task: request.task,
+        callId: "card-cut",
+        card: {
+          title: "Recovery check",
+          body: "<p>Check before showing it again.</p>",
+          actions: [],
+        },
+      }),
+    ).rejects.toThrow("stopped while showing this card, so it may already be up");
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:reply", {
+        task: request.task,
+        callId: "reply-cut",
+        cardId: "card-t-begun",
+        text: "Already posted?",
+      }),
+    ).rejects.toThrow("cannot confirm whether the reply was posted");
+    // Reads still run on another ask, rather than acquiring a begun mark.
+    const read = { task: request.task, callId: "read-cut", input: {} };
+    await home.placed.answer(at.deviceId, "inf:work:tasks", read);
+    expect(readFileSync(join(dir, "begun.jsonl"), "utf8")).not.toContain("read-cut");
+    expect(home.tasks.get(request.task)?.outcome).toBeNull();
+    slow.open();
+    // Idle can also describe adoption; the saved outcome witnesses this turn's completion.
+    await expect.poll(() => home.tasks.get(request.task)?.outcome).toBe("Finished after recovery.");
+    expect(home.tasks.get(request.task)?.activity).toBe("idle");
+    console.info("Window 1 recovery:", kept.trim(), "progress count unchanged:", before);
+  });
+
+  it("leaves no begun mark when the task conversation is not ready (INF-312)", async () => {
+    const at = await world();
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-not-ready",
+      title: "Not open",
+      status: "running",
+      deviceId: at.deviceId,
+    });
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:progress", {
+        task: "t-not-ready",
+        callId: "not-ready",
+        text: "Not yet.",
+      }),
+    ).rejects.toThrow("not open");
+    expect(existsSync(join(crewmatePlacedDir(home.paths, "t-not-ready"), "begun.jsonl"))).toBe(
+      false,
+    );
+  });
+
   it("starts there, does each callback once here, and keeps its report and a copy of its record", async () => {
     const at = await world();
     model([

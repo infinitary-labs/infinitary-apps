@@ -17,6 +17,7 @@ import { ComputerBrowsers, type ComputerBrowsersOptions } from "./browsers";
 import { computerForgesDir } from "./forges";
 import { PlacedTasks } from "./placedTasks";
 import { type OwnAccounts, SessionHost } from "./sessionHost";
+import { PLACED_TOOL_WAIT_MS } from "./toolWait";
 import { WorkingCopies } from "./workingCopies";
 
 /**
@@ -29,14 +30,6 @@ import { WorkingCopies } from "./workingCopies";
  * conversation from an earlier run is still on disk, so a computer that is
  * never given work never loads a model's code.
  */
-
-/**
- * How long the Claude client lets an app tool wait: the longest wait a
- * timer can hold, about 24 days. A tool's callback waits for the home while
- * it is out of reach, and the client's own default gives up after about 28
- * hours (`claudeToolWait.integration.test.ts` measures both).
- */
-export const PLACED_TOOL_WAIT_MS = 2 ** 31 - 1;
 
 /** The Claude client's environment for a conversation held here. */
 export const PLACED_CLAUDE_ENV = { MCP_TOOL_TIMEOUT: String(PLACED_TOOL_WAIT_MS) } as const;
@@ -145,7 +138,7 @@ export type ComputerBrowserParts = Pick<
 
 export async function startConversations(options: {
   dataDir: string;
-  ask: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
+  ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
   /** Asks the home once, while it is in reach, and never again; a task browser's fact and pictures ride it. */
   tell?: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
   /** This computer's browser engine and command process; absent, it keeps no task browsers. */

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
@@ -9,7 +10,7 @@ import {
 import type { CardPicture } from "@shared/cards";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
-import { keepsCardTypefaces, type WorkInvokeChannel } from "@shared/ipc";
+import { invokeContract, keepsCardTypefaces, type WorkInvokeChannel } from "@shared/ipc";
 import {
   isWorkOrderChannel,
   PLACED_EVENTS_MAX_PER_REQUEST,
@@ -26,6 +27,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import type { JobExit } from "../jobs/jobManager";
 import {
@@ -53,9 +55,11 @@ import {
   type CrewmateTool,
   type CrewmateToolDelegate,
 } from "../session/tools";
+import { changeRecoveryCheck } from "../session/workRecovery";
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { PlacedTaskState, PlacedTasks } from "./placedTasks";
+import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
 /**
@@ -88,7 +92,7 @@ import type { WorkingCopies } from "./workingCopies";
 export type SessionHostOptions = {
   tasks: PlacedTasks;
   /** Asks the home one work request; asked again after every drop until it answers. */
-  ask: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
+  ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
   /** This computer's own factories. */
   factories: Partial<SessionFactories>;
   /** The binding the home described, resolved with this computer's own sign-ins. */
@@ -219,6 +223,8 @@ type Held = {
 };
 
 export class SessionHost {
+  /** Per invocation, so concurrent tool callbacks never borrow each other's cancellation. */
+  private readonly toolSignal = new AsyncLocalStorage<AbortSignal | undefined>();
   private readonly held = new Map<string, Held>();
   private readonly now: () => number;
   private readonly log: (line: string) => void;
@@ -615,6 +621,11 @@ export class SessionHost {
           ...(granted ? { browser: granted.browser } : {}),
         },
       );
+      const cancellableTools = tools.map((tool) => ({
+        ...tool,
+        run: (params: unknown, signal?: AbortSignal) =>
+          this.toolSignal.run(signal, () => tool.run(params, signal)),
+      }));
       const sessionSpec: SessionSpec = {
         machine: LOCAL_MACHINE_ID,
         owner: held.task,
@@ -651,7 +662,7 @@ export class SessionHost {
           ? { personalResources: spec.personalResources }
           : {}),
         builtins: "coding",
-        tools,
+        tools: cancellableTools,
         ...(granted ? { shell: granted.shell } : {}),
         shape: {
           turns: "rolling",
@@ -822,32 +833,43 @@ export class SessionHost {
    * the order they happened.
    */
   private delegate(held: Held, folders: ReturnType<PlacedTasks["folders"]>): CrewmateToolDelegate {
-    const text = async (channel: WorkInvokeChannel, fields: object) =>
-      toolTextSchema.parse(await this.call(held, channel, { callId: randomUUID(), ...fields }))
-        .text;
-    const sendPictures = async (pictures: readonly CardPicture[]) => {
+    const text = async (channel: WorkInvokeChannel, fields: object, signal?: AbortSignal) =>
+      toolTextSchema.parse(
+        await this.call(held, channel, { callId: randomUUID(), ...fields }, signal),
+      ).text;
+    const sendPictures = async (pictures: readonly CardPicture[], signal: AbortSignal) => {
       // Each picture's bytes first, so the home holds them when it shows the card.
       for (const picture of pictures) {
         const { extension, data } = this.options.tasks.picture(held.task, picture.id);
-        await this.call(held, "inf:work:picture", {
-          callId: randomUUID(),
-          id: picture.id,
-          extension,
-          data: data.toString("base64"),
-        });
+        await this.call(
+          held,
+          "inf:work:picture",
+          {
+            callId: randomUUID(),
+            id: picture.id,
+            extension,
+            data: data.toString("base64"),
+          },
+          signal,
+        );
         // A poster's recording follows it, a piece at a time.
         if (!picture.demo) continue;
         const { id, kind } = picture.demo;
         const recording = this.options.tasks.recording(held.task, id, kind);
         for (let offset = 0; offset < recording.length; offset += CARD_MEDIA_PIECE_BYTES) {
-          await this.call(held, "inf:work:media", {
-            callId: randomUUID(),
-            id,
-            extension: kind,
-            offset,
-            size: recording.length,
-            data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
-          });
+          await this.call(
+            held,
+            "inf:work:media",
+            {
+              callId: randomUUID(),
+              id,
+              extension: kind,
+              offset,
+              size: recording.length,
+              data: recording.subarray(offset, offset + CARD_MEDIA_PIECE_BYTES).toString("base64"),
+            },
+            signal,
+          );
         }
       }
     };
@@ -859,46 +881,54 @@ export class SessionHost {
       evidenceDir: folders.evidence,
       ...(this.options.probeMedia ? { probeMedia: this.options.probeMedia } : {}),
       ...(this.options.probeTypeface ? { probeTypeface: this.options.probeTypeface } : {}),
-      onCard: async (card) => {
-        // A card whose preview names a project font of this task's own goes
-        // only to a home that keeps one: an older home is told nothing, not
-        // even the card's pictures.
-        const typefaces = cardTypefaceNames(card.body).flatMap((name) => {
-          const typeface = parseCardTypefaceFileName(name);
-          return typeface?.taskId === held.task ? [typeface] : [];
-        });
-        const home = this.options.homeVersion?.() ?? null;
-        if (typefaces.length > 0 && home !== null && !keepsCardTypefaces(home)) {
-          throw new Error(
-            `Card font refused: ${HOME.the} runs an older Infinitary that cannot show a project's fonts; draw the preview in the app's own typefaces until it is updated.`,
-          );
-        }
-        // Each picture's bytes first, so the home holds them when it shows the card.
-        await sendPictures(card.pictures ?? []);
-        // Each project font its preview names, before the card too.
-        for (const typeface of typefaces) {
-          await this.call(held, "inf:work:typeface", {
-            callId: randomUUID(),
-            id: typeface.id,
-            extension: typeface.kind,
-            data: this.options.tasks.typeface(held.task, typeface.fileName).toString("base64"),
+      onCard: (card) =>
+        this.withDeadline("inf:work:card", async (signal) => {
+          // A card whose preview names a project font of this task's own goes
+          // only to a home that keeps one: an older home is told nothing, not
+          // even the card's pictures.
+          const typefaces = cardTypefaceNames(card.body).flatMap((name) => {
+            const typeface = parseCardTypefaceFileName(name);
+            return typeface?.taskId === held.task ? [typeface] : [];
           });
-        }
-        const answer = placedCardAnswerSchema.parse(
-          await this.call(held, "inf:work:card", { callId: randomUUID(), card }),
-        );
-        if ("refused" in answer)
-          throw new CardRefusedError(
-            answer.refused.message,
-            answer.refused.reason,
-            answer.refused.why,
+          const home = this.options.homeVersion?.() ?? null;
+          if (typefaces.length > 0 && home !== null && !keepsCardTypefaces(home)) {
+            throw new Error(
+              `Card font refused: ${HOME.the} runs an older Infinitary that cannot show a project's fonts; draw the preview in the app's own typefaces until it is updated.`,
+            );
+          }
+          // Each picture's bytes first, so the home holds them when it shows the card.
+          await sendPictures(card.pictures ?? [], signal);
+          // Each project font its preview names, before the card too.
+          for (const typeface of typefaces) {
+            await this.call(
+              held,
+              "inf:work:typeface",
+              {
+                callId: randomUUID(),
+                id: typeface.id,
+                extension: typeface.kind,
+                data: this.options.tasks.typeface(held.task, typeface.fileName).toString("base64"),
+              },
+              signal,
+            );
+          }
+          const answer = placedCardAnswerSchema.parse(
+            await this.call(held, "inf:work:card", { callId: randomUUID(), card }, signal),
           );
-        return answer.cardId;
-      },
+          if ("refused" in answer)
+            throw new CardRefusedError(
+              answer.refused.message,
+              answer.refused.reason,
+              answer.refused.why,
+            );
+          return answer.cardId;
+        }),
       onCardRefused: (refusal) => {
-        void this.call(held, "inf:work:card-refused", { callId: randomUUID(), refusal }).catch(
-          (error: unknown) => this.log(`a refused card was not recorded: ${messageOf(error)}`),
-        );
+        void this.toolSignal
+          .exit(() => this.call(held, "inf:work:card-refused", { callId: randomUUID(), refusal }))
+          .catch((error: unknown) =>
+            this.log(`a refused card was not recorded: ${messageOf(error)}`),
+          );
       },
       onCloseCard: (input) => text("inf:work:close-card", input),
       onFollowup: (input) => text("inf:work:followup", { input }),
@@ -925,21 +955,22 @@ export class SessionHost {
       },
       // The home opens, checks and merges with its own sign-in, once it has
       // brought the branch home; an artifact is written here before it answers.
-      onPrepareChange: async (story) => {
-        try {
-          await sendPictures(story.pictures);
-          return await text("inf:work:prepare-change", { input: story });
-        } finally {
-          await this.options.tasks
-            .discardCardCopies(
-              held.task,
-              story.assets.map((asset) => asset.file),
-            )
-            .catch(() => {
-              console.warn("Could not remove transferred story staging copies", held.task);
-            });
-        }
-      },
+      onPrepareChange: (story) =>
+        this.withDeadline("inf:work:prepare-change", async (signal) => {
+          try {
+            await sendPictures(story.pictures, signal);
+            return await text("inf:work:prepare-change", { input: story }, signal);
+          } finally {
+            await this.options.tasks
+              .discardCardCopies(
+                held.task,
+                story.assets.map((asset) => asset.file),
+              )
+              .catch(() => {
+                console.warn("Could not remove transferred story staging copies", held.task);
+              });
+          }
+        }),
       onOpenChange: (input) => text("inf:work:open-change", { input }),
       onCheckChange: (input) => text("inf:work:check-change", { input: input ?? {} }),
       onDownloadArtifact: (input) => text("inf:work:download-artifact", { input }),
@@ -951,10 +982,62 @@ export class SessionHost {
     };
   }
 
-  /** One work request about a task, after the events written before it reach the home. */
-  private async call(held: Held, channel: WorkInvokeChannel, fields: object): Promise<unknown> {
-    await this.flushed(held);
-    return this.options.ask(channel, [{ task: held.task, ...fields }]);
+  /** One deadline spans all requests in a callback, including its asset transfers. */
+  private async withDeadline<T>(
+    channel: WorkInvokeChannel,
+    run: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PLACED_REQUEST_WAIT_MS);
+    const provider = this.toolSignal.getStore();
+    const signal = provider ? AbortSignal.any([controller.signal, provider]) : controller.signal;
+    try {
+      return await run(signal);
+    } catch (error) {
+      if (!signal.aborted) throw error;
+      const days = PLACED_REQUEST_WAIT_MS / (24 * 60 * 60 * 1000);
+      const ended = controller.signal.aborted
+        ? `The request waited ${days} days for ${HOME.the}`
+        : `The conversation stopped waiting for ${HOME.the}`;
+      const sent = error instanceof WorkRequestAbortedError && error.everSent;
+      if (invokeContract[channel].effect === "read")
+        throw new Error(
+          sent
+            ? `${ended}; the request was sent, but its answer did not arrive. You can ask for the read again.`
+            : `${ended}; the request was not sent. It will not be sent when ${HOME.the} returns. You can ask again.`,
+        );
+      throw new Error(
+        sent
+          ? `${ended}; the change may already be done. ${changeRecoveryCheck(channel)}`
+          : `${ended}; the change was not sent. It will not be sent when ${HOME.the} returns. You can ask again.`,
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** One work request, after prior events reach the home, within its callback's deadline. */
+  private async call(
+    held: Held,
+    channel: WorkInvokeChannel,
+    fields: object,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    if (!signal)
+      return this.withDeadline(channel, (deadline) => this.call(held, channel, fields, deadline));
+    signal.throwIfAborted();
+    await this.flushed(held, signal);
+    signal.throwIfAborted();
+    try {
+      return await this.options.ask(channel, [{ task: held.task, ...fields }], signal);
+    } catch (error) {
+      if (!(error instanceof WorkRequestAbortedError)) throw error;
+      const finalRequest =
+        channel !== "inf:work:picture" &&
+        channel !== "inf:work:media" &&
+        channel !== "inf:work:typeface";
+      throw new WorkRequestAbortedError(finalRequest && error.everSent, error.cause);
+    }
   }
 
   private hold(task: string): Held {
@@ -1079,11 +1162,23 @@ export class SessionHost {
   }
 
   /** Resolves once the home has every event written before now, or refused them. */
-  private flushed(held: Held): Promise<void> {
+  private flushed(held: Held, signal?: AbortSignal): Promise<void> {
     const seq = held.state.seq;
     if (held.through >= seq || held.refused) return Promise.resolve();
-    return new Promise((resolve) => {
-      held.flushes.push({ seq, resolve });
+    return new Promise((resolve, reject) => {
+      const abort = () => {
+        held.flushes = held.flushes.filter((entry) => entry !== flush);
+        reject(signal?.reason);
+      };
+      const flush = {
+        seq,
+        resolve: () => {
+          signal?.removeEventListener("abort", abort);
+          resolve();
+        },
+      };
+      signal?.addEventListener("abort", abort, { once: true });
+      held.flushes.push(flush);
       this.pump(held);
     });
   }

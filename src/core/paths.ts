@@ -183,8 +183,8 @@ export function crewmateTempDir(paths: AppPaths, taskId: string): string {
 /**
  * What the home keeps about a crewmate's conversation held on a computer that
  * runs work (src/core/placed/): `crewmates/<taskId>/placed/`, with the answer
- * to every callback it asked (`calls.jsonl`) and the newest event the home
- * keeps (`state.json`).
+ * to every callback it asked (`calls.jsonl`), change ids synced before their
+ * effects (`begun.jsonl`), and the newest event the home keeps (`state.json`).
  */
 export function crewmatePlacedDir(paths: AppPaths, taskId: string): string {
   return join(paths.crewmatesDir, taskId, "placed");

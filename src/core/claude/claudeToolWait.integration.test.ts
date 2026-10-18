@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { Type } from "typebox";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { writeMockClaudeClient } from "../../../tests/e2e/mockClaudeClient";
@@ -19,6 +20,7 @@ import { PLACED_CLAUDE_ENV } from "../helper/conversations";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { boundTool } from "../session/tools";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
+import { claudeToolOf } from "./claudeTaskTools";
 import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
 
 /**
@@ -78,7 +80,11 @@ function callTheToolOnce(): void {
 }
 
 /** One turn on the boxed client whose one tool waits, with `env` laid over the box's. */
-async function waitInATool(env: Record<string, string>): Promise<string> {
+async function waitInATool(
+  env: Record<string, string>,
+  onSignal?: (signal?: AbortSignal) => void,
+  stopTurn = false,
+): Promise<string> {
   const home = scratchDir("infinitary-claude-tool-wait-");
   const stub = writeMockClaudeClient(home, {
     turns: { baseUrl: api.url, credential: "subscription", maxRetries: 0 },
@@ -90,6 +96,10 @@ async function waitInATool(env: Record<string, string>): Promise<string> {
     configDir: join(home, ".claude"),
     env: () => ({ PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub, ...env }),
     clock,
+  });
+  let started!: () => void;
+  const toolStarted = new Promise<void>((resolve) => {
+    started = resolve;
   });
   const spec: SessionSpec = {
     machine: LOCAL_MACHINE_ID,
@@ -106,7 +116,9 @@ async function waitInATool(env: Record<string, string>): Promise<string> {
         label: "Wait for the home",
         description: "Waits for the home to answer.",
         parameters: Type.Object({}),
-        run: async () => {
+        run: async (_params, signal) => {
+          onSignal?.(signal);
+          started();
           await new Promise((resolve) => setTimeout(resolve, WAIT_MS));
           return { text: ANSWERED };
         },
@@ -118,12 +130,18 @@ async function waitInATool(env: Record<string, string>): Promise<string> {
   callTheToolOnce();
   const session = await factory.open(spec);
   try {
-    await session.prompt("Wait for the home.");
+    const turn = session.prompt("Wait for the home.");
+    if (stopTurn) {
+      await toolStarted;
+      await session.abort();
+    }
+    await turn;
   } finally {
     session.dispose();
     await session.closed();
   }
   const answered = api.requests.slice(first).find((request) => request.raw.includes("tool_result"));
+  if (!answered && stopTurn) return "";
   if (!answered) throw new Error("The model never got the tool's result.");
   return answered.raw;
 }
@@ -134,6 +152,65 @@ describe("how long the Claude client lets an app tool wait", () => {
     expect(result).not.toContain(ANSWERED);
     expect(result).toContain(`tool \\"${TOOL}\\" timed out after 1s`);
     expect(result).toMatch(/"is_error":\s*true/);
+  });
+
+  // Intent: the captain's F2 backstop must hear Claude give up, including when our timer cannot run during sleep.
+  it("passes Claude's give-up signal to the bound tool (INF-312 F2)", async () => {
+    let received: AbortSignal | undefined;
+    await waitInATool({ MCP_TOOL_TIMEOUT: "1000" }, (signal) => {
+      received = signal;
+    });
+    expect(received).toBeInstanceOf(AbortSignal);
+    await expect.poll(() => received?.aborted).toBe(true);
+  });
+
+  // Intent: the captain narrowed F3 to Claude giving up, excluding an ordinary home stop.
+  it.each([
+    new Error("The home stopped the turn"),
+    String(new McpError(ErrorCode.ConnectionClosed, "The turn was stopped")),
+  ])(
+    "keeps the real answer on non-timeout Claude cancellation: %s (INF-312 scope)",
+    async (reason) => {
+      const stop = new AbortController();
+      let finish!: () => void;
+      let received: AbortSignal | undefined;
+      const waiting = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const tool = claudeToolOf(
+        boundTool({
+          name: "finish_change",
+          label: "Finish",
+          description: "Return the real answer.",
+          parameters: Type.Object({}),
+          run: async (_params, signal) => {
+            received = signal;
+            await waiting;
+            return { text: "The real change answer." };
+          },
+        }),
+      );
+      const result = tool.handler({}, { signal: stop.signal });
+      stop.abort(reason);
+      expect(received?.aborted).toBe(false);
+      finish();
+      expect(await result).toMatchObject({
+        content: [{ type: "text", text: "The real change answer." }],
+      });
+    },
+  );
+
+  it("does not withdraw a request when the home interrupts the real Claude client (INF-312 scope)", async () => {
+    let received: AbortSignal | undefined;
+    await waitInATool(
+      PLACED_CLAUDE_ENV,
+      (signal) => {
+        received = signal;
+      },
+      true,
+    );
+    expect(received).toBeInstanceOf(AbortSignal);
+    expect(received?.aborted).toBe(false);
   });
 
   it("waits for the tool under the wait a computer that runs work sets", async () => {

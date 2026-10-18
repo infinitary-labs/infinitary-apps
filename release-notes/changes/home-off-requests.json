@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "home-off-requests",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Work avoids repeating changes after this computer stops",
+      "body": "If this computer stops during a request from another computer, work does not repeat the same change automatically. Requests waiting for this computer end after 24 days and do not arrive later unexpectedly.",
+      "noPicture": "This changes request recovery between computers, without adding or changing a view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

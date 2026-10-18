@@ -12,7 +12,7 @@ import {
   type WorkOrderChannel,
   type WorkOrderResponse,
 } from "@shared/work";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -47,6 +47,7 @@ import { joinHome } from "./join";
 import { PlacedTasks } from "./placedTasks";
 import { type HelperRun, startHelper } from "./run";
 import { SessionHost } from "./sessionHost";
+import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
 /**
@@ -77,8 +78,8 @@ afterAll(async () => {
   await api.close();
 });
 
-/** A real 4x3 grayscale PNG, the smallest picture a card verifies. */
-function png(): Buffer {
+/** A real grayscale PNG, 4x3 by default; distinct widths produce distinct picture ids. */
+function png(width = 4): Buffer {
   const chunk = (type: string, data: Buffer) => {
     const length = Buffer.alloc(4);
     length.writeUInt32BE(data.length);
@@ -88,13 +89,13 @@ function png(): Buffer {
     return Buffer.concat([length, typed, crc]);
   };
   const header = Buffer.alloc(13);
-  header.writeUInt32BE(4, 0);
+  header.writeUInt32BE(width, 0);
   header.writeUInt32BE(3, 4);
   header[8] = 8;
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk("IHDR", header),
-    chunk("IDAT", deflateSync(Buffer.alloc(5 * 3))),
+    chunk("IDAT", deflateSync(Buffer.alloc((width + 1) * 3))),
     chunk("IEND", Buffer.alloc(0)),
   ]);
 }
@@ -185,6 +186,11 @@ function standInHome() {
     if (actor) actors.push(actor);
     const [request] = rawArgs as [Record<string, unknown>];
     if (channel === "inf:work:events") {
+      const gate = gates.get(channel);
+      if (gate) {
+        gate.reached();
+        await gate.open;
+      }
       for (const record of request.events as PlacedEventRecord[]) {
         if (record.seq <= through) continue;
         if (record.seq !== through + 1) break;
@@ -282,6 +288,9 @@ async function placed(
     claude?: ContractWorld;
     /** Its work starts in Firstmate 3000's folder, before its first update to Infinitary (`moveComputer`). */
     inOlderFolder?: boolean;
+    retryMs?: readonly number[];
+    /** A filtered Claude give-up signal, injected at the bound-tool seam independently of the test model. */
+    toolSignal?: AbortSignal;
   } = {},
 ) {
   const home = standInHome();
@@ -326,16 +335,29 @@ async function placed(
     const started = startHelper({
       dataDir,
       say: () => {},
-      retryMs: [20],
+      retryMs: options.retryMs ?? [20],
       conversations: async ({ dataDir: dir, ask, homeVersion, belowUi: below }) => {
         belowUi = below;
         const copies = options.copies ? folderCopies(dir) : undefined;
+        const pi = createPiSessionFactory({ agentDir: join(dir, "pi-agent") });
         host = new SessionHost({
           tasks: new PlacedTasks(dir, copies?.worktreesDir),
           ...(copies ? { copies } : {}),
           ask,
           factories: {
-            pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }),
+            pi: options.toolSignal
+              ? {
+                  ...pi,
+                  open: (spec) =>
+                    pi.open({
+                      ...spec,
+                      tools: spec.tools?.map((tool) => ({
+                        ...tool,
+                        run: (params) => tool.run(params, options.toolSignal),
+                      })),
+                    }),
+                }
+              : pi,
             ...(options.claude ? { claude: options.claude.factory } : {}),
           },
           bind: async (binding) =>
@@ -380,7 +402,7 @@ async function placed(
     model: { provider: PROVIDER, id: MODEL },
     thinking: { level: "off" },
     instructions: "You are a crewmate on another Mac.",
-    tools: ["emit_card", "report", "note_progress", "file_followup", "tasks"],
+    tools: ["emit_card", "report", "note_progress", "file_followup", "tasks", "github_write"],
   };
   return {
     home,
@@ -407,6 +429,15 @@ async function placed(
           ),
         )
         .toBe(true),
+    stopHome: async () => {
+      await connection.close();
+      await expect.poll(() => run.state().contact).not.toBe("in-reach");
+    },
+    startHome: async () => {
+      connection = listen();
+      await connection.settled();
+    },
+    inReach,
     /** Firstmate quits on the home and opens again: the connection drops and comes back. */
     dropAndReturn: async () => {
       await connection.close();
@@ -516,6 +547,258 @@ describe("a conversation held on a computer that runs work", () => {
     expect(
       await at.order("inf:session:steer", [{ orderId: "rows:8", task: TASK, text: "Late." }]),
     ).toEqual({ delivered: false });
+  });
+
+  // Intent: INF-311's accepted whole-call deadline includes waiting for prior events.
+  it.each(["inf:work:report", "inf:work:events"])(
+    "ends the whole tool call after 24 days while waiting on %s (INF-312)",
+    async (channel) => {
+      const at = await placed();
+      await at.open();
+      const held = at.home.hold(channel);
+      model([
+        { tools: [{ name: "report", args: { text: "Across the deadline." } }] },
+        { text: "Checked the timeout." },
+      ]);
+      const first = api.requests.length;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
+      await at.order("inf:session:prompt", [{ orderId: "deadline", task: TASK, text: "Report." }]);
+      await held.reached;
+      // Wait for the model's tool-start event before moving only the deadline clock.
+      await expect
+        .poll(() => {
+          const outbox = new PlacedTasks(at.dataDir).outbox(TASK, 0);
+          return outbox.some((record) => record.event.type === "tool_start");
+        })
+        .toBe(true);
+      try {
+        await vi.advanceTimersByTimeAsync(PLACED_REQUEST_WAIT_MS);
+      } finally {
+        vi.useRealTimers();
+      }
+      held.open();
+      await at.ended(1);
+      const transcript = JSON.stringify(
+        api.requests.slice(first).map((request) => request.body.messages),
+      );
+      expect(transcript).toContain(
+        channel === "inf:work:report" ? "may already be done" : "was not sent",
+      );
+      if (channel === "inf:work:events")
+        expect(
+          at.home.effects.filter((effect) => effect.channel === "inf:work:report"),
+        ).toHaveLength(0);
+      console.info("Whole-call deadline:", channel, transcript.slice(-1200));
+    },
+  );
+
+  // Intent: the captain's F2 backstop withdraws a Claude give-up callback even before our deadline.
+  it("withdraws a tool when Claude gives up, and never resends it on return (INF-312 F2)", async () => {
+    const controller = new AbortController();
+    const at = await placed({ toolSignal: controller.signal });
+    await at.open();
+    const report = at.home.hold("inf:work:report");
+    model([
+      { tools: [{ name: "report", args: { text: "Wait for this report." } }] },
+      { text: "Checking what happened before asking again." },
+    ]);
+    const from = api.requests.length;
+    try {
+      await at.order("inf:session:prompt", [
+        { orderId: "provider-abort", task: TASK, text: "Report." },
+      ]);
+      await report.reached;
+      await at.stopHome();
+      controller.abort(new Error("The provider stopped waiting"));
+      await expect
+        .poll(() =>
+          JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
+        )
+        .toContain("conversation stopped waiting");
+      await at.startHome();
+      await at.inReach();
+      report.open();
+      await at.ended(1);
+      expect(at.home.asked.filter((request) => request.channel === "inf:work:report")).toHaveLength(
+        1,
+      );
+      console.info(
+        "Claude give-up: callback withdrawn without advancing the 24-day timer; no resend on return.",
+      );
+    } finally {
+      report.open();
+    }
+  });
+
+  // Intent: review d0c421b2 F2: a completion refusal is an independent fact, not part of the cancelled tool.
+  it("records a refused completion outside its cancelled invocation (INF-312 review)", async () => {
+    const controller = new AbortController();
+    const at = await placed({ toolSignal: controller.signal });
+    await at.open();
+    const card = at.home.hold("inf:work:card");
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "Review this change",
+              presentation: 1,
+              actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+            },
+          },
+        ],
+      },
+      { text: "The completion was refused." },
+    ]);
+    try {
+      await at.order("inf:session:prompt", [
+        { orderId: "refusal-cancel", task: TASK, text: "Show the review." },
+      ]);
+      await card.reached;
+      controller.abort(new Error("Claude stopped waiting"));
+      await expect
+        .poll(
+          () =>
+            at.home.effects.filter((effect) => effect.channel === "inf:work:card-refused").length,
+        )
+        .toBe(1);
+      card.open();
+      await at.ended(1);
+      expect(
+        at.home.effects.find((effect) => effect.channel === "inf:work:card-refused")?.request
+          .refusal,
+      ).toMatchObject({ title: "Review this change" });
+    } finally {
+      card.open();
+    }
+  });
+
+  // Intent: review d0c421b2 F1/F5: name a reachable check for changes and call a read a request.
+  it.each([
+    {
+      channel: "inf:work:github-write",
+      name: "github_write",
+      args: { method: "POST", path: "/repos/fixture/site/issues", body: "{}" },
+      words: "Read the affected item where your project lives",
+    },
+    {
+      channel: "inf:work:tasks",
+      name: "tasks",
+      args: {},
+      words: "the request was sent, but its answer did not arrive",
+    },
+    { channel: "inf:work:events", name: "tasks", args: {}, words: "the request was not sent" },
+  ])(
+    "explains an unanswered $channel accurately (INF-312 review)",
+    async ({ channel, name, args, words }) => {
+      const at = await placed();
+      await at.open();
+      const held = at.home.hold(channel);
+      model([{ tools: [{ name, args }] }, { text: "Checking before asking again." }]);
+      const from = api.requests.length;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
+      try {
+        await at.order("inf:session:prompt", [
+          { orderId: `words:${name}`, task: TASK, text: "Check it." },
+        ]);
+        await held.reached;
+        await expect
+          .poll(() =>
+            new PlacedTasks(at.dataDir)
+              .outbox(TASK, 0)
+              .some((record) => record.event.type === "tool_start"),
+          )
+          .toBe(true);
+        await vi.advanceTimersByTimeAsync(PLACED_REQUEST_WAIT_MS);
+      } finally {
+        vi.useRealTimers();
+        held.open();
+      }
+      await at.ended(1);
+      const transcript = JSON.stringify(
+        api.requests.slice(from).map((request) => request.body.messages),
+      );
+      expect(transcript).toContain(words);
+      if (name === "tasks") expect(transcript).not.toContain("the change was not sent");
+    },
+  );
+
+  // Intent: INF-339 F1, the accepted limit covers a whole card callback, not each transfer.
+  it("does not reset a card's deadline when one picture arrives between two absences (INF-312)", async () => {
+    const day = PLACED_REQUEST_WAIT_MS / 24;
+    const at = await placed({ retryMs: [day] });
+    await at.open();
+    const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+    writeFileSync(join(folders.evidence, "first.png"), png());
+    writeFileSync(join(folders.evidence, "second.png"), png(5));
+    const first = at.home.hold("inf:work:picture");
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              title: "Two pictures",
+              body: ["first.png", "second.png"]
+                .map((name) => `<img src="${join(folders.evidence, name)}" alt="${name}">`)
+                .join(""),
+            },
+          },
+        ],
+      },
+      { text: "Checked before showing the card again." },
+    ]);
+    const from = api.requests.length;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], shouldAdvanceTime: true });
+    try {
+      await at.order("inf:session:prompt", [
+        { orderId: "multipart-deadline", task: TASK, text: "Show it." },
+      ]);
+      await first.reached;
+      const start = Date.now();
+      const advanceToDay = (number: number) =>
+        vi.advanceTimersByTimeAsync(Math.max(0, start + number * day - Date.now()));
+      await at.stopHome();
+      await advanceToDay(9);
+      await at.startHome();
+      await vi.advanceTimersToNextTimerAsync();
+      await at.inReach();
+      await advanceToDay(10);
+      first.open();
+      const second = at.home.hold("inf:work:picture");
+      await second.reached;
+      expect(
+        at.home.effects.filter((effect) => effect.channel === "inf:work:picture"),
+      ).toHaveLength(1);
+      await at.stopHome();
+      await advanceToDay(24);
+      // The model hears the refusal at the original deadline, not 24 days after the first answer.
+      await expect
+        .poll(() =>
+          JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
+        )
+        .toContain("was not sent");
+      expect(
+        JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
+      ).not.toContain("may already be done");
+      await advanceToDay(29);
+      await at.startHome();
+      await vi.advanceTimersToNextTimerAsync();
+      await at.inReach();
+      await advanceToDay(30);
+      second.open();
+      await at.ended(1);
+      expect(at.home.effects.filter((effect) => effect.channel === "inf:work:card")).toHaveLength(
+        0,
+      );
+      console.info(
+        "Multipart recovery: one picture answered on day 10; callback expired at day 24; no card on return at day 30.",
+      );
+    } finally {
+      vi.useRealTimers();
+      first.open();
+    }
   });
 
   it("keeps the turn running through a drop: a waiting callback is asked again under its id, done once, and the home catches up exactly", async () => {

@@ -345,7 +345,7 @@ export type ToolOutput = {
   details?: Record<string, unknown>;
 };
 
-export type ToolRun = (params: unknown) => Promise<ToolOutput>;
+export type ToolRun = (params: unknown, signal?: AbortSignal) => Promise<ToolOutput>;
 
 /**
  * One tool bound to what it runs on: the unit both runtimes serve. The name
@@ -375,14 +375,15 @@ export function boundTool<const N extends string, T extends TObject>(spec: {
   label: string;
   description: string;
   parameters: T;
-  run: (params: Static<T>) => ToolOutput | Promise<ToolOutput>;
+  run: (params: Static<T>, signal?: AbortSignal) => ToolOutput | Promise<ToolOutput>;
 }): BoundTool<N, T> {
   return {
     name: spec.name,
     label: spec.label,
     description: spec.description,
     parameters: spec.parameters,
-    run: async (params) => spec.run(params as Static<T>),
+    run: async (params, signal) =>
+      signal === undefined ? spec.run(params as Static<T>) : spec.run(params as Static<T>, signal),
   };
 }
 

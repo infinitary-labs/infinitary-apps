@@ -1,6 +1,7 @@
 import {
   appendFileSync,
   closeSync,
+  fsyncSync,
   ftruncateSync,
   mkdirSync,
   openSync,
@@ -14,12 +15,13 @@ import {
 import { dirname, join, relative, sep } from "node:path";
 import { standingCutOff } from "@shared/accounts";
 import type { CutOffClass } from "@shared/authFailure";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
 import { awayWord } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import {
   type InvokeRequest,
   type InvokeResponse,
+  invokeContract,
   speaksChangePresentations,
   speaksInfinitaryNames,
   speaksKnowledge,
@@ -70,6 +72,7 @@ import type {
   SessionSpec,
 } from "../session/session";
 import { CardRefusedError, type DeclaredCardInput } from "../session/tools";
+import { CHANGE_RECOVERY } from "../session/workRecovery";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
@@ -388,6 +391,7 @@ type Placed = {
   /** The conversation is being opened on this Mac for an ask that came first. */
   adopting: Promise<void> | undefined;
   ledger: Map<string, CallLine> | undefined;
+  begun: Set<string> | undefined;
   calling: Map<string, Promise<unknown>>;
   /** One events request at a time, in order. */
   chain: Promise<unknown>;
@@ -1062,6 +1066,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       case "inf:work:job-exit": {
         const { exit } = request as InvokeRequest<"inf:work:job-exit">[0];
         if (!this.host) throw new NotHeldHere(`${HERE.This} is still starting.`);
+        this.begin(placed, channel, request);
         this.host.jobExit(placed.task, { ...exit, ownerId: placed.task });
         return { ok: true };
       }
@@ -1069,6 +1074,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         const { event } = request as InvokeRequest<"inf:work:browser-event">[0];
         const browsers = this.options.browsers?.();
         if (!browsers) throw new NotHeldHere(`${HERE.This} is still starting.`);
+        this.begin(placed, channel, request);
         browsers.heardEvent(placed.deviceId, placed.task, event);
         return { ok: true };
       }
@@ -1076,6 +1082,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         break;
     }
     const session = await this.live(placed);
+    this.begin(placed, channel, request);
     const callbacks = session.callbacks;
     const missing = (): never => {
       throw new Error("That tool is not this task's.");
@@ -1454,6 +1461,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       session: undefined,
       adopting: undefined,
       ledger: undefined,
+      begun: undefined,
       calling: new Map(),
       chain: Promise.resolve(),
       replays: [],
@@ -1494,6 +1502,61 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
     placed.ledger = ledger;
     return ledger;
+  }
+
+  /** Synced before a non-repeatable change; a cut answer must never repeat its effect. */
+  private begin(
+    placed: Placed,
+    channel: WorkInvokeChannel,
+    request: Record<string, unknown>,
+  ): void {
+    if (
+      invokeContract[channel].effect !== "change" ||
+      channel === "inf:work:picture" ||
+      channel === "inf:work:media" ||
+      channel === "inf:work:typeface" ||
+      channel === "inf:work:record-knowledge"
+    )
+      return;
+    const dir = crewmatePlacedDir(this.options.paths, placed.task);
+    const path = join(dir, "begun.jsonl");
+    if (!placed.begun) {
+      const begun = new Set<string>();
+      let text = "";
+      try {
+        text = readFileSync(path, "utf8");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      for (const line of text.split("\n")) {
+        if (!line) continue;
+        try {
+          begun.add(z.string().parse(JSON.parse(line)));
+        } catch {
+          // A final partial mark cannot have preceded an effect: sync had not returned.
+        }
+      }
+      placed.begun = begun;
+    }
+    const callId = request.callId as string;
+    if (placed.begun.has(callId)) {
+      const [action, result, check] = CHANGE_RECOVERY[channel] ?? [
+        "updating this task",
+        "the change may already be recorded",
+        "Check your task with tasks before asking for the change again.",
+      ];
+      throw new Error(`${HOME.The} stopped while ${action}, so ${result}. ${check}`);
+    }
+    mkdirSync(dir, { recursive: true });
+    const fd = openSync(path, "a");
+    try {
+      // Start on a fresh line even if a crash left a partial final mark.
+      writeFileSync(fd, `\n${JSON.stringify(callId)}\n`);
+      fsyncSync(fd);
+      placed.begun.add(callId);
+    } finally {
+      closeSync(fd);
+    }
   }
 
   /** Kept before it is returned, so a callback asked again is answered from here. */

@@ -48,6 +48,10 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - **A crewmate's tools come from one spec (primitives P7, contract v4.12).**
   Every app-owned crewmate tool - `emit_card`, `close_card`, `file_followup`, `note_progress`, `report`, `reply`, `tasks`, `lint_panel`, `capture_panel`, `open_change`, `check_change`, `read_workflow`, `download_artifact`, `github_read` and `github_write` - is ONE entry (name, description, typebox parameters, run) in `CREWMATE_TOOLS` (`src/core/pi/crewmateTaskTools.ts`; the entry type and the rest of the runtime-neutral spec are `src/core/session/tools.ts`).
   The crewmate preset (`crewmateSessionSpec`) binds the entries to the crewmate's callbacks, and each session generates its own tools from the bound list: Pi's with `piToolsOf` (`src/core/pi/toolSpec.ts`), Claude's tool server with `claudeToolServer` (`src/core/claude/claudeTaskTools.ts`), which turns the same JSON Schema into zod and REFUSES a parameter kind it cannot carry rather than serving a looser schema.
+  Claude passes an optional give-up signal to `ToolRun` only when the SDK handler's `extra.signal` aborts with the typed MCP `RequestTimeout` code.
+  Ordinary home-stopped Claude turns and Pi turn cancellations do not withdraw a pending request; it can still receive its real answer.
+  A conversation on a work computer scopes the give-up signal to the invocation and combines it with its own callback deadline.
+  Background completion-refusal records run outside that invocation's scope, so a cancelled card still leaves its refusal on the home.
   There are no hand-written Claude twins any more, so a rule reaches both runtimes in one edit and the self-source map lists the same set (`crewmateTools`).
   A tool is served only when the crewmate's delegate hands the callback it runs on.
   `prepare_change` shares this spec: on a paired computer, `inf:work:prepare-change` transfers inspected media to the home behind `CHANGE_PRESENTATIONS_SINCE` (`docs/forge.md`, "Saved change stories").

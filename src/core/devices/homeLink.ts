@@ -42,8 +42,8 @@ import { dialHome } from "./dial";
  * A computer that runs work is the one exception, for its work requests
  * alone (`ask`, src/shared/work.ts): each carries an id the home keeps its
  * answer under, so it waits while the home is out of reach and is asked
- * again on every new connection until the home answers. It also answers
- * what the home asks it (`onInvoke`).
+ * again on every new connection until the home answers or its caller
+ * withdraws it. It also answers what the home asks it (`onInvoke`).
  */
 
 /**
@@ -161,6 +161,7 @@ type Asked = Pending & {
   /** The socket it was last sent on, and the request id it went under there. */
   sentOn: WebSocket | null;
   wireId: number;
+  everSent: boolean;
 };
 
 /** How one attempt ended: whether the home welcomed it, how its upgrade was refused, how it closed. */
@@ -250,12 +251,30 @@ export class HomeLink {
    * its answer, or rejects with its refusal. Unlike `invoke` it waits while
    * the home is out of reach and is asked again on every new connection
    * until the home answers, so its arguments carry the id the home answers
-   * a repeat by. Refused only when this device stops or is removed.
+   * a repeat by. An optional signal withdraws it, including from future retries.
    */
-  ask(channel: string, args: unknown): Promise<unknown> {
+  ask(channel: string, args: unknown, signal?: AbortSignal): Promise<unknown> {
     if (this.stopped) return Promise.reject(new HomeOutOfReachError(STOPPED));
+    if (signal?.aborted) return Promise.reject(new WorkRequestAbortedError(false, signal.reason));
     return new Promise((resolve, reject) => {
-      const asked: Asked = { channel, args, resolve, reject, sentOn: null, wireId: 0 };
+      const finish = (action: () => void) => {
+        signal?.removeEventListener("abort", abort);
+        action();
+      };
+      const abort = () => {
+        this.asked.delete(asked);
+        finish(() => reject(new WorkRequestAbortedError(asked.everSent, signal?.reason)));
+      };
+      const asked: Asked = {
+        channel,
+        args,
+        sentOn: null,
+        wireId: 0,
+        everSent: false,
+        resolve: (value) => finish(() => resolve(value)),
+        reject: (error) => finish(() => reject(error)),
+      };
+      signal?.addEventListener("abort", abort, { once: true });
       this.asked.add(asked);
       if (this.open) this.sendAsked(this.open, asked);
     });
@@ -504,6 +523,7 @@ export class HomeLink {
   private sendAsked(socket: WebSocket, asked: Asked): void {
     asked.wireId = this.nextId++;
     asked.sentOn = socket;
+    asked.everSent = true;
     try {
       socket.send(
         JSON.stringify({
@@ -633,5 +653,15 @@ function parseFrame(raw: unknown): HomeFrame | undefined {
     return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** Cancellation reports transport facts, leaving the caller to explain its own deadline. */
+export class WorkRequestAbortedError extends Error {
+  constructor(
+    readonly everSent: boolean,
+    reason: unknown,
+  ) {
+    super("Work request withdrawn.", { cause: reason });
   }
 }

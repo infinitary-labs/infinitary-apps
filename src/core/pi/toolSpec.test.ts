@@ -27,8 +27,8 @@ it("declares and executes bound tools without initializing the Pi runtime", asyn
     description: bound.description,
   });
   expect(tool?.parameters).toBe(bound.parameters);
-  // The adapter consumes only the first two execute arguments; the real Pi
-  // contract suite supplies the SDK's context and exercises this same object.
+  // Declaration does not require provider cancellation; the next case
+  // keeps ordinary Pi turn cancellation local to that runtime.
   const execute = tool?.execute as (id: string, params: unknown) => Promise<unknown>;
   expect(await execute("call-1", { value: "hello" })).toEqual({
     content: [
@@ -38,4 +38,30 @@ it("declares and executes bound tools without initializing the Pi runtime", asyn
     details: { recorded: true },
   });
   expect(run).toHaveBeenCalledExactlyOnceWith({ value: "hello" });
+});
+
+// Intent: The captain limited INF-312 F3 to Claude giving up, not Pi turn cancellation.
+it("does not forward Pi turn cancellation to a bound tool", async () => {
+  const { piToolsOf } = await import("./toolSpec");
+  const controller = new AbortController();
+  let received: AbortSignal | undefined;
+  const [tool] = piToolsOf([
+    boundTool({
+      name: "cancel",
+      label: "Cancel",
+      description: "Observe cancellation.",
+      parameters: Type.Object({}),
+      run: (_params, signal) => {
+        received = signal;
+        return { text: "Observed." };
+      },
+    }),
+  ]);
+  const execute = tool?.execute as (
+    id: string,
+    params: unknown,
+    signal: AbortSignal,
+  ) => Promise<unknown>;
+  await execute("cancel-1", {}, controller.signal);
+  expect(received).toBeUndefined();
 });

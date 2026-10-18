@@ -9,6 +9,7 @@ import type {
   FileReadInput,
   FileWriteInput,
 } from "@anthropic-ai/claude-agent-sdk/sdk-tools";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
@@ -150,7 +151,39 @@ export function claudeToolOf(bound: BoundTool) {
     bound.name,
     bound.description,
     zodShapeOf(bound.parameters as JsonSchema),
-    async (params) => ({ content: toolContent(await bound.run(params)) }),
+    async (params, extra) => {
+      const signal =
+        extra !== null &&
+        typeof extra === "object" &&
+        "signal" in extra &&
+        extra.signal instanceof AbortSignal
+          ? extra.signal
+          : undefined;
+      if (!signal) return { content: toolContent(await bound.run(params)) };
+      // Only Claude's typed MCP timeout is the give-up backstop. Ordinary
+      // turn cancellation must still let a request receive its real answer.
+      const giveUp = new AbortController();
+      const abort = () => {
+        const reason = signal.reason;
+        // MCP cancellation notifications serialize their error as String(error).
+        // Read only its protocol-code prefix, never the human timeout message.
+        const timedOut =
+          typeof reason === "string"
+            ? reason.startsWith(String(new McpError(ErrorCode.RequestTimeout, "")))
+            : reason !== null &&
+              typeof reason === "object" &&
+              "code" in reason &&
+              reason.code === ErrorCode.RequestTimeout;
+        if (timedOut) giveUp.abort(reason);
+      };
+      if (signal.aborted) abort();
+      else signal.addEventListener("abort", abort, { once: true });
+      try {
+        return { content: toolContent(await bound.run(params, giveUp.signal)) };
+      } finally {
+        signal.removeEventListener("abort", abort);
+      }
+    },
   );
 }
 

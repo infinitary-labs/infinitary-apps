@@ -120,7 +120,7 @@ export type StartHelperOptions = {
    */
   conversations?: (options: {
     dataDir: string;
-    ask: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
+    ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
     tell: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
     browser?: ComputerBrowserParts;
     accounts: () => Promise<ComputerAccounts>;
@@ -286,7 +286,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           (async (start) => (await import("./conversations")).startConversations(start))
         )({
           dataDir,
-          ask: (channel, args) => link.ask(channel, args),
+          ask: (channel, args, signal) => link.ask(channel, args, signal),
           // A browser's fact and pictures go once, while the home is in reach.
           tell: (channel, args) => link.invoke(channel, args),
           ...(options.browser

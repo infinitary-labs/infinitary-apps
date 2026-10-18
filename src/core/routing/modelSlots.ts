@@ -42,7 +42,9 @@ import type { PiModelRef, SlottedRef } from "./routingEngine";
  *   the map → off until the user places it - and a listed or kept model a
  *   successful read no longer serves is announced once as gone. Both come
  *   only from successful reads: a failed one falls back to the shipped
- *   catalog silently and is never evidence that a model left.
+ *   catalog silently and is never evidence that a model left. An arrival
+ *   also carries the board's "new" mark, saved, for `NEW_MARK_MS` or until
+ *   the user changes its levels.
  * - THE FALLBACK. If nothing anywhere is slotted, routing does not stop:
  *   it applies the starter map virtually, then every listed model at
  *   medium. A shortlist is a preference, never a way to brick the app.
@@ -50,6 +52,13 @@ import type { PiModelRef, SlottedRef } from "./routingEngine";
  * Off is not a sign-out: an unslotted model is still available, and an
  * explicit pin still reaches it (naming a model is its own placement).
  */
+
+/**
+ * How long an arrival keeps the board's "new" mark: a week, so a person who
+ * opens Settings days after the feed line still finds it, and a mark on a
+ * model nobody moved does not stay for good.
+ */
+export const NEW_MARK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type NewModelNotice = {
   providerId: string;
@@ -107,25 +116,31 @@ export type ModelSlotsOptions = {
    * account may announce.
    */
   canAnnounce?: (accountId: string) => boolean;
+  /** The clock an arrival's "new" mark is stamped and aged on. */
+  now?: () => number;
 };
 
 export class ModelSlots {
-  /** Offerings announced as newcomers this session, for the Settings "new" mark. */
-  private lastNew = new Set<string>();
+  private readonly now: () => number;
 
-  constructor(private readonly options: ModelSlotsOptions) {}
+  constructor(private readonly options: ModelSlotsOptions) {
+    this.now = options.now ?? Date.now;
+  }
 
   /**
    * Seeds never-seen offerings from the starter map and records newcomers
    * on the ones that have been seen. Returns the newcomers so the caller
    * can announce them exactly once; a first-time seed for a provider
    * announces nothing, because none of those models is new to the user.
+   * Each newcomer is stamped for the board's "new" mark, and a mark past
+   * `NEW_MARK_MS` is let go.
    */
   reconcile(): NewModelNotice[] {
     const state = this.read();
+    const now = this.now();
     const seen = new Set(state.seen);
     const notices: NewModelNotice[] = [];
-    let changed = false;
+    let changed = this.dropOldMarks(state, now);
     const providerHadHistory = new Map<string, boolean>();
 
     for (const account of this.options.accounts()) {
@@ -153,11 +168,11 @@ export class ModelSlots {
             id: model.id,
             ...(seed.length > 0 ? { slots: seed } : {}),
           });
+          state.arrived = { ...state.arrived, [key]: now };
         }
       }
     }
     if (changed) this.write(state);
-    this.lastNew = new Set(notices.map((notice) => `${notice.providerId}/${notice.id}`));
     return notices;
   }
 
@@ -306,7 +321,8 @@ export class ModelSlots {
       : current.filter((existing) => existing !== slot);
     if (next.length > 0) state.assignments[key] = next;
     else delete state.assignments[key];
-    this.lastNew.delete(key);
+    // The person has placed it themselves: it is no longer news.
+    dropMark(state, key);
     this.write(state);
   }
 
@@ -359,10 +375,9 @@ export class ModelSlots {
     const prefix = `${providerId}/`;
     state.seen = state.seen.filter((key) => !key.startsWith(prefix));
     for (const key of Object.keys(state.assignments))
-      if (key.startsWith(prefix)) {
-        delete state.assignments[key];
-        this.lastNew.delete(key);
-      }
+      if (key.startsWith(prefix)) delete state.assignments[key];
+    for (const key of Object.keys(state.arrived ?? {}))
+      if (key.startsWith(prefix)) dropMark(state, key);
     for (const key of Object.keys(state.reasoning ?? {}))
       if (key.startsWith(prefix)) delete state.reasoning?.[key];
     this.write(state);
@@ -391,6 +406,7 @@ export class ModelSlots {
    */
   view(): ModelSlotsView {
     const state = this.read();
+    const now = this.now();
     const catalog = this.catalogByKey();
     const accounts = this.options.accounts();
     const listed = this.listedKeysOf(accounts, state);
@@ -452,7 +468,7 @@ export class ModelSlots {
             : {}),
           ...(capabilities ? { reasoningCapabilities: capabilities } : {}),
           ...(reasoning ? { reasoning } : {}),
-          ...(this.lastNew.has(key) ? { isNew: true as const } : {}),
+          ...(isMarked(state, key, now) ? { isNew: true as const } : {}),
           ...(account.place ? { place: account.place } : {}),
         });
       }
@@ -551,6 +567,17 @@ export class ModelSlots {
     return byKey;
   }
 
+  /** Lets go of every "new" mark past `NEW_MARK_MS`; whether one went. */
+  private dropOldMarks(state: ModelSlotsState, now: number): boolean {
+    let dropped = false;
+    for (const key of Object.keys(state.arrived ?? {})) {
+      if (isMarked(state, key, now)) continue;
+      dropMark(state, key);
+      dropped = true;
+    }
+    return dropped;
+  }
+
   private read(): ModelSlotsState {
     return this.options.settings.getModelSlots();
   }
@@ -558,6 +585,19 @@ export class ModelSlots {
   private write(state: ModelSlotsState): void {
     this.options.settings.setModelSlots(state);
   }
+}
+
+/** Whether an offering still carries the board's "new" mark at `now`. */
+function isMarked(state: ModelSlotsState, key: string, now: number): boolean {
+  const at = state.arrived?.[key];
+  return at !== undefined && now - at < NEW_MARK_MS;
+}
+
+/** Takes one offering's "new" mark off, and the record's field once none is left. */
+function dropMark(state: ModelSlotsState, key: string): void {
+  if (!state.arrived) return;
+  delete state.arrived[key];
+  if (Object.keys(state.arrived).length === 0) delete state.arrived;
 }
 
 function sameIds(a: readonly string[], b: readonly string[]): boolean {

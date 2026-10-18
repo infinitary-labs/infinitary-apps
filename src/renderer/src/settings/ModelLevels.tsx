@@ -14,11 +14,12 @@ import {
   dropPlan,
   type LevelTarget,
   levelList,
+  newModelNote,
   providerPrefix,
   removeAllLine,
   usedLine,
 } from "./levelDrops";
-import { NEW_MODEL_NOTE, removeFromLevelOnly } from "./modelsWords";
+import { removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { SpeedControl } from "./SpeedControl";
 import "./models.css";
@@ -355,8 +356,7 @@ export function ModelLevels({
           aria-label={pinned ? `${model.label} ✱` : model.label}
           words={model.isNew ? `${model.providerLabel}, new` : model.providerLabel}
           aria-pressed={selectedKey === key}
-          // Not in use says it already, so its lane's "new" needs no note.
-          note={model.isNew && level !== "off" ? NEW_MODEL_NOTE : undefined}
+          note={model.isNew ? newModelNote(model) : undefined}
           onPointerDown={(event) => beginPress(event, key, level)}
           onClick={(event) => {
             if (suppressClick.current) return;

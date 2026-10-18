@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
-import { type AccountModels, ModelSlots } from "./modelSlots";
+import { type AccountModels, ModelSlots, NEW_MARK_MS } from "./modelSlots";
 
 function build(accounts: AccountModels[], catalog?: ModelsCatalogView) {
   const settings = new SettingsStore(openInMemoryDatabase());
@@ -226,6 +226,68 @@ describe("ModelSlots.reconcile - first activation only", () => {
     expect(slots.reconcile()).toEqual([]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["low"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-luna" })).toEqual([]);
+  });
+});
+
+// INF-94: the board's "new" mark lived in memory and the next catalog read
+// (the quota refresh at start) cleared it, so a person opening Settings did
+// not see it. It is saved with the slots now, for a week or until the person
+// changes the model's levels.
+describe("ModelSlots - the board's new mark", () => {
+  /** A Grok account that served 4.6 before, now bringing 4.7, which its starter level places. */
+  function grokArrival() {
+    const settings = new SettingsStore(openInMemoryDatabase());
+    let clock = Date.parse("2026-10-18T09:00:00Z");
+    let rows: AccountModels[] = [
+      { ...grokLine, models: grokLine.models.filter((model) => model.id !== "grok-4.7") },
+    ];
+    const open = () =>
+      new ModelSlots({
+        settings,
+        accounts: () => rows,
+        quotaModels: () => undefined,
+        now: () => clock,
+      });
+    open().reconcile();
+    rows = [grokLine];
+    const slots = open();
+    expect(slots.reconcile()).toEqual([{ providerId: "xai", id: "grok-4.7", slots: ["medium"] }]);
+    return { settings, slots, open, later: (ms: number) => (clock += ms) };
+  }
+  const isNew = (slots: ModelSlots) =>
+    slots.view().models.find((model) => model.id === "grok-4.7")?.isNew === true;
+
+  it("keeps an arrival's mark through the next catalog read and a restart", () => {
+    const { slots, open, later } = grokArrival();
+    expect(isNew(slots)).toBe(true);
+    later(60_000);
+    expect(slots.reconcile()).toEqual([]);
+    expect(isNew(slots)).toBe(true);
+    expect(isNew(open())).toBe(true);
+    // Only the arrival is news: the generations seen before carry no mark.
+    expect(
+      slots
+        .view()
+        .models.filter((model) => model.isNew)
+        .map((model) => model.id),
+    ).toEqual(["grok-4.7"]);
+  });
+
+  it("takes the mark off once the person changes the model's levels", () => {
+    const { slots, open } = grokArrival();
+    slots.setSlotMembership("xai/grok-4.7", "high", true);
+    expect(isNew(slots)).toBe(false);
+    expect(isNew(open())).toBe(false);
+  });
+
+  it("lets the mark go a week after the model arrived", () => {
+    const { slots, settings, later } = grokArrival();
+    later(NEW_MARK_MS - 1);
+    expect(isNew(slots)).toBe(true);
+    later(1);
+    expect(isNew(slots)).toBe(false);
+    slots.reconcile();
+    expect(settings.getModelSlots().arrived).toBeUndefined();
   });
 });
 

@@ -5,8 +5,9 @@ import type { RoutingSettings } from "@shared/quota";
 import { reasoningWord } from "@shared/reasoning";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { newModelNote } from "./levelDrops";
 import { ModelsSection } from "./ModelsSection";
-import { NEW_MODEL_NOTE, removeFromLevelOnly } from "./modelsWords";
+import { removeFromLevelOnly } from "./modelsWords";
 import { ReasoningControl } from "./ReasoningControl";
 import { USE_LEVEL_DEFAULT } from "./reasoningWords";
 
@@ -418,10 +419,39 @@ describe("ModelsSection - facts a pill holds", () => {
 
   it("reads a new model's provider, its new mark and its note first in its pill's description", () => {
     const html = render(slots);
-    expect(describedBy(html, "xai/grok-4.7")).toEqual([`Grok, new. ${NEW_MODEL_NOTE}`, "hint"]);
+    expect(describedBy(html, "xai/grok-4.7")).toEqual([
+      `Grok, new. ${newModelNote({ slots: ["medium"] })}`,
+      "hint",
+    ]);
     // A description by reference leaves aria-description unread, so none is set.
     expect(pillOf(html)).not.toContain('aria-description="Grok');
     expect(pillOf(html)).not.toContain("title=");
+  });
+
+  // INF-94: Not in use is where the note's "not in use" is true, so a new
+  // model there carries it too, as the "new" mark it explains does.
+  it("reads a new model's note on its pill in Not in use", () => {
+    const html = render({
+      models: [
+        {
+          provider: "xai",
+          providerLabel: "Grok",
+          id: "grok-4.7",
+          label: "Grok 4.7",
+          slots: [],
+          isNew: true,
+        },
+      ],
+      byName: [],
+      usingDefaults: false,
+    });
+    expect(html.indexOf('data-model-row="xai/grok-4.7"')).toBeGreaterThan(
+      html.indexOf('data-slot-group="off"'),
+    );
+    expect(describedBy(html, "xai/grok-4.7")).toEqual([
+      `Grok, new. ${newModelNote({ slots: [] })}`,
+      "hint",
+    ]);
   });
 
   it("reads a placed model's provider in its pill's description", () => {

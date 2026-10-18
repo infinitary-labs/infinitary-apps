@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "new-model-mark-stays",
+      "kind": "fix",
+      "title": "A new model's mark on the models board stays long enough to see",
+      "body": "When a subscription brings a new model, its new mark in Settings, under Intelligence and Models, now stays for a week, through restarts, or until you change that model's levels. Before, it often vanished before you could open Settings. Its note also says where the model is used, such as at medium, instead of saying it is not in use when its starting level already uses it.",
+      "area": "settings",
+      "picture": {
+        "dark": "new-model-mark-stays-dark.webp",
+        "light": "new-model-mark-stays-light.webp",
+        "alt": "The models board's medium level: Grok 4.7 marked new, with the note New here - it is used at medium."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1124,6 +1124,7 @@ export async function createServices(
       if (!account || backendForProvider(account.providerId) === "pi") return true;
       return served.read(accountId) !== undefined;
     },
+    now: ticker.now,
   });
   /**
    * The routing boundary: the sign-in gate, then the slot record, with the

@@ -114,6 +114,9 @@ Provider-reported allowance meters are unchanged.
 - **An arrival:** one feed line when a listed model appears that this install never saw - a tracked family's new generation, or a starter row.
   Re-listed older generations and untracked ids are marked seen silently.
   A client-served account announces only from a successful read (`canAnnounce`); its shipped list is never news.
+  - An announced arrival also carries the Models board's `new` mark, saved with the slot record (`arrived`), so a later catalog read or a restart keeps it.
+  - The mark ends when the person changes that model's levels, or a week after it arrived (`NEW_MARK_MS`).
+  - Its note says where the model is used now, since the starter map may already have placed it (`newModelNote`).
 - **A departure:** one feed line when a model that was listed, or is kept, is gone from an account's **successful** read compared with its **previous successful** read (`ModelSlots.departures`).
   The baseline per account is the `served-baselines` settings row.
   - The first read only records a baseline.
@@ -190,7 +193,7 @@ Specified in the design skill, `components/quota/ModelsBoard.prompt.md`:
 - `modelListing.test.ts`: the rule against Claude's Sonnet 5.5 listing (including older generations) and each Pi provider's catalog shape.
 - `servedModels.test.ts`: never blocking; failure, deferral and the rail.
 - `catalogReaders.test.ts`: each reader's failures, and the rail.
-- `modelSlots.test.ts`: listing, news, departures, the fallback rungs.
+- `modelSlots.test.ts`: listing, news and the board's new mark, departures, the fallback rungs.
 - `modelRuntime.test.ts`: the create never waits on pi.dev.
 - `tests/e2e/model-lists.spec.ts`: a read that never answers, a successful read, a departure across a relaunch, a failed read - all end to end, over a Claude account whose stand-in client answers the SDK's model list.
 

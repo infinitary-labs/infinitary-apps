@@ -70,10 +70,21 @@ export function removeAllLine(model: Pick<SlotModelView, "slots">): string {
     : "It is not in any level.";
 }
 
+/**
+ * What a new model's "new" says, on its pill wherever the pill sits and in
+ * its panel: where the model is used now. An arrival the starter levels
+ * placed is already in use there; one they did not place waits for a level.
+ */
+export function newModelNote(model: Pick<SlotModelView, "slots">): string {
+  return model.slots.length > 0
+    ? `New here - it is used at ${levelList(model.slots)}.`
+    : "New here - it is not in use until you give it a level.";
+}
+
 /** One line on where a model is used, for its panel. */
 export function usedLine(model: Pick<SlotModelView, "slots" | "isNew">): string {
-  if (model.slots.length > 0) return `Used at ${levelList(model.slots)}.`;
-  return model.isNew
-    ? "New here. It is not in use until you give it a level."
+  if (model.isNew) return newModelNote(model);
+  return model.slots.length > 0
+    ? `Used at ${levelList(model.slots)}.`
     : "Not in use. It is never picked on its own.";
 }

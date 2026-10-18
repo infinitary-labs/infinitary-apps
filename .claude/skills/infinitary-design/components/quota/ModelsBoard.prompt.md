@@ -1,6 +1,8 @@
 The Models board (Settings → Intelligence → Models): one lane per level - premium, high, medium, low - and a Not in use lane under them, each model a pill in every level it is used at.
-A pill reads provider then model label in mono (the provider is dropped where the label already starts with it: "Claude Opus 5.5", "Grok 4.7"), a `new` micro label on a model this install has not seen, and `✱` on a model set to always use.
-A pill's name is described by its provider, "new" on a new model, and in a level that micro label's note, "New here - it is not in use until you give it a level.", which also shows on rest, the pointer's or the keyboard's focus on the pill; the × says "Remove from high only" the same way (readme, "Facts shown on rest").
+A pill reads provider then model label in mono (the provider is dropped where the label already starts with it: "Claude Opus 5.5", "Grok 4.7"), a `new` micro label on a model that arrived after this install had seen its provider, and `✱` on a model set to always use.
+The `new` mark stays a week, through restarts, or until the person changes that model's levels (`docs/model-lists.md`, "The news").
+A pill's name is described by its provider, "new" on a new model, and that micro label's note, which also shows on rest, the pointer's or the keyboard's focus on the pill; the × says "Remove from high only" the same way (readme, "Facts shown on rest").
+The note says where the model is used wherever its pill sits: "New here - it is used at medium." for an arrival its starting levels placed, "New here - it is not in use until you give it a level." for one they did not; the model panel's line on where it is used reads the same note.
 An empty level says where its work goes instead: high and low run on medium, medium on high.
 An empty premium level never says its work runs lower, because an ask for premium waits: its hint says the work waits until a model is added there or the person chooses to run it lower.
 Where a control sits says how far it reaches (captain's pick from the three-way prototype review, 2026-10-02):

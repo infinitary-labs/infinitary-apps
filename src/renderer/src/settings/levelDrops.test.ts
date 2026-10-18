@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dropPlan, levelList, providerPrefix, usedLine } from "./levelDrops";
+import type { Slot } from "../../../shared/modelSlots";
+import { dropPlan, levelList, newModelNote, providerPrefix, usedLine } from "./levelDrops";
 
 describe("what a drop on the Models board does", () => {
   const sol = { slots: ["high", "medium"] as const };
@@ -71,8 +72,22 @@ describe("the words the Models board uses for a model", () => {
   it("says where a model is used, or that it is not", () => {
     expect(usedLine({ slots: ["medium", "high"] })).toBe("Used at high and medium.");
     expect(usedLine({ slots: [] })).toBe("Not in use. It is never picked on its own.");
-    expect(usedLine({ slots: [], isNew: true })).toBe(
-      "New here. It is not in use until you give it a level.",
+  });
+
+  // INF-94: a new model's note is true wherever its pill sits. The starter
+  // levels already use an arrival they place, so only one with no level
+  // waits for one; its panel reads the same note as its pill.
+  it("says where a new model is used, or that it waits for a level", () => {
+    expect(newModelNote({ slots: ["medium"] })).toBe("New here - it is used at medium.");
+    expect(newModelNote({ slots: ["medium", "high"] })).toBe(
+      "New here - it is used at high and medium.",
     );
+    expect(newModelNote({ slots: [] })).toBe(
+      "New here - it is not in use until you give it a level.",
+    );
+    const placements: Slot[][] = [["medium"], []];
+    for (const slots of placements) {
+      expect(usedLine({ slots, isNew: true })).toBe(newModelNote({ slots }));
+    }
   });
 });

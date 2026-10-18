@@ -74,6 +74,12 @@ export const modelSlotsStateSchema = z.object({
   reasoning: reasoningOverridesSchema.optional(),
   /** Per offering, shared by every account; absent means Standard. */
   speed: z.record(z.string(), crewSpeedSchema).optional(),
+  /**
+   * offering → when it arrived as announced news (epoch ms), for the board's
+   * "new" mark. Saved, so a later catalog read or a restart keeps the mark
+   * until the person changes the model's levels or it has had a week.
+   */
+  arrived: z.record(z.string(), z.number()).optional(),
 });
 export type ModelSlotsState = z.infer<typeof modelSlotsStateSchema>;
 
@@ -286,7 +292,10 @@ export const slotModelViewSchema = z.object({
       }),
     )
     .optional(),
-  /** Arrived after this install had already seen the provider's catalog. */
+  /**
+   * Arrived as announced news after this install had already seen the
+   * provider's catalog, within the last week and with its levels untouched since.
+   */
   isNew: z.boolean().optional(),
   /** The computer the model runs on, when it is not this Mac's. */
   place: z.string().min(1).max(64).optional(),

@@ -8,6 +8,7 @@ S3 is what fills that hole - one bounded call on the cheapest slotted model that
 
 `CrewSupervisor.classifyShape` is the only caller.
 It runs in the spawn path before routing - at `commission` for an immediate spawn, at `dispatchQueuedTask` for a queued row when its gate opens - so a queued row is sorted against what it was commissioned with, as late as that can still change the outcome.
+A queued row's verdict is stamped on the row as it stands when the call returns, so a model or basis named or cleared while the classifier ran stays, and the tier is computed from it (`CrewSupervisor.classifyQueued`, INF-83).
 
 Three shapes are never classified, because the captain's table decides them *above* the kind and a call could only cost quota:
 
@@ -22,6 +23,7 @@ Attaching a packaged plan-step line sets `kind` to `plan`, and a packaged teach 
 A named model still records `skipped:override`, and the kind is `plan` rather than `unclear`.
 With no skip, these attachments record `host:plan-step` or `host:teach-step` and do not ask the classifier.
 The one way back is a filed row whose named model is cleared with `update_task override_model_id` empty: its `skipped:override` becomes `none`, so it is classified when it starts.
+A model cleared while a queued row's start is skipping the classifier leaves nothing to skip, so that row is classified as it now stands.
 
 Since S7 the classifier is the first CONSUMER of the decision-model class (`docs/decision-models.md`): `DecisionKindClassifier` (`src/core/routing/decisionKindClassifier.ts`) owns the question, the facts and the mapping to a `KindVerdict`, and `DecisionModels` owns which model answers it.
 The adapter over one of the user's own subscription models and the native question share the retrieval criterion and whole-task boundary from `piResources.ts`.

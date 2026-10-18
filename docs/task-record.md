@@ -308,6 +308,10 @@ By-key/list task rows expose the basis reference.
 A model the captain names for a filed task is `update_task override_model_id` (contract v4.46, FI3-436): `TaskService.updateFields` stores it as the shape's `override_model_id` on open work no crewmate holds - a row a failed start returned to the queue included - recomputes `difficulty` from the shape, and an empty value clears it.
 Combined with `start_now` it is an edit that applies before the start, so the same row - its key, parent and links - routes on the named model (R0), and the start answer names the model that took it, saying so when the named one was not available, as a new spawn's answer does (`docs/routing.md`).
 Before it, a model could be chosen only on a new spawn, so a filed task was dropped and replaced.
+A model or basis named or cleared while a queued task starts decides that start (INF-83).
+The classifier's verdict is stamped on the row as it stands when the classifier answers, so the edit stays and the tier is computed from it.
+A start whose model or basis moved while it waited on a computer, to place the task or to route it, starts over from the record as it now stands.
+Once the start claims the row it is no longer open work, so both edits are refused in words.
 
 ## Requested crew speed
 

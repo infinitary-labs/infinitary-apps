@@ -8851,26 +8851,53 @@ export class CrewSupervisor {
    * is sorted against what it was commissioned with and a row already
    * sorted keeps its kind. The stamp is a quiet write - no timeline event,
    * no feed line: it explains a routing decision, it is not one.
+   *
+   * The verdict is stamped on the row as it stands when the call returns
+   * (INF-83): a model or basis named or cleared while the classifier ran
+   * stays, and the tier is computed from it, so the shape the classifier
+   * was asked about is never written back over that edit. A skip asks
+   * nothing, so one whose named model was cleared meanwhile classifies the
+   * row as it now stands.
    */
-  private async classifyQueued(
-    taskId: string,
-    shape: WorkShape,
-    record: TaskRecord,
-  ): Promise<WorkShape> {
-    if (kindEstablished(shape.kind_source)) return shape;
+  private async classifyQueued(record: TaskRecord): Promise<void> {
+    const shape = this.queuedShape(record);
+    if (kindEstablished(shape.kind_source)) return;
     const intent = record.intent ?? { goal: record.title, userWords: record.prompt };
     const classified = this.withDeliverable(
-      await this.classifyShape(taskId, record.title, intent, record.repoId, shape),
+      await this.classifyShape(record.id, record.title, intent, record.repoId, shape),
       intent,
     );
-    if (
-      classified.kind_source === shape.kind_source &&
-      classified.deliverable === shape.deliverable
-    ) {
-      return classified;
-    }
-    this.options.tasks.recordShape(taskId, classified, tierFor(classified).bucket ?? null);
-    return classified;
+    const current = this.options.tasks.get(record.id);
+    if (current?.status !== "open" || current.kind !== "work") return;
+    const now = this.queuedShape(current);
+    if (classified.kind_source === `${KIND_SOURCE.skipped}override` && !now.override_model_id)
+      return this.classifyQueued(current);
+    const stamped: WorkShape = {
+      ...now,
+      kind: classified.kind,
+      kind_source: classified.kind_source,
+      ...(classified.kind_detail ? { kind_detail: classified.kind_detail } : {}),
+      deliverable: classified.deliverable,
+    };
+    if (stamped.kind_source === now.kind_source && stamped.deliverable === now.deliverable) return;
+    this.options.tasks.recordShape(record.id, stamped, tierFor(stamped).bucket ?? null);
+  }
+
+  /**
+   * A queued row's shape as its record holds it now, with its basis
+   * verdict derived now: what it was commissioned with - its basis, its
+   * premium ask and the model the captain named. A commissioned row written
+   * before the shape existed is read as the judgment it carried. A
+   * crewmate's follow-up is filed with no shape and no intent: it never
+   * carried a judgment, so its shape is built here the way a planned row's
+   * is, and `rigorFor` derives its rigor like any other row's - never the
+   * legacy quick.
+   */
+  private queuedShape(record: TaskRecord): WorkShape {
+    return this.withBasisVerdict(
+      record.shape ??
+        (record.intent ? legacyShapeFromDifficulty(record.difficulty) : this.workShape(undefined)),
+    );
   }
 
   /**
@@ -8923,28 +8950,19 @@ export class CrewSupervisor {
     const gate = record.gate;
     const blockers = this.options.tasks.blockers(taskId);
     try {
-      // The row's own shape, so a queued task dispatches from what it was
-      // commissioned with - its basis, its premium ask and the model the
-      // captain named. A commissioned row written before the shape existed
-      // is read as the judgment it carried. A crewmate's follow-up is filed
-      // with no shape and no intent: it never carried a judgment, so its
-      // shape is built here the way a planned row's is, and `rigorFor`
-      // derives its rigor like any other row's - never the legacy quick.
-      const shape = await this.classifyQueued(
-        record.id,
-        this.withBasisVerdict(
-          record.shape ??
-            (record.intent
-              ? legacyShapeFromDifficulty(record.difficulty)
-              : this.workShape(undefined)),
-        ),
-        record,
-      );
+      await this.classifyQueued(record);
       // Classification awaits a provider. An edit during that await must
-      // reach the first turn, not the earlier snapshot used to classify.
+      // reach the first turn, not the earlier snapshot used to classify:
+      // the row routes from its own shape as the record now holds it.
       record = this.options.tasks.get(taskId);
       if (record?.status !== "open" || record.kind !== "work") return;
+      const shape = this.queuedShape(record);
       this.restampGroundedTier(record.id, shape);
+      // Placement and routing can wait on a computer, and a model or basis
+      // named or cleared meanwhile decides this start: it starts over from
+      // the record as it now stands.
+      const routedFrom = record.shape;
+      const moved = () => routingAskMoved(routedFrom, this.options.tasks.get(taskId)?.shape);
       // A task that waits for its computer chooses its model once that
       // computer is back, among its own subscriptions.
       const automatic = this.automaticFor(record);
@@ -8963,6 +8981,9 @@ export class CrewSupervisor {
           : undefined;
       const selected = choice && "computerId" in choice ? choice : undefined;
       if (automatic && !selected) {
+        // Automatic declines a task that changed while computers were
+        // compared, which is no wait for room.
+        if (moved()) return this.dispatchQueuedTask(taskId, options);
         // A wait whose computers were compared says why; another keeps what was said.
         const waiting = choice && "wait" in choice ? choice : undefined;
         const wait = waiting?.wait ?? this.automaticWaits.get(taskId) ?? UNCOMPARED_WAIT;
@@ -9000,6 +9021,8 @@ export class CrewSupervisor {
       const routed =
         selected?.routed ??
         (ready ? await this.routeTask(taskId, record.prompt, shape, target) : undefined);
+      // From here to the claim nothing waits.
+      if (moved()) return this.dispatchQueuedTask(taskId, options);
       if (!routed?.choice && signInWait()) return;
       if (!ignoreAsk && routed && requiresReasoningWait(shape, routed)) {
         // The user's premium ask - or an escalation's rung (S4) - still
@@ -10739,6 +10762,18 @@ export class CrewSupervisor {
       clearTimeout(timer),
     );
   }
+}
+
+/**
+ * Whether an edit since `before` named or cleared a queued row's model or
+ * its basis: the asks of its shape that decide its tier and its model
+ * (INF-83).
+ */
+function routingAskMoved(
+  before: WorkShape | null | undefined,
+  after: WorkShape | null | undefined,
+): boolean {
+  return before?.override_model_id !== after?.override_model_id || before?.basis !== after?.basis;
 }
 
 /**

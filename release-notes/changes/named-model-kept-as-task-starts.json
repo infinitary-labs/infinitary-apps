@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "named-model-kept-as-task-starts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A model you name as a task starts is kept",
+      "body": "If you named a model for a waiting task just as it started, or a task for it to build on, the start could leave it out. It now starts on the model you named and builds on the task you named. This holds on your other computers and when Automatic chooses where it runs.",
+      "noPicture": "Nothing on screen changes: the task's crewmate starts on the model that was named.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -65,6 +65,7 @@ import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
+import { Router } from "../routing/router";
 import type { CrewmateTool } from "../session/tools";
 import { SettingsStore } from "../storage/settingsStore";
 import { CrewTranscripts } from "../tasks/crewTranscript";
@@ -2037,6 +2038,72 @@ describe("a task that runs on a computer that runs work", () => {
     expect(at.bound).toEqual([
       { backend: "pi", provider: "openai-codex", accountId: "acct_codex_other" },
     ]);
+  });
+
+  it("starts on a model or basis the captain named while it waited for that computer's subscriptions (INF-83)", async () => {
+    // That computer serves its medium starter, which routing takes unless the
+    // captain names GPT-6 Sol, and its conversations can run either.
+    const runtime = await piStubRuntime(
+      api.url,
+      { provider: "openai-codex", id: CODEX_MEDIUM_STARTER },
+      ["gpt-6-sol"],
+    );
+    const at = await world(undefined, { ...TWO_CODEX_THERE, runtime });
+    const home = at.home();
+    const decide = vi.spyOn(Router.prototype, "decide");
+    /** Holds the start's next read of that computer's subscriptions, its last wait before routing. */
+    const holdServed = () => {
+      const reached = gate();
+      const release = gate();
+      const served = home.placed.served.bind(home.placed);
+      vi.spyOn(home.placed, "served").mockImplementationOnce(async (machine) => {
+        reached.open();
+        await release.held;
+        return served(machine);
+      });
+      return { reached: reached.held, release: release.open };
+    };
+    const queued = (id: string) =>
+      seedTask(home.tasks, {
+        id,
+        title: "website",
+        prompt: "Fix the footer.",
+        status: "queued",
+        deviceId: at.deviceId,
+      });
+
+    // A model named while it waits starts it on that model there.
+    queued("t-model");
+    const named = holdServed();
+    model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
+    const starting = home.supervisor.dispatchQueuedTask("t-model");
+    await named.reached;
+    home.tasks.updateFields("t-model", { model: "gpt-6-sol" }, "firstmate");
+    named.release();
+    await starting;
+    await expect.poll(() => home.tasks.get("t-model")?.outcome).toBe("The footer is fixed.");
+    expect(home.tasks.get("t-model")?.model).toBe("openai-codex/gpt-6-sol");
+
+    // A basis named while it waits is the one its tier is read from, verified.
+    const spec = home.tasks.create({
+      id: "t-spec",
+      title: "Footer spec",
+      prompt: "p",
+      repoId: null,
+      startPolicy: "on-request",
+    });
+    home.tasks.recordReport(spec.id, { text: "The footer reads the year from the clock." });
+    queued("t-basis");
+    const grounded = holdServed();
+    model([{ tools: [{ name: "report", args: { text: "The footer is grounded." } }] }]);
+    const basisStart = home.supervisor.dispatchQueuedTask("t-basis");
+    await grounded.reached;
+    home.tasks.updateFields("t-basis", { basis: spec.key }, "firstmate");
+    grounded.release();
+    await basisStart;
+    await expect.poll(() => home.tasks.get("t-basis")?.outcome).toBe("The footer is grounded.");
+    const asked = decide.mock.calls.filter(([taskId]) => taskId === "t-basis");
+    expect(asked.at(-1)?.[2]).toMatchObject({ basis: spec.key, basis_verified: true });
   });
 
   it("binds the same account there again when it resumes after both computers restart, not the provider's pinned one (INF-146)", async () => {

@@ -6369,6 +6369,161 @@ describe("the task graph (R1)", () => {
     });
   });
 
+  it("routes on a model the captain named while queued classification is in flight (INF-83)", async () => {
+    let release:
+      | ((value: { kind: "implement"; source: string; version: string }) => void)
+      | undefined;
+    const classified = new Promise<{ kind: "implement"; source: string; version: string }>(
+      (resolve) => {
+        release = resolve;
+      },
+    );
+    const routed: WorkShape[] = [];
+    const { supervisor, tasks } = setup(fakeCrewmate(), {
+      classifier: { classify: async () => classified },
+      routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
+      onRouteDecide: ({ shape }) => routed.push(shape),
+    });
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const starting = supervisor.startQueuedNow(planned.key);
+    tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
+    release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
+    await starting;
+    await tick();
+    // The router is asked once, on the model the captain named (R0), and
+    // the record keeps it with the tier it computes to: the pin's own slot.
+    expect(routed.map((shape) => shape.override_model_id)).toEqual(["gpt-6-astra"]);
+    expect(tasks.get(planned.id)?.shape?.override_model_id).toBe("gpt-6-astra");
+    expect(tasks.get(planned.id)?.difficulty).toBeNull();
+  });
+
+  it("classifies a row whose named model the captain cleared as its start began (INF-83)", async () => {
+    const asked: KindInput[] = [];
+    const { supervisor, tasks } = setup(fakeCrewmate(), {
+      classifier: {
+        classify: async (input) => {
+          asked.push(input);
+          return { kind: "implement", source: "classifier:test", version: "kc1" };
+        },
+      },
+      routedModel: { provider: "fm-mock", id: "mock-1" },
+    });
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
+    const starting = supervisor.startQueuedNow(planned.key);
+    tasks.updateFields(planned.id, { model: "" }, "firstmate");
+    await starting;
+    // A named model skips the classifier; once cleared there is nothing to
+    // skip, so the row is classified as it starts (docs/kind-classifier.md).
+    expect(asked).toHaveLength(1);
+    expect(tasks.get(planned.id)?.shape).toMatchObject({
+      kind: "implement",
+      kind_source: "classifier:test",
+    });
+  });
+
+  it("starts an Automatic task on a model the captain named while its computers were compared (INF-83)", async () => {
+    const dir = scratchDir("infinitary-automatic-named-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    let compared!: () => void;
+    const comparing = new Promise<void>((resolve) => {
+      compared = resolve;
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const asked: WorkShape[] = [];
+    const { supervisor, repos, tasks, sessionSpecs, events } = setup(fakeCrewmate(), {
+      automatic: {
+        choose: async (record, _repo, _prompt, shape) => {
+          asked.push(shape);
+          if (asked.length === 1) {
+            compared();
+            await held;
+          }
+          // As AutomaticPlacement's own check: late facts never overrule a changed task.
+          if (JSON.stringify(tasks.get(record.id)?.shape) !== JSON.stringify(record.shape))
+            return undefined;
+          const model = shape.override_model_id ?? "mock-1";
+          return {
+            computerId: null,
+            routed: { choice: { provider: "fm-mock", id: model }, bucket: "high", rule: "R8" },
+          };
+        },
+      },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "footer",
+      title: "Fix the ledger footer",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const starting = supervisor.startQueuedNow(task.id);
+    await comparing;
+    tasks.updateFields(task.id, { model: "mock-2" }, "firstmate");
+    release();
+    await starting;
+    // Compared again on the model named, and started on it: the captain's
+    // Start is not turned into a wait for room.
+    expect(asked.map((shape) => shape.override_model_id)).toEqual([undefined, "mock-2"]);
+    expect(sessionSpecs[0]?.model).toEqual({ provider: "fm-mock", id: "mock-2" });
+    expect(tasks.get(task.id)?.status).toBe("active");
+    expect(
+      events.some((event) => event.type === "firstmate_note" && event.taskId === task.id),
+    ).toBe(false);
+  });
+
+  it("routes on a basis the captain named while queued classification is in flight, asking the classifier once (INF-83)", async () => {
+    let release:
+      | ((value: { kind: "implement"; source: string; version: string }) => void)
+      | undefined;
+    const verdict = new Promise<{ kind: "implement"; source: string; version: string }>(
+      (resolve) => {
+        release = resolve;
+      },
+    );
+    const asked: KindInput[] = [];
+    const routed: WorkShape[] = [];
+    const { supervisor, tasks } = setup(fakeCrewmate(), {
+      classifier: {
+        classify: async (input) => {
+          asked.push(input);
+          return verdict;
+        },
+      },
+      routedModel: { provider: "fm-mock", id: "mock-1" },
+      onRouteDecide: ({ shape }) => routed.push(shape),
+    });
+    // A basis is verified by its report; it waits for the captain's word, so nothing starts it.
+    const spec = tasks.create({
+      id: "spec-1",
+      title: "Accepted spec",
+      prompt: "p",
+      repoId: null,
+      startPolicy: "on-request",
+    });
+    tasks.recordReport(spec.id, { text: "Replacement-only shell-height interpolation." });
+    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const starting = supervisor.startQueuedNow(planned.key);
+    tasks.updateFields(planned.id, { basis: spec.key }, "firstmate");
+    release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
+    await starting;
+    await tick();
+    // The classifier is consulted once per row (docs/kind-classifier.md), and
+    // its verdict is stamped beside the basis, which the router reads
+    // verified: implement on a verified basis is grounded (R4).
+    expect(asked).toHaveLength(1);
+    expect(routed).toEqual([
+      expect.objectContaining({ kind: "implement", basis: spec.key, basis_verified: true }),
+    ]);
+    expect(tasks.get(planned.id)?.shape).toMatchObject({ kind: "implement", basis: spec.key });
+  });
+
   it("delivers historical full reports and uncut card amendments, then pins the served content", async () => {
     const crew = fakeCrewmate();
     const { supervisor, tasks, specs, repos, cardStore } = setup(crew);

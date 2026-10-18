@@ -10,10 +10,13 @@ import { scratchDir } from "./scratchDirs";
  * the Anthropic dialect (`startStubApi`), offering more output than any
  * role's cap. Its catalog refresh asks the same stub, so nothing reaches the
  * network, and it resolves once that refresh has settled. No sign-in is read.
+ * `others` are further models of the same provider it serves, for a world
+ * where routing chooses between them.
  */
 export async function piStubRuntime(
   baseUrl: string,
   model: { provider: string; id: string },
+  others: readonly string[] = [],
 ): Promise<ModelRuntime> {
   const store = join(scratchDir("infinitary-pi-stub-store-"), "store");
   mkdirSync(store, { recursive: true, mode: 0o700 });
@@ -27,7 +30,12 @@ export async function piStubRuntime(
           baseUrl,
           api: "anthropic-messages",
           apiKey: "stub-key",
-          models: [{ id: model.id, name: "Stub", input: ["text"], maxTokens: 32_000 }],
+          models: [model.id, ...others].map((id) => ({
+            id,
+            name: "Stub",
+            input: ["text"],
+            maxTokens: 32_000,
+          })),
         },
       },
     }),

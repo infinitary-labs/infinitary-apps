@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { type CrewColors, crewmateLight, drawCrewmate, solidFor, TIER_SOLIDS } from "./crewmate";
+import {
+  type CrewColors,
+  crewmateLight,
+  drawCrewmate,
+  drawDependencyLink,
+  solidFor,
+  TIER_SOLIDS,
+} from "./crewmate";
 import type { CrewmateFrame } from "./orbit";
 
 const colors: CrewColors = { accent: [127, 220, 255], hot: [255, 162, 87], boost: 1 };
@@ -113,6 +120,36 @@ describe("drawCrewmate's speed streak", () => {
     const rec = recordingContext();
     drawCrewmate(rec.ctx, { ...settled, streak, unfold: 0 }, 0, 0, colors, 5_000);
     expect(rec.strokes).toEqual([]);
+  });
+});
+
+// Captain (INF-304): "the arrows that mark a blocked or review relationshop should be
+// present at all times to make it more clear there's a relationship".
+describe("the arrow from a waiting crewmate or a reviewer", () => {
+  /** The arrow's line and head as drawn from (0, 0) to (`apart`, 0). */
+  const arrow = (apart: number) => {
+    const rec = recordingContext();
+    drawDependencyLink(rec.ctx, { x: 0, y: 0 }, { x: apart, y: 0 }, 0, 0, colors, false);
+    const points = rec.log.map((line) => line.match(/^[ML](-?[\d.]+),(-?[\d.]+)$/));
+    const xs = points.flatMap((m) => (m ? [Number(m[1])] : []));
+    return { strokes: rec.strokes.length, start: xs[0] ?? Number.NaN, tip: xs[1] ?? Number.NaN };
+  };
+
+  it("stays off both glyphs when they are far apart", () => {
+    const { strokes, start, tip } = arrow(120);
+    expect(strokes).toBe(2);
+    expect(start).toBeGreaterThan(settled.size / 2);
+    expect(tip).toBeLessThan(120 - settled.size / 2);
+  });
+
+  it("is drawn however close the two crewmates come on screen, pointing at the one waited on", () => {
+    for (const apart of [44, 30, 18, 8, 3]) {
+      const { strokes, start, tip } = arrow(apart);
+      expect(strokes, `${apart} px apart`).toBe(2);
+      expect(start, `${apart} px apart`).toBeGreaterThanOrEqual(0);
+      expect(tip, `${apart} px apart`).toBeGreaterThan(start);
+      expect(tip, `${apart} px apart`).toBeLessThanOrEqual(apart);
+    }
   });
 });
 

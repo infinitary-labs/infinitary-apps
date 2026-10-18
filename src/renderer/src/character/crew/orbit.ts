@@ -256,7 +256,7 @@ export type PacketFrame = {
   alpha: number;
 };
 
-/** A tether from a waiting crewmate to the crewmate it waits on. */
+/** An arrow from a waiting crewmate or a reviewer to the crewmate it waits on or reviews. */
 export type DependencyLink = { fromId: string; toId: string };
 
 /**
@@ -291,7 +291,7 @@ export type OrbitFrame = {
   count: number;
   working: number;
   idle: number;
-  /** Tethers for waits that stay on their own slots. Absent when there are none. */
+  /** An arrow for every wait and review on this orbit, circling or on a slot. Empty when there are none. */
   links: DependencyLink[];
 };
 
@@ -1115,8 +1115,9 @@ export class CrewOrbit {
    * The recorded waits plus each live review: a reviewer circles its builder
    * like a satellite does. A real dependency keeps its place; the reviewers
    * and satellites of one builder share up to three seats, and more than that
-   * (or a builder that is itself a satellite) leaves reviewers on their slots
-   * with a tether. A builder or reviewer off this orbit draws nothing.
+   * (or a builder that is itself a satellite) leaves reviewers on their slots.
+   * Every reviewer keeps its arrow to the builder, wherever it is drawn. A
+   * builder or reviewer off this orbit draws nothing.
    */
   private withReviewCues(): Map<string, CenterCue> {
     const cues = new Map(this.dependencies);
@@ -1156,7 +1157,7 @@ export class CrewOrbit {
           blockerId: builder,
           index: seated.length + i,
           count: satellite ? count : 1,
-          arrows: satellite ? [] : [builder],
+          arrows: [builder],
         });
       });
     }
@@ -1165,8 +1166,8 @@ export class CrewOrbit {
 
   /**
    * Move eligible idle waits onto their blocker's perpendicular circle, and
-   * name the tethers for everyone who keeps a slot. The angle and radius
-   * springs are untouched, so clearing a wait glides the offset home.
+   * name the arrow of every wait and review, circling or on a slot. The angle
+   * and radius springs are untouched, so clearing a wait glides the offset home.
    */
   private applyCompanions(
     frames: CrewmateFrame[],
@@ -1212,14 +1213,11 @@ export class CrewOrbit {
         );
         return [{ id, x: origin.x + offset[0], y: origin.y + offset[1], z: offset[2] }];
       });
-      const others = [...scenes.entries()]
-        .filter(([id]) => id !== blockerId && !ids.includes(id))
-        .map(([, point]) => point);
-      const fits =
-        placed.length === ids.length && placed.every((point) => satelliteFits(point, others));
+      const fits = placed.length === ids.length && placed.every((point) => satelliteFits(point));
       for (const id of ids) {
         const point = placed.find((item) => item.id === id);
         const slot = scenes.get(id);
+        // Circling or on its slot, the companion keeps its arrow to the blocker.
         wanted.set(
           id,
           fits && point && slot
@@ -1227,7 +1225,7 @@ export class CrewOrbit {
                 x: point.x - slot.x,
                 y: point.y - slot.y,
                 z: point.z - (slot.z ?? 0),
-                arrows: [],
+                arrows: [blockerId],
               }
             : { x: 0, y: 0, z: 0, arrows: [blockerId] },
         );

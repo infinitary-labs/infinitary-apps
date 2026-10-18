@@ -92,7 +92,10 @@ Waiting on another crewmate (captain's FI3-1680 choice): an idle dependency wait
 The circle is 64 scene pixels out, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 Its plane is spanned by the blocker's radial spoke and the main plane's normal, so the two planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions take that circle.
-A chain, a second blocker, a larger group, a crowd, or a companion that would leave the scene stays on its own slot and draws a quiet tether instead, arrow at the blocker.
+A chain, a second blocker, a larger group, or a companion that would leave the scene stays on its own slot instead.
+Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).
+As two related glyphs close in on screen the arrow's clearance gives way, so a short arrow still shows.
+Crew cross and pass close to one another freely; nothing moves a crewmate aside to keep it clear of another.
 A missing or remote blocker is a named link in the summary, never an invented crewmate and never a move.
 Continuing, paused and unknown work keep their slots, colors, solids, labels and review cues.
 Clearing the wait removes the cue and the offset glides home on the existing springs.

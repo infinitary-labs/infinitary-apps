@@ -1,3 +1,4 @@
+import { centerCues, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER, outerPlaneRadius } from "./computers";
@@ -282,7 +283,7 @@ describe("computer constellations", () => {
       expect(after.get("r1")).toBe(plain.get("r1"));
     });
 
-    it("shares seats with a waiting crewmate without tethers", () => {
+    it("shares seats with a waiting crewmate, each with its arrow to the builder", () => {
       const model = stage({ builder: "a", waiter: "a", review: "a" }, [["review", "builder"]]);
       model.setDependencies([
         {
@@ -291,27 +292,69 @@ describe("computer constellations", () => {
           blockerId: "builder",
           index: 0,
           count: 1,
-          arrows: [],
+          arrows: ["builder"],
         },
       ]);
       const plain = xs(stage({ builder: "a", waiter: "a", review: "a" }, []));
       const frame = model.update(0, true);
-      expect(frame.links).toEqual([]);
+      expect(frame.links.map((l) => `${l.fromId}>${l.toId}`).sort()).toEqual([
+        "review>builder",
+        "waiter>builder",
+      ]);
       for (const id of ["waiter", "review"])
         expect(frame.crew.find((c) => c.id === id)?.x).not.toBe(plain.get(id));
     });
 
-    it("never crowds an unrelated crewmate: it circles clear or keeps its slot with a tether", () => {
-      const placements: Record<string, string | null> = { builder: null, review: null };
-      for (let i = 0; i < 46; i++) placements[`other${i}`] = null;
-      const frame = stage(placements, [["review", "builder"]]).update(0, true);
-      const mine = frame.crew.find((c) => c.id === "review");
-      const clear = frame.crew
-        .filter((c) => c.id !== "review" && c.id !== "builder")
-        .every((c) => Math.hypot(c.x - (mine?.x ?? 0), c.y - (mine?.y ?? 0)) >= 38);
-      expect(clear || frame.links.some((l) => l.fromId === "review" && l.toId === "builder")).toBe(
-        true,
+    // Captain (INF-304): crewmates moved apart when they came too close, "this is too
+    // distracting, so i think we should just not care about collision", and the arrows
+    // "should be present at all times".
+    it("keeps circling past unrelated crewmates, its arrow drawn in every frame", () => {
+      const ids = ["builder", "waiter", "other0", "other1", "author", "review"];
+      for (let i = 2; i < 12; i++) ids.push(`other${i}`);
+      const model = new ComputerOrbits(0);
+      model.configure([device("a"), device("b")]);
+      for (const id of ids) seed(model, id, null);
+      model.setReview("review", "author");
+      model.setDependencies(
+        centerCues(
+          ids.map((id) => ({
+            id,
+            key: id,
+            blockedBy: id === "waiter" ? ["builder"] : [],
+            deviceId: null,
+            idleDependency: id === "waiter",
+            crewed: true,
+          })),
+        ),
       );
+      model.settleBootRoster(0);
+      const pairs = [
+        ["waiter", "builder"],
+        ["review", "author"],
+      ] as const;
+      let closest = Number.POSITIVE_INFINITY;
+      // A minute of stage time, frame by frame.
+      for (let now = 0; now <= 60_000; now += 16) {
+        const frame = model.update(now);
+        const at = (id: string) => required(frame.crew.find((c) => c.id === id));
+        for (const [from, to] of pairs) {
+          expect(frame.links).toContainEqual({ fromId: from, toId: to });
+          const mine = at(from);
+          // On its circle about the one it waits on or reviews, never back on its slot.
+          expect(Math.hypot(mine.x - at(to).x, mine.y - at(to).y)).toBeLessThan(
+            DEPENDENCY_VISUAL.radiusPx * 1.25,
+          );
+          for (const other of frame.crew) {
+            if (other.id.startsWith("other"))
+              closest = Math.min(
+                closest,
+                Math.hypot(other.x - mine.x, other.y - mine.y) / mine.size,
+              );
+          }
+        }
+      }
+      // The minute did bring an unrelated crewmate within a glyph of a circling one.
+      expect(closest).toBeLessThan(1);
     });
   });
 });

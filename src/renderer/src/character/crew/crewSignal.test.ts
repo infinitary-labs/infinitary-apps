@@ -305,7 +305,8 @@ describe("crew orbit wiring", () => {
       );
       const frame = m.update(0, true);
       const slots = plain.update(0, true).crew;
-      expect(frame.links).toEqual([]);
+      // One arrow, the reviewer's to its builder: the builder draws none back (INF-304).
+      expect(frame.links).toEqual([{ fromId: "reviewer", toId: "builder" }]);
       expect(frame.crew.find((c) => c.id === "builder")?.x).toBe(
         slots.find((c) => c.id === "builder")?.x,
       );
@@ -375,28 +376,35 @@ describe("crew orbit wiring", () => {
       expect(m.update(0, true).crew).toEqual(plain.update(0, true).crew);
     });
 
-    it("shares three seats and falls back to tethers beyond them", () => {
-      const m = adaptive();
+    it("shares three seats and keeps reviewers beyond them on their slots, each with its arrow", () => {
       const ids = ["r1", "r2", "r3", "r4"];
-      seedCrew(
-        m,
-        [
-          view({ id: "builder", activity: "idle" }),
-          ...ids.map((id) => view({ id, reviewOf: "builder", activity: "idle" })),
-        ],
-        0,
-      );
-      expect(m.update(0, true).links).toHaveLength(4);
-      const three = adaptive();
-      seedCrew(
-        three,
-        [
-          view({ id: "builder", activity: "idle" }),
-          ...ids.slice(0, 3).map((id) => view({ id, reviewOf: "builder", activity: "idle" })),
-        ],
-        0,
-      );
-      expect(three.update(0, true).links).toEqual([]);
+      const stage = (reviewers: string[], reviewing: boolean) => {
+        const m = adaptive();
+        seedCrew(
+          m,
+          [
+            view({ id: "builder", activity: "idle" }),
+            ...reviewers.map((id) =>
+              view({ id, reviewOf: reviewing ? "builder" : undefined, activity: "idle" }),
+            ),
+          ],
+          0,
+        );
+        return m.update(0, true);
+      };
+      const arrows = (frame: OrbitFrame) =>
+        frame.links.map((link) => `${link.fromId}>${link.toId}`).sort();
+      const xOf = (frame: OrbitFrame, id: string) => frame.crew.find((c) => c.id === id)?.x;
+      // Four: every reviewer keeps its slot, and each still points at the builder (INF-304).
+      const four = stage(ids, true);
+      const fourSlots = stage(ids, false);
+      expect(arrows(four)).toEqual(ids.map((id) => `${id}>builder`));
+      for (const id of ids) expect(xOf(four, id)).toBe(xOf(fourSlots, id));
+      // Three: all circle the builder, with the same arrows.
+      const three = stage(ids.slice(0, 3), true);
+      const threeSlots = stage(ids.slice(0, 3), false);
+      expect(arrows(three)).toEqual(ids.slice(0, 3).map((id) => `${id}>builder`));
+      for (const id of ids.slice(0, 3)) expect(xOf(three, id)).not.toBe(xOf(threeSlots, id));
     });
   });
 

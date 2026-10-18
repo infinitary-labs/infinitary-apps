@@ -5,8 +5,9 @@
  *
  * Satellites are only an idle dependency wait with one visible crewmate on
  * the same computer, and at most three of them. Everything else that still
- * has both crewmates keeps its slot and uses a tether. A missing or remote
- * blocker is not a cue here: the summary names that key, and no crewmate is
+ * has both crewmates keeps its slot and uses a tether. Either way an arrow
+ * points at the blocker at all times (INF-304). A missing or remote blocker
+ * is not a cue here: the summary names that key, and no crewmate is
  * invented.
  */
 
@@ -39,7 +40,7 @@ export type CenterCue = {
   blockerId: string;
   index: number;
   count: number;
-  /** Blockers to connect with a tether. Empty while the waiter is a satellite. */
+  /** Blockers its arrows point at, drawn whether the waiter circles or keeps its slot. */
   arrows: string[];
 };
 
@@ -90,7 +91,7 @@ export function centerCues(nodes: readonly CenterNode[]): CenterCue[] {
         blockerId,
         index,
         count: waiters.length,
-        arrows: satellite ? [] : [blockerId],
+        arrows: [blockerId],
       });
     });
   }

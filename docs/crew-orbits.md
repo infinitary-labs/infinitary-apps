@@ -123,23 +123,25 @@ All clusters and their controls hide with the character frame under cards.
 A host-commissioned review task identifies the builder through its fixed parent edge and its `shape.kind = review`.
 The task board and `task_changed` stream carry that typed `reviewOf` id; an ordinary child cannot trigger the cue.
 While the review task remains active (including an idle reviewer awaiting a re-review), the reviewer crewmate itself circles the builder it reviews, on the same circle a waiting crewmate uses ("Waiting on another crewmate" below): 64 scene pixels, 24 degrees per second, spanned by the builder's radial spoke and its main plane's normal.
-Nothing else is drawn around the builder; the review has no electrons.
+Besides the reviewer's own arrow (below), nothing else is drawn around the builder; the review has no electrons.
 The reviewer keeps its own solid, label and working/idle color, and its original slot stays reserved.
 The circle ends as soon as the review closes or the builder departs.
 Closing the review closes the reviewer's task, so the reviewer takes its existing departure.
 Its offset eases out on the springs over the fall, so it leaves from the seat it was drawn at and glides to its normal path; reduced motion settles at once.
 Restart seeds the same relationship from the live board, and two reviews of one builder do not cancel each other when one ends: the other keeps circling.
 `CrewOrbit.withReviewCues` turns each live review into a satellite cue beside the recorded waits.
-The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits or tethers to its own reviewer (the Tasks list and its gutter still show the wait).
+The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits its own reviewer or points an arrow at it (the Tasks list and its gutter still show the wait).
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
-More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a circle that would crowd or leave the scene keeps the reviewer on its slot with a tether to the builder.
+More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a circle that would leave the scene keeps the reviewer on its slot.
+Circling or on its slot, the reviewer draws a quiet arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below).
+Like a waiting crewmate, it keeps circling when other crew pass close to it.
 A reviewer and builder on different computers stay where they are and draw no line, because each computer's orbit holds only its own crew.
 The reviewer's summary names the relation in every placement: a Reviewing row with the builder's key, opening its record, beside any Blocked by row.
 Packets and a steer's send-off aim at where the reviewer is drawn, circle included.
 The circle is always 64 scene pixels, even when it crosses the first mate; the captain chose that overlap, so no clearance rule keeps it off the first mate (INF-51).
 Reduced motion paints one settled frame.
 
-`crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the tether fallback, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer, two reviews, mixed companions and a crowded stage.
+`crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the slot fallback with every reviewer's arrow, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer, two reviews, mixed companions with their arrows, and a waiting crewmate and a reviewer that keep their circles and their arrows through a minute of other crew passing close.
 
 ## Tier solids
 
@@ -163,7 +165,10 @@ An idle dependency wait with one visible blocker on the same computer orbits tha
 The circle is 64 scene pixels from the blocker, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 It is spanned by the blocker's radial spoke and the main plane's normal, so the planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions share that circle.
-A chain, more than one blocker, a larger group, a crowd against unrelated crew, or a companion that would leave the scene keeps its slot and draws a tether, arrow at the blocker.
+A chain, more than one blocker, a larger group, or a companion that would leave the scene keeps its slot instead.
+Circling or on its slot, a waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker (captain, INF-304: the arrows "should be present at all times to make it more clear there's a relationship").
+The arrow keeps clear of both glyphs; as the two close in on screen, such as when the circle passes in front of the blocker, that clearance gives way so a short arrow still shows (`drawDependencyLink`).
+Crew pass close to one another and cross freely: nothing moves a circling crewmate back to its slot because another crewmate comes near (captain, INF-304: "we should just not care about collision").
 A missing or remote blocker is named in the summary.
 No crewmate is invented, and no one is moved onto another computer.
 Continuing, paused and unknown work keep their slots.

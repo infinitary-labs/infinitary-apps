@@ -371,7 +371,18 @@ export function drawCrewmate(
   ctx.globalAlpha = 1;
 }
 
-/** A tether from a waiting crewmate to the one it waits on. The arrowhead sits at the blocker. */
+/**
+ * The arrow's clearance from the glyph it leaves and the glyph it points at,
+ * and the least line it keeps when the two crowd together on screen.
+ */
+const LINK = { startPx: 18, endPx: 21, minLinePx: 6 } as const;
+
+/**
+ * An arrow from a waiting crewmate or a reviewer to the crewmate it waits on
+ * or reviews. The arrowhead sits at the blocker. It is drawn at every
+ * distance (INF-304): as the two glyphs close in on screen, the clearances
+ * give way so the line never shrinks below `LINK.minLinePx`.
+ */
 export function drawDependencyLink(
   ctx: CanvasRenderingContext2D,
   from: { x: number; y: number },
@@ -388,13 +399,15 @@ export function drawDependencyLink(
   let dx = bx - ax;
   let dy = by - ay;
   const length = Math.hypot(dx, dy);
-  if (length < 42) return;
+  // Two glyphs drawn on one spot leave the arrow no direction to point.
+  if (length < 1) return;
   dx /= length;
   dy /= length;
-  const startX = ax + dx * 18;
-  const startY = ay + dy * 18;
-  const endX = bx - dx * 21;
-  const endY = by - dy * 21;
+  const room = Math.min(1, Math.max(0, length - LINK.minLinePx) / (LINK.startPx + LINK.endPx));
+  const startX = ax + dx * LINK.startPx * room;
+  const startY = ay + dy * LINK.startPx * room;
+  const endX = bx - dx * LINK.endPx * room;
+  const endY = by - dy * LINK.endPx * room;
   const color = lit ? colors.accent : (colors.quiet ?? colors.accent);
   ctx.save();
   ctx.strokeStyle = rgba(color, lit ? 0.7 : 0.28);

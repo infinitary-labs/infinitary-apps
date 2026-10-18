@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import type { MicAccess } from "@shared/voice";
 import { type LaunchedApp, launchApp } from "./launch";
+import { probeMicrophone } from "./micPreflight";
 
 /**
  * Microphone access is a line under the input, never a card
@@ -197,4 +198,14 @@ test("Don't Allow leaves a line that leads to System Settings, and access turned
   } finally {
     await launched.close();
   }
+});
+
+// INF-420: the run's own microphone check (tests/e2e/micPreflight.ts) asked
+// for __dirname, which Playwright's loader does not define, and its probe's
+// data: page had no navigator.mediaDevices, so in a virtual Mac every run
+// failed before its first journey, granted or not. It runs here under the
+// same loader as the global setup, on a Mac whose runner may open the
+// microphone.
+test("the run's microphone check opens the fake microphone", async () => {
+  expect(await probeMicrophone()).toBe("opened");
 });

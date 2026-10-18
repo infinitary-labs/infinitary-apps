@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "virtual-mac-image",
+      "reason": "Internal: the project builds its virtual Mac test runner's image from a script, with microphone access for the runner and the Claude Code the Mac mini runs, and runs journeys in a fresh copy of it."
+    }
+  ]
+}

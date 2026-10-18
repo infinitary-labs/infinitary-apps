@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import electronPath from "electron";
 
 /**
@@ -34,7 +34,9 @@ export function inVirtualMac(): boolean {
 
 export function probeMicrophone(): Promise<MicProbe> {
   return new Promise((resolve) => {
-    const child = spawn(String(electronPath), [join(__dirname, "micProbe.cjs")], {
+    // Playwright loads this as an ES module, where there is no __dirname.
+    const probe = fileURLToPath(new URL("./micProbe.cjs", import.meta.url));
+    const child = spawn(String(electronPath), [probe], {
       stdio: "ignore",
     });
     const timer = setTimeout(() => {

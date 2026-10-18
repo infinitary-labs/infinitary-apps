@@ -401,17 +401,25 @@ The recipe:
 ## A virtual Mac as a runner
 
 A virtual Mac runs the journeys like the Mac mini does only when its image holds two things the app and macOS look for there.
+`scripts/virtual-mac/image.sh [name]` builds that image with tart (`brew install cirruslabs/cli/tart`, or name it with `TART`), under tart's own `TART_HOME`, `~/.tart` by default.
+It clones Cirrus Labs' `macos-tahoe-xcode:26.4` with 6 CPUs and 16 GB as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
+Each part checks itself as the image is built, and the image is renamed into place only once all of them pass, so a fix lands in the script and never in an image by hand.
+`scripts/virtual-mac/run.sh <files>` runs journeys in a fresh clone of the image the way `journeys.yml` runs them on the Mac mini, on the working copy's committed version, keeps the run's log and `test-results/runs/` in `test-results/virtual-mac/`, and deletes the clone.
 
 ### The runner's microphone access
 
 The journeys open Chromium's fake microphone, but coreaudiod still asks macOS for microphone access on behalf of the responsible process, which in a virtual Mac is the lane's guest agent, not the app.
 With no grant, macOS raises a prompt nobody answers and `getUserMedia` never settles, so `mic-access.spec.ts` and `voice-prompt-focus.spec.ts` fail after their waits.
 The image grants `kTCCServiceMicrophone` to that agent: sign the agent ad hoc (`codesign -f -s -`), because a Homebrew build is only linker-signed and a row for it fails its code requirement, then add a row carrying its cdhash requirement.
+The running agent keeps its old signature until it restarts, so the grant holds from the image's next start, which is every clone's first.
+`micProbe.cjs` opens the microphone from a file page, because a `data:` page is not a secure context and has no `navigator.mediaDevices`.
 `tests/e2e/globalSetup.ts` checks this before any test starts (`tests/e2e/micPreflight.ts`): in a virtual Mac, or with `INFINITARY_E2E_MIC_PREFLIGHT=1`, it opens the fake microphone once and fails the run with the fix when it does not open.
 
 ### The Claude Code the app finds first
 
-`knownClaudeHomes` looks in `/opt/homebrew/bin` before any other folder, so the image installs Claude Code there (`/opt/homebrew/bin/npm install -g --force @anthropic-ai/claude-code@<version>`); a newer copy in `~/node/bin` is never read.
+`knownClaudeHomes` looks in `~/.local/bin` and `~/.claude/local`, which the base image leaves empty, then in `/opt/homebrew/bin`, all before the search path.
+So the image installs Claude Code there with Homebrew's npm (`/opt/homebrew/bin/npm install -g --force --prefix /opt/homebrew @anthropic-ai/claude-code@<version>`); a copy Node's own npm puts in `~/node/bin` is never read.
+The version is the one the Mac that builds the image finds first, or `CLAUDE_CODE_VERSION`, so the lane runs the client the Mac mini's own journeys run.
 `claude-seat-instructions.spec.ts` fails with a first mate that never answers when that copy is old.
 
 ## Voice start and release budgets

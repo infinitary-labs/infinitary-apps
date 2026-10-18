@@ -220,3 +220,6 @@ The host owns confirmation effects and observers (`docs/required-actions.md`); o
 Protocol 6.2 adds optional `lane` to the placed Knowledge write request, distinguishing captain-stated personal context from saved references without granting different access.
 Every crewmate has equal factual access, including no-project tasks; saved task shapes still read legacy `knowledge_access` as inert metadata.
 A work computer on an older supported minor can still save references through the same tools; the home defaults its omitted lane to reference.
+
+Protocol 8.14 adds an optional `download` observation to a Remote Login copy: bytes received and, only when the release states it, a total.
+The existing copy states stay unchanged; older views ignore the added observation.

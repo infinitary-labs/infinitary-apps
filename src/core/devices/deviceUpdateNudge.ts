@@ -88,10 +88,17 @@ export class DeviceUpdateNudge {
       remoteLogin: device.remoteLogin,
       other,
       homeApp: this.options.homeApp(),
+      system: device.system,
       refusal: this.refusals.get(deviceId),
     };
     const gap = deviceUpdateGap(facts);
-    const signature = JSON.stringify([gap, other.takesWork, other.updateBy, facts.refusal ?? []]);
+    const signature = JSON.stringify([
+      gap,
+      other.takesWork,
+      other.updateBy,
+      facts.system,
+      facts.refusal ?? [],
+    ]);
     if (!forced && (this.raised.get(deviceId) === signature || this.remembered(id, gap, deviceId)))
       return;
     const first = this.gaps.get(deviceId) !== gap;

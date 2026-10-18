@@ -30,8 +30,9 @@ if [[ "$MODE_GATEKEEPER" -eq 1 ]]; then
   MODE_SIGNED=1
 fi
 
-EXPECTED_BUNDLE_ID="com.getinfinitary.infinitary"
-EXPECTED_TEAM_ID="9T2J7MNUP9"
+RELEASE_IDENTITY="$(dirname "$0")/../packaging/release-identity.json"
+EXPECTED_BUNDLE_ID="$(plutil -extract bundleId raw -o - "$RELEASE_IDENTITY")"
+EXPECTED_TEAM_ID="$(plutil -extract teamId raw -o - "$RELEASE_IDENTITY")"
 EXPECTED_EXECUTABLE="Infinitary"
 # The only entitlements any executable may carry (docs/architecture.md
 # section 10): JIT for V8 and microphone for hold-to-talk.

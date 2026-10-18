@@ -341,7 +341,8 @@ This Mac counts each piece of the archive as it hands it to that Mac's SSH sessi
 The count is said at its first bytes, then at most once a second while it moves, and once more at its end with all it sent: "Sending Infinitary to Mac mini: 42.3 MB sent.", in the size words a file's chip uses (`fileSizeWords`).
 Each count is one run of feed lines (`feedRunSchema`, `src/shared/events.ts`): it rewrites the line before it in place while that line is still Activity's newest, the same way the captain's settled runs do (`docs/orchestrator-contract.md`, "Settled runs"), and a count after any other line starts a line of its own.
 A copy that stops is refused as before, with its last count left in the feed above the two lines.
-Updating Infinitary there sends the same copy and says no count.
+Updating a Mac by its address counts a send the same way, or shows its own download count (below, "Downloading on a Mac reached by its address").
+After either transfer, the row says "Starting Infinitary on Mac mini…" while the update starts.
 
 ### Infinitary for another system
 
@@ -603,6 +604,34 @@ Devices asks for its refusals as data (`answerRefusals`, also on `inf:devices:ch
 A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`deviceConnected`: connected over SSH, in reach, or in reach on another version), after the row had said it was not.
 For Change address the row has to reconnect at the address that was tried.
 Any other refusal stays until the captain's next action.
+
+### Downloading on a Mac reached by its address
+
+Add and Update first look up this computer's version in the published builds, without downloading its zip here.
+This computer sends fixed shell instructions, the address and the published SHA-256 over its existing SSH path; an older Mac needs no new helper to read them.
+That Mac downloads the universal zip itself over HTTPS, checks its checksum and unpacks it in a private temporary folder.
+Before starting it, `codesign --verify --deep --strict -R` verifies its Developer ID signature against the release's Team ID and app identifier in `packaging/release-identity.json`, also read by the release gate.
+A bad or wrong-publisher signature follows the same immediate counted-send fallback as a checksum mismatch.
+A Mac reached by its address but proven to be this Mac uses the local copy as before, without even looking up a public download.
+Each second it reports received bytes and the final release response's Content-Length, if present, never a redirect's size.
+Devices and one rewritten feed line say "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" without a known total.
+If fetching, checking or unpacking fails, this computer immediately sends its own copy, explains the fallback and counts bytes sent for Add and Update.
+The row clears the failed download count and returns to preparing while this computer gets the fallback build, before the sent count begins.
+A development, unpublished or offline version sends its copy directly.
+Two minutes without byte movement stops a Mac transfer; heartbeats never renew that deadline, and moving transfers have no thirty-minute ceiling.
+The idle clock ends when the transfer finishes, before signature checking, unpacking and start work.
+Preparation, the home's own fallback fetch, and silent start/join work use the existing thirty-minute backstop instead.
+The public address/checksum lookup has a separate five-second deadline, after which a local bundle can still be sent.
+The first empty observation stays silent until either bytes or a release-stated total arrives.
+A stalled download falls back to sending; a stalled send names inactivity instead of reporting that the address could not be reached.
+For Update, a downloaded app enters its start phase when the home acknowledges it; a sent copy enters it only when its script prints the execution marker after checks and unpacking.
+A lost outcome after that boundary says it may already have updated and asks the person to check Devices, never claiming nothing changed or inviting a second update while it may still run.
+An Add that never claimed its invite remains a definite setup or SSH failure; its unclaimed invite is closed and its warning never describes an update.
+Closing a session stops the packing process and the downloader, and removes partial files before returning.
+For Update from a direct download, the remote instructions wait for the home's acknowledgement after checking and unpacking, before starting `work update`.
+The home commits to that start before sending the acknowledgement, so a lost reply cannot trigger a second update.
+Only download/check/unpack failure retries; once that start is acknowledged, its result is never retried as a fetch failure.
+Linux and the existing no-argument connection update order keep their current delivery path.
 
 ### Updating over the connection
 
@@ -870,9 +899,12 @@ Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and
 | `device-invite { name?, how: "command" }` | "Add your Mac mini by a command": "Make the command here, then run it once in Terminal on your Mac mini." and "It works once, for ten minutes. Only your click can make it, so I never see it." | Make the command, beside Not now |
 | `device-invite { how: "another-user" }` | "Run work as another user on this computer": "Its work then runs as that user, with sign-ins of its own, and cannot control your first mate.", "That user, like every user on this computer, can read files in your home folder, outside private folders such as Desktop and Documents." and "Make the user in System Settings first. Then make the command here, and run it once as that user." | Make the command, beside Not now |
 | `device-invite { how: "address", address }` | "Add the computer at sam@mini.local": "I set it up over Remote Login, with your own SSH key. Nothing needs to be open on it." and "Only your click can add a computer, so I ask first." | Add it, beside Not now |
-| `device-update { deviceId }` | "Update Infinitary on Mac mini", for a Mac added by its address: "I copy this computer's Infinitary there over Remote Login, with your own SSH key, and start it again." and "Its running work stops for a moment and goes on after. Only your click can update it."; for another computer in reach on another version "I send this computer's Infinitary to it over your network, and it starts again." (another user on this Mac: "I start it again on this computer's own Infinitary.") with the same second line | Update it, beside Not now |
+| `device-update { deviceId }` | "Update Infinitary on Mac mini", for a Mac added by its address: "It downloads this computer's version of Infinitary, or this computer sends its own copy, with a count. Remote Login uses your own SSH key." and "Its running work stops for a moment and goes on after. Only your click can update it."; for another computer in reach on another version "I send this computer's Infinitary to it over your network, and it starts again." (another user on this Mac: "I start it again on this computer's own Infinitary.") with the same second line | Update it, beside Not now |
 | `device-update { deviceId }`, too old to update from here | "Update Infinitary on Mac mini": "Its version of Infinitary is too old to update from here, so it needs a new command." and "Make the command here, then run it once in Terminal on Mac mini." (or "as Builder") | Make the command, beside Not now |
 | `device-remove { deviceId }` | "Remove MacBook Air?", named from the list itself: "It is cut off at once." and "To come back, it needs a new link. Only your click can remove a computer."; for a computer that runs work "Its task on website stops, and its unmerged work comes here first." and "Then I remove what I set up there, with its sign-ins. Only your click can remove it." | a danger Remove Mac mini, beside Keep it |
+
+For another user on this Mac added by its address, the update card says "This computer copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again."
+A user added by a command instead starts again on this computer's own installed app, as before.
 
 The button's effect is `open` on `devices` with `make` (`link`, `command` or `user-command`), `add: <address>`, `update: <id>` or `remove: <id>`; the captain's click opens Settings -> Devices, which makes the link or the command, adds the Mac or updates Infinitary there, or removes the device, on arrival.
 On a Mac controlling this one, the same button sends nothing and says to do it on this Mac (`docs/view.md`, "Card buttons that open Settings").

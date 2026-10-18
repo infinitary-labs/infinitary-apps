@@ -113,6 +113,13 @@ export class PublishedBuilds {
     return getting;
   }
 
+  /** Looks up the published address and checksum without fetching the app here. */
+  async downloadFor(want: PublishedWant): Promise<{ url: string; sha256: string } | null> {
+    const asset = publishedAssetName(this.options.version, want);
+    if (!asset || !publicTagFor(this.options.version)) return null;
+    return this.publishedDownload(want, asset, AbortSignal.timeout(5_000));
+  }
+
   private async fetchChecked(want: PublishedWant): Promise<PublishedBuild> {
     const { version } = this.options;
     const asset = publishedAssetName(version, want);
@@ -157,9 +164,10 @@ export class PublishedBuilds {
   private async publishedDownload(
     want: PublishedWant,
     asset: string,
+    signal?: AbortSignal,
   ): Promise<{ url: string; sha256: string } | null> {
     const { version } = this.options;
-    const builds = await this.readJson(this.options.buildsUrl ?? BUILDS_URL);
+    const builds = await this.readJson(this.options.buildsUrl ?? BUILDS_URL, signal);
     const parsed = builds === null ? null : parseBuilds(builds);
     for (const entry of [parsed?.channels.stable, parsed?.channels.alpha]) {
       if (entry?.version !== version) continue;
@@ -167,7 +175,7 @@ export class PublishedBuilds {
       if (download) return download;
     }
     const url = buildDownloadUrl(version, asset);
-    const sidecar = await this.readText(`${url}.sha256`);
+    const sidecar = await this.readText(`${url}.sha256`, signal);
     if (sidecar === null) return null;
     const sha256 = /^([0-9a-f]{64})\b/.exec(sidecar.trim())?.[1];
     if (!sha256 || !SHA256.test(sha256))
@@ -179,8 +187,8 @@ export class PublishedBuilds {
   }
 
   /** The tap's JSON at `url`; null when it has none there. */
-  private async readJson(url: string): Promise<unknown | null> {
-    const text = await this.readText(url);
+  private async readJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
+    const text = await this.readText(url, signal);
     if (text === null) return null;
     try {
       return JSON.parse(text) as unknown;
@@ -190,10 +198,14 @@ export class PublishedBuilds {
   }
 
   /** The text at `url`; null on a 404, a rejection when the tap could not be read. */
-  private async readText(url: string): Promise<string | null> {
+  private async readText(url: string, signal?: AbortSignal): Promise<string | null> {
     let response: Response;
     try {
-      response = await this.fetchImpl(url, { headers: HEADERS, redirect: "follow" });
+      response = await this.fetchImpl(url, {
+        headers: HEADERS,
+        redirect: "follow",
+        ...(signal ? { signal } : {}),
+      });
     } catch {
       throw new PublishedBuildError("unreachable", "The public tap could not be reached.");
     }

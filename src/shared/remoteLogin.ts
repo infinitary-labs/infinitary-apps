@@ -60,12 +60,21 @@ export type RemoteLoginStage = z.infer<typeof remoteLoginStageSchema>;
  * How far the copy of Firstmate has gone while a Mac is set up, or found
  * again, by its address (docs/devices.md, "How far the copy has gone"):
  * `preparing` it, `sending` it with `sent`, the bytes handed to that Mac so
- * far, or `starting` it there once all of it arrived. No total rides it: the
- * copy is made as it is sent, so nothing knows its size before its end.
+ * far, or `starting` it there once all of it arrived. A streamed send has no
+ * total: the copy is made as it is sent. During a remote download, the
+ * preparing state additionally carries `download`, with its received bytes
+ * and a total only when release storage states one.
  */
 export const remoteLoginCopySchema = z.object({
   state: z.enum(["preparing", "sending", "starting"]),
   sent: z.number().int().nonnegative().optional(),
+  /** A separately downloaded file, whose total is only present when the release states it. */
+  download: z
+    .object({
+      received: z.number().int().nonnegative(),
+      total: z.number().int().positive().optional(),
+    })
+    .optional(),
 });
 export type RemoteLoginCopy = z.infer<typeof remoteLoginCopySchema>;
 
@@ -478,11 +487,29 @@ export const remoteLoginWords = {
   /** The copy's line, which says the bytes sent so far and never a share of a total. */
   sending: (name: string, sent: number) =>
     `Sending Infinitary to ${name}: ${fileSizeWords(sent)} sent.`,
+  downloading: (name: string, received: number, total?: number) =>
+    `${name} is downloading Infinitary… ${fileSizeWords(received)}${total === undefined ? " so far" : ` of ${fileSizeWords(total)}`}`,
+  downloadFallback: (name: string, mismatch: boolean) =>
+    mismatch
+      ? `${name}'s download did not match, so ${HERE.this} is sending its copy.`
+      : `${name} could not download Infinitary, so ${HERE.this} is sending its copy.`,
+  inactive: (name: string, doing: RemoteLoginDoing): readonly [string, string] => [
+    `${doing === "update" ? "Updating Infinitary on" : "Preparing Infinitary for"} ${name} stopped after two minutes with nothing moving.`,
+    "Nothing changed there. Ask again.",
+  ],
+  uncertain: (name: string): readonly [string, string] => [
+    `${name} may already have updated Infinitary.`,
+    "Check Devices for its version. Do not start another update while it may still be running.",
+  ],
   starting: (name: string) => `Starting Infinitary on ${name}.`,
   /** The Ubuntu package is being installed there, after the copy was checked. */
   installing: (name: string) => `Installing Infinitary on ${name}.`,
   /** A computer on the list, out of reach since this Mac's address changed (docs/devices.md, "Finding the home again"). */
   finding: (device: Named) => `Telling ${deviceLabel(device)} where ${HERE.this} is now.`,
+  updateLocalCopyOffer: () =>
+    `${HERE.This} copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again.`,
+  updateDownloadOffer: () =>
+    `It downloads ${HERE.this}'s version of Infinitary, or ${HERE.this} sends its own copy, with a count. Remote Login uses your own SSH key.`,
   updating: (device: Named) => `Updating Infinitary on ${deviceLabel(device)}.`,
   removing: (device: Named) =>
     `Removing what Infinitary set up on ${deviceLabel(device)}, ${overSsh(device)}.`,

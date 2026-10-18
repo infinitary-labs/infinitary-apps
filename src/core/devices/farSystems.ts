@@ -1,6 +1,7 @@
 import type { DeviceChip, DeviceSystem } from "@shared/devices";
 import { type BuildFlavor, userDataFoldersNewestFirst } from "@shared/userDataFolders";
 import { RETIRED_PROFILE_MARKER } from "../storage/retiredProfile";
+import { UPDATE_STARTING, VERIFY_MAC_APP } from "./remoteDownload";
 import { UBUNTU_KEPT_LINES, UBUNTU_PROBE_LINES } from "./ubuntuPackage";
 
 /**
@@ -273,9 +274,11 @@ export const MACOS: FarSystem = {
       'F="$1/.firstmate.zip"',
       'cat > "$F" || exit 4',
       ...checksum("$2"),
-      '/usr/bin/ditto -x -k "$F" "$1"; r=$?',
+      '/usr/bin/ditto -x -k "$F" "$1" || exit 4',
       'rm -f "$F"',
-      'exit "$r"',
+      'B=""; for b in "$1"/*.app; do B="$b"; break; done',
+      '[ -d "$B" ] || exit 4',
+      VERIFY_MAC_APP,
     ].join("\n"),
   },
   update: {
@@ -286,6 +289,7 @@ export const MACOS: FarSystem = {
       'B=""',
       'for b in "$T"/*.app; do B="$b"; break; done',
       '[ -d "$B" ] || exit 4',
+      `printf "${UPDATE_STARTING}\\n"`,
       '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2"',
     ].join("\n"),
     zip: [
@@ -299,6 +303,8 @@ export const MACOS: FarSystem = {
       'B=""',
       'for b in "$T"/*.app; do B="$b"; break; done',
       '[ -d "$B" ] || exit 4',
+      VERIFY_MAC_APP,
+      `printf "${UPDATE_STARTING}\\n"`,
       '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2"',
     ].join("\n"),
   },
@@ -359,6 +365,7 @@ export const LINUX: FarSystem = {
       ...checksum("$3"),
       `B="$T/${LINUX_APP_FILE}"`,
       'chmod 0700 "$F" && mv "$F" "$B" || exit 4',
+      `printf "${UPDATE_STARTING}\\n"`,
       '"$B" work update --fetched "$B" --from-home --home "$1" --device "$2"',
     ].join("\n"),
   },

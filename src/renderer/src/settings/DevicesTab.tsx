@@ -250,6 +250,7 @@ type SetupStore = {
   adding: AddingMac[];
   /** Computers whose Firstmate is updating, by id. */
   updating: string[];
+  updateCopy: Record<string, RemoteLoginCopy>;
   /** Computers whose address is changing. */
   moving: MovingMac[];
   stopListening: (() => void) | null;
@@ -269,7 +270,12 @@ const useSetups = create<SetupStore>((set, get) => {
   const hear = () => {
     if (get().stopListening) return;
     const stopListening = window.infinitary.events.on((event) => {
-      if (event.type !== "device_setup" || event.doing !== "add") return;
+      if (event.type !== "device_setup") return;
+      if (event.doing === "update" && event.deviceId && event.copy) {
+        set({ updateCopy: { ...get().updateCopy, [event.deviceId]: event.copy } });
+        return;
+      }
+      if (event.doing !== "add") return;
       set({
         adding: get().adding.map((mac) =>
           mac.address !== event.address
@@ -299,6 +305,7 @@ const useSetups = create<SetupStore>((set, get) => {
   return {
     adding: [],
     updating: [],
+    updateCopy: {},
     moving: [],
     stopListening: null,
     addFrom: (address, stage = "reaching") => {
@@ -309,9 +316,14 @@ const useSetups = create<SetupStore>((set, get) => {
       set({ adding: get().adding.filter((mac) => mac.address !== address) });
       quiet();
     },
-    updateFrom: (deviceId) => set({ updating: [...get().updating, deviceId] }),
+    updateFrom: (deviceId) => {
+      hear();
+      set({ updating: [...get().updating, deviceId] });
+    },
     updateDone: (deviceId) => {
-      set({ updating: get().updating.filter((id) => id !== deviceId) });
+      const updateCopy = { ...get().updateCopy };
+      delete updateCopy[deviceId];
+      set({ updating: get().updating.filter((id) => id !== deviceId), updateCopy });
       quiet();
     },
     moveFrom: (moving) => set({ moving: [...get().moving, moving] }),
@@ -572,7 +584,7 @@ function HomeDevicesTab() {
   useEffect(() => {
     if (joinedNoticeClears(panel, signIns)) clear();
   }, [panel, signIns, clear]);
-  const { adding, updating, moving } = useSetups();
+  const { adding, updating, moving, updateCopy } = useSetups();
   const arrival = useShellStore((s) => s.pendingDeviceArrival);
   const phone = useShellStore((s) => s.phoneShown);
 
@@ -929,6 +941,7 @@ function HomeDevicesTab() {
       leaving={leaving}
       adding={adding}
       updating={updating}
+      updateCopy={updateCopy}
       busy={busy}
       problem={problem}
       onAddMac={() => {
@@ -1037,6 +1050,7 @@ export type DevicesTabViewProps = {
   adding: AddingMac[];
   /** Computers whose Firstmate is updating, by id. */
   updating: string[];
+  updateCopy?: Record<string, RemoteLoginCopy>;
   busy: Busy;
   problem: string | null;
   onAddMac: () => void;
@@ -1611,6 +1625,8 @@ function LeaveQuestion({
  * a total - and before that the stage. `name` is how the row names it.
  */
 function addingWords(mac: AddingMac, name: string): string {
+  if (mac.copy?.download)
+    return remoteLoginWords.downloading(name, mac.copy.download.received, mac.copy.download.total);
   if (mac.copy?.state === "sending") return remoteLoginWords.sendingRow(name, mac.copy.sent ?? 0);
   if (mac.copy?.state === "starting") return remoteLoginWords.startingRow(name);
   switch (mac.stage) {
@@ -1651,6 +1667,7 @@ function DeviceRow({
   signIns,
   now,
   updating,
+  updateCopy,
   adding,
   busy,
   onAskRemove,
@@ -1690,6 +1707,7 @@ function DeviceRow({
   const state = deviceState(device);
   const own = signIns.find((entry) => entry.deviceId === device.id);
   const updatingHere = updating.includes(device.id);
+  const copy = updateCopy?.[device.id];
   // Brought back over Remote Login: reached, then told where this Mac is now.
   const finding = adding.find((mac) => mac.deviceId === device.id);
   // Looked for at another address, to be reached there from now on.
@@ -1734,7 +1752,13 @@ function DeviceRow({
             : moved
               ? remoteLoginWords.reachingRow(moved.address)
               : updatingHere
-                ? remoteLoginWords.updatingRow(device)
+                ? copy?.download
+                  ? remoteLoginWords.downloading(label, copy.download.received, copy.download.total)
+                  : copy?.state === "sending"
+                    ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
+                    : copy?.state === "starting"
+                      ? remoteLoginWords.startingRow(label)
+                      : remoteLoginWords.updatingRow(device)
                 : deviceSummary(device, own)}
         </span>
         {stranded && (

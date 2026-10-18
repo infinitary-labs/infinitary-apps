@@ -70,6 +70,9 @@ export type SshServer = {
     port?: number;
     remote?: Record<string, string>;
     password?: string;
+    downloads?: Record<string, string>;
+    programs?: Record<string, string>;
+    elsewhere?: boolean;
   }) => SshProgram;
   /**
    * Each run of an ssh made with `remote` or `password`, in order: its
@@ -352,6 +355,10 @@ export async function startSshServer(
       port?: number;
       remote?: Record<string, string>;
       password?: string;
+      /** Stand in for release storage without letting a test reach the public network. */
+      downloads?: Record<string, string>;
+      programs?: Record<string, string>;
+      elsewhere?: boolean;
     } = {},
   ) => {
     made += 1;
@@ -373,7 +380,13 @@ export async function startSshServer(
       ].join("\n"),
     );
     const remote = Object.entries(options.remote ?? {});
-    if (remote.length === 0 && options.password === undefined)
+    if (
+      remote.length === 0 &&
+      options.password === undefined &&
+      !options.downloads &&
+      !options.programs &&
+      !options.elsewhere
+    )
       return { program: "/usr/bin/ssh", args: ["-F", settings] };
     // The other user's environment, as its shell would have it: assignments
     // before the remote command, which the home quoted word by word.
@@ -411,8 +424,16 @@ export async function startSshServer(
         "  return;",
         "}",
         // A request on a control socket carries no remote command to prefix.
-        'const command = args.includes("-O") ? undefined : args.pop();',
+        'let command = args.includes("-O") ? undefined : args.pop();',
+        `for (const [from, to] of Object.entries(${JSON.stringify({ ...options.downloads, ...options.programs })})) if (command) command = command.split(from).join(to);`,
+        // Another Mac cannot read the home computer's locality challenge.
+        ...(options.elsewhere
+          ? [
+              `if (command) command = command.replace(/'\\/tmp\\/infinitary-here-[^']+\\/here'/g, ${JSON.stringify(shellWord(join(dir, "elsewhere-no-token")))});`,
+            ]
+          : []),
         `const child = spawn("/usr/bin/ssh", ["-F", ${JSON.stringify(settings)}, ...args, ...(command === undefined ? [] : [${JSON.stringify(prefix)} + " " + command])], { stdio: "inherit", env });`,
+        "for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, () => child.kill(signal));",
         "child.on('exit', (code) => { process.exitCode = code ?? 255; });",
         "",
       ].join("\n"),

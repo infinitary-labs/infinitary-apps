@@ -85,10 +85,14 @@ export type SshResult = {
   stdout: string;
   /** The end of stderr: SSH's own notes and what the remote command said there. */
   stderr: string;
+  stopped?: "timeout" | "inactive";
 };
 
 /** How much of each stream is kept: the outcome line and SSH's notes fit well inside. */
 const KEEP_BYTES = 64 * 1024;
+
+/** Movement renews only the transfer phase; end hands the remaining work to its backstop. */
+export type SshActivity = (() => void) & { end: () => void };
 
 export type RunSshOptions = {
   ssh: SshProgram;
@@ -99,8 +103,12 @@ export type RunSshOptions = {
   /** What it carries before the address; `SSH_OPTIONS` unless it goes over the app's own control socket. */
   options?: readonly string[];
   /** Writes what the remote command reads; the stream is ended after it resolves. */
-  stdin?: (sink: Writable) => Promise<void>;
-  /** Stops it after this long, as a backstop: a quiet connection already ends within a minute. */
+  stdin?: (sink: Writable, activity: SshActivity) => Promise<void>;
+  /** Only real byte movement renews this transfer deadline; activity.end() ends that phase. */
+  idleTimeoutMs?: number;
+  /** Returns true for new bytes; activity.end() hands silent checking/start work to its backstop. */
+  onLine?: (line: string, activity: SshActivity) => boolean;
+  /** Backstop for silent work: after activity.end() with an idle deadline, immediately otherwise. */
   timeoutMs?: number;
 };
 
@@ -139,38 +147,83 @@ export function runSsh(options: RunSshOptions): Promise<SshResult> {
     });
     let stdout = "";
     let stderr = "";
+    let stopped: SshResult["stopped"];
+    let settled = false;
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    let force: ReturnType<typeof setTimeout> | undefined;
+    const stop = (why: NonNullable<SshResult["stopped"]>) => {
+      stopped ??= why;
+      child.kill("SIGTERM");
+      force ??= setTimeout(() => child.kill("SIGKILL"), 2_000);
+      force.unref();
+    };
+    let transferring = options.idleTimeoutMs !== undefined;
+    let backstop: ReturnType<typeof setTimeout> | undefined;
+    const startBackstop = () => {
+      if (settled) return;
+      if (options.timeoutMs) {
+        backstop = setTimeout(() => stop("timeout"), options.timeoutMs);
+        backstop.unref();
+      }
+    };
+    const activity: SshActivity = Object.assign(
+      () => {
+        if (!transferring || settled) return;
+        if (idle) clearTimeout(idle);
+        if (options.idleTimeoutMs) {
+          idle = setTimeout(() => stop("inactive"), options.idleTimeoutMs);
+          idle.unref();
+        }
+      },
+      {
+        end: () => {
+          if (!transferring || settled) return;
+          transferring = false;
+          if (idle) clearTimeout(idle);
+          startBackstop();
+        },
+      },
+    );
+    if (transferring) activity();
+    else startBackstop();
+    let partial = "";
     const keep = (kept: string, chunk: Buffer) => {
       const next = kept + chunk.toString("utf8");
       return next.length > KEEP_BYTES ? next.slice(next.length - KEEP_BYTES) : next;
     };
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout = keep(stdout, chunk);
+      if (options.onLine) {
+        partial += chunk.toString("utf8");
+        const lines = partial.split("\n");
+        partial = (lines.pop() ?? "").slice(-KEEP_BYTES);
+        for (const line of lines) if (options.onLine(line, activity)) activity();
+      }
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       stderr = keep(stderr, chunk);
     });
-    const timer = options.timeoutMs
-      ? setTimeout(() => child.kill("SIGTERM"), options.timeoutMs)
-      : undefined;
-    timer?.unref();
-    let settled = false;
     const finish = (code: number | null) => {
       if (settled) return;
       settled = true;
-      if (timer) clearTimeout(timer);
-      resolve({ code, stdout, stderr });
+      if (backstop) clearTimeout(backstop);
+      if (idle) clearTimeout(idle);
+      if (force) clearTimeout(force);
+      child.stdin?.destroy();
+      void input.finally(() => resolve({ code, stdout, stderr, ...(stopped ? { stopped } : {}) }));
     };
     child.once("error", (error) => {
       stderr += `\n${error.message}`;
       finish(SSH_FAILED);
     });
     child.once("close", (code) => finish(code));
+    let input: Promise<void> = Promise.resolve();
     if (options.stdin && child.stdin) {
       const sink = child.stdin;
       // The other Mac may stop reading early, as a refusal does.
       sink.on("error", () => {});
-      void options
-        .stdin(sink)
+      input = options
+        .stdin(sink, activity)
         .catch(() => undefined)
         .finally(() => sink.end());
     }
@@ -333,8 +386,9 @@ export class SshMaster {
    */
   session(
     command: readonly string[],
-    stdin?: (sink: Writable) => Promise<void>,
+    stdin?: (sink: Writable, activity: SshActivity) => Promise<void>,
     timeoutMs?: number,
+    progress: Pick<RunSshOptions, "idleTimeoutMs" | "onLine"> = {},
   ): Promise<SshResult> {
     return runSsh({
       ssh: { program: this.options.ssh.program, args: [...this.options.ssh.args, ...this.own()] },
@@ -342,6 +396,7 @@ export class SshMaster {
       command,
       ...(stdin ? { stdin } : {}),
       ...(timeoutMs ? { timeoutMs } : {}),
+      ...progress,
       // A session over the control socket, never a connection of its own.
       options: ["-T", "-o", "ControlMaster=no", "-o", "ProxyCommand=/usr/bin/false"],
     });

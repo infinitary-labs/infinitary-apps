@@ -171,7 +171,22 @@ A computer whose version of Infinitary is too old to update from here makes the 
 Out of reach, a row says nothing of its version: this computer cannot tell it.
 Connected on another version, a row is in reach, so it never shows the old-address line or its way back ("Bringing a computer back").
 
-**Updating** turns the summary to "Updating Infinitary on Mac mini…", with no version line, no state and no Update or Remove until it is done (`AddAMac.prompt.md`).
+**Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no state and no Update or Remove until it is done (`AddAMac.prompt.md`).
+For a Mac reached by its address, Add and Update first let it download this computer's published version itself.
+Its summary and the feed read "Mac mini is downloading Infinitary… 200.6 MB of 401.1 MB", or "200.6 MB so far" when the release states no size.
+The count changes in place at most once a second; it has no bar, percentage or time remaining.
+If the download fails or its checksum does not match, the feed explains that this computer is sending its own copy instead, and the row and feed count "Sending Infinitary to Mac mini… 42.3 MB sent".
+While this computer gets the fallback build, the row returns to preparing instead of keeping the failed download's count.
+A development or unpublished version sends that counted copy without trying a download.
+Two minutes without bytes moving stops a download or send; a slow transfer that keeps moving can finish.
+The first empty observation stays silent until bytes or a known total arrive.
+After checks and unpacking, the summary reads "Starting Infinitary on Mac mini…" only when the remote script is about to run the update.
+A failed check or unpack keeps its definite failure; sending the last byte alone never means the app started.
+Silent start work uses its existing backstop, not the transfer's two-minute deadline.
+If the outcome is lost after starting, the warning says the computer may already have updated and to check Devices before starting another update.
+Another user on this computer uses its local copy and makes no public download lookup.
+A stop names inactivity, not a failure to reach the computer.
+The row keeps its existing type, spacing, focus and disabled controls.
 Remove on a computer that takes no new work asks as for one out of reach, with its own first line: "Remove Mac mini?
 It takes no new work." over "Its unmerged work on website is still there.
 Update it, and its work comes here before Mac mini is removed.", with a secondary "Remove once it is updated" and a danger "Remove now".

@@ -58,6 +58,10 @@ export function standInFirstmate(
      * stand-in speaks the controller's side itself.
      */
     connect?: string;
+    /** Pause external start work until the test permits its real completion. */
+    startGate?: { when: "update" | "join"; ready: string; resume: string };
+    /** An external app crash before it claims a join or returns an update result. */
+    startExit?: { when: "update" | "join"; code: number };
   } = {
     joined: "at-login",
     updated: "running",
@@ -91,6 +95,19 @@ export function standInFirstmate(
       linux
         ? `stand_in_curl() { ${curlLines.join("; ")}; }; CURL=stand_in_curl`
         : 'CURL="$(dirname "$0")/../Resources/curl"',
+      ...(background.startExit
+        ? [
+            `if [ "$2" = ${shellWord(background.startExit.when)} ]; then exit ${background.startExit.code}; fi`,
+          ]
+        : []),
+      ...(background.startGate
+        ? [
+            `if [ "$2" = ${shellWord(background.startGate.when)} ]; then`,
+            `  touch ${shellWord(background.startGate.ready)}`,
+            `  while [ ! -f ${shellWord(background.startGate.resume)} ]; do sleep 1; done`,
+            "fi",
+          ]
+        : []),
       `if [ "$2" = update ]; then echo '{"firstmate":"updated","background":"${background.updated}"}'; exit 0; fi`,
       `if [ "$2" = remove ]; then echo ${shellWord(workOutcomeLine(background.removed ?? { firstmate: "removed", kept: [] }))}; exit 0; fi`,
       ...(background.connect

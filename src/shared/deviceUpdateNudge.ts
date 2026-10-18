@@ -1,6 +1,12 @@
 import type { CardAction } from "./cards";
 import { HERE } from "./deviceNames";
-import { type DeviceOtherVersion, deviceLabel, userDisplayName } from "./devices";
+import {
+  type DeviceOtherVersion,
+  type DeviceSystem,
+  deviceLabel,
+  userDisplayName,
+} from "./devices";
+import { remoteLoginWords } from "./remoteLogin";
 
 /**
  * The card that nudges the captain to update a computer on an older Firstmate
@@ -19,6 +25,7 @@ export type DeviceUpdateNudgeFacts = {
   user?: string | undefined;
   onThisMac?: boolean | undefined;
   remoteLogin?: string | undefined;
+  system?: DeviceSystem | undefined;
   other: DeviceOtherVersion;
   /** This computer's Firstmate version. */
   homeApp?: string | undefined;
@@ -102,10 +109,14 @@ function how(facts: DeviceUpdateNudgeFacts): string {
   const stops = "Its running work stops for a moment and goes on after.";
   if (facts.other.updateBy === "command")
     return "Its version of Infinitary is too old to update from here, so it needs a new command. Make the command here, then run it once in Terminal there.";
-  if (facts.onThisMac === true && facts.user !== undefined)
-    return `Update it starts it again on ${HERE.this}'s own Infinitary, as ${userDisplayName(facts.user)}. ${stops}`;
+  if (facts.onThisMac === true && facts.remoteLogin)
+    return `${remoteLoginWords.updateLocalCopyOffer()} ${stops}`;
+  if (facts.onThisMac === true)
+    return `Update it starts it again on ${HERE.this}'s own Infinitary${facts.user !== undefined ? `, as ${userDisplayName(facts.user)}` : ""}. ${stops}`;
   if (facts.other.updateBy === "remote-login")
-    return `Update it copies ${HERE.this}'s Infinitary there over Remote Login, with your own SSH key, and starts it again. ${stops}`;
+    return facts.system === "linux"
+      ? `Update it gets ${HERE.this}'s version of Infinitary there over Remote Login, with your own SSH key, and starts it again. ${stops}`
+      : `${remoteLoginWords.updateDownloadOffer()} ${stops}`;
   return `Update it sends ${HERE.this}'s Infinitary to it over your network, and it starts again. ${stops}`;
 }
 

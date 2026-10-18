@@ -27,7 +27,7 @@ import { catalogEntry } from "./providers";
 import type { RoutingSettings } from "./quota";
 import { reasoningWord } from "./reasoning";
 import type { ReleaseNotesView } from "./releaseTracking";
-import { remoteLoginAddressSchema } from "./remoteLogin";
+import { remoteLoginAddressSchema, remoteLoginWords } from "./remoteLogin";
 import {
   type RepoView,
   repoPolicyOutcome,
@@ -448,7 +448,11 @@ const actionLines = {
           cardId,
           title,
           paragraphs: [
-            `I copy ${HERE.this}'s Infinitary there over Remote Login, with your own SSH key, and start it again.`,
+            device.onThisMac
+              ? remoteLoginWords.updateLocalCopyOffer()
+              : device.system === "linux"
+                ? `I copy ${HERE.this}'s Infinitary there over Remote Login, with your own SSH key, and start it again.`
+                : remoteLoginWords.updateDownloadOffer(),
             stops,
           ],
           label: "Update it",

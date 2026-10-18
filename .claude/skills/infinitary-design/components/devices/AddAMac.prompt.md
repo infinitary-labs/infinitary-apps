@@ -115,9 +115,13 @@ That computer decides for itself: a first mate that still answers stays, and Add
 
 **Updating and removing a computer added by its address.**
 The same address keeps working for that computer.
-"update Infinitary on the mini" yields one decision from the first mate, "Update Infinitary on Mac mini": "I copy this computer's Infinitary there over Remote Login, with your own SSH key, and start it again." and "Its running work stops for a moment and goes on after.
+"update Infinitary on the mini" yields one decision from the first mate, "Update Infinitary on Mac mini": "It downloads this computer's version of Infinitary, or this computer sends its own copy, with a count.
+Remote Login uses your own SSH key." and "Its running work stops for a moment and goes on after.
 Only your click can update it.", with a ghost "Not now" and a primary "Update it".
-The click opens Devices, whose row reads "Updating Infinitary on Mac mini…" in place of what it runs, with no Remove, and the feed says "Updating Infinitary on Mac mini." then "Mac mini runs this computer's version of Infinitary now."
+For another user on this computer added by its address, the first line instead reads "This computer copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again."
+The click opens Devices, whose row first reads "Updating Infinitary on Mac mini…" in place of what it runs, with no Remove.
+For Add and Update by address, the row and feed then count the download or fallback send as `DevicesTab.prompt.md` describes.
+The feed ends with "Mac mini runs this computer's version of Infinitary now."
 When the session there refused to start it in the background, the feed says "Mac mini has this computer's version of Infinitary now." then two warning lines, "Mac mini could not set itself to start in the background, so it runs no work for now." and "Ask again to update it."
 A computer added by a link or a command has no address, so it updates over your network instead (below, "Updating any other computer").
 Removing it out of reach (`DevicesTab.prompt.md`, "Remove") with Remove now also removes what Infinitary set up there over Remote Login at once: the feed says "Removing what Infinitary set up on Mac mini, over Remote Login."

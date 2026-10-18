@@ -17,8 +17,8 @@ import {
  * runs the same system and chip - a Mac's universal bundle for any Mac, an
  * AppImage for Linux on its chip - or else the Firstmate published for that
  * system at this computer's version, checked against its SHA-256
- * (`PublishedBuilds`). A Mac home adding a Mac sends its own bundle as it
- * always has.
+ * (`PublishedBuilds`). A Mac may first download that published version itself,
+ * with this home's bundle kept as the immediate fallback.
  */
 
 /** A copy ready to go: its form, its file, and the SHA-256 the other side checks, except a bundle's. */
@@ -76,6 +76,19 @@ export class FarBuilds {
   /** Whether that computer's copy must be got from the published release first. */
   fetches(far: FarSystem, chip: DeviceChip): boolean {
     return this.ownFor(far, chip) === null;
+  }
+
+  /** A Mac may fetch this version itself; development and unpublished builds still send. */
+  async downloadFor(far: FarSystem, chip: DeviceChip) {
+    if (far.system !== "macos") return null;
+    try {
+      return (
+        (await this.options.published?.downloadFor({ system: "macos", chip, kind: "zip" })) ?? null
+      );
+    } catch {
+      // An offline home can still send its own bundle.
+      return null;
+    }
   }
 
   /** The copy for a computer of `far`'s system on `chip`, or why there is none. */

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-download",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Your work Mac downloads its own update, with progress",
+      "body": "When you add or update a Mac by its address, it downloads this computer's published version on its own connection. Devices counts how much it has against the download's size. It checks the file and its publisher before starting it. If it cannot download or verify it, this computer sends its own copy and counts what it sends. A transfer stops after two minutes without movement, not while it is still making progress.",
+      "noPicture": "The live count and fallback change over time; the verification records them as a demo rather than a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

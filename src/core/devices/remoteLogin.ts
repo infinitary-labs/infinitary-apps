@@ -36,6 +36,15 @@ import { readHostKey, signInUser } from "./hostKey";
 import { sameHostKey } from "./hostTrust";
 import { type Locality, type LocalityChallenge, placeLocalityChallenge } from "./locality";
 import type { DevicePairing, SshCleanup } from "./pairing";
+import {
+  DOWNLOAD_FETCHED,
+  DOWNLOAD_INSTALL,
+  DOWNLOAD_READY,
+  MAC_DOWNLOAD,
+  MAC_DOWNLOAD_UPDATE,
+  readDownloadCount,
+  UPDATE_STARTING,
+} from "./remoteDownload";
 import { runSsh, SSH_FAILED, SSH_OPTIONS, SshMaster, type SshProgram } from "./ssh";
 import { type PasswordMethod, passwordMethods, placeOwnKey } from "./sshPassword";
 import { sshRefusal } from "./sshRefusal";
@@ -150,6 +159,8 @@ export type RemoteLoginOptions = {
   sendTimeoutMs?: number;
   /** How often the copy's count is said while it moves; `COPY_EVERY_MS` unless a test says every chunk. */
   copyEveryMs?: number;
+  /** No movement for two minutes ends a Mac download or send. */
+  idleTimeoutMs?: number;
   /** This app's version, which an Ubuntu package there is compared with. */
   version?: string;
 };
@@ -206,6 +217,7 @@ const LOOK_TIMEOUT_MS = 90_000;
 const SEND_TIMEOUT_MS = 30 * 60_000;
 /** The copy's count is said at most this often between its first bytes and its end. */
 const COPY_EVERY_MS = 1_000;
+const IDLE_TIMEOUT_MS = 2 * 60_000;
 
 /** What a bootstrap's path may be: absolute, and nothing a shell or SSH would read. */
 const REMOTE_PATH = /^\/[A-Za-z0-9._/-]{1,1000}$/;
@@ -397,25 +409,117 @@ export class RemoteLogin {
             return this.updateUbuntu(device, looked, options.password, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
-        if (this.builds.fetches(far, chip))
-          step.say("updating", remoteLoginWords.gettingBuild(deviceLabel(device)), { deviceId });
-        const build = await this.builds.for(far, chip);
-        if ("refusal" in build) return step.refuse(build.refusal);
-        const script = far.update[build.form];
-        if (!script) return step.refuse("failed");
-        const ran = await runSsh({
-          ...this.sshFor(address),
-          command: [
-            "/bin/sh",
-            "-c",
-            script,
-            "firstmate",
-            ...this.expected(deviceId),
-            ...(build.form === "bundle" ? [] : [build.sha256]),
-          ],
-          stdin: (sink) => sendCopy(build, sink),
-          timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-        });
+        const name = deviceLabel(device);
+        const download = device.onThisMac ? null : await this.builds.downloadFor(far, chip);
+        const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
+        let ran: Awaited<ReturnType<typeof runSsh>> | undefined;
+        let starting = false;
+        const start = () => {
+          starting = true;
+          step.say("updating", remoteLoginWords.starting(name), {
+            deviceId,
+            copy: { state: "starting" },
+          });
+        };
+        const backstopMs = this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS;
+        if (download) {
+          let install: () => void = () => {};
+          const observe = this.downloadProgress(name, step, "updating", { deviceId });
+          ran = await runSsh({
+            ...this.sshFor(address),
+            command: [
+              "/bin/sh",
+              "-c",
+              MAC_DOWNLOAD_UPDATE,
+              "infinitary",
+              ...this.expected(deviceId),
+              download.sha256,
+              download.url,
+            ],
+            idleTimeoutMs,
+            timeoutMs: backstopMs,
+            stdin: async (sink) => {
+              install = () => {
+                sink.write(`${DOWNLOAD_INSTALL}\n`);
+              };
+              await new Promise<void>((resolve) => sink.once("close", resolve));
+            },
+            onLine: (line, activity) => {
+              if (line === DOWNLOAD_FETCHED) {
+                activity.end();
+                return false;
+              }
+              if (line === DOWNLOAD_READY && !starting) {
+                // Decide before sending the acknowledgement: a lost reply
+                // must never retry an update that may already have started.
+                activity.end();
+                start();
+                install();
+                return true;
+              }
+              return observe(line);
+            },
+          });
+          // Only a fetch/check/unpack failure retries. Never repeat work update.
+          if (!starting && (ran.stopped || [6, 7, 8].includes(ran.code ?? -1))) {
+            step.say("updating", remoteLoginWords.downloadFallback(name, ran.code === 7), {
+              deviceId,
+              copy: { state: "preparing" },
+            });
+            ran = undefined;
+          }
+        }
+        if (!ran) {
+          if (this.builds.fetches(far, chip))
+            step.say("updating", remoteLoginWords.gettingBuild(name), {
+              deviceId,
+              copy: { state: "preparing" },
+            });
+          const build = await this.builds.for(far, chip);
+          if ("refusal" in build) return step.refuse(build.refusal);
+          const script = far.update[build.form];
+          if (!script) return step.refuse("failed");
+          const run = { id: `copy-${randomUUID()}` };
+          const copy = copyCount((sent) => {
+            if (far.system === "macos")
+              step.say("updating", remoteLoginWords.sendingRow(name, sent), {
+                deviceId,
+                copy: { state: "sending", sent },
+                run,
+              });
+          }, this.options.copyEveryMs ?? COPY_EVERY_MS);
+          ran = await runSsh({
+            ...this.sshFor(address),
+            command: [
+              "/bin/sh",
+              "-c",
+              script,
+              "firstmate",
+              ...this.expected(deviceId),
+              ...(build.form === "bundle" ? [] : [build.sha256]),
+            ],
+            stdin: async (sink, activity) => {
+              await sendCopy(build, sink, (bytes) => {
+                activity();
+                copy.add(bytes);
+              });
+              copy.end();
+              activity.end();
+            },
+            onLine: (line, activity) => {
+              if (line === UPDATE_STARTING && !starting) {
+                activity.end();
+                start();
+              }
+              return false;
+            },
+            ...(far.system === "macos"
+              ? { idleTimeoutMs, timeoutMs: backstopMs }
+              : { timeoutMs: backstopMs }),
+          });
+          copy.end();
+          if (ran.stopped === "inactive" && !starting) return step.inactive(name);
+        }
         const outcome = readWorkOutcome(ran.stdout);
         if (outcome?.firstmate === "updated") {
           step.say("done", remoteLoginWords.updated(device, outcome.background), { deviceId });
@@ -423,7 +527,6 @@ export class RemoteLogin {
             step.caution(remoteLoginWords.notInBackground(device, "update"), { deviceId });
           return this.device(deviceId);
         }
-        if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
         if (outcome?.firstmate === "refused")
           return step.refuse(
             outcome.reason === "not-joined"
@@ -434,6 +537,8 @@ export class RemoteLogin {
                   ? "already-joined"
                   : "failed",
           );
+        if (starting) return step.uncertain(name);
+        if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
         return step.refuse("failed");
       }),
     );
@@ -596,16 +701,20 @@ export class RemoteLogin {
       // Its Firstmate first: this app's own for its own system, or the one
       // published for that system, got and checked before any link exists.
       // An Ubuntu package was installed above; the join runs that program.
+      const download =
+        !at.package && at.locality !== "this-mac"
+          ? await this.builds.downloadFor(at.far, at.chip)
+          : null;
       let build: FarBuild | null = null;
-      if (!at.package) {
+      if (!at.package && !download) {
         if (this.builds.fetches(at.far, at.chip))
           step.say(at.stage, remoteLoginWords.gettingBuild(name), said({ state: "preparing" }));
         const got = await this.builds.for(at.far, at.chip);
         if ("refusal" in got) return step.refuse(got.refusal, { name });
         build = got;
       }
-      const unpack = build ? at.far.unpack[build.form] : null;
-      if (!at.package && !unpack) return step.refuse("failed", { name });
+      let unpack = build ? at.far.unpack[build.form] : null;
+      if (!at.package && !download && !unpack) return step.refuse("failed", { name });
       // A Mac, unless the look found this Mac itself: then another user here.
       const invite = pairing.invite(
         { kind: "mac" },
@@ -634,11 +743,19 @@ export class RemoteLogin {
           ...(this.options.controlBase ? { controlBase: this.options.controlBase } : {}),
         });
         const opened = master;
-        const timer = setTimeout(
-          () => void opened.stop(),
-          this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-        );
-        timer.unref?.();
+        const mac = at.far.system === "macos";
+        const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
+        const backstopMs = this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS;
+        let backstop: ReturnType<typeof setTimeout> | undefined;
+        const clearBackstop = () => {
+          if (backstop) clearTimeout(backstop);
+        };
+        const startBackstop = () => {
+          clearBackstop();
+          backstop = setTimeout(() => void opened.stop(), backstopMs);
+          backstop.unref();
+        };
+        startBackstop();
         try {
           const ready = await Promise.race([
             bootstrapped.then(() => true),
@@ -668,7 +785,57 @@ export class RemoteLogin {
               ),
             this.options.copyEveryMs ?? COPY_EVERY_MS,
           );
-          if (!at.package && build && unpack) {
+          let downloaded = false;
+          if (download) {
+            clearBackstop();
+            const observe = this.downloadProgress(
+              name,
+              step,
+              at.stage,
+              at.deviceId ? { deviceId: at.deviceId } : {},
+            );
+            const got = await master.session(
+              ["/bin/sh", "-c", MAC_DOWNLOAD, "infinitary", stage, download.sha256, download.url],
+              undefined,
+              backstopMs,
+              {
+                idleTimeoutMs,
+                onLine: (line, activity) => {
+                  if (line === DOWNLOAD_FETCHED) {
+                    activity.end();
+                    return false;
+                  }
+                  return observe(line);
+                },
+              },
+            );
+            startBackstop();
+            downloaded = got.code === 0 && !got.stopped;
+            if (!downloaded) {
+              if (!master.alive()) return step.refuse("unreachable", { name });
+              step.say(
+                at.stage,
+                remoteLoginWords.downloadFallback(name, got.code === 7),
+                said({ state: "preparing" }),
+              );
+              if (this.builds.fetches(at.far, at.chip))
+                step.say(
+                  at.stage,
+                  remoteLoginWords.gettingBuild(name),
+                  said({ state: "preparing" }),
+                );
+              const gotBuild = await Promise.race([
+                this.builds.for(at.far, at.chip),
+                master.exited.then(() => ({ refusal: "failed" as const })),
+              ]);
+              if ("refusal" in gotBuild) return step.refuse(gotBuild.refusal, { name });
+              build = gotBuild;
+              unpack = at.far.unpack[build.form] ?? null;
+            }
+          }
+          if (!at.package && !downloaded && build && unpack) {
+            const sendingBuild = build;
+            if (mac) clearBackstop();
             const sent = await master.session(
               [
                 "/bin/sh",
@@ -678,14 +845,26 @@ export class RemoteLogin {
                 stage,
                 ...(build.form === "bundle" ? [] : [build.sha256]),
               ],
-              (sink) => sendCopy(build, sink, copy.add),
+              async (sink, activity) => {
+                await sendCopy(sendingBuild, sink, (bytes) => {
+                  activity();
+                  copy.add(bytes);
+                });
+                copy.end();
+                activity.end();
+              },
+              mac ? backstopMs : undefined,
+              mac ? { idleTimeoutMs } : {},
             );
+            if (mac) startBackstop();
+            if (sent.stopped === "inactive") return step.inactive(name);
             if (sent.code !== 0) {
               await master.stop();
               return step.refuse(sent.code === SSH_FAILED ? "unreachable" : "failed", { name });
             }
             copy.end();
           }
+          if (mac) startBackstop();
           step.say(at.stage, remoteLoginWords.starting(name), said({ state: "starting" }));
           master.write(
             sshMessageLine({
@@ -718,7 +897,6 @@ export class RemoteLogin {
               });
             return device;
           }
-          if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr), { name });
           if (outcome?.firstmate === "refused") {
             const refusal = joinRefusal(outcome.reason);
             // The other Firstmate answered there after all, so it stays.
@@ -729,9 +907,10 @@ export class RemoteLogin {
               },
             );
           }
+          if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr), { name });
           return step.refuse("failed", { name });
         } finally {
-          clearTimeout(timer);
+          clearBackstop();
         }
       } finally {
         await master?.stop();
@@ -1164,6 +1343,30 @@ export class RemoteLogin {
     }
   }
 
+  private downloadProgress(
+    name: string,
+    step: ReturnType<RemoteLogin["stepper"]>,
+    stage: RemoteLoginStage,
+    facts: StepFacts,
+  ): (line: string) => boolean {
+    const run = { id: `download-${randomUUID()}` };
+    let last = -1;
+    return (line) => {
+      const count = readDownloadCount(line);
+      if (!count || (count.received === 0 && count.total === undefined) || count.received === last)
+        return false;
+      const moved = count.received > Math.max(0, last);
+      last = count.received;
+      step.say(stage, remoteLoginWords.downloading(name, count.received, count.total), {
+        ...facts,
+        name,
+        copy: { state: "preparing", download: count },
+        run,
+      });
+      return moved;
+    };
+  }
+
   /** Says each step of one operation in the feed, and its refusal as two warn lines. */
   private stepper(address: string, doing: RemoteLoginDoing, device?: DeviceView) {
     const emit = (
@@ -1197,6 +1400,16 @@ export class RemoteLogin {
       /** Lines that finish the step but say what is still wrong there. */
       caution: (said: readonly string[], extra: { name?: string; deviceId?: string } = {}) => {
         for (const line of said) emit("done", line, "warn", extra);
+      },
+      uncertain: (name: string): never => {
+        const said = remoteLoginWords.uncertain(name);
+        for (const line of said) emit("refused", line, "warn", { name });
+        throw new RemoteLoginRefusedError("failed", said);
+      },
+      inactive: (name: string): never => {
+        const said = remoteLoginWords.inactive(name, doing);
+        for (const line of said) emit("refused", line, "warn", { name });
+        throw new RemoteLoginRefusedError("failed", said);
       },
       warn: (refusal: RemoteLoginRefusal) => {
         for (const line of lines(refusal, {})) emit("refused", line, "warn");
@@ -1259,9 +1472,22 @@ type StepFacts = {
  * tar made as it goes, anything else as its file; `sent` hears the size of
  * each piece as it is handed over.
  */
-function sendCopy(build: FarBuild, sink: Writable, sent?: (bytes: number) => void): Promise<void> {
-  const { stream, ended } = copyStream(build);
+export function sendCopy(
+  build: FarBuild,
+  sink: Writable,
+  sent?: (bytes: number) => void,
+): Promise<void> {
+  const { stream, ended, stop } = copyStream(build);
+  // SSH may stop reading long before tar fills its output pipe (INF-320).
+  const closed = () => stop();
+  sink.once("close", closed);
+  sink.once("error", closed);
   if (sent) stream.on("data", (chunk: Buffer) => sent(chunk.length));
   stream.pipe(sink, { end: false });
-  return ended;
+  return ended.finally(() => {
+    sink.off("close", closed);
+    sink.off("error", closed);
+    stream.unpipe(sink);
+    stop();
+  });
 }

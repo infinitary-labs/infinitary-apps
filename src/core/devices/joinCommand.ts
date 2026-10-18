@@ -1,3 +1,7 @@
+import { shellWord } from "./shellWord";
+
+export { shellWord } from "./shellWord";
+
 import { dirname } from "node:path";
 import { FETCH_APP_PATH } from "@shared/connection";
 import { COMPUTER, HERE } from "@shared/deviceNames";
@@ -52,11 +56,6 @@ export type JoinCommandInput = {
   /** This app as another user here starts it. */
   launcher: AppLauncher;
 };
-
-/** One word for a POSIX shell, quoted so nothing in it is read as the shell's. */
-export function shellWord(text: string): string {
-  return `'${text.replace(/'/g, `'\\''`)}'`;
-}
 
 /** The command for a link: the words a person pastes into Terminal. */
 export function joinCommand(input: JoinCommandInput): string {

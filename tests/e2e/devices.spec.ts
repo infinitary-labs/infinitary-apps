@@ -29,6 +29,7 @@ import { nearbyMacsWords } from "@shared/nearbyMacs";
 import { remoteLoginWords, type WorkOutcome } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import electronPath from "electron";
+
 import {
   NO_NEW_WORK,
   PANEL_WORDS,
@@ -39,6 +40,7 @@ import {
 import { aDevice, COMPUTER } from "../../src/shared/deviceNames";
 import { connectClient, freePort } from "../helpers/connectionClient";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
+import { macRelease } from "../helpers/macRelease";
 import { scratchDir } from "../helpers/scratchDirs";
 import { SSH_SERVER_AVAILABLE, startSshServer } from "../helpers/sshServer";
 import {
@@ -48,12 +50,17 @@ import {
   standInRecord,
 } from "../helpers/standInFirstmate";
 import { waitForFirstmateIdle } from "./crew";
+import { startDemo } from "./demo";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, feedLineOf } from "./rails";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
+
+const appPackage = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 /**
  * Settings -> Devices and Firstmate's cards for it (docs/devices.md): the
@@ -842,7 +849,10 @@ test("this Mac's address changes: a computer added by a command says how it come
  * `env` is what this Mac's app runs with to reach it; `removed` is what
  * removing it there answers.
  */
-async function otherMacOverSsh(removed?: WorkOutcome) {
+async function otherMacOverSsh(
+  removed?: WorkOutcome,
+  startGate?: { when: "update" | "join"; ready: string; resume: string },
+) {
   const sshd = await startSshServer();
   const record = join(scratchDir("infinitary-e2e-remote-record-"), "started");
   const them = scratchDir("infinitary-e2e-remote-user-");
@@ -868,6 +878,7 @@ async function otherMacOverSsh(removed?: WorkOutcome) {
     updated: "running",
     connect: builtApp,
     ...(removed ? { removed } : {}),
+    ...(startGate ? { startGate } : {}),
   });
   return {
     sshd,
@@ -889,7 +900,7 @@ function running(pid: number): boolean {
 }
 
 /** + A Mac, by its address, from the keyboard, in Devices: answers it once it joined. */
-async function addByAddress(page: Page, address: string): Promise<DeviceView> {
+async function addByAddress(page: Page, address: string, timeout = 5_000): Promise<DeviceView> {
   await pressKey(page.locator('[data-device-add="mac"]'), "Enter");
   await pressKey(page.getByRole("button", { name: "By its address", exact: true }), "Enter");
   // The question takes the caret once it has drawn.
@@ -902,7 +913,9 @@ async function addByAddress(page: Page, address: string): Promise<DeviceView> {
     "Enter",
   );
   await expect
-    .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length)
+    .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length, {
+      timeout,
+    })
     .toBe(1);
   await expect(page.locator("[data-device-adding]")).toHaveCount(0);
   await expect(page.locator("[data-device-address-question]")).toHaveCount(0);
@@ -1669,3 +1682,167 @@ test("a computer on another version of Firstmate: Devices says so, Update brings
     await app.close();
   }
 });
+
+/** INF-322, accepted Add and Update choices. Promise: keyboard-triggered
+ * downloads update the Devices row and replace one feed count in place.
+ * Data: a real universal zip of the existing stand-in app, local HTTPS
+ * release storage, disposable SSH and helper homes. Completion: the checked
+ * app joins/updates, and the last count persists in the feed. macOS only;
+ * no real computer, provider, release, signing key or shared port is used.
+ */
+for (const operation of ["add", "update", "fallback"] as const) {
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
+  test(`an addressed Mac downloads with progress from the keyboard: ${operation}`, async ({}, testInfo) => {
+    test.skip(
+      !SSH_SERVER_AVAILABLE || process.platform !== "darwin",
+      "needs macOS zip tools and isolated SSH",
+    );
+    test.setTimeout(120_000);
+    process.env.PI_OFFLINE = "1";
+    const gateDir = scratchDir("infinitary-download-start-");
+    const gate = {
+      when: operation === "add" ? ("join" as const) : ("update" as const),
+      ready: join(gateDir, "ready"),
+      resume: join(gateDir, "resume"),
+    };
+    const { sshd, them, work, bundle } = await otherMacOverSsh(undefined, gate);
+    addStandInPayload(bundle, randomBytes(8_000_000));
+    const release = await macRelease(bundle, appPackage.version, 150);
+    const ssh = sshd.ssh({
+      remote: {
+        HOME: them,
+        CFFIXED_USER_HOME: them,
+        TMPDIR: them,
+        INFINITARY_HELPER_DATA_DIR: work,
+        INFINITARY_DEVICE_NAME: "Mac mini",
+        ELECTRON_RENDERER_URL: "",
+        PI_OFFLINE: "1",
+        CURL_CA_BUNDLE: release.cert,
+      },
+      downloads: release.downloads,
+      programs: release.programs,
+      elsewhere: true,
+    });
+    const demo = await startDemo({
+      withMockProvider: true,
+      size: { width: 1280, height: 800 },
+      env: {
+        INFINITARY_SSH: ssh.program,
+        INFINITARY_APP_BUNDLE: bundle,
+        INFINITARY_PUBLISHED_TAP: release.dir,
+      },
+    });
+    const app = demo.launched;
+    let runner: HelperRun | undefined;
+    try {
+      const { page } = app;
+      await openDevices(page);
+      await page.evaluate(() => {
+        const seen = window as Window & { __downloadEvents?: unknown[] };
+        seen.__downloadEvents = [];
+        window.infinitary.events.on((event) => {
+          if (event.type === "device_setup") seen.__downloadEvents?.push(event);
+        });
+      });
+      let device: DeviceView | undefined;
+      if (operation === "add") {
+        await demo.record("Add a Mac with download progress", "window", async () => {
+          const joining = addByAddress(page, sshd.address, 30_000);
+          await expect(page.locator("[data-device-adding]")).toContainText(
+            remoteLoginWords.startingRow("Mac mini"),
+            { timeout: 30_000 },
+          );
+          await demo.step(async () => {
+            await expect(page.locator("[data-device-adding]")).toContainText(
+              remoteLoginWords.startingRow("Mac mini"),
+            );
+          });
+          writeFileSync(gate.resume, "resume");
+          device = await joining;
+        });
+      } else {
+        device = await addByAddress(page, sshd.address, 30_000);
+        const started = startHelper({
+          dataDir: work,
+          appVersion: "0.0.1",
+          say: () => {},
+          retryMs: [50],
+          log: () => {},
+        });
+        if (!started.ok) throw new Error(started.reason);
+        runner = started.run;
+        const updatingDevice = device;
+        const row = page.locator(`[data-device-row="${device.id}"]`);
+        const label = deviceLabel(device);
+        const update = row.getByRole("button", { name: `Update ${label}`, exact: true });
+        await expect(update).toBeVisible();
+        if (operation === "fallback") release.mode("corrupt");
+        await page.evaluate(() => {
+          (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents = [];
+        });
+        await demo.record("Update a Mac with download progress", "window", async () => {
+          await pressKey(update, "Enter");
+          await expect(row).toContainText(
+            remoteLoginWords.downloading(label, 0).split("…")[0] ?? label,
+            { timeout: 30_000 },
+          );
+
+          await expect(row).not.toContainText("%");
+          await expect(row).toContainText(remoteLoginWords.startingRow(label), { timeout: 30_000 });
+          await demo.step(async () => {
+            await expect(row).toContainText(remoteLoginWords.startingRow(label));
+          });
+          writeFileSync(gate.resume, "resume");
+          await expect(update).toBeVisible({ timeout: 30_000 });
+          // The older test helper deliberately keeps reporting its old version.
+          // Remote Login already checked the new app's work-update outcome.
+          await page.keyboard.press("Escape");
+          await expect(
+            feedLine(page, remoteLoginWords.updated(updatingDevice, "running")).first(),
+          ).toBeVisible();
+        });
+      }
+      const said = (await page.evaluate(
+        () => (window as Window & { __downloadEvents?: unknown[] }).__downloadEvents ?? [],
+      )) as Extract<FmEvent, { type: "device_setup" }>[];
+      const downloads = said.filter((event) => event.copy?.download);
+      expect(downloads.length).toBeGreaterThan(2);
+      expect(downloads.at(-1)?.copy?.download).toEqual({
+        received: release.size,
+        total: release.size,
+      });
+      expect(new Set(downloads.map((event) => event.run?.id)).size).toBe(1);
+      const sent = said.filter((event) => event.copy?.state === "sending");
+      if (operation === "fallback") {
+        expect(sent.at(-1)?.copy?.sent).toBeGreaterThan(8_000_000);
+        await expect(feedLineOf(page, sent.at(-1) as FmEvent)).toBeVisible();
+        await expect(
+          feedLine(
+            page,
+            remoteLoginWords.downloadFallback(deviceLabel(device ?? { name: "Mac mini" }), true),
+          ).first(),
+        ).toBeVisible();
+      } else expect(sent).toEqual([]);
+      await page.keyboard.press("Escape");
+      const finalDownload = feedLineOf(page, downloads.at(-1) as FmEvent);
+      // Add and Update each retain their own completed run with the same words.
+      await expect(finalDownload).toHaveCount(operation === "add" ? 1 : 2);
+      await expect(finalDownload.last()).toBeVisible();
+      await expect(feedLineOf(page, downloads[0] as FmEvent)).toHaveCount(0);
+      writeFileSync(testInfo.outputPath("download-events.json"), JSON.stringify(said, null, 2));
+      await demo.finish({
+        dir: testInfo.outputPath("demo"),
+        name: `${operation}-after`,
+        poster: "last",
+      });
+    } finally {
+      writeFileSync(gate.resume, "resume");
+      await runner?.stop();
+      await catalogRefreshesSettled();
+      await app.close();
+      await app.mockProvider?.close();
+      await sshd.stop();
+      await release.stop();
+    }
+  });
+}

@@ -12,6 +12,7 @@ import { type NetworkInterfaceInfo, userInfo } from "node:os";
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { FoundTools } from "@shared/connection";
+import { deviceLabel } from "@shared/devices";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import electronPath from "electron";
 import { CLAUDE_CONTROL_PROFILE } from "../../src/core/claude/session";
@@ -956,6 +957,7 @@ test("a Mac added by its address over Remote Login: the copy joins through the h
   await remote.update(device.id);
   expect(said).toEqual([
     remoteLoginWords.updating(device),
+    remoteLoginWords.starting(deviceLabel(device)),
     remoteLoginWords.updated(device, "running"),
   ]);
   expect(await running.exited).toBe(0);

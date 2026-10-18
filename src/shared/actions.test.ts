@@ -7,7 +7,9 @@ import {
   uncoveredSettings,
 } from "./actionCoverage";
 import { ACTION_NAMES, ACTIONS, actionRefusal } from "./actions";
+import { deviceUpdateBody } from "./deviceUpdateNudge";
 import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "./ipc";
+import { remoteLoginWords } from "./remoteLogin";
 
 describe("action permissions and channel parity", () => {
   it("changes an OpenRouter decision pick without creating outbound consent", () => {
@@ -173,4 +175,38 @@ describe("action permissions and channel parity", () => {
       expect(actionRefusal(line, { kind: "firstmate", wake: "captain" })).toBeTruthy();
     }
   });
+});
+
+// INF-333 F3/F4: the offered operation must describe the selected delivery path.
+it("offers counted downloads for another Mac and the local copy for another user here", () => {
+  const device = {
+    id: "mini",
+    kind: "work" as const,
+    name: "Mac mini",
+    pairedAt: 1,
+    remoteLogin: "sam@mini.local",
+  };
+  const makeOffer = ACTIONS["device-update"].offer;
+  if (!makeOffer) throw new Error("No update offer.");
+  const offer = makeOffer({ deviceId: device.id }, [device], { platform: "darwin" });
+  expect(offer.paragraphs[0]).toBe(remoteLoginWords.updateDownloadOffer());
+  expect(offer.arrival).toEqual({ update: device.id });
+  const here = makeOffer(
+    { deviceId: device.id },
+    [{ ...device, onThisMac: true, user: "builder" }],
+    { platform: "darwin" },
+  );
+  expect(here.paragraphs[0]).toBe(remoteLoginWords.updateLocalCopyOffer());
+  expect(here.paragraphs[0]).toBe(
+    "This computer copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again.",
+  );
+  expect(here.arrival).toEqual({ update: device.id });
+  const nudge = deviceUpdateBody({
+    ...device,
+    deviceId: device.id,
+    onThisMac: true,
+    user: "builder",
+    other: { app: "0.0.1", than: "older", takesWork: true, updateBy: "remote-login" },
+  });
+  expect(nudge).toContain(remoteLoginWords.updateLocalCopyOffer());
 });

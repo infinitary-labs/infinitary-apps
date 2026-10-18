@@ -11,6 +11,7 @@ import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { plainProblem } from "@shared/plainProblem";
 import { type DecisionRecord, decisionRecordSchema } from "@shared/provenance";
 import type { ModelsCatalogView, Slot } from "@shared/quota";
+import { remoteLoginWords } from "@shared/remoteLogin";
 import { runsHereOnly } from "@shared/repos";
 import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
 import { DEFAULT_SHARING } from "@shared/sharing";
@@ -2124,7 +2125,7 @@ describe("FirstmateAgent", () => {
     expect((await change("device-update", { deviceId: "mini-1" })).text).toMatch(/offered on/);
     const update = card("Update Infinitary on Mac mini");
     expect(update.body).toBe(
-      "<p>I copy this computer's Infinitary there over Remote Login, with your own SSH key, and start it again.</p>\n<p>Its running work stops for a moment and goes on after. Only your click can update it.</p>",
+      `<p>${remoteLoginWords.updateDownloadOffer()}</p>\n<p>Its running work stops for a moment and goes on after. Only your click can update it.</p>`,
     );
     expect(update.actions.find((action) => action.default)).toMatchObject({
       label: "Update it",

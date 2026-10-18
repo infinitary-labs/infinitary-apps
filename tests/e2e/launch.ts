@@ -396,8 +396,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     // cleanly; a scratch one goes even when closeApp has to kill the app.
     artifactsDir: scratchDir("infinitary-pw-artifacts-"),
     ...(options.recordVideo ? { recordVideo: options.recordVideo } : {}),
-    // Fake media devices: hold-to-talk opens a synthetic mic, so e2e never
-    // triggers the macOS microphone permission prompt.
+    // Fake media devices: hold-to-talk opens a synthetic mic, so the app
+    // never asks for the real one. macOS still asks for the runner's
+    // responsible process, so a runner needs microphone access
+    // (docs/testing.md, "The runner's microphone access").
     args: [
       options.packaged ? packagedEntry(appDir, options.devFlavor, options.version) : appDir,
       // Chromium honors this before JavaScript. Playwright's electron loader

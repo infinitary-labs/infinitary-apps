@@ -3,6 +3,7 @@ import type { FullConfig } from "@playwright/test";
 import { leaveRunnerSession } from "../helpers/runnerSession";
 import { closeRunTempRoot, leakReport, openRunTempRoot } from "../helpers/runTempRoot";
 import { E2E_RUN_ROOT } from "../helpers/scratchDirs";
+import { checkMicrophone } from "./micPreflight";
 import { runDir, tidyRunEvidence } from "./runEvidence";
 
 /**
@@ -14,8 +15,10 @@ import { runDir, tidyRunEvidence } from "./runEvidence";
  * They inherit nothing of the session that started the run
  * (tests/helpers/runnerSession.ts).
  */
-export default function globalSetup(config: FullConfig): () => Promise<void> {
+export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
   leaveRunnerSession();
+  // Voice journeys need the runner to open the microphone (tests/e2e/micPreflight.ts).
+  await checkMicrophone();
   const workingCopy = config.configFile ? dirname(config.configFile) : config.rootDir;
   const evidence = runDir();
   tidyRunEvidence(workingCopy, evidence);

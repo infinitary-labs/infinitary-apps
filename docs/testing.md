@@ -398,6 +398,22 @@ The recipe:
 - Zero retries and the release-only trigger are unchanged.
   A local run writes the same files into its own `test-results/runs/<run>/`, the JSON beside them ("Per-run e2e evidence" above); a `--reporter` flag replaces both reporters.
 
+## A virtual Mac as a runner
+
+A virtual Mac runs the journeys like the Mac mini does only when its image holds two things the app and macOS look for there.
+
+### The runner's microphone access
+
+The journeys open Chromium's fake microphone, but coreaudiod still asks macOS for microphone access on behalf of the responsible process, which in a virtual Mac is the lane's guest agent, not the app.
+With no grant, macOS raises a prompt nobody answers and `getUserMedia` never settles, so `mic-access.spec.ts` and `voice-prompt-focus.spec.ts` fail after their waits.
+The image grants `kTCCServiceMicrophone` to that agent: sign the agent ad hoc (`codesign -f -s -`), because a Homebrew build is only linker-signed and a row for it fails its code requirement, then add a row carrying its cdhash requirement.
+`tests/e2e/globalSetup.ts` checks this before any test starts (`tests/e2e/micPreflight.ts`): in a virtual Mac, or with `INFINITARY_E2E_MIC_PREFLIGHT=1`, it opens the fake microphone once and fails the run with the fix when it does not open.
+
+### The Claude Code the app finds first
+
+`knownClaudeHomes` looks in `/opt/homebrew/bin` before any other folder, so the image installs Claude Code there (`/opt/homebrew/bin/npm install -g --force @anthropic-ai/claude-code@<version>`); a newer copy in `~/node/bin` is never read.
+`claude-seat-instructions.spec.ts` fails with a first mate that never answers when that copy is old.
+
 ## Voice start and release budgets
 
 `tests/e2e/voice-freeze.check.spec.ts` is a macOS real-model check, skipped unless `INFINITARY_VOICE_MODEL_DIR` names the installed Whisper model directory.

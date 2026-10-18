@@ -149,10 +149,20 @@ export function useCardPresentation(
 
     const scrollers = Array.from(shown?.querySelectorAll<HTMLElement>("[data-card-body]") ?? []);
     const positions = scrollers.map((el) => el.scrollTop);
+    // A body that overflows needs no release to measure: what the shown
+    // entry lacks is exactly what its scrollers lie past their edges. Releasing
+    // the constraint would clamp their scrollTop to 0 and writing it back
+    // cancels a smooth scroll already under way (a PageDown pressed just
+    // before this ran). Only a card with nothing to scroll is released.
+    const overflow = scrollers.reduce(
+      (sum, el) => sum + Math.max(0, el.scrollHeight - el.clientHeight),
+      0,
+    );
+    const scrolls = overflow > 1;
     // Release only the presentation constraint, once before paint. The
     // intrinsic iframe viewport NEVER follows the shell's animated height.
-    shell.dataset.cardGeometry = "natural";
-    const natural = Math.min(cap, shown ? laidOutHeight(shown) : 0);
+    if (!scrolls) shell.dataset.cardGeometry = "natural";
+    const natural = Math.min(cap, shown ? laidOutHeight(shown) + (scrolls ? overflow : 0) : 0);
     const card = shown?.querySelector<HTMLElement>("[data-response-card]");
     // A lone card's reply row sits under it in the same surface.
     const reply = shown?.querySelector<HTMLElement>(
@@ -165,9 +175,10 @@ export function useCardPresentation(
         )
       : 0;
     shell.dataset.cardGeometry = "held";
-    scrollers.forEach((el, i) => {
-      el.scrollTop = positions[i] ?? 0;
-    });
+    if (!scrolls)
+      scrollers.forEach((el, i) => {
+        el.scrollTop = positions[i] ?? 0;
+      });
     const target = boundedShell(natural, chrome, cap);
     if (held.waiting && !current.ready) {
       shell.style.height = `${boundedShell(visible || target, chrome, cap)}px`;

@@ -466,3 +466,33 @@ test("a card's script cannot use its frame to open things or move focus", async 
     await launched.close();
   }
 });
+
+// INF-391: on a slow virtual Mac the card's height check ran between a
+// PageDown and the first scroll frame, wrote the body's scrollTop back as 0
+// and lost the smooth scroll (card-keyboard.spec.ts failed at the PageDown
+// step in 9 of 205 runs there, 0 of 90 on a fast Mac). The check is forced
+// here by a change inside the card, the moment a smooth scroll starts.
+test("a smooth scroll of a card's body survives the card's height check", async () => {
+  test.setTimeout(120_000);
+  const userDataDir = scratchDir("infinitary-card-scroll-");
+  seed(userDataDir, (key) => [decisionCard(key)]);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, TITLE);
+    await expect.poll(() => cardOverflow(page)).toBeGreaterThan(0);
+    await shownEntry(page)
+      .locator("[data-card-body]")
+      .evaluate((scroller) => {
+        scroller.scrollTo({ top: 200, behavior: "smooth" });
+        // A change inside the shell queues the height check as a microtask,
+        // before the scroll's first frame.
+        const shell = scroller.closest("[data-card-presentation]");
+        shell?.append(document.createElement("span"));
+      });
+    await expect.poll(() => cardScroll(page)).toBeGreaterThan(0);
+  } finally {
+    await launched.close();
+  }
+});

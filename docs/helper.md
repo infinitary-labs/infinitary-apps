@@ -445,9 +445,10 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   Claude's typed handler timeout also withdraws a waiting request, even when sleep has paused the work computer's own timer.
   Ordinary home-stopped turns and Pi turn cancellations leave the request waiting for its real answer.
   Claude carries the give-up signal through its runtime adapter, and the work computer keeps it scoped to that invocation across asynchronous callbacks.
-  A background completion-refusal record runs outside that scope, so it is still sent after the card's callback is cancelled.
+  A background completion-refusal record runs outside that scope, so it is still sent after the card's callback is cancelled before its card request went out.
   A background job's end runs outside it too, so a job started under a callback still tells its end after that callback is cancelled.
   Its answer says the change was not sent if the final change request never went on a connection, or may already be done if it did, even if that connection dropped.
+  A completion card whose card request went out that way records no refusal, since the home may already show it (`OutcomeUnknownError`; `docs/card-authoring.md`, "A refused completion card").
   Sending a picture, demo piece or font alone never implies the change may be done, and the home marks none of them begun; both computers read that one list (`ASSET_CHANNELS` in `src/core/session/workRecovery.ts`).
   Sending proves only that the home may have received it; it cannot prove receipt or completion.
   A change that may have acted names the same operation-specific check as a begun-mark warning (`src/core/session/workRecovery.ts`); a read is called a request, and can be asked again when its answer never arrives.

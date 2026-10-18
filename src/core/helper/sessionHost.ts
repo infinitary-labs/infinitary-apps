@@ -54,6 +54,7 @@ import {
   CardRefusedError,
   type CrewmateTool,
   type CrewmateToolDelegate,
+  OutcomeUnknownError,
 } from "../session/tools";
 import { ASSET_CHANNELS, changeRecoveryCheck } from "../session/workRecovery";
 import type { TaskQueryRow } from "../tasks/taskQuery";
@@ -1102,11 +1103,13 @@ export class SessionHost {
             ? `${ended}; the request was sent, but its answer did not arrive. You can ask for the read again.`
             : `${ended}; the request was not sent. It will not be sent when ${HOME.the} returns. You can ask again.`,
         );
-      throw new Error(
-        sent
-          ? `${ended}; the change may already be done. ${changeRecoveryCheck(channel)}`
-          : `${ended}; the change was not sent. It will not be sent when ${HOME.the} returns. You can ask again.`,
-      );
+      throw sent
+        ? new OutcomeUnknownError(
+            `${ended}; the change may already be done. ${changeRecoveryCheck(channel)}`,
+          )
+        : new Error(
+            `${ended}; the change was not sent. It will not be sent when ${HOME.the} returns. You can ask again.`,
+          );
     } finally {
       clearTimeout(timer);
     }

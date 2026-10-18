@@ -672,49 +672,107 @@ describe("a conversation held on a computer that runs work", () => {
     }
   });
 
+  /** A saved-story completion card, the shape a crewmate's merge decision takes. */
+  const completionCard: Step = {
+    tools: [
+      {
+        name: "emit_card",
+        args: {
+          title: "Review this change",
+          presentation: 1,
+          actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+        },
+      },
+    ],
+  };
+
   // Intent: review d0c421b2 F2: a completion refusal is an independent fact, not part of the cancelled tool.
   it("records a refused completion outside its cancelled invocation (INF-312 review)", async () => {
     const controller = new AbortController();
     const at = await placed({ toolSignal: controller.signal });
     await at.open();
-    const card = at.home.hold("inf:work:card");
-    model([
-      {
-        tools: [
-          {
-            name: "emit_card",
-            args: {
-              title: "Review this change",
-              presentation: 1,
-              actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
-            },
-          },
-        ],
-      },
-      { text: "The completion was refused." },
-    ]);
+    // The card asks after the events before it, so held here it never goes out.
+    const events = at.home.hold("inf:work:events");
+    model([completionCard, { text: "The completion was refused." }]);
     try {
       await at.order("inf:session:prompt", [
         { orderId: "refusal-cancel", task: TASK, text: "Show the review." },
       ]);
-      await card.reached;
+      await events.reached;
+      await expect
+        .poll(() =>
+          new PlacedTasks(at.dataDir)
+            .outbox(TASK, 0)
+            .some((record) => record.event.type === "tool_start"),
+        )
+        .toBe(true);
       controller.abort(new Error("Claude stopped waiting"));
+      events.open();
       await expect
         .poll(
           () =>
             at.home.effects.filter((effect) => effect.channel === "inf:work:card-refused").length,
         )
         .toBe(1);
-      card.open();
       await at.ended(1);
+      expect(at.home.asked.filter((request) => request.channel === "inf:work:card")).toEqual([]);
       expect(
         at.home.effects.find((effect) => effect.channel === "inf:work:card-refused")?.request
           .refusal,
-      ).toMatchObject({ title: "Review this change" });
+      ).toMatchObject({ title: "Review this change", why: expect.stringContaining("not sent") });
     } finally {
-      card.open();
+      events.open();
     }
   });
+
+  // Intent: INF-370 R1 - a completion card whose request went out may already be up, so it is not recorded as refused.
+  it.each(["Claude gives up", "the 24 days pass"])(
+    "records no refusal for a completion card the home may already show when %s (INF-370 R1)",
+    async (cause) => {
+      const controller = new AbortController();
+      const at = await placed({ toolSignal: controller.signal });
+      await at.open();
+      const card = at.home.hold("inf:work:card");
+      model([completionCard, { text: "Checking whether the card is up." }]);
+      const from = api.requests.length;
+      try {
+        if (cause === "Claude gives up") {
+          await at.order("inf:session:prompt", [
+            { orderId: "unknown-card", task: TASK, text: "Show the review." },
+          ]);
+          await card.reached;
+          controller.abort(new Error("Claude stopped waiting"));
+        } else {
+          vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
+          try {
+            await at.order("inf:session:prompt", [
+              { orderId: "unknown-card", task: TASK, text: "Show the review." },
+            ]);
+            await card.reached;
+            await vi.advanceTimersByTimeAsync(PLACED_REQUEST_WAIT_MS);
+          } finally {
+            vi.useRealTimers();
+          }
+        }
+        await expect
+          .poll(() =>
+            JSON.stringify(api.requests.slice(from).map((request) => request.body.messages)),
+          )
+          .toContain("may already be done");
+        // The home shows it after the conversation stopped waiting.
+        card.open();
+        await at.ended(1);
+        expect(at.home.effects.filter((effect) => effect.channel === "inf:work:card")).toHaveLength(
+          1,
+        );
+        expect(
+          at.home.asked.filter((request) => request.channel === "inf:work:card-refused"),
+        ).toEqual([]);
+      } finally {
+        card.open();
+      }
+    },
+  );
 
   // Intent: review d0c421b2 F1/F5: name a reachable check for changes and call a read a request.
   it.each([

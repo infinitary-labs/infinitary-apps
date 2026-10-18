@@ -223,6 +223,8 @@ It stands until a completion card goes up, which clears it.
 While it stands, the crewmate's report wake names it after the report - the card, when, why, that it did not reach the captain, and that none of the crewmate's cards is on the screen when none is - and `crew_status` carries it as `cardRefused`.
 Nothing reads the report's words; the fact sits beside them.
 A task on the personal workspace or an answer task has no completion card, and its settle refusal already says so, so it records nothing.
+A completion card a work computer sent to the home whose answer never came is not a refusal either: the home may already show it, so the card tool records nothing, and the crewmate reads that it may already be up and what to check (INF-370 R1; `docs/helper.md`, "Lost contact").
+A card whose request never went out is still recorded as refused.
 
 ## Revising a card
 

@@ -156,6 +156,18 @@ export class CardRefusedError extends Error {
 }
 
 /**
+ * A change that went out and whose answer never came: it may already be
+ * done, so nobody knows its outcome. A completion card that ends this way
+ * may already be up, so the card tool records no refusal for it (INF-370 R1).
+ */
+export class OutcomeUnknownError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OutcomeUnknownError";
+  }
+}
+
+/**
  * A card's actions, each with the words its author gave, once the host has
  * worded its own (`DeclaredAction`). An action with no words, or blank
  * ones, would be a button that says nothing, so the card is refused.

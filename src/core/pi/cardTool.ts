@@ -27,6 +27,7 @@ import {
   type DeclaredAction,
   type EmittedAction,
   labeledActions,
+  OutcomeUnknownError,
   stringEnum,
   type ToolOutput,
 } from "../session/tools";
@@ -701,7 +702,12 @@ function crewmateEmitCard(
     } catch (error) {
       // A refused completion card is a fact the host keeps, whichever
       // step refused it: the crewmate's report may still say it went up.
-      if ((params.actions ?? []).some((action) => action.effect?.kind === "settle")) {
+      // One whose request went out and was never answered may already be
+      // up, so it is no refusal: its error tells the crewmate what to check.
+      if (
+        !(error instanceof OutcomeUnknownError) &&
+        (params.actions ?? []).some((action) => action.effect?.kind === "settle")
+      ) {
         delegate.onCardRefused?.({ title: params.title, ...cardRefusalOf(error) });
       }
       throw error;

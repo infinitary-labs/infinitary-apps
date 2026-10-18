@@ -211,13 +211,13 @@ export class GitLabForge implements Forge {
       throw new ForgeWriteError(
         "failed",
         "refused",
-        "The merge request changed while preparing its story. Read it again before updating.",
+        "The merge request changed after it was read, so its description was not replaced. Read it again before updating.",
       );
     await this.client.write(
       "PUT",
       this.mergeRequestPath(iid),
       { description: body },
-      "replacing the story",
+      "replacing the description",
     );
   }
 

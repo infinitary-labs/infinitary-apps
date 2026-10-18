@@ -709,6 +709,11 @@ The squash is `<title>`, a blank line and the story's plain summary with any bre
 Evidence: `providers/gitlab/attachments.test.ts` (the multipart upload, media protection, identity, role and returned-reference rules), `providers/gitlab/gitlabForge.test.ts` ("saved-story writes"), `presentation.test.ts` ("the layout GitLab can actually display"), `providers/gitlab/gateway.test.ts` (the raw-write refusals), `tests/gitlabStub.test.ts` ("a saved story through the real GitLab forge and the stand-in": a refused private upload, uploads before the opening read back byte for byte, a lost upload answer, a restart with a person's words and the squash), and `tests/e2e/gitlab-delivery.spec.ts`, whose gitlab.com journey opens the story and squashes its summary while the self-hosted one keeps its body.
 
 Existing PRs are not rewritten into this format.
+An open pull or merge request whose description is not a saved story - on GitHub Enterprise Server or self-hosted GitLab, or on github.com and gitlab.com when it predates saved stories - takes `body` again on a later `open_change` (INF-291), and `prepare_change` on one that predates saved stories points there.
+The forge rereads it, replaces the whole description only while it is still open at the version and words just read, and `PrCiService` reads it back, so the answer says what the host now shows rather than only that the change exists.
+An identical body sends nothing, no body leaves the description unchanged, and the title is never renamed; each answer says which.
+A refused or uncertain write, or a read-back with different words, is answered as that, and nothing is sent again on its own.
+A plain Git host keeps no description for a pushed branch, and its answer says the body was not published.
 GitHub Enterprise Server, self-hosted GitLab, plain Git, local-only delivery, answer cards and release-note hero pictures are unchanged.
 
 Preparation and ordinary publication reject tracked uncommitted changes, not untracked downloads such as `.infinitary-artifacts` archives.

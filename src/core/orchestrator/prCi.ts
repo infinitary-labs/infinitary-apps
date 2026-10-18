@@ -28,6 +28,7 @@ import {
   type ForgeReadiness,
   type ForgeRepo,
   type ForgeRuleset,
+  ForgeWriteError,
   isAcceptedCheckState,
   isRedCheckState,
   isSignInForgeFailure,
@@ -214,6 +215,17 @@ function changeWords(forge: Forge, change: ForgeChange): string {
   return change.number !== undefined
     ? `pull request ${forge.label(change)}${url ? ` ${url}` : ""}`
     : `the pushed branch ${forge.label(change)}${url ? ` ${url}` : ""}`;
+}
+
+/** What open_change says of a body on a host whose pushed branch carries no description. */
+function keepsNoDescription(forge: Forge): string {
+  return `${forge.place ?? "The project's host"} keeps no description for a pushed branch, so body was not published.`;
+}
+
+/** Two descriptions alike as a host keeps them: line endings and trailing space aside. */
+function sameDescription(held: string | undefined, body: string): boolean {
+  const plain = (text: string) => text.replace(/\r\n?/g, "\n").trimEnd();
+  return plain(held ?? "") === plain(body);
 }
 
 export class PrCiService {
@@ -1263,7 +1275,8 @@ export class PrCiService {
    * branch as a proposed change where the project lives - a pull request
    * on GitHub (the crewmate has pushed the branch), the branch sent up on a
    * plain host (the forge pushes it). A change already open for the branch
-   * is answered, not opened twice. Recorded like a reading's change:
+   * is answered, not opened twice, and a body replaces its description when
+   * that is not a saved story (`redescribe`). Recorded like a reading's change:
    * `pr_opened` on the timeline, the label and link on the delivery facts.
    */
   async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
@@ -1279,7 +1292,7 @@ export class PrCiService {
           !located.record.delivery?.presentation &&
           (await located.forge.changeFor(located.branch))
         )
-          return "This pull request predates saved stories and will not be rewritten.";
+          return "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.";
         const merged = await this.mergedBeforeStories(located.record, located.forge);
         if (merged) return merged;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
@@ -1394,26 +1407,33 @@ export class PrCiService {
         return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
       if (!usesStory && !existing && input.body === undefined)
         return "The pull request description is missing.";
-      const change = usesStory
-        ? await presentations.publish(
-            taskId,
-            input.presentation as number,
-            forge,
-            branch,
-            input.title,
-            current.delivery?.ci === "green" && current.delivery.headSha === existing?.headSha
-              ? "passed"
-              : "pending",
-            input.recovery,
-          )
-        : (existing ??
-          (await forge.openChange({ branch, title: input.title, body: input.body ?? "" })));
+      let change: ForgeChange;
+      let described = "";
+      if (usesStory) {
+        change = await presentations.publish(
+          taskId,
+          input.presentation as number,
+          forge,
+          branch,
+          input.title,
+          current.delivery?.ci === "green" && current.delivery.headSha === existing?.headSha
+            ? "passed"
+            : "pending",
+          input.recovery,
+        );
+      } else if (existing) {
+        ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
+      } else {
+        change = await forge.openChange({ branch, title: input.title, body: input.body ?? "" });
+        if (!hasChangeRequests(forge.kind)) described = keepsNoDescription(forge);
+      }
       this.noteChange(record.id, { change, forge });
       const next =
         "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.";
+      const said = described ? ` ${described}` : "";
       return existing
-        ? `A pull request for ${branch} is already open: ${changeWords(forge, change)}. ${next}`
-        : `Opened ${changeWords(forge, change)} for ${branch}. ${next}`;
+        ? `A pull request for ${branch} is already open: ${changeWords(forge, change)}.${said} ${next}`
+        : `Opened ${changeWords(forge, change)} for ${branch}.${said} ${next}`;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (isSignInForgeFailure(caught)) {
@@ -1437,6 +1457,82 @@ export class PrCiService {
       }
       return `Could not open the pull request: ${message}`;
     }
+  }
+
+  /**
+   * An open change whose description is the crewmate's own words, not a
+   * saved story (INF-291): a body replaces it whole through the forge's
+   * conditional write, and the answer says what the host shows when read
+   * back, never only that the change exists. A refused or uncertain write,
+   * or a read-back that differs, is said as such; nothing is sent again.
+   */
+  private async redescribe(
+    forge: Forge,
+    branch: string,
+    existing: ForgeChange,
+    input: OpenChangeInput,
+  ): Promise<{ change: ForgeChange; said: string }> {
+    const { body } = input;
+    // A title is never renamed here; say so rather than drop it quietly.
+    const titled =
+      existing.title !== undefined && existing.title !== input.title
+        ? ` Its title stays "${existing.title}".`
+        : "";
+    const place = forge.place ?? "the project's host";
+    const readBack = "Read it with github_read before calling open_change again.";
+    if (!hasChangeRequests(forge.kind))
+      return { change: existing, said: body === undefined ? "" : keepsNoDescription(forge) };
+    if (body === undefined)
+      return {
+        change: existing,
+        said: `Its description is unchanged; pass body to replace it.${titled}`,
+      };
+    if (sameDescription(existing.body, body))
+      return {
+        change: existing,
+        said: `${place} already shows this description; nothing was sent.${titled}`,
+      };
+    if (!forge.updateChangeBody)
+      return {
+        change: existing,
+        said: `Its description was not replaced: ${place} offers no way to replace it here.`,
+      };
+    try {
+      await forge.updateChangeBody(existing, body);
+    } catch (caught) {
+      // A missing sign-in or write access keeps the blocker words open_change already gives.
+      const denied =
+        isSignInForgeFailure(caught) ||
+        (caught instanceof ForgeError && caught.failure === "permission");
+      if (!(caught instanceof ForgeWriteError) || denied) throw caught;
+      return {
+        change: existing,
+        said:
+          caught.outcome === "failed"
+            ? `Its description was not replaced: ${caught.message}`
+            : `Its description may or may not have been replaced: ${caught.message} ${readBack}`,
+      };
+    }
+    let read: ForgeChange | null;
+    try {
+      read = await forge.changeFor(branch);
+    } catch (caught) {
+      if (isSignInForgeFailure(caught)) throw caught;
+      const why = caught instanceof Error ? caught.message : String(caught);
+      return {
+        change: existing,
+        said: `Sent the new description, but could not read it back: ${why}. ${readBack}`,
+      };
+    }
+    if (read && read.number === existing.number && sameDescription(read.body, body))
+      return {
+        change: read,
+        said: `Replaced its description: ${place} now shows the ${body.length}-character body you passed, at version ${read.headSha.slice(0, 7)}.${titled}`,
+      };
+    return {
+      change: read ?? existing,
+      said: `Sent the new description, but ${place} shows different words; someone may have edited it at the same time. ${readBack}`,
+    };
   }
 
   /** A placed task's branch, brought here before this Mac's git reads it. */

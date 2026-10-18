@@ -232,7 +232,7 @@ export interface Forge {
   defaultBranch(): Promise<string>;
   /** Offer the branch as a proposed change; on a plain host this sends it up. */
   openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange>;
-  /** Replace a story only if its just-read body and code version still match. */
+  /** Replace the description, a saved story or legacy words, only if its just-read body and code version still match. */
   updateChangeBody?(change: ForgeChange, body: string): Promise<void>;
   /** Read the pushed branch before opening a story-bound change. */
   branchHead?(branch: string): Promise<string>;

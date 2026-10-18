@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "refresh-open-pr-description",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate can rewrite the description of a pull request it already opened",
+      "body": "When a crewmate rewrites the description of a pull request or merge request that is already open, the page where your project lives now shows the new words, and the crewmate checks that it does. Before, the crewmate was told the request was open while its page kept the old description. This covers GitHub Enterprise, GitLab on your own server, and requests on github.com and gitlab.com opened before they shared one explanation with their merge cards.",
+      "noPicture": "The new words show on the pull request's own page where the project lives; nothing in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

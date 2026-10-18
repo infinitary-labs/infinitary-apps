@@ -361,7 +361,7 @@ export class GitHubForge implements Forge {
       throw new ForgeWriteError(
         "failed",
         "refused",
-        "Could not reread the pull request before updating its story.",
+        "Could not reread the pull request before replacing its description.",
       );
     let pull: PullStateJson;
     try {
@@ -381,11 +381,11 @@ export class GitHubForge implements Forge {
       throw new ForgeWriteError(
         "failed",
         "refused",
-        "The pull request changed while preparing its story. Read it again before updating.",
+        "The pull request changed after it was read, so its description was not replaced. Read it again before updating.",
       );
     const answer = await this.apiCall("PATCH", path, JSON.stringify({ body }));
     if (answer.status !== 200)
-      throw changeWriteError(answer.status, "replacing the story", answer.body);
+      throw changeWriteError(answer.status, "replacing the description", answer.body);
   }
 
   async changeFor(branch: string): Promise<ForgeChange | null> {

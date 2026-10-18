@@ -16,6 +16,7 @@ import {
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
+  ForgeWriteError,
   GITLAB_PRIVATE_MEDIA_REFUSAL,
   overallOfChecks,
   presentationCommitMessage,
@@ -67,8 +68,13 @@ class FakeForge implements Forge {
   states: ForgeCheckState[] = ["success"];
   names?: string[];
   fail: Partial<
-    Record<"changeFor" | "checks" | "putIn" | "close" | "openChange", ForgeError | Error>
+    Record<
+      "changeFor" | "checks" | "putIn" | "close" | "openChange" | "updateChangeBody",
+      ForgeError | Error
+    >
   > = {};
+  /** The description the host holds after a replacement: a person's edit that raced it. */
+  heldAfterWrite?: string;
   /** What `openChange` offers the branch as. */
   opened: Omit<ForgeChange, "branch"> = {
     number: 42,
@@ -98,6 +104,18 @@ class FakeForge implements Forge {
     if (this.fail.openChange) throw this.fail.openChange;
     this.change = { ...this.opened, branch: input.branch };
     return this.change;
+  }
+  /** GitHub's and GitLab's conditional write: refused unless the change is as just read. */
+  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+    this.calls.push(`updateChangeBody ${this.label(change)}`);
+    if (this.fail.updateChangeBody) throw this.fail.updateChangeBody;
+    if (
+      !this.change ||
+      this.change.headSha !== change.headSha ||
+      (this.change.body ?? "") !== (change.body ?? "")
+    )
+      throw new ForgeWriteError("failed", "refused", "The pull request changed after it was read.");
+    this.change = { ...this.change, body: this.heldAfterWrite ?? body };
   }
   async changeFor(branch: string) {
     this.calls.push(`changeFor ${branch}`);
@@ -1118,6 +1136,112 @@ describe("PrCiService and the sign-in where the project lives", () => {
     expect(text).toContain("A pull request for fm/task-ab12cd34 is already open: pull request #23");
     expect(text).toContain("file it as Continue: …");
     expect(forge.calls).not.toContain("openChange fm/task-ab12cd34 fix: correct it");
+  });
+
+  /**
+   * INF-291, from INF-87's PR #39: a corrected body passed to open_change on a
+   * pull request opened before saved stories was answered "already open"
+   * while GitHub kept the stale description. A body now replaces such a
+   * description, and the answer says what the host shows when read back.
+   */
+  describe("a body on a pull request that is open without a saved story (INF-291)", () => {
+    const STALE = "## Verified\nCurrent head: `46e20da`.";
+    const CORRECTED = "## Verified\nCurrent head: `4c771ba`; approved pieces start Queued.";
+
+    it("replaces the description, reads it back, and answers what GitHub shows", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.change = { ...(forge.change as ForgeChange), body: STALE };
+      const replaced = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(replaced).toContain(
+        `Replaced its description: GitHub now shows the ${CORRECTED.length}-character body you passed, at version feedbee.`,
+      );
+      expect(replaced).toContain("Read its checks with check_change.");
+      expect(forge.change?.body).toBe(CORRECTED);
+      // One write, made only after reading the change, and read back before answering.
+      expect(forge.calls).toEqual([
+        "changeFor fm/task-ab12cd34",
+        "updateChangeBody #23",
+        "changeFor fm/task-ab12cd34",
+      ]);
+
+      // Asking again with the same words sends nothing more.
+      const again = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(again).toContain("GitHub already shows this description; nothing was sent.");
+      expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toHaveLength(1);
+    });
+
+    it("leaves the description unchanged without a body, and says so", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.change = { ...(forge.change as ForgeChange), body: STALE };
+      const text = await service.open("ab12cd34", { title: "fix: ship it" });
+      expect(text).toContain("Its description is unchanged; pass body to replace it.");
+      expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toEqual([]);
+      expect(forge.change?.body).toBe(STALE);
+    });
+
+    it("says the title stays, since open_change never renames one", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      const text = await service.open("ab12cd34", { title: "fix: a new name", body: CORRECTED });
+      expect(text).toContain('Its title stays "fix: ship it".');
+      expect(forge.change?.title).toBe("fix: ship it");
+    });
+
+    it("never claims words the host does not show after the write", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.change = { ...(forge.change as ForgeChange), body: STALE };
+      forge.heldAfterWrite = `${CORRECTED}\n\nA person's words.`;
+      const text = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(text).toContain("Sent the new description, but GitHub shows different words");
+      expect(text).toContain("Read it with github_read before calling open_change again.");
+      expect(text).not.toContain("Replaced its description");
+    });
+
+    it("says a refused replacement was not made, without sending the crewmate to push", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.fail.updateChangeBody = new ForgeWriteError(
+        "failed",
+        "refused",
+        "The pull request changed after it was read, so its description was not replaced. Read it again before updating.",
+      );
+      const text = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(text).toContain(
+        "Its description was not replaced: The pull request changed after it was read",
+      );
+      expect(text).not.toContain("Push your branch first");
+    });
+
+    it("says an uncertain write may or may not have replaced it, and is not resent", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.fail.updateChangeBody = new ForgeWriteError(
+        "uncertain",
+        "transient",
+        "GitHub answered 502 when replacing the description; read it back before any retry.",
+      );
+      const text = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(text).toContain(
+        "Its description may or may not have been replaced: GitHub answered 502",
+      );
+      expect(text).toContain("Read it with github_read before calling open_change again.");
+      expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toHaveLength(1);
+    });
+
+    it("says a plain Git host keeps no description for the pushed branch", async () => {
+      const forge = new FakeForge({ kind: "git", place: "git.example.com" });
+      forge.change = { url: null, branch: "fm/task-ab12cd34", headSha: "feedbeef" };
+      const { tasks, repos, service } = setup({ forge });
+      await insertDirectPrTask(tasks, repos);
+      const text = await service.open("ab12cd34", { title: "fix: ship it", body: CORRECTED });
+      expect(text).toContain(
+        "git.example.com keeps no description for a pushed branch, so body was not published.",
+      );
+      expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toEqual([]);
+    });
   });
 
   it("tells the crewmate a missing sign-in is the captain's blocker, never its own", async () => {

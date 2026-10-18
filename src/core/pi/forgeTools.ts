@@ -36,7 +36,7 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
   "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes.",
   "On github.com and gitlab.com, prepare_change first, then pass its presentation revision, not body. Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
-  "For self-hosted GitLab, GitHub Enterprise and other hosts, keep body with the project's required headings; a pull or merge request still open from before saved stories is answered unchanged.",
+  "For self-hosted GitLab, GitHub Enterprise and other hosts, keep body with the project's required headings. On a pull or merge request already open there, or still open from before saved stories, body replaces its description whole; the answer says what the host shows when read back.",
   "A saved story is replaced whole, preserving surrounding text. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication; a pull request opened before saved stories and since closed without merging is forgotten, and a new story starts.",
   "Never squash your commits yourself (the merge does): bring the branch up to date with git rebase onto the default branch, never git reset --soft onto it, which would undo its newer work.",
   "If it answers that the app is not signed in, report that as a blocker: the captain signs in, never you.",
@@ -108,7 +108,8 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
     title: Type.String({ description: "The pull request's title" }),
     body: Type.Optional(
       Type.String({
-        description: "The legacy pull request description, on hosts without saved stories.",
+        description:
+          "The legacy pull request description, on hosts without saved stories or a pull request opened before them; on one already open it replaces the description.",
       }),
     ),
     presentation: Type.Optional(

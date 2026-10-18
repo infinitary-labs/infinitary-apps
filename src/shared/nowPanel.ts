@@ -16,6 +16,8 @@ import type { TaskView } from "./tasks";
  * - `waiting` - a live task with a reachable ready decision. Rows shown by default.
  * - `working` - active, whether still working or idle with unmerged work.
  *               Rows shown by default. A task still starting is not here.
+ *               The panel lists a working task's live tree beside it
+ *               (`nowGroupsOf`); its finished parts stay under `landed`.
  * - `queued`  - open work that starts by itself when nothing holds it (start
  *               policy when-ready), blocked or held included, and a task
  *               that is starting until its crewmate begins.
@@ -92,23 +94,30 @@ export function nowGroupOf(task: NowGroupInput): NowGroup | null {
 /** A row the grouping places, with where it hangs in its tree. */
 type PlacedTask = NowGroupInput & Pick<TaskView, "id" | "parentId">;
 
-/** Resolve each task's visible group, keeping a working parent tree together. */
+/**
+ * Resolve each task's visible group, keeping a working parent tree together.
+ * The tree is live work only: a closed task - a finished review, plan or part
+ * - keeps its own group and does not hold the tree together, so Working never
+ * lists finished work (the captain: "remove already-done tasks from the
+ * 'working' section").
+ */
 export function nowGroupsOf(board: { tasks: readonly PlacedTask[] }): Map<string, NowGroup | null> {
   const byId = new Map(board.tasks.map((task) => [task.id, task]));
+  const live = (task: PlacedTask | undefined) =>
+    task && task.status !== "done" && task.status !== "dropped" ? task : undefined;
+  const liveParentOf = (task: PlacedTask) =>
+    task.parentId ? live(byId.get(task.parentId)) : undefined;
   const workingTrees = new Set<string>();
   for (const task of board.tasks) {
     if (nowGroupOf(task) !== "working") continue;
-    let member: PlacedTask | undefined = task;
-    while (member) {
+    for (let member = live(task); member; member = liveParentOf(member)) {
       workingTrees.add(member.id);
-      member = member.parentId ? byId.get(member.parentId) : undefined;
     }
   }
   for (const task of board.tasks) {
-    let member: PlacedTask | undefined = task;
-    while (member?.parentId) {
-      member = byId.get(member.parentId);
-      if (member && workingTrees.has(member.id)) {
+    if (!live(task)) continue;
+    for (let member = liveParentOf(task); member; member = liveParentOf(member)) {
+      if (workingTrees.has(member.id)) {
         workingTrees.add(task.id);
         break;
       }

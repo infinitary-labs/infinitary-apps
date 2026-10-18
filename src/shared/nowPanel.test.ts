@@ -156,6 +156,67 @@ describe("nowGroupsOf", () => {
     expect([...nowGroupsOf(board).values()]).toEqual(["working", "working", "working", "waiting"]);
     expect(board.tasks.map(nowGroupOf)).toEqual(["queued", "working", "queued", "waiting"]);
   });
+
+  // The captain: "remove already-done tasks from the 'working' section in
+  // tasks panel" - his Tasks panel listed finished reviews and a finished
+  // plan with check marks under working parents.
+  it("leaves finished work out of a working tree, under done", () => {
+    const done = { status: "done", closedReason: "finished", closedAt: 5 } as const;
+    const fix = task({ id: "fix", title: "Fix: browser command", status: "active" });
+    const reviews = [1, 2].map((n) =>
+      task({ id: `review-${n}`, parentId: "fix", title: "Review: Fix: browser command", ...done }),
+    );
+    const app = task({ id: "ios", title: "Infinitary iOS app", startPolicy: "on-request" });
+    const plan = task({ id: "plan", parentId: "ios", title: "Plan: split the iOS app", ...done });
+    const join = task({
+      id: "join",
+      parentId: "ios",
+      title: "Your Mac lets a phone join",
+      ...done,
+    });
+    const joinReview = task({ id: "join-review", parentId: "join", title: "Review", ...done });
+    const store = task({ id: "store", parentId: "ios", title: "The phone app in the App Store" });
+    const phone = task({
+      id: "phone",
+      parentId: "ios",
+      title: "The phone app joins your Mac",
+      status: "active",
+      activity: "running",
+    });
+    const phoneReview = task({ id: "phone-review", parentId: "phone", title: "Review", ...done });
+    const board = {
+      tasks: [fix, ...reviews, app, plan, join, joinReview, store, phone, phoneReview],
+    };
+    expect(Object.fromEntries(nowGroupsOf(board))).toEqual({
+      fix: "working",
+      "review-1": "landed",
+      "review-2": "landed",
+      ios: "working",
+      plan: "landed",
+      join: "landed",
+      "join-review": "landed",
+      store: "working",
+      phone: "working",
+      "phone-review": "landed",
+    });
+
+    // Parts a merge kept open under a finished parent are not one working
+    // tree through it: each keeps its own group.
+    const merged = task({ id: "merged", title: "Ship the phone app", ...done });
+    const kept = task({ id: "kept", parentId: "merged", title: "Add widgets" });
+    const started = task({
+      id: "started",
+      parentId: "merged",
+      title: "Add a share sheet",
+      status: "active",
+      activity: "running",
+    });
+    expect(Object.fromEntries(nowGroupsOf({ tasks: [merged, kept, started] }))).toEqual({
+      merged: "landed",
+      kept: "queued",
+      started: "working",
+    });
+  });
 });
 
 describe("taskStatusWord", () => {

@@ -317,12 +317,12 @@ describe("what the collapsed panel says it holds", () => {
     const sibling = task({ id: "s", key: "FI3-22", parentId: "p", status: "open", activity: null });
     const done = task({ id: "d", key: "FI3-23", parentId: "p", status: "done", activity: null });
     const current = board({ tasks: [parent, child, sibling, done] });
-    // The Working group shows the whole tree beside its working child...
+    // The Working group shows the live tree beside its working child...
     expect(
       rowsOf(current, noFilter)
         .get("working")
         ?.map((row) => row.task.key),
-    ).toEqual(["FI3-20", "FI3-21", "FI3-22", "FI3-23"]);
+    ).toEqual(["FI3-20", "FI3-21", "FI3-22"]);
     // ...and the summary counts only the one task that is working.
     expect(summaryOf(current)).toEqual([{ text: "0 waiting" }, { text: "1 working" }]);
   });

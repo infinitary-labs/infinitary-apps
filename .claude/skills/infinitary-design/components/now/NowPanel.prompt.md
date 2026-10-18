@@ -14,6 +14,8 @@ Hidden replies, Working cards, notes, no-card holds, dead dependencies and close
 A ready decision behind another card counts because its task can bring it forward.
 Count each task once.
 A waiting child separates into Waiting on you while its nonwaiting parent and siblings keep their existing working grouping; do not duplicate parent context or add row decoration.
+Working lists a working task's live tree beside it: its parent and the parent's other open parts.
+A finished part - a done review, plan or piece of work - stays under done · 7d, never in Working, and finished work does not hold a tree together.
 
 A row is a shared task status mark, the task key in dim mono at the start of the title, the title (one line, ellipsized), and, when space permits, the project name in dim mono at the end (ellipsized; the trailing track is `fit-content(40%)` so short names size to content and long names cap at 40%).
 Hide the project name and its grid track when the panel content is 320px wide or less, or when exactly one registered, non-archived repo project exists (Scratch and archived projects do not count).

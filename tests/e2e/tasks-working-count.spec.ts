@@ -15,7 +15,7 @@ import { dockSummaryParts, expandDock, nowFrame } from "./rails";
 
 // Exact count arithmetic belongs to the Tasks folder's rows.test.ts. This
 // journey checks that the own-state count reaches the header the panel
-// says while collapsed, while the tree remains visible.
+// says while collapsed, while the live tree remains visible.
 test("Tasks counts working tasks without counting their contextual tree", async () => {
   const userDataDir = scratchDir("infinitary-working-count-");
   const repo = join(userDataDir, "project");
@@ -90,8 +90,10 @@ test("Tasks counts working tasks without counting their contextual tree", async 
       .poll(async () => (await dockSummaryParts(page, "now"))[1])
       .toMatch(new RegExp(`^${working}\\b`));
     await expandDock(page, "now");
+    // The parent, its working child and its queued part; the finished part
+    // is listed under done, not Working.
     await expect(nowFrame(page).locator('[data-now-group="working"] [data-now-row]')).toHaveCount(
-      4,
+      3,
     );
     await panel.screenshot({ path: test.info().outputPath("expanded-tree.png") });
   } finally {

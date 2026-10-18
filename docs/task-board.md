@@ -44,7 +44,7 @@ Each task appears once, under its own shared group (`nowGroupOf`, `src/shared/no
 - Dropped · 7d: work dropped in the board's seven days, read-only.
 
 Answered questions, decisions and operations stay off the board, as they stay off the panel.
-Unlike the panel, which keeps a working parent's tree together in Working, the board shows each task under its own state: a child nests under its parent only when both are in the same lane, and otherwise stands alone with "part of KEY" as its word.
+Unlike the panel, which keeps a working parent's live tree together in Working (its finished parts stay under Done · 7d), the board shows each task under its own state: a child nests under its parent only when both are in the same lane, and otherwise stands alone with "part of KEY" as its word.
 Lanes sort by priority, then oldest first; Done and Dropped newest first.
 An empty lane says so in its place ("Nothing queued").
 

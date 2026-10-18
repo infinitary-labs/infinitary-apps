@@ -32,7 +32,7 @@ FI3-1014 piece 6 added what a panel that draws tasks draws them with, so its row
 |---|---|
 | `TaskStatusMark` | The task's status mark, one shape at every size, from a reading |
 | `taskStatusOf`, `taskStatusLabel` | A task's reading (`mark`, `word`, `reason`) and its words, from the task's fields |
-| `NOW_GROUPS`, `NOW_GROUP_LABELS`, `nowGroupOf`, `nowGroupsOf` | The shared grouping the Tasks panel and the board name their lanes by: a task's own group, or the panel's, which keeps a working parent's tree together |
+| `NOW_GROUPS`, `NOW_GROUP_LABELS`, `nowGroupOf`, `nowGroupsOf` | The shared grouping the Tasks panel and the board name their lanes by: a task's own group, or the panel's, which keeps a working parent's live tree together |
 | `focusWithRing` | Focus an element with the keyboard's ring, as the app's lists do |
 | `useInPlaceReveal` | The drift a group's rows open with |
 | `foldForSearch` | A task's key or title folded the way the app's own search folds it |

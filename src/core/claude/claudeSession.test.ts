@@ -1211,6 +1211,49 @@ describe("the client's own continuations", () => {
 });
 
 describe("the crewmate's record (the session contract's step 6)", () => {
+  // INF-40 / review G2: a renewed session may still have its previous client attached.
+  it("refreshes the attached client's late tail after its next session ID is renewed", async () => {
+    const configDir = scratchDir("infinitary-claude-renewed-client-");
+    const recordDir = scratchDir("infinitary-claude-renewed-record-");
+    const instructions = "Count the footer's rivets.";
+    let client = "";
+    const line = (text: string) =>
+      `${JSON.stringify({ type: "user", uuid: text, message: { role: "user", content: text } })}\n`;
+    const { factory, harness } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        appendFileSync(client, line("first"));
+        closes(emit, result({ cost: 0.01, input: 10, output: 2 }));
+      },
+    });
+    const session = await scriptedClaudeFactory({ configDir, query: factory }).open(
+      codingSpec({
+        binding: { backend: "claude", accountId: "acct_claude" },
+        cwd: baseSpec.cwd,
+        recordDir,
+        instructions,
+        stamp: crewmateContractStamp(instructions, []),
+      }),
+    );
+    const attached = session.sessionId;
+    client = join(configDir, "projects", encodeClaudeProjectDir(baseSpec.cwd), `${attached}.jsonl`);
+    mkdirSync(dirname(client), { recursive: true });
+    try {
+      await session.prompt("Read the footer.");
+      const copy = session.recordPath() ?? "";
+      expect(readFileSync(copy, "utf8")).toBe(line("first"));
+      session.serveInstructions({ text: "Count the rivets in pairs.", sha: "rivets-in-pairs" });
+      expect(session.sessionId).not.toBe(attached);
+      expect(session.takeRenewal()).toMatchObject({ from: attached, changed: ["instructions"] });
+      expect(harness().closed()).toBe(false);
+      appendFileSync(client, line("late"));
+      session.recordPath({ refresh: true });
+      expect(readFileSync(copy, "utf8")).toBe(line("first") + line("late"));
+    } finally {
+      session.dispose();
+      await session.closed();
+    }
+  });
   it("copies the turn into its task's record, and on each tick the tail the client wrote after it", async () => {
     const configDir = scratchDir("infinitary-claude-coding-record-");
     const recordDir = scratchDir("infinitary-claude-coding-copy-");

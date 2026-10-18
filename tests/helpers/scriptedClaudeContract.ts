@@ -137,7 +137,9 @@ const lingering: { stores: SessionRecordStore[]; mcps: Promise<Client | undefine
   mcps: [],
 };
 
-export async function scriptedClaudeWorld(): Promise<ContractWorld> {
+export async function scriptedClaudeWorld(
+  controls: { beforeTool?: () => Promise<void>; beforeToolRecord?: () => Promise<void> } = {},
+): Promise<ContractWorld & { continueTurn: () => void; endClient: (error?: Error) => void }> {
   const root = scratchDir("infinitary-claude-scripted-contract-");
   const configDir = join(root, "claude-config");
   const homeDir = join(root, "home");
@@ -253,25 +255,33 @@ export async function scriptedClaudeWorld(): Promise<ContractWorld> {
     tool: string,
   ): Promise<void> => {
     const { emit } = client.attachment;
+    if (controls.beforeTool) {
+      await controls.beforeTool();
+      if (client.turn !== turn || client.attachment.closed()) return;
+    }
     toolCalls += 1;
     const id = `toolu_${toolCalls}`;
-    emit({
-      type: "assistant",
-      parent_tool_use_id: null,
-      message: {
-        content: [{ type: "tool_use", id, name: `${CLAUDE_SEAT_TOOL_PREFIX}${tool}`, input: {} }],
-      },
-    });
+    const call = {
+      role: "assistant",
+      content: [{ type: "tool_use", id, name: `${CLAUDE_SEAT_TOOL_PREFIX}${tool}`, input: {} }],
+    };
+    emit({ type: "assistant", parent_tool_use_id: null, message: call });
+    if (controls.beforeToolRecord) {
+      await controls.beforeToolRecord();
+      if (client.turn !== turn || client.attachment.closed()) return;
+    }
+    record(client, { type: "assistant", message: call });
     const called = await mcp.callTool({ name: tool, arguments: {} });
-    if (client.turn !== turn) return;
+    if (client.turn !== turn || client.attachment.closed()) return;
     const content = (called.content as { type: string; text?: string }[])
       .map((block) => block.text ?? "")
       .join("");
-    emit({
-      type: "user",
-      parent_tool_use_id: null,
-      message: { content: [{ type: "tool_result", tool_use_id: id, content }] },
-    });
+    const result = {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: id, content }],
+    };
+    record(client, { type: "user", message: result });
+    emit({ type: "user", parent_tool_use_id: null, message: result });
     client.history.push(content);
     for (const steer of turn.steers.splice(0)) {
       emit(says.ack(steer));
@@ -322,7 +332,7 @@ export async function scriptedClaudeWorld(): Promise<ContractWorld> {
     if (playing === "loop") {
       if (!turn || !mcp) return;
       await callTool(client, turn, mcp, CONTRACT_TOOL);
-      if (client.turn !== turn) return;
+      if (client.turn !== turn || client.attachment.closed()) return;
       const cap = options.maxTurns;
       if (cap !== undefined && turn.requests >= cap) {
         // The client's own stop at its turn cap, in its own words (measured
@@ -368,7 +378,7 @@ export async function scriptedClaudeWorld(): Promise<ContractWorld> {
       turn.toolDone = true;
       await callTool(client, turn, mcp, playing.tool);
       // An interrupt ended the turn while its tool ran: the rest of it is dropped.
-      if (client.turn !== turn) return;
+      if (client.turn !== turn || client.attachment.closed()) return;
       await request(client);
       return;
     }
@@ -431,6 +441,22 @@ export async function scriptedClaudeWorld(): Promise<ContractWorld> {
         records: recordsIn,
       }),
     ),
+    // INF-341 F1: a background completion starts work without another prompt.
+    continueTurn: () => {
+      const attachment = attachments.at(-1);
+      if (!attachment) throw new Error("No client is attached.");
+      const client = clientOf(attachment);
+      client.turn = { steers: [], toolDone: false, requests: 0 };
+      attachment.emit(says.running);
+      void request(client);
+    },
+    endClient: (error) => {
+      const attachment = attachments.at(-1);
+      if (!attachment) throw new Error("No client is attached.");
+      clientOf(attachment).turn = undefined;
+      if (error) attachment.fail(error);
+      else attachment.end();
+    },
     advance: clock.advance,
     binding: { backend: "claude", accountId: "acct_claude" },
     foreignBinding: { backend: "pi", runtime: {} as unknown as ModelRuntime },

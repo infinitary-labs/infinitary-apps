@@ -245,6 +245,7 @@ export class SessionHost {
         this.record(held, { type: "turn_ended", turn, outcome: "interrupted", undelivered: [] });
         this.writeOut(held);
       }
+      this.interruptContinuation(held);
     }
   }
 
@@ -319,6 +320,7 @@ export class SessionHost {
         held.state = { ...held.state, running: undefined };
         this.record(held, { type: "turn_ended", turn, outcome: "interrupted", undelivered: [] });
       }
+      this.interruptContinuation(held);
       held.unsubscribe?.();
       held.unsubscribe = null;
       if (held.session) sessions.push(held.session);
@@ -337,6 +339,7 @@ export class SessionHost {
     const [fields] = request as [{ task: string; orderId?: string }];
     if (channel === "inf:session:copy") {
       const [copy] = request as WorkOrderRequest<"inf:session:copy">;
+      if (copy.refresh) this.held.get(copy.task)?.session?.recordPath({ refresh: true });
       return this.options.tasks.copy(copy.task, copy.from) as WorkOrderResponse<C>;
     }
     if (channel === "inf:session:source-file") {
@@ -1049,9 +1052,19 @@ export class SessionHost {
     const state = tasks.state(task);
     const outbox = tasks.outbox(task, state.kept);
     const seq = Math.max(state.seq, outbox.at(-1)?.seq ?? 0, state.kept);
+    // Older folders have the boundaries in their outbox but no state flag yet.
+    const continuing = outbox.reduce(
+      (active, { event }) =>
+        event.type === "continuation_started"
+          ? true
+          : event.type === "continuation_ended"
+            ? false
+            : active,
+      state.continuing === true,
+    );
     const held: Held = {
       task,
-      state: { ...state, seq },
+      state: { ...state, seq, continuing: continuing ? true : undefined },
       session: null,
       speed: false,
       backend: null,
@@ -1076,13 +1089,32 @@ export class SessionHost {
     return held;
   }
 
+  /** This computer owns the terminal boundary when its client cannot send one. */
+  private interruptContinuation(held: Held): void {
+    if (held.state.closed || !held.state.continuing) return;
+    this.record(held, {
+      type: "continuation_ended",
+      interrupted: true,
+      // Older homes can still read a plain error when they ignore the new marker.
+      error: "Work stopped before the turn finished.",
+    });
+  }
+
   /** One thing the conversation did, numbered, kept until the home keeps it, and sent. */
   private record(held: Held, event: SessionEvent | PlacedEvent): void {
     const seq = held.state.seq + 1;
-    held.state = { ...held.state, seq };
+    held.state = {
+      ...held.state,
+      seq,
+      ...(event.type === "continuation_started" ? { continuing: true as const } : {}),
+      ...(event.type === "continuation_ended" ? { continuing: undefined } : {}),
+    };
     const record: PlacedEventRecord = { seq, at: this.now(), event: event as PlacedEvent };
     held.outbox.push(record);
     held.unwritten.push(record);
+    // Keep the boundary even if the home acknowledges and trims its outbox entry.
+    if (event.type === "continuation_started" || event.type === "continuation_ended")
+      this.writeOut(held);
     // A burst of words is one write.
     if (!this.writeTimer)
       this.writeTimer = setImmediate(() => {

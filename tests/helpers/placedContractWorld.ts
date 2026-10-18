@@ -92,11 +92,19 @@ function callbacksOf(spec: SessionSpec): CrewmateToolDelegate {
   };
 }
 
-export async function placedContractWorld(inner: ContractWorld): Promise<ContractWorld> {
+export async function placedContractWorld(
+  inner: ContractWorld,
+  options: {
+    protocolVersion?: string;
+    now?: () => number;
+    schedule?: (ms: number, run: () => void) => () => void;
+  } = {},
+) {
   // The home.
   const db = freshDatabase();
   started.closes.push(() => db.close());
-  const tasks = new TaskService({ db, now: () => Date.now() });
+  const now = options.now ?? (() => Date.now());
+  const tasks = new TaskService({ db, now });
   const homeRoot = scratchDir("infinitary-placed-contract-home-");
   const pairing = new DevicePairing({
     dir: join(homeRoot, "devices"),
@@ -114,7 +122,8 @@ export async function placedContractWorld(inner: ContractWorld): Promise<Contrac
     deviceName: () => "Mac mini",
     projectName: () => undefined,
     broadcastEvent: () => {},
-    now: () => Date.now(),
+    now,
+    schedule: options.schedule,
     log: () => {},
   });
   placed.serve({
@@ -173,6 +182,7 @@ export async function placedContractWorld(inner: ContractWorld): Promise<Contrac
   });
   const run = startHelper({
     dataDir,
+    protocolVersion: options.protocolVersion,
     say: () => {},
     retryMs: [20],
     conversations: async ({ dataDir: dir, ask }) => {
@@ -202,7 +212,13 @@ export async function placedContractWorld(inner: ContractWorld): Promise<Contrac
     controlProfile: there.controlProfile,
     open: (spec) => there.open({ ...spec, callbacks: callbacksOf(spec) }),
   };
-  return { ...inner, factory, machine: deviceId, homeDir: folders.work };
+  return {
+    ...inner,
+    factory,
+    machine: deviceId,
+    homeDir: folders.work,
+    placement: { tasks, paths: appPathsFor(homeRoot), devices, deviceId },
+  };
 }
 
 /** Lets go of everything every world started. */

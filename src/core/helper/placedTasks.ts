@@ -59,6 +59,8 @@ const taskStateSchema = z.object({
   closed: z.boolean(),
   /** The turn running when it was written, and the order that started it. */
   running: z.object({ turn: z.number().int().positive(), orderId: z.string() }).optional(),
+  /** A client-owned continuation has started but has not ended yet. */
+  continuing: z.literal(true).optional(),
   /** Its crewmate was told its folders moved with the one-time move (`crewmateMovedText`). */
   toldMoved: z.literal(true).optional(),
 });

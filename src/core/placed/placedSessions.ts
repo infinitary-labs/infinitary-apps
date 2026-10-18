@@ -25,6 +25,7 @@ import {
   speaksChangePresentations,
   speaksInfinitaryNames,
   speaksKnowledge,
+  speaksRecordRefresh,
   speaksSeed,
   speaksTempCleanup,
   type WorkInvokeChannel,
@@ -113,6 +114,14 @@ import type { WorkDevices } from "./workDevices";
 
 /** How long a computer with work is out of reach before the feed says so. */
 export const OUT_OF_REACH_LINE_MS = 60_000;
+/** Live copies share at most one start per second; a turn's end always flushes. */
+const LIVE_COPY_MS = 1_000;
+
+function scheduleCopy(ms: number, run: () => void): () => void {
+  const timer = setTimeout(run, ms);
+  timer.unref();
+  return () => clearTimeout(timer);
+}
 
 /** What the supervisor does for the placed tasks (`CrewSupervisor`). */
 export type PlacedHost = {
@@ -322,6 +331,8 @@ export type PlacedSessionsOptions = {
   reachMoved?: () => void;
   broadcastEvent: (event: FmEvent) => void;
   now: () => number;
+  /** One-shot copy delay; answers its own cancel. Tests drive it with the same clock as now. */
+  schedule?: (ms: number, run: () => void) => () => void;
   log?: (line: string) => void;
 };
 
@@ -403,6 +414,13 @@ type Placed = {
   closed: boolean;
   /** The record's copy, one at a time. */
   copying: Promise<void>;
+  /** A trailing live copy, coalesced while a copy is scheduled or in flight. */
+  copyTimer: (() => void) | undefined;
+  /** Calls announced by the computer whose results have not arrived yet. */
+  openCalls: Set<string>;
+  liveCopy: Promise<void> | undefined;
+  copyPending: boolean;
+  copiedAt: number;
   /** Where this Mac keeps the copy: its open session's record folder. */
   recordDir: string;
   /** What its session was opened with, to open it there again after that computer restarts. */
@@ -822,10 +840,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>,
         inReach: () => this.options.devices.inReach(deviceId),
         copy: () => this.copy(placed),
-        interrupted: () =>
-          `${this.nameOf(deviceId)} quit before this turn finished, so its messages go again.`,
+        interrupted: (retry = true) =>
+          `${this.nameOf(deviceId)} quit before this turn finished${retry ? ", so its messages go again." : "."}`,
         released: (released) => {
-          if (placed.session === released) placed.session = undefined;
+          if (placed.session === released) {
+            placed.session = undefined;
+            placed.openCalls.clear();
+            this.cancelLiveCopy(placed);
+          }
         },
       },
       controlProfile,
@@ -855,7 +877,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       device.roster = undefined;
       device.goneSince = this.options.now();
       for (const placed of this.placed.values())
-        if (placed.deviceId === contact.deviceId) placed.released = false;
+        if (placed.deviceId === contact.deviceId) {
+          placed.released = false;
+          this.cancelLiveCopy(placed);
+        }
       this.options.reachMoved?.();
       return;
     }
@@ -909,7 +934,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       if (placed.deviceId !== device.id || !placed.session || placed.session.letGo) continue;
       // What waited for it goes now; the record's copy may have missed a turn's end the drop cut off.
       placed.session.reached();
-      void this.copy(placed).catch(() => undefined);
+      void this.copy(placed)
+        .finally(() => {
+          if (this.hasGrowingCall(placed)) this.copyDuringTurn(placed);
+        })
+        .catch(() => undefined);
     }
     // A closed task whose working copy it no longer holds has nothing left there to bring home.
     if (roster.worktreesDir)
@@ -1031,9 +1060,30 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       // says so with its sign-ins: heard first, so the turn ends here held.
       if (metCutOff(record.event))
         await this.options.refreshSignIns?.(placed.deviceId).catch(() => undefined);
-      await session.take(record.event);
+      const event = record.event;
+      const type = event.type;
+      if (type === "tool_start") placed.openCalls.add(event.callId);
+      else if (type === "tool_end") placed.openCalls.delete(event.callId);
+      else if (
+        type === "turn_end" ||
+        type === "turn_ended" ||
+        type === "turn_failed" ||
+        type === "continuation_ended"
+      ) {
+        placed.openCalls.clear();
+        // A continuation still needs its final tail, even when its client exited.
+        if (type !== "continuation_ended") this.cancelLiveCopy(placed);
+      }
+      await session.take(event);
       placed.through = record.seq;
-      const type = record.event.type;
+      if (
+        type === "request_started" ||
+        type === "tool_start" ||
+        type === "tool_end" ||
+        type === "turn_end" ||
+        type === "continuation_ended"
+      )
+        this.copyDuringTurn(placed);
       if (type === "turn_end" || type === "turn_ended") {
         placed.kept = placed.through;
         if (type === "turn_ended") {
@@ -1271,20 +1321,71 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   // ---- the record's copy -------------------------------------------------------
 
+  /** Claude may announce a call before its refreshable transcript has reached disk. */
+  private hasGrowingCall(placed: Placed): boolean {
+    return (
+      placed.openCalls.size > 0 &&
+      placed.spec?.binding.backend === "claude" &&
+      speaksRecordRefresh(this.options.devices.version(placed.deviceId)?.contract ?? "")
+    );
+  }
+
+  /** Coalesced copies outside the event lane, repeated while a call's transcript can still grow. */
+  private copyDuringTurn(placed: Placed): void {
+    if (
+      placed.closed ||
+      !placed.session ||
+      placed.session.letGo ||
+      !this.options.devices.inReach(placed.deviceId)
+    )
+      return;
+    placed.copyPending = true;
+    if (placed.copyTimer !== undefined || placed.liveCopy) return;
+    const delay = Math.min(
+      LIVE_COPY_MS,
+      Math.max(0, placed.copiedAt + LIVE_COPY_MS - this.options.now()),
+    );
+    placed.copyTimer = (this.options.schedule ?? scheduleCopy)(delay, () => {
+      placed.copyTimer = undefined;
+      placed.liveCopy = this.copy(placed)
+        .catch(() => undefined) // copy() records the failure; reconnect and turn end still retry.
+        .finally(() => {
+          placed.liveCopy = undefined;
+          if (placed.copyPending || this.hasGrowingCall(placed)) this.copyDuringTurn(placed);
+        });
+    });
+  }
+
+  private cancelLiveCopy(placed: Placed): void {
+    placed.copyTimer?.();
+    placed.copyTimer = undefined;
+    placed.copyPending = false;
+  }
+
   /**
    * Brings this Mac's copy of the conversation's record up to the
    * computer's, from where each file's copy ends; a file the computer
    * rewrote shorter is rewritten from where it differs.
    */
   private copy(placed: Placed): Promise<void> {
+    this.cancelLiveCopy(placed);
     const recordDir = placed.recordDir;
     const run = placed.copying.then(async () => {
+      placed.copiedAt = this.options.now();
+      let refresh = speaksRecordRefresh(
+        this.options.devices.version(placed.deviceId)?.contract ?? "",
+      );
       let more = true;
       while (more) {
         const answer = (await this.options.devices.ask(placed.deviceId, "inf:session:copy", [
-          { task: placed.task, from: copiedFiles(recordDir) },
+          {
+            task: placed.task,
+            from: copiedFiles(recordDir),
+            ...(refresh ? { refresh: true } : {}),
+          },
         ])) as WorkOrderResponse<"inf:session:copy">;
         for (const file of answer.files) writeAt(recordDir, file);
+        refresh = false;
         more = answer.more && answer.files.length > 0;
       }
     });
@@ -1417,6 +1518,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private close(taskId: string, deviceId: string): void {
     const placed = this.load(taskId, deviceId);
     placed.closed = true;
+    placed.openCalls.clear();
+    this.cancelLiveCopy(placed);
     this.options.devices
       .ask(deviceId, "inf:session:close", [{ orderId: `close:${taskId}`, task: taskId }])
       .then(
@@ -1468,6 +1571,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       released: false,
       closed: false,
       copying: Promise.resolve(),
+      copyTimer: undefined,
+      openCalls: new Set(),
+      liveCopy: undefined,
+      copyPending: false,
+      copiedAt: Number.NEGATIVE_INFINITY,
       recordDir: crewmateSessionsDir(this.options.paths, task),
       spec: undefined,
     };

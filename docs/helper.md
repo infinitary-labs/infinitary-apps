@@ -512,10 +512,21 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   The roster's running turn is followed as a continuation that delivers its rows, and a report it gave before the restart is given to that turn again from the kept answers.
 - **That computer restarts.**
   A turn it cut off ends as `interrupted`, which the home reads as a failed turn in its own words; its rows go back for the honest retry, and the lane runs them again there in the conversation reopened from its record.
+  The computer records an errored `continuation_ended` before detaching a continuation at shutdown, or on recovery if a crash cut it off, so the home ends its autonomous turn and stops repeat copies after reconnect.
+  Its optional `interrupted` fact lets the home use its own interruption wording with that computer's name, without interpreting the helper's error text; a closed task records no extra ending.
+  The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.
   A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
   The task's timeline notes the move, its record names the new conversation at once, and the crewmate's next prompt says why, gives its brief, and says where its earlier transcript is saved on that computer.
 - **The record's copy.**
-  The home copies the conversation's record into `crewmates/<task>/sessions/` at each turn's end, from where each file's copy ends, and once more when its session lets go; Observe reads that copy for a task on another computer.
+  The home copies the conversation's record into `crewmates/<task>/sessions/` as model requests start and tools start or finish, and at model turn ends, coalescing live copies to at most one start per second and keeping a trailing copy when events arrive during a transfer.
+  For Claude on a computer that supports record refresh (protocol 8.15 or later), the same throttled copy keeps checking while any call is open for a client transcript written after the call was announced, even if no further event arrives.
+  Pi and older computers keep event-driven copies without this repeating check.
+  The loop stops after the last call ends, at a turn's or continuation's end or session release, and while its computer is out of reach; reconnect resumes it only for refresh-capable Claude calls still open.
+  A continuation's end keeps one final coalesced copy for its completed text or the tail left by a client exit, without repeating afterward.
+  Live copies never hold up a step's events; a turn's end waits for any transfer already in flight before flushing its final record.
+  A turn's end, reconnect and session release flush the copy without the live throttle, from where each file's copy ends; Observe and the Crewmate tab read that copy for a task on another computer.
+  On protocol 8.15 or later, the first piece's copy order requests a fresh app-owned record from the live session before the computer reads it, so a Claude client's mid-turn tail does not wait for its minute tick.
+  The home omits that request on older computers, which retain the cached-source behavior until updated.
 - **Closing.**
   When the record closes the conversation is closed there for good, at once or at that computer's next roster.
 

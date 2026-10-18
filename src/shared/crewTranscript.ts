@@ -209,8 +209,8 @@ export const CREWMATE_WORDS = {
   waiting: "Waiting on you",
   paused: "Paused · you hold its browser",
   closed: "This task is closed; its session reads as it ran.",
-  /** No session to read yet. */
-  empty: "Nothing yet: the crewmate's session starts when it does.",
+  /** No copied session lines to read yet; the turn may already be running. */
+  empty: "No session lines to show yet.",
   unreadable: "This crewmate's session could not be read.",
   /** A fold's buttons. */
   open: "open",

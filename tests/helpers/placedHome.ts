@@ -113,6 +113,8 @@ export function startPlacedHome(options: {
   /** The pairing the connection follows; a restart gets a new one over the same folder. */
   pairing: () => DevicePairing;
   now: () => number;
+  /** The live-copy clock's cancellable scheduler, for deterministic lifecycle checks. */
+  scheduleCopy?: (ms: number, run: () => void) => () => void;
   /** What every task's account binds to here; the computer binds its own. */
   binding: SessionBinding;
   /** The backends' control planes, as this Mac's factories declare them. */
@@ -220,6 +222,7 @@ export function startPlacedHome(options: {
     ...(options.connecting ? { connecting: options.connecting } : {}),
     broadcastEvent: (event) => events.push(event),
     now,
+    schedule: options.scheduleCopy,
     log: options.log ?? (() => {}),
   });
   const backend = options.binding.backend;

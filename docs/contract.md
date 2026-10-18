@@ -122,6 +122,12 @@ Protocol 8.14 adds the optional `answerRefusals` to `inf:devices:update` and `in
 Settings -> Devices uses it to tell a "could not reach" refusal, which goes once that computer's row says connected again, from every other refusal (`docs/devices.md`, "Updating").
 A caller that does not set it, such as a client on an older minor, is rejected as before.
 
+Protocol 8.15 adds optional `refresh` to `inf:session:copy`: the executing computer refreshes its app-owned session record from the live client's transcript before answering the first piece of a copy (`docs/helper.md`, "The record's copy").
+The home sends it only to a computer on 8.15 or later (`SESSION_RECORD_REFRESH_SINCE`); an older computer keeps answering from the cached record without the new field.
+
+Protocol 8.15 also adds optional `interrupted` to a placed `continuation_ended`: the helper declares that shutdown or recovery ended its work, and the home supplies the computer's name in its own interruption wording.
+An older home ignores the marker and reads the plain fallback error; ordinary client failures retain their own error and cut-off facts.
+
 Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
 It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
 The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.

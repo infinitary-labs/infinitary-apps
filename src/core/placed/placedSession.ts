@@ -55,7 +55,7 @@ export type PlacedSessionLink = {
   /** Brings the record's copy home up to the computer's. */
   copy(state: PlacedState): Promise<void>;
   /** What a turn the computer quit in the middle of failed with, in the person's words. */
-  interrupted(): string;
+  interrupted(retry?: boolean): string;
   /** The session let go here. */
   released(session: PlacedSession): void;
 };
@@ -294,6 +294,11 @@ export class PlacedSession implements ModelSession {
       case "background_work_changed":
         this.emit({ type: "background_work_changed", count: event.count });
         return;
+      case "continuation_ended": {
+        const { interrupted, ...ended } = event;
+        this.emit(interrupted ? { ...ended, error: this.link.interrupted(false) } : ended);
+        return;
+      }
       default:
         this.emit(event as SessionEvent);
     }

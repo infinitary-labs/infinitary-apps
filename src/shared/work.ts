@@ -218,6 +218,8 @@ export const placedEventSchema = z.union([
     z.object({ type: z.literal("continuation_started") }),
     z.object({
       type: z.literal("continuation_ended"),
+      /** The helper ended this work on shutdown/recovery; the home supplies its computer's name. */
+      interrupted: z.literal(true).optional(),
       error: z.string().optional(),
       cutOff: cutOffSchema.optional(),
     }),
@@ -950,6 +952,8 @@ export const workOrders = {
     request: z.tuple([
       z.object({
         task: placedTaskIdSchema,
+        /** Refresh the app-owned record from a live client before reading (8.14 or later). */
+        refresh: z.boolean().optional(),
         from: z
           .array(
             z.object({

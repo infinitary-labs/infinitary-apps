@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import { crc32, deflateSync } from "node:zlib";
@@ -1115,6 +1115,85 @@ describe("a conversation held on a computer that runs work", () => {
     ).toEqual({ turn: 1 });
     report.open();
   });
+
+  // Captain's INF-352 W1: helper shutdown/recovery must terminate its own continuation.
+  it.each(["stop", "crash", "older-crash", "closed"] as const)(
+    "records terminal Claude endings only for open work after %s",
+    async (ending) => {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const claude = await scriptedClaudeWorld({ beforeToolRecord: () => held });
+      const at = await placed({ claude });
+      const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+      claude.answer({ text: "The background check started." });
+      try {
+        await at.order("inf:session:open", [{ orderId: "open:continuation", task: TASK, spec }]);
+        await at.order("inf:session:prompt", [
+          { orderId: "rows:continuation", task: TASK, text: "Start the background check." },
+        ]);
+        await at.ended(1);
+        claude.answer({ tool: "note_progress", answer: "Not reached while held." });
+        claude.continueTurn();
+        await expect
+          .poll(() => at.home.events.some(({ event }) => event.type === "tool_start"))
+          .toBe(true);
+        let root = at.dataDir;
+        if (ending === "crash" || ending === "older-crash") {
+          // The bytes already on disk before graceful shutdown model a process lost mid-call.
+          root = scratchDir("infinitary-continuation-crash-");
+          cpSync(join(at.dataDir, "tasks"), join(root, "tasks"), { recursive: true });
+        }
+        if (ending === "closed")
+          await at.order("inf:session:close", [{ orderId: "close:continuation", task: TASK }]);
+        await at.host().close();
+        const tasks = new PlacedTasks(root);
+        if (ending === "older-crash") {
+          // c645fe4's helper kept the outbox boundaries without a state flag.
+          tasks.writeState(TASK, { ...tasks.state(TASK), continuing: undefined });
+        }
+        const restart = () =>
+          new SessionHost({
+            tasks,
+            factories: { claude: claude.factory },
+            bind: async () => claude.binding,
+            ask: async () => {
+              throw new Error("The recovered helper has not reconnected.");
+            },
+            log: () => {},
+          });
+        const recovered = restart();
+        await recovered.close();
+        const events = tasks.outbox(TASK, 0);
+        const terminal = events.filter(({ event }) => event.type === "continuation_ended");
+        if (ending === "closed") expect(tasks.state(TASK).closed).toBe(true);
+        expect(terminal).toEqual(
+          ending === "closed"
+            ? []
+            : [
+                expect.objectContaining({
+                  event: {
+                    type: "continuation_ended",
+                    interrupted: true,
+                    error: expect.any(String),
+                  },
+                }),
+              ],
+        );
+        if (ending !== "closed") expect(events.at(-1)?.event).toEqual(terminal[0]?.event);
+        expect(events.some(({ event }) => event.type === "tool_end")).toBe(false);
+        const again = restart();
+        await again.close();
+        expect(
+          tasks.outbox(TASK, 0).filter(({ event }) => event.type === "continuation_ended"),
+        ).toHaveLength(ending === "closed" ? 0 : 1);
+      } finally {
+        claude.endClient();
+        release();
+      }
+    },
+  );
 
   // INF-284, review F4: a Claude conversation's token names no folder, and a
   // home that restarted after this computer's one-time move names the new

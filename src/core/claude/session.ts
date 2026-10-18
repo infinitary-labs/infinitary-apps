@@ -146,8 +146,9 @@ import { locateClaudeTranscript } from "./claudeTranscript";
  *   Every rolling session's durable record is the app's own
  *   (`SessionRecordStore`, in the spec's record dir: the seat's
  *   `firstmate/claude/`, a crewmate's `crewmates/<task>/sessions/`): at
- *   every idle boundary, attach and exit, and on each tick while its client
- *   is attached, the session copies what the client appended to its own
+ *   every idle boundary, attach and exit, on each tick while its client
+ *   is attached, and when the home's copy order requests a refresh, the
+ *   session copies what the client appended to its own
  *   transcript, so the record outlives the client's 30-day sweep, and
  *   stamps the spec's contract, when it has one, in a sidecar. A resume
  *   reads the client's own file; when that is gone, the session starts
@@ -903,7 +904,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   }
 
   /** The app's copy of the client's transcript: the session's durable record. */
-  recordPath(): string {
+  recordPath(options?: { refresh?: boolean }): string {
+    if (options?.refresh) this.mirror(this.connection?.sessionId ?? this.id);
     return this.config.store.transcriptPath(this.sessionId);
   }
 

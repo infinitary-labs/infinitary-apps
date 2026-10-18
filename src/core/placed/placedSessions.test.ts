@@ -52,6 +52,7 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
+import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import {
   crewmateMovedText,
   crewmateRenewedNote,
@@ -64,6 +65,7 @@ import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import type { CrewmateTool } from "../session/tools";
 import { SettingsStore } from "../storage/settingsStore";
+import { CrewTranscripts } from "../tasks/crewTranscript";
 import { seedTask } from "../tasks/seedTask";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
@@ -118,10 +120,9 @@ afterAll(async () => {
 });
 
 /** What the model does on one request: call tools, answer, or answer once a test lets it. */
-type Step =
-  | { tools: { name: string; args: Record<string, unknown> }[] }
-  | { text: string }
-  | { held: Promise<void>; text: string };
+type Step = ({ tools: { name: string; args: Record<string, unknown> }[] } | { text: string }) & {
+  held?: Promise<void>;
+};
 
 /** The model, one step per request from now on; past the last step it answers "Done." */
 function model(steps: Step[]): void {
@@ -129,25 +130,22 @@ function model(steps: Step[]): void {
   api.answer((request: StubRequest, res: ServerResponse) => {
     const step = steps[request.n - first - 1] ?? { text: "Done." };
     beginAnthropicStream(res, 100, request.n);
-    if ("held" in step) {
-      void step.held.then(() => {
+    const answer = () => {
+      if ("text" in step) {
         writeAnthropicText(res, 0, step.text);
         finishAnthropicStream(res, "end_turn", 3);
-      });
-      return;
-    }
-    if ("text" in step) {
-      writeAnthropicText(res, 0, step.text);
-      finishAnthropicStream(res, "end_turn", 3);
-      return;
-    }
-    for (const [index, tool] of step.tools.entries())
-      writeAnthropicToolUse(res, index, {
-        id: `toolu_${request.n}_${index}`,
-        name: tool.name,
-        args: tool.args,
-      });
-    finishAnthropicStream(res, "tool_use", 5);
+        return;
+      }
+      for (const [index, tool] of step.tools.entries())
+        writeAnthropicToolUse(res, index, {
+          id: `toolu_${request.n}_${index}`,
+          name: tool.name,
+          args: tool.args,
+        });
+      finishAnthropicStream(res, "tool_use", 5);
+    };
+    if (step.held) void step.held.then(answer);
+    else answer();
   });
 }
 
@@ -190,6 +188,7 @@ function startHome(
   forgeFor?: ForgeFor,
   extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> & {
     claude?: ContractWorld;
+    scheduleCopy?: Parameters<typeof startPlacedHome>[0]["scheduleCopy"];
   } = {},
 ): PlacedHome {
   const home = startPlacedHome({
@@ -197,6 +196,7 @@ function startHome(
     port,
     pairing,
     now,
+    scheduleCopy: extra.scheduleCopy,
     // A home whose crew runs on Claude binds every task to Claude there.
     binding: extra.claude?.binding ?? { backend: "pi", runtime },
     profiles: {
@@ -279,6 +279,7 @@ async function world(
      * computer's Claude conversations run on, and every task's crew binds to.
      */
     claude?: ContractWorld;
+    scheduleCopy?: Parameters<typeof startPlacedHome>[0]["scheduleCopy"];
     /** Whether Firstmate there runs work for another Firstmate now, as the home's SSH connection found. */
     runsForAnotherFirstmate?: (deviceId: string) => boolean;
     /**
@@ -766,6 +767,85 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
+  // INF-40: the captain saw Working beside an empty Crewmate tab on a placed task.
+  it("copies completed steps into the Crewmate tab before the placed turn ends", async () => {
+    const at = await world();
+    const held = gate();
+    const next = gate();
+    const copying = gate();
+    const firstCopy = gate();
+    const trailingCopy = gate();
+    const home = at.home();
+    const ask = home.devices.ask.bind(home.devices);
+    let copies = 0;
+    const sent = vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:copy") {
+        copies += 1;
+        if (copies === 1) {
+          firstCopy.open();
+          await copying.held;
+        } else if (copies === 2) trailingCopy.open();
+      }
+      return answer;
+    });
+    const progress = (text: string) => ({ tools: [{ name: "note_progress", args: { text } }] });
+    model([
+      progress("Reading the footer on Mac mini."),
+      { ...progress("Checking the footer."), held: next.held },
+      progress("The footer checks passed."),
+      { held: held.held, text: "The footer is fixed." },
+    ]);
+    try {
+      await at.start("t-live");
+      await firstCopy.held;
+      next.open();
+      // The live transfer must not hold up event delivery or pile up one transfer per step.
+      await expect
+        .poll(() => kinds(home, "t-live").filter((kind) => kind === "progress").length)
+        .toBe(3);
+      expect(copies).toBe(1);
+      // Review F3: a backwards clock adjustment cannot postpone the trailing transfer by a minute.
+      ahead -= 60_000;
+      copying.open();
+      await expect.poll(() => api.openRequests()).toBe(1);
+      const recordDirOf = (id: string) => crewmateSessionsDir(home.paths, id);
+      const resolve = createCrewmateTranscriptResolver({
+        recordDirOf,
+        backendOf: () => undefined,
+        configDirOf: () => undefined,
+      });
+      const reader = new CrewTranscripts({
+        recordDirOf,
+        currentSession: (task) => resolve(task).path,
+      });
+      const read = () => {
+        const task = home.tasks.get("t-live");
+        if (!task) throw new Error("The placed task is missing.");
+        return reader.of(task, home.tasks.timeline(task.id), false);
+      };
+      await trailingCopy.held;
+      await expect.poll(() => read().lines.filter((line) => line.kind === "plan").length).toBe(3);
+      expect(copies).toBe(2);
+      expect(home.tasks.get("t-live")?.activity).toBe("running");
+      expect(api.openRequests()).toBe(1);
+      held.open();
+      await expect.poll(() => home.tasks.get("t-live")?.activity).toBe("idle");
+      expect(read().lines).toContainEqual(
+        expect.objectContaining({ kind: "said", text: "The footer is fixed." }),
+      );
+      const [file] = readdirSync(at.folders("t-live").sessions);
+      expect(file).toBeDefined();
+      expect(readFileSync(join(recordDirOf("t-live"), file ?? ""), "utf8")).toBe(
+        readFileSync(join(at.folders("t-live").sessions, file ?? ""), "utf8"),
+      );
+    } finally {
+      next.open();
+      copying.open();
+      held.open();
+      sent.mockRestore();
+    }
+  });
   it("starts there, does each callback once here, and keeps its report and a copy of its record", async () => {
     const at = await world();
     model([
@@ -943,6 +1023,97 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.inbox.inFlight("t-restart")).toEqual([]);
     expect(home.inbox.allFor("t-restart")).toEqual([]);
   });
+
+  // Captain's INF-352 W1: the helper owns the ending of a continuation its restart cut off.
+  it.each(["copy-loop", "home-turn"] as const)(
+    "ends a Claude continuation after a helper restart: %s",
+    async (check) => {
+      const scheduled = new Set<{ due: number; run: () => void }>();
+      const heldCall = gate();
+      const claude = await scriptedClaudeWorld({ beforeToolRecord: () => heldCall.held });
+      stops.push(scriptedClaudeCleanup);
+      const at = await world(undefined, {
+        claude,
+        scheduleCopy: (ms, run) => {
+          const timer = { due: now() + ms, run };
+          scheduled.add(timer);
+          return () => {
+            scheduled.delete(timer);
+          };
+        },
+      });
+      const home = at.home();
+      const ask = home.devices.ask.bind(home.devices);
+      let copies = 0;
+      let copying = 0;
+      const sent = vi
+        .spyOn(home.devices, "ask")
+        .mockImplementation(async (device, channel, args) => {
+          if (channel === "inf:session:copy") copying += 1;
+          try {
+            const answer = await ask(device, channel, args);
+            if (channel === "inf:session:copy") copies += 1;
+            return answer;
+          } finally {
+            if (channel === "inf:session:copy") copying -= 1;
+          }
+        });
+      const fireNext = () => {
+        const timer = scheduled.values().next().value;
+        if (!timer) return;
+        scheduled.delete(timer);
+        ahead += Math.max(0, timer.due - now());
+        timer.run();
+      };
+      const taskId = "t-continuation-restart";
+      claude.answer({ text: "The background check started." });
+      try {
+        await at.start(taskId);
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+        claude.answer({ tool: "note_progress", answer: "Not reached while held." });
+        claude.continueTurn();
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("running");
+        await expect
+          .poll(() =>
+            home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
+          )
+          .toBe(true);
+        const before = copies;
+        await expect
+          .poll(() => {
+            fireNext();
+            return copies;
+          })
+          .toBeGreaterThan(before);
+        await at.restartComputer();
+        await at.inReach(taskId);
+        if (check === "home-turn") {
+          await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+          const failure = home.wakes.find((wake) => wake.facts?.kind === "turn-failed");
+          const computer = at
+            .pairing()
+            .list()
+            .find((device) => device.id === at.deviceId);
+          expect(computer).toBeDefined();
+          expect(failure?.facts).toMatchObject({
+            error: `${computer?.name} quit before this turn finished.`,
+          });
+        } else {
+          await expect
+            .poll(async () => {
+              fireNext();
+              await new Promise<void>((resolve) => setImmediate(resolve));
+              return scheduled.size === 0 && copying === 0;
+            })
+            .toBe(true);
+        }
+      } finally {
+        claude.endClient();
+        heldCall.open();
+        sent.mockRestore();
+      }
+    },
+  );
 
   it("fails a turn the computer's restart cut off, and its lane runs the words there again", async () => {
     const at = await world();

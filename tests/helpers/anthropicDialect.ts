@@ -193,6 +193,9 @@ export async function startStubApi(
       new Promise((resolve) => {
         for (const res of open) res.destroy();
         server.close(() => resolve());
+        // A request whose body has not arrived is not in `open` yet. Stop those too,
+        // after closing the listener so no new connection can race the shutdown.
+        server.closeAllConnections();
       }),
   };
 }

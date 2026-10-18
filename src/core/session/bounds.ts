@@ -185,8 +185,8 @@ class WatchedSession implements ModelSession {
     return this.inner.resume();
   }
 
-  recordPath(): string | undefined {
-    return this.inner.recordPath();
+  recordPath(options?: Parameters<ModelSession["recordPath"]>[0]): string | undefined {
+    return this.inner.recordPath(options);
   }
 
   modelRef(): { provider: string; id: string } | undefined {

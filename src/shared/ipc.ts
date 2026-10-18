@@ -390,7 +390,7 @@ import { workRequests } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "8.14.0";
+export const PROTOCOL_VERSION = "8.15.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -545,6 +545,13 @@ export function speaksResources(deviceVersion: string): boolean {
  * `infinitary-browser-axi`), so the home names those to it.
  */
 export const INFINITARY_NAMES_SINCE = "8.4.0";
+
+/** A copy order may refresh the executing computer's client-owned session tail first. */
+export const SESSION_RECORD_REFRESH_SINCE = "8.15.0";
+
+export function speaksRecordRefresh(deviceVersion: string): boolean {
+  return speaksSince(deviceVersion, SESSION_RECORD_REFRESH_SINCE);
+}
 
 /** Whether a computer knows the Infinitary rename's code names (`INFINITARY_NAMES_SINCE`). */
 export function speaksInfinitaryNames(deviceVersion: string): boolean {

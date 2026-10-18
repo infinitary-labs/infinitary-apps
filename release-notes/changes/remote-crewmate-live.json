@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "remote-crewmate-live",
+      "kind": "fix",
+      "title": "Follow a crewmate on another computer while it works",
+      "body": "With both computers updated, the Crewmate tab shows work during a turn, including calls that are still running. This also works with Claude. An empty tab no longer says the session has not started. A restarted computer no longer leaves the task marked as working when Claude was working on its own.",
+      "area": "crewmates",
+      "noPicture": "A still picture cannot show updates during unfinished work or recovery after a restart; the other changes clarify messages.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

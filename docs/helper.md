@@ -444,7 +444,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   After this computer's move those name the older folder, which stays as the move's recovery copy (above, "Under the other name").
   So each path into the older folder that an open carries names the same place in this one (`PlacedTasks.inThisFolder`, read from the move's record beside the work folder).
   A Pi conversation resumes from its record's copy here and writes there, and its crewmate is told its folders here.
-  A Claude conversation starts over instead, since its instructions changed (`renewIfChanged`), and on a reopen after this computer restarted the home does not tell the new conversation its brief again (`PlacedSession.reopened`).
+  A Claude conversation starts over instead, since its instructions changed (`renewIfChanged`), and on a reopen after this computer restarted the home carries its brief into the new conversation, as an open does (`PlacedSession.reopened`).
   A task whose folder the older folder holds too has its crewmate told once, ahead of its first prompt after the move, that its working copy and its task's folders moved, naming where each was and is now (`crewmateMovedText`), so a path its earlier turns or its brief name is not used.
   That holds whatever the open carries: a Claude conversation's token names no folder, and a home that restarted names this one.
   The task's state here keeps that it was told (`toldMoved`).

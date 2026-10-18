@@ -1,0 +1,9 @@
+{
+  "exclusions": [
+    {
+      "id": "helper-docs-reopened-brief",
+      "reason": "Docs-only correction: docs/helper.md now says a reopened Claude conversation is given its brief after this computer restarts, as an open does. No screen change.",
+      "covers": ["f4c5dbef5483ad56a0b3f321c72378b2ee0fb9b9"]
+    }
+  ]
+}

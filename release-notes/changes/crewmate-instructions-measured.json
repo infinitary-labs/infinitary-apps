@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-instructions-measured",
+      "reason": "A crewmate's standing instructions are now measured, and two rules that were repeated are said once. Only the length of those instructions changes; nothing a person sees or receives is different."
+    }
+  ]
+}

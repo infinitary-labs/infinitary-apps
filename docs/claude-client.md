@@ -33,6 +33,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A fixed choice is one string with an `enum` (`stringEnum`), which `zodOf` reads as the same closed set.
   A two-member union with null carries that same typed value as nullable, preserving its validation on both runtimes.
   The 2,048-character cap is on a TOOL description only: a top-level parameter description arrives whole (`spawn_crewmate`'s `shape` group, 2,545 characters, is served byte for byte, and the capture holds it), so a group's rules are never trimmed to fit a cap that does not apply to them.
+  The crewmate's fixed instructions, for each runtime and kind of work, are measured in `tests/crewmate-fixed-context.test.ts`, which names each tool's headroom when a description would meet the cap.
   Two more things that binary taught us the expensive way (captain dogfood, packaged build, 2026-09-01):
   - **Never spawn a path inside app.asar.**
     `child_process.spawn` cannot execute one (only `execFile` is asar-aware), and Electron's asar shim answers `fs.existsSync` for it - so the obvious check passes and the spawn fails ENOTDIR.

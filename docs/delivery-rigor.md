@@ -84,6 +84,7 @@ Before opening or updating a PR the crewmate:
 
 Then it reports under the evidence contract below.
 Future github.com pull requests, gitlab.com merge requests and their completion cards use one saved story; legacy PRs and other hosts retain the five-heading PR description.
+The crewmate is told that once, on `emit_card`'s `presentation` field (`tests/crewmate-fixed-context.test.ts`).
 Failed checks first require reading the failed step and logs and declaring an explicit diagnosis at the head/check via `check_change`.
 Initial diagnosis spends nothing.
 Own regressions are repaired on this task: declare a stable repair id, source head, new target head/check and fix evidence; only the unsuccessful result spends one of three attempts.

@@ -78,6 +78,7 @@ The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-
   Other clone failures keep their original error.
   The first mate turns them into one decision card under one prompt rule (contract v4.8); the host raises no card of its own for it.
   A crewmate's `open_change` and `check_change` answer the same fact as its blocker to report - it never signs in.
+  The crewmate is told that once, in its prompt (`tests/crewmate-fixed-context.test.ts`); the tools do not repeat it.
 - **Git that never prompts** (`src/core/hostEnv.ts`): every child the core starts - host git, a crewmate's shell, Claude's client - carries `GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS` naming the shipped helper `resources/git-askpass` (extraResources, executable, outside the archive; the release contract and `scripts/verify-app.sh` pin it) and `INFINITARY_GIT_SIGNIN_DIR`.
   The helper answers the stored sign-in for an `https://` host with a sign-in here, with the user name its file names (`gitUser`) or `x-access-token`, and nothing for any other.
   `GIT_CONFIG_PARAMETERS` empties the credential helpers for `https://github.com` and each host on the person's own server with a sign-in here, read at each spawn - so neither the keychain's helper nor another program's GitHub sign-in ever answers for them under the app, while a plain host keeps the person's own helpers - and an SSH origin is the person's own agent, untouched.

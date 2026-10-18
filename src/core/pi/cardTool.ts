@@ -382,24 +382,37 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   browser_page?: string;
 };
 
+/**
+ * The saved-story rule, said once (INF-416 piece J). A top-level parameter,
+ * so a Claude crewmate reads it whole. The prompt, the brief and the other
+ * tools do not restate it.
+ */
+export const SAVED_STORY_RULE = [
+  "The saved-story rule, said once: a future github.com pull request or gitlab.com merge request, and its completion card, use the story prepare_change returns.",
+  "Pass that current revision here and to open_change as presentation, not body; supply the saved title, give one settle merge action, and omit body, body_file, risk and required_actions.",
+  "The host uses the saved story after the checks pass.",
+  "Pictures and recordings on it are the selected, inspected, publishable ones, with no local path or private thread.",
+  "Existing pull requests, self-hosted GitLab, GitHub Enterprise, plain Git and local-only delivery keep body and the five headings.",
+  "A pull request opened before saved stories and since closed starts a new story; one still open keeps body.",
+].join(" ");
+
 const crewmateCardParams = Type.Object({
   ...sharedCardParams,
   title: Type.String({
-    description: `${CARD_PARAMS.title} With presentation, supply the saved story title here; the host uses that saved title.`,
+    description: CARD_PARAMS.title,
   }),
   required_actions: Type.Optional(
     Type.Unsafe<RequiredAction[]>({
       ...z.toJSONSchema(requiredActionsSchema),
       description:
-        "Omit with presentation: the saved story supplies required actions. Otherwise required on a completion merge offer, including [] when none. " +
+        "Required on a completion merge offer, including [] when none. " +
         REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
   presentation: Type.Optional(
     Type.Integer({
       minimum: 1,
-      description:
-        "A current, fully published github.com or gitlab.com story revision. The saved title wins. Give one settle merge action and no body, risk or required_actions; the host uses the saved story after checks pass.",
+      description: SAVED_STORY_RULE,
     }),
   ),
   actions: Type.Optional(
@@ -420,9 +433,7 @@ const crewmateCardParams = Type.Object({
   body: Type.Optional(sharedCardParams.body),
   risk: Type.Optional(
     Type.Object(riskParam.properties, {
-      description:
-        "Omit with presentation: the saved story supplies every risk rating. Otherwise: " +
-        CARD_PARAMS.risk,
+      description: CARD_PARAMS.risk,
     }),
   ),
   asking: Type.Optional(Type.Boolean({ description: CARD_PARAMS.asking })),
@@ -430,7 +441,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Except for a saved-story completion using presentation, write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for him; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
+        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for him; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
     }),
   ),
 });

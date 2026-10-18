@@ -104,7 +104,7 @@ describe("continuation instructions served at the seven moments", () => {
     );
     const filing = CREWMATE_TOOLS.find((tool) => tool.name === "file_followup");
     expect(filing?.description).toContain("title beginning Continue:");
-    expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("Name it in the body");
+    expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("name it in the body");
     expect(FIRSTMATE_PROMPT_CORE).toContain(
       "first link_tasks blocks from origin to filing, then set update_task start_policy when-ready",
     );
@@ -1041,9 +1041,8 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
         "For finished change work (not a plan's preview, review, internal step or personal workspace), show the outcome on a card before reporting",
       );
       expect(tool).toContain("Without one, emit a factual note with no settle action");
-      expect(tool).toContain(
-        "say what happened and how you verified it, then report with waiting_on_captain naming it, and say finished only after he closes it",
-      );
+      // The prompt already says when to report waiting_on_captain and finished.
+      expect(tool).not.toContain("waiting_on_captain");
       expect(tool).toContain(
         "With a PR or branch to merge, emit one completion decision with one settle merge action",
       );
@@ -1442,7 +1441,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Show that the intent is met with evidence. Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit. Future github.com pull requests and gitlab.com merge requests use prepare_change to retain selected, inspected, publishable pictures and recordings for native uploads; no local path or private thread enters the description. Existing PRs and other hosts keep evidence in prose. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
+      "Show that the intent is met with evidence. Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; no local path or private thread enters the description. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(

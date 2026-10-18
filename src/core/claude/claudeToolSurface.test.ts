@@ -289,7 +289,7 @@ describe("what the Claude client serves equals the source", () => {
     // these; since v4.59 no nested parameter is described at all.
     const emitCard = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}emit_card`);
     expect(emitCard?.description).toContain(
-      "Name it in the body and say it starts once it is merged",
+      "name it in the body and say it starts once it is merged",
     );
     expect(
       ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}file_followup`)?.description,

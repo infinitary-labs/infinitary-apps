@@ -373,7 +373,7 @@ export function renderRigorSection(rigor: Rigor): string {
     case "quick":
       return "Rigor: quick - the repository's own gate and green CI; the five headings are welcome, nothing more is required.";
     case "standard":
-      return "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, a saved story on future github.com and gitlab.com changes (the five headings elsewhere), three CI rounds then a blocker report.";
+      return "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, three CI rounds then a blocker report.";
     case "reviewed":
       return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card. A passed review holds when a later version is the same change; any edit asks a fresh review.`;
   }

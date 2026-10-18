@@ -239,8 +239,8 @@ export const CARD_MECHANICS = [
  * words for fixed buttons the model no longer writes.
  */
 export const CREWMATE_CARD_ADDENDUM = [
-  "For finished change work (not a plan's preview, review, internal step or personal workspace), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action: say what happened and how you verified it, then report with waiting_on_captain naming it, and say finished only after he closes it.",
-  "For a continuation, report without a card; on the first mate's steer emit the completion decision. Name it in the body and say it starts once it is merged.",
+  "For finished change work (not a plan's preview, review, internal step or personal workspace), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action.",
+  "For a continuation, name it in the body and say it starts once it is merged.",
   "No settle effects on intermediate questions; reuse an open outcome card's id. A click on a settle action never comes back to you as a steer; the host reports the outcome to the first mate.",
 ].join(" ");
 

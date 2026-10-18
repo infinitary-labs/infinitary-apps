@@ -463,6 +463,8 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   A Claude conversation that started over as it opened names the one it started over from in its state (`renewal`) until a turn of the new one finishes, so a home that opens it again before then still tells the crewmate why, and one that opens it later never tells it twice.
 - **After the one-time move.**
   The home opens a conversation here again with what it opened it with before: a Pi record's file, and instructions that name the task's folders.
+  Tool names, and the instruction rewrite the contract allows, are the ones that computer speaks now.
+  An idle conversation this computer still holds is opened again when those differ, and a turn in progress keeps the tools it started with.
   After this computer's move those name the older folder, which stays as the move's recovery copy (above, "Under the other name").
   So each path into the older folder that an open carries names the same place in this one (`PlacedTasks.inThisFolder`, read from the move's record beside the work folder).
   A Pi conversation resumes from its record's copy here and writes there, and its crewmate is told its folders here.
@@ -519,6 +521,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   The computer records an errored `continuation_ended` before detaching a continuation at shutdown, or on recovery if a crash cut it off, so the home ends its autonomous turn and stops repeat copies after reconnect.
   Its optional `interrupted` fact lets the home use its own interruption wording with that computer's name, without interpreting the helper's error text; a closed task records no extra ending.
   The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.
+  The reopen names the tools and the instruction rewrite that computer's contract allows now, not the ones it allowed when the conversation opened, so a version-gated tool such as `prepare_change` arrives without this Mac restarting.
   A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
   The task's timeline notes the move, its record names the new conversation at once, and the crewmate's next prompt says why, gives its brief, and says where its earlier transcript is saved on that computer.
 - **The record's copy.**

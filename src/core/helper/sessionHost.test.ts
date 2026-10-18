@@ -549,6 +549,36 @@ describe("a conversation held on a computer that runs work", () => {
     ).toEqual({ delivered: false });
   });
 
+  it("rebinds an idle conversation when a later open names a tool it lacked (INF-398)", async () => {
+    const at = await placed();
+    const opened = await at.open();
+    model([{ text: "Started." }, { text: "Has the tool." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+    expect(api.requests.at(-1)?.body.tools?.map((tool) => tool.name)).not.toContain(
+      "prepare_change",
+    );
+    const held = await at.open();
+    expect(held.state.sessionId).toBe(opened.state.sessionId);
+    expect(held.state.resume).toBeTruthy();
+
+    const again = await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:2`,
+        task: TASK,
+        spec: {
+          ...at.spec,
+          tools: [...at.spec.tools, "prepare_change"],
+          resume: held.state.resume,
+        },
+      },
+    ]);
+    expect(again.state.resume).toBe(held.state.resume);
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
+    await at.ended(2);
+    expect(api.requests.at(-1)?.body.tools?.map((tool) => tool.name)).toContain("prepare_change");
+  });
+
   // Intent: INF-311's accepted whole-call deadline includes waiting for prior events.
   it.each(["inf:work:report", "inf:work:events"])(
     "ends the whole tool call after 24 days while waiting on %s (INF-312)",

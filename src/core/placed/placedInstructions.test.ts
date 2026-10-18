@@ -2,7 +2,7 @@ import { PROTOCOL_VERSION } from "@shared/ipc";
 import { describe, expect, it } from "vitest";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import { buildCrewmateSystemPrompt } from "../pi/piResources";
-import { instructionsThere } from "./placedSessions";
+import { instructionsForContract, instructionsThere } from "./placedSessions";
 
 /**
  * The Infinitary rename (step 8 of FI3-1780's plan): a computer that runs
@@ -19,5 +19,12 @@ describe("a placed crewmate's instructions across the rename", () => {
     expect(older).toContain("run `fm-browser-axi`");
     expect(older).not.toContain(BROWSER_COMMAND);
     expect(older.replace("fm-browser-axi", BROWSER_COMMAND)).toBe(base);
+  });
+
+  it("retargets a stored prompt when that computer restarts onto another contract (INF-398)", () => {
+    const older = instructionsThere(base, "8.3.0");
+    expect(instructionsForContract(older, "8.3.0", PROTOCOL_VERSION)).toBe(base);
+    expect(instructionsForContract(base, PROTOCOL_VERSION, "8.3.0")).toBe(older);
+    expect(instructionsForContract(base, PROTOCOL_VERSION, PROTOCOL_VERSION)).toBe(base);
   });
 });

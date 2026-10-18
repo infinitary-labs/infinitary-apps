@@ -204,6 +204,7 @@ import { planStepAttached, teachStepAttached } from "../personal/sequencesSkill"
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { lintCrewmateCard } from "../pi/cardLint";
 import { resolveFirstmateCardId } from "../pi/cardTool";
+import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { type CrewStatusEntry, NOTHING_SPAWNED } from "../pi/crewTools";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { PlacedCopy } from "../placed/placedCopies";
@@ -231,6 +232,7 @@ import {
   type TaskShell,
 } from "../session/session";
 import {
+  bindTools,
   CardRefusedError,
   type DeclaredAction,
   type DeclaredCardInput,
@@ -8450,6 +8452,18 @@ export class CrewSupervisor {
   placedReopened(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (task?.session) this.carryRestart(task, this.machineOf(taskId), task.session);
+  }
+
+  /**
+   * The tool names this task's crewmate binds now. Read at a reopen, so a
+   * computer that restarted on a newer contract is given a version-gated
+   * tool the conversation opened without.
+   */
+  toolsNow(taskId: string): readonly string[] | undefined {
+    const task = this.tasks.get(taskId);
+    if (!task) return undefined;
+    const personal = this.isPersonalTask(taskId) ? this.options.personal : undefined;
+    return bindTools(CREWMATE_TOOLS, this.crewmateHooks(task, personal)).map((tool) => tool.name);
   }
 
   /**

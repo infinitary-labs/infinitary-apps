@@ -367,6 +367,7 @@ function startHome(options: {
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
     jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
+    toolsNow: (taskId) => supervisor.toolsNow(taskId),
   });
   const dispatch = (async (channel, rawArgs, actor) => {
     if (channel === "inf:app:healthcheck")

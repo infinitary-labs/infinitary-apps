@@ -10,6 +10,7 @@ import {
   noSignInsWaitLine,
 } from "@shared/deviceSetup";
 import type { DeviceView } from "@shared/devices";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
@@ -293,6 +294,8 @@ async function world(
      * work mode keeps them (`startConversations`); otherwise Pi's own bash.
      */
     jobs?: boolean;
+    /** The contract the computer's hello names; this build's own unless a test stands in an older one. */
+    protocolVersion?: string;
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -334,13 +337,16 @@ async function world(
   let run: HelperRun | undefined;
   /** The computer refuses to open a conversation, as one with no sign-in for its provider does. */
   let refusing = false;
+  /** The contract the running computer's hello names. */
+  let protocolVersion = options.protocolVersion;
   /** Every binding the home asked the computer to resolve with its own sign-ins. */
   const bound: PlacedSpec["binding"][] = [];
-  const startComputer = (tools?: readonly CrewmateTool[]) => {
+  const startComputer = (tools?: readonly CrewmateTool[], version = protocolVersion) => {
     const started = startHelper({
       dataDir,
       say: () => {},
       retryMs: [20],
+      ...(version ? { protocolVersion: version } : {}),
       ...(options.signedInTo
         ? { signIns: signedInTo(options.signedInTo, options.forges, options.served) }
         : {}),
@@ -455,7 +461,11 @@ async function world(
      * The computer's own process quits, and starts again from the same
      * folder; updated, with the crewmate tools its new version binds.
      */
-    restartComputer: async (updated?: { tools: readonly CrewmateTool[] }) => {
+    restartComputer: async (updated?: {
+      tools?: readonly CrewmateTool[];
+      protocolVersion?: string;
+    }) => {
+      if (updated?.protocolVersion) protocolVersion = updated.protocolVersion;
       await run?.stop();
       startComputer(updated?.tools);
     },
@@ -1146,6 +1156,35 @@ describe("a task that runs on a computer that runs work", () => {
       }
     },
   );
+
+  it("gives a crewmate prepare_change after that computer restarts from 8.12.0 onto this contract (INF-398)", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)), { protocolVersion: "8.12.0" });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    model([{ text: "Started on the footer." }, { text: "The header is next." }]);
+    await at.start("t-contract", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-contract")?.activity).toBe("idle");
+    const opened = api.requests.at(-1)?.body.tools?.map((tool) => tool.name) ?? [];
+    expect(opened).toContain("open_change");
+    expect(opened).not.toContain("prepare_change");
+    expect(home.placed.takesChangePresentations(at.deviceId)).toBe(false);
+
+    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+    // The old connection can still be in reach when the restart returns.
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+    await at.inReach("t-contract");
+    expect(home.placed.takesChangePresentations(at.deviceId)).toBe(true);
+    const requests = api.requests.length;
+    await home.supervisor.steerCrewmate("t-contract", "Fix the header too.");
+    await expect.poll(() => home.tasks.get("t-contract")?.outcome).toBe("The header is next.");
+    const served = api.requests.at(-1)?.body.tools?.map((tool) => tool.name) ?? [];
+    expect(api.requests.length).toBeGreaterThan(requests);
+    expect(served).toContain("prepare_change");
+    expect(served).toContain("open_change");
+    expect(said(api.requests.at(-1))).toContain("Fix the header too.");
+  });
 
   it("fails a turn the computer's restart cut off, and its lane runs the words there again", async () => {
     const at = await world();

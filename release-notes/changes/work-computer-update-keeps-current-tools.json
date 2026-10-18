@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-update-keeps-current-tools",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate on an updated computer gets that computer's tools",
+      "body": "When a computer that runs work for you updates and starts again, a crewmate already working there is given the tools that version allows. It no longer stays on the tools from before the update until you also quit and reopen Infinitary on this Mac.",
+      "noPicture": "Nothing on screen looks different: the change is which tools that crewmate can use after the other computer updates.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

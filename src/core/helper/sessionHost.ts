@@ -182,6 +182,12 @@ const FORWARDED_TOOLS = new Set([
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
 
+function sameNames(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const names = new Set(left);
+  return right.every((name) => names.has(name));
+}
+
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const tasksAnswerSchema = workRequests["inf:work:tasks"].response;
 
@@ -221,6 +227,8 @@ type Held = {
   removed: boolean;
   /** What its crewmate is told ahead of its next prompt: its folders moved (`crewmateMovedText`). */
   movedNotice: string | undefined;
+  /** The tool names and instructions this conversation was opened with. */
+  opened: { tools: readonly string[]; instructions: string; browser: boolean } | undefined;
 };
 
 export class SessionHost {
@@ -633,9 +641,15 @@ export class SessionHost {
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {
-      // A home reopening its side needs a fresh count even when nothing changed here.
-      this.recordJobs(held, true);
-      return this.stateOf(held);
+      // A turn in progress keeps the tools it started with. An idle
+      // conversation whose named tools or instructions changed, because the
+      // home reopened it for a contract this computer now speaks, lets go
+      // and opens again, so a version-gated tool arrives without a restart here.
+      if (held.state.running || !this.contractMoved(held, spec)) {
+        this.recordJobs(held, true);
+        return this.stateOf(held);
+      }
+      await this.releaseConversation(held);
     }
     const opening = (async () => {
       const binding = await this.options.bind(spec.binding);
@@ -727,6 +741,11 @@ export class SessionHost {
         throw new Error("This computer is stopping.");
       }
       held.session = session;
+      held.opened = {
+        tools: spec.tools,
+        instructions: spec.instructions,
+        browser: spec.browser === true,
+      };
       held.backend = binding.backend;
       held.movedNotice = moved ? crewmateMovedText(moved) : undefined;
       held.account = this.options.accounts?.of(binding);
@@ -747,6 +766,31 @@ export class SessionHost {
       held.opening = null;
     }
     return this.stateOf(held);
+  }
+
+  /** Whether this open names tools or instructions the held conversation was not opened with. */
+  private contractMoved(held: Held, spec: PlacedSpec): boolean {
+    const opened = held.opened;
+    if (!opened) return false;
+    return (
+      !sameNames(opened.tools, spec.tools) ||
+      opened.instructions !== spec.instructions ||
+      opened.browser !== (spec.browser === true)
+    );
+  }
+
+  /** Lets an idle conversation go so a later open can bind the tools this spec names. */
+  private async releaseConversation(held: Held): Promise<void> {
+    held.unsubscribe?.();
+    held.unsubscribe = null;
+    const session = held.session;
+    held.session = null;
+    held.opened = undefined;
+    held.renewal = undefined;
+    held.backend = null;
+    if (!session) return;
+    session.dispose();
+    await session.closed().catch(() => undefined);
   }
 
   private prompt(
@@ -1127,6 +1171,7 @@ export class SessionHost {
       copying: new Map(),
       removed: false,
       movedNotice: undefined,
+      opened: undefined,
     };
     this.held.set(task, held);
     return held;

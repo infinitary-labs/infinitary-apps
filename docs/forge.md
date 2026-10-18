@@ -632,6 +632,7 @@ Only the newest revision and the last published revision remain (or the unresolv
 Each receipt is scoped to the host, numeric project identity, full project name, visibility, content digest and media type.
 The paired computer transfers retained pictures and recordings through the existing picture and chunked-media routes before asking the home to prepare the story.
 `CHANGE_PRESENTATIONS_SINCE` gates that tool on work computers; an older computer must be updated before opening a new github.com pull request or gitlab.com merge request, rather than bypassing the publication barrier.
+A computer that restarts on a contract that speaks it is given the tool on the conversations the home reopens, without the home restarting.
 The home opens the PR using its own sign-in; no sign-in moves to the work computer.
 The work computer discards its staging copies after transfer; the home retains the newest and last published story copies.
 A refused preparation discards unretained staging copies even before host or legacy-PR validation, or when another story operation is running; it never removes that active operation's files.

@@ -119,6 +119,31 @@ describe("fmEventsFromPiEvent", () => {
     ]);
   });
 
+  // INF-443 piece 1: xAI's refusal for spent credits is a typed cut-off the
+  // host holds the sign-in on; the same words from another provider are not.
+  it("types xAI's 402 as a spent allowance with no reset, and no other provider's", () => {
+    const refused = {
+      type: "turn_end",
+      message: {
+        role: "assistant",
+        stopReason: "error",
+        errorMessage:
+          "xai API error (402): Your team has either used all available credits or reached its monthly spending limit.",
+      },
+    };
+    expect(fmEventsFromPiEvent(refused, "t1", "xai")[0]).toEqual({
+      type: "turn_failed",
+      taskId: "t1",
+      error: expect.stringContaining("(402)"),
+      cutOff: { class: "no_headroom" },
+    });
+    expect(fmEventsFromPiEvent(refused, "t1", "openrouter")[0]).not.toHaveProperty("cutOff");
+    expect(fmEventsFromPiEvent(refused, "t1")[0]).not.toHaveProperty("cutOff");
+    // The session path reads the provider when the turn ends.
+    const translate = piSessionEvents("t1", () => "xai");
+    expect(translate(refused)[0]).toMatchObject({ cutOff: { class: "no_headroom" } });
+  });
+
   it("does not fabricate turn_failed for clean or aborted turns", () => {
     expect(
       fmEventsFromPiEvent({ type: "turn_end", message: { stopReason: "stop" } }, "t1"),

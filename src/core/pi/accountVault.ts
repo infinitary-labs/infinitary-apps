@@ -119,6 +119,12 @@ export type AccountCutOff = {
   since: number;
   /** When a spent allowance returns, epoch ms (`no_headroom` only). */
   resetsAt?: number;
+  /**
+   * The lowest percent left the sensor read when a spent allowance was
+   * observed (`noteCutOff`): a later reading that shows more ends the hold
+   * early (`noteReading`), as after a top-up.
+   */
+  leftPercent?: number;
   stamp: CredentialStamp;
 };
 
@@ -597,7 +603,7 @@ export class AccountVault {
    * its reset. One with no known reset, or a reset already past, has
    * nothing to clear it and is not held.
    */
-  noteCutOff(accountId: string, cutOff: CutOff): void {
+  noteCutOff(accountId: string, cutOff: CutOff, seen?: { leftPercent?: number }): void {
     const account = this.registry.accounts.find((entry) => entry.id === accountId);
     if (!account || !this.get(accountId)) return;
     const now = this.now();
@@ -634,6 +640,9 @@ export class AccountVault {
       ...(cutOff.class === "no_headroom" && cutOff.resetsAt !== undefined
         ? { resetsAt: cutOff.resetsAt }
         : {}),
+      ...(cutOff.class === "no_headroom" && seen?.leftPercent !== undefined
+        ? { leftPercent: seen.leftPercent }
+        : {}),
       stamp: {},
     };
     this.saveRegistry();
@@ -663,6 +672,19 @@ export class AccountVault {
       return undefined;
     }
     return { ...standing, stamp: { ...standing.stamp } };
+  }
+
+  /**
+   * A fresh allowance reading showed this much left. A spent allowance that
+   * was observed against a lower reading ends: credits were added before
+   * the reset. Answers whether a hold ended.
+   */
+  noteReading(accountId: string, leftPercent: number): boolean {
+    const standing = this.cutOff(accountId);
+    if (standing?.class !== "no_headroom" || standing.leftPercent === undefined) return false;
+    if (leftPercent <= standing.leftPercent) return false;
+    this.clearCutOff(accountId);
+    return true;
   }
 
   /**
@@ -1231,6 +1253,7 @@ function withReadableCutOff(account: AccountRecord): AccountRecord {
     CUT_OFF_CLASSES.includes(cutOff.class) &&
     typeof cutOff.since === "number" &&
     (cutOff.resetsAt === undefined || typeof cutOff.resetsAt === "number") &&
+    (cutOff.leftPercent === undefined || typeof cutOff.leftPercent === "number") &&
     cutOff.stamp !== null &&
     typeof cutOff.stamp === "object";
   if (!known) return rest;

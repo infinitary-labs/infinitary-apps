@@ -1,3 +1,4 @@
+import { isOutOfCreditsRefusal } from "@shared/authFailure";
 import {
   type FmEvent,
   type FmUsage,
@@ -15,7 +16,7 @@ const [COMPACTION_TOOL, RETRY_TOOL] = PROGRESS_TOOL_NAMES;
  * crosses IPC. Compaction and retries surface as pseudo-tools so the shell
  * can show progress without knowing Pi's internals.
  */
-export function fmEventsFromPiEvent(event: unknown, taskId: string): FmEvent[] {
+export function fmEventsFromPiEvent(event: unknown, taskId: string, provider?: string): FmEvent[] {
   if (
     !event ||
     typeof event !== "object" ||
@@ -64,7 +65,16 @@ export function fmEventsFromPiEvent(event: unknown, taskId: string): FmEvent[] {
       // event or the failure never becomes visible anywhere.
       const error = errorFromMessage(typed.message);
       if (error !== undefined) {
-        events.push({ type: "turn_failed", taskId, error });
+        // xAI's 402 is the typed fact "the allowance is spent"; the reset is
+        // the host's to fill from the sign-in's own reading.
+        events.push({
+          type: "turn_failed",
+          taskId,
+          error,
+          ...(isOutOfCreditsRefusal(provider, error)
+            ? { cutOff: { class: "no_headroom" as const } }
+            : {}),
+        });
       }
       events.push({ type: "turn_end", taskId, ...(usage ? { usage } : {}) });
       return events;
@@ -119,7 +129,11 @@ export function fmEventsFromPiEvent(event: unknown, taskId: string): FmEvent[] {
  * turn's closing assistant text. The owner reads only these; no Pi event
  * shape crosses the contract.
  */
-export function seatEventsFromPiEvent(event: unknown, taskId: string): SessionEvent[] {
+export function seatEventsFromPiEvent(
+  event: unknown,
+  taskId: string,
+  provider?: string,
+): SessionEvent[] {
   const type = (event as { type?: unknown } | null)?.type;
   // A retried attempt is not a failed turn, but its measured usage still is.
   // The holder already normalized it, provider included. Reading the message
@@ -131,7 +145,7 @@ export function seatEventsFromPiEvent(event: unknown, taskId: string): SessionEv
   if (type === "compaction_start" || isAssistantStart(event)) {
     return [{ type: "request_started" }, ...fmEventsFromPiEvent(event, taskId)];
   }
-  const events: SessionEvent[] = fmEventsFromPiEvent(event, taskId);
+  const events: SessionEvent[] = fmEventsFromPiEvent(event, taskId, provider);
   if (type !== "turn_end") return events;
   const text = closingText((event as { message?: unknown }).message);
   events.push({ type: "turn_closed", ...(text ? { text } : {}) });
@@ -224,7 +238,10 @@ export function usageFromMessage(message: unknown): FmUsage | undefined {
 }
 
 /** One subscription's completed housekeeping calls, never a replay of saved history. */
-export function piSessionEvents(taskId: string): (event: unknown) => SessionEvent[] {
+export function piSessionEvents(
+  taskId: string,
+  provider?: () => string | undefined,
+): (event: unknown) => SessionEvent[] {
   let compactionEnded = false;
   return (event) => {
     const type = (event as { type?: unknown } | null)?.type;
@@ -233,6 +250,6 @@ export function piSessionEvents(taskId: string): (event: unknown) => SessionEven
       if (compactionEnded) return [];
       compactionEnded = true;
     }
-    return seatEventsFromPiEvent(event, taskId);
+    return seatEventsFromPiEvent(event, taskId, provider?.());
   };
 }

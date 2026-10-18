@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "grok-out-of-credits-hold",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates stop retrying a Grok sign-in that is out of credits",
+      "body": "When Grok says your credits are spent, the crewmates on that sign-in now wait until the credits reset, or until you add more, instead of trying again every few minutes. The first mate hears about it once, and new work goes to another model meanwhile.",
+      "noPicture": "Nothing on screen looks different: the change is that refused retries stop and the sign-in reads empty until it resets.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

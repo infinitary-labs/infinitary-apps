@@ -30,6 +30,7 @@ import {
   type PlacementWaitRow,
   placementWait,
 } from "@shared/placement";
+import { typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import type { RiskDeclaration } from "@shared/risk";
@@ -11741,6 +11742,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       }
     }
 
+    /** Ticks that stay short of `until`, each past any backoff that is not the hold's. */
+    async function tenTicksUntil(supervisor: CrewSupervisor, until: number) {
+      for (let pass = 1; pass <= 10; pass += 1) {
+        hostNow = Math.min(hostNow + minutes(20), until);
+        supervisor.reconcileIdle(hostNow);
+        await supervisor.sweepInbox(hostNow);
+        await tick();
+      }
+    }
+
     /**
      * A fresh supervisor over the same database, on the same login (an app
      * restart): no runtime survives, the rows and the durable once-names do.
@@ -12115,6 +12126,57 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await cutOffTurn(crewmate, taskId, { class: "no_headroom" });
       expect(cutOffWakes(ops)).toEqual([]);
       expect(turnWakes(ops)).toEqual([expect.stringContaining("failed at the provider")]);
+    });
+
+    // INF-443 piece 1: xAI's 402 names no reset, so the host holds the
+    // sign-in against its own reading's limiting window. The words are Pi's
+    // (formatProviderError), the typed class is the session's.
+    it("a Pi crewmate refused by xAI's 402 waits out the reset it was held against, and the feed line reads the class", async () => {
+      const login = claudeLogin();
+      const resetsAt = hostNow + minutes(600);
+      // The composition root fills the reset from the sign-in's reading; the
+      // supervisor reads it back from the standing hold.
+      const noteCutOff = (accountId: string, cutOff: CutOff) =>
+        login.extras.noteCutOff?.(
+          accountId,
+          cutOff.class === "no_headroom" && cutOff.resetsAt === undefined
+            ? { ...cutOff, resetsAt }
+            : cutOff,
+        );
+      const harness = await stopped({ ...login.extras, noteCutOff }, fakeCrewmate());
+      const { supervisor, crewmate, taskId, inbox, ops, tasks } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      crewmate.emit({
+        type: "turn_failed",
+        taskId,
+        error:
+          "xai API error (402): Your team has either used all available credits or reached its monthly spending limit.",
+        cutOff: { class: "no_headroom" },
+      });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      const prompts = crewmate.promptCalls.length;
+
+      // One wake for the account, no failed-turn wake, and the guidance waits for the reset.
+      expect(cutOffWakes(ops)).toHaveLength(1);
+      expect(turnWakes(ops)).toEqual([]);
+      expect(inbox.allFor(taskId)).toEqual([
+        expect.objectContaining({ attempts: 0, failures: 1, nextAttemptAt: resetsAt }),
+      ]);
+      const failed = tasks.timeline(taskId).find((event) => event.kind === "failed");
+      expect(typedFailureOf(failed?.data)).toEqual({ cutOff: { class: "no_headroom", resetsAt } });
+
+      await tenTicksUntil(supervisor, resetsAt - 1);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(cutOffWakes(ops)).toHaveLength(1);
+
+      hostNow = resetsAt;
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      expect(backWakes(ops)).toHaveLength(1);
+      expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
     });
   });
 

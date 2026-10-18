@@ -1,4 +1,9 @@
-import type { ModelsCatalogView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
+import type {
+  ModelsCatalogView,
+  QuotaProviderView,
+  QuotaSnapshotView,
+  QuotaWindowView,
+} from "@shared/quota";
 import type {
   ManagedAuth,
   QuotaAccountRef,
@@ -53,9 +58,10 @@ export type QuotaFetcherOptions = {
   /**
    * The vendor just accepted this account's credential: a fresh allowance
    * reading came back ok. A cached answer is not a fresh acceptance, so a
-   * throttled Claude row does not call this.
+   * throttled Claude row does not call this. `windows` is the sensor's own
+   * reading, before any refusal is laid over it.
    */
-  onAccepted?: (accountId: string) => void;
+  onAccepted?: (accountId: string, windows: QuotaWindowView[]) => void;
 };
 
 /**
@@ -167,7 +173,7 @@ async function fetchOneAccount(
           : CLAUDE_ASK_INTERVAL_MS;
       claudeAsks.set(account.accountId, { at: now, nextAskAt: now + wait, view: result });
     }
-    if (outcome.status === "ok") options.onAccepted?.(account.accountId);
+    if (outcome.status === "ok") options.onAccepted?.(account.accountId, outcome.windows);
     return result;
   };
   const first = await attempt(account, options, managed, now);

@@ -11,6 +11,7 @@ import { JobManager } from "../jobs/jobManager";
 import { Ticker } from "../orchestrator/ticker";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
+import { heldAgainst } from "../quota/spentAllowance";
 import type { SessionBinding } from "../session/session";
 import type { ComputerAccounts } from "./accounts";
 import { ComputerBrowsers, type ComputerBrowsersOptions } from "./browsers";
@@ -58,7 +59,7 @@ export const CLAUDE_LOGIN_HERE = "claude";
  */
 export async function bindHere(
   binding: PlacedSpec["binding"],
-  accounts?: Pick<ComputerAccounts, "vault">,
+  accounts?: Pick<ComputerAccounts, "vault"> & Partial<Pick<ComputerAccounts, "allowance">>,
 ): Promise<SessionBinding> {
   if (binding.backend === "claude") {
     const vault = accounts?.vault;
@@ -101,7 +102,9 @@ export async function bindHere(
  * and that account's own store, where a typed cut-off a turn met is recorded.
  */
 export function ownAccounts(
-  accounts: () => Promise<Pick<ComputerAccounts, "vault"> | undefined>,
+  accounts: () => Promise<
+    (Pick<ComputerAccounts, "vault"> & Partial<Pick<ComputerAccounts, "allowance">>) | undefined
+  >,
   log: (line: string) => void,
 ): OwnAccounts {
   return {
@@ -111,7 +114,23 @@ export function ownAccounts(
         : binding.accountId,
     noteCutOff: (accountId, cutOff) => {
       void accounts()
-        .then((loaded) => loaded?.vault.noteCutOff(accountId, cutOff))
+        .then((loaded) => {
+          if (!loaded) return;
+          // A spent allowance with no reset of its own (xAI's 402) takes the
+          // limiting window of this computer's latest reading of the account.
+          const spent = heldAgainst(
+            cutOff,
+            loaded.vault.get(accountId)?.providerId,
+            loaded.allowance?.(),
+            accountId,
+            Date.now(),
+          );
+          loaded.vault.noteCutOff(
+            accountId,
+            spent ? { ...cutOff, resetsAt: spent.resetsAt } : cutOff,
+            spent ? { leftPercent: spent.leftPercent } : undefined,
+          );
+        })
         .catch((error: unknown) =>
           log(`a cut-off on ${accountId} was not recorded: ${messageOf(error)}`),
         );

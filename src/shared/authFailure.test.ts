@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyClaudeSignal, isAuthFailureMessage } from "./authFailure";
+import { classifyClaudeSignal, isAuthFailureMessage, isOutOfCreditsRefusal } from "./authFailure";
 
 describe("isAuthFailureMessage", () => {
   it("flags a provider-reported 401/403 in Pi's error shapes", () => {
@@ -275,5 +275,31 @@ describe("classifyClaudeSignal", () => {
     expect(classifyClaudeSignal({ ...failedResult, apiErrorStatus: 500 })).toEqual({
       kind: "turn-failed",
     });
+  });
+});
+
+// INF-443 piece 1: only xAI's 402 is the typed fact "credits are spent".
+describe("isOutOfCreditsRefusal", () => {
+  it("reads xAI's 402 from where Pi's error puts the status", () => {
+    // pi-ai's formatProviderError "<prefix> (<status>): <body>".
+    expect(
+      isOutOfCreditsRefusal(
+        "xai",
+        "xai API error (402): Your team has either used all available credits or reached its monthly spending limit.",
+      ),
+    ).toBe(true);
+    expect(isOutOfCreditsRefusal("xai", "402: payment required")).toBe(true);
+  });
+
+  it("leaves every other provider, status and mention of 402 an ordinary failure", () => {
+    // OpenRouter's 402 can be about one oversized request.
+    expect(isOutOfCreditsRefusal("openrouter", "402: This request requires more credits")).toBe(
+      false,
+    );
+    expect(isOutOfCreditsRefusal(undefined, "xai API error (402): out of credits")).toBe(false);
+    expect(isOutOfCreditsRefusal("xai", "xai API error (403): forbidden")).toBe(false);
+    expect(isOutOfCreditsRefusal("xai", "xai API error (429): too many requests")).toBe(false);
+    // The words alone are not the status.
+    expect(isOutOfCreditsRefusal("xai", "Error: a 402 appeared in a tool's output")).toBe(false);
   });
 });

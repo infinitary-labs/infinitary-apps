@@ -270,7 +270,7 @@ class PiOneShotSession implements ModelSession {
   }
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
-    const translate = piSessionEvents(this.owner);
+    const translate = piSessionEvents(this.owner, () => this.modelRef()?.provider);
     const deliver = holdingRecoverableAttempt((event) => {
       const reported = rewriteTimedOutTurn(event, this.failure !== undefined, this.failure ?? "");
       for (const sessionEvent of translate(reported)) listener(sessionEvent);
@@ -411,7 +411,7 @@ class PiRollingSession implements ModelSession {
   }
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
-    const translate = piSessionEvents(this.options.owner);
+    const translate = piSessionEvents(this.options.owner, () => this.modelRef()?.provider);
     const deliver = holdingRecoverableAttempt((event) => {
       const rewritten = rewriteTimedOutTurn(event, this.failure !== undefined, this.failure ?? "");
       for (const sessionEvent of translate(rewritten)) {

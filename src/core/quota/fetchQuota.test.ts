@@ -377,11 +377,12 @@ describe("createQuotaFetcher (per-account sensor)", () => {
       http,
       models: () => [],
       now: () => NOW,
-      onAccepted: (accountId) => accepted.push(accountId),
+      onAccepted: (accountId, windows) => accepted.push(`${accountId}:${windows.length}`),
     });
     await fetchQuota();
     await fetchQuota();
-    expect(accepted).toEqual(["acct_claude"]);
+    // With the sensor's own windows, for a hold that a top-up ends early.
+    expect(accepted).toEqual(["acct_claude:1"]);
     expect(http).toHaveBeenCalledTimes(1);
   });
 

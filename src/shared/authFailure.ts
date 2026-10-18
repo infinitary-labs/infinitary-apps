@@ -35,6 +35,24 @@ const STATUS_PATTERNS: readonly RegExp[] = [
   /\b40[13]\s+(?:unauthorized|forbidden)\b/i,
 ];
 
+/** An HTTP 402 in a position Pi's error shapes put a status. */
+const PAYMENT_STATUS_PATTERNS: readonly RegExp[] = [
+  // formatProviderError "<status>: <body>"; SDK messages leading with the status.
+  /^\s*402\b/,
+  // formatProviderError "<prefix> (<status>): <body>", as xAI's reads.
+  /\(402\)/,
+];
+
+/**
+ * Whether a Pi provider failure is xAI saying the account's credits are
+ * spent: status 402, read from where Pi's error puts the number and never
+ * from the words, and only for xAI. Another provider's 402 can be about one
+ * oversized request (OpenRouter's), so it stays an ordinary failed turn.
+ */
+export function isOutOfCreditsRefusal(provider: string | undefined, message: string): boolean {
+  return provider === "xai" && PAYMENT_STATUS_PATTERNS.some((pattern) => pattern.test(message));
+}
+
 /** HTTP reason phrases: standalone words in provider errors, not prose. */
 const REASON_PHRASE_PATTERN = /\b(?:unauthorized|forbidden)\b/i;
 

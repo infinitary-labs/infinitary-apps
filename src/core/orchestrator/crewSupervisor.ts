@@ -5371,7 +5371,7 @@ export class CrewSupervisor {
     if (placement)
       this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "ended");
     const providerError = task.lastTurnError;
-    const cutOff = task.lastTurnCutOff;
+    let cutOff = task.lastTurnCutOff;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
     // A cut-off is a fact about the account, not only this turn: it stands
@@ -5381,6 +5381,14 @@ export class CrewSupervisor {
     // account, whose Firstmate and crew keep serving.
     if (cutOff && task.accountId && this.machineOf(task.id) === LOCAL_MACHINE_ID)
       this.options.noteCutOff?.(task.accountId, cutOff);
+    // A spent allowance that named no reset (xAI's 402) was held against the
+    // sign-in's own reading when it was recorded: the retry waits for that.
+    if (cutOff?.class === "no_headroom" && cutOff.resetsAt === undefined && task.accountId) {
+      const standing = this.serveability()?.cutOff(task.accountId);
+      if (standing?.class === "no_headroom" && standing.resetsAt !== undefined) {
+        cutOff = { ...cutOff, resetsAt: standing.resetsAt };
+      }
+    }
     const finalText =
       task.turnReport ?? (task.currentTurnText.trim() ? task.currentTurnText : undefined);
     const candidate = providerError ? undefined : (task.explicitReport ?? finalText);
@@ -5455,6 +5463,10 @@ export class CrewSupervisor {
       let typed: TypedFailure | undefined;
       if (providerError !== undefined && task.session?.controlProfile.failureSignals === "typed") {
         typed = cutOff ? { cutOff } : {};
+      } else if (providerError !== undefined && cutOff) {
+        // A prose backend's failure with a typed class (xAI's 402) keeps the
+        // class too, so the feed line reads the class and not the words.
+        typed = { cutOff };
       }
       this.options.tasks.recordTurnFailure(task.id, turnError, typed);
     } else if (report) {

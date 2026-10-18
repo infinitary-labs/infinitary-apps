@@ -22,6 +22,7 @@ import { createQuotaFetcher } from "../quota/fetchQuota";
 import { createQuotaHttp, type QuotaHttp } from "../quota/http";
 import type { ProviderOutcome } from "../quota/outcome";
 import { mergeStaleProviders } from "../quota/quotaService";
+import { lowestLeft } from "../quota/spentAllowance";
 
 /**
  * A computer that runs work's own sign-ins (docs/helper.md, "Its own
@@ -219,7 +220,12 @@ export async function startComputerAccounts(
     },
     http: options.http ?? createQuotaHttp(),
     models: () => [],
-    onAccepted: (accountId) => vault.noteAccepted(accountId),
+    onAccepted: (accountId, windows) => {
+      vault.noteAccepted(accountId);
+      // More left than when the allowance was refused: credits were added.
+      const left = lowestLeft(windows);
+      if (left !== undefined) vault.noteReading(accountId, left);
+    },
     now,
   });
   // Each account's own model list is read as this Mac reads its own: when it

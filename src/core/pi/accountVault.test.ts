@@ -710,6 +710,48 @@ describe("a typed cut-off on the account", () => {
     expect((await vault.views())[0]?.cutOff).toBeUndefined();
   });
 
+  // INF-443 piece 1, question 2: credits added before the reset end the hold.
+  it("ends a spent allowance early when a later reading shows more left than at the refusal, and not before", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    const resetsAt = world.facts.now + 600 * 60_000;
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt }, { leftPercent: 19 });
+    expect(vault.cutOff(id)).toMatchObject({ class: "no_headroom", resetsAt, leftPercent: 19 });
+
+    // The meter as it stood, or lower: still spent.
+    expect(vault.noteReading(id, 19)).toBe(false);
+    expect(vault.noteReading(id, 3)).toBe(false);
+    expect(vault.cutOff(id)?.class).toBe("no_headroom");
+    // The hold is not a row's own field.
+    expect((await vault.views())[0]?.cutOff).toEqual({
+      class: "no_headroom",
+      since: world.facts.now,
+      resetsAt,
+    });
+
+    // Credits were added: more left than at the refusal.
+    const heard: string[] = [];
+    vault.onCutOffChange((accountId) => heard.push(accountId));
+    expect(vault.noteReading(id, 64)).toBe(true);
+    expect(vault.cutOff(id)).toBeUndefined();
+    await Promise.resolve();
+    expect(heard).toEqual([id]);
+  });
+
+  it("never ends a hold that did not record its reading, or a refusal, on a reading", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 60_000 });
+    expect(vault.noteReading(id, 90)).toBe(false);
+    expect(vault.cutOff(id)?.class).toBe("no_headroom");
+
+    const refused = claudeWorld();
+    const held = await signedInClaude(refused);
+    held.vault.noteCutOff(held.id, { class: "refused" });
+    expect(held.vault.noteReading(held.id, 90)).toBe(false);
+    expect(held.vault.cutOff(held.id)?.class).toBe("refused");
+  });
+
   it("survives a restart, stamped with the login and client it was seen under", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);

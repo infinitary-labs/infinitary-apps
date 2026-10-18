@@ -1,6 +1,7 @@
 import { mkdir, readdir } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { join } from "node:path";
+import type { CutOff } from "@shared/authFailure";
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { CONNECTION_PORT } from "@shared/connection";
 import { accountIdFromNeedsReauthCard, needsReauthCopy } from "@shared/credentialHealth";
@@ -173,6 +174,7 @@ import { needsReauthTargets } from "./quota/needsReauth";
 import type { ProviderOutcome } from "./quota/outcome";
 import { PushedQuotaStore, pushedProviderViews, withRejectedReadings } from "./quota/pushedQuota";
 import { type QuotaRefresh, QuotaService } from "./quota/quotaService";
+import { lowestLeft, recordCutOff } from "./quota/spentAllowance";
 import { releaseNotesView } from "./releaseNotes/shown";
 import { loadCatalog, ReleaseNotesService } from "./releaseNotes/startup";
 import { bundledSource, recordLaunch } from "./releaseTracking";
@@ -982,7 +984,14 @@ export async function createServices(
         models: () => quotaCatalogModels(),
         // A session's refusal is a zero window until its reset, even on a
         // sensed row: the vendor said no, and the sensor lags behind it.
-        onAccepted: (accountId) => vault.noteAccepted(accountId),
+        onAccepted: (accountId, windows) => {
+          vault.noteAccepted(accountId);
+          // More left than when the allowance was refused: credits were
+          // added, so the hold and its refused reading end now.
+          const left = lowestLeft(windows);
+          if (left !== undefined && vault.noteReading(accountId, left))
+            endRefusedReadings(accountId);
+        },
         overlay: (view, now) =>
           view.accountId
             ? withRejectedReadings(view, pushedQuota.windowsFor(view.accountId), now)
@@ -1187,6 +1196,34 @@ export async function createServices(
     // A window that just said no, or just stopped saying it, moves the
     // account's headroom now rather than at the next sensor pass.
     if ((reading.status === "rejected") !== refusedBefore) void quota.refresh("pushed");
+  };
+  /** A typed cut-off a session observed, recorded on its account (`recordCutOff`). */
+  const noteCutOff = (accountId: string, cutOff: CutOff) =>
+    recordCutOff(
+      {
+        providerOf: (id) => vault.get(id)?.providerId,
+        latest: () => quota.latest(),
+        hold: (id, held, seen) => vault.noteCutOff(id, held, seen),
+        holding: (id) => vault.cutOff(id)?.class === "no_headroom",
+        refuse: (id, refused) =>
+          pushedQuota.record(id, {
+            windowId: refused.windowId,
+            status: "rejected",
+            resetsAt: refused.resetsAt,
+            at: refused.at,
+          }),
+        refresh: () => void quota.refresh("pushed"),
+      },
+      accountId,
+      cutOff,
+      Date.now(),
+    );
+  const endRefusedReadings = (accountId: string) => {
+    for (const window of pushedQuota.windowsFor(accountId)) {
+      if (window.status === "rejected") {
+        pushedQuota.record(accountId, { ...window, status: "allowed", at: Date.now() });
+      }
+    }
   };
   /**
    * Every model session the app opens comes from one factory per backend
@@ -1715,7 +1752,7 @@ export async function createServices(
     },
     sessions: sessionFactories,
     // Whoever observes a typed cut-off records it on the account.
-    noteCutOff: (accountId, cutOff) => vault.noteCutOff(accountId, cutOff),
+    noteCutOff,
     prepareHome: async () => {
       await mkdir(paths.firstmateHomeDir, { recursive: true });
     },
@@ -1894,7 +1931,7 @@ export async function createServices(
     router,
     accounts,
     // Whoever observes a typed cut-off records it on the account.
-    noteCutOff: (accountId, cutOff) => vault.noteCutOff(accountId, cutOff),
+    noteCutOff,
     // Crew delivery reads that fact: a lane is held while a cut-off stands
     // on its account, and the Firstmate hears the cut-off and its end.
     serveability: {
@@ -2399,7 +2436,7 @@ export async function createServices(
     scheduler,
     broadcastEvent,
     selfSourceDir,
-    noteCutOff: (accountId, cutOff) => vault.noteCutOff(accountId, cutOff),
+    noteCutOff,
     // The orchestrator's own burn is tracked under the conversation surface.
     recordUsage: ({ accountId, model, usage }) =>
       recordUsage({

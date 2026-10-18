@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-conversations-keep-later-turns",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Crewmates on an updated work computer keep every turn they took",
+      "body": "A computer that runs work for you could keep writing a crewmate's conversation into Firstmate 3000's old folder for a while after its saved work moved into Infinitary's. After its next update, that crewmate picked up from the copy taken at the move and forgot the turns since. Now it picks up with every turn, in the order it took them, and is told which of its files are still only in the old folder.",
+      "noPicture": "Nothing new appears on screen: the crewmate's answers show it remembers its own recent work, and its Crewmate tab shows those turns again.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

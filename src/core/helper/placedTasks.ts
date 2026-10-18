@@ -35,6 +35,7 @@ import { z } from "zod";
 import { pathsOf } from "../folderMove/due";
 import { readMoveRecord } from "../folderMove/record";
 import type { JobRows } from "../jobs/jobManager";
+import { joinRecord, RECORD_JOINS, type RecordJoin } from "../pi/recordJoin";
 import { APP_KEPT_PARTS, removeTaskLeftovers } from "../tasks/taskLeftovers";
 import { provisionTaskTemp, removeOwnedTempFolder, type TempRemoval } from "../tasks/taskTemp";
 import { sha256Of } from "../workspace/bundles";
@@ -65,6 +66,12 @@ const taskStateSchema = z.object({
   continuing: z.literal(true).optional(),
   /** Its crewmate was told its folders moved with the one-time move (`crewmateMovedText`). */
   toldMoved: z.literal(true).optional(),
+  /**
+   * Its record took in turns an earlier version of this app wrote to the older
+   * folder's copy after the one-time move (`PlacedTasks.olderTurns`); its
+   * crewmate's notice of the move says so.
+   */
+  olderTurns: z.enum(RECORD_JOINS).optional(),
 });
 export type PlacedTaskState = z.infer<typeof taskStateSchema>;
 
@@ -149,6 +156,29 @@ export class PlacedTasks {
       path.startsWith(`${folder}${sep}`) ? `${older.from}${path.slice(folder.length)}` : path;
     if (!existsSync(before(root))) return undefined;
     return { work: { from: before(work), to: work }, root: { from: before(root), to: root } };
+  }
+
+  /**
+   * Brings into the task's Pi record at `file` here the turns its copy in the
+   * folder the one-time move brought this work from gained after the move
+   * (`joinRecord`; docs/helper.md, "Holding a conversation"). A version of
+   * this app from before it named that folder (`inThisFolder`) resumed from
+   * that copy and wrote there; the version after it resumed from the copy
+   * here, which the move made before those turns. Undefined when that copy
+   * is not this task's, has not changed since the move, or holds nothing the
+   * record here lacks.
+   */
+  olderTurns(task: string, file: string): RecordJoin | undefined {
+    const older = this.olderFolder();
+    const folder = dirname(this.dataDir);
+    if (!older || !file.startsWith(`${this.folders(task).sessions}${sep}`)) return undefined;
+    const before = `${older.from}${file.slice(folder.length)}`;
+    try {
+      if (statSync(before).mtimeMs <= older.at) return undefined;
+    } catch {
+      return undefined;
+    }
+    return joinRecord(before, file);
   }
 
   private olderFolder(): OlderFolder | null {
@@ -553,9 +583,10 @@ type MovedPath = { from: string; to: string };
 /**
  * The folder the one-time move brought this work from: as the older app
  * named it, and by every name of it, longest first, since the name the disk
- * resolves through a link (`/private/var`) ends with the other.
+ * resolves through a link (`/private/var`) ends with the other; and when the
+ * move was made, in milliseconds.
  */
-type OlderFolder = { from: string; names: readonly string[] };
+type OlderFolder = { from: string; names: readonly string[]; at: number };
 
 /**
  * The older folder when the one-time move brought its work into `folder`
@@ -568,5 +599,6 @@ function olderFolderOf(folder: string): OlderFolder | null {
   return {
     from: record.from,
     names: pathsOf(record.from).sort((a, b) => b.length - a.length),
+    at: Date.parse(record.at),
   };
 }

@@ -1,7 +1,15 @@
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import type { ServerResponse } from "node:http";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import type { AccountView } from "@shared/accounts";
 import {
   deviceForgeGateRef,
@@ -41,6 +49,7 @@ import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
+import { MOVE_RECORD } from "../folderMove/record";
 import { rewriteDatabases } from "../folderMove/rewrite";
 import { createForgeResolver, type Forge } from "../forge";
 import type { ComputerAccounts } from "../helper/accounts";
@@ -477,12 +486,14 @@ async function world(
     /**
      * The computer's first update to Infinitary: its work stops, the
      * one-time move brings Firstmate 3000's folder into Infinitary's, and its
-     * work runs again from there (docs/helper.md, "Under the other name").
+     * work runs again from there (docs/helper.md, "Under the other name"),
+     * after `moved` runs on the work folder the move made.
      */
-    moveComputer: async () => {
+    moveComputer: async (moved?: (work: string) => void) => {
       if (!appData) throw new Error("This computer's work is in no older folder.");
       await run?.stop();
       dataDir = await moveWorkFolder(appData);
+      moved?.(dataDir);
       startComputer();
     },
     /** The computer's folder for a task. */
@@ -1441,6 +1452,102 @@ describe("a task that runs on a computer that runs work", () => {
         .toBe("The footer still holds.");
       expect(said(api.requests.at(-1)).split(notice)).toHaveLength(2);
       expect(readFileSync(file, "utf8").split(notice)).toHaveLength(2);
+    });
+  }
+
+  // INF-378: a computer whose version from before the move's paths were
+  // mapped (`inThisFolder`) went on writing a conversation's record into the
+  // older folder after the move, and then updated, must resume from every
+  // turn - also when the version after it had resumed from the copy the move
+  // left behind and taken turns there.
+  for (const since of ["none", "turns"] as const) {
+    it(`resumes from the turns an earlier version wrote to the older folder after the move, ${since === "turns" ? "ahead of the turns a later version took from the copy the move left" : "when nothing ran from the copy the move left"} (INF-378)`, async () => {
+      const at = await world(undefined, { inOlderFolder: true });
+      model([
+        { text: "Started on the footer." },
+        { text: "Fixed the header." },
+        ...(since === "turns" ? [{ text: "Running them." }] : []),
+        {
+          tools: [{ name: "report", args: { text: "Everything holds.", summary: "Held." } }],
+        },
+        { text: "Reported." },
+      ]);
+      await at.start("t-older");
+      await expect.poll(() => at.home().tasks.get("t-older")?.activity).toBe("idle");
+      const older = at.folders("t-older");
+      const before = at.home().tasks.get("t-older")?.sessionFile ?? "";
+      expect(before.startsWith(`${older.sessions}/`)).toBe(true);
+
+      // The move, and a version that names nothing of it: it resumes from the
+      // older folder's copy of the record and writes its next turn there.
+      let record = "";
+      await at.moveComputer((work) => {
+        record = join(dirname(work), MOVE_RECORD);
+        renameSync(record, `${record}.later`);
+      });
+      await at.inReach("t-older");
+      await at.home().supervisor.steerCrewmate("t-older", "Fix the header too.");
+      await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Fixed the header.");
+      const moved = at.folders("t-older");
+      const file = join(moved.sessions, relative(older.sessions, before));
+      expect(readFileSync(before, "utf8")).toContain("Fix the header too.");
+      expect(readFileSync(file, "utf8")).not.toContain("Fix the header too.");
+      const olderRecord = readFileSync(before, "utf8");
+
+      await at.stopComputer();
+      renameSync(`${record}.later`, record);
+      if (since === "turns") {
+        // The version after it maps the move's paths but reads nothing of
+        // the older copy's later turns: it resumes from the copy the move
+        // left behind.
+        renameSync(before, `${before}.unread`);
+        await at.restartComputer();
+        await at.inReach("t-older");
+        await at.home().supervisor.steerCrewmate("t-older", "Resume the native tests.");
+        await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Running them.");
+        expect(readFileSync(file, "utf8")).not.toContain("Fix the header too.");
+        await at.stopComputer();
+        renameSync(`${before}.unread`, before);
+      }
+      const kept = readFileSync(file, "utf8");
+
+      // This version: the conversation resumes from every turn, in order.
+      await at.restartComputer();
+      await at.inReach("t-older");
+      const requests = api.requests.length;
+      await at.home().supervisor.steerCrewmate("t-older", "Check the footer again.");
+      await expect.poll(() => at.home().tasks.get("t-older")?.outcome).toBe("Everything holds.");
+      const words = said(api.requests[requests]);
+      const asked = [
+        "Fix the footer.",
+        "Fix the header too.",
+        ...(since === "turns" ? ["Resume the native tests."] : []),
+        "Check the footer again.",
+      ].map((ask) => words.indexOf(ask));
+      expect(asked.every((index) => index >= 0)).toBe(true);
+      expect(asked).toEqual([...asked].sort((a, b) => a - b));
+      // The record here only grew, so this Mac's copy goes on from where it
+      // ended and matches it; the older copy is as that version left it.
+      expect(readFileSync(file, "utf8").startsWith(kept)).toBe(true);
+      expect(readFileSync(before, "utf8")).toBe(olderRecord);
+      const copy = join(
+        crewmateSessionsDir(at.home().paths, "t-older"),
+        relative(moved.sessions, file),
+      );
+      await expect.poll(() => readFileSync(copy, "utf8")).toBe(readFileSync(file, "utf8"));
+      // Its crewmate is told once, ahead of the new words, that those turns
+      // are back and what it wrote in them is only in the older folder.
+      const notice = JSON.stringify(
+        crewmateMovedText(
+          {
+            work: { from: older.work, to: moved.work },
+            root: { from: older.root, to: moved.root },
+          },
+          since === "turns" ? "rejoined" : "continued",
+        ),
+      ).slice(1, -1);
+      expect(words.split(notice)).toHaveLength(2);
+      expect(words.indexOf(notice)).toBeLessThan(words.indexOf("Check the footer again."));
     });
   }
 

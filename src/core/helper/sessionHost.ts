@@ -38,6 +38,7 @@ import {
 } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import type { RecordJoin } from "../pi/recordJoin";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -711,6 +712,21 @@ export class SessionHost {
       const named = (text: string) => this.options.tasks.inThisFolder(text);
       const instructions = named(spec.instructions);
       const resume = crewmateResume(spec.resume && named(spec.resume), binding.backend);
+      // Turns an earlier version wrote to the older folder's copy of its
+      // record after the move come into the record here before it resumes,
+      // and its crewmate is told of them with the move, again if need be.
+      let olderTurns: RecordJoin | undefined;
+      try {
+        if (resume?.backend === "pi")
+          olderTurns = this.options.tasks.olderTurns(held.task, resume.sessionFile);
+      } catch (error) {
+        this.log(`could not bring ${held.task}'s turns from the older folder: ${messageOf(error)}`);
+      }
+      if (olderTurns) {
+        const { toldMoved: _told, ...state } = held.state;
+        held.state = { ...state, olderTurns };
+        this.writeOut(held);
+      }
       // Its earlier turns and its brief may still name the older folder,
       // whatever this open carries - a Claude conversation's token names no
       // folder, and a restarted home names this one: a task whose folder
@@ -794,7 +810,7 @@ export class SessionHost {
         browser: spec.browser === true,
       };
       held.backend = binding.backend;
-      held.movedNotice = moved ? crewmateMovedText(moved) : undefined;
+      held.movedNotice = moved ? crewmateMovedText(moved, held.state.olderTurns) : undefined;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
       held.unsubscribe = session.subscribe((event) => {

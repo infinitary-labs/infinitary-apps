@@ -377,6 +377,10 @@ it.each([
         expect(events).not.toContain("tool_end");
       }
       // G1: the last coalesced copy survives the ending, then no repeat is armed.
+      // The ending can arrive while a copy asked before it is still on its way,
+      // and that copy may lack the tail, so the home arms the final copy once it
+      // answers: wait for that copy to be armed before firing it (INF-445).
+      await expect.poll(() => scheduled.size).toBe(1);
       const copiesBeforeTail = copiedAt.length;
       fireNext();
       await expect.poll(() => copiedAt.length).toBe(copiesBeforeTail + 1);

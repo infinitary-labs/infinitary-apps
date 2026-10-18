@@ -72,7 +72,7 @@ import {
   readingAnchor,
 } from "../cards/cardMaximize";
 import { useCardPresentation } from "../cards/cardPresentation";
-import { footerGroups } from "../cards/footerGroups";
+import { choiceOrder, footerGroups } from "../cards/footerGroups";
 import { PanelCardView } from "../cards/PanelCardView";
 import {
   PastCardColumn,
@@ -1815,14 +1815,12 @@ function StackedCard({
     useCommandKeys(CARD_CHOICE_COMMANDS[2]),
     useCommandKeys(CARD_CHOICE_COMMANDS[3]),
   ];
-  const choiceIndex = useMemo(() => {
-    const index = new Map<string, number>();
-    let next = 0;
-    for (const group of footerGroups(card.actions)) {
-      for (const action of group.actions) index.set(action.id, next++);
-    }
-    return index;
-  }, [card.actions]);
+  // ⌘1 is the default wherever it sits; the rest count leftward from the
+  // right edge (docs/keyboard.md).
+  const choiceIndex = useMemo(
+    () => new Map(choiceOrder(card.actions).map((action, at) => [action.id, at])),
+    [card.actions],
+  );
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
   const sentAnswers = useShellStore((s) => s.sentCardAnswers[card.id]);

@@ -26,7 +26,7 @@ A decision's footer reads left to right: the other choices (secondary; a destruc
 Every action closes the card: the captain asks for a revision by replying, so there is no Revise or Explain more button, no automatic Later and no Keep button - closing the card is keep.
 Keep `--space-3` above the action row so the body and buttons stay distinct.
 The choices are one non-wrapping group in a right-aligned wrapping row: when the card is too narrow for one row they move down together, and the default never sits alone on a row.
-Each live footer choice shows its direct key inside the button, after its label on the same line, the button six pixels wider than its label alone: ⌘1 through ⌘4 in the order the buttons are drawn, left to right, quiet actions included.
+Each live footer choice shows its direct key inside the button, after its label on the same line, the button six pixels wider than its label alone. ⌘1 is always the default, so a person learns one key for the recommended step; ⌘2 through ⌘4 take the other buttons from the right edge leftward, quiet actions included, and a footer with no default starts ⌘1 at its rightmost button.
 The key is quiet mono at `--text-sm` in the button's own text color, set on the label's baseline near the button's right edge; the label moves left to make most of the room, the button widens by six pixels, and its height does not change (`Button.prompt.md`).
 A key too long for that room, such as Ctrl+1 on Linux, widens the button only by what it still needs.
 A fifth choice has no key.

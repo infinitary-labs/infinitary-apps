@@ -78,7 +78,7 @@ describe("command search's list", () => {
         keys: undefined,
         refusal: null,
       },
-      { id: "cards.choice-1", label: "Press the first choice", keys: "⌘1", refusal: null },
+      { id: "cards.choice-1", label: "Press the recommended choice", keys: "⌘1", refusal: null },
       { id: "cards.choice-2", label: "Press the second choice", keys: "⌘2", refusal: null },
       { id: "cards.choice-3", label: "Press the third choice", keys: "⌘3", refusal: null },
       { id: "cards.choice-4", label: "Press the fourth choice", keys: "⌘4", refusal: null },

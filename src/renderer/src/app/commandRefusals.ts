@@ -169,7 +169,7 @@ const REFUSALS: Readonly<
     if (isHeldEntry(entry) || entry.actions.length === 0) return "This card has no buttons";
     return null;
   },
-  // The shown card's choices, in draw order. A press is the button's click.
+  // The shown card's choices: the default, then right to left. A press is the button's click.
   ...choiceRefusals(),
   // Moving between the window's parts changes nothing but focus; a
   // recording keeps it where its words will go.

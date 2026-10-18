@@ -1,10 +1,12 @@
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
+import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { Card, CardObservation } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
+import { hintOf } from "./desktop";
 import { cardBody, frameGesturesDecided } from "./frames";
 import { launchApp } from "./launch";
 import { pressPointer, resizeWindow } from "./layout";
@@ -70,6 +72,27 @@ function decisionCard(key: string): Card {
     actions: [
       { id: "hold", label: "Hold", variant: "secondary" },
       { id: "launch", label: "Launch it", variant: "primary", default: true },
+    ],
+  };
+}
+
+const PLAN = "Add a dark theme to the settings page";
+
+/** A planner's card: two other choices, then its default at the right edge. */
+function planCard(): Card {
+  return {
+    id: "card-fm-plan",
+    author: "firstmate",
+    meta: "firstmate",
+    priority: 20,
+    title: PLAN,
+    body: "<p>I would add a dark theme switch under Appearance, using the colors the app already has.</p>",
+    status: "ready",
+    createdAt: Date.now(),
+    actions: [
+      { id: "abandon", label: "Abandon", variant: "secondary" },
+      { id: "defer", label: "Save and defer", variant: "secondary" },
+      { id: "build", label: "Approve and build", variant: "primary", default: true },
     ],
   };
 }
@@ -284,6 +307,46 @@ test("a card is read, answered and chosen from the keyboard, through the click's
   expect(chosen.payload.answers).toEqual(
     expect.arrayContaining([expect.objectContaining({ name: "window", values: ["evening"] })]),
   );
+});
+
+// The captain's words: "the default should always be cmd+1, and the number
+// should grow from the right to the left", so ⌘1 always takes the recommended step.
+test("⌘1 presses the recommended choice, and the other keys count leftward from it", async () => {
+  test.setTimeout(120_000);
+  const userDataDir = scratchDir("infinitary-card-keyboard-");
+  seed(userDataDir, () => [planCard()]);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, PLAN);
+    await typeDraft(page);
+
+    await test.step("the default shows ⌘1, and the keys grow from the right edge leftward", async () => {
+      // Drawn left to right: Abandon, Save and defer, Approve and build.
+      await expect(shownEntry(page).locator("[data-card-actions] [data-button-key]")).toHaveText([
+        hintOf(CARD_CHOICE_COMMANDS[2]),
+        hintOf(CARD_CHOICE_COMMANDS[1]),
+        hintOf(CARD_CHOICE_COMMANDS[0]),
+      ]);
+    });
+
+    await test.step("⌘1 presses the default, and the draft waits in the main message", async () => {
+      await pressWindowKey(app, "1", ["meta"]);
+      await expectNoCard(page, PLAN);
+      await expectDraftKept(page);
+    });
+  } finally {
+    await launched.close();
+  }
+
+  const chosen = observationsOf(userDataDir, "card-fm-plan").filter(
+    (seen) => seen.kind === "action",
+  );
+  expect(chosen).toHaveLength(1);
+  if (chosen[0]?.kind !== "action") throw new Error("⌘1 left no choice behind");
+  expect(chosen[0].actor).toBe("captain");
+  expect(chosen[0].payload).toMatchObject({ actionId: "build" });
 });
 
 test("focus that leaves a card's field or picture comes back to it, caret and all", async () => {

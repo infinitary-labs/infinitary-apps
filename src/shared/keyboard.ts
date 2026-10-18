@@ -155,18 +155,20 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [],
   },
-  // The shown card's footer choices, left to right (docs/keyboard.md).
-  // A digit with ⌘ never types, so a reply and a card body keep their
-  // characters. The button's own click still decides: an unanswered
-  // question is not sent, and a pending or disabled button does not run.
+  // The shown card's footer choices (docs/keyboard.md): ⌘1 the default,
+  // so the recommended step is always the same key, then the rest from the
+  // right edge leftward. A digit with ⌘ never types, so a reply and a card
+  // body keep their characters. The button's own click still decides: an
+  // unanswered question is not sent, and a pending or disabled button does
+  // not run.
   "cards.choice-1": {
-    label: "Press the first choice",
+    label: "Press the recommended choice",
     scope: "window",
     runs: "shell",
     repeat: false,
     risk: "close",
     keys: [{ key: "1", meta: true }],
-    searchWords: ["card", "button"],
+    searchWords: ["card", "button", "default", "first"],
   },
   "cards.choice-2": {
     label: "Press the second choice",
@@ -514,7 +516,7 @@ export type ShellCommandId = {
   [Id in CommandId]: (typeof KEYBOARD_COMMANDS)[Id] extends { runs: "shell" } ? Id : never;
 }[CommandId];
 
-/** The shown card's footer choices, in the order the buttons are drawn. */
+/** The shown card's footer choices: the default, then the rest from the right edge leftward. */
 export const CARD_CHOICE_COMMANDS = [
   "cards.choice-1",
   "cards.choice-2",

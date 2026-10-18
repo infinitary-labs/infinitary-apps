@@ -86,7 +86,7 @@ const cardButton = (cardId: string) =>
   shownPart(cardId, "[data-card-actions] button[data-card-action-default]:enabled") ??
   shownPart(cardId, "[data-card-actions] button:enabled");
 
-/** Presses the shown card's nth footer button, the click the pointer would make. */
+/** Presses the shown card's nth choice (`choiceOrder`), the click the pointer would make. */
 function pressCardChoice(index: number): void {
   const entryId = shownEntry(useShellStore.getState())?.id;
   if (!entryId) return;

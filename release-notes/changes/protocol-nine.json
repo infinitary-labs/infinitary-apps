@@ -1,11 +1,14 @@
 {
-  "entries": [{
-    "id": "protocol-nine",
-    "kind": "fix",
-    "area": "devices",
-    "title": "Update your paired devices together",
-    "body": "Update your other computers and phones alongside the computer where your first mate lives. Older copies cannot make changes or take work. Infinitary keeps your conversation turns when its saved work moves.",
-    "noPicture": "This changes connection compatibility and saved-conversation recovery, not the layout or words of a screen.",
-    "provenance": { "origin": "change" }
-  }]
+  "entries": [
+    {
+      "id": "protocol-nine",
+      "kind": "removal",
+      "highlight": 3,
+      "area": "devices",
+      "title": "Update Infinitary on your other computers and phone",
+      "body": "This version changes how your devices work together. A computer that runs work for you takes no new work until it runs this version too, and you can update it from Devices. A computer that controls your first mate can look but not change anything until it is updated. Update Infinitary on your phone too.",
+      "noPicture": "This changes connection compatibility and saved-conversation recovery, not the layout or words of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
 }

@@ -3,8 +3,8 @@
     {
       "id": "placed-work-routing",
       "kind": "fix",
-      "title": "Routing counts work it has just started",
-      "body": "New tasks now count the work already placed on each subscription when choosing a model. Infinitary learns the size of a task and the cost of allowance points from your own finished work and allowance readings. Until it has enough data, routing stays unchanged. Your allowance meters still show the provider's readings.",
+      "title": "New tasks count the work each subscription already has",
+      "body": "When choosing a model for a new task, Infinitary now counts the work already running on each subscription, here and on your other computers. It learns how much a task usually uses from your own finished tasks and allowance readings, and changes nothing until it has learned enough. Your allowance meters still show the provider's own readings.",
       "area": "firstmate",
       "noPicture": "This changes model choices behind existing task summaries, not the appearance of a screen.",
       "provenance": { "origin": "change" }

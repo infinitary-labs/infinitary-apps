@@ -3,6 +3,7 @@
     {
       "id": "card-default-command-1",
       "kind": "improvement",
+      "highlight": 2,
       "title": "⌘1 always picks a card's recommended choice",
       "body": "On every card, ⌘1 now presses the recommended button, so the same key always takes the suggested step. The other buttons count up from right to left: ⌘2 is the next button to the left, then ⌘3 and ⌘4. On Linux, Ctrl takes ⌘'s place.",
       "area": "cards",

@@ -12,9 +12,24 @@
  * is legitimate, and the Claude client never passes through it. Deliberately conservative: text inside code spans is ignored
  * (a report may quote a fragment it investigated), CJK next to Latin inside
  * one word is ordinary writing, and so is a Greek letter in a unit.
+ *
+ * A ceiling (docs/principles.md, "Build the agent's reach, never its
+ * verdicts"): the tool-call and writing-system checks below cover a model
+ * whose decoding can break down at a turn's end, leaking its chat template
+ * or tool-call syntax into prose and running unrelated scripts together in
+ * one word, as on Sep 14. Remove them once no model the crew is served
+ * still ends a turn that way. Where it shows: the task record's failed
+ * events reading "its report was set aside because ...", and the report
+ * tool's "Report refused:" answers in the crewmate's own conversation.
  */
 
-/** Fewer words than this is not a report anyone can act on. */
+/**
+ * Fewer words than this is not a report anyone can act on. A ceiling, as
+ * above: it covers a model that closes a turn with one word ("Done."), in
+ * its report or its final text, as if that told the first mate what
+ * happened. Remove it once no model the crew is served closes that way; it
+ * shows in the same two places.
+ */
 export const MIN_REPORT_WORDS = 2;
 
 /**

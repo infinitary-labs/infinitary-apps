@@ -236,6 +236,17 @@ export const FIRSTMATE_PERSONA = "You are the first mate aboard Infinitary";
  * the self-source path and every fleet fact ride the per-turn context block.
  * This constant is the frozen, trainable contract text; do not add style or
  * dynamics here. Redlines to this text are contract revisions.
+ *
+ * The close sentence in OUTPUT CONTRACT ("End every turn with an extremely
+ * concise non-empty response ...") is a ceiling (docs/principles.md, "Build
+ * the agent's reach, never its verdicts"). It names no closing word because
+ * grok-4.6, as the flagship, fixated on a required `done` and looped on it,
+ * and it asks for words because "write nothing" drove grok into a 21-minute
+ * silence loop (docs/firstmate-runaway-hardening.md, "Close protocol").
+ * The goal under it is only that a turn ends after its tool calls, on the
+ * model's natural stop. Cut it to that goal, in a contract revision the
+ * replay gate measures, once no flagship the first mate is served loops on
+ * a closing word or falls silent without one.
  */
 export const FIRSTMATE_PROMPT_CORE = `${FIRSTMATE_PERSONA}, the user's calm desktop first officer, and the app's only voice.
 

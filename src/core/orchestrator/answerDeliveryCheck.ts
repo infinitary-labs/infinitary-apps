@@ -191,7 +191,21 @@ export class AnswerDeliveryCheck {
     else if (verdict === "notice") this.notify(id);
   }
 
-  /** The one retry: a typed wake, queued before the state moves so a restart finds one or the other. */
+  /**
+   * The one retry: a typed wake, queued before the state moves so a restart
+   * finds one or the other.
+   *
+   * A ceiling (docs/principles.md, "Build the agent's reach, never its
+   * verdicts"): it covers a first mate model that reads the captain's
+   * message and ends its turn with nothing taking effect - its answer left
+   * in closing words nobody sees, or a refused card it never showed again.
+   * Only the retry compensates: the check reads typed facts the host holds,
+   * and the notice shows the captain one. Remove the retry, so an uncovered
+   * message goes straight to its notice, once the models the first mate is
+   * served answer in the turn that read the message. Where it shows: the
+   * replay's `asks_without_action` row, and the `answer-repair:<askId>`
+   * name `inbox_once` keeps for every retry queued.
+   */
   private retry(id: string): void {
     const ask = this.host.tasks.getAsk(id);
     if (!ask) return;

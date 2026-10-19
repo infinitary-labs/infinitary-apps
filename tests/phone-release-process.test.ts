@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { hostEnv } from "../src/core/hostEnv";
+import { phoneCertificateFixture } from "./helpers/phoneCertificateFixture";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-80: run the workflow's real release command through stand-in Xcode/Apple
@@ -22,7 +23,12 @@ async function runRelease(failure = "", overrides: Partial<Record<string, string
   const temp = join(root, "temp");
   for (const directory of [bin, home, temp, join(root, "scripts"), join(root, "ios")])
     mkdirSync(directory);
-  for (const file of ["release-phone.sh", "phone-release.ts", "with-mac-check.py"])
+  for (const file of [
+    "release-phone.sh",
+    "phone-release.ts",
+    "phone-certificates.ts",
+    "with-mac-check.py",
+  ])
     copyFileSync(resolve("scripts", file), join(root, "scripts", file));
   copyFileSync("ios/ExportOptions.plist", join(root, "ios/ExportOptions.plist"));
   copyFileSync("ios/Infinitary/Info.plist", join(root, "ios/Info.plist"));
@@ -62,6 +68,7 @@ if (tool === 'security' || tool === 'codesign') process.exit(97);
 if (tool === 'xcodebuild' && args[0] === '-version') { console.log('Xcode 26.4'); process.exit(0); }
 if (args[0] === 'archive') {
   if (fail === 'archive') process.exit(7);
+  if (process.env.PHONE_TEST_SIGNER) console.log('/usr/bin/codesign --force --sign ' + process.env.PHONE_TEST_SIGNER + ' /archive/Infinitary.app');
   // The project's actual metadata is the fixture. Only compiler-added fields
   // and supplied build settings are filled in, so an omitted iPad key fails too.
   let info = fs.readFileSync('ios/Info.plist', 'utf8');
@@ -104,12 +111,14 @@ if (args[0] === 'archive') {
     RUNNER_TEMP: temp,
     GITHUB_ENV: join(root, "github-env"),
     GITHUB_OUTPUT: join(root, "github-output"),
+    GITHUB_STEP_SUMMARY: join(root, "summary.md"),
     GITHUB_ACTIONS: "true",
     GITHUB_REF: "refs/heads/main",
     GITHUB_EVENT_NAME: "workflow_dispatch",
     GITHUB_SHA: "54d835d17f2baa056c3899f7ad93f20e96756b1a",
     GITHUB_RUN_NUMBER: "42",
     GITHUB_RUN_ATTEMPT: "1",
+    RUNNER_NAME: "hosted-mac",
     PHONE_VERSION: "0.1.0",
     CHECK_BUILD: "",
     PHONE_RECEIPT: join(temp, "receipt.json"),
@@ -120,6 +129,21 @@ if (args[0] === 'archive') {
     FAIL_AT: failure,
     ...overrides,
   };
+  if (overrides.PHONE_TEST_CERTIFICATES) {
+    const loader = join(root, "apple-boundary.cjs");
+    writeFileSync(
+      loader,
+      `
+const fs = require('node:fs');
+globalThis.fetch = async (url, init) => {
+  if (url.origin !== 'https://api.appstoreconnect.apple.com' || url.pathname !== '/v1/certificates' || init.method !== 'GET') throw new Error('Unexpected Apple request');
+  fs.appendFileSync(process.env.TRACE, JSON.stringify({tool: 'apple', args: [init.method, url.pathname]}) + '\\n');
+  return new Response(JSON.stringify({data: JSON.parse(process.env.PHONE_TEST_CERTIFICATES)}));
+};
+`,
+    );
+    Object.assign(env, { NODE_OPTIONS: `--require="${loader}"` });
+  }
   const command = workflow.jobs.testflight.steps.find(
     (step: { id?: string }) => step.id === "upload",
   ).run;
@@ -158,6 +182,13 @@ if (args[0] === 'archive') {
     : undefined;
   expect(trace.some((item) => ["security", "codesign"].includes(item.tool))).toBe(false);
   for (const path of otherKeyFiles) expect(readFileSync(path, "utf8")).toBe(staleKey);
+  const summary = (() => {
+    try {
+      return readFileSync(env.GITHUB_STEP_SUMMARY, "utf8");
+    } catch {
+      return "";
+    }
+  })();
   const evidence = process.env.INFINITARY_PHONE_RELEASE_EVIDENCE;
   if (evidence) {
     const folder = resolve(evidence);
@@ -165,7 +196,13 @@ if (args[0] === 'archive') {
       throw new Error("Release evidence must stay outside the working copy");
     }
     mkdirSync(folder, { recursive: true });
-    const name = failure || Object.keys(overrides)[0] || "success";
+    const name =
+      (overrides.PHONE_TEST_CERTIFICATES?.includes("invalid certificate")
+        ? "listing-failed"
+        : "") ||
+      failure ||
+      (overrides.PHONE_TEST_CERTIFICATES ? "certificate-list" : Object.keys(overrides)[0]) ||
+      "success";
     writeFileSync(
       join(folder, `${name}.json`),
       JSON.stringify(
@@ -175,13 +212,14 @@ if (args[0] === 'archive') {
           trace,
           receipt,
           output,
+          summary,
         },
         null,
         2,
       ),
     );
   }
-  return { code, trace, receipt, output };
+  return { code, trace, receipt, output, summary };
 }
 
 describe("the TestFlight release command", () => {
@@ -202,12 +240,71 @@ describe("the TestFlight release command", () => {
     expect(result.trace[1]?.args).toContain("MARKETING_VERSION=0.1.0");
     expect(result.trace[1]?.args).toContain("CURRENT_PROJECT_VERSION=42.1");
     expect(result.trace.at(-1)?.usesPreparedKey).toBe(true);
+    expect(result.output).toContain("Skipped: not the Mac mini runner.");
+    expect(result.output).toContain("list-only; no certificates revoked");
     expect(result.receipt).toMatchObject({
       version: "0.1.0",
       build_number: "42.1",
       upload: "accepted",
       app: "Infinitary",
     });
+  });
+  it("lists the eligible certificate after upload through the real cleanup entry point without a delete", async () => {
+    const certificates = phoneCertificateFixture();
+    const api = certificates.api!;
+    const signer = certificates["other-key"]!;
+    // Use the real fixture's validity reading, not an invented API creation date.
+    // The fixture is older than one day at the release boundary by its fixed notBefore.
+    const result = await runRelease("", {
+      RUNNER_NAME: "mini-mac",
+      PHONE_TEST_SIGNER: signer.fingerprint.replaceAll(":", ""),
+      PHONE_TEST_CERTIFICATES: JSON.stringify([
+        {
+          id: "old-api",
+          type: "certificates",
+          attributes: {
+            certificateType: "DEVELOPMENT",
+            certificateContent: api.raw.toString("base64"),
+          },
+        },
+      ]),
+    });
+    expect(result.code, result.output).toBe(0);
+    expect(result.trace.map((entry) => [entry.tool, entry.args[0]])).toEqual([
+      ["xcodebuild", "-version"],
+      ["xcodebuild", "archive"],
+      ["xcodebuild", "-exportArchive"],
+      ["xcrun", "altool"],
+      ["apple", "GET"],
+    ]);
+    expect(result.output).toContain("list-only; no certificates revoked");
+    expect(result.output).toContain(
+      `Would revoke: old-api; SHA-1 ${api.fingerprint.replaceAll(":", "")}`,
+    );
+    expect(result.receipt.upload).toBe("accepted");
+  });
+  it("does not retry or invalidate an accepted upload when the certificate listing fails", async () => {
+    const result = await runRelease("", {
+      RUNNER_NAME: "mini-mac",
+      PHONE_TEST_SIGNER: "AEBD27AB15EDB3547EF82E2E8025D54BA1F849A1",
+      PHONE_TEST_CERTIFICATES: JSON.stringify([
+        {
+          id: "broken",
+          type: "certificates",
+          attributes: { certificateType: "DEVELOPMENT", certificateContent: "invalid certificate" },
+        },
+      ]),
+    });
+    expect(result.code, result.output).toBe(0);
+    expect(result.output).toContain("Certificate listing failed; upload remains accepted");
+    expect(result.receipt.upload).toBe("accepted");
+    expect(result.trace.filter((entry) => entry.tool === "xcrun")).toHaveLength(1);
+  });
+  it("lists nothing on the Mac mini when the archive has no signing fingerprint", async () => {
+    const result = await runRelease("", { RUNNER_NAME: "mini-mac" });
+    expect(result.code, result.output).toBe(0);
+    expect(result.output).toContain("Skipped: no archive signing fingerprint");
+    expect(result.receipt.upload).toBe("accepted");
   });
   it.each([
     "archive",
@@ -222,12 +319,14 @@ describe("the TestFlight release command", () => {
     expect(result.code).not.toBe(0);
     expect(result.trace.some((entry) => entry.tool === "xcrun")).toBe(false);
     expect(result.receipt).toBeUndefined();
+    expect(result.output).not.toContain("Certificate cleanup:");
   });
   it("does not retry an unclear upload and retains an attempted, not accepted, receipt", async () => {
     const result = await runRelease("upload");
     expect(result.code).not.toBe(0);
     expect(result.trace.filter((entry) => entry.tool === "xcrun")).toHaveLength(1);
     expect(result.receipt.upload).toBe("attempted");
+    expect(result.output).not.toContain("Certificate cleanup:");
     expect(result.output).toContain("do not retry automatically");
   });
   it.each([

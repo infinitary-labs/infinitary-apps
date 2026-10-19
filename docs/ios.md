@@ -94,7 +94,7 @@ The Linux preflight reads App Store Connect with the existing `APP_STORE_CONNECT
 It requires exactly the app record named **Infinitary** for `com.getinfinitary.infinitary`, the registered bundle identifier, and an internal TestFlight group with automatic distribution and a configured, non-revoked tester.
 Apple's identifier filters can return prefix matches; the preflight selects exact identifiers before requiring one match.
 Apple sends the TestFlight invitation only after a build is available, so `NOT_INVITED` and `INVITED` are valid preflight states, not proof of installation ([Apple's internal-testing instructions](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers/)).
-These are GET-only reads; the workflow creates no app record or tester, changes no account permissions and deletes no certificate.
+These preflight reads use GET only; they create no app record or tester and change no account permissions.
 It signs short-lived requests in memory, refuses redirects or pagination to another host, and prints neither credentials nor tester identities.
 A successful read proves app access, not permission to manage signing; Xcode checks that authority during the archive.
 A configured tester somewhere in the group is not proof that the captain accepted an invitation or installed the app.
@@ -118,8 +118,18 @@ Install-time checks use a scratch HOME and an empty local-signing directory, as 
 
 `scripts/release-phone.sh` uses ordinary Xcode automatic signing on the existing Mac runner with the same Apple team and API key as SSHHIP.
 This CI path is captain-approved; it is not permission for a crewmate to sign locally or inspect the person's keychains.
-There are no explicit `security`, Keychain or certificate-pruning commands.
-SSHHIP's post-upload cleanup revokes older development certificates team-wide, so this workflow deliberately omits it; certificate cleanup remains with SSHHIP's releases.
+There are no explicit `security`, Keychain or `codesign` commands; Xcode may reuse an existing development certificate rather than create one.
+After a confirmed upload, `scripts/phone-certificates.ts` lists safe cleanup candidates inside the release command's existing exclusive lease.
+Only a runner named `mini-mac` or starting `mini-mac-` may select candidates, and an archive without a signing fingerprint selects nothing.
+It protects every SHA-1 signing identity printed by archive and export, including nested targets, rather than just the last identity.
+It reads all certificate pages through the existing host-checked App Store Connect reader, with a ten-page bound; malformed or incomplete listings fail closed.
+A candidate must be a `DEVELOPMENT` certificate whose X.509 subject common name is exactly `Apple Development: Created via API (<this release key ID>)`, whose fingerprint is not protected, and whose X.509 `notBefore` is strictly more than 24 hours old.
+The key ID in that naming convention is an inference from INF-259, not an Apple creator field; an unrecognised name is always kept.
+Apple supplies no certificate creation date, so cleanup never sorts on `createdDate` or expiration.
+The release entry point is list-only with no revocation input or environment switch: the first real candidate list appears in the job log and summary for the captain to read.
+Revocation stays off until the captain reviews that list and a separate reviewed code change wires the revocation callback.
+A listing failure leaves the accepted upload receipt intact and never retries upload.
+This changes only Infinitary; SSHHIP and Eddie's Wallet have separate cleanup implementations.
 The key is written with mode 0600 inside this invocation's owned mode-0700 temporary folder and supplied to Xcode by file path.
 The uploader receives that exact file through `--p8-file-path`, bypassing its earlier working-directory and HOME search locations rather than relying on the last-searched `API_PRIVATE_KEYS_DIR`.
 Archive, derived data, export and key cleanup run on exit, with an `always()` cleanup for the known invocation path; local verification uses only unsigned simulator runs and unsigned packaging rehearsals.

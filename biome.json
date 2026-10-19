@@ -411,6 +411,8 @@
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
         "!tests/phone-release-process.test.ts",
+        "!tests/phone-certificates.test.ts",
+        "!tests/helpers/phoneCertificateFixture.ts",
         "!tests/mockClaudeClient.test.ts",
         "!tests/module-runner.test.ts",
         "!tests/release-contract.test.ts",

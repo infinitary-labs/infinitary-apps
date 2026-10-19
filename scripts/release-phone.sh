@@ -1,6 +1,6 @@
 #!/bin/bash
 # INF-80: ordinary Xcode automatic signing, only in the merged workflow.
-# No security/keychain commands, certificate deletion, or upload retry.
+# No security/keychain commands or upload retry. INF-259 cleanup is list-only pending review.
 set -euo pipefail
 
 if [[ "${GITHUB_ACTIONS:-}" != true || "${GITHUB_REF:-}" != refs/heads/main || "${GITHUB_EVENT_NAME:-}" != workflow_dispatch ]]; then
@@ -40,7 +40,7 @@ xcodebuild archive \
   -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
   -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
   DEVELOPMENT_TEAM=9T2J7MNUP9 PRODUCT_BUNDLE_IDENTIFIER=com.getinfinitary.infinitary \
-  CODE_SIGN_STYLE=Automatic MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
+  CODE_SIGN_STYLE=Automatic MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" 2>&1 | tee "$work/archive.log"
 
 # Read the actual archive, not just the build settings passed above.
 python3 - "$archive/Products/Applications/Infinitary.app/Info.plist" "$VERSION" "$BUILD_NUMBER" <<'PY'
@@ -73,7 +73,7 @@ PY
 xcodebuild -exportArchive -archivePath "$archive" -exportPath "$export_path" \
   -exportOptionsPlist ios/ExportOptions.plist -allowProvisioningUpdates \
   -authenticationKeyPath "$key_path" -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
-  -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+  -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" 2>&1 | tee "$work/export.log"
 
 shopt -s nullglob
 ipas=("$export_path"/*.ipa)
@@ -92,3 +92,9 @@ if ! xcrun altool --upload-app --p8-file-path "$key_path" \
 fi
 node scripts/phone-release.ts receipt accepted
 printf 'Apple accepted Infinitary %s (%s) for processing. Internal TestFlight availability is checked separately.\n' "$VERSION" "$BUILD_NUMBER"
+
+# Keep this inside the release command’s shared exclusive lease, after confirmed upload.
+# A listing failure must not turn an accepted upload into a reason to upload again.
+if ! node scripts/phone-certificates.ts "$work/archive.log" "$work/export.log"; then
+  echo "Certificate listing failed; upload remains accepted. No certificates were revoked." >&2
+fi

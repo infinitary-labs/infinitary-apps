@@ -328,6 +328,7 @@ The welcome tells a computer that runs work whether it may take new work (`takes
 That is stricter than the version rule's window for a client, because the home sends it the work itself (`docs/contract.md`).
 On another major it still connects, says "MacBook Pro has another version of Infinitary, so this computer takes no new work." and "It takes work again once it is updated from MacBook Pro.", and takes none until it is replaced with the home's version.
 Its hello also says the version of Infinitary it runs (`appVersion`), so the home's Settings -> Devices says when it runs another (`docs/devices.md`, "Another version, and updating").
+On the same major, a home and a computer may still be built from different contract changes, so each lists its own by name and keeps the other's (`changes`; `HomeLinkState.homeChanges` here, `WorkDeviceVersion.changes` at the home; `docs/contract.md`, "Changes by name").
 
 ## Updated by its home
 

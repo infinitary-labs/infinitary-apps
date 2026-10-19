@@ -234,6 +234,16 @@ export type ConnectionCursor = z.infer<typeof connectionCursorSchema>;
  */
 const spellingsSchema = z.array(z.string().min(1).max(32)).max(16).optional();
 
+/**
+ * The name of each minor contract change a side has, one per file in
+ * `src/shared/contract-changes/` but the major's
+ * (`src/core/connection/contractChanges.ts`, docs/contract.md "Changes by
+ * name"). A feature that needs the other side to have a change waits for its
+ * name here; a side that says nothing has none. Open strings, as spellings
+ * are; a major removes every name, so the list stays short.
+ */
+const changesSchema = z.array(z.string().min(1).max(64)).max(256).optional();
+
 const requestIdSchema = z.union([z.number().int().nonnegative(), z.string().min(1).max(64)]);
 
 /** A request, either way: the device asks the home, and the home asks a computer that runs work. */
@@ -304,6 +314,7 @@ export const clientFrameSchema = z.union([
       system: deviceSystemSchema.optional(),
       chip: deviceChipSchema.optional(),
       spellings: spellingsSchema,
+      changes: changesSchema,
     }),
     invokeFrameSchema,
     z.object({ t: z.literal("leave") }),
@@ -350,6 +361,7 @@ export const homeFrameSchema = z.union([
      */
     onHomeMac: z.boolean().optional(),
     spellings: spellingsSchema,
+    changes: changesSchema,
   }),
   z.object({
     t: z.literal("push"),

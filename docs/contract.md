@@ -4,162 +4,6 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
-Protocol 10.1 adds the optional `around` to `open_change`'s input (`inf:work:open-change`): one exact passage of the words around a published story and what replaces it (`docs/forge.md`, "Saved change stories").
-An older home strips the field and would answer as if nothing was asked, so a computer that runs work refuses such a call to a home before 10.1 (`STORY_AROUND_SINCE`) and sends nothing.
-
-Protocol 10.0 adds version 2 to the saved story's closed version set, with bounded typed checked facts beside folded verification.
-The new union member requires a major version; version-1 saved stories remain readable and keep their rendering (`docs/forge.md`, "Saved change stories").
-A computer on an older major must update before taking work.
-
-Protocol 9.3 adds optional `reviewCapOwner` to task delivery facts: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the existing captain hold.
-Older readers ignore the optional field; the home owns routing and gate enforcement.
-
-Protocol 5.0 adds the project-change card’s apply and decline host ops, and optional name, path and origin fields to project configuration.
-The closed host-op enum requires a major change; project configuration retains its policy fields.
-Protocol 5.0 also adds `request_write` to a card action's effect: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
-It is a new member of a closed union, so the version rule requires a major change; a work computer's placed card carries it, and its placed `check_change` carries the optional `skipRules` of a merge past the branch rules.
-A computer on another major must update before making changes.
-Protocol 5.0 also adds a card's page from its task's project (`docs/task-browser.md`, "A page from the project"): a second kind, `page`, in a card's live attachment, again a new member of a closed set, with the home-only `inf:cards:open-page` request, a placed card's optional `browserPage` and an open browser fact's optional `own`.
-
-Protocol 5.1 adds the optional `system` and `chip` to what a computer sends where it gets Infinitary (`fetchApp`'s request): a home on 5.1 or later answers the copy of Infinitary published for them (`docs/devices.md`, "Infinitary for another system").
-A computer names them only to a home whose welcome says 5.1 or later, since an older home reads the request strictly and refuses them.
-
-Protocol 4.0 adds the setup card's host ops, `add-project` and `decline-project`, to a card action's effect (`docs/fleet.md` "Asking the first mate to add a project"), new members of a closed enum like those below.
-Protocol 3.0 adds `teach` to emitted work and usage kinds and to the model reason's kind, again new members of closed enums.
-Protocol 2.0 adds `retrieval` to emitted work/usage kinds and `R10` to model reasons.
-Those are new members of closed enums, not optional fields, so the version rule requires a major change; an older contract cannot validate a task carrying them.
-The generated file retains the same version window.
-Protocol 2.16 adds optional `holdsPlace` to cards, captured offers and placed card requests; it declares reply continuity and forward arrival, without changing unmarked cards.
-
-Protocol 4.2 adds the optional `firewall` to where devices find a home (`inf:devices:addresses`): a Linux home's firewall that may keep its devices out (`docs/devices.md`, "A Linux home's firewall").
-A client on an older minor ignores it.
-
-Protocol 4.1 adds a task's browser on a computer that runs work (`docs/task-browser.md`, "On another computer"): the `browserOrders`, the `inf:work:browser`, `inf:work:browser-frame` and `inf:work:browser-event` requests, and optional fields - the roster's `browsers`, the placed spec's `browser`, and a placed card's `browserButton` and `browserHandoff`.
-A computer on an older minor answers no browser order and its roster says nothing of browsers, so the home gives its tasks none.
-
-Protocol 4.2 adds the `inf:session:clean-files` order, which removes only a closed placed task's leftover files after the home checks its retention age and live dependencies.
-Its answer carries the removed names and byte count; a computer on an older minor refuses the new order, so the home retries after it is updated.
-
-Protocol 4.2 carries a placed card's optional `riskDeclaration`, `asking` and `designOnly`, and `check_change`'s optional `pull` and `absentChecks` merge-review declarations.
-The work computer already sends these declarations; the home needs this version to preserve them instead of dropping them during request parsing.
-Cards already stored without risk are unchanged.
-`PlacedToolFieldCoverage` in `src/core/session/tools.ts` checks that every crewmate-declared top-level card and check-reading field exists in its work request; host-resolved card fields and the first mate's target task are excluded.
-
-Protocol 3.2 adds the read-only `inf:working-copy:revision` order and optional exact-base preparation fields to `inf:working-copy:prepare`.
-The home requires a matching `headSha` acknowledgement for exact-base preparation, so an older computer that ignores the field never starts a review at another commit.
-
-Protocol 4.2 adds `inf:session:source-file` and `inf:working-copy:source-ref` orders for verified source cards, media and starting work on the destination computer (`docs/helper.md`, "Starting from a source task").
-The home names destination paths and refs only after that computer acknowledges them.
-
-Protocol 5.0 adds the home-only `inf:knowledge:directions` and `inf:knowledge:note` reads, and optional direction and older-note collection counts.
-The new names also extend the closed read-name enum carried by panel manifests, so the version rule requires a major change.
-These are the read-only preparation for notes retirement in protocol 5; protocol 6 replaces those retired reads as described below.
-
-Protocol 5.2 adds per-model crew speed writes, the placed speed-policy read, and optional speed fields on model rows, task shapes and the placed spec.
-Speed capability stays on the executing computer; only the requested setting is read from the home.
-
-Protocol 5.3 adds an optional password to `inf:devices:update`, and lets that answer be the same password question Add it already returns.
-A client that only reads a device still gets one, except when an Ubuntu package update asks for the password, which older clients never did.
-
-Protocol 5.4 adds the optional `thirdCrewmateDoneAt` to the first-run record (`inf:app:first-run`), the moment the create-your-own-panel slot waits for (`docs/first-launch.md`).
-The home still writes `firstTaskDoneAt`, so a view on an older minor keeps showing the slot from it.
-
-Protocol 5.5 adds the `inf:work:knowledge` and `inf:work:record-knowledge` work requests: a crewmate on a computer that runs work reads and writes the home's knowledge through them (`docs/knowledge.md`, "The tools").
-The home names the knowledge pair among a task's tools, and writes its knowledge lines into the brief, only for a computer on 5.5 or later (`KNOWLEDGE_THERE_SINCE`), so a computer on an older minor gives its tasks no knowledge.
-
-Protocol 6.1 adds the optional `also` addresses of a pairing link, the optional network `name` where devices find this computer, and the optional `reachedOn` of a device.
-A client on an older minor ignores each of them.
-
-Protocol 6.0 replaces the retired `inf:knowledge:note` and `inf:knowledge:older` reads with `inf:knowledge:direction`, removes older-note counts and the legacy search source, and carries the current direction kind through the placed Knowledge write request.
-The closed panel read-name enum and removed shapes require a major change; the home still enforces the same crewmate authority, so carrying a direction write does not allow a crewmate to make one.
-Knowledge runs in every build, and a profile carried to Knowledge refuses an older notes-writing build (`docs/saved-data-compatibility.md`).
-
-Protocol 6.2 adds an optional fourth boolean argument to `inf:cards:reply`: the view's send-time decision that an ordinary card leaves the stack until the answer.
-A lone or `holds_place` card stays; the home persists the decision through the existing awaiting and reply-stamp fields.
-A view that omits it retains the earlier stamped behavior, and already waiting stamped cards keep their place until answered.
-
-Protocol 6.3 adds the read-only `inf:computer:resources` order in `resourceOrders`, with bounded, numbered CPU/memory observations and explicit unknown answers (`docs/helper.md`, "Resource observations").
-The home only asks a work computer that speaks this version or later; an older computer remains on the existing placement path.
-
-Protocol 7.1 adds `inf:session:clean-temp`, which removes only a closed task's provisioned temporary folder on a computer that runs work (`docs/task-retention.md`, "A task's temporary folder").
-It is a new order, so an older computer refuses it; the home does not report that computer as cleaned and retries after it is updated.
-A pending answer is not final and is asked again.
-
-Protocol 7.0 adds the `computers.resources` panel read and the `inf:computers:resources` request and push for shared live CPU/memory observations (`docs/helper.md`, "Shared live readings").
-The new member of the closed panel read-name enum requires a major version; work computers must match this major before taking work, under the existing rule.
-The request is read-only and available to paired views, not work connections; panel subscriptions still require a declared read.
-The resource order remains compatible from 6.3; this addition neither changes manual placement nor enables automatic starts.
-
-Protocol 8.2 adds the optional `spellings` to the hello and the welcome: the spellings of channel names each side reads, for the Infinitary rename (`docs/connection.md`, "Two spellings").
-A side that says none reads only `fm`, so a client on an older minor is written Firstmate 3000's names, and the update order keeps its one name in every spelling.
-The published file names every channel in this build's spelling, `inf:` since protocol 8.4; a client written against it says it reads `inf`, as `scripts/contract-client.ts` does.
-
-Protocol 8.3 adds the optional `key` to a project's setup (`inf:repos:setup`): the task key a new project's tasks are numbered with, which the home refuses in words when another project has it (`docs/fleet.md`, "Choosing a task key").
-The request is the home's own, so no client on an older minor sends it.
-
-Protocol 8.4 lets `inf:working-copy:source-ref` name the Infinitary rename's git refs: a task's starting work fetched into `refs/infinitary/sources/`, from a kept ref under `refs/infinitary/kept/`, beside Firstmate 3000's `refs/fm3000/` names (`docs/helper.md`, "Starting from a source task").
-A computer on 8.4 also gives its crewmates the browser command as `infinitary-browser-axi`.
-A computer on an older minor knows only the older names, so the home names those to it, in the refs (`INFINITARY_NAMES_SINCE`); protocol 9 no longer rewrites placed instructions.
-
-Protocol 8.5 lets a placed crewmate's `inf:work:read-workflow` leave out `jobId`: the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
-A home on an older minor refuses that read as a malformed request; a read that names a job is the same on both.
-
-Protocol 8.6 adds the optional `system` to the pair request (`POST /pair`, `docs/devices.md`, "Joining"): a phone says `ios` and joins as a view whichever link it used.
-A phone always sends `system`: a first join can read no version, since the welcome comes after pairing and `/pair` exposes none.
-A home on an older minor reads the request strictly, so its `malformed` answer to a well-formed request from a phone means the Mac needs updating, and the phone says so.
-
-Protocol 8.6 also adds the optional `connecting` to a computer's sign-ins (`DeviceSignIns`), to a task's place and to a saved placement's candidate.
-A candidate keeps the `out-of-reach` rejection, so an older build still reads the saved placement.
-A computer out of reach only because its connection is being made says so (`docs/devices.md`, "Reached over your SSH").
-A task's place with `connecting` also carries `outOfReach`, so a paired view on 8.5 keeps its marker and only a view that reads `connecting` says it differently.
-
-Protocol 8.7 adds the optional `accountList` to each account a computer's sign-ins serve: the ids a Codex or Grok account's own model list named there, beside Pi's catalog for it, which the home narrows behind its own rail (`docs/helper.md`, "Its own sign-ins").
-A home on an older minor ignores it and routes among Pi's catalog for that account; a computer on an older minor sends none, and the home narrows nothing.
-
-Protocol 8.9 adds a preview's project fonts (`docs/card-authoring.md`, "Fonts by reference"): the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
-A computer that runs work sends that request only to a home on 8.9 or later (`CARD_TYPEFACES_SINCE`) and refuses such a card itself to an older one; an older home keeps no project font, so a view of it meets none.
-
-Protocol 8.11 adds optional inactive memory, speculative memory and macOS pressure to a computer's memory reading (`docs/routing.md`).
-A computer on an older minor sends none of them, and a home on an older minor ignores them, so that reading keeps the free, purgeable and file-backed sum.
-
-Protocol 8.12 adds `phone` to `inf:devices:shown`: whether Settings -> Devices offers + A phone, which every build answers yes (`docs/devices.md`, "Settings -> Devices").
-Only this Mac's own window asks that request, and a client on an older minor ignores the field.
-
-Protocol 8.13 adds `inf:work:prepare-change` and optional saved-story revisions on change publication and completion cards (`docs/forge.md`, "Saved change stories").
-A home and work computer use these only when the other speaks 8.13 or later (`CHANGE_PRESENTATIONS_SINCE`); an 8.12 computer has the phone-button flag, not saved change stories.
-
-Protocol 8.14 adds the optional `answerRefusals` to `inf:devices:update` and `inf:devices:change-address`: a caller that sets it gets a refusal over Remote Login back as `{ refused, lines }`, the refusal's kind and its two lines, instead of a rejection that carries only the words.
-Settings -> Devices uses it to tell a "could not reach" refusal, which goes once that computer's row says connected again, from every other refusal (`docs/devices.md`, "Updating").
-A caller that does not set it, such as a client on an older minor, is rejected as before.
-
-Protocol 8.15 adds optional `refresh` to `inf:session:copy`: the executing computer refreshes its app-owned session record from the live client's transcript before answering the first piece of a copy (`docs/helper.md`, "The record's copy").
-The home sends it only to a computer on 8.15 or later (`SESSION_RECORD_REFRESH_SINCE`); an older computer keeps answering from the cached record without the new field.
-
-Protocol 8.15 also adds optional `interrupted` to a placed `continuation_ended`: the helper declares that shutdown or recovery ended its work, and the home supplies the computer's name in its own interruption wording.
-An older home ignores the marker and reads the plain fallback error; ordinary client failures retain their own error and cut-off facts.
-
-Protocol 8.15 also adds the optional `interrupted` to a background job's end (`inf:work:job-exit`): `quit` or `crash`, sent at a computer's next start for a job its last run's end cut off, so the home tells the crewmate the job never exited (`docs/helper.md`, "Holding a conversation").
-A home on an older minor drops the field and words it as an exit by signal, which still ends the crewmate's wait.
-Protocol 9.2 adds `client` to that `interrupted`: sent at once for each background task a Claude client still ran when the client ended while the computer ran on - the home let go of it, a moved contract reopened the conversation, or the client stopped by itself - so the home tells the crewmate the task never finished.
-A home before 9.2 refuses a value it does not know, so the computer sends that end to one without `interrupted` (`CLIENT_JOB_ENDS_SINCE`), and the home words it as an exit by signal.
-Protocol 8.15 adds the download orders a home asks a Mac that runs work (`downloadOrders`, `docs/devices.md`, "Downloading over the connection"): `fm:firstmate:update-download`, which downloads the home's published version there and keeps it, answers a fallback, or answers `updating` while an update already runs there, and `fm:firstmate:update-progress`, how far that download has got and what is under way, which a home follows a download by after its connection dropped.
-Like the update order, their names and shapes never change across majors, and a home asks them only of a computer on 8.15 or later (`WORK_DOWNLOAD_SINCE`), on any major; an older computer keeps the update order alone.
-Protocol 8.15 also adds the optional `copy` and `run` to a `device_update` event, the optional `downloads` to a computer's `otherVersion`, and the optional `check` to what a command sends `/firstmate`, which only that home's own command sends.
-A client on an older minor ignores each of them.
-
-Protocol 8.17 adds optional `connectedAt` to a device on the list: when the connection the row calls connected began.
-A view on an older minor ignores it.
-The Devices tab clears a stale "could not reach" line when that time is newer than the line.
-
-Protocol 8.16 adds optional `memoryUsedBytes` to a fresh computer resource reading: installed memory the home counts as used, by the one figure in `docs/routing.md`.
-A panel on this version is handed installed memory, that figure, and Mac pressure, and loses the raw counts.
-A Mac on an older minor ignores the field.
-The published reading keeps every raw count, so an older paired Mac still sends the same observation.
-
-Protocol 8.0 adds the read-only `inf:computer:placement` compatibility order, optional project/task declarations and task placement explanations.
-It adds the closed `preparation-failed` and `preparation-unknown` preparation response variants, so the version rule requires a major change and work computers need a matching version.
-The order carries actual served models and project/tool/physical-computer facts; CPU and memory still use the shared resource source.
-
 ## The file
 
 `docs/contract.json` is generated, never edited by hand: `pnpm generate:contract` writes it from `src/shared/publishedContract.ts`, which reads `src/shared/ipc.ts`, `src/shared/work.ts` and `src/shared/connection.ts`.
@@ -200,13 +44,18 @@ How the shapes are written:
 
 ## The version rule
 
-`PROTOCOL_VERSION` is `major.minor.patch` (`src/shared/ipc.ts`).
+`PROTOCOL_VERSION` is `major.minor.patch` (`src/shared/ipc.ts`), and only a major change moves it.
+Every change to the contract adds one Markdown file to `src/shared/contract-changes/`, named for the change and never for a number; that folder's README says how to write one.
 
-- **Minor**: additive - a new request, a new push, a new optional field, a new capability.
+- **Minor**: additive - a new request, a new push, a new optional field, a new capability, a new order.
   Nothing a client already sends or reads changes meaning.
-- **Major**: anything a client written against an older version could not survive - a request, push or field removed or renamed, a field made required, a meaning changed.
+  A minor change adds its file and moves no number, so two changes open at once each add a file of their own and merge cleanly.
+- **Major**: anything a client written against an older version could not survive - a request, push or field removed or renamed, a field made required, a new member of a closed set, a meaning changed.
+  A major change replaces the folder's one major file, `major-<N>.md`, with `major-<N+1>.md`, removes every minor file, and sets `PROTOCOL_VERSION` to `<N+1>.0.0`.
 
-A bump is `PROTOCOL_VERSION` and the regenerated file alone: no test pins the number and no ledger lists the bumps, so two changes that both take the next minor write the same line and merge cleanly.
+The minor stays where it is until the next major: major 10 keeps 10.1, the last minor typed before changes had names, and every later major stays at its first minor, 0.
+`src/core/connection/contractChanges.test.ts` holds `PROTOCOL_VERSION` to the version the folder allows, so two majors open at once both add the same file and conflict on purpose, and the one that merges second takes the next number.
+The published file and the phone's generated file carry the version, so they change it only with a major too.
 
 A home answers every request only on its own major (`PROTOCOL_MAJORS_BEHIND`, 0).
 A client on any other major, older or newer, is answered its reads (`effect: "read"`) and sent every push, and each change (`effect: "change"`) is refused, as the result's error, until the client is updated.
@@ -219,7 +68,181 @@ Both sides read the envelope leniently: a frame field this version does not know
 A request's arguments are read as published.
 
 A major may retire earlier shapes under their existing channel names; paired views must update before changing anything.
+A computer that runs work on another major takes no work until it is updated (`takesWork`, `docs/helper.md`), while the update and download orders it is asked stay the same on every major.
 `src/shared/ipc.test.ts` exercises the rule with explicit versions and derives the current boundary from the version owner.
+
+## Changes by name
+
+A home and a computer that runs work on the same major may still be built from different changes, so a feature that needs the other side to have a change waits for that change's name, never for a number.
+Each side lists its changes in its hello and its welcome (`changes`, `docs/connection.md`, "The handshake and the numbering"): one name per minor file in `src/shared/contract-changes/`, the file's name without `.md`.
+A packaged app's build lists the folder once and bakes the list in (`electron.vite.config.ts`); tests read the folder (`src/core/connection/contractChanges.ts`).
+The home keeps what a computer listed beside that computer's version (`WorkDeviceVersion.changes`), and a computer keeps what its home listed (`HomeLinkState.homeChanges`).
+A feature names its change once with `contractChange`, which refuses a name no file has when its module loads, and asks `listsChange` of the other side's list.
+A side that listed nothing, such as one built before changes had names, has no change, so it gets no feature that waits for one.
+The published file does not list the names, since no client written against it needs them.
+
+## Features that wait for a number
+
+A feature written before changes had names waits for the first version that had it, as a typed `*_SINCE` number beside its check, and a version that does not read as `major.minor.patch` has none of them.
+A feature asked across majors keeps a typed number for good, because a major removes every name.
+
+These cross majors:
+
+| Number | What waits for it |
+| --- | --- |
+| `WORK_UPDATE_SINCE` (1.76) | The home asks a computer the update order, `fm:firstmate:update`, on any major (`takesUpdate`); Settings -> Devices updates an older one by a new command run there (`docs/devices.md`, "Updating over the connection"). |
+| `WORK_DOWNLOAD_SINCE` (8.15) | The home has a Mac elsewhere download the home's published version itself, with the download orders, on any major (`takesDownload`); an older one is updated with the update order alone (`docs/devices.md`, "Downloading over the connection"). |
+| `FETCH_APP_SYSTEM_SINCE` (5.1) | A computer names its `system` and `chip` where it gets Infinitary (`fetchApp`'s request) only to a home on this version or later, which answers the copy published for them (`readsFetchAppSystem`; `docs/devices.md`, "Infinitary for another system"); an older home reads the request strictly and refuses them. |
+
+These wait within a major, and every one but the last is older than major 10, so every computer that takes work from a home on 10 has it:
+
+| Number | What waits for it |
+| --- | --- |
+| `PLACED_WORK_SINCE` (1.64) | A computer takes work at all (`takesWork`), and the published `orders` start here. |
+| `CUSTOM_API_SIGN_INS_SINCE` (2.6) | The home asks a computer the custom API sign-in orders (`speaksCustomApi`), and refuses with "Update Infinitary on" that computer "first." otherwise. |
+| `PLACED_SEED_SINCE` (3.1) | A computer takes a task with no project (`speaksSeed`). |
+| `KNOWLEDGE_THERE_SINCE` (5.5) | The home names the knowledge pair among a task's tools and writes its knowledge lines into the brief (`speaksKnowledge`; `docs/knowledge.md`, "The tools"). |
+| `RESOURCE_OBSERVATIONS_SINCE` (6.3) | The home asks a computer its CPU and memory (`speaksResources`); an older one's reading is unknown, `unsupported`. |
+| `TEMP_CLEANUP_SINCE` (7.1) | The home asks a computer to remove a closed task's temporary folder (`speaksTempCleanup`), and otherwise says that computer needs an update first (`docs/task-retention.md`, "A task's temporary folder"). |
+| `PLACEMENT_FACTS_SINCE` (8.0) | The home asks a computer its placement facts (`inf:computer:placement`, `src/core/placed/automaticPlacement.ts`). |
+| `INFINITARY_NAMES_SINCE` (8.4) | The home names the Infinitary rename's git refs and artifacts folder to a computer (`speaksInfinitaryNames`), and Firstmate 3000's to an older one (`docs/helper.md`, "Starting from a source task"). |
+| `CARD_TYPEFACES_SINCE` (8.9) | A computer sends a card that names a project font only to a home that keeps one (`keepsCardTypefaces`), and refuses it in words otherwise (`docs/card-authoring.md`, "Fonts by reference"). |
+| `CHANGE_PRESENTATIONS_SINCE` (8.13) | The home and a computer use saved change stories (`speaksChangePresentations`; `docs/forge.md`, "Saved change stories"). |
+| `SESSION_RECORD_REFRESH_SINCE` (8.15) | The home asks `inf:session:copy` with `refresh` (`speaksRecordRefresh`; `docs/helper.md`, "The record's copy"). |
+| `CLIENT_JOB_ENDS_SINCE` (9.2) | A computer says a background job ended with its Claude client (`interrupted: "client"` on `inf:work:job-exit`) only to a home that hears it (`hearsClientJobEnds`), and says the end without why otherwise. |
+| `STORY_AROUND_SINCE` (10.1) | A computer sends `open_change`'s `around` only to a home that changes the words around a published story (`changesStoryAround`), and refuses it and sends nothing otherwise (`docs/forge.md`, "Saved change stories"). |
+
+## What the contract carries
+
+What a side of the contract may rely on beyond its shapes in `docs/contract.json`, by what it serves.
+Where a feature waits for the other side, its number is in the tables above.
+
+### Cards and saved stories
+
+Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares reply continuity and forward arrival and leaves unmarked cards unchanged.
+A card action's effect may be `request_write`: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
+The setup card's Add project and Not now carry the host ops `add-project` and `decline-project` (`docs/fleet.md`, "Asking the first mate to add a project"), and the project-change card's Apply change and Not now carry `apply-project-change` and `decline-project-change`.
+
+Host operations include confirming and deferring a required action, and task operations include `show-card` (`docs/required-actions.md`).
+Cards, captured offers and placed requests may carry required-action declarations, and task rows may carry durable action state.
+The host owns confirmation effects and observers, and old cards remain unchanged historical records.
+
+A card's live attachment has a second kind, `page`, a page from its task's project (`docs/task-browser.md`, "A page from the project").
+It is opened with the home-only `inf:cards:open-page` request, declared by a placed card's optional `browserPage`, and marked on the open browser fact by the optional `own`.
+
+A card may carry `reviewTaskId`, and the home refuses the card unless that names an independent review of the card's task, before Review finding is drawn.
+First mate cards about a task carry the task's title in their meta line.
+
+Cards and record card rows may carry `minimized`, and task rows the desktop presentation-only `minimizedCardId`.
+A view's `inf:cards:minimize` changes saved stack visibility without resolving a card, and its `inf:cards:show` restores an open card or shows a closed card read-only.
+`inf:cards:show-past` answers a closed card.
+
+The optional fourth boolean argument of `inf:cards:reply` is the view's send-time decision that an ordinary card leaves the stack until the answer.
+A lone or `holds_place` card stays, and the home keeps the decision in the existing awaiting and reply-stamp fields.
+A view that omits the argument gets the stamped behavior, and waiting stamped cards keep their place until answered.
+
+A preview's project fonts (`docs/card-authoring.md`, "Fonts by reference") travel by the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and by the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
+
+A saved story's `version` is 1 or 2: version 2 carries up to six typed `checked` facts beside folded `verification`, and a version-1 story stays readable and keeps its rendering (`docs/forge.md`, "Saved change stories").
+`inf:work:prepare-change` stages a saved change story, and change publication and completion cards may carry its revision.
+`open_change`'s input (`inf:work:open-change`) takes an optional `around`: one exact passage of the words around a published story and what replaces it.
+A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing was asked, so a computer that runs work refuses such a call to it and sends nothing.
+
+### Tasks, projects and routing
+
+Task delivery facts carry an optional `reviewCapOwner`: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the captain hold (`docs/delivery-rigor.md`).
+The home alone sets it and enforces the gate it chooses.
+
+`teach` and `retrieval` are work and usage kinds; `teach` is also a model reason's `kind`, and `R10` one of its rules.
+
+Crew speed has a per-model write (`inf:models:speed:set`), the placed speed read (`inf:work:speed`), and optional speed fields on model rows (`speed`, `speeds`), task shapes (`override_speed`) and the placed spec (`speed`).
+Speed capability stays on the executing computer; only the requested setting is read from the home.
+
+A project's setup (`inf:repos:setup`) takes an optional `key`, the task key its tasks are numbered with, which the home refuses in words when another project has it (`docs/fleet.md`, "Choosing a task key").
+Only the home's own window asks it.
+Project configuration takes an optional `name`, `path` and `origin` beside its policy fields (`placementRequirements`, `delivery`, `autonomy`, `rigor`).
+
+The first-run record (`inf:app:first-run`) carries the optional `thirdCrewmateDoneAt`, the moment the create-your-own-panel slot waits for (`docs/first-launch.md`).
+The home still writes `firstTaskDoneAt`, which nothing in this version reads, for a view on an older version.
+
+### Knowledge
+
+The home-only `inf:knowledge:directions` read lists standing directions, `inf:knowledge:direction` reads one, and each knowledge collection carries an optional `directions` count.
+`knowledge.directions` is a member of the closed read-name enum panel manifests carry (`PANEL_READ_NAMES`).
+A crewmate on a computer that runs work reads and writes the home's knowledge through the `inf:work:knowledge` and `inf:work:record-knowledge` work requests (`docs/knowledge.md`, "The tools").
+The placed write request carries the `direction` kind and an optional `lane`, which separates captain-stated personal context from saved references without granting different access; the home defaults a crewmate's omitted lane to reference.
+Carrying a direction write does not let a crewmate make one: only the first mate, on the captain's own words, changes a direction.
+Every crewmate has equal factual access, including a task with no project, and saved task shapes read the legacy `knowledge_access` as inert metadata.
+Knowledge runs in every build, and a profile carried to Knowledge refuses an older notes-writing build (`docs/saved-data-compatibility.md`).
+
+### Devices and the connection
+
+The hello and the welcome carry the optional `spellings`, the channel-name spellings each side reads (`docs/connection.md`, "Two spellings").
+A side that lists none reads only `fm` and is written Firstmate 3000's names, and the update, download and progress orders keep one name in every spelling (`FROZEN_CHANNELS`).
+The published file names channels in `inf:`, except those frozen orders, and a client written against it says it reads `inf`, as `scripts/contract-client.ts` does.
+
+The pair request (`POST /pair`, `docs/devices.md`, "Joining") takes an optional `system`, and a phone that says `ios` joins as a view whichever link it used.
+A phone always sends it, since a first join can read no version: the welcome comes after pairing and `/pair` exposes none.
+A phone reads a `malformed` answer to its pair request as a Mac that needs updating, and says so.
+
+A pairing link may carry optional `also` addresses, and a device its optional `reachedOn`.
+Where devices find this computer (`inf:devices:addresses`) may carry its optional network `name` and an optional `firewall`, a Linux home's firewall that may keep its devices out (`docs/devices.md`, "A Linux home's firewall").
+
+`inf:devices:update` takes an optional password and may answer the same password question Add returns.
+It and `inf:devices:change-address` answer a Remote Login refusal as typed data, `{ refused, lines }`.
+A device on the list may carry `connectedAt`, when the connection the row calls connected began, and Settings -> Devices clears a "could not reach" line once that time is newer than the line.
+`inf:devices:shown` answers only `shown`, and only this Mac's own window asks it.
+A Remote Login copy in its `preparing` state may carry a `download` observation: bytes received and, only when the release states it, a total.
+
+Task places, computer sign-ins and placement explanations carry the core's one reach value (`computerReachSchema`), which reads `connecting` for a computer out of reach only because its connection is being made.
+A placement candidate not in reach keeps the `out-of-reach` rejection.
+
+A computer may name its `system` and `chip` where it gets Infinitary (`fetchApp`'s request), and the home answers the copy published for them (`docs/devices.md`, "Infinitary for another system").
+A home asks a Mac that runs work two download orders (`downloadOrders`, `docs/devices.md`, "Downloading over the connection").
+`fm:firstmate:update-download` downloads the home's published version there and keeps it, answers a fallback, or answers `updating` while an update already runs there.
+`fm:firstmate:update-progress` answers how far that download has got and what is under way, by which the home follows it, including after its connection dropped.
+Like the update order, their names and shapes never change across majors.
+A `device_update` event may carry `copy` and `run`, a computer's `otherVersion` may carry `downloads`, and what a command sends `/firstmate` may carry `check`, which only that home's own command sends.
+
+### Computers that run work
+
+A task's browser on a computer that runs work (`docs/task-browser.md`, "On another computer") uses the `browserOrders`, the `inf:work:browser`, `inf:work:browser-frame` and `inf:work:browser-event` requests, the roster's `browsers`, the placed spec's `browser`, and a placed card's `browserButton` and `browserHandoff`.
+The home gives a task there a browser only when that computer's roster says `browsers`.
+
+A placed card carries the optional `riskDeclaration`, `asking`, `designOnly` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
+`PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
+A placed crewmate's `inf:work:read-workflow` may leave out `jobId` for the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
+
+The read-only `inf:working-copy:revision` order reads a task's committed revision.
+`inf:working-copy:prepare` takes an optional exact `base`, whose `headSha` its answer must acknowledge, so a computer that ignores the base never starts a review at another commit.
+It may answer the closed variants `preparation-failed` and `preparation-unknown`.
+
+The `inf:session:source-file` and `inf:working-copy:source-ref` orders carry verified source cards, media and starting work to the destination computer (`docs/helper.md`, "Starting from a source task"), and the home names destination paths and refs only after that computer acknowledges them.
+`inf:working-copy:source-ref` fetches into `refs/infinitary/sources/` from a kept ref under `refs/infinitary/kept/`, and accepts Firstmate 3000's `refs/fm3000/` names too, which the home names to a computer older than `INFINITARY_NAMES_SINCE`.
+A computer that runs work gives its crewmates the browser command as `infinitary-browser-axi`, and placed instructions keep the home's words unchanged.
+It recovers saved conversations once, before any opens (`docs/helper.md`, "After the one-time move").
+
+`inf:session:clean-files` removes only a closed placed task's leftover files, after the home checks its retention age and live dependencies, and answers the removed names (`removedFiles`) and byte count (`bytes`).
+`inf:session:clean-temp` removes only a closed task's provisioned temporary folder (`docs/task-retention.md`, "A task's temporary folder"); a pending answer is not final and is asked again.
+
+`inf:session:copy` may carry `refresh`, which has the computer refresh its app-owned session record from the live client's transcript before answering the first piece of a copy (`docs/helper.md`, "The record's copy").
+A placed `continuation_ended` may carry `interrupted` when shutdown or recovery ended the computer's work, and the home then uses its own interruption wording with that computer's name; an ordinary client failure keeps its own `error` and `cutOff`.
+A background job's end (`inf:work:job-exit`) may carry `interrupted` (`docs/helper.md`, "Holding a conversation").
+It is `quit` or `crash` at a computer's next start, for a job its last run's end cut off, so the home tells the crewmate the job never exited.
+It is `client` at once for each background task a Claude client still ran when the client ended while the computer ran on: the home let go of it, a moved contract reopened the conversation, or the client stopped by itself.
+A home before `CLIENT_JOB_ENDS_SINCE` hears a client end without `interrupted`, and words it as an exit by signal.
+
+The read-only `inf:computer:placement` order carries actual served models and project, tool and physical-computer facts, and projects and tasks may declare placement requirements and keep placement explanations.
+Each account a computer's sign-ins serve may carry `accountList`, the ids a Codex or Grok account's own model list named there, beside Pi's catalog for it, which the home narrows behind its own rail (`docs/helper.md`, "Its own sign-ins").
+
+### Resources
+
+The read-only `inf:computer:resources` order in `resourceOrders` answers bounded, numbered CPU and memory observations or an explicit unknown (`docs/helper.md`, "Resource observations").
+A Mac's memory reading may carry inactive memory, speculative memory and macOS pressure, and a reading without them counts free, purgeable and file-backed bytes as free (`docs/routing.md`).
+A fresh reading may carry `memoryUsedBytes`, installed memory the home counts as used, by the one figure in `docs/routing.md`.
+The `computers.resources` panel read, the `inf:computers:resources` request and its push share these live observations (`docs/helper.md`, "Shared live readings").
+The request is read-only and open to paired views but not work connections, and a panel must declare the read to subscribe.
+The published reading keeps every raw count, and a panel is handed installed memory, the memory-used figure and Mac pressure, never the raw counts.
 
 ## The scripted client
 
@@ -242,36 +265,7 @@ node scripts/contract-client.ts --grant grant.json [--contract docs/contract.jso
 
 - `src/shared/publishedContract.test.ts`: the committed file is what the contract renders; every core request and push is published with the version and the rule, and no host channel; every shape compiles in a standard validator; argument lists are admitted exactly as the home admits them; what the home sends is open to a later field.
 - `src/shared/ipc.test.ts`, "the version rule": the window, read by majors alone, and a version that cannot be read gets reads only.
+- `src/core/connection/contractChanges.test.ts`: `PROTOCOL_VERSION` is the version the folder allows, a minor file moves no version, the next major's file makes it `<N+1>.0.0`, a folder with no major file or two is refused, a wait for a name no file has is refused, and a side that listed nothing has no change.
+- `src/core/devices/homeLink.test.ts`, "a home and a computer that list their contract changes": each side lists this build's changes, keeps the other's, and keeps none from a side that listed nothing.
 - `src/core/connection/connection.test.ts`: a home two majors on answers its own major in full, and an older or a newer client only its reads, with every push; a frame's unknown fields are ignored.
 - `src/core/core.test.ts`, "a client that knows only the published contract": the scripted client, as its own process against the real core, answers a stall card and reads the feed; a client one major behind reads the feed but cannot answer a card; an older and a newer one read the cards and the feed and have their answer refused, and the card stays.
-
-## Protocol 6.0: required captain actions
-
-Protocol 6.0 adds confirmation and deferral host operations and the `show-card` task operation, new members of closed enums.
-Cards, captured offers and placed requests carry optional required-action declarations; task rows carry optional durable action state.
-The host owns confirmation effects and observers (`docs/required-actions.md`); old cards remain unchanged historical records.
-
-Protocol 6.2 adds optional `lane` to the placed Knowledge write request, distinguishing captain-stated personal context from saved references without granting different access.
-Every crewmate has equal factual access, including no-project tasks; saved task shapes still read legacy `knowledge_access` as inert metadata.
-A work computer on an older supported minor can still save references through the same tools; the home defaults its omitted lane to reference.
-
-Protocol 8.14 adds an optional `download` observation to a Remote Login copy: bytes received and, only when the release states it, a total.
-The existing copy states stay unchanged; older views ignore the added observation.
-
-## Protocol 9: compatibility cleanup
-
-Protocol 9 requires paired views as well as work computers to update across a major (INF-416 piece L, captain's compatibility choice).
-A different-major view retains read-only access, with no promise that retired field shapes remain readable by its older interface.
-Work computers on another major take no work, while the cross-major update orders stay unchanged.
-Device update and change-address requests always answer typed Remote Login refusals and no longer accept `answerRefusals`.
-The device visibility answer has only `shown`; every build offers a phone without a second flag.
-Task places, computer sign-ins and placement explanations carry the core reach value instead of published connecting/out-of-reach flags.
-Placed instructions keep the home's words unchanged, without the browser-command swap for 8.0–8.3 computers.
-Saved conversation recovery runs once before conversations open, not at each open (`docs/helper.md`, "After the one-time move").
-
-Protocol 9.2 adds optional `reviewTaskId` to cards: the home validates that the named independent review belongs to the card's task before showing Review finding.
-Older readers ignore this additive attribution; first mate cards about tasks also carry the task's title in their existing meta line.
-
-Protocol 9.3 adds optional `minimized` on cards and record card rows, the desktop presentation-only `minimizedCardId` on task rows, and the views-only `inf:cards:minimize` and `inf:cards:show` requests.
-The first changes saved stack visibility without resolving a card; the second restores an open card or shows a closed card read-only.
-An older client ignores optional fields and keeps its current list; `inf:cards:show-past` keeps its earlier closed-card response.

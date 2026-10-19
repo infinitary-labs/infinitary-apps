@@ -382,14 +382,17 @@ import { workRequests, workRequestWire } from "./work";
 /**
  * The version of THIS contract - the channel set, their schemas, the surface
  * split, and the connection's envelope around them (src/shared/connection.ts).
- * Bump the minor for an additive change (a new channel, a new optional
- * field), the major for anything a client compiled against an older contract
- * could not survive. Reported by `inf:app:healthcheck` and the connection's
- * welcome, and published with every core shape in docs/contract.json
- * (docs/contract.md), so a client can refuse or degrade on a mismatch instead
- * of failing one call at a time. A bump is this line and the published file
- * alone: no test pins the number and no ledger lists the bumps, so two
- * changes that both take the next minor write the same line and merge.
+ * Only a major change edits this line, for anything a client compiled
+ * against an older contract could not survive: its major is the number of
+ * the one `major-<N>.md` in `src/shared/contract-changes/`. An additive
+ * change (a new channel, a new optional field) adds a file of its own there
+ * and moves no number, and a feature that needs the other side to have it
+ * waits for its name (docs/contract.md, "The version rule";
+ * `src/core/connection/contractChanges.ts`, whose test holds this line to
+ * the folder). Reported by `inf:app:healthcheck` and the connection's
+ * welcome, and published with every core shape in docs/contract.json, so a
+ * client can refuse or degrade on a mismatch instead of failing one call at
+ * a time.
  */
 export const PROTOCOL_VERSION = "10.1.0";
 

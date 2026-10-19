@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 import type { Plugin } from "vite";
 import { frameLibPlugin } from "./scripts/frame-lib";
+import { contractChangeFiles } from "./src/core/connection/contractChanges";
 import { contractRevisionFiles } from "./src/core/prompts/contractVersion";
 import { PRODUCTION_CSP } from "./src/shared/csp";
 
@@ -49,6 +50,11 @@ export default defineConfig({
       // folder to count (src/core/prompts/contractVersion.ts).
       __FM_CONTRACT_REVISIONS__: JSON.stringify(
         contractRevisionFiles(resolve(__dirname, "src/core/prompts/contract-revisions")),
+      ),
+      // The contract's changes by name, listed once for the same reason
+      // (src/core/connection/contractChanges.ts).
+      __INF_CONTRACT_CHANGES__: JSON.stringify(
+        contractChangeFiles(resolve(__dirname, "src/shared/contract-changes")),
       ),
     },
     build: {

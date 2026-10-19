@@ -55,6 +55,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
+import { CONTRACT_CHANGES } from "./contractChanges";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -166,7 +167,16 @@ export type ViewDeviceContact = { deviceId: string; contact: "in-reach" | "gone"
  * one, and whether its welcome let it take work (docs/devices.md, "Another
  * version").
  */
-export type WorkDeviceVersion = { contract: string; app?: string; takesWork: boolean };
+export type WorkDeviceVersion = {
+  contract: string;
+  app?: string;
+  takesWork: boolean;
+  /**
+   * The contract changes its hello listed by name (`changes`,
+   * src/core/connection/contractChanges.ts); absent when it listed none.
+   */
+  changes?: readonly string[];
+};
 
 export type ConnectionOptions = {
   dispatch: CoreDispatch;
@@ -187,6 +197,12 @@ export type ConnectionOptions = {
    * a test stands in a later home with it.
    */
   protocolVersion?: string;
+  /**
+   * The contract changes this home's welcome lists by name. Defaults to this
+   * build's own (`CONTRACT_CHANGES`); a test stands in another home's with
+   * it, and an empty list says none, as a home from before names.
+   */
+  changes?: readonly string[];
   /**
    * The spelling of channel names this home writes to a device that reads
    * it (docs/connection.md, "Two spellings"). Defaults to this build's own;
@@ -374,6 +390,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   const maxBufferedBytes = options.maxBufferedBytes ?? 32 * 1024 * 1024;
   const onProblem = options.onProblem ?? ((text) => console.warn(`[connection] ${text}`));
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
+  const homeChanges = options.changes ?? CONTRACT_CHANGES.names;
   const speaks = options.speaks ?? OWN_SPELLING;
   let run: Run | null = null;
   let closed = false;
@@ -592,6 +609,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             ? { onHomeMac: client.device.onThisMac }
             : {}),
           spellings: SPELLINGS,
+          ...(homeChanges.length ? { changes: homeChanges } : {}),
         }),
       );
       for (const entry of missed ?? []) send(client, pushFrameIn(entry, client.spelling));
@@ -606,6 +624,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           contract: hello.protocolVersion,
           ...(hello.appVersion ? { app: hello.appVersion } : {}),
           takesWork: client.takesWork,
+          ...(hello.changes?.length ? { changes: hello.changes } : {}),
         });
       if (client.takesWork) tellWork({ deviceId: client.device.id, contact: "in-reach" });
       if (role === "view") tellView({ deviceId: client.device.id, contact: "in-reach" });

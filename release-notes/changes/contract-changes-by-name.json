@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "contract-changes-by-name",
+      "reason": "Internal: each contract change adds its own named file, only a major moves the contract version, and a home and a computer that runs work list their changes by name when they connect; how the project is developed, with nothing a person notices."
+    }
+  ]
+}

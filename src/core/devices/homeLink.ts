@@ -23,6 +23,7 @@ import {
   PROTOCOL_VERSION,
 } from "@shared/ipc";
 import type { WebSocket } from "ws";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { thisDeviceSystem } from "../platform";
 import { dialHome } from "./dial";
 
@@ -59,6 +60,12 @@ export type HomeLinkState = {
   readonly access: ContractAccess | null;
   /** The contract version the home speaks, from the newest welcome. */
   readonly homeVersion: string | null;
+  /**
+   * The contract changes the home listed by name in the newest welcome
+   * (`changes`, src/core/connection/contractChanges.ts): none when it listed
+   * nothing, and null before any welcome.
+   */
+  readonly homeChanges: readonly string[] | null;
   /** The home's own name, from the newest welcome that carried one. */
   readonly name: string | null;
   /**
@@ -95,6 +102,12 @@ export type HomeLinkOptions = {
   grant: DeviceGrant;
   /** The contract version the device speaks; the version rule reads its major. */
   protocolVersion?: string;
+  /**
+   * The contract changes its hello lists by name. Defaults to this build's
+   * own (`CONTRACT_CHANGES`); a test stands in another device's with it,
+   * and an empty list says none, as a device from before names.
+   */
+  changes?: readonly string[];
   /**
    * The spelling of channel names it writes to a home that reads it
    * (docs/connection.md, "Two spellings"). Defaults to this build's own; a
@@ -187,6 +200,7 @@ export class HomeLink {
     contact: "reaching",
     access: null,
     homeVersion: null,
+    homeChanges: null,
     name: null,
     takesWork: null,
     onHomeMac: null,
@@ -384,6 +398,7 @@ export class HomeLink {
         socket.terminate();
       });
       socket.once("open", () => {
+        const changes = this.options.changes ?? CONTRACT_CHANGES.names;
         socket.send(
           JSON.stringify({
             t: "hello",
@@ -394,6 +409,7 @@ export class HomeLink {
             ...(this.options.as && this.grant.kind === "mac" ? { as: this.options.as } : {}),
             ...(this.options.system ?? thisDeviceSystem()),
             spellings: SPELLINGS,
+            ...(changes.length ? { changes } : {}),
           }),
         );
       });
@@ -481,6 +497,7 @@ export class HomeLink {
       contact: "in-reach",
       access: frame.access,
       homeVersion: frame.protocolVersion,
+      homeChanges: sameNames(frame.changes ?? [], this.current.homeChanges),
       name: frame.name ?? this.current.name,
       takesWork: frame.takesWork ?? null,
       onHomeMac: frame.onHomeMac ?? this.current.onHomeMac,
@@ -644,6 +661,7 @@ export class HomeLink {
       next.contact === this.current.contact &&
       next.access === this.current.access &&
       next.homeVersion === this.current.homeVersion &&
+      next.homeChanges === this.current.homeChanges &&
       next.name === this.current.name &&
       next.takesWork === this.current.takesWork &&
       next.onHomeMac === this.current.onHomeMac &&
@@ -654,6 +672,16 @@ export class HomeLink {
     this.current = next;
     this.options.onState?.(next);
   }
+}
+
+/**
+ * The names a welcome listed, as the list already held when they are the
+ * same, so an unchanged list is no change of state.
+ */
+function sameNames(listed: readonly string[], held: readonly string[] | null): readonly string[] {
+  return held && held.length === listed.length && held.every((name, at) => name === listed[at])
+    ? held
+    : listed;
 }
 
 function parseFrame(raw: unknown): HomeFrame | undefined {

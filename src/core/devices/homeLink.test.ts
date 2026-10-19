@@ -6,7 +6,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { type HomeConnection, startConnection } from "../connection/connection";
+import {
+  type HomeConnection,
+  startConnection,
+  type WorkDeviceVersion,
+} from "../connection/connection";
+import {
+  CONTRACT_CHANGES,
+  contractChange,
+  listsChange,
+  readContractChanges,
+} from "../connection/contractChanges";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { PLACED_REQUEST_WAIT_MS, PLACED_TOOL_WAIT_MS } from "../helper/toolWait";
@@ -74,9 +84,10 @@ afterEach(async () => {
 /**
  * A home on a free loopback port that can stop and start listening again,
  * keeping its pairing; `speaks` stands in the spelling of channel names it
- * writes, as a home that moved to Infinitary writes its own.
+ * writes, as a home that moved to Infinitary writes its own, and `changes`
+ * the contract changes its welcome lists.
  */
-async function home(options: { speaks?: Spelling } = {}) {
+async function home(options: { speaks?: Spelling; changes?: readonly string[] } = {}) {
   const core = standInCore();
   const left: DeviceView[] = [];
   const pairing = new DevicePairing({
@@ -95,6 +106,7 @@ async function home(options: { speaks?: Spelling } = {}) {
       name: () => "MacBook Pro",
       heartbeatMs: 60_000,
       ...(options.speaks ? { speaks: options.speaks } : {}),
+      ...(options.changes ? { changes: options.changes } : {}),
     });
     await connection.settled();
   };
@@ -145,6 +157,8 @@ function follow(
     onInvoke?: (channel: string, args: unknown) => Promise<unknown>;
     /** The spelling of channel names it writes, as a device that moved to Infinitary writes its own. */
     speaks?: Spelling;
+    /** The contract changes its hello lists. */
+    changes?: readonly string[];
   } = {},
 ) {
   const states: HomeLinkState[] = [];
@@ -170,6 +184,7 @@ function follow(
       return socket;
     },
     ...(options.speaks ? { speaks: options.speaks } : {}),
+    ...(options.changes ? { changes: options.changes } : {}),
     onPush: (channel, payload) => pushes.push({ channel, payload }),
     onCaughtUp: (catchUp) => catchUps.push(catchUp),
     onState: (state) => states.push(state),
@@ -599,6 +614,70 @@ describe("a home and a device on two sides of the Infinitary rename", () => {
     at.events.emit("inf:models:changed", { ok: true });
     await air.until(() => air.pushes.length === 1);
     expect(channelsOf(air.wire.heard, "push")).toEqual(["inf:models:changed"]);
+  });
+});
+
+/**
+ * Contract changes by name (INF-519, the captain's choice that a feature
+ * waits for the other computer by name: each computer lists its changes when
+ * it connects): a computer's hello and its home's welcome list this build's
+ * changes, each side keeps what the other listed, and a side from before
+ * names lists nothing, so it has no change.
+ */
+describe("a home and a computer that list their contract changes", () => {
+  // A change at the next minor, which a feature would wait for.
+  const limits = contractChange(
+    "plan-label-limits",
+    readContractChanges([`major-${CONTRACT_CHANGES.major}.md`, "plan-label-limits.md"]),
+  );
+
+  it("lists this build's changes in the hello and the welcome, and each side keeps the other's", async () => {
+    const at = await home();
+    const heard: (WorkDeviceVersion | null)[] = [];
+    at.connection().onWorkVersion((_device, version) => heard.push(version));
+    const mini = follow(await at.joinWork());
+    expect(mini.link.state().homeChanges).toBeNull();
+    mini.link.start();
+    await mini.until(() => mini.link.state().contact === "in-reach");
+    const [hello] = mini.wire.sent;
+    const [welcome] = mini.wire.heard;
+    expect(hello?.changes ?? []).toEqual(CONTRACT_CHANGES.names);
+    expect(welcome?.changes ?? []).toEqual(CONTRACT_CHANGES.names);
+    expect(mini.link.state().homeChanges).toEqual(CONTRACT_CHANGES.names);
+    await expect.poll(() => heard.at(-1)?.changes ?? []).toEqual(CONTRACT_CHANGES.names);
+  });
+
+  it("has a change only from a side that listed it", async () => {
+    const at = await home({ changes: ["plan-label-limits"] });
+    const heard: (WorkDeviceVersion | null)[] = [];
+    at.connection().onWorkVersion((_device, version) => heard.push(version));
+    const grant = await at.joinWork();
+    const mini = follow(grant, { changes: ["plan-label-limits"] });
+    mini.link.start();
+    await mini.until(() => mini.link.state().contact === "in-reach");
+    expect(listsChange(mini.link.state().homeChanges, limits)).toBe(true);
+    await expect.poll(() => listsChange(heard.at(-1)?.changes, limits)).toBe(true);
+    mini.link.close();
+    await expect.poll(() => heard.at(-1)).toBeNull();
+
+    // A computer from before names says none, so its home gives it no change.
+    const older = follow(grant, { changes: [] });
+    older.link.start();
+    await older.until(() => older.link.state().contact === "in-reach");
+    expect(older.wire.sent[0]).not.toHaveProperty("changes");
+    await expect.poll(() => heard.at(-1)).toMatchObject({ takesWork: true });
+    expect(heard.at(-1)).not.toHaveProperty("changes");
+    expect(listsChange(heard.at(-1)?.changes, limits)).toBe(false);
+  });
+
+  it("gives a home from before names no change", async () => {
+    const at = await home({ changes: [] });
+    const mini = follow(await at.joinWork(), { changes: ["plan-label-limits"] });
+    mini.link.start();
+    await mini.until(() => mini.link.state().contact === "in-reach");
+    expect(mini.wire.heard[0]).not.toHaveProperty("changes");
+    expect(mini.link.state().homeChanges).toEqual([]);
+    expect(listsChange(mini.link.state().homeChanges, limits)).toBe(false);
   });
 });
 

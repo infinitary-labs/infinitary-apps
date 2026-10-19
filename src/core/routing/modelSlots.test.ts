@@ -227,6 +227,35 @@ describe("ModelSlots.reconcile - first activation only", () => {
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6.1-sol" })).toEqual(["low"]);
     expect(slots.slotsOf({ provider: "openai-codex", id: "gpt-6-luna" })).toEqual([]);
   });
+
+  // INF-408: every Pi runtime also lists the person's own models.json
+  // providers, and the feed said "Grok added mock-1" for the mock
+  // provider's model because the Grok account's runtime reached it first.
+  it("credits a models.json model to its own provider, never the account that listed it", () => {
+    const { slots, setAccounts } = build([
+      { ...grok, models: [...grok.models, { provider: "local-lab", id: "llama-9" }] },
+    ]);
+    expect(slots.reconcile()).toEqual([]);
+    setAccounts([
+      {
+        ...grok,
+        models: [
+          ...grok.models,
+          { provider: "local-lab", id: "llama-9" },
+          { provider: "local-lab", id: "llama-10" },
+          // A provider the person's models.json never had before: a first-time seed.
+          { provider: "home-gpu", id: "qwen-5" },
+        ],
+      },
+    ]);
+    expect(slots.reconcile()).toEqual([{ providerId: "local-lab", id: "llama-10" }]);
+    expect(
+      slots
+        .view()
+        .models.filter((row) => row.isNew)
+        .map((row) => row.id),
+    ).toEqual(["llama-10"]);
+  });
 });
 
 // INF-94: the board's "new" mark lived in memory and the next catalog read

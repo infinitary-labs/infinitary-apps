@@ -114,6 +114,8 @@ Provider-reported allowance meters are unchanged.
 - **An arrival:** one feed line when a listed model appears that this install never saw - a tracked family's new generation, or a starter row.
   Re-listed older generations and untracked ids are marked seen silently.
   A client-served account announces only from a successful read (`canAnnounce`); its shipped list is never news.
+  - The line names the model's own provider, as its row on the board does, never the account whose runtime listed it: every Pi runtime also lists the person's `models.json` providers.
+  - A provider this install never saw is a first seed and says nothing, a `models.json` provider included.
   - An announced arrival also carries the Models board's `new` mark, saved with the slot record (`arrived`), so a later catalog read or a restart keeps it.
   - The mark ends when the person changes that model's levels, or a week after it arrived (`NEW_MARK_MS`).
   - Its note says where the model is used now, since the starter map may already have placed it (`newModelNote`).

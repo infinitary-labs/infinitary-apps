@@ -61,6 +61,7 @@ import type { PiModelRef, SlottedRef } from "./routingEngine";
 export const NEW_MARK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type NewModelNotice = {
+  /** The model's own provider, never the account whose runtime listed it. */
   providerId: string;
   id: string;
   /** Set when the starter map placed it; omitted when it arrived off. */
@@ -132,6 +133,8 @@ export class ModelSlots {
    * on the ones that have been seen. Returns the newcomers so the caller
    * can announce them exactly once; a first-time seed for a provider
    * announces nothing, because none of those models is new to the user.
+   * The provider is the model's own: a models.json provider every Pi
+   * runtime reads has a history and a name of its own.
    * Each newcomer is stamped for the board's "new" mark, and a mark past
    * `NEW_MARK_MS` is let go.
    */
@@ -141,18 +144,13 @@ export class ModelSlots {
     const seen = new Set(state.seen);
     const notices: NewModelNotice[] = [];
     let changed = this.dropOldMarks(state, now);
-    const providerHadHistory = new Map<string, boolean>();
+    // History, and the news, belong to the model's own provider: every Pi
+    // runtime also serves the person's models.json providers, which are not
+    // the account's.
+    const hadHistory = new Set(state.seen.map((key) => parseOfferingKey(key).provider));
 
     for (const account of this.options.accounts()) {
-      if (!providerHadHistory.has(account.providerId)) {
-        const prefix = `${account.providerId}/`;
-        providerHadHistory.set(
-          account.providerId,
-          state.seen.some((key) => key.startsWith(prefix)),
-        );
-      }
-      const firstForProvider = providerHadHistory.get(account.providerId) !== true;
-      const announce = !firstForProvider && (this.options.canAnnounce?.(account.accountId) ?? true);
+      const announce = this.options.canAnnounce?.(account.accountId) ?? true;
       const listed = announce ? this.listedKeysOf([account]) : new Set<string>();
       for (const model of account.models) {
         const key = offeringKey(model);
@@ -162,9 +160,9 @@ export class ModelSlots {
         changed = true;
         const seed = starterSlots(model.provider, model.id);
         if (seed.length > 0) state.assignments[key] = [...seed];
-        if (announce && listed.has(key)) {
+        if (hadHistory.has(model.provider) && listed.has(key)) {
           notices.push({
-            providerId: account.providerId,
+            providerId: model.provider,
             id: model.id,
             ...(seed.length > 0 ? { slots: seed } : {}),
           });

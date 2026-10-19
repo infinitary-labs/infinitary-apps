@@ -290,7 +290,7 @@ export class GithubGatewayService {
     )
       throw new ForgeError(
         "refused",
-        "Update this task's description through its saved story with open_change; raw writes cannot replace its evidence region.",
+        "Update this task's description through its saved story with open_change; raw writes cannot replace its evidence region. To change only the words around the story, pass around to open_change.",
       );
   }
 

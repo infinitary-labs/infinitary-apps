@@ -1173,6 +1173,19 @@ describe("PrCiService and the sign-in where the project lives", () => {
       expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toHaveLength(1);
     });
 
+    it("refuses to keep a story that is not there when around is passed (INF-497)", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      forge.change = { ...(forge.change as ForgeChange), body: STALE };
+      const text = await service.open("ab12cd34", {
+        title: "fix: ship it",
+        around: { from: STALE, to: CORRECTED },
+      });
+      expect(text).toContain("does not carry a saved story");
+      expect(forge.calls.filter((call) => call.startsWith("updateChangeBody"))).toEqual([]);
+      expect(forge.change?.body).toBe(STALE);
+    });
+
     it("leaves the description unchanged without a body, and says so", async () => {
       const { tasks, repos, service, forge } = setup();
       await insertDirectPrTask(tasks, repos);
@@ -2284,6 +2297,48 @@ describe("shared story delivery boundaries", () => {
     recordPr(at.tasks, 23);
     return { ...at, bringBranchHome, update, story };
   }
+
+  // INF-497 (the captain on INF-100's PR #138): correct only the words around the story.
+  it("corrects only the words around the published story through open_change (INF-497)", async () => {
+    const at = await saved();
+    const obsolete = "This first publication advances the published protocol to 9.0.0.";
+    const corrected =
+      "The published protocol advances to 10.0.0; every check on this version passed.";
+    const footer = "BREAKING CHANGE: The published protocol advances to 10.0.0.";
+    const region = at.forge.change?.body ?? "";
+    at.forge.change = {
+      ...(at.forge.change as ForgeChange),
+      body: `${obsolete}\n\n${footer}\n\n${region}`,
+    };
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(original);
+    const same = await at.service.open("ab12cd34", {
+      title: "fix: keep the saved story",
+      presentation: 1,
+      around: { from: obsolete, to: obsolete },
+    });
+    expect(same).toContain("Nothing was sent");
+    expect(at.update).not.toHaveBeenCalled();
+    const said = await at.service.open("ab12cd34", {
+      title: "fix: keep the saved story",
+      presentation: 1,
+      around: { from: obsolete, to: corrected },
+    });
+    expect(said).toContain(
+      "Changed the words around the story: GitHub shows them, and the story is as published.",
+    );
+    expect(at.forge.change?.body).toBe(`${corrected}\n\n${footer}\n\n${region}`);
+    expect(at.update).toHaveBeenCalledTimes(1);
+    // The same passage again is no longer there: nothing is sent, and the answer quotes the words.
+    const stale = await at.service.open("ab12cd34", {
+      title: "fix: keep the saved story",
+      presentation: 1,
+      around: { from: obsolete, to: corrected },
+    });
+    expect(stale).toContain(`no longer hold around.from exactly`);
+    expect(stale).toContain(corrected);
+    expect(at.update).toHaveBeenCalledTimes(1);
+  });
 
   it("merges the published PR while its work computer is asleep and reads completion only once", async () => {
     const at = await saved();

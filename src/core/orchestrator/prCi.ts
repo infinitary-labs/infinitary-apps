@@ -33,6 +33,8 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  PresentationAroundError,
+  presentationLines,
 } from "../forge";
 import type { CiWatch } from "../storage/taskStore";
 import type { TaskService } from "../tasks/taskService";
@@ -1434,9 +1436,16 @@ export class PrCiService {
       const usesStory =
         presentations && forge.attachments && (!existing || current.delivery?.presentation);
       if (usesStory && (input.presentation === undefined || input.body !== undefined))
-        return "Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write.";
+        return "Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. To change only the words around the story on its open pull request, pass around with that revision. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write.";
       if (!usesStory && input.presentation !== undefined)
         return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
+      if (!usesStory && input.around !== undefined)
+        return "This pull request does not carry a saved story, so around has nothing to keep; pass body to replace its description.";
+      if (
+        input.around &&
+        presentationLines(input.around.from) === presentationLines(input.around.to)
+      )
+        return "Nothing was sent: around.to is the same as around.from.";
       if (!usesStory && !existing && input.body === undefined)
         return "The pull request description is missing.";
       let change: ForgeChange;
@@ -1452,7 +1461,10 @@ export class PrCiService {
             ? "passed"
             : "pending",
           input.recovery,
+          input.around,
         );
+        if (input.around)
+          described = `Changed the words around the story: ${forge.place ?? "the project's host"} shows them, and the story is as published.`;
       } else if (existing) {
         ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
       } else {
@@ -1475,6 +1487,8 @@ export class PrCiService {
       // A permission refusal keeps the write-access note and blocker words below (INF-290 G1).
       if (caught instanceof AttachmentUploadError && caught.failure !== "permission")
         return message;
+      // INF-497: nothing was sent, or what the host shows; the words carry the current text.
+      if (caught instanceof PresentationAroundError) return message;
       const place = forge.place ?? "the project's host";
       if (caught instanceof ForgeError && caught.failure === "permission") {
         const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;

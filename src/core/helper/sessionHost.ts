@@ -10,6 +10,7 @@ import type { CardPicture } from "@shared/cards";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
 import {
+  changesStoryAround,
   hearsClientJobEnds,
   invokeContract,
   keepsCardTypefaces,
@@ -1146,7 +1147,15 @@ export class SessionHost {
           },
           toolSignal,
         ),
-      onOpenChange: (input, signal) => ask("inf:work:open-change", { input }, signal),
+      onOpenChange: async (input, signal) => {
+        // An older home would drop around and answer as if nothing was asked.
+        const home = this.options.homeVersion?.() ?? null;
+        if (input.around && home !== null && !changesStoryAround(home))
+          throw new Error(
+            `around refused: ${HOME.the} runs an older Infinitary that cannot change the words around a story; nothing was sent. Report it until ${HOME.the} is updated.`,
+          );
+        return ask("inf:work:open-change", { input }, signal);
+      },
       onCheckChange: (input, signal) =>
         ask("inf:work:check-change", { input: input ?? {} }, signal),
       onDownloadArtifact: (input, signal) => ask("inf:work:download-artifact", { input }, signal),

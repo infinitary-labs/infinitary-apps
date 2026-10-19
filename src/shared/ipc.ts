@@ -391,7 +391,7 @@ import { workRequests, workRequestWire } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "10.0.0";
+export const PROTOCOL_VERSION = "10.1.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -590,6 +590,19 @@ export const CARD_TYPEFACES_SINCE = "8.9.0";
 /** Whether a home keeps a preview's project fonts (`CARD_TYPEFACES_SINCE`). */
 export function keepsCardTypefaces(homeVersion: string): boolean {
   return speaksSince(homeVersion, CARD_TYPEFACES_SINCE);
+}
+
+/**
+ * The first contract whose home changes the words around a published story
+ * (`open_change`'s optional `around`, docs/forge.md "Saved change stories").
+ * An older home drops the field and would answer as if nothing was asked, so
+ * a computer that runs work refuses it in words to that home instead.
+ */
+export const STORY_AROUND_SINCE = "10.1.0";
+
+/** Whether a home changes the words around a published story (`STORY_AROUND_SINCE`). */
+export function changesStoryAround(homeVersion: string): boolean {
+  return speaksSince(homeVersion, STORY_AROUND_SINCE);
 }
 
 /**

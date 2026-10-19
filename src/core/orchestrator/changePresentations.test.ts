@@ -13,6 +13,7 @@ import {
   type ChangePresentationDraft,
   type PresentationRecovery,
   presentationRecoverySchema,
+  type StoryAround,
 } from "@shared/changePresentation";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -204,7 +205,7 @@ async function arrange() {
       service = create();
     },
     prepare: () => service.prepare(TASK, staged, forge),
-    publish: (revision = 1, recovery?: PresentationRecovery) =>
+    publish: (revision = 1, recovery?: PresentationRecovery, around?: StoryAround) =>
       service.publish(
         TASK,
         revision,
@@ -213,6 +214,7 @@ async function arrange() {
         "feat: share the change story",
         "pending",
         recovery,
+        around,
       ),
   };
 }
@@ -748,6 +750,93 @@ describe("saved change publication", () => {
     await at.publish();
     expect(at.upload).not.toHaveBeenCalled();
     expect((await at.service.completion(TASK, 1, HEAD)).body).toContain("data-inf-no-picture");
+  });
+});
+
+// INF-497 (the captain on INF-100's PR #138): correct only the words around the
+// published story, leave the story unchanged, and refuse a concurrent edit.
+describe("the words around a published story", () => {
+  const obsolete =
+    "This first publication advances the published protocol to 9.0.0. One Linux integration failure remains open and is tracked separately.";
+  const corrected =
+    "The published protocol advances to 10.0.0; every check on this version passed.";
+  const footer =
+    "BREAKING CHANGE: The published protocol advances to 10.0.0 for the live-validation and paired-evidence contract.";
+  async function published() {
+    const at = await arrange();
+    const staged = await stageChangePresentation(
+      { ...at.draft, projectText: `${obsolete}\n\n${footer}` },
+      { taskId: TASK, worktree: at.worktree, dir: at.media },
+    );
+    await at.service.prepare(TASK, staged, at.forge);
+    const opened = await at.publish();
+    return { at, opened, region: readPresentationRegion(opened.body ?? "", TASK) };
+  }
+
+  it("changes one passage in place and keeps the story, its files and the squash footer", async () => {
+    const { at, region } = await published();
+    if (!at.change) throw new Error("Missing opened change");
+    at.change = { ...at.change, body: `${at.change.body}\n\nA person's closing note.` };
+    const changed = await at.publish(1, undefined, { from: obsolete, to: corrected });
+    expect(changed.body).toBe(`${corrected}\n\n${footer}\n\n${region}\n\nA person's closing note.`);
+    expect(at.upload).toHaveBeenCalledTimes(2);
+    expect(at.update).toHaveBeenCalledTimes(1);
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      revision: 1,
+      state: "confirmed",
+      region,
+    });
+    await expect(at.service.assertPublished(TASK, changed, at.forge)).resolves.toMatchObject({
+      squashMessage: [...at.draft.whatChanged, footer].join("\n\n"),
+    });
+  });
+
+  it("sends nothing when a person changed the passage after it was read", async () => {
+    const { at } = await published();
+    if (!at.change) throw new Error("Missing opened change");
+    const theirs = at.change.body?.replace(obsolete, "The captain's own sentence.");
+    at.change = { ...at.change, body: theirs };
+    await expect(at.publish(1, undefined, { from: obsolete, to: corrected })).rejects.toThrow(
+      /no longer hold around\.from exactly[\s\S]*The captain's own sentence\./,
+    );
+    expect(at.update).not.toHaveBeenCalled();
+    expect(at.change?.body).toBe(theirs);
+    expect(at.tasks.changePresentation(TASK)?.publication?.state).toBe("confirmed");
+  });
+
+  it("keeps the existing refusal for an edit inside the story", async () => {
+    const { at } = await published();
+    if (!at.change) throw new Error("Missing opened change");
+    at.change = { ...at.change, body: at.change.body?.replace("## Why", "## My edits") };
+    await expect(at.publish(1, undefined, { from: obsolete, to: corrected })).rejects.toThrow(
+      /Someone edited/,
+    );
+    expect(at.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses to change words around a story that has no open pull request yet", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await expect(at.publish(1, undefined, { from: "", to: corrected })).rejects.toThrow(
+      /projectText/,
+    );
+    expect(at.upload).not.toHaveBeenCalled();
+    expect(at.open).not.toHaveBeenCalled();
+  });
+
+  it("says so when the host shows other words around the story after the write", async () => {
+    const { at, region } = await published();
+    at.update.mockImplementationOnce(async (_current, body) => {
+      if (!at.change) throw new Error("No open change");
+      at.change = { ...at.change, body: `A simultaneous line.\n\n${body}` };
+    });
+    await expect(at.publish(1, undefined, { from: obsolete, to: corrected })).rejects.toThrow(
+      /shows different words around it than you sent/,
+    );
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      state: "confirmed",
+      region,
+    });
   });
 });
 

@@ -4,6 +4,9 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
+Protocol 10.1 adds the optional `around` to `open_change`'s input (`inf:work:open-change`): one exact passage of the words around a published story and what replaces it (`docs/forge.md`, "Saved change stories").
+An older home strips the field and would answer as if nothing was asked, so a computer that runs work refuses such a call to a home before 10.1 (`STORY_AROUND_SINCE`) and sends nothing.
+
 Protocol 10.0 adds version 2 to the saved story's closed version set, with bounded typed checked facts beside folded verification.
 The new union member requires a major version; version-1 saved stories remain readable and keep their rendering (`docs/forge.md`, "Saved change stories").
 A computer on an older major must update before taking work.

@@ -9,12 +9,14 @@ import {
   type PresentationPublication,
   type PresentationReceipt,
   type PresentationRecovery,
+  type StoryAround,
 } from "@shared/changePresentation";
 import {
   AttachmentUploadError,
   type Forge,
   type ForgeChange,
   ForgeWriteError,
+  PresentationAroundError,
   presentationBodyLimit,
   presentationCardBody,
   presentationCommitMessage,
@@ -23,7 +25,9 @@ import {
   presentationMarkdown,
   presentationSizingUrl,
   readPresentationRegion,
+  replaceAroundPresentation,
   replacePresentationRegion,
+  sameAroundPresentation,
   sameAttachmentDestination,
 } from "../forge";
 import type { StagedChangePresentation } from "../pi/changePresentation";
@@ -152,9 +156,21 @@ export class ChangePresentations {
     title: string,
     checks: "pending" | "passed" = "pending",
     recovery?: PresentationRecovery,
+    around?: StoryAround,
   ): Promise<ForgeChange> {
     return this.serial(taskId, () =>
-      this.publishLocked(taskId, revision, forge, branch, title, checks, recovery),
+      this.publishLocked(
+        taskId,
+        revision,
+        forge,
+        branch,
+        title,
+        checks,
+        recovery,
+        false,
+        undefined,
+        around,
+      ),
     );
   }
 
@@ -168,6 +184,7 @@ export class ChangePresentations {
     recovery?: PresentationRecovery,
     remoteOnly = false,
     inheritedContentHash?: string,
+    around?: StoryAround,
   ): Promise<ForgeChange> {
     const story = this.current(taskId, revision);
     if (story.version === 2 && title !== story.title)
@@ -182,7 +199,8 @@ export class ChangePresentations {
       if (!sameAttachmentDestination(story.destination, await forge.attachments.destination()))
         throw new Error("The publication destination or audience changed.");
       const reconciled = await this.reconcile(story, ledger.publication, forge, branch, recovery);
-      if (reconciled && ledger.publication.revision === revision) return reconciled;
+      // A reconciled write is this revision's; words around it still need their own change.
+      if (reconciled && ledger.publication.revision === revision && !around) return reconciled;
       ledger = this.ledger(taskId);
     }
     const existing = await forge.changeFor(branch);
@@ -195,7 +213,7 @@ export class ChangePresentations {
         recovery,
         existing,
       );
-      if (reconciled && ledger.publication.revision === revision) return reconciled;
+      if (reconciled && ledger.publication.revision === revision && !around) return reconciled;
       ledger = this.ledger(taskId);
     }
     if (existing && !ledger.published && !ledger.reconciled)
@@ -209,14 +227,23 @@ export class ChangePresentations {
       throw new Error(
         `Another ${words.change} is open for this branch. Publication stops rather than replacing the named ${words.change}.`,
       );
+    // INF-497: changing only the words around the published story keeps its region byte for byte.
+    const kept = around && ledger.published?.revision === revision ? ledger.published : undefined;
     await this.validateCurrent(story, forge, branch, remoteOnly);
     const previousRegion =
       recovery?.replaceRegion ?? ledger.reconciled?.region ?? ledger.published?.region;
     const bodyFor = (region: string, current: ForgeChange | null): string => {
-      const body =
+      if (around && !current)
+        throw new PresentationAroundError(
+          `Nothing was sent: around changes the words around the story on an open ${words.change}. On its first publication, put them in the story's projectText.`,
+        );
+      const replaced =
         current && previousRegion !== undefined
           ? replacePresentationRegion(current.body ?? "", previousRegion, region, taskId)
           : [story.projectText, region].filter(Boolean).join("\n\n");
+      const body = around
+        ? replaceAroundPresentation(replaced, around, taskId, forge.kind === "gitlab")
+        : replaced;
       const limit = presentationBodyLimit(story.destination.host);
       if (Array.from(body).length > limit)
         throw new Error(
@@ -226,17 +253,18 @@ export class ChangePresentations {
     };
     // Render the actual layout, escaping, links and recovery-preserved words before sending files.
     bodyFor(
-      presentationMarkdown(
-        story,
-        // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
-        new Map(
-          this.uploadAssets(story).map((asset) => [
-            asset.id,
-            presentationSizingUrl(story.destination.host, asset.mediaType),
-          ]),
+      kept?.region ??
+        presentationMarkdown(
+          story,
+          // Never saved as a receipt or sent: a real receipt's length, for sizing alone.
+          new Map(
+            this.uploadAssets(story).map((asset) => [
+              asset.id,
+              presentationSizingUrl(story.destination.host, asset.mediaType),
+            ]),
+          ),
+          existing ? checks : "pending",
         ),
-        existing ? checks : "pending",
-      ),
       existing,
     );
     const urls = new Map<string, string>();
@@ -295,7 +323,7 @@ export class ChangePresentations {
     }
     // Uploading may have taken time. No write until code, destination and all retained files still match.
     await this.validateCurrent(story, forge, branch, remoteOnly);
-    const region = presentationMarkdown(story, urls, existing ? checks : "pending");
+    const region = kept?.region ?? presentationMarkdown(story, urls, existing ? checks : "pending");
     const fresh = await forge.changeFor(branch);
     if (existing?.number !== fresh?.number)
       throw new Error(`The ${words.change} changed during publication. Read it again.`);
@@ -310,13 +338,14 @@ export class ChangePresentations {
       state: "sending",
       region,
       regionHash: hash(region),
-      contentHash: inheritedContentHash ?? presentationContentHash(story),
+      contentHash: inheritedContentHash ?? kept?.contentHash ?? presentationContentHash(story),
       ...(fresh?.number ? { number: fresh.number } : {}),
     };
     this.options.tasks.updateChangePresentation(taskId, (record) => ({
       ...this.required(record),
       publication,
     }));
+    let read: ForgeChange | null;
     try {
       if (fresh) {
         if (!forge.updateChangeBody) throw new Error("This host cannot replace a saved story.");
@@ -328,7 +357,7 @@ export class ChangePresentations {
       // Neither GitHub nor GitLab offers an atomic conditional body update. Reread both sides and disclose the race.
       // Only the generated region is the app's: GitLab runs and strips a project
       // template's own quick actions around it, and a person may add words (INF-290 F3).
-      const read = await forge.changeFor(branch);
+      read = await forge.changeFor(branch);
       if (
         !read ||
         read.headSha !== story.head ||
@@ -338,7 +367,6 @@ export class ChangePresentations {
           "The story write did not read back exactly; a simultaneous edit or an uncertain write needs reconciliation.",
         );
       await this.confirm(taskId, { ...publication, number: read.number });
-      return read;
     } catch (error) {
       this.options.tasks.updateChangePresentation(taskId, (record) => ({
         ...this.required(record),
@@ -349,6 +377,12 @@ export class ChangePresentations {
       }));
       throw error;
     }
+    // The story is the app's and is confirmed; the words around it are a person's too.
+    if (around && !sameAroundPresentation(read.body ?? "", body, taskId))
+      throw new PresentationAroundError(
+        `The story is published, but ${words.place} shows different words around it than you sent; someone may have edited them at the same time. Read the description with github_read before changing them again.`,
+      );
+    return read;
   }
 
   /** A completion offer must use the newest fully published story at the current committed version. */

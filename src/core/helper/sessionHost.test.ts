@@ -1199,6 +1199,55 @@ describe("a conversation held on a computer that runs work", () => {
     );
   });
 
+  // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
+  // would answer as if the words had been changed; the computer refuses first.
+  it("refuses to change the words around a story through a home too old to keep the story, sending nothing", async () => {
+    const at = await placed({ homeVersion: "10.0.0" });
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
+      },
+    ]);
+    const title = "feat(validation): require reviewed live proof for careful changes";
+    model([
+      {
+        tools: [
+          {
+            name: "open_change",
+            args: {
+              title,
+              presentation: 2,
+              around: {
+                from: "This first publication advances the published protocol to 9.0.0.",
+                to: "The published protocol advances to 10.0.0.",
+              },
+            },
+          },
+        ],
+      },
+      { tools: [{ name: "open_change", args: { title, presentation: 2 } }] },
+      { text: "Reported." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:around", task: TASK, text: "Correct the summary above the story." },
+    ]);
+    await at.ended(1);
+
+    // Only the call without around reached the home.
+    expect(at.home.effects.map((effect) => effect.channel)).toEqual(["inf:work:open-change"]);
+    expect(at.home.effects[0]?.request).toMatchObject({ input: { title, presentation: 2 } });
+    expect(at.home.effects[0]?.request).not.toHaveProperty("input.around");
+    const ends = at.home.events.filter(
+      (record) => record.event.type === "tool_end" && record.event.toolName === "open_change",
+    );
+    expect(ends.map((record) => record.event)).toMatchObject([{ isError: true }, {}]);
+    expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+      "runs an older Infinitary that cannot change the words around a story; nothing was sent",
+    );
+  });
+
   it("ends a turn the computer quit in the middle of as interrupted, and tells the home once it is back", async () => {
     const at = await placed();
     await at.open();

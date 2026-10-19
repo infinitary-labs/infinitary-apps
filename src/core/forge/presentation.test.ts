@@ -5,9 +5,13 @@ import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import {
+  PresentationAroundError,
   presentationCardBody,
   presentationCommitMessage,
   presentationMarkdown,
+  presentationRegionMarkers,
+  readPresentationRegion,
+  replaceAroundPresentation,
 } from "./presentation";
 
 // INF-155's live reading disproved video widths in GitHub's two-column tables.
@@ -377,5 +381,87 @@ describe("version-two stories read in two tiers", () => {
     expect(body).toContain(`![Sample recording 1](${receipt.get(video)})`);
     expect(body).toContain("- [x] \\/merge:");
     expect(body).not.toMatch(/^\/merge/m);
+  });
+});
+
+// INF-497 (the captain on INF-100's PR #138): correct only the words around a
+// published story and leave the story itself unchanged.
+describe("the words around a published story", () => {
+  const task = "ab12cd34";
+  const { start, end } = presentationRegionMarkers(task);
+  const region = `${start}\n## Why\n\nThe story the captain approved.\n${end}`;
+  const obsolete =
+    "This first publication advances the published protocol to 9.0.0. One Linux integration failure remains open and is tracked separately.";
+  const corrected =
+    "The published protocol advances to 10.0.0; every check on this version passed.";
+  const footer = "BREAKING CHANGE: The published protocol advances to 10.0.0.";
+  const body = `${obsolete}\n\n${footer}\n\n${region}\n\nA person's closing note.`;
+
+  it("replaces one exact passage in place and keeps the story byte for byte", () => {
+    const above = replaceAroundPresentation(body, { from: obsolete, to: corrected }, task, false);
+    expect(above).toBe(`${corrected}\n\n${footer}\n\n${region}\n\nA person's closing note.`);
+    expect(readPresentationRegion(above, task)).toBe(region);
+    const below = replaceAroundPresentation(
+      body,
+      { from: "A person's closing note.", to: "Closes #24" },
+      task,
+      false,
+    );
+    expect(below).toBe(`${obsolete}\n\n${footer}\n\n${region}\n\nCloses #24`);
+    // The new words are text: a replacement pattern is never expanded.
+    expect(
+      replaceAroundPresentation(body, { from: "9.0.0", to: "$& and $1" }, task, false),
+    ).toContain("protocol to $& and $1.");
+  });
+
+  it("sends nothing for a passage someone changed since it was read, and quotes what is there now", () => {
+    const edited = body.replace(obsolete, "The captain's own sentence.");
+    expect(() =>
+      replaceAroundPresentation(edited, { from: obsolete, to: corrected }, task, false),
+    ).toThrow(PresentationAroundError);
+    expect(() =>
+      replaceAroundPresentation(edited, { from: obsolete, to: corrected }, task, false),
+    ).toThrow(/no longer hold around\.from exactly[\s\S]*The captain's own sentence\./);
+  });
+
+  it("refuses a passage that names more than one place, and never reaches into the story", () => {
+    const twice = `${footer}\n\n${region}\n\n${footer}`;
+    expect(() => replaceAroundPresentation(twice, { from: footer, to: "" }, task, false)).toThrow(
+      /appears 2 times/,
+    );
+    expect(() =>
+      replaceAroundPresentation(
+        body,
+        { from: "The story the captain approved.", to: "" },
+        task,
+        false,
+      ),
+    ).toThrow(/no longer hold around\.from/);
+  });
+
+  it("adds words with an empty passage only when nothing surrounds the story", () => {
+    expect(replaceAroundPresentation(region, { from: "", to: footer }, task, false)).toBe(
+      `${footer}\n\n${region}`,
+    );
+    expect(() => replaceAroundPresentation(body, { from: "", to: footer }, task, false)).toThrow(
+      /Name the passage you change/,
+    );
+    expect(() =>
+      replaceAroundPresentation(
+        `${obsolete}\n\n${start}`,
+        { from: obsolete, to: corrected },
+        task,
+        false,
+      ),
+    ).toThrow(/markers are missing or duplicated/);
+  });
+
+  // INF-290 F2: GitLab runs a line that starts with a quick action; only the captain's click merges.
+  it("never starts a line of the new words with a quick action on GitLab", () => {
+    const to = `${corrected}\n/merge\n  /close`;
+    const gitlab = replaceAroundPresentation(body, { from: obsolete, to }, task, true);
+    expect(gitlab.split("\n").filter((line) => line.trimStart().startsWith("/"))).toEqual([]);
+    expect(gitlab).toContain(`${corrected}\n\\/merge\n  \\/close`);
+    expect(replaceAroundPresentation(body, { from: obsolete, to }, task, false)).toContain(to);
   });
 });

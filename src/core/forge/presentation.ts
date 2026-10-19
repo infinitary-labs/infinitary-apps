@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
-import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
+import type {
+  ChangePresentation,
+  RetainedPresentationMedia,
+  StoryAround,
+} from "@shared/changePresentation";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
 import type { AttachmentMediaType } from "./attachments";
 import {
@@ -308,6 +312,82 @@ ${old}`);
   const { start, end } = presentationRegionMarkers(taskId);
   const preserved = body.replaceAll(start, "").replaceAll(end, "");
   return [preserved, next].filter(Boolean).join("\n\n");
+}
+
+/** INF-497: a passage around the story was not changed; the words are the crewmate's whole answer. */
+export class PresentationAroundError extends Error {}
+
+/** The words a project template or a person keeps above and below the story; none without whole markers. */
+export function presentationAround(
+  body: string,
+  taskId: string,
+): { above: string; below: string } | undefined {
+  body = presentationLines(body);
+  const bounds = presentationBounds(body, taskId);
+  return bounds && { above: body.slice(0, bounds.first), below: body.slice(bounds.end) };
+}
+
+/** Whether a description read back keeps the words around the story it was sent with. */
+export function sameAroundPresentation(read: string, sent: string, taskId: string): boolean {
+  const held = presentationAround(read, taskId);
+  const wanted = presentationAround(sent, taskId);
+  return (
+    held !== undefined &&
+    wanted !== undefined &&
+    held.above.trim() === wanted.above.trim() &&
+    held.below.trim() === wanted.below.trim()
+  );
+}
+
+const aroundWords = ({ above, below }: { above: string; below: string }) =>
+  `Above the story:\n${above.trim() || "(nothing)"}\nBelow the story:\n${below.trim() || "(nothing)"}`;
+
+/**
+ * INF-497: change one exact passage of the words around the story, in place.
+ * The story's own region never moves or changes. A passage someone changed
+ * since the crewmate read it is no longer there, so nothing is sent and the
+ * answer quotes the words as they are now. On GitLab no line of the new words
+ * starts a quick action (`/merge`, `/close`): only the captain's click merges.
+ */
+export function replaceAroundPresentation(
+  body: string,
+  around: StoryAround,
+  taskId: string,
+  quickActions: boolean,
+): string {
+  body = presentationLines(body);
+  const bounds = presentationBounds(body, taskId);
+  if (!bounds)
+    throw new PresentationAroundError(
+      "Nothing was sent: the story's markers are missing or duplicated, so the words around it cannot be told from the story. Republish the story first.",
+    );
+  const parts = { above: body.slice(0, bounds.first), below: body.slice(bounds.end) };
+  const story = body.slice(bounds.first, bounds.end);
+  const from = presentationLines(around.from);
+  const to = quickActions
+    ? presentationLines(around.to).replace(/^([ \t]*)\//gm, "$1\\/")
+    : presentationLines(around.to);
+  if (from === "") {
+    if (`${parts.above}${parts.below}`.trim())
+      throw new PresentationAroundError(
+        `Nothing was sent: an empty around.from adds words only when nothing surrounds the story. Name the passage you change; the words around the story read now:\n${aroundWords(parts)}`,
+      );
+    return [to, story].filter(Boolean).join("\n\n");
+  }
+  const count = (text: string) => text.split(from).length - 1;
+  const found = count(parts.above) + count(parts.below);
+  if (found === 0)
+    throw new PresentationAroundError(
+      `Nothing was sent: the words around the story no longer hold around.from exactly; someone may have changed them since you read them. They read now:\n${aroundWords(parts)}`,
+    );
+  if (found > 1)
+    throw new PresentationAroundError(
+      `Nothing was sent: around.from appears ${found} times around the story. Quote more of it so it names one place.`,
+    );
+  // A replacer function: the new words are text, never `$&` patterns.
+  return count(parts.above) > 0
+    ? `${parts.above.replace(from, () => to)}${story}${parts.below}`
+    : `${parts.above}${story}${parts.below.replace(from, () => to)}`;
 }
 
 /** Bind a kept approval to its content, independently of the demonstrated version. */

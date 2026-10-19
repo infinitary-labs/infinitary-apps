@@ -636,7 +636,7 @@ A view containing a recording stacks in both outputs because GitHub's and GitLab
 Version-1 stories retain the author's optional adjacent grouping within each state.
 The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
 Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.
-Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication.
+Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication; after it, `around` changes those words (below).
 A saved story's squash commit message is its plain `whatChanged` summary, followed by any conventional `BREAKING CHANGE:` (or `BREAKING-CHANGE:`) footer and continuation lines in the current surrounding project text.
 That text begins as `projectText`; the merge preserves a footer the person later adds outside the verified story region too.
 Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
@@ -699,6 +699,17 @@ A newer edit refuses the earlier choice; no ordinary raw body write through eith
 Neither GitHub nor GitLab supplies an atomic conditional description write, so the adapter rereads before and after writing; a simultaneous human edit can still race those reads.
 The read after a write compares only the generated region, the one text the app owns, so words a person adds around it, or template lines the host removes, do not make a confirmed write uncertain.
 An ambiguous PR write is reconciled by branch, PR number when known, and exact generated region before any further write; a later push does not prevent confirming the earlier write.
+
+`open_change`'s `around` changes one passage of the words around a published story on its open pull or merge request, such as an outdated summary or a `BREAKING CHANGE:` footer the squash reads, while the story stays as published.
+`from` is the passage exactly as the description shows it, found once above or below the story, and `to` replaces it in place; an empty `from` adds words only where nothing surrounds the story.
+With the published revision, the host sends that published region, its content hash and its receipts byte for byte and uploads nothing; with a newer revision, the newer story is published in the same write.
+A passage that is not there, because someone changed it since the crewmate read it, or that appears more than once sends nothing, and the answer quotes the words as they read now; an edit inside the story keeps the refusal above.
+On GitLab, a line of the new words that starts with a quick action escapes its slash like the author's prose, because only the captain's click merges.
+The read after the write confirms the story by its region as before; when the words around it differ from those sent, the answer says so rather than claiming them.
+Before the first publication there is no description to change, so the words go in `projectText`, and a pull request without a saved story takes `body` instead.
+A home before `STORY_AROUND_SINCE` (10.1.0) would drop `around` and answer as if nothing was asked, so a work computer refuses the call to it and sends nothing.
+Evidence: `presentation.test.ts` and `changePresentations.test.ts` ("the words around a published story"), `prCi.test.ts` (open_change's answers) and `sessionHost.test.ts` (the older home).
+
 Missing or mismatched evidence holds the completion offer and the final own-task merge boundary independently of checks and merge authority.
 The completion call gives `emit_card presentation` and one merge action, without a second body, risk declaration or required-action list.
 CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.

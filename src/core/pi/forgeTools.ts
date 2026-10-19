@@ -3,6 +3,8 @@ import {
   changePresentationDraftSchema,
   type PresentationRecovery,
   presentationRecoverySchema,
+  type StoryAround,
+  storyAroundSchema,
 } from "@shared/changePresentation";
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "@shared/checkRepair";
 import { Type } from "typebox";
@@ -37,8 +39,15 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes.",
   "Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
   "When body is the description, it replaces the open description whole; the answer says what the host shows when read back.",
-  "A saved story is replaced whole, preserving surrounding text. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication.",
+  "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication.",
   "Never squash your commits yourself (the merge does): bring the branch up to date with git rebase onto the default branch, never git reset --soft onto it, which would undo its newer work.",
+].join(" ");
+
+/** The around parameter's own words: Claude drops nested descriptions, so from and to are explained here (INF-497). */
+export const OPEN_CHANGE_AROUND_DESCRIPTION = [
+  "Change one passage of the words around this task's saved story on its open pull or merge request, such as an outdated summary or a footer, while the story stays exactly as published. Pass the newest presentation revision with it.",
+  "from is that passage exactly as the description shows it now, found once above or below the story; to replaces it. An empty from adds to only when nothing surrounds the story.",
+  "A passage someone changed since you read it is not found: nothing is sent and the answer quotes the current words. Change a person's words only when asked.",
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
@@ -121,6 +130,12 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
         ...z.toJSONSchema(presentationRecoverySchema),
         description:
           "Deliberate recovery only, never an automatic retry: retryOpening after the earlier uncertain opening was read and no open PR exists; retryUploads names the exact uncertain digests after a card disclosed possible orphan uploads and the captain chose another attempt; replaceRegion is the exact edited region shown with the saved story on a card, after the captain chose to republish. A newer edit refuses that choice; show it again. Existing confirmed uploads are reused.",
+      }),
+    ),
+    around: Type.Optional(
+      Type.Unsafe<StoryAround>({
+        ...z.toJSONSchema(storyAroundSchema),
+        description: OPEN_CHANGE_AROUND_DESCRIPTION,
       }),
     ),
   }),

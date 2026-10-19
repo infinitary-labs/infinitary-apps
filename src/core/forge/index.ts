@@ -67,6 +67,8 @@ export {
   overallOfChecks,
 } from "./forge";
 export {
+  PresentationAroundError,
+  presentationAround,
   presentationBodyLimit,
   presentationCardBody,
   presentationCommitMessage,
@@ -77,7 +79,9 @@ export {
   presentationRegionMarkers,
   presentationSizingUrl,
   readPresentationRegion,
+  replaceAroundPresentation,
   replacePresentationRegion,
+  sameAroundPresentation,
 } from "./presentation";
 export type { RemoteHost } from "./projects";
 export { remoteProjectsText } from "./projects";

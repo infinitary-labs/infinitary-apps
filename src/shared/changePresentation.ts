@@ -150,11 +150,19 @@ export const presentationRecoverySchema = z.strictObject({
 });
 export type PresentationRecovery = z.infer<typeof presentationRecoverySchema>;
 
+/** INF-497: one exact passage of the words around a published story, and what replaces it. */
+export const storyAroundSchema = z.strictObject({
+  from: z.string().max(200000),
+  to: z.string().max(200000),
+});
+export type StoryAround = z.infer<typeof storyAroundSchema>;
+
 export const openChangeInputSchema = z.object({
   title: z.string(),
   body: z.string().optional(),
   presentation: z.number().int().positive().optional(),
   recovery: presentationRecoverySchema.optional(),
+  around: storyAroundSchema.optional(),
 });
 export type OpenChangeInput = z.infer<typeof openChangeInputSchema>;
 

@@ -41,7 +41,7 @@ struct CodeScanner: UIViewControllerRepresentable {
     private func configure() {
         guard let camera = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: camera), capture.canAddInput(input)
-        else { failed("This device has no camera available. Paste your Mac’s link instead."); return }
+        else { failed("This device has no camera available. Paste your computer’s link instead."); return }
         capture.addInput(input)
         let output = AVCaptureMetadataOutput()
         guard capture.canAddOutput(output) else { failed("Could not open the camera. Paste the link instead."); return }

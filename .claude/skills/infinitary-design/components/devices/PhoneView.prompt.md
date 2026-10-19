@@ -1,31 +1,98 @@
 # Infinitary on iPhone and iPad
 
 The native SwiftUI shell uses the shared dark and light colors, Space Grotesk for words and JetBrains Mono for data.
-Native controls keep Dynamic Type, VoiceOver, hardware-keyboard focus and platform-sized touch targets; desktop text sizes are not a phone's reading size.
+Native controls keep Dynamic Type, VoiceOver, hardware-keyboard focus and platform-sized touch targets of at least 44 points.
 The screen is opaque, with the shared void background, raised cards, hairlines and one ice-cyan selection.
 Native colors, spacing and radii are generated from the shared tokens; cards use the card radius and Nearby buttons the control radius.
-The single reading column is at most 750 logical points wide.
-No character, message bubbles or new visual metaphor appears.
+The app follows the device's appearance; it never presents message bubbles.
 
-At first launch, the heading says Infinitary is on another computer.
-Nearby lists the names of computers announcing Infinitary; a press opens the scanner, never trusts the announcement.
-Scan the code and Paste its link are the two join controls.
-A confirmation names the computer reached through the link before the phone starts showing it.
+## Joining and the computer
+
+At first launch, the native first mate sits above the centered caption “Infinitary is on another computer”.
+One sentence explains that tasks and conversation stay on the computer.
+Nearby is a bordered list of computers announcing Infinitary, with a status dot and scanner icon on each row; a press opens the scanner, never trusts the announcement.
+Scan the code is primary and Paste its link secondary, full-width controls below the list.
+A confirmation names the computer address reached through the link before the phone starts showing it; the authenticated computer name is not known before joining.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the top line names the computer and says whether it is in reach.
-Out of reach shows the last heard time and retains only the current in-memory view.
-Cards and Activity are separate tabs; Cards initially lists titles and attribution read-only, without executing card bodies or showing inert action buttons.
-A review-finding card shows Review finding in the warning color above its title, and the builder’s task name in its attribution.
-Activity puts the newest line first so returning to it shows the Mac's latest work.
-Each empty list says plainly it has nothing to show.
-In reach, Leave asks for confirmation and removes this phone from the Mac.
-Out of reach, Forget this Mac replaces Leave and asks for confirmation before clearing the saved Mac locally; its explanation says the Mac may still list this phone.
-Removed clears the Mac's data from this phone and explains that a new link is needed.
+Once joined, the native navigation title is the computer's name, with its reach line below it.
+Out of reach shows the last-heard time, a quiet explanation above the content and only the current in-memory view; changes are unavailable until it returns.
+The top-right computer button opens a native sheet with the computer's name and reach, this device and its current capability, and the fact that appearance follows the device.
+The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
+Leave sits at the foot, with a confirmation and the explanation that a new link is needed to return.
+Out of reach, Forget this computer replaces Leave, asking before clearing only the local saved computer and explaining that the computer may still list this device.
+Removed clears the computer's data from this device and explains that a new link is needed.
 A protected-data read failure explains why joining cannot proceed and offers another attempt after unlocking.
-A damaged saved connection clears only the saved Mac, keeps the phone's identity and explains that a fresh link can join again; it never asks the person to unlock for a decoding error.
-The iPad uses the same single-column view with roomier margins, not a side-by-side layout.
+A damaged saved connection clears only the saved computer, keeps this device's identity and explains that a fresh link can join again; it never asks the person to unlock for a decoding error.
 
-On the Mac, + A phone opens the existing link panel with a locally encoded scan code, a Copy link alternative and Stop it.
+## Stage and rails
+
+The compact shell uses iOS's own Cards and Activity tabs, tinted with the shared accent and Lucide outline template images.
+Tasks joins those tabs when the task reader is present, never as an inert placeholder.
+Landscape iPad uses two columns: collapsible Activity and, when present, Tasks panels in the sidebar, with the stage alongside at up to 560 points.
+Portrait and narrow multitasking return to one column with tabs; the tablet's width and height decide the layout, not its physical orientation alone.
+Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.
+A row has a semantic kind dot, the computer-authored words, an optional task key in mono before them, and a relative mono age.
+The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
+
+Cards shows one card at a time, with a peek of the next card at its right edge and a previous/next pager below it, including a menu of titles, a new-card dot and count; an ordinary arrival never replaces the card being read.
+The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
+Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
+The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet.
+The kind chip, attribution, title, close control, footer buttons and reply field are native controls outside the body’s web view.
+The native controls inherit the shell's tint and retain platform focus and touch behavior.
+A review-finding card shows Review finding in the warning color above its title, and the builder’s task name in its attribution.
+The default choice uses a prominent native button with the dark void's ink on the accent in either appearance, as the approved card does.
+The body uses the Mac’s card stylesheet and fonts, fits the available width and permits pinch zoom; its pictures open a separate viewer and its recordings offer playback there.
+Named form answers and reply drafts stay in memory while paging; choosing a form value sends nothing, and a footer press collects the current answers.
+Required questions hold the default choice, and a failure keeps the draft with an explanation.
+A failed body with a saved reading says that choices use the last saved answers and offers Retry; a timeout on a press never sends that choice.
+The thread opens below the card, with plain messages and their submitted answers, never message bubbles.
+Past cards show their last-seen body, submitted answers and chosen button, with Hide instead of Close and no reply field or working actions.
+A Settings or browser door says to do it on the named computer and keeps the card open.
+Using a saved sign-in is a normal choice sent to that computer, not a request to open its browser here.
+While out of reach, the shown body remains readable, actions and replies are unavailable, and no change waits to be sent later.
+A stalled body leaves the native card controls usable and offers Retry in its place.
+An empty stage shows the native first mate; a crew count appears only when the connection supplies it.
+The three native character states are idle (slow tesseract drift), listening (two counter-rotating hexagons) and working (fast double rotation with ember light and pulsing nodes).
+All three keep the inner eyes, stop their timeline off-screen or in the background, and show a still pose under Reduce Motion; there are no emotes.
+The join stage uses idle; the empty stage shows working only when the Mac's published `firstmate_state.busy` says a conversational turn is running, and returns to idle when it finishes.
+A stopped or lost connection clears that reading; until a new busy event arrives, the character stays idle because the connection has no initial busy snapshot.
+Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.
+
+The conversation owner puts the message box at the foot on every tab, with the last turn's two lines above it.
+The footer grows with the message, photos, last turn and problems, above the measured native tabs.
+On iOS 26 it uses native glass; on iOS 18 it is a plain inset.
+The fixed-height system tab accessory is not used for multi-line content.
+In the landscape sidebar layout it sits at the stage's foot.
+The message box stays mounted once, so its own text and photo drafts survive changing tabs or rotating; no tab or orientation branch owns another copy.
+On an iPhone in compact-height landscape, the last-turn excerpts sit side by side above a row containing the removable photo strip and the message capsule.
+The field shows at most two lines there and keeps its full text; the 44-point controls and complete warning rows remain visible above the native tabs.
+Portrait and iPad retain the stacked layout; a landscape card must show its full heading and have enough scrollable height to read body text and use its actions.
+Dictation is the keyboard's own.
+While the keyboard is open, a native Done button occupies the leading navigation slot and supports Shift-Command-K without sending or clearing the draft.
+Its command belongs to the persistent navigation bar, not the keyboard's transient accessory view.
+Tasks uses the desktop's five groups, search, status/key/title/project rows and records with their action bar.
+
+## On the computer
+
+On the computer, + A phone opens the existing link panel with a locally encoded scan code, a Copy link alternative and Stop it.
 The code has a white quiet margin in both themes because the phone's camera must read it.
 The panel says the phone app comes from TestFlight for now, only to people asked to test it, so it implies neither App Store availability nor that anyone can install it.
+
+## Talk and tasks
+
+The joined screen keeps the message box at its foot above the system tabs, with the last captain turn and the first mate’s reply immediately above it.
+The two turn excerpts are centred; the message field, Photos and Send sit in a native material capsule.
+The native multiline field takes the keyboard’s dictation; there is no second microphone or speech engine.
+Photos opens the system library picker, and selected photos appear as removable thumbnail chips above the field.
+Send submits words and photos once; a refusal keeps the draft and says why, and an unconfirmed send asks the person to check the Mac before sending again.
+Out of reach and a read-only connection retain the view but refuse every change, without sending it later.
+The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
+The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.
+A row has a status mark, mono key, title and project; active parent trees stay together.
+A task opens its record in the same column: goal, captain’s words, progress, outcome and timeline, plus a Crewmate section for the session and its direct message box.
+Start and Continue follow the Mac’s own allowed moves; Steer sends to that crewmate, and Interrupt stops only its current turn.
+A closed task remains readable without a message box or action bar.
+New cards and answered replies announce themselves in a dismissible in-app notice while the phone is open, following the Mac’s Notifications switch.
+No notice requests background delivery, and an initial snapshot does not announce old cards.

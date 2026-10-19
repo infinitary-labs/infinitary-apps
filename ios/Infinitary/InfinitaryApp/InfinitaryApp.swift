@@ -16,7 +16,16 @@ import SwiftUI
                 }
                 .onOpenURL { model.propose($0.absoluteString) }
         }
+        .commands {
+            CommandGroup(after: .textEditing) {
+                Button("Hide keyboard", action: dismissPhoneKeyboard).keyboardShortcut("k", modifiers: [.command, .shift])
+            }
+        }
     }
+}
+
+@MainActor func dismissPhoneKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
 struct PhoneView: View {
@@ -24,17 +33,17 @@ struct PhoneView: View {
     @State private var scanning = false
     @State private var pasting = false
     @State private var linkText = ""
-    @State private var leaving = false
-    @State private var forgetting = false
+    @State private var details = false
+    @State private var keyboardVisible = false
 
     var body: some View {
         NavigationStack {
             Group {
                 if model.removed {
                     ContentUnavailableView {
-                        Label("Removed from your Mac", systemImage: "iphone.slash")
+                        Label("Removed from your computer", systemImage: "iphone.slash")
                     } description: {
-                        Text("This phone no longer shows your Mac. Make a new link in Devices on your Mac to join again.")
+                        Text("This device no longer shows your computer. Make a new link in Devices on your computer to join again.")
                     } actions: {
                         Button("Join again") { model.dismissRemoved() }.accessibilityIdentifier("join-again")
                     }
@@ -48,15 +57,41 @@ struct PhoneView: View {
             .navigationTitle("Infinitary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if model.connection != nil && !model.removed {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        if model.connection?.contact == "in-reach" {
-                            Button("Leave") { leaving = true }.accessibilityIdentifier("leave")
-                        } else {
-                            Button("Forget this Mac") { forgetting = true }.accessibilityIdentifier("forget-mac")
-                        }
+                if keyboardVisible {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Done", action: dismissPhoneKeyboard)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .keyboardShortcut("k", modifiers: [.command, .shift])
+                            .accessibilityIdentifier("dismiss-phone-keyboard")
                     }
                 }
+                if let session = model.connection, !model.removed {
+                    ToolbarItem(placement: .principal) {
+                        VStack(spacing: 2) {
+                            Text(session.mac.name).font(PhoneFont.headline).accessibilityIdentifier("home-name")
+                            PhoneReach(session: session)
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { details = true } label: { PhoneSymbol.computer.image.frame(minWidth: 44, minHeight: 44) }
+                            .accessibilityLabel("Your computer").accessibilityIdentifier("computer-details")
+                            .keyboardShortcut("i", modifiers: .command)
+                    }
+                }
+            }
+            .sheet(isPresented: $details) {
+                if let session = model.connection {
+                    PhoneComputerSheet(session: session, leave: { Task { await model.leave() } }, forget: { model.forgetMac() })
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                keyboardVisible = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardVisible = false
+            }
+            .onChange(of: model.connection == nil || model.removed) { _, unavailable in
+                if unavailable { details = false }
             }
             .safeAreaInset(edge: .bottom) {
                 if let problem = model.problem {
@@ -69,15 +104,15 @@ struct PhoneView: View {
                 NavigationStack {
                     CodeScanner(scanned: { value in scanning = false; model.propose(value) },
                                 failed: { words in scanning = false; model.problem = words })
-                        .navigationTitle("Scan your Mac’s code")
+                        .navigationTitle("Scan your computer’s code")
                         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { scanning = false } } }
                 }
             }
             .sheet(isPresented: $pasting) {
                 NavigationStack {
                     Form {
-                        Text("On your Mac, open Settings → Devices → A phone, then copy its link.")
-                        TextField("Your Mac’s link", text: $linkText, axis: .vertical)
+                        Text("On your computer, open Settings → Devices → A phone, then copy its link.")
+                        TextField("Your computer’s link", text: $linkText, axis: .vertical)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
                             .privacySensitive().accessibilityIdentifier("join-link")
                         PasteButton(payloadType: String.self) { strings in linkText = strings.first ?? "" }
@@ -89,108 +124,85 @@ struct PhoneView: View {
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { linkText = ""; pasting = false } } }
                 }
             }
-            .confirmationDialog("Join \(model.proposal?.computer ?? "your Mac")?", isPresented: Binding(
+            .confirmationDialog("Join \(model.proposal?.computer ?? "your computer")?", isPresented: Binding(
                 get: { model.proposal != nil && !model.busy },
                 set: { if !$0 && !model.busy { model.proposal = nil } }
             ), titleVisibility: .visible) {
-                Button("Join this Mac") { model.join() }.accessibilityIdentifier("confirm-join")
+                Button("Join \(model.proposal?.computer ?? "your computer")") { model.join() }.accessibilityIdentifier("confirm-join")
                 Button("Cancel", role: .cancel) { model.proposal = nil }
             } message: {
                 Text("Your first mate stays on this computer. This phone will show its cards and Activity. Only join your own computer.")
             }
-            .confirmationDialog("Leave \(model.connection?.mac.name ?? "your Mac")?", isPresented: $leaving, titleVisibility: .visible) {
-                Button("Leave this Mac", role: .destructive) { Task { await model.leave() } }
-                Button("Keep it", role: .cancel) {}
-            } message: { Text("This phone forgets the Mac. To come back, use a new link.") }
-            .confirmationDialog("Forget this Mac?", isPresented: $forgetting, titleVisibility: .visible) {
-                Button("Forget this Mac", role: .destructive) { model.forgetMac() }.accessibilityIdentifier("confirm-forget")
-                Button("Keep it", role: .cancel) {}
-            } message: { Text("You’ll need a new link to join again. Your Mac may still list this phone.") }
+
         }
     }
 
     private var joinScreen: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PhoneTheme.space5) {
-                Text("Infinitary is on another computer").font(PhoneFont.title).fontWeight(.medium)
-                Text("Your first mate, its tasks and conversation stay on your Mac. Join it to read your cards and Activity here.")
-                    .foregroundStyle(PhoneTheme.secondary)
-                if model.busy { ProgressView("Joining your Mac…").accessibilityIdentifier("joining") }
+            VStack(spacing: PhoneTheme.space5) {
+                PhoneCharacter().frame(width: 150, height: 150)
+                VStack(spacing: PhoneTheme.space3) {
+                    Text("Infinitary is on another computer").font(PhoneFont.display)
+                        .foregroundStyle(PhoneTheme.text)
+                    Text("Your first mate, its tasks and conversation stay on your computer. Join it to read your cards and Activity here.")
+                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                }.multilineTextAlignment(.center)
+                if model.busy { ProgressView("Joining your computer…").accessibilityIdentifier("joining") }
                 VStack(alignment: .leading, spacing: PhoneTheme.space3) {
-                    Text("Nearby").font(PhoneFont.headline)
-                    if model.nearby.macs.isEmpty {
-                        Text(model.nearby.problem ?? "Open A phone in Devices on your Mac to find it here.")
-                            .foregroundStyle(PhoneTheme.secondary)
+                    Text("NEARBY").font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.muted)
+                    VStack(spacing: 0) {
+                        if model.nearby.macs.isEmpty {
+                            Text(model.nearby.problem ?? "Open A phone in Devices on your computer to find it here.")
+                                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(PhoneTheme.space4)
+                        }
+                        ForEach(model.nearby.macs) { mac in
+                            Button { scanning = true } label: {
+                                HStack(spacing: PhoneTheme.space3) {
+                                    Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6)
+                                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                                        Text(mac.name).foregroundStyle(PhoneTheme.text)
+                                        Text("Scan its code").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                                    }.frame(maxWidth: .infinity, alignment: .leading)
+                                    PhoneSymbol.scan.image
+                                }.padding(PhoneTheme.space4).frame(minHeight: 44)
+                            }.buttonStyle(.plain).accessibilityLabel("Scan the code on \(mac.name)")
+                        }
                     }
-                    ForEach(model.nearby.macs) { mac in
-                        Button { scanning = true } label: {
-                            VStack(alignment: .leading) {
-                                Text(mac.name)
-                                Text("Tap to scan its code").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                            }.frame(maxWidth: .infinity, alignment: .leading).padding()
-                        }.background(PhoneTheme.surface, in: RoundedRectangle(cornerRadius: PhoneTheme.controlRadius))
-                    }
+                    .background(PhoneTheme.panel, in: RoundedRectangle(cornerRadius: PhoneTheme.controlRadius))
+                    .overlay(RoundedRectangle(cornerRadius: PhoneTheme.controlRadius).stroke(PhoneTheme.line, lineWidth: 1))
                 }
-                Button("Scan the code") { scanning = true }.buttonStyle(.borderedProminent).controlSize(.large)
-                    .accessibilityIdentifier("scan-code")
-                Button("Paste its link") { pasting = true }.buttonStyle(.bordered).controlSize(.large)
-                    .accessibilityIdentifier("paste-link")
-            }.disabled(model.busy).padding(PhoneTheme.space5).frame(maxWidth: 750)
+                VStack(spacing: PhoneTheme.space3) {
+                    Button { scanning = true } label: { Text("Scan the code").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
+                        .buttonStyle(.borderedProminent).accessibilityIdentifier("scan-code")
+                    Button { pasting = true } label: { Text("Paste its link").frame(maxWidth: .infinity, minHeight: 44) }
+                        .buttonStyle(.bordered).accessibilityIdentifier("paste-link")
+                }.controlSize(.large)
+            }.disabled(model.busy).padding(PhoneTheme.space5).frame(maxWidth: 468)
                 .frame(maxWidth: .infinity)
         }
     }
 
     private func connected(_ session: ReadOnlySession) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                Text("Reading Infinitary on \(session.mac.name)").font(PhoneFont.headline)
-                    .accessibilityIdentifier("home-name")
-                HStack {
-                    Circle().fill(session.contact == "in-reach" ? PhoneTheme.accent : PhoneTheme.warning).frame(width: 6, height: 6)
-                    Text(session.contact == "in-reach" ? "In reach" : session.contact == "reaching" ? "Reaching your Mac…" : "Out of reach")
-                        .accessibilityIdentifier("contact")
-                    if session.contact != "in-reach", let date = session.heardAt {
-                        Text("· as of \(date.formatted(date: .omitted, time: .shortened))")
-                    }
-                }.font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
-                Text("Read-only for now. Answer cards on your Mac.").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-            }.padding()
-            TabView {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: PhoneTheme.space3) {
-                        if session.cards.isEmpty { Text("No cards to read yet.").foregroundStyle(PhoneTheme.secondary) }
-                        ForEach(session.cards) { card in
-                            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                                if card.reviewTaskId != nil {
-                                    Text("Review finding").font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
-                                }
-                                Text(card.title).font(PhoneFont.headline)
-                                Text(card.author == "firstmate" ? "Your first mate" : card.author == "host" ? "Infinitary" : "Crewmate")
-                                    .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                                if let meta = card.meta, meta != card.author {
-                                    Text(meta).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                                }
-                            }.padding().frame(maxWidth: .infinity, alignment: .leading)
-                                .background(PhoneTheme.surface, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius))
-                                .accessibilityElement(children: .combine)
-                        }
-                    }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity)
-                }.background(PhoneTheme.background).accessibilityIdentifier("cards-list").tabItem { Label("Cards", systemImage: "rectangle.stack") }
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: PhoneTheme.space4) {
-                        if session.activity.isEmpty { Text("No activity yet.").foregroundStyle(PhoneTheme.secondary) }
-                        ForEach(Array(session.activity.reversed().enumerated()), id: \.offset) { _, line in
-                            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                                Text(line.text).accessibilityIdentifier("activity-text")
-                                Text(Date(timeIntervalSince1970: line.at / 1000).formatted(date: .abbreviated, time: .shortened))
-                                    .font(.custom("JetBrainsMono-Regular", size: 11, relativeTo: .caption2))
-                                    .foregroundStyle(PhoneTheme.secondary)
-                            }
-                            Divider().overlay(PhoneTheme.line)
-                        }
-                    }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity)
-                }.background(PhoneTheme.background).accessibilityIdentifier("activity-list").tabItem { Label("Activity", systemImage: "list.bullet") }
+        VStack(spacing: 0) {
+            if session.contact != "in-reach" {
+                Text(session.contact == "reaching" ? "Waiting for \(session.mac.name)." : "\(session.mac.name) is out of reach. Changes are off until it is back.")
+                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    .padding(PhoneTheme.space3).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(PhoneTheme.panel).accessibilityIdentifier("reach-notice")
             }
+            if let notice = session.notice {
+                HStack {
+                    Text(notice).accessibilityIdentifier("phone-notice")
+                    Spacer()
+                    Button("Dismiss") { session.notice = nil }
+                }.font(PhoneFont.callout).padding().background(PhoneTheme.surface)
+                    .accessibilityElement(children: .contain)
+            }
+            PhoneWorkspace(session: session, stage: PhoneCards(session: session),
+                tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
+                .id(session.mac.deviceID)
         }
     }
+
 }

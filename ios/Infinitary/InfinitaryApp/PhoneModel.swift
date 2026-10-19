@@ -49,10 +49,10 @@ import UIKit
             return true
         } catch {
             if identity == nil { problem = error.localizedDescription }
-            else if needsUnlock(error) { problem = "Could not read this phone’s saved Mac. Unlock your phone and try again." }
+            else if needsUnlock(error) { problem = "Could not read this phone’s saved computer. Unlock your phone and try again." }
             else if error is DecodingError || (error as? CocoaError)?.code == .fileReadCorruptFile {
                 return discardDamagedMac()
-            } else { problem = "Could not read this phone’s saved Mac. Try again." }
+            } else { problem = "Could not read this phone’s saved computer. Try again." }
             return false
         }
     }
@@ -63,16 +63,16 @@ import UIKit
 
     private func discardDamagedMac() -> Bool {
         guard protectedDataAvailable() else {
-            problem = "Could not read this phone’s saved Mac. Unlock your phone and try again."
+            problem = "Could not read this phone’s saved computer. Unlock your phone and try again."
             return false
         }
         do {
             try forget()
-            problem = "Infinitary forgot a damaged connection. Use a new link to join your Mac again."
+            problem = "Infinitary forgot a damaged connection. Use a new link to join your computer again."
             return true
         } catch {
-            problem = needsUnlock(error) ? "Could not forget this Mac. Unlock your phone and try again."
-                : "Could not forget this Mac. Try again."
+            problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
+                : "Could not forget this computer. Try again."
             return false
         }
     }
@@ -87,7 +87,7 @@ import UIKit
         guard let link = proposal, !busy else { return }
         guard restore(), let identity else { proposal = nil; return }
         guard connection == nil else {
-            proposal = nil; problem = "Leave or forget your saved Mac before joining another."
+            proposal = nil; problem = "Leave or forget your saved computer before joining another."
             return
         }
         busy = true; proposal = nil; problem = nil
@@ -120,8 +120,8 @@ import UIKit
             connection?.stop(); connection = nil
             removed = false; proposal = nil; problem = nil
         } catch {
-            problem = needsUnlock(error) ? "Could not forget this Mac. Unlock your phone and try again."
-                : "Could not forget this Mac. Try again."
+            problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
+                : "Could not forget this computer. Try again."
         }
     }
 
@@ -135,11 +135,11 @@ import UIKit
         guard let identity else { return }
         let session = ReadOnlySession(mac: mac, phone: identity)
         session.onMacChanged = { [weak self] mac in
-            do { try self?.save(mac) } catch { self?.problem = "Could not keep this Mac’s new address." }
+            do { try self?.save(mac) } catch { self?.problem = "Could not keep this computer’s new address." }
         }
         session.onRemoved = { [weak self] in
             guard let self else { return }
-            do { try forget() } catch { problem = "Could not forget this Mac. Try Leave again." }
+            do { try forget() } catch { problem = "Could not forget this computer. Try Leave again." }
             removed = true
         }
         connection = session

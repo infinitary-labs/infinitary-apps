@@ -4,11 +4,11 @@ public enum PhoneError: LocalizedError, Sendable {
     case damagedLink, unsupportedLink, wrongMac, unavailable, invalidReply, refused(String)
     public var errorDescription: String? {
         switch self {
-        case .damagedLink: "This link is damaged. Copy a new link from Devices on your Mac."
+        case .damagedLink: "This link is damaged. Copy a new link from Devices on your computer."
         case .unsupportedLink: "Use a link for another computer, not a command for another user."
-        case .wrongMac: "This is not the Mac your link names. Nothing was sent."
-        case .unavailable: "Your Mac is out of reach. Check that Infinitary is open and both devices share a network."
-        case .invalidReply: "This Mac sent an answer Infinitary could not read."
+        case .wrongMac: "This is not the computer your link names. Nothing was sent."
+        case .unavailable: "Your computer is out of reach. Check that Infinitary is open and both devices share a network."
+        case .invalidReply: "This computer sent an answer Infinitary could not read."
         case .refused(let reason): reason
         }
     }
@@ -19,7 +19,7 @@ public struct JoinLink: Equatable, Sendable {
     public let pin: String
     public let code: String
     public let kind: String
-    public var computer: String { (try? Self.url(addresses[0], path: "/").host) ?? "your Mac" }
+    public var computer: String { (try? Self.url(addresses[0], path: "/").host) ?? "your computer" }
 
     public init(_ text: String) throws {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -59,10 +59,13 @@ describe("the native pull-request gate", () => {
   it.each([
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
     "scripts/generate-phone-contract.ts",
+    "scripts/generate-phone-cards.ts",
     "scripts/phone-contract-shapes.ts",
     ".github/workflows/phone.yml",
     "scripts/test-phone.ts",
     "tests/helpers/phoneHome.ts",
+    // INF-355: changing the native registration witness must exercise its simulator consumer.
+    "tests/helpers/phoneKeyboard.ts",
     "scripts/phone-test-home.ts",
     "scripts/affected-phone.ts",
     "scripts/with-mac-check.py",

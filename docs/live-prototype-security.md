@@ -128,6 +128,39 @@ The test load catches a file whose structure is sound and whose data is not, suc
 A crewmate on a computer that runs work has the check and the test load run there, by that computer's own probe, and sends each kept copy home before the card (`inf:work:typeface`), which the home keeps only under that task's own id; a paired view asks the home for a font by its minted name (`inf:cards:typeface`), and its own frame scheme serves the answer, never a path.
 The home keeps what that computer sends as it keeps its pictures, trusting the check the paired computer ran; the frame's sanitizer and its process of its own still stand between those bytes and the home's own window.
 
+## Phone cards
+
+Both native WebKit views set `allowsLinkPreview = false`, so system long-press previews cannot load a link outside the card’s script policy.
+
+The phone uses the same card bridge, validators and stylesheet in a generated offline bundle, but WebKit rather than Chromium supplies its web process.
+`CardWebHost` owns one nonpersistent WKWebView for the shown card; native SwiftUI owns every effect-bearing footer button, close and reply outside it.
+The trusted parent assigns the body as an opaque `sandbox="allow-scripts"` iframe’s `srcdoc`, never as parent markup.
+Its broad inline script permission is narrowed by the child’s own `frameCsp` containing the bridge hash and the hashes of only the body’s original inline scripts.
+The parent parses those scripts in an inert document and asks native CryptoKit to hash their parsed text; it never grants an external script source, event handler, eval or dynamically invented script.
+Both policies refuse network connections, and the child admits only the app’s in-process font and picture scheme plus inline pictures.
+Navigation delegates refuse every destination except the initial parent and its srcdoc child, including meta refresh, and deny new windows and media-capture permissions.
+
+WebKit exposes registered message handlers to child frames too, so `frameInfo.isMainFrame` is a mandatory native admission check.
+The parent accepts only its iframe’s window, binds its first bridge document and parses the existing shared message and request schemas.
+Its native vocabulary is closed: hashes, drawing, form readings, watchdog replies, effect-free card actions and read-only presentation requests, never an IPC channel or a caller-chosen action source.
+Native code checks an action against the mounted card again and stamps it `frame`; it cannot become a footer click even if the body writes `chrome` in its message.
+The core’s dispatch-time effect check remains independent.
+No sign-in, invitation, pinned address, key or filesystem path enters either document.
+
+`CardAssets` answers only bundled runtime/font filenames and the core’s minted picture, project-font and recording names.
+Every remote byte comes through the already pinned connection, not WebKit networking, and memory caches have a byte bound.
+Recordings arrive in bounded pieces with a stable size and a total cap.
+MP4 playback uses AVFoundation with an in-memory resource loader, all external asset references forbidden, and external playback and picture-in-picture disabled.
+The player receives no path or network URL; pictures and GIFs use a separate script-free, nonpersistent web view with no native message handler.
+Project fonts and pictures are parsed by WebKit and the system’s parsers in the web process; this is not a claim that WebKit has Chromium’s OpenType Sanitizer or Chromium’s per-site process model.
+A native watchdog tears down a nonresponsive web view while the SwiftUI close, pager and footer remain outside that process.
+Residuals are a browser/parser flaw, a yielding script that consumes resources while still answering, and authored pixels that lie about their own meaning, as on the desktop.
+None gives an authored body permission to press a native effect button.
+
+The native test home carries an ordinary interactive form beside attempted fetch/image exfiltration, parent DOM access, a direct child-to-native message, an effect-bearing action and an injected script.
+Its journey checks the boundary result and the real home’s received calls and saved card outcomes; an answer sent on the phone is checked through the home’s past-card and thread readers.
+An out-of-reach attempt must add no action after reconnection.
+
 ## The frame realm (one plugin vehicle, Phase A item 4)
 
 The captain's A1a, reviewed here as the plan requires: a panel the captain ADDED from elsewhere - someone else's code, the first the app runs - is drawn in a sandboxed frame that loads React, the JSX runtime, the design library and a small runtime from the shell, and reaches its data only through the host.

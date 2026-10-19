@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 enum PhoneTheme {
+    static let onAccent = Color(uiColor: UIColor(red: 0.0196078431372549, green: 0.027450980392156862, blue: 0.050980392156862744, alpha: 1))
     static let space2: CGFloat = 8
     static let space3: CGFloat = 12
     static let space4: CGFloat = 16
@@ -32,5 +33,23 @@ enum PhoneTheme {
     })
     static let danger = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .light ? UIColor(red: 0.8117647058823529, green: 0.2901960784313726, blue: 0.1803921568627451, alpha: 1) : UIColor(red: 1, green: 0.4196078431372549, blue: 0.3215686274509804, alpha: 1)
+    })
+    static let muted = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.4235294117647059, green: 0.47058823529411764, blue: 0.5686274509803921, alpha: 1) : UIColor(red: 0.47843137254901963, green: 0.5254901960784314, blue: 0.6274509803921569, alpha: 1)
+    })
+    static let panel = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.9686274509803922, green: 0.9764705882352941, blue: 0.9882352941176471, alpha: 1) : UIColor(red: 0.0392156862745098, green: 0.054901960784313725, blue: 0.09411764705882353, alpha: 1)
+    })
+    static let captain = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.4470588235294118, green: 0.32941176470588235, blue: 0.788235294117647, alpha: 1) : UIColor(red: 0.7254901960784313, green: 0.6039215686274509, blue: 1, alpha: 1)
+    })
+    static let wire = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.0392156862745098, green: 0.4470588235294118, blue: 0.6588235294117647, alpha: 1) : UIColor(red: 0.4980392156862745, green: 0.8627450980392157, blue: 1, alpha: 1)
+    })
+    static let wireDim = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.5098039215686274, green: 0.7058823529411765, blue: 0.8117647058823529, alpha: 1) : UIColor(red: 0.1803921568627451, green: 0.41568627450980394, blue: 0.5490196078431373, alpha: 1)
+    })
+    static let wireHot = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.9098039215686274, green: 0.4627450980392157, blue: 0.0392156862745098, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
     })
 }

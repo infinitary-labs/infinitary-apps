@@ -85,6 +85,8 @@ const isolatedUnit = [
   "tests/check-account-models.test.ts",
   "tests/derive-miss-candidates.test.ts",
   "tests/extract-dispatch-corpus.test.ts",
+  // Its observer lifecycle checks replace child_process.spawn with owned streams.
+  "tests/phone-keyboard.test.ts",
   // Its fixed-clock migration comparison must not inherit a warmed template.
   "tests/helpers/database.test.ts",
 ];

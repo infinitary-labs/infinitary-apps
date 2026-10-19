@@ -12,6 +12,8 @@ describe("the native reader's published response shapes", () => {
     ["inf:cards:list", "id"],
     ["inf:cards:list", "title"],
     ["inf:cards:list", "author"],
+    ["inf:cards:list", "body"],
+    ["inf:cards:list", "actions"],
     ["inf:feed:recent", "kind"],
     ["inf:feed:recent", "text"],
     ["inf:feed:recent", "at"],
@@ -23,6 +25,38 @@ describe("the native reader's published response shapes", () => {
     const changed = contract();
     changed.requests[channel].response.items.properties[field] = { type: "object" };
     expect(() => assertPhoneReaderShapes(changed)).toThrow(`must require ${field}`);
+  });
+  // INF-64 piece 5: contract evolution cannot silently break Talk or Tasks decoders.
+  it.each([
+    ["inf:tasks:board", ["properties", "tasks", "items"], "title"],
+    ["inf:tasks:detail", [], "key"],
+    ["inf:tasks:detail", ["properties", "events", "items"], "text"],
+    ["inf:tasks:search", ["items"], "id"],
+    ["inf:tasks:crewmate", [], "lines"],
+    ["inf:tasks:crewmate:live", [], "text"],
+  ] as const)("refuses an incompatible native work reading in %s", (channel, path, field) => {
+    const changed = contract();
+    let row = changed.requests[channel].response;
+    for (const part of path) row = row[part];
+    row.required = row.required.filter((key: string) => key !== field);
+    expect(() => assertPhoneReaderShapes(changed)).toThrow(`must require ${field}`);
+  });
+  // INF-82's live character must keep consuming the real typed conversation state.
+  it("refuses a missing or incompatible first-mate busy event", () => {
+    const missing = contract();
+    const events = missing.pushes["inf:event"].payload.oneOf;
+    missing.pushes["inf:event"].payload.oneOf = events.filter(
+      (event: { properties: { type: { const: string } } }) =>
+        event.properties.type.const !== "firstmate_state",
+    );
+    expect(() => assertPhoneReaderShapes(missing)).toThrow("firstmate_state must require busy");
+    const changed = contract();
+    const busy = changed.pushes["inf:event"].payload.oneOf.find(
+      (event: { properties: { type: { const: string } } }) =>
+        event.properties.type.const === "firstmate_state",
+    );
+    busy.properties.busy = { type: "string" };
+    expect(() => assertPhoneReaderShapes(changed)).toThrow("firstmate_state must require busy");
   });
   it("refuses replacing the pushed card rows with a wrapper", () => {
     const changed = contract();

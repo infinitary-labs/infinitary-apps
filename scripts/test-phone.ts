@@ -3,6 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
@@ -51,23 +52,52 @@ const run = async (command: string, args: string[]) => {
   return output;
 };
 let simulator: string | undefined;
+const phoneBundle = "com.getinfinitary.infinitary";
+let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
 let recordingLog = "";
-const rawVideo = join(root, "reconnect.mp4");
+const recordings: { name: string; raw: string }[] = [];
 const recording = {
+  keyboardBeforeLaunch: async () => {
+    if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
+    return keyboard.beforeLaunch();
+  },
+  keyboardReady: async (chord: PhoneChord) => {
+    if (!simulator || !keyboard) throw new Error("No owned simulator keyboard observer exists");
+    const owned = simulator;
+    const observer = keyboard;
+    // The app publishes its key commands only while this keyboard is attached; the chord's own press detaches it again.
+    return withPhoneHardwareKeyboard(run, owned, async () => {
+      const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
+      return observer.wait(phoneApplicationPid(services, phoneBundle), chord);
+    });
+  },
+  display: async (appearance: "light" | "dark", large: boolean) => {
+    if (!simulator) throw new Error("No owned simulator exists");
+    await run("xcrun", ["simctl", "ui", simulator, "appearance", appearance]);
+    await run("xcrun", ["simctl", "ui", simulator, "content_size", large ? "extra-extra-extra-large" : "large"]);
+  },
+  appearance: async (theme: "dark" | "light") => {
+    if (!simulator) throw new Error("No owned simulator exists");
+    await run("xcrun", ["simctl", "ui", simulator, "appearance", theme]);
+  },
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");
-    const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, "com.getinfinitary.infinitary", "data"])).trim());
+    const container = resolve((await run("xcrun", ["simctl", "get_app_container", simulator, phoneBundle, "data"])).trim());
     if (!container.split("/").includes(simulator)) throw new Error("The app container is not on this run's simulator");
     const saved = join(container, "Library", "Application Support", "JoinedMac.json");
     const bytes = readFileSync(saved);
     // Reproduce a truncated version of the actual saved record, never another simulator's data.
     writeFileSync(saved, bytes.subarray(0, bytes.length - 8));
   },
-  start: async () => {
+  start: async (name = "reconnect") => {
     if (!values.demo || recorder || !simulator) return;
-    const child = spawn("xcrun", ["simctl", "io", simulator, "recordVideo", "--codec=h264", rawVideo], {
+    if (!["reconnect", "talk", "composer", "character", "conversation", "card-form", "card-paging", "card-reply", "card-picture", "card-recording", "review-recovery"].includes(name)) throw new Error("Unknown phone recording");
+    const raw = join(root, `${name}.mp4`);
+    recordings.push({ name, raw });
+    recordingLog = "";
+    const child = spawn("xcrun", ["simctl", "io", simulator, "recordVideo", "--codec=h264", raw], {
       env, stdio: ["ignore", "pipe", "pipe"],
     });
     recorder = child;
@@ -89,13 +119,14 @@ const recording = {
   stop: async () => {
     if (!recorder) return;
     recorder.kill("SIGINT"); await recorded; recorder = undefined;
-    writeFileSync(join(evidence, "recording.log"), recordingLog);
+    writeFileSync(join(evidence, `${recordings.at(-1)!.name}-recording.log`), recordingLog);
   },
 };
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 try {
   await run("node", ["scripts/generate-phone-contract.ts", "--check"]);
   await run("node", ["scripts/generate-phone-theme.ts", "--check"]);
+  await run("node", ["scripts/generate-phone-cards.ts", "--check"]);
   await run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]);
   // Do not borrow or erase a developer's simulator. Own exactly one, from create to delete.
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
@@ -107,6 +138,8 @@ try {
   simulator = (await run("xcrun", ["simctl", "create", "Infinitary isolated test", device.identifier, runtime.identifier])).trim();
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
   await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
+  await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
+  keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
   if (values.demo) await run("ffmpeg", ["-version"]);
   fixture = await startPhoneHome(root, recording);
@@ -115,9 +148,10 @@ try {
     "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig", "-parallel-testing-enabled", "NO",
     "-destination", `platform=iOS Simulator,id=${simulator}`, "-derivedDataPath", join(root, "DerivedData"),
     "-resultBundlePath", join(evidence, "phone.xcresult"), `PHONE_TEST_HOME=${fixture.url}`, "test"]);
-  if (values.demo) {
-    await run("ffmpeg", ["-y", "-i", rawVideo, "-vf", "crop=iw:trunc(ih*0.55/2)*2:0:0,scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=2", "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, "reconnect.mp4")]);
-    await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, "reconnect.mp4"), "-frames:v", "1", join(evidence, "reconnect-poster.png")]);
+  if (values.demo) for (const { name, raw } of recordings) {
+    const crop = name === "reconnect" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
+    await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
+    await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, `${name}.mp4`), "-frames:v", "1", join(evidence, `${name}-poster.png`)]);
   }
   console.log("The phone joined its disposable Mac, read its cards and Activity, reconnected, left and was removed.");
 } finally {
@@ -125,7 +159,10 @@ try {
   try {
     try {
       if (fixture) writeFileSync(join(evidence, "home-observations.json"), JSON.stringify(fixture.observations(), null, 2));
-    } finally { await recording.stop(); }
+    } finally {
+      try { await recording.stop(); }
+      finally { await keyboard?.close(); }
+    }
   } finally {
     try { await fixture?.close(); }
     finally {

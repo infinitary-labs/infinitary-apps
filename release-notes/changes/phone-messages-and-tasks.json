@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "phone-messages-and-tasks",
+      "kind": "feature",
+      "title": "Send messages and guide tasks from your phone",
+      "body": "The early phone app sends messages and photos to your computer and shows your last turn. Find tasks, read their records, and start, continue, steer or interrupt work there. Unsent drafts stay put when you switch tabs or turn your phone. A shorter landscape message box leaves room to read your cards. On an empty stage, your first mate shows when your computer is answering. The phone app is not in the App Store yet.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-messages-and-tasks-dark.png",
+        "light": "phone-messages-and-tasks-light.png",
+        "alt": "Infinitary on iPhone shows the last turn and a message box with Photos and Send above the Cards, Activity and Tasks tabs"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

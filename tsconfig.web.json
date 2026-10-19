@@ -32,6 +32,7 @@
     }
   },
   "include": [
+    "ios/Infinitary/CardRuntime/**/*.ts",
     "src/renderer/**/*.ts",
     "src/renderer/**/*.tsx",
     // The app's own panel folders (docs/ui-plugins.md, "The app's own panels

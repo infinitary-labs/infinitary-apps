@@ -66,6 +66,12 @@ type Rule = {
 const ANY_TEST = /(\.test\.tsx?|\.spec\.ts)$|^tests\//;
 
 export const RULES: readonly Rule[] = [
+  {
+    class: "reader",
+    why: "the phone bundles the shared bridge that reads older cards' hooks and action names",
+    path: /^ios\/Infinitary\/InfinitaryApp\/CardAssets\/CardHost\.generated\.js$/,
+    families: ["card-hook"],
+  },
   // --- history: published or recorded, never rewritten ----------------------
   {
     class: "history",

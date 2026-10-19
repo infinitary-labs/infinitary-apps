@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-design-shell",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A familiar look on your phone",
+      "body": "Infinitary has a native first mate, clearer Activity and computer details behind one button. Turn your iPad sideways to read Activity beside your cards.",
+      "picture": {
+        "dark": "phone-design-shell-dark.png",
+        "light": "phone-design-shell-light.png",
+        "alt": "Infinitary on iPhone, showing recent Activity beneath the computer’s name, reach and details button."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

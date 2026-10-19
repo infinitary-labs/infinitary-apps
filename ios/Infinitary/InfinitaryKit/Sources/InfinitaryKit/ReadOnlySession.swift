@@ -1,16 +1,9 @@
 import Foundation
 import Observation
 
-public struct PhoneCard: Decodable, Identifiable, Sendable {
-    public let id: String
-    public let title: String
-    public let meta: String?
-    public let reviewTaskId: String?
-    public let author: String
-}
-
 public struct ActivityLine: Decodable, Sendable {
     public let kind: String
+    public let taskKey: String?
     public let text: String
     public let at: Double
 }
@@ -20,6 +13,24 @@ public struct ActivityLine: Decodable, Sendable {
     public private(set) var mac: JoinedMac
     public private(set) var cards: [PhoneCard] = []
     public private(set) var activity: [ActivityLine] = []
+    public private(set) var threads: [String: PhoneJSON] = [:]
+    public private(set) var pastCards: [PhoneCard] = []
+    public var showCardID: String?
+    @ObservationIgnored private var threadRevisions: [String: Int] = [:]
+    public private(set) var board: PhoneBoard?
+    public private(set) var lastTurn: PhoneLastTurn?
+    /// Only the Mac's firstmate_state event establishes an active conversational turn.
+    /// The contract has no initial busy snapshot and no phone dictation/listening signal.
+    public private(set) var firstmateBusy = false
+    public private(set) var workRevision = 0
+    public private(set) var access = "read"
+    public var notice: String?
+    public var canChange: Bool { contact == "in-reach" && access == "full" }
+    public var changeRefusal: String? {
+        if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
+        if access != "full" { return "Update Infinitary on this phone and your computer to make changes." }
+        return nil
+    }
     public private(set) var contact = "reaching"
     public private(set) var heardAt: Date?
     public private(set) var removed = false
@@ -42,6 +53,90 @@ public struct ActivityLine: Decodable, Sendable {
     @ObservationIgnored private var waitingSince: [Int: Date] = [:]
     @ObservationIgnored private var leaveStarted: Date?
     @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var calls: [Int: (Bool, CheckedContinuation<Data, Error>)] = [:]
+    @ObservationIgnored private var notified: [String: Bool] = [:]
+    @ObservationIgnored private var primed = false
+    private let initialReads = [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
+
+    /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
+    public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self) async throws -> T {
+        let answer = try await invoke(channel.rawValue, changes: channel.changes, args: args)
+        try Task.checkCancellation()
+        do { return try JSONDecoder().decode(T.self, from: answer) }
+        catch {
+            if channel.changes { throw PhoneError.refused("Could not confirm the change. Check your computer before sending it again.") }
+            throw PhoneError.invalidReply
+        }
+    }
+
+    private func invoke(_ channel: String, changes: Bool, args: [Any]) async throws -> Data {
+        guard !Task.isCancelled, contact == "in-reach", let socket, !removed else { throw PhoneError.unavailable }
+        if changes, let reason = changeRefusal { throw PhoneError.refused(reason) }
+        nextID += 1
+        let id = nextID
+        let data = try JSONSerialization.data(withJSONObject: ["t": "invoke", "id": id, "channel": channel, "args": args])
+        guard data.count <= PhoneContract.maxFrameBytes, let text = String(data: data, encoding: .utf8) else { throw PhoneError.invalidReply }
+        let answer: Data = try await withCheckedThrowingContinuation { continuation in
+            calls[id] = (changes, continuation); waitingSince[id] = Date()
+            Task {
+                do { try await socket.send(.string(text)) }
+                catch { self.failCall(id) }
+            }
+        }
+        return answer
+    }
+
+    public func ask(_ channel: PhoneCardRequest, _ args: [PhoneJSON]) async throws -> PhoneJSON {
+        let answer = try await invoke(channel.rawValue, changes: channel.changes, args: args.map { try $0.foundation })
+        try Task.checkCancellation()
+        do { return try JSONDecoder().decode(PhoneJSON.self, from: answer) }
+        catch {
+            if channel.changes { throw PhoneError.refused("Could not confirm the change. Check your computer before sending it again.") }
+            throw PhoneError.invalidReply
+        }
+    }
+
+    public func readThread(_ id: String) async throws {
+        let revision = threadRevisions[id, default: 0]
+        let thread = try await ask(.thread, [.string(id)])
+        if revision == threadRevisions[id, default: 0] { threads[id] = thread }
+    }
+
+    public func readPast(_ id: String) async throws {
+        let result = try await ask(.past, [.string(id)])
+        guard result != .null else { return }
+        let card = try PhoneCard(result)
+        pastCards.removeAll { $0.id == id }; pastCards.insert(card, at: 0)
+    }
+
+    private func failCall(_ id: Int) {
+        waitingSince.removeValue(forKey: id)
+        guard let (changes, continuation) = calls.removeValue(forKey: id) else { return }
+        continuation.resume(throwing: changes
+            ? PhoneError.refused("Could not confirm the change. Check your computer before sending it again.")
+            : PhoneError.unavailable)
+    }
+    private func failCalls() { for id in Array(calls.keys) { failCall(id) } }
+
+    private func clearContent() {
+        cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false
+        threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]
+        notified = [:]; primed = false; workRevision += 1
+    }
+
+    private func observeCards(_ snapshot: [PhoneCard]) {
+        let live = snapshot.filter { $0.awaiting == nil || $0.sentBackAt != nil }
+        let news = live.filter { primed && (notified[$0.id] == nil || (notified[$0.id] == true && $0.awaiting == nil)) }
+        notified = Dictionary(uniqueKeysWithValues: live.map { ($0.id, $0.awaiting != nil) })
+        primed = true
+        guard let newest = news.last, contact == "in-reach" else { return }
+        let current = generation
+        Task {
+            let enabled = try? await request(.notifications, as: Bool.self)
+            guard enabled == true, current == generation, contact == "in-reach" else { return }
+            notice = newest.title
+        }
+    }
 
     public init(mac: JoinedMac, phone: PhoneIdentity) { self.mac = mac; self.phone = phone }
 
@@ -56,6 +151,7 @@ public struct ActivityLine: Decodable, Sendable {
         generation += 1
         loop?.cancel(); loop = nil
         finishLeave(PhoneError.unavailable)
+        failCalls(); notice = nil; access = "read"; firstmateBusy = false
         socket?.cancel(with: .goingAway, reason: nil); socket = nil
         transport?.close(); transport = nil
         contact = "lost"
@@ -104,7 +200,9 @@ public struct ActivityLine: Decodable, Sendable {
                 do {
                     let socket = try transport.socket(at: address)
                     connection = socket; self.socket = socket
+                    failCalls()
                     pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
+                    access = "read"; firstmateBusy = false
                     contact = heardAt == nil ? "reaching" : "lost"
                     var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
                         "as": "view", "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
@@ -160,13 +258,13 @@ public struct ActivityLine: Decodable, Sendable {
                     let code = connection?.closeCode.rawValue
                     let status = (connection?.response as? HTTPURLResponse)?.statusCode
                     if code == 4401 {
-                        removed = true; cards = []; activity = []
+                        removed = true; clearContent()
                         contact = "removed"; finishLeave(); onRemoved?()
                     } else {
                         if status == 401 { refused += 1 }
                         else if status != nil { refused = 0 }
                         if refused >= 2 {
-                            removed = true; cards = []; activity = []; contact = "removed"
+                            removed = true; clearContent(); contact = "removed"
                             finishLeave(); onRemoved?()
                         } else {
                             contact = code == 1001 ? "closed" : "lost"
@@ -174,6 +272,7 @@ public struct ActivityLine: Decodable, Sendable {
                         }
                     }
                 }
+                failCalls(); firstmateBusy = false
                 transport.close()
                 guard current == generation else { return }
                 self.socket = nil; self.transport = nil
@@ -194,16 +293,18 @@ public struct ActivityLine: Decodable, Sendable {
                   let seq = frame["seq"] as? Int, seq >= 0,
                   let catchUp = frame["catchUp"] as? String, ["replay", "reload"].contains(catchUp)
             else { throw PhoneError.invalidReply }
-            if catchUp == "reload" { self.sequence = seq }
+            if catchUp == "reload" { self.sequence = seq; primed = false; notified = [:] }
+            access = frame["access"] as? String == "full" ? "full" : "read"
             self.epoch = epoch
             refused = 0
             if let name = frame["name"] as? String, !name.isEmpty {
                 mac.name = name; onMacChanged?(mac)
             }
             contact = "reaching"
-            try await refresh(PhoneContract.cards, on: socket)
-            guard self.socket === socket, !Task.isCancelled else { return }
-            try await refresh(PhoneContract.feed, on: socket)
+            for channel in initialReads {
+                guard self.socket === socket, !Task.isCancelled else { return }
+                try await refresh(channel, on: socket)
+            }
         case "push":
             guard epoch != nil, let seq = frame["seq"] as? Int else { throw PhoneError.invalidReply }
             if seq <= sequence { return }
@@ -211,12 +312,40 @@ public struct ActivityLine: Decodable, Sendable {
             sequence = seq
             if frame["channel"] as? String == "inf:cards" {
                 guard let snapshot = frame["payload"] else { throw PhoneError.invalidReply }
-                cards = try JSONDecoder().decode([PhoneCard].self, from: JSONSerialization.data(withJSONObject: snapshot))
-                // A later push supersedes the initial read, whose reply may still be in flight.
-                if let request = pending.first(where: { $0.value == PhoneContract.cards })?.key {
-                    pending.removeValue(forKey: request); waitingSince.removeValue(forKey: request)
+                let updated = try JSONDecoder().decode([PhoneCard].self, from: JSONSerialization.data(withJSONObject: snapshot))
+                let departed = cards.filter { old in !updated.contains { $0.id == old.id } }.map(\.id)
+                cards = updated
+                for id in departed { Task { try? await self.readPast(id) } }
+                observeCards(cards)
+                supersede(PhoneContract.cards)
+            }
+            if frame["channel"] as? String == "inf:tasks", let payload = frame["payload"] {
+                board = try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: payload))
+                supersede(PhoneRequest.board.rawValue); workRevision += 1
+            }
+            // A full read is also the contract's resync path for a delta we cannot apply.
+            if frame["channel"] as? String == "inf:tasks:delta" {
+                try await refresh(PhoneRequest.board.rawValue, on: socket)
+            }
+            if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
+                if type == "firstmate_state", let busy = event["busy"] as? Bool { firstmateBusy = busy }
+                if type == "user_turn" || type == "firstmate_reply" {
+                    try await refresh(PhoneRequest.lastTurn.rawValue, on: socket)
                 }
-                markReady(PhoneContract.cards)
+                if ["task_changed", "task_event", "turn_end", "tool_execution_end"].contains(type) { workRevision += 1 }
+            }
+            if frame["channel"] as? String == "inf:cards:thread", let payload = frame["payload"] {
+                let thread = try PhoneJSON.read(payload)
+                if let id = thread["cardId"].text {
+                    threadRevisions[id, default: 0] += 1
+                    threads[id] = thread
+                }
+            }
+            if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any],
+               let id = event["cardId"] as? String {
+                if event["type"] as? String == "past_card_shown" {
+                    Task { try? await self.readPast(id); self.showCardID = id }
+                } else if event["type"] as? String == "open_card_shown" { showCardID = id }
             }
             // The Mac still owns feed wording. Only types that can change it cause a read.
             if frame["channel"] as? String == "inf:event",
@@ -226,24 +355,46 @@ public struct ActivityLine: Decodable, Sendable {
                 try await refresh(PhoneContract.feed, on: socket)
             }
         case "result":
-            guard let id = frame["id"] as? Int, let channel = pending.removeValue(forKey: id)
-            else { return }
+            guard let id = frame["id"] as? Int else { throw PhoneError.invalidReply }
+            if let (_, continuation) = calls.removeValue(forKey: id) {
+                waitingSince.removeValue(forKey: id)
+                if frame["ok"] as? Bool == true, let value = frame["value"] {
+                    do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)) }
+                    catch { continuation.resume(throwing: PhoneError.invalidReply) }
+                } else {
+                    continuation.resume(throwing: PhoneError.refused((frame["error"] as? [String: Any])?["message"] as? String ?? frame["error"] as? String ?? "Your computer refused this request."))
+                }
+                return
+            }
+            guard let channel = pending.removeValue(forKey: id) else { return }
             waitingSince.removeValue(forKey: id)
             guard frame["ok"] as? Bool == true, let value = frame["value"] else {
                 throw PhoneError.invalidReply
             }
-            let bytes = try JSONSerialization.data(withJSONObject: value)
-            if channel == PhoneContract.cards { cards = try JSONDecoder().decode([PhoneCard].self, from: bytes) }
-            else { activity = try JSONDecoder().decode([ActivityLine].self, from: bytes) }
+            let bytes = try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)
+            switch channel {
+            case PhoneContract.cards: cards = try JSONDecoder().decode([PhoneCard].self, from: bytes); observeCards(cards)
+            case PhoneContract.feed: activity = try JSONDecoder().decode([ActivityLine].self, from: bytes)
+            case PhoneRequest.board.rawValue: board = try JSONDecoder().decode(PhoneBoard.self, from: bytes); workRevision += 1
+            case PhoneRequest.lastTurn.rawValue: lastTurn = try JSONDecoder().decode(PhoneLastTurn?.self, from: bytes)
+            default: break
+            }
             markReady(channel)
             if dirty.remove(channel) != nil { try await refresh(channel, on: socket) }
         default: break // Later envelope fields and frame kinds do not widen what this client sends.
         }
     }
 
+    private func supersede(_ channel: String) {
+        if let id = pending.first(where: { $0.value == channel })?.key {
+            pending.removeValue(forKey: id); waitingSince.removeValue(forKey: id)
+        }
+        markReady(channel)
+    }
+
     private func markReady(_ channel: String) {
         ready.insert(channel)
-        if ready.count == 2 { contact = "in-reach" }
+        if initialReads.allSatisfy({ ready.contains($0) }) { contact = "in-reach" }
     }
 
     private func refresh(_ channel: String, on socket: URLSessionWebSocketTask) async throws {

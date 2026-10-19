@@ -7,8 +7,8 @@ import { parseArgs } from "node:util";
 // INF-79 / INF-136: the captain requested the native gate on phone/shared-contract PRs.
 // Include the captain's approved gate setup inputs, not broad shared/core/package changes.
 const INPUTS = [
-  "ios/", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
-  ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts",
+  "ios/", "scripts/generate-phone-cards.ts", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
+  ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts", "tests/helpers/phoneKeyboard.ts",
   "scripts/phone-test-home.ts", "scripts/affected-phone.ts", "scripts/with-mac-check.py",
   "scripts/replaced-phone-runs.ts",
 ] as const;

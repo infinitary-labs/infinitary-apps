@@ -2,9 +2,9 @@
 
 The native SwiftUI app lives in `ios/Infinitary/`, supports iPhone and iPad from iOS 18, and reads a Mac through the published connection contract.
 Its name is Infinitary, its bundle identifier is `com.getinfinitary.infinitary`, and its Xcode development team is `9T2J7MNUP9`.
-This is the join-and-read foundation of the accepted phone plan, not a separate first mate or a place that runs work.
-The phone shows Cards and Activity read-only; it does not run card HTML, scripts, actions or replies, and has no Talk or Tasks controls.
-The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution, background notifications, the character and a side-by-side iPad layout remain separate work.
+The phone is a view of the Mac, not a separate first mate or a place that runs work.
+It shows interactive Cards, Activity and Tasks, sends the captain's messages and photos, and lets the captain start, continue, steer and interrupt work on the Mac.
+The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution and background notifications remain separate work.
 The visual rules live in the design skill's `components/devices/PhoneView.prompt.md`.
 
 ## Joining and trust
@@ -17,7 +17,7 @@ Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplie
 The Mac announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works.
 Camera and Local Network permissions have separate explanations; a camera refusal offers pasting rather than reading the clipboard automatically.
 
-`InfinitaryKit` owns strict link parsing, the device identity, pinned transport and the read-only session.
+`InfinitaryKit` owns strict link parsing, the device identity, pinned transport and the view session (`ReadOnlySession`, the foundation’s original type).
 `PhoneIdentity` creates a P-256 signing key and a self-signed certificate, with Apple's `swift-certificates` package supplying the certificate encoder.
 The private key and certificate live in this app's iOS Keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` and synchronization disabled, not in iCloud, a shared group or the Secure Enclave.
 If the key exists without its certificate, the app issues a certificate for that same key rather than rotating or abandoning the identity.
@@ -41,17 +41,19 @@ An undecodable record, invalid pin or invalid address discards only the saved Ma
 
 ## Reading and returning
 
-The session sends a view hello and its current in-memory epoch/sequence cursor, and asks only `inf:cards:list` and `inf:feed:recent`.
-Card bodies are never rendered or executed; the list shows titles and attribution.
-A card carrying the host-validated `reviewTaskId` shows Review finding above its title, and first mate cards about tasks name their task in the existing meta line.
+The session sends a view hello and its current in-memory epoch/sequence cursor, then reads cards, Activity, the task board and the last turn.
+The generated `PhoneRequest` limits the additional requests to the published view channels and derives their read/change distinction and message limits from the contract.
 Activity shows the newest line first and uses the Mac's feed wording, not a second event-to-words implementation.
 The native contract constants are generated from `docs/contract.json` with `node scripts/generate-phone-contract.ts`.
-`pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants or theme values.
-Generation also verifies the required card fields (`id`, `title`, `author`) and feed fields (`kind`, `text`, `at`), including the pushed card snapshot.
+`pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants, theme values or bundled card code and fonts.
+Generation also verifies the required native fields in cards, Activity, task boards, records, search, last turns and crewmate transcripts, including the pushed card and task snapshots.
+The shown card reads its thread once and follows numbered `inf:cards:thread` pushes; a newer push supersedes an older thread read.
+Its card requests are a closed enum generated from the published contract, not a channel an HTML body chooses.
 
 A return consumes numbered replay pushes, or reads fresh snapshots after a reload welcome.
-Both initial snapshots must arrive before the app says **In reach**.
-A card push supplies the new snapshot directly and supersedes any older initial read still in flight.
+All four initial snapshots must arrive before the app says **In reach**.
+A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
+A task-board delta requests a coalesced full board, the published resynchronization path, rather than duplicating the Mac’s delta application logic.
 Only a closed list of non-streaming events that can change the feed requests a coalesced feed refresh; assistant and thinking deltas cause no reads.
 The feed owner exports `FEED_EVENT_TYPES`, with its authoring switch checked exhaustively against that list, and the contract generator derives the Swift `FeedChange` enum from it.
 A gap in numbering drops the cursor and reconnects rather than silently losing updates.
@@ -63,10 +65,115 @@ A late callback from an old connection cannot clear or overwrite a newer connect
 Nearby addresses may be tried with the original pin, and only an authenticated address is saved as preferred.
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
-Out of reach, **Forget this Mac** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
+Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
+Both choices live in the computer-details sheet, opened by the top-right computer button or Command-I; neither is an always-visible destructive toolbar action.
 A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
+
+## Cards on the phone
+
+`PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
+It keeps one shown card with a next-card peek, a lower pager, a title menu and unread indicators.
+Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
+Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
+Form and reply drafts live only in memory and survive paging.
+Native controls own the title, attribution, close, footer choices and reply field; a body cannot draw over or press them.
+A card carrying the host-validated `reviewTaskId` shows Review finding above its title, and first mate cards about tasks name their task in the existing meta line.
+A footer press collects a fresh form reading through the computer’s shared bridge, including question definitions and staged settings, and sends the mounted offer and lifecycle with its own interaction id.
+If the body has already failed, a later deliberate press may use its last observed draft, marked `fallback` with `no-fresh-reading` rather than fresh question evidence.
+A timeout on the current press still refuses it; a body that never supplied a reading keeps choices unavailable rather than inventing answers.
+The default choice waits for every required question; other choices carry the current answers.
+The core still owns refusals, effects and closing, and a refusal leaves the card and draft in place.
+Body and footer choices share one native pending gate, and an accepted choice remains locked until its card leaves.
+Reply admission counts UTF-16 units against `PhoneLimits.reply`, generated from the published request’s text limit.
+A shown, drawn card reports seen only while the phone is active and the Mac is in reach.
+A reply sends its words and current settings to the card’s author, keeps the thread’s messages as plain text and makes no closing choice.
+A lone or marked card stays; an ordinary reply with another card declares its departure to the core.
+Settings and browser doors name the computer where they must be used and send no action.
+The host’s saved-sign-in choice needs no local browser page and is sent like any other choice.
+The phone keeps recently closed cards in memory through `inf:cards:past` and also opens a past card the Mac points to with `past_card_shown`.
+A past card has its last-seen body, saved answers, inert choices with the chosen one marked, its thread and Hide; it has no reply or mutation path.
+Its ending words are generated from `src/shared/pastCard.ts`, so the captain, first mate and crewmate keep their own attribution, alongside withdrawn, taken-down and duplicate endings.
+An evidence actor of `frame` is projected to the card’s typed author for those words; the stored ending stays unchanged.
+The same read accepts older past-card ids; the current Tasks record does not expose its cards.
+
+`CardWebHost` gives the shown body a nonpersistent WKWebView containing an opaque `sandbox="allow-scripts"` frame.
+The bundled parent uses the actual shared frame bridge, form readers, schemas, stylesheet and typefaces, generated by `node scripts/generate-phone-cards.ts`; no second form implementation exists in Swift.
+Each inline body script runs by its hash under `default-src 'none'`, with only local font and picture sources; event handlers, external scripts, fetch, forms, popups and navigation gain no permission.
+Native WebKit messages are admitted from the trusted main frame alone, never from the body’s child frame.
+The parent checks source identity, document identity, shared message schemas and declared action ids; native code checks effect-free action ids again and stamps every such request as `frame`, never `chrome`.
+The native footer is the only path to an effect-bearing action.
+A native watchdog removes a body that stops answering without removing its native controls, and offers Retry.
+A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
+`CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
+A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
+Both web views disable system link previews as well as refusing navigation.
+MP4 recordings use the native player, whose resource loader serves only bounded bytes read through the pinned connection and writes nothing to disk.
+The asset refuses all external references, and the player disables external playback and picture-in-picture.
+Assets and drafts are memory-only and are cleared when their owner goes away.
+An out-of-reach session refuses changes; a lost reply has an unknown result and is never retried or queued across reconnection.
+The phone containment review is in `docs/live-prototype-security.md`, “Phone cards”.
+
+## Native shell and component ownership
+
+`PhoneWorkspace` supplies a stage, an optional Tasks view and an optional composer, with no draft or record state of its own.
+The composition installs `PhoneCards(session:)`, `PhoneTasks(session:)` and `MessageComposer(session:)` together.
+The composer stays mounted once, preserving its own text and photo state across tab and orientation changes; the shell never copies it into a tab or layout branch.
+In compact-height iPhone landscape, `AnyLayout` puts the last-turn excerpts side by side and the removable photo strip beside the message capsule, retaining one field and its complete draft.
+The field displays up to two lines there, the controls retain 44-point targets, and warnings remain full-length; portrait and iPad keep the stacked arrangement.
+The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft above the tabs.
+Card and task owners keep their selected records and replies.
+`PhoneMessageContext` carries only the shown current or past card, the Cards tab’s visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
+One content-sized footer overlays the tab container above the measured native bar, with each tab reserving its measured height; no native bar height is guessed.
+Only a tab bar attached to the same window contributes clearance; the iPad's top tabs leave a detached legacy bar whose stale frame must not move the footer.
+It uses native glass on iOS 26 and a plain surface on iOS 18.
+While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
+The dismissal command does not belong to the keyboard’s transient accessory view.
+The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.
+The iPad's wide landscape workspace places collapsible Activity and Tasks panels beside the stage and puts the composer at the stage's foot.
+Portrait or narrow multitasking returns to tabs; layout measurement excludes the keyboard.
+`PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
+It exposes the full local timestamp to accessibility.
+`PhoneSymbol` supplies native outline template images for the system's tinted chrome.
+
+`PhoneCharacter` draws the tesseract, eyes and listening hexagons in a native Canvas, with idle, listening and working states only.
+Its timeline is capped at 30 frames per second, paused when hidden or backgrounded, and still under Reduce Motion.
+The join stage uses idle; the empty stage follows the Mac's published busy event for working and idle, with the snapshot and listening limits described under “Disposable verification”.
+No crew count or joining time is invented: the current connection supplies neither, so those facts stay absent.
+Joining still confirms the link's computer address, not a name obtained before authenticating that computer.
+The details sheet names the connected view's ability to answer cards, send messages and control tasks, or explains read-only access when the Mac requires an update.
+
+## Talk and tasks
+
+The message box keeps the captain’s last message and the first mate’s reply above its native multiline field.
+Its component owns messages and photos; the shared shell places it at the foot above the tabs.
+A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
+The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
+Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.
+Selected photos appear as removable chips; messages and photos remain in memory until a confirmed send clears them.
+Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
+
+The Tasks tab combines a filter of the live board with the Mac’s earlier-task search.
+Its five groups and their labels come from `src/shared/nowPanel.ts`, generated as a finite native lookup so the phone does not own another grouping rule.
+The phone keeps active parent trees together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
+Waiting on you, Working and Queued start expanded; Backlog and Done start collapsed, with counts and keyboard-reachable disclosure buttons.
+Each row shows its status mark, key, title and project, with the newest task first inside each group.
+A record shows the goal, captain’s words, progress, latest report, model and timeline; its Crewmate section reads the redacted session and live words from their Mac owners.
+The open record refreshes once a second, as the desktop transcript does, and no hidden record polls.
+Start and Continue come only from the Mac’s `moves`; Steer and Interrupt use the existing captain-owned task channels, never a phone worker.
+Interrupt stops a running turn and keeps its task idle and steerable; Continue is offered only when the Mac marks a task Interrupted, such as after recovery.
+Tool results open on demand through their published read.
+Task cards, browser pages and rich transcript pictures remain outside this piece.
+
+A mutation requires both **In reach** and the welcome’s `full` access.
+Every request has one connection-bound response and a bounded wait; a disconnect, timeout or unreadable mutation response explains that its outcome is unconfirmed.
+The phone retains the draft, asks the captain to check the Mac, and never queues or retries a mutation after reconnecting.
+A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
+
+A new card or an answered reply raises a dismissible in-app notice while the app is open, after reading the Mac’s Notifications switch.
+The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
+Background stops the connection and clears the notice; there is no background notification service or push relay.
 
 ## Installing on a phone
 
@@ -75,7 +182,9 @@ Once a build is in internal testing, Apple emails each tester in the app's inter
 On the phone, the tester opens Apple's TestFlight app with the Apple Account in that group, accepts the invitation and installs Infinitary; automatic distribution offers each later build there too.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
 Open **A phone** in the Mac app's Devices settings, scan or paste its link in the phone app, and confirm that Mac.
-The phone should name the Mac and show In reach, its Cards and Activity.
+The phone should name the Mac and show In reach, its Cards, Activity and Tasks.
+Type a message or use keyboard dictation, attach a library photo, and confirm the last turn on the Mac.
+Open a task’s record to start or continue it, and its Crewmate section to steer or interrupt its running turn.
 TestFlight installation, camera scanning and the real Local Network prompt are the captain's checks on a physical phone.
 Someone working on the phone app can still run it on their own iPhone or iPad from `ios/Infinitary/Infinitary.xcodeproj` with the Infinitary scheme and their own development sign-in.
 Release signing runs only in the separately dispatched TestFlight workflow below.
@@ -151,13 +260,46 @@ Apple's internal-testing state means testers can install the build, not that a p
 
 `pnpm test:phone --evidence <absolute-folder-outside-the-project>` takes the same exclusive lease as CI's native gate, waiting behind pull-request journeys and CI phone gates, then runs the foundation's native gate on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
-Add `--demo`, with FFmpeg installed, to keep a real-speed reconnect/catch-up recording and its poster beside the test results.
-The recording crops the top of the phone view around the connection state and first two cards; it retains real speed and holds the final frame for two seconds.
+Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
+The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
+Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 It first verifies the independent published-contract client can join and read the sample card.
 The native journey covers a wrong Mac pin, joining, cards and feed, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
+Its Cards section drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
+It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.
+A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
+The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
+
+It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, collapse and return to portrait.
+Every native journey launch goes through `launchPhoneApp`, which renews the owned simulator's keyboard log subscription and waits for its startup before launching the app.
+A live subscription is not proof that it still supplies registrations after relaunch; the new subscription starts with no cached witnesses and observes both launch and the home's keyboard attachment.
+The runner joins the old output streams before appending the new subscription's gzip member, keeping all registrations in order.
+Hardware chords go through `pressPhoneKey`, which asks the test home for backboardd's acknowledgement of that chord's registration for the current app process, then sends the chord once.
+UIKit publishes an app's key commands to backboardd only while a hardware keyboard is attached when its deferred update runs after the next Core Animation commit, so for that wait the home attaches one to its owned simulator by setting the simulator-wide attached state `UIDevice` reads, the value backboardd itself writes when a keyboard connects, and detaches it again however the wait ends.
+XCTest's virtual keyboard connects and disconnects within a millisecond of each key press, so a priming press only races that publication, and once a press has detached it no app process launched afterwards publishes at launch.
+The native runner observes only its own simulator, and the isolated test home returns the acknowledgement to the key driver.
+Subscription renewal happens only at the explicit launch boundary, never as a timeout retry or a second key press.
+An evidence-writer failure stops the observer, rejects readiness and waits for both output streams before simulator cleanup.
+An app-side command list is not that acknowledgement; a missing witness fails before sending the chord, without a delay, another priming attempt or a repeated chord.
+For Return, the driver checks the router's carriage-return registration but supplies newline to XCTest: Xcode 26.4 emits the physical Return key for newline and no key for its Return constant.
+The full journey checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
+The full journey exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
+The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
+The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
+App-hosted shell tests render each native character's still pose and read Activity from the real test home; the native journey also verifies the computer-authored task key.
+The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.
+A stopped or lost connection clears the busy reading; the published connection has no initial busy snapshot, so a fresh session stays idle until a busy event arrives.
+Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.
+Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
+
+Its talk-and-tasks section chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
+It searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
+The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
+The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
+It also checks the foreground notice, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
@@ -174,8 +316,8 @@ The runner waits for simulator boot completion before launching tests and uses o
 
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
-`phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/` or the phone-contract generator and its shape guard.
-The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py` and its replacement helper `scripts/replaced-phone-runs.ts`.
+`phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
+The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py` and its replacement helper `scripts/replaced-phone-runs.ts`.
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.

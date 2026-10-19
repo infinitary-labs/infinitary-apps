@@ -10476,6 +10476,60 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
   });
+
+  // The captain's words on INF-155's sign-in card: "i clicked "open browser",
+  // finished the sign in process and came back. but the card is still here".
+  it("takes a request card down when the captain returns the browser he took from its record, leaving a plain door", async () => {
+    const h = await crewmateWithBrowser();
+    await h.emitCard.run({ ...REQUEST, id: "sign-in" });
+    await h.emitCard.run({
+      title: "The fare on aurora.example",
+      body: "<p>The fare is held on aurora.example.</p>",
+      id: "fare",
+      browser_button: "View fare",
+    });
+    await h.endTurn();
+    const open = () =>
+      h.cardStore
+        .listOpen()
+        .filter((card) => card.taskId === h.taskId)
+        .map((card) => card.title);
+    expect(open()).toEqual([REQUEST.title, "The fare on aurora.example"]);
+    // He took the browser from the record, never pressing the card's action.
+    h.shown.fact = { ...OPEN, control: "captain" };
+    const prompts = h.crewmate.promptCalls.length;
+    h.supervisor.browserReturned(h.taskId, {
+      site: "aurora.example",
+      after: HANDOFF.after,
+      once: "browser-returned:run-1:2:1",
+    });
+    await tick();
+    // The request is answered and leaves; the card that asked nothing stays.
+    expect(open()).toEqual(["The fare on aurora.example"]);
+    expect(h.supervisor.cardsSnapshot().map((card) => card.title)).not.toContain(REQUEST.title);
+    // Its crewmate hears only the return's one wake, never a choice he did not make.
+    expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+    expect(h.crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: { kind: "browser-returned", site: "aurora.example", after: HANDOFF.after },
+      }),
+    );
+  });
+
+  it("leaves a request card naming an older browser when the captain returns a newer one", async () => {
+    const h = await crewmateWithBrowser();
+    await h.emitCard.run(REQUEST);
+    await h.endTurn();
+    // That browser stopped and a newer one took its place, which he took and returns.
+    h.shown.fact = { ...OPEN, generation: 3, control: "captain" };
+    h.supervisor.browserReturned(h.taskId, {
+      site: "aurora.example",
+      once: "browser-returned:run-1:3:1",
+    });
+    await tick();
+    // Its click is what tells the crewmate that its browser is gone.
+    expect(h.saved()?.title).toBe(REQUEST.title);
+  });
 });
 
 describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {

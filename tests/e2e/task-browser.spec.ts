@@ -918,8 +918,17 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
         return current;
       });
 
-    await test.step("the card's door shows the paused page on an ember row, and the record says so", async () => {
-      await strip.getByRole("button", { name: BROWSER_DOOR_LABEL }).click();
+    await test.step("the card's line has no door beside its action, and the record shows the paused page on an ember row", async () => {
+      // The captain's words on INF-155's sign-in card: "there are two "open
+      // browser" buttons here, so it's confusing". The card's action is its one way in.
+      await expect(strip).toHaveAttribute("data-attachment-handoff", "waiting");
+      await expect(strip.getByRole("button")).toHaveCount(0);
+      await expect(cardRegion.getByRole("button", { name: MOCK_HANDOFF_ACTION })).toBeVisible();
+      // The card's key opens its task's record, where the browser's line keeps its own Open.
+      await cardRegion.getByRole("link", { name: task.key }).click();
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
+      await expectRecordBody(page);
+      await taskFact(recordCard(page), "browser").locator("[data-browser-open]").click();
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "waiting");
       await expect(view(page, task.id).locator("[data-browser-did]")).toHaveText(
         `· ${MOCK_HANDOFF_REASON}`,

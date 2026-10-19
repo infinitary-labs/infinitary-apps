@@ -123,7 +123,7 @@ describe('a card\'s live attachment (docs/task-browser.md, "From a card")', () =
     }
   });
 
-  it('draws a request card\'s strip as attention while it waits, his violet while he drives, then plain (docs/task-browser.md, "Asking for help")', () => {
+  it("draws a request card's strip as attention while it waits, his violet while he drives, then plain, never with a door beside the card's own action (docs/task-browser.md, \"Asking for help\")", () => {
     const request: LiveAttachment = { ...ATTACHMENT, label: "Open browser", handoff: true };
     const box = (control?: "waiting" | "captain") => {
       const reading = attachmentReading(
@@ -139,6 +139,7 @@ describe('a card\'s live attachment (docs/task-browser.md, "From a card")', () =
         handoff: marked(root, "data-card-attachment")?.attribs?.["data-attachment-handoff"],
         style: marked(root, "data-card-attachment")?.attribs?.style ?? "",
         line: textOf(marked(root, "data-attachment-line")),
+        buttons: buttons(root).map(textOf),
       };
     };
     expect(box("waiting")).toMatchObject({
@@ -157,9 +158,16 @@ describe('a card\'s live attachment (docs/task-browser.md, "From a card")', () =
       line: "localhost:5173 · the crewmate is driving",
     });
     expect(box().style).not.toContain("-dim");
-    // A card that asked nothing is never tinted, whoever holds its browser.
+    // The captain's words on INF-155's sign-in card: "there are two "open
+    // browser" buttons here, so it's confusing". The card's own action is
+    // the one way in, whoever holds the browser.
+    for (const control of ["waiting", "captain", undefined] as const) {
+      expect(box(control).buttons).toEqual([]);
+    }
+    // A card that asked nothing is never tinted, whoever holds its browser, and keeps its door.
     const plain = strip(attachmentReading(ATTACHMENT, detail({ ...OPEN, control: "waiting" })));
     expect(marked(plain, "data-card-attachment")?.attribs?.style ?? "").not.toContain("-dim");
+    expect(buttons(plain).map(textOf)).toEqual(["Try it"]);
   });
 
   it("draws no line until the task's record answers", () => {

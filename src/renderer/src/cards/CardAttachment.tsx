@@ -26,7 +26,9 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
  *
  * On a card that asks the captain to take the browser over (`handoff`,
  * docs/task-browser.md "Asking for help") the strip is attention while the
- * request stands, and his violet while he has control.
+ * request stands, and his violet while he has control. It draws no button
+ * there: the card's own open-browser action is its one way into the browser,
+ * since a door beside it would open the page without answering the card.
  */
 export function CardAttachment({
   cardId,
@@ -151,9 +153,11 @@ export function CardAttachmentStrip({
           STALE_ATTACHMENT_LINE
         )}
       </span>
-      <Button variant="secondary" size="sm" style={{ flexShrink: 0 }} onClick={onOpen}>
-        {attachment.label}
-      </Button>
+      {handoff ? null : (
+        <Button variant="secondary" size="sm" style={{ flexShrink: 0 }} onClick={onOpen}>
+          {attachment.label}
+        </Button>
+      )}
     </div>
   );
 }

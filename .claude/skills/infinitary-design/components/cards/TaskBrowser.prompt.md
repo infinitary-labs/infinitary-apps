@@ -61,7 +61,9 @@ Returning gives the task the signed-in page, never authority to spend; the crewm
 **Asking for help.**
 A crewmate that needs a person on the page - a sign-in, a code, a payment - asks on an ordinary decision card that names the site and why, with an action such as `Open browser and sign in` (`ResponseCard.prompt.md`, "A live attachment").
 From that card on, the browser is paused for the captain: the row tints ember (`--warn-dim`, a `warn` dot), reads `site · paused for your help · the crewmate's reason`, and offers `Take control` as the primary button.
-The card's open-browser action opens this view with the captain taking control at once; Leave waiting, closing the card or Hide leave it paused, and the record's Browser line keeps saying so.
+The card's open-browser action opens this view with the captain taking control at once, and the card leaves at that press; its Browser line has no button, so that action is the card's one way in.
+Leave waiting, closing the card or Hide leave it paused, and the record's Browser line keeps saying so.
+When he takes control from the record's Browser line instead, his `Return control` takes the request card down, so he comes back to no card; its crewmate hears only the return's one wake.
 When the browser that card names is gone - stopped, or ended when Infinitary quit - the action still opens this view, with the line from "From a card" over whatever the task's browser is now.
 Its crewmate is told, so it can open the site again and ask anew: the view fills with its fresh browser paused for his help, a new card asks, and the feed says so.
 

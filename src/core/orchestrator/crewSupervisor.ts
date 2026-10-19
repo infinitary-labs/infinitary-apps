@@ -10237,9 +10237,11 @@ export class CrewSupervisor {
   /**
    * The captain handed a task's browser back (docs/task-browser.md, "Taking
    * control"): its crewmate's one steer, named by the return so the inbox
-   * queues it once, through the task's durable lane like any other.
+   * queues it once, through the task's durable lane like any other. A
+   * request card still up for that browser goes first.
    */
   browserReturned(taskId: string, returned: BrowserReturned): void {
+    this.takeDownAnsweredRequests(taskId);
     if (this.options.inbox.woken(taskId, returned.once)) return;
     this.options.tasks.endIdle(taskId);
     const wake: TypedWake = {
@@ -10260,6 +10262,26 @@ export class CrewSupervisor {
       // No conversation to resume: the ladder reads the task on its own clock.
       console.warn("[crew] browser return's steer not delivered:", caught);
     });
+  }
+
+  /**
+   * A request card whose browser the captain just handed back asked for
+   * what he has done (docs/task-browser.md, "Asking for help"): he took that
+   * browser from the record rather than with the card's own action, which
+   * would have answered it. The card leaves on his return, so he comes back
+   * to no card, and its crewmate hears only the return's one wake. A card
+   * naming an older browser stays, since its click tells its crewmate that
+   * browser is gone.
+   */
+  private takeDownAnsweredRequests(taskId: string): void {
+    const fact = this.options.browsers?.fact(taskId);
+    for (const open of [...this.cards.values()]) {
+      const card = this.cards.shown(open.id);
+      const attachment = card?.attachment;
+      if (!card || card.taskId !== taskId || attachment?.kind !== "browser") continue;
+      if (!attachment.handoff || attachmentStanding(attachment, fact) !== "same") continue;
+      this.cards.takeDown(card.id, "browser-returned");
+    }
   }
 
   /**

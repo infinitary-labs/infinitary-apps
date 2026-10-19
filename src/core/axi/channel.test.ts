@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer, CrewmateBrowser } from "../browser/taskBrowsers";
+import { JobManager } from "../jobs/jobManager";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
 import { AxiChannel, SHELL_CAP_ENV, SHELL_STARTED_ENV, type TaskShell } from "./channel";
@@ -71,12 +72,16 @@ function standIn(title: string): CrewmateBrowser & { calls: { op: string; input:
   };
 }
 
-async function openChannel(keysDir = join(scratchDir("infinitary-axi-channel-"), "task-channel")) {
+async function openChannel(
+  keysDir = join(scratchDir("infinitary-axi-channel-"), "task-channel"),
+  answering?: (shell: string) => void,
+) {
   const channel = await AxiChannel.open({
     spawner: forkChildProcess(entry),
     binDir: BIN_DIR,
     version: "9.9.9-test",
     keysDir,
+    ...(answering ? { answering } : {}),
   });
   channels.push(channel);
   return channel;
@@ -286,6 +291,52 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     expect(look.stdout).toContain('did: "Clicked button \\"Send\\" [g1:e2]."');
     expect(browser.act).toHaveBeenCalledTimes(1);
     expect(browser.calls.filter((call) => call.op === "inspect")).toEqual([]);
+  });
+
+  it("returns a command's answer through Pi's shell when the app is held up past the shell's limit", async () => {
+    // INF-531: on a loaded Mac the app's process did not run from before the
+    // channel's deadline until after Pi's limit. When it ran again, Pi's
+    // limit turned a look into a background job before its answer came
+    // back. The channel now tells Pi's shell that the command reached it.
+    const jobs = new JobManager({ onExit: () => {} });
+    let reached: () => void = () => {};
+    const told = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const channel = await openChannel(undefined, (shell) => {
+      jobs.answering(shell);
+      reached();
+    });
+    const browser = standIn("Sign up");
+    // The page never shows the words: the wait runs on in the browser.
+    browser.inspect = vi.fn(() => new Promise<BrowserAnswer>(() => {}));
+    const granted = channel.grant("task-a", { browser });
+    const cap = 1_500;
+    const started = Date.now();
+    const running = jobs.run({
+      ownerId: "task-a",
+      command: "infinitary-browser-axi wait Ready",
+      cwd: "/tmp",
+      capMs: cap,
+      shell: granted,
+    });
+    await told;
+    // This process stops running from before the channel's deadline (750 ms
+    // before the limit) until after the limit, as the app's did.
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.max(0, started + cap - 900 - Date.now())),
+    );
+    const until = started + cap + 300;
+    while (Date.now() < until) {
+      // Held up: no timer or answer runs here until the limit has passed.
+    }
+
+    const outcome = await running;
+    expect(outcome.kind).toBe("done");
+    if (outcome.kind !== "done") return;
+    expect(outcome.exitCode).toBe(0);
+    expect(decode(outcome.output)).toMatchObject({ running: "wait" });
+    expect(browser.inspect).toHaveBeenCalledTimes(1);
   });
 
   it("counts the shell's limit from when the shell started, while that shell can still answer", async () => {

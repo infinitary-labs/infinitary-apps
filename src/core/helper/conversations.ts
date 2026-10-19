@@ -232,6 +232,8 @@ export async function startConversations(options: {
           ...parts,
           keysDir: join(options.dataDir, "task-channel"),
           evidenceDir: (task) => tasks.folders(task).evidence,
+          // A command that reached this computer keeps its shell waiting for its answer.
+          answering: (shell) => jobs.answering(shell),
           tell,
           ask: options.ask,
           log: (line) => log(`browser: ${line}`),

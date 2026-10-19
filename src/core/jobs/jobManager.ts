@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { hostEnv, SHELL_CAP_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
+import { hostEnv, SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
 import type { TaskShell } from "../session/session";
@@ -106,6 +106,11 @@ export type JobManagerOptions = {
 
 export class JobManager {
   private readonly jobs = new Map<string, RunningJob>();
+  /**
+   * Shells still inside their limit, by the id each tells its commands
+   * (`SHELL_ID_ENV`), and whether a task command in it reached the app.
+   */
+  private readonly limited = new Map<string, { answering: boolean }>();
   private readonly now: () => number;
   /** The home's jobs table, when its rows are kept there. */
   private readonly store: JobStore | undefined;
@@ -129,9 +134,22 @@ export class JobManager {
   }
 
   /**
+   * A task command in the shell with this id reached the app, which answers
+   * it within the shell's limit (docs/axi-commands.md, "A shell's limit").
+   * That answer still comes back through the shell, which a loaded Mac can
+   * hold up past the limit, so the shell waits for it (`run`). The id of a
+   * shell no longer inside its limit changes nothing.
+   */
+  answering(shell: string): void {
+    const limited = this.limited.get(shell);
+    if (limited) limited.answering = true;
+  }
+
+  /**
    * Run one command. Resolves with the output when it finishes within the
-   * cap (or the command was quick), with a job handle otherwise - and then
-   * the exit arrives through onExit when it comes.
+   * cap (or the command was quick), or within one cap more once a task
+   * command in it reached the app (`answering`), with a job handle
+   * otherwise - and then the exit arrives through onExit when it comes.
    */
   run(input: {
     ownerId: string;
@@ -143,6 +161,8 @@ export class JobManager {
     shell?: TaskShell;
   }): Promise<BashOutcome> {
     const id = randomUUID().slice(0, 8);
+    // The shell's own id, which a task command passes on (`answering`).
+    const shellId = randomUUID();
     const startedAt = this.now();
     // The channel compares this stamp with `Date.now()`, not the ticker.
     const shellStartedAt = Date.now();
@@ -163,6 +183,7 @@ export class JobManager {
         hostEnv({
           [SHELL_CAP_ENV]: String(input.background ? 0 : (input.capMs ?? SYNC_CAP_MS)),
           [SHELL_STARTED_ENV]: String(shellStartedAt),
+          [SHELL_ID_ENV]: shellId,
         }),
         input.shell,
       ),
@@ -200,6 +221,7 @@ export class JobManager {
       let timer: ReturnType<typeof setTimeout> | undefined;
 
       const becomeJob = () => {
+        this.limited.delete(shellId);
         if (becameJob || exited) return;
         becameJob = true;
         this.jobs.set(id, job);
@@ -213,6 +235,7 @@ export class JobManager {
       });
       child.on("close", (code, signal) => {
         exited = true;
+        this.limited.delete(shellId);
         if (timer) clearTimeout(timer);
         this.jobs.delete(id);
         this.options.onChange?.();
@@ -239,7 +262,16 @@ export class JobManager {
       if (input.background) {
         becomeJob();
       } else {
-        timer = setTimeout(becomeJob, input.capMs ?? SYNC_CAP_MS);
+        const cap = input.capMs ?? SYNC_CAP_MS;
+        const limited = { answering: false };
+        this.limited.set(shellId, limited);
+        // A task command that reached the app has its answer on the way
+        // back: the shell waits for it, for at most one limit more, so a
+        // shell that goes on after that command still becomes a job.
+        timer = setTimeout(() => {
+          if (limited.answering) timer = setTimeout(becomeJob, cap);
+          else becomeJob();
+        }, cap);
       }
     });
   }

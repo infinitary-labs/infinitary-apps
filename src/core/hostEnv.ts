@@ -245,6 +245,14 @@ export const SHELL_CAP_ENV = "INFINITARY_SHELL_CAP_MS";
 export const SHELL_STARTED_ENV = "INFINITARY_SHELL_STARTED_MS";
 
 /**
+ * That shell's own id, which a task command passes on, so the channel can
+ * tell the shell that its command reached the app and its answer is on the
+ * way back (`JobManager.answering`, docs/axi-commands.md). Absent: no shell
+ * is told.
+ */
+export const SHELL_ID_ENV = "INFINITARY_SHELL_ID";
+
+/**
  * An environment with a session's shell laid over it (`SessionSpec.shell`):
  * its variables, and its folders first on the search path.
  */
@@ -266,12 +274,14 @@ export function withTaskShell(
  * search path (`resources/git-bin/git`) which tree to run.
  */
 export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  // An app started from a Pi shell inherits that shell's limit. A child that
-  // is not itself that shell — the Claude client among them — must not keep
-  // it: JobManager sets both again through `extra` for the shells it starts.
+  // An app started from a Pi shell inherits that shell's limit and id. A
+  // child that is not itself that shell — the Claude client among them —
+  // must not keep them: JobManager sets them again through `extra` for the
+  // shells it starts.
   const inherited = { ...process.env };
   delete inherited[SHELL_CAP_ENV];
   delete inherited[SHELL_STARTED_ENV];
+  delete inherited[SHELL_ID_ENV];
   delete inherited.FM3000_SHELL_CAP_MS; // the older name still reads as this limit
   return {
     ...inherited,

@@ -1865,6 +1865,8 @@ export async function createServices(
             : join(host.app.appDir, "resources", "axi-bin"),
           version: host.app.version,
           keysDir: paths.taskChannelDir,
+          // A command that reached the app keeps Pi's shell waiting for its answer.
+          answering: (shell) => jobs.answering(shell),
         }).catch((error: unknown) => {
           console.warn(
             `[task-commands] no task channel, so no crewmate has a browser: ${error instanceof Error ? error.message : String(error)}`,

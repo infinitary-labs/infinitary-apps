@@ -60,6 +60,8 @@ export type ComputerBrowsersOptions = {
   version: string;
   /** This computer's folder for the tasks' keys, emptied when the channel opens and closes. */
   keysDir: string;
+  /** Told the shell a command came from once it reached this computer (`AxiChannelOptions.answering`). */
+  answering?: (shell: string) => void;
   /** Where a task's pictures go: its evidence folder here. */
   evidenceDir: (task: string) => string;
   /** Asked once, while the home is in reach, and never again (`HomeLink.invoke`). */
@@ -199,6 +201,7 @@ export class ComputerBrowsers {
       binDir: options.binDir,
       version: options.version,
       keysDir: options.keysDir,
+      ...(options.answering ? { answering: options.answering } : {}),
     });
     return new ComputerBrowsers(options, channel);
   }

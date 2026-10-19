@@ -10,6 +10,7 @@ import {
   mergeSearchPath,
   resetLoginPathForTests,
   SHELL_CAP_ENV,
+  SHELL_ID_ENV,
   SHELL_STARTED_ENV,
   withTaskShell,
 } from "./hostEnv";
@@ -238,33 +239,40 @@ PATH='${bin}':"$PATH"`,
   });
 
   it("does not hand a child a shell limit inherited from the process that started the app", async () => {
-    // A Pi shell's cap and start must not reach the Claude client. JobManager
-    // sets both again, through extra, for the shells it starts.
+    // A Pi shell's cap, start and id must not reach the Claude client.
+    // JobManager sets them again, through extra, for the shells it starts.
     const olderCap = "FM3000_SHELL_CAP_MS";
     const saved = {
       cap: process.env[SHELL_CAP_ENV],
       started: process.env[SHELL_STARTED_ENV],
+      id: process.env[SHELL_ID_ENV],
       older: process.env[olderCap],
     };
     process.env[SHELL_CAP_ENV] = "3000";
     process.env[SHELL_STARTED_ENV] = "1";
+    process.env[SHELL_ID_ENV] = "a-pi-shell";
     process.env[olderCap] = "3000";
     try {
       const dropped = hostEnv();
       expect(dropped[SHELL_CAP_ENV]).toBeUndefined();
       expect(dropped[SHELL_STARTED_ENV]).toBeUndefined();
+      expect(dropped[SHELL_ID_ENV]).toBeUndefined();
       expect(dropped[olderCap]).toBeUndefined();
       const restored = hostEnv({
         [SHELL_CAP_ENV]: "3000",
         [SHELL_STARTED_ENV]: "1700000000000",
+        [SHELL_ID_ENV]: "this-shell",
       });
       expect(restored[SHELL_CAP_ENV]).toBe("3000");
       expect(restored[SHELL_STARTED_ENV]).toBe("1700000000000");
+      expect(restored[SHELL_ID_ENV]).toBe("this-shell");
     } finally {
       if (saved.cap === undefined) delete process.env[SHELL_CAP_ENV];
       else process.env[SHELL_CAP_ENV] = saved.cap;
       if (saved.started === undefined) delete process.env[SHELL_STARTED_ENV];
       else process.env[SHELL_STARTED_ENV] = saved.started;
+      if (saved.id === undefined) delete process.env[SHELL_ID_ENV];
+      else process.env[SHELL_ID_ENV] = saved.id;
       if (saved.older === undefined) delete process.env[olderCap];
       else process.env[olderCap] = saved.older;
     }

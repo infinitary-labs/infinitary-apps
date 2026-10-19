@@ -75,6 +75,7 @@ answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
   --data-urlencode "cwd=$PWD" \
   --data-urlencode "cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}" \
   --data-urlencode "started=${INFINITARY_SHELL_STARTED_MS:-}" \
+  --data-urlencode "shell=${INFINITARY_SHELL_ID:-}" \
   "$@" "http://$address/run" 2>&1)
 status=$?
 code=${answer%%"$nl"*}

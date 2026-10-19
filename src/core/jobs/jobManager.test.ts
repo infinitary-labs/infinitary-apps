@@ -159,6 +159,57 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(db.prepare("SELECT COUNT(*) as n FROM jobs").get()).toEqual({ n: 0 });
   });
 
+  // INF-531: on a loaded Mac a task command's answer came back after Pi's
+  // limit and its look became a job. The channel tells the shell the command
+  // reached the app; the shell waits for the answer, at most one cap more.
+  it("waits past the cap for a shell whose task command reached the app, at most one cap more", async () => {
+    const { jobs, exits } = manager();
+    const dir = scratchDir("infinitary-job-answering-");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // Each shell writes the id it was told and waits to be let go, so what
+    // the cap sees does not depend on how fast a loaded machine starts it.
+    const shell = async (name: string) => {
+      const told = join(dir, `${name}.id`);
+      const release = join(dir, `${name}.release`);
+      let settled = false;
+      const running = jobs.run({
+        ownerId: "t1",
+        command: `printf %s "$INFINITARY_SHELL_ID" > '${told}.part' && mv '${told}.part' '${told}'; while [ ! -e '${release}' ]; do sleep 0.02; done; echo answered`,
+        cwd: "/tmp",
+        capMs: 100,
+      });
+      void running.then(() => (settled = true));
+      while (!existsSync(told)) await turn();
+      return {
+        id: readFileSync(told, "utf8"),
+        running,
+        settled: () => settled,
+        release: () => writeFileSync(release, ""),
+      };
+    };
+
+    // Its answer comes back after the cap: the shell returns it.
+    const answered = await shell("answered");
+    expect(answered.id).toMatch(/^[0-9a-f-]{36}$/);
+    jobs.answering(answered.id);
+    await vi.advanceTimersByTimeAsync(199);
+    expect(answered.settled()).toBe(false);
+    answered.release();
+    expect(await answered.running).toEqual({ kind: "done", exitCode: 0, output: "answered" });
+
+    // A shell that goes on after its command still becomes a job, one cap later.
+    const longer = await shell("longer");
+    jobs.answering(longer.id);
+    await vi.advanceTimersByTimeAsync(199);
+    expect(longer.settled()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect((await longer.running).kind).toBe("job");
+    vi.useRealTimers();
+    longer.release();
+    await expect.poll(() => exits.length, { timeout: 5_000 }).toBe(1);
+    expect(exits[0]?.tail).toBe("answered");
+  });
+
   it("starts immediately as a job with the explicit background flag", async () => {
     const { jobs, exits } = manager();
     const outcome = await jobs.run({

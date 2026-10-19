@@ -48,6 +48,12 @@ import type {
  * operation still running then goes on, and its answer is kept for the task's
  * next command, which gets it instead of running, even when the limit has
  * already run out. Nothing is ever sent twice.
+ *
+ * The answer still has to come back through the shell, and a loaded Mac can
+ * hold up that way back, or this process, past the limit, which no margin
+ * covers. So a request tells its shell, by the id the shell gave it
+ * (`INFINITARY_SHELL_ID`), that its command reached the app (`answering`):
+ * the shell then waits for the answer rather than turning it into a job.
  */
 
 export type { TaskShell } from "../session/session";
@@ -64,13 +70,18 @@ export type AxiChannelOptions = {
   version: string;
   /** The app's own folder for the keys (`AppPaths.taskChannelDir`); emptied at open and close. */
   keysDir: string;
+  /**
+   * Told the id of the shell a command came from once it reached the app
+   * (`JobManager.answering`), so that shell waits for its answer.
+   */
+  answering?: (shell: string) => void;
 };
 
 /** The variables a task's shell carries (`resources/axi-bin/infinitary-axi` reads them). */
 export const AXI_ADDRESS_ENV = "INFINITARY_AXI_ADDRESS";
 export const AXI_KEY_ENV = "INFINITARY_AXI_KEY";
 export const AXI_VERSION_ENV = "INFINITARY_AXI_VERSION";
-export { SHELL_CAP_ENV, SHELL_STARTED_ENV } from "../hostEnv";
+export { SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV } from "../hostEnv";
 
 /** The header a request carries its key in; the key file is that one header line. */
 const KEY_HEADER = "x-infinitary-axi-key";
@@ -298,6 +309,9 @@ export class AxiChannel {
       return;
     }
     const form = new URLSearchParams(body);
+    // Every answer from here comes back through the shell, a refusal too.
+    const shell = form.get("shell");
+    if (shell) this.options.answering?.(shell);
     // Firstmate 3000's name for a command is the same command.
     const tool = ownTaskCommand(form.get("tool") ?? "");
     const deadline = shellDeadline(received, form.get("cap"), form.get("started"));

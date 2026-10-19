@@ -59,13 +59,13 @@ export const MAC_DOWNLOAD_UPDATE = [
   'T="$(mktemp -d -t firstmate)" || exit 3',
   "trap 'rm -rf \"$T\"' EXIT",
   "trap 'exit 6' HUP INT TERM PIPE",
-  `/bin/sh -c ${shellWord(MAC_DOWNLOAD)} infinitary "$T" "$3" "$4" || exit $?`,
+  `/bin/sh -c ${shellWord(MAC_DOWNLOAD)} infinitary "$T" "$4" "$5" || exit $?`,
   'B=""; for b in "$T"/*.app; do B="$b"; break; done',
   '[ -d "$B" ] || exit 8',
   `printf "${DOWNLOAD_READY}\\n"`,
   "IFS= read -r C || exit 6",
   `[ "$C" = ${DOWNLOAD_INSTALL} ] || exit 6`,
-  '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2"',
+  '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2" ${3:+--on-home-mac "$3"}',
 ].join("\n");
 
 export function readDownloadCount(line: string): { received: number; total?: number } | null {

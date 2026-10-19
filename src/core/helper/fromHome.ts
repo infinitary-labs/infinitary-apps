@@ -2,7 +2,6 @@ import { rmSync } from "node:fs";
 import type { DeviceGrant } from "@shared/devices";
 import type { WorkOutcome } from "@shared/remoteLogin";
 import type { ExpectedHome } from "@shared/sshConnection";
-import { dialHome } from "../devices/dial";
 import { JoinedHome } from "../devices/joinedHome";
 import {
   type BackgroundContext,
@@ -16,9 +15,8 @@ import {
 } from "./background";
 import { cleanUp } from "./cleanUp";
 import { homePlace } from "./homePlace";
-import { fetchedLauncher, hearHome, keepApp, keepHeard } from "./join";
+import { fetchedLauncher, keepApp } from "./join";
 import { STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
-import { homeDialOptions } from "./route";
 import { homeLabel } from "./words";
 
 /**
@@ -42,6 +40,14 @@ export type FromHomeContext = {
    * that now reaches another Mac never removes or updates its Firstmate.
    */
   expected: ExpectedHome;
+  /**
+   * Whether this computer runs on the home's own Mac, as the home's list
+   * found where it joined from (`onThisMac`), which an update's arguments
+   * carry (`--on-home-mac`); absent when the list does not say. Its Update
+   * holds its SSH connection to this computer, so nothing here can dial the
+   * home to hear it while the update runs.
+   */
+  onHomeMac?: boolean;
   /** Where this user's agent is and how its service manager is asked; null when nothing is set up in the background. */
   background: BackgroundContext | null;
   /** What the background carries of this process's environment: a development run's stand-ins alone. */
@@ -81,7 +87,7 @@ export async function updateFromHome(
     return { firstmate: "refused", reason: "not-kept" };
   }
   const launcher = fetchedLauncher(kept);
-  if (background && launcher) await hearWhereItRuns(context, joined.grant);
+  keepWhereItRuns(context);
   const state =
     background && launcher
       ? await startInBackground(background, {
@@ -119,7 +125,7 @@ export async function restartInstalled(
   const release = await takeFolder(context, before.service);
   if (!release) return { firstmate: "refused", reason: "busy" };
   release();
-  if (background) await hearWhereItRuns(context, joined.grant);
+  keepWhereItRuns(context);
   const state = background
     ? await startInBackground(background, {
         launcher,
@@ -180,19 +186,15 @@ export async function removeFromHome(context: FromHomeContext): Promise<WorkOutc
 }
 
 /**
- * Hears the home once, before the agent is set up anew, when the grant has
- * not kept where this computer runs (docs/helper.md, "In the background"):
- * one that joined before its home said it, updated here before its run
- * heard a welcome. A home that does not answer leaves the grant as it was.
+ * Keeps the home's word on where this computer runs on the grant, before the
+ * agent is set up anew, which reads it (docs/helper.md, "In the background"):
+ * one that joined before its home said it, updated before its run heard a
+ * welcome, starts at the priority the home's word gives. With no word, the
+ * grant stays as it was.
  */
-async function hearWhereItRuns(context: FromHomeContext, grant: DeviceGrant): Promise<void> {
-  if (grant.onHomeMac !== undefined) return;
-  const { dataDir, now } = context;
-  // Over the route the home's SSH connection keeps, or at the grant's address.
-  const heard = await hearHome(grant, {
-    dial: (dialed) => dialHome(dialed, homeDialOptions(dataDir, dialed, now)),
-  }).catch(() => null);
-  keepHeard(new JoinedHome(dataDir, () => {}), grant, heard);
+function keepWhereItRuns(context: FromHomeContext): void {
+  if (context.onHomeMac === undefined) return;
+  new JoinedHome(context.dataDir, () => {}).onHomeMac(context.onHomeMac);
 }
 
 /** Whether the folder runs work for the home the home expects, as that computer. */

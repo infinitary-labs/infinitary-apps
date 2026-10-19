@@ -158,19 +158,23 @@ function backgroundOf(
  * The words after a command: `--fetched <app>`, the copy of Firstmate the
  * home sent; `--from-home`, started by the home over Remote Login;
  * `--home <pin> --device <id>`, the home and computer the home expects this
- * folder to run work for (`expectedHomeSchema`), both public; and the rest.
- * Null when a flag names nothing.
+ * folder to run work for (`expectedHomeSchema`), both public;
+ * `--on-home-mac true|false`, whether this computer runs on the home's own
+ * Mac, as the home's list found it; and the rest. Null when a flag names
+ * nothing, or something it does not take.
  */
 function readFlags(rest: readonly string[]): {
   fetched?: string;
   fromHome: boolean;
   expected?: ExpectedHome;
+  onHomeMac?: boolean;
   words: string[];
 } | null {
   const words: string[] = [];
   let fetched: string | undefined;
   let homeKey: string | undefined;
   let deviceId: string | undefined;
+  let onHomeMac: boolean | undefined;
   let fromHome = false;
   for (let index = 0; index < rest.length; index += 1) {
     const word = rest[index] as string;
@@ -180,6 +184,11 @@ function readFlags(rest: readonly string[]): {
       if (word === "--fetched") fetched = value;
       else if (word === "--home") homeKey = value;
       else deviceId = value;
+      index += 1;
+    } else if (word === "--on-home-mac") {
+      const value = rest[index + 1];
+      if (value !== "true" && value !== "false") return null;
+      onHomeMac = value === "true";
       index += 1;
     } else if (word === "--from-home") fromHome = true;
     else words.push(word);
@@ -193,6 +202,7 @@ function readFlags(rest: readonly string[]): {
     ...(fetched ? { fetched } : {}),
     fromHome,
     ...(expected?.success ? { expected: expected.data } : {}),
+    ...(onHomeMac === undefined ? {} : { onHomeMac }),
     words,
   };
 }
@@ -331,27 +341,16 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
     case "remove": {
       const flags = readFlags(rest);
       if (!flags?.fromHome || !flags.expected || flags.words.length !== 0) break;
-      if (command === "update" && !flags.fetched) {
-        const uid = process.getuid?.() ?? userInfo().uid;
-        return answerHome(
-          await restartInstalled(
-            {
-              dataDir: place.dataDir,
-              expected: flags.expected,
-              background: backgroundOf(context, uid),
-              backgroundEnv: context.backgroundEnv,
-            },
-            context.launcher,
-          ),
-        );
-      }
       const uid = process.getuid?.() ?? userInfo().uid;
       const fromHomeContext = {
         dataDir: place.dataDir,
         expected: flags.expected,
+        ...(flags.onHomeMac === undefined ? {} : { onHomeMac: flags.onHomeMac }),
         background: backgroundOf(context, uid),
         backgroundEnv: context.backgroundEnv,
       };
+      if (command === "update" && !flags.fetched)
+        return answerHome(await restartInstalled(fromHomeContext, context.launcher));
       return answerHome(
         command === "update" && flags.fetched
           ? await updateFromHome(fromHomeContext, flags.fetched)

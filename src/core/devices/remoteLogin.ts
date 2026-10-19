@@ -433,6 +433,7 @@ export class RemoteLogin {
               MAC_DOWNLOAD_UPDATE,
               "infinitary",
               ...this.expected(deviceId),
+              onHomeMacWord(device),
               download.sha256,
               download.url,
             ],
@@ -496,6 +497,7 @@ export class RemoteLogin {
               script,
               "firstmate",
               ...this.expected(deviceId),
+              onHomeMacWord(device),
               ...(build.form === "bundle" ? [] : [build.sha256]),
             ],
             stdin: async (sink, activity) => {
@@ -1119,6 +1121,7 @@ export class RemoteLogin {
         if ("asks" in installed && installed.asks === "password") return installed;
         return step.refuse("failed");
       }
+      const onHomeMac = onHomeMacWord(device);
       const ran = await runSsh({
         ...this.sshFor(device.remoteLogin ?? ""),
         command: [
@@ -1130,6 +1133,7 @@ export class RemoteLogin {
           this.options.pairing.identity().pin,
           "--device",
           device.id,
+          ...(onHomeMac ? ["--on-home-mac", onHomeMac] : []),
         ],
         timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
       });
@@ -1443,6 +1447,18 @@ function pkgField(value: string | undefined): string {
 
 function sudoField(value: string | undefined): { sudo?: SudoRight } {
   return value === "free" || value === "password" || value === "no" ? { sudo: value } : {};
+}
+
+/**
+ * Whether a computer runs on this Mac, as its list found where it joined
+ * from (`onThisMac`), as an update's arguments say it (`--on-home-mac`);
+ * empty while the list does not say. The update there keeps it on its
+ * grant before it sets its agent up anew: this Mac's Update holds its SSH
+ * connection to that computer, so the update cannot dial this Mac to hear
+ * it (docs/helper.md, "Started by the home").
+ */
+function onHomeMacWord(device: Pick<DeviceView, "onThisMac">): "true" | "false" | "" {
+  return device.onThisMac === undefined ? "" : device.onThisMac ? "true" : "false";
 }
 
 /** Why the work mode there would not join, as the home says it. */

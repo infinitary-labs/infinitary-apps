@@ -1117,6 +1117,15 @@ test("a Mac added by its address over Remote Login: the copy joins through the h
   await expect.poll(running.lines).toContain(helperWords.inReach(place, "MacBook Pro")[0]);
   await expect.poll(() => first.sshConnections.state(device.id)).toEqual({ state: "connected" });
 
+  // A grant kept before its home said where it runs (INF-472), as a join
+  // before alpha 0.5.0-alpha.5 kept it: the update below decides its agent.
+  const joinedHome = new JoinedHome(them.dataDir, () => {});
+  const joined = joinedHome.read();
+  if (!joined) throw new Error("Nothing joined there.");
+  const { onHomeMac: _said, ...unheard } = joined.grant;
+  joinedHome.join(unheard, joined.joinedAt);
+  if (joined.name) joinedHome.name(joined.name);
+
   // Updated: the connection lets go, this Mac's Firstmate goes there again, its agent
   // starts the new copy, and the connection is made again to that copy.
   markCopy(bundle, "the home's newer version");
@@ -1129,6 +1138,10 @@ test("a Mac added by its address over Remote Login: the copy joins through the h
   ]);
   expect(await running.exited).toBe(0);
   expect(copyMark(kept)).toBe("the home's newer version\n");
+  // The home held its connection, so the update could dial nothing: it kept
+  // the home's word from its own arguments, and set the agent up by it.
+  expect(new JoinedHome(them.dataDir, () => {}).read()?.grant).toMatchObject({ onHomeMac: true });
+  expect(readFileSync(installed.service?.file ?? "", "utf8")).not.toContain("ProcessType");
   const updated = work(["run"], them.env);
   writeFileSync(them.agentPid, `${updated.child.pid}\n`);
   await expect

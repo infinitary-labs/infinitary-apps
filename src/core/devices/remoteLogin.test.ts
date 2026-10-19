@@ -708,6 +708,13 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const device = await addChecked(elsewhere.remote, sshd.address);
     expect(device).toMatchObject({ user: "sam", onThisMac: false });
     expect(elsewhere.pairing.list()).toEqual([expect.objectContaining({ onThisMac: false })]);
+
+    // INF-472: its update tells the work there it runs on another Mac, so the
+    // agent there starts as an app while this Mac's connection is held.
+    await elsewhere.remote.update(device.id);
+    expect(readFileSync(record, "utf8")).toMatch(
+      new RegExp(`^started: work update .* --device ${device.id} --on-home-mac false$`, "m"),
+    );
   });
 
   it("updates Firstmate on a Mac added by its address, and removes what it set up there", async () => {
@@ -726,11 +733,13 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       remoteLoginWords.starting(deviceLabel(device)),
       remoteLoginWords.updated(device, "running"),
     ]);
-    // It is checked there to be this home's computer before anything changes.
+    // It is checked there to be this home's computer before anything changes,
+    // and told it runs on this Mac, as the look found it when it was added.
     const expected = `--home ${at.pairing.identity().pin} --device ${device.id}`;
+    expect(device.onThisMac).toBe(true);
     expect(readFileSync(record, "utf8")).toMatch(
       new RegExp(
-        `^started: work update --fetched /.+/${escapeRegExp(STAND_IN_APP)} --from-home ${expected}$`,
+        `^started: work update --fetched /.+/${escapeRegExp(STAND_IN_APP)} --from-home ${expected} --on-home-mac true$`,
         "m",
       ),
     );
@@ -1302,6 +1311,7 @@ describe.runIf(SSH_SERVER_AVAILABLE && process.platform === "darwin")(
             "infinitary",
             "fixture-home",
             "fixture-device",
+            "false",
             release.sha256,
             release.publicUrl,
           ],
@@ -1573,6 +1583,7 @@ process.exit(ran.status ?? 1);
               "infinitary",
               "fixture-home",
               "fixture-device",
+              "false",
               each.sha256,
             ],
             stdin: async (sink) => {

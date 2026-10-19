@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 import {
   buildPairingLink,
   type DeviceKind,
@@ -8,10 +9,16 @@ import {
   splitDialAddress,
 } from "@shared/devices";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
-import { afterEach, describe, expect, it } from "vitest";
+import {
+  controllerSaysSchema,
+  readSshMessage,
+  SSH_MESSAGE_VERSION,
+  sshMessageLine,
+} from "@shared/sshConnection";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { claudeOnComputer } from "../../../tests/helpers/computerClaude";
 import { freePort } from "../../../tests/helpers/connectionClient";
-import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../../../tests/helpers/socketForward";
 import {
   type HomeConnection,
@@ -26,6 +33,7 @@ import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { type BackgroundContext, separateMac, serviceLabel, writeInstalled } from "./background";
 import { cleanUp, LEFT_CLAUDE_LOGIN } from "./cleanUp";
+import { connectFromHome } from "./connect";
 import { updateFromHome } from "./fromHome";
 import { onHomeMac } from "./homePlace";
 import { type HelperIO, homeDialAddress, joinHome } from "./join";
@@ -1153,20 +1161,22 @@ describe("a home that reaches this computer through its own SSH connection", () 
     expect(await run.ended).toBe("stopped");
   });
 
-  // INF-247 and the captain's pick on INF-460: the Mac mini joined as
-  // `work` through the home's SSH connection, whose grant names only that
-  // connection's far end. Updated over Remote Login before its run heard
-  // where it runs, the update hears the home once, so its agent follows the
-  // home's word: an app on a separate Mac, and the low priority another
-  // user here always had.
-  it("hears where it runs from the home before an update sets its agent up anew", async () => {
+  // INF-247, the captain's pick on INF-460, and INF-472: the Mac mini joined
+  // as `work` through the home's SSH connection, whose grant names only that
+  // connection's far end. The home's Update holds that connection
+  // (`SshConnections.hold`), so the controller here has withdrawn its route
+  // before the update starts, and nothing here can dial the home. Updated
+  // before its run heard where it runs, the update keeps the home's word
+  // from its own arguments, so its agent follows it: an app on a separate
+  // Mac, and the low priority another user here always had.
+  it("keeps where it runs from the home's word as an update sets its agent up anew while the home holds its connection", async () => {
     const PROCESS_TYPE = "<key>ProcessType</key>\n\t<string>Interactive</string>";
     for (const [locality, separate] of [
       ["elsewhere", true],
       ["this-mac", false],
     ] as const) {
       const at = await home();
-      const forwarded = await forward(at.at);
+      const joining = await forward(at.at);
       const { link } = at.pairing.invite(
         { kind: "work" },
         { remoteLogin: "builder@mini.local", via: "ssh", locality },
@@ -1176,17 +1186,45 @@ describe("a home that reaches this computer through its own SSH connection", () 
       const grant = await claimLink(
         link,
         { kind: "work", name: "Mac mini", user: BUILDER },
-        { target: { socket: forwarded.socket } },
+        { target: { socket: joining.socket } },
       );
       expect(grant.onHomeMac).toBeUndefined();
       const dataDir = scratchDir("infinitary-helper-");
       new JoinedHome(dataDir).join(grant, Date.now());
-      const route = new HomeRoute(dataDir);
-      route.publish(route.begin(), {
-        socket: forwarded.socket,
-        homeKey: grant.homeKey,
-        deviceId: grant.deviceId,
+      const expected = { homeKey: grant.homeKey, deviceId: grant.deviceId };
+
+      // The home's SSH connection runs the controller here, which publishes
+      // its route once the home's forward is in place.
+      const input = new PassThrough();
+      const output = new PassThrough();
+      let said = "";
+      output.on("data", (chunk: Buffer) => {
+        said += chunk.toString();
       });
+      const ended = connectFromHome({
+        dataDir,
+        expected,
+        input,
+        output,
+        socketBase: socketScratchDir("fm-b-"),
+        agent: async () => "running",
+      });
+      const socket = await vi.waitFor(() => {
+        const first = readSshMessage(controllerSaysSchema, said.split("\n")[0] ?? "");
+        if (first?.firstmate !== "socket") throw new Error("The controller said no socket yet.");
+        return first.socket;
+      });
+      const forwarded = await forwardSocket(splitDialAddress(at.at)?.port ?? 0, socket);
+      forwards.push(forwarded);
+      input.write(sshMessageLine({ firstmate: "forwarded", v: SSH_MESSAGE_VERSION }));
+      await expect.poll(() => new HomeRoute(dataDir).current(grant)).toBe(socket);
+
+      // The home's Update holds its connection: the SSH session ends, and
+      // the route goes with it, before anything is sent.
+      input.end();
+      expect(await ended).toBe("ended");
+      expect(new HomeRoute(dataDir).current(grant)).toBeNull();
+      const carried = forwarded.carried();
       // The grant alone reads the home's own Mac: `work`, through its SSH.
       expect(separateMac(dataDir), locality).toBe(false);
       const contacts: WorkDeviceContact[] = [];
@@ -1201,9 +1239,14 @@ describe("a home that reaches this computer through its own SSH connection", () 
       const sent = join(scratchDir("infinitary-helper-sent-"), "Infinitary.app");
       mkdirSync(join(sent, "Contents", "MacOS"), { recursive: true });
       writeFileSync(join(sent, "Contents", "MacOS", "Infinitary"), "#!/bin/sh\n", { mode: 0o755 });
-      const expected = { homeKey: grant.homeKey, deviceId: grant.deviceId };
+      // What the home's list found of where it joined from, which its Update names.
+      const onThisMac = at.pairing.list().find(({ id }) => id === grant.deviceId)?.onThisMac;
+      expect(onThisMac, locality).toBe(!separate);
       expect(
-        await updateFromHome({ dataDir, background, backgroundEnv: {}, expected }, sent),
+        await updateFromHome(
+          { dataDir, background, backgroundEnv: {}, expected, onHomeMac: onThisMac },
+          sent,
+        ),
       ).toEqual({ firstmate: "updated", background: "running" });
       const agent = join(
         background.homeDir,
@@ -1217,7 +1260,8 @@ describe("a home that reaches this computer through its own SSH connection", () 
       expect(new JoinedHome(dataDir).read()?.grant.onHomeMac, locality).toBe(!separate);
       writeFileSync(agent, "not a priority reading");
       expect(separateMac(dataDir), locality).toBe(separate);
-      // The home counted that dial as nothing of this computer in reach.
+      // Nothing dialed the home while it held its connection.
+      expect(forwarded.carried(), locality).toBe(carried);
       expect(contacts).toEqual([]);
     }
   });

@@ -75,8 +75,9 @@ export type FarSystem = {
   unpack: Partial<Record<CopyForm, string>>;
   /**
    * Updating: the copy on the input, then `work update --fetched <app>
-   * --from-home --home "$1" --device "$2"`; `$3` its SHA-256. Exit 3: no
-   * temporary folder; 4: the copy did not arrive whole.
+   * --from-home --home "$1" --device "$2" --on-home-mac "$3"`, the flag left
+   * out when `$3` is empty; `$4` its SHA-256. Exit 3: no temporary folder;
+   * 4: the copy did not arrive whole.
    */
   update: Partial<Record<CopyForm, string>>;
 };
@@ -290,14 +291,14 @@ export const MACOS: FarSystem = {
       'for b in "$T"/*.app; do B="$b"; break; done',
       '[ -d "$B" ] || exit 4',
       `printf "${UPDATE_STARTING}\\n"`,
-      '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2"',
+      '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2" ${3:+--on-home-mac "$3"}',
     ].join("\n"),
     zip: [
       'T="$(mktemp -d -t firstmate)" || exit 3',
       "trap 'rm -rf \"$T\"' EXIT",
       'F="$T/.firstmate.zip"',
       'cat > "$F" || exit 4',
-      ...checksum("$3"),
+      ...checksum("$4"),
       '/usr/bin/ditto -x -k "$F" "$T" || exit 4',
       'rm -f "$F"',
       'B=""',
@@ -305,7 +306,7 @@ export const MACOS: FarSystem = {
       '[ -d "$B" ] || exit 4',
       VERIFY_MAC_APP,
       `printf "${UPDATE_STARTING}\\n"`,
-      '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2"',
+      '"$B/Contents/MacOS/$(basename "$B" .app)" work update --fetched "$B" --from-home --home "$1" --device "$2" ${3:+--on-home-mac "$3"}',
     ].join("\n"),
   },
 };
@@ -362,11 +363,11 @@ export const LINUX: FarSystem = {
       "umask 077",
       `F="$T/${LINUX_APP_FILE}.part"`,
       'cat > "$F" || exit 4',
-      ...checksum("$3"),
+      ...checksum("$4"),
       `B="$T/${LINUX_APP_FILE}"`,
       'chmod 0700 "$F" && mv "$F" "$B" || exit 4',
       `printf "${UPDATE_STARTING}\\n"`,
-      '"$B" work update --fetched "$B" --from-home --home "$1" --device "$2"',
+      '"$B" work update --fetched "$B" --from-home --home "$1" --device "$2" ${3:+--on-home-mac "$3"}',
     ].join("\n"),
   },
 };

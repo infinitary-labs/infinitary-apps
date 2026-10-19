@@ -228,6 +228,15 @@ html[data-card-maximized] [data-prompt-notices] {
 [data-side-panel][data-side-panel-collapsed] {
   flex-shrink: 0;
 }
+/* Expanded panels share the rail evenly, each capped at its own content,
+   so a short panel keeps all of its rows and a long one scrolls in what is
+   left. Shrinking in proportion to content height instead pushed a short
+   docked panel out of the window beside a long board. A `fill` panel below
+   sets its own flex and takes what the others leave. */
+[data-side-panel]:not([data-side-panel-collapsed], [data-side-panel-size="fill"]) {
+  flex: 1 1 0;
+  max-height: max-content;
+}
 [data-side-panel-placement-y="bottom"] {
   margin-top: auto;
 }

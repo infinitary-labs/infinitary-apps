@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "automation-panel-stays-docked",
+      "kind": "fix",
+      "area": "settings",
+      "title": "The Automation panel stays at the bottom of the right side",
+      "body": "With a long list of tasks, the Automation panel could slide down out of the window and show only its header. Now it keeps all of its rows in view and the Tasks list scrolls in the room that is left.",
+      "noPicture": "The fixed layout is shown by a stylesheet check in a browser, not a hero picture; the panel simply stays in view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

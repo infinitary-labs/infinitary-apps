@@ -64,10 +64,10 @@ Six rules, each with its test:
 A side panel binds a `PanelSource<T>` (`subscribe` + `get`, framework-free); `null` means nothing to show, and the host renders no chrome for it.
 There is no `show_panel` / `hide_panel` anywhere, and none is planned.
 Placement: a contribution declares a `preferredPlacement` (`x`: left/right rail, `y`: top/bottom of that rail's stack), an order, and a `size` (`content` hugs what it shows; `fill` takes the rail height its siblings leave); `placeSidePanels` honours `x` for the rail in v1, then stacks `y`'s top group above its bottom group, sorting by order then id within each.
-A collapsed panel keeps its whole header height when a sibling overflows; expanded panels take the remaining space and scroll their bodies.
+A collapsed panel keeps its whole header height when a sibling overflows; expanded panels share the remaining space evenly, each capped at its own content, so a short panel shows all of it and a long one scrolls its body.
 The bottom group docks together: only its first shown panel consumes spare height above it, and later panels keep only the rail's normal gap.
 Hidden bottom panels do not consume the group's leading margin.
-The focused browser stylesheet contracts are `tests/renderer/railDocking.spec.ts` for docking and `tests/renderer/collapsedRailPanel.spec.ts` for collapsed headers beside overflowing content.
+The focused browser stylesheet contracts are `tests/renderer/railDocking.spec.ts` for docking and `tests/renderer/collapsedRailPanel.spec.ts` for collapsed headers beside overflowing content, and `tests/renderer/railExpandedPanels.spec.ts` for two expanded panels sharing an overflowing rail.
 A personal or added panel that names no placement lands at the top of the left rail (`DEFAULT_PERSONAL_PLACEMENT`).
 Above the left rail's top group, `Rail` draws the create-your-own-panel slot while it shows (`docs/first-launch.md`): it docks the rail as a panel does and counts toward no cap.
 

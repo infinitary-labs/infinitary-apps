@@ -5,6 +5,8 @@
  * counts tokens before deciding. docs/claude-client.md owns the contract.
  * Keep the real plan fixture within that unconditional acceptance band,
  * not merely a guessed conversion of the full token cap to characters.
+ * Its 50,000 characters is also the client's default length past which it
+ * saves a tool result to a file (INF-451).
  */
 export const CLAUDE_MCP_DEFAULT_OUTPUT_TOKENS = 25_000;
 const ESTIMATE_CHARACTERS_PER_TOKEN = 4;

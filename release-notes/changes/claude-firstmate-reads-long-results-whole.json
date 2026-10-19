@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "claude-firstmate-reads-long-results-whole",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate on Claude reads long answers whole",
+      "body": "When your first mate on Claude looks something up and the answer is long, it now reads up to 200,000 characters of it. Before, anything past 50,000 characters reached it as a short excerpt it could not open, so it could act without seeing the rest.",
+      "noPicture": "This changes what the first mate on Claude reads before it answers, not a screen or control.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

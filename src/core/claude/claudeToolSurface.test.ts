@@ -14,6 +14,7 @@ import {
 import { approvalHost } from "../../../scripts/evals/host";
 import { sdkBundledClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import { answerText, startStubApi } from "../../../tests/helpers/anthropicDialect";
+import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "../../../tests/helpers/claudeMcpLimit";
 import {
   answersTool,
   answerTool,
@@ -41,6 +42,7 @@ import { resolveClaudeExecutable } from "./claudeCli";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { claudeToolServer, claudeToolsOf, zodShapeOf } from "./claudeTaskTools";
 import { locateClaudeTranscript } from "./claudeTranscript";
+import { CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS } from "./session";
 
 /**
  * What the Claude transport actually SERVES of the app's own tools.
@@ -669,4 +671,67 @@ describe("the accepted plan through the real Claude client", () => {
       }
     },
   );
+});
+
+// INF-451: past its 50,000-character default the client saves a tool result to a file and
+// serves a preview, which the seat has no tool to open. Every result in the seat's band
+// must reach the model whole.
+describe("a first mate tool result past the client's default band", () => {
+  afterEach(async () => {
+    resetStoreLeasesForTest();
+    await seatBoxesFlushed();
+  });
+  // The captured INF-91 row as one read would serve it whole, before the tasks tool pages it.
+  const record = JSON.stringify(
+    JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8")),
+    null,
+    2,
+  );
+  it.each([
+    { name: "the captured INF-91 row", text: record },
+    {
+      name: "that record filling the seat's band to its last character",
+      text: record.repeat(2).slice(0, CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS),
+    },
+  ])("reaches the model whole: $name", { timeout: 180_000 }, async ({ text }) => {
+    expect(text.length).toBeGreaterThan(CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS);
+    expect(text.length).toBeLessThanOrEqual(CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS);
+    const api = await startStubApi();
+    try {
+      const box = claudeSeatBox(api, resolveClaudeExecutable() ?? sdkBundledClaudeClient());
+      const tools = (await firstmateTools()).map((tool) =>
+        tool.name === "tasks" ? { ...tool, run: async () => ({ text }) } : tool,
+      );
+      api.answer((request, res) =>
+        answersTool(request)
+          ? answerText(request, res, "Read it.")
+          : answerTool(request, res, "tasks", { key: "INF-91" }),
+      );
+      const session = await box.factory({
+        cwd: box.cwd,
+        sessionsDir: join(box.home, "firstmate", "sessions"),
+        binding: { backend: "claude", accountId: "acct_fixture" },
+        model: { provider: "anthropic-claude", id: "claude-opus-5-5" },
+        tools,
+      });
+      await session.prompt("Read INF-91.");
+      session.dispose();
+      await session.closed();
+      expect(api.requests).toHaveLength(2);
+      const received = api.requests
+        .at(-1)
+        ?.body.messages?.flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content) ? message.content : [],
+        )
+        .findLast((block) => block.type === "tool_result")?.content;
+      const served =
+        typeof received === "string"
+          ? received
+          : received?.map((block: { text?: string }) => block.text ?? "").join("\n");
+      expect(served?.length).toBe(text.length);
+      expect(served).toBe(text);
+    } finally {
+      await api.close();
+    }
+  });
 });

@@ -300,6 +300,15 @@ export const CLAUDE_ROLLING_ENV = { CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: "1" }
 export const CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS = 100_000;
 
 /**
+ * The first mate's tool-result band in characters: the client takes a result
+ * whose estimate (a quarter token per character) is at most half the cap
+ * without counting it (docs/claude-client.md). INF-451: each of the seat's
+ * tools declares it, or the client saves a result past 50,000 characters to a
+ * file and serves a preview the seat has no tool to open.
+ */
+export const CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS = (CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS / 2) * 4;
+
+/**
  * The client's documented switch that keeps its per-turn extras off the
  * seat: without it the installed 2.1.283 tells a seat that ran a few tool
  * calls without a word that "the user hasn't heard from you"
@@ -340,9 +349,15 @@ export type ClaudeSessionOptionsInput = {
   };
 };
 
-/** The app's in-process server for the spec's tools, served always-load. */
-function toolServer(tools: readonly BoundTool[]): Options["mcpServers"] {
-  return { [CLAUDE_SEAT_TOOL_SERVER]: claudeToolServer(tools) };
+/**
+ * The app's in-process server for the spec's tools, served always-load, with
+ * the result length the client serves whole when one is given.
+ */
+function toolServer(
+  tools: readonly BoundTool[],
+  wholeResultCharacters?: number,
+): Options["mcpServers"] {
+  return { [CLAUDE_SEAT_TOOL_SERVER]: claudeToolServer(tools, wholeResultCharacters) };
 }
 
 /**
@@ -416,8 +431,16 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // the session's whole surface is the spec's own typed tools
       // (docs/orchestrator-contract.md).
       ...(coding ? {} : { tools: [] }),
-      // The spec's tools, served always-load, when it has any.
-      ...(spec.tools.length > 0 ? { mcpServers: toolServer(spec.tools) } : {}),
+      // The spec's tools, served always-load, when it has any; the seat's
+      // whole band reaches it, since it has no tool to open a saved result.
+      ...(spec.tools.length > 0
+        ? {
+            mcpServers: toolServer(
+              spec.tools,
+              coding ? undefined : CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS,
+            ),
+          }
+        : {}),
       // Only the app's tool server: nothing of the person's mounts.
       strictMcpConfig: true,
       // The working copy's skills, listed as `project:<skill>`, and no hook

@@ -204,12 +204,27 @@ export function claudeToolsOf(tools: readonly BoundTool[]) {
  * server serves, rather than a lookalike built beside it: the client
  * truncates a tool description at 2,048 characters and drops every nested
  * parameter description, and nothing noticed for weeks.
+ *
+ * `wholeResultCharacters`, when given, is declared on every tool as the
+ * client's `anthropic/maxResultSizeChars`: a longer result is the one the
+ * client saves to a file and serves as a preview, in place of its own
+ * 50,000-character default (docs/claude-client.md).
  */
-export function claudeToolServer(tools: readonly BoundTool[]): McpSdkServerConfigWithInstance {
+export function claudeToolServer(
+  tools: readonly BoundTool[],
+  wholeResultCharacters?: number,
+): McpSdkServerConfigWithInstance {
   return createSdkMcpServer({
     name: CLAUDE_SEAT_TOOL_SERVER,
     alwaysLoad: true,
-    tools: claudeToolsOf(tools),
+    tools: claudeToolsOf(tools).map((served) =>
+      wholeResultCharacters === undefined
+        ? served
+        : {
+            ...served,
+            _meta: { ...served._meta, "anthropic/maxResultSizeChars": wholeResultCharacters },
+          },
+    ),
   });
 }
 

@@ -94,6 +94,7 @@ export function RecordCard({
 }) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [unreadable, setUnreadable] = useState(false);
+  const [frameDrawn, setFrameDrawn] = useState(false);
   const modelName = useModelNames();
   const knowledge = useKnowledgeHere();
   const template = useMemo(() => recordTemplate(taskId, knowledge), [taskId, knowledge]);
@@ -101,6 +102,7 @@ export function RecordCard({
   useEffect(() => {
     setDetail(null);
     setUnreadable(false);
+    setFrameDrawn(false);
     return appReadExecutor().subscribe(
       "tasks.detail",
       { id: taskId },
@@ -121,12 +123,14 @@ export function RecordCard({
   const words = useMemo(() => recordWords(detail, parentKey), [detail, parentKey]);
   const links = useTaskLinks(words, taskId);
 
-  // The record has drawn once its own facts are on screen, or it could not
-  // be read (FI3-948): its body frame can start below the visible part of
-  // the card, where it reports nothing until it is scrolled to, so waiting
-  // on it kept the card at its first height. The frame then grows the card
-  // through the stage's size watcher, and still reports each later drawing.
-  const loaded = detail !== null || unreadable;
+  // The record is ready once its facts are loaded and its body frame has
+  // drawn, or it could not be read. The card stays unseen until then, so it
+  // appears at the height it keeps: revealing it on the facts alone drew an
+  // empty card that grew and re-centred twice as the facts and then the
+  // frame arrived (INF-510). The frame draws while the card is unseen; a
+  // frame that never reports ends on the stage's hold limit, and the card
+  // then appears as it is (FI3-948).
+  const loaded = (detail !== null && frameDrawn) || unreadable;
   useEffect(() => {
     if (loaded) onDrawn();
   }, [loaded, onDrawn]);
@@ -301,7 +305,7 @@ export function RecordCard({
               reads: pluginHost.declaredReads(BUILTIN_PLUGIN_ID),
               grant: pluginHost.grantOf(BUILTIN_PLUGIN_ID),
               actions: knowledge ? KNOWLEDGE_BODY_ACTIONS : BODY_ACTIONS,
-              onDrawn,
+              onDrawn: () => setFrameDrawn(true),
               onAction: (id, value) => void openCard(id, value),
               onLink: openLink,
               taskKeys: links.keys,

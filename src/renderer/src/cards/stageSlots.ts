@@ -54,13 +54,17 @@ export function emptySlots<V>(): StageSlots<V> {
  * A new selection keeps on screen whatever the captain can see: the
  * previous entry when it had appeared, else the drawing already held. An
  * entry that never appeared is dropped, so rapid paging never queues. With
- * nothing on screen to hold, the new entry appears at once.
+ * nothing on screen to hold, the new entry appears at once, unless it
+ * `waits`: an entry whose first drawing is not its final one (a task record,
+ * whose facts and body arrive in turn) stays unseen until it is ready, or
+ * its hold ends, so it appears once at the size it keeps.
  */
 export function selectSlots<V>(
   state: StageSlots<V>,
   shown: string | null,
   warm: string | null,
   lastView: V | undefined,
+  waits = false,
 ): StageSlots<V> {
   let next: StageSlots<V> = state;
   if (shown !== (state.shown?.id ?? null)) {
@@ -70,7 +74,7 @@ export function selectSlots<V>(
       const { view: _view, ...held } = state.outgoing;
       next = { ...state, shown: held, outgoing: null, revealed: true };
     } else {
-      next = select(state, shown, lastView);
+      next = select(state, shown, lastView, waits);
     }
   }
   const prepared = next.outgoing === null && warm !== null && warm !== shown ? warm : null;
@@ -88,6 +92,7 @@ function select<V>(
   state: StageSlots<V>,
   shown: string | null,
   lastView: V | undefined,
+  waits: boolean,
 ): StageSlots<V> {
   const previous = state.shown;
   const outgoing =
@@ -107,7 +112,7 @@ function select<V>(
     ...state,
     shown: selected,
     outgoing,
-    revealed: outgoing === null,
+    revealed: outgoing === null && !(waits && selected !== null),
     warm: state.warm?.id === shown ? null : state.warm,
     next: born,
   };

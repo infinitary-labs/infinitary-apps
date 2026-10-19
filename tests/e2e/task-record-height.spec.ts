@@ -98,3 +98,68 @@ test("a task card with a long Progress list opens to show all of it, without a s
     await app.close();
   }
 });
+
+/**
+ * INF-510, the captain: "when i open a task record card, it will have layout
+ * shift in the first 1-2 seconds". A record opened on an empty stage appears
+ * once, with its facts and its body drawn, and then holds its height: it is
+ * not shown as an empty Loading card that grows and re-centres as the facts
+ * and then the body frame arrive.
+ */
+test("a task record opened on an empty stage keeps one height from its first visible frame", async () => {
+  const fixture = await crewRoster(1, {
+    idPrefix: "steady-crew",
+    title: () => "Cut the alpha in six steps",
+    note: () => "The alpha is running from the reviewed commit.",
+    plan: () => LONG_PLAN,
+    routing: () => ROUTING,
+  });
+  const app = await launchApp({ ...fixture, withMockProvider: true });
+  try {
+    const { page } = app;
+    await resizeWindow(app.app, page, { width: 1280, height: 900 });
+    await expandDock(page, "now");
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    const key = board.tasks.find((task) => task.id === "steady-crew-0")?.key;
+    if (!key) throw new Error("The seeded task steady-crew-0 is missing");
+    // Every frame, the stage shell's laid-out height (the arrival's scale does
+    // not touch it) and whether the stage has revealed the shown entry (it holds
+    // an unready one at opacity 0).
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        __shell: { visible: boolean; height: number; title: string }[];
+      };
+      w.__shell = [];
+      const tick = () => {
+        const shell = document.querySelector<HTMLElement>("[data-card-presentation]");
+        const entry = shell?.querySelector<HTMLElement>(':scope > [data-stage-entry="shown"]');
+        if (shell && entry)
+          w.__shell.push({
+            visible: entry.style.opacity !== "0",
+            height: shell.offsetHeight,
+            title:
+              shell.querySelector<HTMLElement>("[data-record-title]")?.textContent?.trim() ?? "",
+          });
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await pressRow(page, key);
+    await expect(recordCard(page)).toHaveAttribute("data-task-record", "steady-crew-0");
+    await expect(
+      recordFrame(page).locator('[data-record-section="details"] > summary'),
+    ).toBeVisible();
+    await page.waitForTimeout(1000);
+    const samples = await page.evaluate(
+      () =>
+        (window as unknown as { __shell: { visible: boolean; height: number; title: string }[] })
+          .__shell,
+    );
+    const seen = samples.filter((sample) => sample.visible);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen[0]?.title, "the first visible frame already names the task").not.toBe("");
+    expect(new Set(seen.map((sample) => sample.height)).size, "heights while visible").toBe(1);
+  } finally {
+    await app.close();
+  }
+});

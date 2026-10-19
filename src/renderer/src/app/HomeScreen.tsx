@@ -552,7 +552,14 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     slots.shown === null && slots.outgoing && selection !== null
       ? retireSlot(slots, slots.outgoing.key)
       : slots;
-  let stage = selectSlots(base, selection, allowWarm ? (warm?.id ?? null) : null, frozen);
+  let stage = selectSlots(
+    base,
+    selection,
+    allowWarm ? (warm?.id ?? null) : null,
+    frozen,
+    // A task record's facts and body frame arrive in turn: it appears once ready.
+    card?.recordTaskId !== undefined,
+  );
   // Which move takes each drawing off the stage: the arrow pressed on it,
   // the stack it left, or neither. Decided once, when it starts to leave.
   const paged = useRef<PageStep | null>(null);

@@ -112,6 +112,18 @@ describe("stage slots", () => {
     expect(roles(expired)).toEqual([{ id: "b", role: "shown" }]);
   });
 
+  it("keeps a waiting entry unseen on an empty stage until it is ready (INF-510)", () => {
+    // A task record's facts and body frame arrive in turn: it must not appear
+    // as an empty card that grows twice.
+    const opened = selectSlots(emptySlots<View>(), "record", null, undefined, true);
+    expect(opened.revealed).toBe(false);
+    expect(roles(opened)).toEqual([{ id: "record", role: "shown" }]);
+    expect(revealSlot(opened, keyOf(opened, "record")).revealed).toBe(true);
+    expect(expireSlot(opened, keyOf(opened, "record")).revealed).toBe(true);
+    // Anything else still appears at once.
+    expect(selectSlots(emptySlots<View>(), "card", null, undefined, false).revealed).toBe(true);
+  });
+
   it("retires a departed drawing without revealing an unready successor", () => {
     const departing = selectSlots(settled("a"), "b", null, view("a"));
     const waiting = retireSlot(departing, keyOf(departing, "a"));

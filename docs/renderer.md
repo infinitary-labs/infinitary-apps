@@ -113,7 +113,9 @@ The selected card is ready when its current document drew at its width (`FrameCo
 A wait that never becomes ready ends after the frame watchdog's budget, counted from the selection, and the entry appears as it is, never counted as ready: a paging or replacement hold, and a successor whose departed drawing has already dropped away.
 The stylesheet narrows a lone card at once when a panel docks or the window shrinks (`STAGE_CEILING`), before the stage's own layout catches up, so a body can draw at its new width under a key that still names the old one.
 Its drawing counts once the stage's layout names the same document and the shown entry is laid out as wide as when the body drew.
-A task record is ready once its own record has loaded or could not be read (`RecordCard`, FI3-948), because its host-drawn facts lead it and its body frame can start below the card's first height, where a frame reports nothing until it is scrolled into view; the frame then grows the card through the shell's size watcher.
+A task record is ready once its own record has loaded and its body frame has drawn once, or it could not be read (`RecordCard`, INF-510).
+Opened on an empty stage it stays unseen until then (`selectSlots`' `waits`), so it appears once at the height it keeps; a card the captain already sees holds its rectangle meanwhile, and an unseen first entry lays out at its natural height so its frame, which reports nothing while it lies below a held rectangle (FI3-948), can draw.
+A record whose frame never reports appears as it is when the hold ends.
 A prepared page with a script that drew held is ready only once the card is shown, its scripts ran and it reported its drawing again.
 Readiness and the shell's natural height read laid-out sizes, so a card still scaling into place (the arrival, a card coming forward) counts at its own width and height.
 A ready entry appears by one move, and the next successor is prepared once the leaving drawing has retired and the incoming reveal and the height easing have both finished.
@@ -132,7 +134,7 @@ Initial thread history resolves before a body is born, so a card/pair is not bor
 Stage widths and folded rails resolve without easing; widths never tween.
 The shell stays at the previous height, bounded by current chrome and the stage envelope, until the shown entry is ready, then eases height only over the shared 360ms with the glide (`--ease-out`) and a fixed centre.
 A press on the card holds it still until the release, so the control under the pointer stays under it, then settles at once.
-That holds while the height eases and when it would jump with no easing, as a task record's does when its body frame draws after the record appears.
+That holds while the height eases and when it would jump with no easing, as a task record's does when its live facts change after it appears.
 The pager stays below the maximum-height envelope; its cap reserves a separate lane for the last turn above the input, so neither intercepts the other's controls.
 Reduced motion makes every move and the easing cuts.
 

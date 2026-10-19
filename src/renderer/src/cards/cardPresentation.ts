@@ -130,7 +130,12 @@ export function useCardPresentation(
     if (changed) {
       held.animation?.cancel();
       held.animation = null;
-      held.waiting = !current.ready && (replacement || held.waiting || held.entry === null);
+      // Only a card the captain already sees holds its rectangle while the
+      // next one gets ready. An entry on an empty stage is unseen until it
+      // is ready, so it lays out at its natural height meanwhile: its body
+      // frame, clipped by a held rectangle, would report no drawing, and the
+      // record would only appear after the hold ran out (INF-510).
+      held.waiting = !current.ready && (replacement || held.waiting);
       held.replacement = replacement || continuingReplacement;
       held.deadline = 0;
       held.entry = current.entry;

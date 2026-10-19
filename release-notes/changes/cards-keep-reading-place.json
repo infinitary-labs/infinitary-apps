@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "cards-keep-reading-place",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Task records and past cards keep your place when you switch away",
+      "body": "Paging to another card and back now returns a task record or a past card to where you stopped reading, and a record keeps the sections you had opened. Scrolling yourself before the old place loads no longer gets pulled back.",
+      "noPicture": "This keeps a scroll position, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

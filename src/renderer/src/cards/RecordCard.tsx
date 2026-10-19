@@ -23,6 +23,7 @@ import {
   useKnowledgeHere,
 } from "../plugins/point/openKnowledge";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
+import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { KeyedText } from "./TaskKey";
@@ -39,7 +40,7 @@ export const RECORD_CARD_KIND = "task-record";
  * 4), never the body's; the task keys it writes are links the bridge draws
  * (FI3-1271).
  */
-const BODY_ACTIONS: readonly string[] = ["open-card"];
+const BODY_ACTIONS: readonly string[] = ["open-card", "record-sections"];
 const KNOWLEDGE_BODY_ACTIONS: readonly string[] = [...BODY_ACTIONS, "open-knowledge"];
 /** Full intrinsic document height; ResponseCard owns the only scroll surface. */
 const MAX_BODY_HEIGHT = Number.POSITIVE_INFINITY;
@@ -160,6 +161,15 @@ export function RecordCard({
       if (entry.success) openKnowledgeEntry(entry.data, focusPanelCard);
       return;
     }
+    if (id === "record-sections") {
+      const open = (value as { open?: unknown } | null)?.open;
+      if (Array.isArray(open))
+        recordOpenSections.set(
+          taskId,
+          open.filter((n) => typeof n === "string"),
+        );
+      return;
+    }
     const cardId = (value as { id?: unknown } | null)?.id;
     if (id !== "open-card" || typeof cardId !== "string") return;
     const listed = detailRef.current?.cards.find((card) => card.id === cardId);
@@ -228,8 +238,15 @@ export function RecordCard({
     if (isSafeCardHref(href)) void window.infinitary.app.openExternal(href).catch(() => {});
   };
 
+  const bodyRef = useCardReadingPlace(recordReadingPlaceId(taskId));
+  // Read once per record: the frame takes it at birth and reports changes back.
+  const birthState = useMemo(
+    () => ({ openSections: recordOpenSections.get(taskId) ?? [] }),
+    [taskId],
+  );
   return (
     <ResponseCard
+      bodyRef={bodyRef}
       recordTaskId={taskId}
       width="100%"
       chrome={
@@ -305,6 +322,7 @@ export function RecordCard({
               reads: pluginHost.declaredReads(BUILTIN_PLUGIN_ID),
               grant: pluginHost.grantOf(BUILTIN_PLUGIN_ID),
               actions: knowledge ? KNOWLEDGE_BODY_ACTIONS : BODY_ACTIONS,
+              state: birthState,
               onDrawn: () => setFrameDrawn(true),
               onAction: (id, value) => void openCard(id, value),
               onLink: openLink,

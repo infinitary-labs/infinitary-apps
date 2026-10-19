@@ -10,6 +10,7 @@ import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChar
 import { RISK_CHART_GAP } from "../design/cards/riskRadar";
 import { useCutWords } from "../design/core/overflowTitle";
 import { MessageList } from "./CardThread";
+import { pastReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import { footerGroups } from "./footerGroups";
 import { HtmlCardBody } from "./PrototypeBody";
 import { RequiredActions } from "./RequiredActions";
@@ -141,8 +142,10 @@ export function PastCardColumn({
   // (docs/card-authoring.md "The risk chart").
   const asideRef = useRef<HTMLDivElement>(null);
   const risk = past.risk;
+  const bodyRef = useCardReadingPlace(pastReadingPlaceId(past.id));
   return (
     <ResponseCard
+      bodyRef={bodyRef}
       title={past.title}
       width={width}
       surface={surface}

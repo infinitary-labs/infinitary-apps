@@ -52,7 +52,12 @@ import type { ReleaseNotesView } from "@shared/releaseTracking";
 import type { UsageUnit } from "@shared/usage";
 import { create } from "zustand";
 import { isPreparing, MAIN_FILES_KEY, whenPrepared } from "../attachments/intake";
-import { retainCardReadingPlaces } from "../cards/cardReadingPlace";
+import {
+  forgetReadingPlace,
+  pastReadingPlaceId,
+  recordReadingPlaceId,
+  retainCardReadingPlaces,
+} from "../cards/cardReadingPlace";
 import {
   applyCrewDependencies,
   applyCrewEvent,
@@ -2232,10 +2237,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     else if (entry?.crewmateTaskId) get().closeCrewmateView(entry.crewmateTaskId);
     else if (entry?.panelCard) get().closePanelCard(entry.panelCard.panel, entry.panelCard.id);
   },
-  closeTaskRecord: (taskId) =>
-    set((s) => closeHeld(s, (record) => "taskId" in record && record.taskId === taskId)),
-  closePastCard: (cardId) =>
-    set((s) => closeHeld(s, (record) => "pastCardId" in record && record.pastCardId === cardId)),
+  closeTaskRecord: (taskId) => {
+    forgetReadingPlace(recordReadingPlaceId(taskId));
+    set((s) => closeHeld(s, (record) => "taskId" in record && record.taskId === taskId));
+  },
+  closePastCard: (cardId) => {
+    forgetReadingPlace(pastReadingPlaceId(cardId));
+    set((s) => closeHeld(s, (record) => "pastCardId" in record && record.pastCardId === cardId));
+  },
   focusCard: (cardId) => {
     const minimized = get().cards.find((card) => card.id === cardId)?.minimized;
     if (minimized) {

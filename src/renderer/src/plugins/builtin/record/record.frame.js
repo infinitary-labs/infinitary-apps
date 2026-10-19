@@ -1028,4 +1028,31 @@
       },
     );
   }
+  // The sections the captain opened outlive this document: the host keeps
+  // them per task and hands them back at birth, so a record paged away from
+  // and back to reads as it was left.
+  const sections = /** @type {HTMLDetailsElement[]} */ ([
+    ...document.querySelectorAll("details.row[data-record-section]"),
+  ]);
+  let restoredSections = false;
+  /** @param {unknown} state */
+  const restoreSections = (state) => {
+    const open = /** @type {{ openSections?: unknown } | null} */ (state)?.openSections;
+    if (restoredSections || !Array.isArray(open)) return;
+    restoredSections = true;
+    for (const node of sections) {
+      if (open.includes(node.getAttribute("data-record-section"))) node.open = true;
+    }
+  };
+  restoreSections(bridge.state);
+  bridge.onState(restoreSections);
+  for (const node of sections) {
+    node.addEventListener("toggle", () => {
+      restoredSections = true;
+      const open = sections
+        .filter((one) => one.open)
+        .map((one) => one.getAttribute("data-record-section"));
+      bridge.action("record-sections", { open }).catch(() => {});
+    });
+  }
 })(/** @type {any} */ (window).inf);

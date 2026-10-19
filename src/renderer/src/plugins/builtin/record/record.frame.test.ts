@@ -83,6 +83,8 @@ function mount(options: { knowledge?: boolean } = {}) {
       },
       inf: {
         action,
+        state: null,
+        onState: () => () => {},
         subscribe: (
           read: string,
           params: { id?: string },
@@ -106,7 +108,7 @@ function mount(options: { knowledge?: boolean } = {}) {
         },
       },
     },
-    { querySelector: node, createElement: () => new Node() },
+    { querySelector: node, querySelectorAll: () => [], createElement: () => new Node() },
   );
   return {
     node: (name: string) => node(`[data-record-${name}]`),

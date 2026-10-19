@@ -16,7 +16,16 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import type { ComputerForges } from "@shared/signIns";
 import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from "vitest";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -155,6 +164,26 @@ function gate(): { held: Promise<void>; open: () => void } {
     open = resolve;
   });
   return { held, open };
+}
+
+/**
+ * Holds the home's next read of a computer - the models it serves, or its
+ * own sign-ins - until the case releases it: a wait a queued task's start
+ * makes on that computer before it claims the task.
+ */
+function holdNext(placed: PlacedHome["placed"], read: "served" | "signInsOf") {
+  const reached = gate();
+  const release = gate();
+  const real = placed[read].bind(placed) as (machine: string) => Promise<unknown>;
+  const spy = vi.spyOn(placed, read) as unknown as MockInstance<
+    (machine: string) => Promise<unknown>
+  >;
+  spy.mockImplementationOnce(async (machine) => {
+    reached.open();
+    await release.held;
+    return real(machine);
+  });
+  return { reached: reached.held, release: release.open };
 }
 
 /** The words of every user turn a request carried. */
@@ -2691,6 +2720,81 @@ describe("a task's own Runs on", () => {
     await home.supervisor.dispatchQueuedTask("t-stays");
     expect(home.tasks.get("t-stays")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-stays")?.gate?.reason).toBe(STARTED_HERE);
+  });
+
+  // Intent: INF-409's goal - a Runs on changed while a start waits on a
+  // computer starts the task where it now runs, routed among that place's
+  // own subscriptions, never with a route chosen for the computer it left.
+  it("routes among this Mac's subscriptions and starts here when the captain runs it here while it waited for that computer's (INF-409)", async () => {
+    // This Mac serves the starter map's medium Codex model, which routing
+    // takes here; that computer's Codex account serves GPT-6 Sol alone.
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_NEWER_CODEX,
+      signedInTo: [computerAccount("acct_codex_there", "openai-codex")],
+      served: [
+        {
+          accountId: "acct_codex_there",
+          models: [{ provider: "openai-codex", id: "gpt-6-sol", name: "GPT-6 Sol" }],
+        },
+      ],
+    });
+    const home = at.home();
+    seedTask(home.tasks, {
+      id: "t-moved",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    const held = holdNext(home.placed, "served");
+    const starting = home.supervisor.dispatchQueuedTask("t-moved");
+    await held.reached;
+    expect(askRunsOn(home, "t-moved", "this-mac")).toBe("Runs on: This computer (This task)");
+    held.release();
+    await starting;
+    expect(home.decisions.latestRouting("t-moved")).toMatchObject({
+      provider: "openai-codex",
+      model: CODEX_MEDIUM_STARTER,
+    });
+    expect(home.tasks.get("t-moved")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-moved")?.gate?.reason).toBe(STARTED_HERE);
+    // Nothing was tried there.
+    expect(at.bound).toEqual([]);
+    expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
+  });
+
+  it("is never held for that computer's GitHub sign-in once the captain runs it here while that computer's sign-ins were read (INF-409)", async () => {
+    // That computer offers a GitHub sign-in from here and has none yet.
+    const forges: ComputerForges = { hosts: [{ host: "github.com", name: "GitHub" }], signIns: [] };
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_grok_there", "xai")],
+      served: GROK_THERE,
+      forges: () => forges,
+    });
+    const home = at.home();
+    const project = await gitProject();
+    await git(project.home, ["remote", "set-url", "origin", "https://github.com/octo/website.git"]);
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, {
+      id: "t-github",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      repoId: repo.id,
+    });
+    const held = holdNext(home.placed, "signInsOf");
+    const starting = home.supervisor.dispatchQueuedTask("t-github");
+    await held.reached;
+    expect(askRunsOn(home, "t-github", "this-mac")).toBe("Runs on: This computer (This task)");
+    held.release();
+    await starting;
+    // Tried here, never held behind that computer's own GitHub sign-in
+    // (whose wait its project, still set to run there, says by itself).
+    expect(home.tasks.get("t-github")?.deviceId ?? null).toBeNull();
+    expect(home.tasks.get("t-github")?.gate?.reason).toBe(STARTED_HERE);
+    expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
   });
 
   it("gives each part its parent's Runs on unless the part has its own", async () => {

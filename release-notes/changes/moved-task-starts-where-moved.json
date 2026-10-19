@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "moved-task-starts-where-moved",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task you move as it starts runs where you moved it",
+      "body": "If you changed where a waiting task runs just as it started, it could start on a model only your other computer is signed in to, keep waiting for that computer's GitHub sign-in, or say it was waiting for a computer with room. It now starts where you moved it, on a model that place is signed in to.",
+      "noPicture": "Nothing on screen changes: the task's crewmate starts on the computer it was moved to.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

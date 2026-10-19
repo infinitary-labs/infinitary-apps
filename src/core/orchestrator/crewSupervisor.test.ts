@@ -33,6 +33,7 @@ import {
 import { typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
+import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { RiskDeclaration } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
@@ -393,6 +394,33 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
   const cardStore = new CardStore(db);
   for (const card of extras.savedCards ?? []) cardStore.upsert(card);
   const inbox = new InboxStore(db, clock);
+  const router =
+    extras.routedModel || extras.routeResult
+      ? {
+          reasoningChoice: extras.reasoningChoice ?? (() => undefined),
+          decide: (
+            taskId: string,
+            prompt: string,
+            shape: WorkShape,
+            options?: { avoidProvider?: string },
+          ) => {
+            extras.onRouteDecide?.({ taskId, prompt, shape, ...options });
+            return (
+              extras.routeResult ?? {
+                choice: extras.routedModel,
+                bucket: "high" as const,
+                rule: "R8" as const,
+              }
+            );
+          },
+          // The builder's served provider (R9): the routed model's, as the
+          // real router reads it off routing_decisions.
+          servedProvider: () => extras.routedModel?.provider,
+          // The settle card's crewmate fact: the real router falls back
+          // to the raw id when the catalog holds no label.
+          modelLabel: (ref: { provider: string; id: string }) => ref.id,
+        }
+      : undefined;
   const supervisor = new CrewSupervisor({
     ...clock,
     ...crewSessions(paths, open, specs),
@@ -404,39 +432,16 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     inbox,
     paths,
     ...(extras.knowledge ? { knowledge: extras.knowledge(repos) } : {}),
-    ...(extras.routedModel || extras.routeResult
-      ? {
-          router: {
-            reasoningChoice: extras.reasoningChoice ?? (() => undefined),
-            decide: (
-              taskId: string,
-              prompt: string,
-              shape: WorkShape,
-              options?: { avoidProvider?: string },
-            ) => {
-              extras.onRouteDecide?.({ taskId, prompt, shape, ...options });
-              return (
-                extras.routeResult ?? {
-                  choice: extras.routedModel,
-                  bucket: "high" as const,
-                  rule: "R8" as const,
-                }
-              );
-            },
-            // The builder's served provider (R9): the routed model's, as the
-            // real router reads it off routing_decisions.
-            servedProvider: () => extras.routedModel?.provider,
-            // The settle card's crewmate fact: the real router falls back
-            // to the raw id when the catalog holds no label.
-            modelLabel: (ref: { provider: string; id: string }) => ref.id,
-          } as unknown as import("../routing/router").Router,
-        }
-      : {}),
+    ...(router ? { router: router as unknown as import("../routing/router").Router } : {}),
     ...(extras.automatic
       ? {
           automaticPlacement: extras.automatic as AutomaticPlacement,
           machines: {} as CrewMachines,
-          router: { dynamicEnabled: () => true } as unknown as import("../routing/router").Router,
+          // This Mac's routing, for a task that starts here once it no longer runs on Automatic.
+          router: {
+            ...router,
+            dynamicEnabled: () => true,
+          } as unknown as import("../routing/router").Router,
         }
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
@@ -6554,6 +6559,71 @@ describe("the task graph (R1)", () => {
     expect(asked.map((shape) => shape.override_model_id)).toEqual([undefined, "mock-2"]);
     expect(sessionSpecs[0]?.model).toEqual({ provider: "fm-mock", id: "mock-2" });
     expect(tasks.get(task.id)?.status).toBe("active");
+    expect(
+      events.some((event) => event.type === "firstmate_note" && event.taskId === task.id),
+    ).toBe(false);
+  });
+
+  // Intent: INF-409's goal - a task whose Runs on changes while its start
+  // waits on a computer starts where it now runs, routed there.
+  it("starts an Automatic task here, routed here, when the captain runs it on this computer while its computers were compared (INF-409)", async () => {
+    const dir = scratchDir("infinitary-automatic-moved-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    let compared!: () => void;
+    const comparing = new Promise<void>((resolve) => {
+      compared = resolve;
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let asked = 0;
+    const { supervisor, repos, tasks, sessionSpecs, events } = setup(fakeCrewmate(), {
+      // This Mac's own routing, which a start here asks.
+      routedModel: { provider: "fm-mock", id: "mock-here" },
+      automatic: {
+        choose: async (record) => {
+          asked += 1;
+          compared();
+          await held;
+          // As AutomaticPlacement's own check: late facts never overrule a changed task.
+          if (JSON.stringify(tasks.get(record.id)?.shape) !== JSON.stringify(record.shape))
+            return undefined;
+          return {
+            computerId: null,
+            routed: { choice: { provider: "fm-mock", id: "mock-1" }, bucket: "high", rule: "R8" },
+          };
+        },
+      },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "footer",
+      title: "Fix the ledger footer",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const starting = supervisor.startQueuedNow(task.id);
+    await comparing;
+    // As update_task does with runs_on this-mac, which a task not yet claimed accepts.
+    expect(supervisor.runsOnRefusal(task.id, RUNS_ON_THIS_MAC)).toBeUndefined();
+    tasks.updateFields(
+      task.id,
+      { runsOn: { ask: RUNS_ON_THIS_MAC, words: "This computer (This task)" } },
+      "firstmate",
+    );
+    supervisor.runsOnChanged(task.id);
+    release();
+    expect(await starting).toBe(`Started ${tasks.get(task.id)?.key} "Fix the ledger footer".`);
+    // It no longer runs on Automatic: never compared again, never told to
+    // wait for room, and routed among this Mac's own subscriptions.
+    expect(asked).toBe(1);
+    expect(sessionSpecs[0]?.model).toEqual({ provider: "fm-mock", id: "mock-here" });
+    expect(tasks.get(task.id)).toMatchObject({ status: "active", deviceId: null });
+    expect(tasks.get(task.id)?.shape?.placement_wait).toBeUndefined();
     expect(
       events.some((event) => event.type === "firstmate_note" && event.taskId === task.id),
     ).toBe(false);

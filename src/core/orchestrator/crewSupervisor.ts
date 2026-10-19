@@ -1656,6 +1656,16 @@ export class CrewSupervisor {
     return target === AUTOMATIC_COMPUTER ? null : target;
   }
 
+  /**
+   * Where a start that has not claimed its task goes (INF-409): Automatic,
+   * which compares the computers - a computer it chose, or the home it
+   * settled on, is still Automatic's - else the computer `placementOf`
+   * names, null for this Mac.
+   */
+  private startPlace(record: PlacementRecord): string | null {
+    return this.automaticFor(record) ? AUTOMATIC_COMPUTER : this.placementOf(record);
+  }
+
   automaticFor(record: PlacementRecord): boolean {
     return Boolean(
       this.options.automaticPlacement &&
@@ -1980,20 +1990,21 @@ export class CrewSupervisor {
   }
 
   /**
-   * A queued task for a computer with no sign-in it needs waits: as unheld
-   * queued work for any sign-in at all, which the ready sweep tries again
-   * once the computer reports one; behind the sign-in's gate for its own
-   * GitHub sign-in. Says whether it waits.
+   * A queued task for a computer with no sign-in it needs waits, as that
+   * computer said (`placedWaitFor`): as unheld queued work for any sign-in
+   * at all, which the ready sweep tries again once the computer reports
+   * one; behind the sign-in's gate for its own GitHub sign-in.
    */
-  private async waitsForSetup(taskId: string, target: string): Promise<boolean> {
+  private waitForSetup(
+    taskId: string,
+    target: string,
+    waitFor: Extract<PlacedWaitFor, { kind: "no-sign-ins" | "update" | "forge" }>,
+  ): void {
     const record = this.options.tasks.get(taskId);
-    if (!record) return false;
-    const waitFor = await this.placedWaitFor(target, record.repoId);
-    if (!waitFor) return false;
+    if (!record) return;
     if (!record.deviceId) this.options.tasks.setDevice(taskId, target);
     if (waitFor.kind === "forge") this.holdForDeviceForge(taskId, target, waitFor.host);
     this.sayPlacedWait(this.waitSubject(record), target, waitFor);
-    return true;
   }
 
   /** The gate a task waits behind for its computer's own GitHub sign-in. */
@@ -9000,10 +9011,15 @@ export class CrewSupervisor {
       const shape = this.queuedShape(record);
       this.restampGroundedTier(record.id, shape);
       // Placement and routing can wait on a computer, and a model or basis
-      // named or cleared meanwhile decides this start: it starts over from
-      // the record as it now stands.
+      // named or cleared meanwhile (INF-83), or a move of where it runs
+      // (INF-409), decides this start: it starts over from the record as it
+      // now stands.
       const routedFrom = record.shape;
-      const moved = () => routingAskMoved(routedFrom, this.options.tasks.get(taskId)?.shape);
+      const startsAt = this.startPlace(record);
+      const moved = () => {
+        const now = this.options.tasks.get(taskId);
+        return !now || routingAskMoved(routedFrom, now.shape) || this.startPlace(now) !== startsAt;
+      };
       // A task that waits for its computer chooses its model once that
       // computer is back, among its own subscriptions.
       const automatic = this.automaticFor(record);
@@ -9055,7 +9071,10 @@ export class CrewSupervisor {
       // One with no sign-in at all, or none for where its project lives,
       // tries nothing until that computer reports one.
       if (!selected && target !== null && ready && !this.tasks.has(taskId)) {
-        if (await this.waitsForSetup(taskId, target)) {
+        const waitFor = await this.placedWaitFor(target, record.repoId);
+        if (moved()) return this.dispatchQueuedTask(taskId, options);
+        if (waitFor) {
+          this.waitForSetup(taskId, target, waitFor);
           this.broadcastCrewCounts();
           return;
         }

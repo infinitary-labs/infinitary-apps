@@ -785,6 +785,7 @@ Activity says a wait once and again only when its kind changes, since every line
 Before the computers have been compared, it waits for a compatible computer with room (`PLACEMENT_WAIT`).
 The latest wait is stored on the record (`placement_wait`), so a restart keeps those words for Details and Start now, and Activity does not say the line again.
 A comparison never chooses for a task that changed while the computers were compared (`stillCurrent`); one whose model or basis changed is compared again at once on its record as it now stands, never told to wait for room (INF-83).
+One set to run elsewhere meanwhile starts where it now runs, also never told to wait for room (INF-409).
 A premium ask or escalation rung that no computer serves at its tier is held as a This computer task is: `AutomaticPlacement.choose` returns the held route (`floorHold`), and the supervisor gates the task on that tier's quota reset and wakes the first mate once (`holdForReasoning`), which may start it lower with `update_task start_now`.
 That gate's own check reads the home's quota only, while another computer may serve the tier first, so the gate sweep asks such a task's choice again on every pass (`heldOnItsLevel`); it starts wherever a computer serves its tier, and a repeated hold wakes nobody.
 Task Details show the chosen computer and a brief reason, or a waiting task's wait words; the native “Compared computers at start” disclosure opens the past-tense candidate explanations by keyboard or pointer.
@@ -810,6 +811,10 @@ The first mate sets it only from the captain's words, never by judging, and only
   A task with no project runs here unless the captain asks, and has no project to follow: it runs on a computer only by its own Runs on, or its parent's.
 - **Kept until it starts.**
   An edit, or a move under another parent or into another project, re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
+  A move made while a queued task's start waits on a computer - reading its sign-ins or the models it serves, or Automatic comparing computers - starts that start over from the record (`CrewSupervisor.startPlace`, INF-409).
+  The task then starts where it now runs, routed among that place's own subscriptions, and is never routed or held for the computer it left.
+  Whatever Automatic chose, a computer or this Mac, still counts as Automatic, so its own choice never starts it over.
+  From that check to the claim nothing waits, and once claimed the task has started, so a move is refused.
   A started task finishes where it started.
   Start again and a stronger-model retry carry the ask to the new task, as they carry `autonomy_ask` (`workShape`).
 - **Refusals, in plain words.**

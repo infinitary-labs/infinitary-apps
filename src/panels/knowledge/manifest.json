@@ -19,7 +19,15 @@
   "cards": {
     "browser": { "view": "browser", "title": "Knowledge", "width": "wide", "height": "fill" }
   },
-  "header": [{ "id": "open", "icon": "open", "label": "Open Knowledge", "emits": "browser" }],
+  "header": [
+    {
+      "id": "open",
+      "icon": "open",
+      "label": "Open Knowledge",
+      "emits": "browser",
+      "data": { "tab": "directions" }
+    }
+  ],
   "commands": [
     {
       "id": "open",

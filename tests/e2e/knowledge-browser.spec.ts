@@ -322,9 +322,11 @@ test("the graph orbits like a game camera with either button, a drag never selec
   const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
   try {
     await expect(knowledgePanel(page)).toBeAttached({ timeout: 30_000 });
-    // The header's Open Knowledge, which shows in its collapsed header too.
+    // The header's Open Knowledge, which shows in its collapsed header too,
+    // puts the browser up on Directions; its Graph tab shows the graph.
     await knowledgePanel(page).locator('[data-panel-header-button="open"] button').click();
     await expect(browserCard(page)).toBeVisible();
+    await pressIn(tab(page, "graph"));
     await expect(concept(page, k.evidence)).toBeVisible();
 
     await clickConcept(page, k.evidence);

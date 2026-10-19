@@ -11,7 +11,7 @@ The app's other surfaces open the same inspector: a reference in an answer (`../
 A compact panel in the right rail, under Tasks (`components/panel/Panel.prompt.md`), titled Knowledge by the app's chrome.
 It is there while a collection holds an entry or the collection cannot be read; with nothing recorded anywhere there is no Knowledge panel and no Open Knowledge, and the first direction, personal fact or requested reference brings both.
 
-- Its header has one button, Open Knowledge (`open`, Lucide `maximize-2`), drawn in both header states, which puts the browser up at the front of the stack.
+- Its header has one button, Open Knowledge (`open`, Lucide `maximize-2`), drawn in both header states, which puts the browser up at the front of the stack on the Directions tab.
 - Its body lists up to four directions in their own words, directly under the Knowledge title with no inner heading.
   Captain-origin instructions come before agent advice, each group newest first.
   Each line is `--text-sm` `--fg-2`, ellipsized; cut words appear whole in the app's rest label for pointer and keyboard alike.
@@ -24,12 +24,13 @@ It is there while a collection holds an entry or the collection cannot be read; 
   The title and one count fill the rail: "5 directions" while it holds a direction, otherwise "2 concepts", and never finding counts.
 - An unreadable collection is one quiet line in its body, the app's own words for why, and no counts.
 
-Its command, Open Knowledge, is found by name in command search and has no default key.
+Its command, Open Knowledge, is found by name in command search and has no default key; it opens the browser where it is, your graph when fresh.
 
 ## Where the browser opens
 
 The browser is one wide card of `fill` height on the stack, as the task board is: up to 800px, giving way to the docks, as tall as a card may be, its own rows staying while its panes scroll.
 There is only ever one: the card's name, `browser`, is its id, so a second press brings the open one forward.
+The header's Open Knowledge and All N directions bring it forward on the Directions tab, and Graph · N concepts on the Graph tab, each starting that tab afresh.
 Its title row is the app's: Knowledge and Hide.
 While it is open it keeps its collection, Find, tab, selection, inspector section, camera, neighborhood and pages across paging; Hide or Esc lets all of it go, and the next browser starts fresh on your graph, the Graph tab and the neutral camera.
 A reference or a Knowledge used row puts it up with the inspector on that entry - at the revision the row names - in the entry's collection, over whatever tab it shows, with the keyboard on the inspector's section; the live line says what opened.

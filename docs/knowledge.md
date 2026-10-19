@@ -197,7 +197,8 @@ Collapsed, its header keeps the Knowledge title and says one total beside it as 
 While the collection cannot be read it says so instead.
 That total stays current while the panel is collapsed or the screen is off: a missed ping in that time does not stop the page, and a page the watchdog does stop no longer shows its last total as current.
 A direction line opens its inspector; lines and links share one Tab stop with arrows, Home, End and Enter, and F6 lands there.
-The header’s Open Knowledge and the command `panel:knowledge/open` (Open Knowledge, no default key) open your graph with the keyboard on the shown tab.
+The header’s Open Knowledge opens the browser on Directions, as All N directions does, each time it is pressed (the captain: "when i click the expand button here, it should show the directions tab by default").
+The command `panel:knowledge/open` (Open Knowledge, no default key) opens your graph with the keyboard on the shown tab.
 
 ### The reads
 

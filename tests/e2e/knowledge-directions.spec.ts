@@ -8,9 +8,12 @@ import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import {
+  browserCard,
+  browsersOnStage,
   filterDirections,
   focusInBrowser,
   inspector,
+  KNOWLEDGE_PANEL,
   OPEN_KNOWLEDGE,
   row,
   section,
@@ -19,6 +22,7 @@ import {
 import { HARBOR, seedKnowledge } from "./knowledgeSeed";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
+import { panelCardChrome, panelHeaderButton } from "./panelCards";
 import {
   holdsSegment,
   latestContext,
@@ -114,6 +118,19 @@ test("directions stay distinct from personal facts in the browser and in Firstma
 
   const app = await launchApp({ userDataDir, withMockProvider: true });
   try {
+    await test.step("the Knowledge panel's header Open Knowledge puts the browser up on Directions", async () => {
+      // The captain: "when i click the expand button here, it should show the
+      // directions tab by default".
+      const open = panelHeaderButton(app.page, KNOWLEDGE_PANEL, "open").locator("button");
+      await expect(open).toBeVisible({ timeout: 30_000 });
+      await open.click();
+      await expect(browserCard(app.page)).toBeVisible();
+      await expect(tab(app.page, "directions")).toHaveAttribute("aria-selected", "true");
+      await expect(row(app.page, DIRECTION.id)).toBeVisible();
+      await panelCardChrome(app.page).hide.click();
+      await expect(browsersOnStage(app.page)).toHaveCount(0);
+    });
+
     await test.step("read a direction's project, origin and exact history without changing it", async () => {
       // The browser puts the keyboard where it opens, and an opened row on the
       // inspector's selected section, a frame after it draws: each wait lets

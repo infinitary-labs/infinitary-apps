@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "stuck-task-card-key-once",
+      "kind": "fix",
+      "title": "The card about a stuck task shows its key once",
+      "body": "The card the app shows when a task has been stuck too long started its top line with the task's key twice. It now shows the key once, like every other card about a task.",
+      "area": "cards",
+      "picture": {
+        "dark": "stuck-task-card-key-once-dark.webp",
+        "light": "stuck-task-card-key-once-light.webp",
+        "alt": "A card about a stuck task, Tidy the docs, whose top line reads Attention and then the task's key, SCR-1, once"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import { DROP_TASK_LABEL } from "../../src/shared/recordDrop";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
+import { taskKey, taskKeyLinks } from "./rails";
 import { cardSurface, expectNoCard, shownCard } from "./stack";
 
 /**
@@ -56,6 +57,12 @@ test("a crewmate stuck past every nudge and wake is the app's own card, and Drop
   try {
     const { page } = launched;
     await expect(shownCard(page, TITLE)).toBeVisible();
+    // Its head names the task once, by the key that leads it as on every
+    // card about a task (INF-418: it read "SCR-1 · SCR-1").
+    const key = await taskKey(page, TASK_TITLE);
+    const head = shownCard(page, TITLE).locator("[data-card-head]");
+    await expect(taskKeyLinks(head.locator("[data-card-key]"))).toHaveText([key]);
+    expect((await head.innerText()).split(key)).toHaveLength(2);
     const body = cardBody(page, TITLE);
     await expect(body.getByText("What it last said: I updated the index.")).toBeVisible();
     for (const label of ["Continue", DROP_TASK_LABEL, "Discard"]) {

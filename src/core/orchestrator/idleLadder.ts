@@ -1093,7 +1093,10 @@ export class IdleLadder {
       author: "host",
       priority: HOST_CARD_PRIORITY,
       title: stallCardTitle(record.title, stuckFor),
-      meta: record.key || record.id,
+      // The head leads with the task's key from `taskId`, as on every card
+      // about a task (INF-358), and the title names the task: nothing is
+      // left for the meta words to add, so the key reads once (INF-418).
+      meta: "",
       body: [
         opening,
         lastLine,

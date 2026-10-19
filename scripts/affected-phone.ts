@@ -10,6 +10,7 @@ const INPUTS = [
   "ios/", "docs/contract.json", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
   ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts",
   "scripts/phone-test-home.ts", "scripts/affected-phone.ts", "scripts/with-mac-check.py",
+  "scripts/replaced-phone-runs.ts",
 ] as const;
 
 export function phoneDecision(paths: readonly string[] | undefined): { run: boolean; reasons: string[] } {

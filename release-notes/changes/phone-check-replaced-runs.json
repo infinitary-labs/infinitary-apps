@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-replaced-runs",
+      "reason": "Pull-request CI only: a newer push cancels the phone check's older runs that have not started a device gate, with no application change."
+    }
+  ]
+}

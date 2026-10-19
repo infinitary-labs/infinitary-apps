@@ -8,13 +8,35 @@ on:
 permissions:
   contents: read
 
-# Let the running native gate clean up its own simulators. A newer version waits;
-# GitHub replaces only the older pending run for this same pull request.
-concurrency:
-  group: phone-${{ github.ref }}
-  cancel-in-progress: false
+# INF-487: no run-level group for the pull request. A run that counts as running
+# while its native job waits for the Mac mini would hold the newer version behind
+# it for hours. cancel-replaced cancels the older runs of this pull request whose
+# native job has not started a device gate, and a replaced version ends its own
+# run before each device gate, a manual rerun of an older version included.
+# A started gate is never cancelled: it deletes its own simulator.
 
 jobs:
+  cancel-replaced:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            package.json
+            scripts/replaced-phone-runs.ts
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Cancel this pull request's older phone runs
+        run: node scripts/replaced-phone-runs.ts cancel-older
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
   choose-phone:
     runs-on: ubuntu-latest
     outputs:
@@ -41,6 +63,11 @@ jobs:
     if: needs.choose-phone.outputs.run == 'true'
     # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
     runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    # Reading the pull request's latest version and cancelling this run, if replaced.
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
     # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
     # The command leases below let a phone take its turn after active journeys.
     concurrency:
@@ -85,14 +112,31 @@ jobs:
           HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
             INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
             pnpm install --frozen-lockfile --store-dir "$store"
+      # No simulator exists before a device gate. A rerun of a replaced version has no
+      # newer run to cancel it, so it stops here. A failed reading runs the gate.
+      - id: start
+        name: Stop before the gates if a newer push replaced this version
+        continue-on-error: true
+        run: node scripts/replaced-phone-runs.ts stop-if-replaced
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       # test-phone owns a fresh HOME, real fixture and simulator, and disables signing.
       # It checks generated files, Swift trust, native recovery and the published client.
       - id: iphone
         name: Read and recover on iPhone
+        if: ${{ steps.start.outputs.replaced != 'true' }}
         run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
+      # No simulator exists between the gates. A failed reading runs the iPad gate.
+      - id: current
+        name: Stop before the iPad if a newer push replaced this version
+        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
+        continue-on-error: true
+        run: node scripts/replaced-phone-runs.ts stop-if-replaced
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - id: ipad
         name: Read and recover on iPad
-        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
+        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' && steps.current.outputs.replaced != 'true' }}
         run: python3 scripts/with-mac-check.py exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
       - name: Keep native results and connection readings
         if: always()

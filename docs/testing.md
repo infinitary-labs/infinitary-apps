@@ -94,13 +94,15 @@ Unit tests are unchanged.
 ## Native phone checks on the pull request
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, `docs/contract.json`, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts` and the command-lease helper `scripts/with-mac-check.py`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py` and the replacement helper `scripts/replaced-phone-runs.ts`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
 The `native-phone` job runs the same disposable `scripts/test-phone.ts` gate for both devices on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
 It keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
-Unlike the desktop journey workflow, a newer push waits for a running native check to finish its simulator cleanup, replacing only an older pending run for that pull request.
+A newer push cancels its pull request's older phone runs whose native job has not started a device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
+Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulator; a replaced version then stops before its next gate.
+A manual rerun of a replaced version stops before its first gate.
 Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
 Desktop journey jobs from different pull requests remain parallel.
 The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; each native device gate takes an exclusive lease against the same runner-account cache file.

@@ -174,12 +174,16 @@ The runner waits for simulator boot completion before launching tests and uses o
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
 `phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/`, `docs/contract.json` or the phone-contract generator and its shape guard.
-The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts` and its command-lease helper `scripts/with-mac-check.py`.
+The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py` and its replacement helper `scripts/replaced-phone-runs.ts`.
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does.
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
 The native job uses `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.
-A newer push waits for the running native gate to finish and remove its own simulators; GitHub replaces only an older pending run for that same pull request.
+A newer push never waits behind its pull request's older phone run: `phone.yml` has no run-level concurrency group.
+Its `cancel-replaced` job cancels the pull request's older phone runs whose native job has not started a device gate, so a replaced version gives up its place in the Mac mini's line (`scripts/replaced-phone-runs.ts`).
+A device gate that already started is never cancelled; it finishes and deletes its own simulator.
+No simulator exists right before either gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
+That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches the Mac mini.
 Only native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and each native device gate an exclusive one.
@@ -190,7 +194,7 @@ Phone gates can yield to desktop work between iPhone and iPad.
 The native job's 165-minute limit allows 45 minutes for both device gates, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
 The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
 Setup, evidence upload, the choosers and Linux jobs remain independent.
-Neither device's failure is ignored, and iPad still runs after an iPhone failure unless the job was cancelled.
+Neither device's failure is ignored, and iPad still runs after an iPhone failure unless the job was cancelled or a newer push replaced its version.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
 

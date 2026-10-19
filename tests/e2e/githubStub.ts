@@ -36,6 +36,13 @@ import { join } from "node:path";
 type StubPull = {
   /** GitHub's `mergeable_state` for this change: `clean` unless a spec names another. */
   mergeableState?: string;
+  /**
+   * How many reads of the change by its number GitHub answers `mergeable:
+   * null` with `mergeable_state: unknown` before `mergeableState`: what it
+   * answered PR #94 just after main moved, while it worked out a fresh test
+   * merge (INF-456).
+   */
+  undecidedReads?: number;
   number: number;
   /** The head when no branch head is read (`headOf`): only for a change never put in. */
   headSha?: string;
@@ -110,6 +117,7 @@ export type GitHubStub = {
     body?: string;
     headSha: string;
     mergeableState?: string;
+    undecidedReads?: number;
   }) => void;
   /**
    * Earlier pull requests ran workflows, while this head has none, so an
@@ -689,6 +697,8 @@ export async function startGitHubStub(
             send(404, { message: "Not Found" });
             return;
           }
+          const undecided = (pull.undecidedReads ?? 0) > 0;
+          if (undecided) pull.undecidedReads = (pull.undecidedReads ?? 0) - 1;
           send(200, {
             ...pullJson(pull, owner, name),
             state: pull.merged || pull.closed ? "closed" : "open",
@@ -696,8 +706,8 @@ export async function startGitHubStub(
             merge_commit_sha: pull.merged ? `squash-${headOfPull(pull)}` : null,
             draft: false,
             base: { ref: "main" },
-            mergeable: true,
-            mergeable_state: pull.mergeableState ?? "clean",
+            mergeable: undecided ? null : true,
+            mergeable_state: undecided ? "unknown" : (pull.mergeableState ?? "clean"),
           });
           return;
         }
@@ -926,6 +936,7 @@ export async function startGitHubStub(
       body?: string;
       headSha: string;
       mergeableState?: string;
+      undecidedReads?: number;
     }) {
       opened.set(pull.branch, { ...pull });
     },

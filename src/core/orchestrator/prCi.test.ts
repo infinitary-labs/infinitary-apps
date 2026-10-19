@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ChangePresentation } from "@shared/changePresentation";
+import type { MergeReview } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
@@ -1730,6 +1731,95 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(tasks.get("ab12cd34")?.delivery?.mergeAuthorization?.lineage).toMatchObject([
       { fromHead: approved, toHead: repaired, newBase, generation: 1 },
     ]);
+  });
+});
+
+describe("the captain's click on a pull request the task did not open, while GitHub works it out (INF-457)", () => {
+  // PR #94 as GitHub served it on 2026-10-18 (INF-456): it answered
+  // mergeable null, which reads computing, to both of the captain's clicks
+  // just after main moved, and clean to reads seconds later.
+  const PR94 = {
+    number: 94,
+    headSha: "44b8b3aaf25091de13081dc62eae268df3d9a148",
+    branch: "fm/task-3a9271dd",
+    title: "fix(crew): keep a renewed conversation's reason across a restart",
+  };
+
+  /** The fake forge answering each read of PR #94 by its number in turn; the last answer repeats. */
+  class UndecidedForge extends FakeForge {
+    answers: { readiness: ForgeReadiness; headSha?: string }[] = [{ readiness: "computing" }];
+    reads = 0;
+    async pull(number: number): Promise<ForgePull> {
+      const answer = this.answers[Math.min(this.reads, this.answers.length - 1)];
+      this.reads += 1;
+      return {
+        number,
+        state: "open",
+        merged: false,
+        headSha: answer?.headSha ?? PR94.headSha,
+        base: "main",
+        branch: PR94.branch,
+        title: PR94.title,
+        headRepo: "infinitary-labs/infinitary",
+        readiness: answer?.readiness ?? "computing",
+      };
+    }
+  }
+
+  async function adopted(answers: UndecidedForge["answers"]) {
+    const forge = new UndecidedForge();
+    forge.answers = answers;
+    const harness = setup({ forge });
+    await insertDirectPrTask(harness.tasks, harness.repos);
+    const review: MergeReview = {
+      id: "mrpr94clicked",
+      relationship: "referenced",
+      kind: "github",
+      host: "github.com",
+      owner: "infinitary-labs",
+      name: "infinitary",
+      number: PR94.number,
+      headSha: PR94.headSha,
+      base: "main",
+      branch: PR94.branch,
+      method: "squash",
+      title: PR94.title,
+      at: Date.now(),
+    };
+    harness.tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+    // The click, with the gaps between GitHub's reads on a fake clock: it
+    // settles only if the wait ends.
+    const click = async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout"] });
+      try {
+        const outcome = harness.service.mergeReview("ab12cd34", review.id);
+        await vi.runAllTimersAsync();
+        return await outcome;
+      } finally {
+        vi.useRealTimers();
+      }
+    };
+    return { ...harness, forge, click };
+  }
+
+  it("refuses, sending nothing, when GitHub is still undecided after the wait", async () => {
+    const { forge, click } = await adopted([{ readiness: "computing" }]);
+    const outcome = await click();
+    expect(outcome).toMatchObject({ ok: false, relationship: "referenced", stop: "computing" });
+    expect(outcome.text).toContain("Nothing merged");
+    expect(forge.reads).toBeGreaterThan(1);
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  it("sends nothing when the pull request moves to a new version while GitHub works it out", async () => {
+    const { forge, click } = await adopted([
+      { readiness: "computing" },
+      { readiness: "clean", headSha: "9d3c0f1e2b4a5968778695a4b3c2d1e0f9a8b7c6" },
+    ]);
+    const outcome = await click();
+    expect(outcome).toMatchObject({ ok: false, stop: "moved" });
+    expect(forge.reads).toBe(2);
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
 });
 

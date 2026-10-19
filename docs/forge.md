@@ -463,6 +463,12 @@ The host derives whether the pull request is the task's own or one it adopted, s
 An owned merge uses the ordinary guarded path and finishes the task.
 A referenced merge is GitHub only, including Enterprise, same repository, into the default branch, and keeps the task and its working copy.
 A changed head, a failed or unreadable check, or a draft or protected branch sends no merge.
+Only a pull request GitHub reads as clean at the reviewed head is sent, so a sign-in that could bypass the branch's rules never does.
+GitHub answers `mergeable: null` while a check it has just started works out a test merge, often just after the default branch moved, and asks to be read again shortly (INF-457).
+At the captain's click, that answer is read again after 1, 2, 3, 5, 8 and 11 seconds (`UNDECIDED_REREAD_MS` in `src/core/orchestrator/prCi.ts`), and every read is checked as the first one was.
+The merge goes as soon as GitHub reads clean at the reviewed head; a moved head or a closed pull request still sends nothing, and GitHub still undecided after half a minute refuses the click, saying how long it asked.
+The card's own read before it goes up asks once.
+Evidence: `tests/e2e/request-merge.spec.ts` ("... waits while GitHub works out whether it can merge ...") merges an adopted pull request after two undecided answers, and `prCi.test.ts` (INF-457) holds the refusal after the wait and a version that moves during it.
 An absence declaration is stored only when it names that exact head, with evidence and a local gate.
 It waives only the host's own "checks have not started yet" marker, never a failed, pending or unreadable check.
 A confirmed referenced merge wakes the crew once.

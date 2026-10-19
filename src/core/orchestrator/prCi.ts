@@ -200,6 +200,16 @@ type Audience = "firstmate" | "crewmate" | "watch";
 /** Backoff between put-in attempts retried for a transient host/network failure. */
 const MERGE_RETRY_DELAYS_MS = [300, 900];
 
+/**
+ * The gaps between reads of a pull request the task did not open while
+ * GitHub has not decided whether it can merge, after the captain's click
+ * (INF-457). GitHub answers `mergeable: null` while a check it has just
+ * started works out a test merge, often just after the default branch moved,
+ * and asks to be read again shortly. Half a minute in all; still undecided
+ * after the last read, the click is refused.
+ */
+const UNDECIDED_REREAD_MS = [1_000, 2_000, 3_000, 5_000, 8_000, 11_000];
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** The checked change, and the forge that answered, for the put-in that follows. */
@@ -1010,10 +1020,15 @@ export class PrCiService {
     });
   }
 
-  /** Re-read a referenced review's target. `ok` means it still matches and may merge. */
+  /**
+   * Re-read a referenced review's target. `ok` means it still matches and may
+   * merge. At the captain's click (`click`), a pull request GitHub has not
+   * decided on yet is read again until it decides (`readDecided`).
+   */
   private async readReviewTarget(
     taskId: string,
     review: MergeReview,
+    click = false,
   ): Promise<
     { ok: true; forge: Forge; pull: ForgePull } | { ok: false; text: string; stop?: MergeStop }
   > {
@@ -1023,9 +1038,15 @@ export class PrCiService {
     if (forge.kind !== "github" || !forge.pull) {
       return { ok: false, text: "this host cannot merge a pull request the task did not open." };
     }
+    const read = forge.pull.bind(forge);
     let pull: ForgePull;
+    let waited = 0;
     try {
-      pull = await forge.pull(review.number);
+      ({ pull, waited } = await readDecided(
+        () => read(review.number),
+        review.headSha,
+        click ? UNDECIDED_REREAD_MS : [],
+      ));
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return {
@@ -1074,7 +1095,17 @@ export class PrCiService {
       };
     }
     const held = readinessStop(forge, pull, { head: review.headSha });
-    if (held) return { ok: false, text: held.plain ?? held.text, stop: held.stop };
+    if (held) {
+      const plain = held.plain ?? held.text;
+      return {
+        ok: false,
+        text:
+          held.stop === "computing" && waited > 0
+            ? `${plain}, after reading it again for ${Math.round(waited / 1_000)} seconds. Nothing merged.`
+            : plain,
+        stop: held.stop,
+      };
+    }
     const change: ForgeChange = {
       number: pull.number,
       url: null,
@@ -1123,7 +1154,7 @@ export class PrCiService {
     taskId: string,
     review: MergeReview,
   ): Promise<PrOutcome & { relationship: "referenced" }> {
-    const fresh = await this.readReviewTarget(taskId, review);
+    const fresh = await this.readReviewTarget(taskId, review, true);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
         const located = this.locate(taskId);
@@ -2300,6 +2331,35 @@ function readinessStops(
     computing: { stop: "computing", plain: `${place} has not worked out whether it can merge yet` },
     draft: { stop: "draft", plain: "its pull request is a draft" },
   };
+}
+
+/**
+ * A pull request read until GitHub decides whether it can merge `head`: while
+ * it reads computing at that head and stays open, it is read again after each
+ * of `gaps` in turn (INF-457). The last read comes back with how long the
+ * gaps took, and the caller checks it as it would a single read, so a moved
+ * head or a closed pull request still stops the merge. Throws as a read does.
+ */
+async function readDecided(
+  read: () => Promise<ForgePull>,
+  head: string,
+  gaps: readonly number[],
+): Promise<{ pull: ForgePull; waited: number }> {
+  let pull = await read();
+  let waited = 0;
+  for (const gap of gaps) {
+    if (
+      pull.readiness !== "computing" ||
+      pull.state !== "open" ||
+      pull.merged ||
+      pull.headSha !== head
+    )
+      break;
+    await sleep(gap);
+    waited += gap;
+    pull = await read();
+  }
+  return { pull, waited };
 }
 
 /** What the pinned pull request's own state says about merging it now; undefined when it may. */

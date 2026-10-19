@@ -1342,7 +1342,11 @@ export class SessionHost {
       .ask("inf:work:events", [{ task: held.task, events: batch }])
       .then(
         (raw) => {
-          if (held.removed) return;
+          // Stopping first: the run that starts next from this folder may
+          // already have gone on, so this answer writes nothing over it; that
+          // run sends again what the home had not kept, and the home skips
+          // what it has (INF-151).
+          if (held.removed || this.stopped) return;
           const answer = placedEventsAnswerSchema.parse(raw);
           held.through = Math.min(answer.through, held.state.seq);
           const kept = Math.min(answer.kept, held.state.seq);

@@ -48,7 +48,7 @@ import { type CrewmateTool, crewmateTool } from "../session/tools";
 import { joinHome } from "./join";
 import { PlacedTasks } from "./placedTasks";
 import { type HelperRun, startHelper } from "./run";
-import { SessionHost } from "./sessionHost";
+import { SessionHost, type SessionHostOptions } from "./sessionHost";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
@@ -1225,6 +1225,86 @@ describe("a conversation held on a computer that runs work", () => {
       await at.order("inf:session:prompt", [{ orderId: "rows:5", task: TASK, text: "Go." }]),
     ).toEqual({ turn: 1 });
     report.open();
+  });
+
+  // INF-151: the home's answer to events a stopped run sent can arrive after
+  // the run that started next from the same folder has gone on.
+  it("keeps the saved turn of the run that started next when a stopped run's events answer arrives late (INF-151)", async () => {
+    const home = standInHome();
+    const dir = scratchDir("infinitary-placed-late-answer-");
+    const spec: PlacedSpec = {
+      binding: { backend: "pi", provider: PROVIDER },
+      model: { provider: PROVIDER, id: MODEL },
+      thinking: { level: "off" },
+      instructions: "You are a crewmate on another Mac.",
+      tools: [],
+    };
+    const host = (ask: SessionHostOptions["ask"]) =>
+      new SessionHost({
+        tasks: new PlacedTasks(dir),
+        ask,
+        factories: { pi: createPiSessionFactory({ agentDir: join(dir, "pi-agent") }) },
+        bind: async () => ({ backend: "pi", runtime }),
+        log: () => {},
+      });
+    // The home keeps the request that carries the first run's turn end; its
+    // answer is held on the way back until that run has stopped.
+    let late: Promise<unknown> | undefined;
+    let reached!: () => void;
+    const answerHeld = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    let deliver!: () => void;
+    const delivered = new Promise<void>((resolve) => {
+      deliver = resolve;
+    });
+    const first = host((channel, args) => {
+      const answer = home.dispatch(channel, args);
+      const [{ events }] = args as [{ events?: PlacedEventRecord[] }];
+      if (late || !events?.some(({ event }) => event.type === "turn_ended")) return answer;
+      late = answer.then(async (kept) => {
+        reached();
+        await delivered;
+        return kept;
+      });
+      return late;
+    });
+    const tasks = new PlacedTasks(dir);
+    const next = host((channel, args) => home.dispatch(channel, args));
+    model([]);
+    try {
+      await first.answer("inf:session:open", [{ orderId: "open:1", task: TASK, spec }]);
+      await first.answer("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Go." }]);
+      await answerHeld;
+      await first.close();
+
+      // The next run reads what the first one left, and runs a turn of its own.
+      await next.answer("inf:session:open", [{ orderId: "open:2", task: TASK, spec }]);
+      await next.answer("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "On." }]);
+      await expect
+        .poll(() => {
+          const state = tasks.state(TASK);
+          return state.turn === 2 && !state.running && state.kept === state.seq;
+        })
+        .toBe(true);
+      const saved = tasks.state(TASK);
+
+      deliver();
+      await late;
+      expect(tasks.state(TASK)).toEqual(saved);
+      // Nothing is lost by leaving that answer unread: the home has each event once, in order.
+      expect(home.events.map(({ seq }) => seq)).toEqual(
+        Array.from({ length: saved.seq }, (_, index) => index + 1),
+      );
+      expect(
+        home.events.flatMap(({ event }) => (event.type === "turn_ended" ? [event.turn] : [])),
+      ).toEqual([1, 2]);
+    } finally {
+      deliver();
+      await late;
+      await first.close();
+      await next.close();
+    }
   });
 
   // Captain's INF-352 W1: helper shutdown/recovery must terminate its own continuation.

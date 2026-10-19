@@ -192,6 +192,33 @@ describe("one task's facts on the crew summary and the task record", () => {
     }
   });
 
+  it("cuts a long plan on the summary's line and lists it whole on the record (INF-484 move 5)", () => {
+    // A release crewmate's plan as E16 found them: more items than the line holds.
+    const items = Array.from({ length: 15 }, (_, i) => ({
+      label: `Release step ${i}, written out in full by the crewmate`,
+      short: `Step ${i}`,
+      state: i < 2 ? "done" : i === 2 ? "current" : "next",
+      since: now - 300_000,
+    }));
+    const long = { ...task, plan: { at: now - 300_000, items } } as unknown as TaskDetail;
+    const dots = renderToStaticMarkup(
+      <TaskFactRows facts={taskFactsOf(long, modelName)} planView="dots" />,
+    );
+    expect(dots).toContain('data-task-plan-dots="12"');
+    expect(dots).toContain(">4 more</span>");
+    expect(dots).toContain(
+      `title="${items
+        .slice(11)
+        .map((item) => item.label)
+        .join(", ")}"`,
+    );
+    const list = renderToStaticMarkup(
+      <TaskFactRows facts={taskFactsOf(long, modelName)} planView="list" />,
+    );
+    expect(list.match(/data-plan-label=""/g)).toHaveLength(15);
+    for (const item of items) expect(list).toContain(item.label);
+  });
+
   it("ends the record's rows with the task's own browser and Open, which the summary leaves out", () => {
     const browsing = {
       ...task,

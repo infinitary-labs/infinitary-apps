@@ -10624,7 +10624,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await tick();
   }
 
-  it("requires a whole plan after the first list through provider failure recovery", async () => {
+  it("keeps the last plan when a note omits it, through provider failure recovery", async () => {
     const crewmate = fakeCrewmate();
     const h = clockedSetup(crewmate);
     const { taskId } = await h.supervisor.commission({
@@ -10651,12 +10651,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(protocol.detail(taskId).plan).toBeNull();
     progress("Starting the library check.", plan);
     hostNow += 11_000;
-    const before = h.tasks.timeline(taskId);
-    const activity = h.tasks.get(taskId)?.updatedAt;
-    const refusal = progress("The library check completed; preparing the test image.");
-    expect(refusal).toContain("whole plan");
-    expect(h.tasks.timeline(taskId)).toEqual(before);
-    expect(h.tasks.get(taskId)?.updatedAt).toBe(activity);
+    const before = h.tasks.timeline(taskId).length;
+    // INF-484 move 5: a note that omits the list is written, and the last list stands.
+    const kept = progress("The library check completed; preparing the test image.");
+    expect(kept).toBe("Noted on your task's timeline; your last plan stands.");
+    expect(h.tasks.timeline(taskId)).toHaveLength(before + 1);
+    expect(protocol.detail(taskId).plan?.items.map((item) => item.state)).toEqual([
+      "current",
+      "next",
+      "next",
+    ]);
     progress("The library check completed; preparing the test image.", [
       { ...plan[0], state: "done" },
       { ...plan[1], state: "current" },
@@ -10684,8 +10688,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         evidence,
         JSON.stringify(
           {
-            refusal,
-            before: before.at(-1),
+            kept,
+            keptNote: h.tasks.timeline(taskId)[before],
             checkpoint,
             recovered: protocol.detail(taskId),
             providerAttempts: crewmate.promptCalls.length,
@@ -14097,7 +14101,7 @@ describe("the task graph (task-system P2)", () => {
     expect(ops[1]).toContain("Nothing more to file today.");
     expect(ops[1]).not.toContain("Filed this turn");
 
-    // A plan rides the note as declared (FI3-734); one that does not fit is refused in words, writing nothing.
+    // A plan rides the note as declared (FI3-734); one no surface could draw is refused in words, writing nothing.
     const plan = [{ label: "Fix the meter", short: "Fix", state: "current" }];
     expect(spec.onProgress?.("briefed", plan)).toBe(
       "Noted on your task's timeline, with your plan.",
@@ -14108,8 +14112,11 @@ describe("the task graph (task-system P2)", () => {
       /^plan was refused at plan\[0\]\[state\]/,
     );
     expect(tasks.timeline(taskId)).toHaveLength(before);
-    expect(spec.onProgress?.("tests pass; opening the PR")).toContain("whole plan");
-    expect(tasks.timeline(taskId)).toHaveLength(before);
+    // A note that omits the list keeps the last one (INF-484 move 5).
+    expect(spec.onProgress?.("tests pass; opening the PR")).toBe(
+      "Noted on your task's timeline; your last plan stands.",
+    );
+    expect(tasks.timeline(taskId)).toHaveLength(before + 1);
     expect(spec.onProgress?.("tests pass; opening the PR", plan)).toBe(
       "Noted on your task's timeline, with your plan.",
     );

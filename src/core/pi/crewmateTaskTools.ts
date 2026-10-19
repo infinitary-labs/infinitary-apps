@@ -224,16 +224,16 @@ export const NOTE_PROGRESS_TOOL = crewmateTool({
       Type.Array(
         Type.Object({
           label: Type.String({
-            description: "What the item is, in a few words (at most 60 characters)",
+            description: "What the item is, in a few words",
           }),
           short: Type.String({
-            description: "A word or two under its dot on the summary (at most 12 characters)",
+            description: "A word or two under its dot on the summary, cut there when it is longer",
           }),
           state: stringEnum(["done", "current", "next", "skipped"]),
         }),
         {
           description:
-            "The whole list of what the task takes, in order, replacing the last one; at most 12 items, under eight is the aim",
+            "The whole list of what the task takes, in order, replacing the last one; under eight items is the aim, and the line folds what it cannot hold",
         },
       ),
     ),

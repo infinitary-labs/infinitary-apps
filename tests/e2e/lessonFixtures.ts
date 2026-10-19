@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { NO_EXCLAMATION_REFUSAL } from "../../src/core/pi/cardLint";
 
 /**
  * The scripted lesson loop (FI3-1474): the words the mock Firstmate and the
@@ -31,7 +30,6 @@ export const LESSON_FRACTIONS_GOAL_TITLE = "Fractions: what do you want to be ab
 export const LESSON_FRACTIONS_ROUND_TITLE = "Halves and quarters on a number line";
 export const LESSON_LEARNER_LINE = "Likes short steps and pictures.";
 export const LESSON_GOAL_ANSWER = "beat my dad at chess";
-export const LESSON_WARM_REFUSAL = NO_EXCLAMATION_REFUSAL;
 export const LESSON_NEXT_GOAL = "the rook along a rank";
 
 export type LessonItem = {

@@ -72,8 +72,8 @@ It stays until chosen and the task stays open, so a restart brings it back with 
 
 A crewmate card that declares `holds_place` may be warm: short praise for effort and strategy, `!` and the chess pawn.
 The tested subject panel also uses short effort praise and exclamation points, but no emoji; other panels keep their calm voice.
-`lintCrewmateCard` reads that declaration (`warm` in `lintCardShape`); the first mate's cards and every card without it keep the calm voice.
-The card authoring contract says so in one crewmate-only sentence, and a body with a script is a preview, which the prose and voice rules never read.
+The card authoring contract says so in one crewmate-only sentence; the first mate's cards and every card without it keep the calm voice the contract asks for.
+No lint rule reads the voice: it is the author's (`docs/card-authoring.md`, "The shape lint").
 
 ## The six ideas
 

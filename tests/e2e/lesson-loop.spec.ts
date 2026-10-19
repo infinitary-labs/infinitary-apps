@@ -23,7 +23,6 @@ import {
   LESSON_ROUND_ONE_TITLE,
   LESSON_ROUND_REVIEW_TITLE,
   LESSON_ROUND_TWO_TITLE,
-  LESSON_WARM_REFUSAL,
   LESSON_WELCOME_TITLE,
 } from "./lessonFixtures";
 import { heroShot, regionShot } from "./pictures";
@@ -259,12 +258,6 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       expect(new Set(taught.map((task) => task.id)).size).toBe(2);
       expect(existsSync(join(workspace, "lessons", "fractions", "progress.md"))).toBe(true);
       expect(existsSync(join(workspace, "lessons", "chess", "progress.md"))).toBe(true);
-      // An ordinary card keeps the calm voice: the unmarked goal card was refused first.
-      expect(
-        (launched.mockProvider?.requestBodies() ?? []).some((body) =>
-          body.includes(LESSON_WARM_REFUSAL),
-        ),
-      ).toBe(true);
       expect(readFileSync(join(workspace, "lessons", "learner.md"), "utf8")).toContain(
         LESSON_LEARNER_LINE,
       );

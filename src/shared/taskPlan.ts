@@ -7,27 +7,30 @@ import { z } from "zod";
  * stores the list exactly as declared and reads nothing into the words;
  * every note that carries one replaces the whole list. The crewmate is asked
  * to keep it under eight items and may fold finished items into one to make
- * room; the hard cap below only refuses what no surface could show.
+ * room. How long and how many is the crewmate's call: the host keeps every
+ * word and every item, the record lists them whole, and the summary's line
+ * cuts what it cannot hold (INF-484 move 5: clip and show, never refuse a
+ * shape). Only what cannot be drawn at all - an item with no words, a state
+ * outside the four - is refused.
  */
-export const PLAN_ITEM_LABEL_MAX = 60;
-export const PLAN_ITEM_SHORT_MAX = 12;
-export const PLAN_ITEMS_MAX = 12;
 /** Past this many items, the finished ones fold away on both surfaces. */
 export const PLAN_FOLD_PAST = 8;
+/** A physical limit: the most dots the summary's line holds; past it the line folds its tail (`clipPlanLine`). */
+export const PLAN_LINE_MAX = 12;
 
 export const planItemStateSchema = z.enum(["done", "current", "next", "skipped"]);
 export type PlanItemState = z.infer<typeof planItemStateSchema>;
 
 export const planItemSchema = z.strictObject({
   /** What the item is, in a few words. */
-  label: z.string().min(1).max(PLAN_ITEM_LABEL_MAX),
-  /** The word or two under its dot on the summary. */
-  short: z.string().min(1).max(PLAN_ITEM_SHORT_MAX),
+  label: z.string().min(1),
+  /** The word or two under its dot on the summary, cut there when it does not fit. */
+  short: z.string().min(1),
   state: planItemStateSchema,
 });
 export type PlanItem = z.infer<typeof planItemSchema>;
 
-export const planItemsSchema = z.array(planItemSchema).min(1).max(PLAN_ITEMS_MAX);
+export const planItemsSchema = z.array(planItemSchema).min(1);
 
 /**
  * One item as the record reads it: as declared, plus `since`, when it first
@@ -44,7 +47,7 @@ export const taskPlanSchema = z.object({
 });
 export type TaskPlan = z.infer<typeof taskPlanSchema>;
 
-/** The whole list as a crewmate's note carries it; refused in words when it does not fit. */
+/** The whole list as a crewmate's note carries it; refused in words only when it cannot be drawn. */
 export function readPlanItems(raw: unknown): { items: PlanItem[] } | { refusal: string } {
   const parsed = planItemsSchema.safeParse(raw);
   if (parsed.success) {
@@ -61,7 +64,7 @@ export function readPlanItems(raw: unknown): { items: PlanItem[] } | { refusal: 
     ? ` at plan${issue.path.map((p) => `[${String(p)}]`).join("")}`
     : "";
   return {
-    refusal: `plan was refused${where}: ${issue?.message ?? "it does not fit"}. Give at most ${PLAN_ITEMS_MAX} items, each a label of at most ${PLAN_ITEM_LABEL_MAX} characters, a short label of at most ${PLAN_ITEM_SHORT_MAX}, and a state of done, current, next or skipped; fold finished items into one to make room.`,
+    refusal: `plan was refused${where}: ${issue?.message ?? "it cannot be drawn"}. Give a list of items, each with a label, a short label and a state of done, current, next or skipped.`,
   };
 }
 
@@ -102,4 +105,21 @@ export function foldPlan<T extends PlanItem>(
   const folded = items.filter(hides);
   if (folded.length < 2) return null;
   return { folded, rest: items.filter((item, i) => !hides(item, i)) };
+}
+
+/**
+ * The summary's line, cut to the dots it holds (INF-484 move 5): past
+ * `PLAN_LINE_MAX` dots - counted after `foldPlan` - the items after the
+ * current one fold into one last dot, their names on hover, while the record
+ * still lists every item. The current item always keeps its dot. Folding one
+ * item would gain nothing, so it takes two; null means the line holds them all.
+ */
+export function clipPlanLine<T extends Pick<PlanItem, "state">>(
+  nodes: readonly T[],
+): { shown: T[]; later: T[] } | null {
+  if (nodes.length <= PLAN_LINE_MAX) return null;
+  const current = nodes.findIndex((node) => node.state === "current");
+  const keep = Math.max(PLAN_LINE_MAX - 1, current + 1);
+  if (nodes.length - keep < 2) return null;
+  return { shown: nodes.slice(0, keep), later: nodes.slice(keep) };
 }

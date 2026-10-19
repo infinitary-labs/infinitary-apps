@@ -17,22 +17,39 @@ import {
 import { hasHook } from "@shared/codeNames";
 import type { Rigor } from "@shared/rigor";
 import { ElementType, parseDocument } from "htmlparser2";
-import {
-  ABANDON,
-  APPROVE_AND_BUILD,
-  SAVE_AND_DEFER,
-  START_THE_NEXT_STEP,
-} from "../prompts/cardContract";
-import { conventionalTitleCopy } from "../workspace/conventional";
 import type { EmittedCard } from "./cardTool";
 
 /**
  * The emit_card boundary lint (contract v1.1; interaction P1 WI-11; one
  * card with effects, cards/tasks/agents P1; facts-and-fix refusals,
  * contract v2.0). Each rule turns a card rule into a host refusal whose
- * text names the real defect and the one fix - simultaneously a safety
- * bound and a training signal. A refused card is never shown; the thrown
- * message reaches the model as a loud tool error and it revises.
+ * text names the real defect and the one fix. A refused card is never
+ * shown; the thrown message reaches the model as a loud tool error and it
+ * revises.
+ *
+ * A rule here refuses only what the host may hard-code (docs/principles.md,
+ * "Build the agent's reach, never its verdicts"; INF-484 move 5): a typed
+ * fact it holds, consent for an effect, a physical limit, or a product fact
+ * the captain ruled. How a card is worded, how long it runs, how it opens,
+ * where its evidence sits and what its buttons are called are the author's
+ * verdicts: the contract states them as goals and nothing here refuses them.
+ * Each rule, by its kind:
+ *
+ * - product fact (D-9): a card with actions (a decision) gives 2 or 3 of
+ *   them and marks exactly one `default`, the step the emitter would take;
+ * - product fact: figure text draws at 11 px or more in the usual card;
+ * - typed fact: a body that arrived entity-escaped (`&lt;p&gt;` for `<p>`)
+ *   is named as such, because it would render as literal tags - the Sep 15
+ *   Claude crewmates that sent one were told they had "3 sentences" instead
+ *   and rewrote correct content four times (contract v2.0);
+ * - consent: an action never carries the host's own effect, and one that
+ *   reads like a merge declares the settle it claims;
+ * - consent: a decision that is not a preview asks a required radio,
+ *   checkbox or select question unpicked, its recommendation only marked
+ *   (contract 4.56), and ends each question with options with a Something
+ *   else row unless it marks the options as the only answers (FI3-1002);
+ * - the Firstmate's own rules and the crewmate's, each named by its kind
+ *   where it is defined below.
  *
  * The lint asks for SHAPE, never for the absence of words: the v1 progress
  * ban list refused legitimate cards for containing "in progress" or "still
@@ -42,25 +59,13 @@ import type { EmittedCard } from "./cardTool";
  * through htmlparser2 - the parser the host hashes a card's scripts with -
  * never through regex over markup. This is a SHAPE gate, never a safety one:
  * a body is rendered verbatim and the frame is what contains it, so nothing
- * here is load-bearing for security:
+ * here is load-bearing for security.
  *
- * - a body that arrived entity-escaped (`&lt;p&gt;` for `<p>`) is named as
- *   such, because it would render as literal tags - the Sep 15 Claude
- *   crewmates that sent one were told they had "3 sentences" instead and
- *   rewrote correct content four times (contract v2.0);
- * - a card with actions (a decision) gives 2 or 3 of them, marks exactly one
- *   `default` (the step the emitter would take), leads with a first
- *   paragraph, and carries its evidence after it (a paragraph, list, table,
- *   or figure); nothing counts the paragraph's sentences - the one-sentence
- *   answer is guidance the contract gives, not a count a regex can take on
- *   prose that names files and versions;
- * - a decision that is not a preview asks a required radio, checkbox or
- *   select question unpicked, its recommendation only marked (contract 4.56),
- *   and ends each question with options with a Something else row unless
- *   it marks the options as the only answers (FI3-1002);
- * - a long body has heading structure;
- * - an action never carries the host's own effect, and one that reads like
- *   a merge declares the settle it claims.
+ * What INF-484 move 5 retired as verdicts (E16, INF-365, counted the
+ * refusals they cost): the title that must not lead with a SHA, the
+ * decision's leading paragraph and the evidence after it, headings on a body
+ * past 1,200 characters, the calm voice's ban on "!" and emoji, and a ready
+ * plan's three button labels.
  *
  * What this lint no longer asks for, at contract v3.6 (captain lock 3 of
  * 2026-09-19 on the visual-density audit, 4.4b row 4): the five evidence
@@ -80,18 +85,16 @@ import type { EmittedCard } from "./cardTool";
  * PR link and CI state on it itself.
  */
 
-/** A body with more visible text than this needs headings (WI-11). */
-export const HEADING_STRUCTURE_CHARS = 1_200;
-
 /** An entity-escaped tag: `&lt;p&gt;`, `&lt;/ul&gt;`, `&lt;svg viewBox=...&gt;`. */
 const ESCAPED_TAG = /&lt;\/?[a-z][a-z0-9-]*(?:\s[^&]*?)?\s*\/?&gt;/i;
 
 /**
- * An action that CLAIMS a settle - a label or id reading like merge or land
- * - without declaring one. Not a word ban: a consistency check between
- * what a button says and what it does. Sep 4-5's thirty "Merge PR" buttons
- * that merged nothing were exactly this; with effects on the wire the host
- * runs a settle only where one is declared, so the claim must carry it.
+ * Consent: an action that CLAIMS a settle - a label or id reading like merge
+ * or land - without declaring one. Not a word ban: a consistency check
+ * between what a button says and what it does. Sep 4-5's thirty "Merge PR"
+ * buttons that merged nothing were exactly this; with effects on the wire
+ * the host runs a settle only where one is declared, so the claim must
+ * carry it.
  */
 const SETTLE_CLAIM_ID = /^(merge[-_ ]?pr|merge|land)([-_ ][a-z0-9]+|\d+)?$/i;
 const SETTLE_CLAIM_LABEL = /^(merge|land)\b/i;
@@ -108,9 +111,9 @@ function fakeSettleRefusal(actions: EmittedCard["actions"]): string | undefined 
 }
 
 /**
- * How many actions a decision gives (CARD_MECHANICS: "A decision gives 2 or
- * 3 actions"). One is no choice - the close already keeps - and four are a
- * menu. FI3-409's live check showed one with a radio question and a lone
+ * A product fact (D-9): how many actions a decision gives (CARD_MECHANICS:
+ * "A decision gives 2 or 3 actions"). One is no choice - the close already
+ * keeps - and four are a menu. FI3-409's live check showed one with a radio question and a lone
  * "Save this answer" going up because nothing counted. The lint reads the
  * card the captain gets: a crewmate's completion decision is counted after
  * the host writes its merge and discard pair.
@@ -129,114 +132,28 @@ function decisionActionsRefusal(actions: EmittedCard["actions"]): string | undef
     : `${given}; keep the ${DECISION_ACTIONS_MIN} or ${DECISION_ACTIONS_MAX} choices that matter, and ask anything finer as a question in the body.`;
 }
 
-/** L3: a title led by a bare SHA, or that is only "PR <n>". */
-const SHA_LEAD = /^[0-9a-f]{7,40}\b/i;
-const BARE_PR_TITLE = /^PR\s+#?\d+$/i;
-
-/** L4: emoji (extended pictographics) in decision/note copy. */
-const EMOJI = /\p{Extended_Pictographic}/u;
-
-/** The refusal of an exclamation point in calm card copy; a scripted stand-in recognizes it. */
-export const NO_EXCLAMATION_REFUSAL = "card copy is calm and factual: no exclamation points.";
-
-/** The one symbol a warm lesson card may carry beside "!": the chess pawn, which Unicode files as an emoji. */
-const WARM_GLYPHS = /\u265F/gu;
-
-/** What counts as evidence after a decision's answer sentence. */
-const EVIDENCE_TAGS = new Set([
-  "p",
-  "ul",
-  "ol",
-  "dl",
-  "table",
-  "figure",
-  "svg",
-  "canvas",
-  "pre",
-  "blockquote",
-  "details",
-]);
-
 /** The card fields the shape rules read. */
 export type ShapedCard = Pick<EmittedCard, "title" | "body" | "actions">;
 
-/** The parsed body as the shape rules see it. */
-type BodyShape = {
-  /** Visible copy: every text node outside script/style, whitespace-collapsed. */
-  text: string;
-  /** The first paragraph's text: the first <p>, else the body's leading text run. */
-  firstParagraph: string | undefined;
-  /** Whether an evidence element follows the first paragraph. */
-  evidenceAfterFirst: boolean;
-  hasHeading: boolean;
-  /** Whether the body holds any element at all (an escaped body holds none). */
-  hasElement: boolean;
-};
-
-function readBody(body: string): BodyShape {
-  const document = parseDocument(body, { decodeEntities: true });
-  const copy: string[] = [];
-  // One parse of the headings (`@shared/cardHeadings`), the same reading the
-  // rigor numbers take of a report, so nothing grades a body by a rule this
-  // gate did not apply.
-  const headings = bodyHeadings(body);
-  let hasElement = false;
-  let first: { text: string } | undefined;
-  let evidenceAfterFirst = false;
-  const walk = (nodes: DomNode[], atRoot: boolean): void => {
-    for (const node of nodes) {
-      if (node.type === ElementType.Text) {
-        const text = (node.data ?? "").replace(/\s+/g, " ").trim();
-        if (!text) continue;
-        copy.push(text);
-        if (atRoot) {
-          if (!first) first = { text };
-          else evidenceAfterFirst = true;
-        }
-        continue;
-      }
-      if (!ELEMENT_TYPES.has(node.type)) continue;
-      hasElement = true;
-      const name = node.name?.toLowerCase() ?? "";
-      if (NON_COPY.has(name)) continue;
-      if (name === "p" && !first) {
-        const text = textOf(node).replace(/\s+/g, " ").trim();
-        if (text) {
-          copy.push(text);
-          first = { text };
-          continue;
-        }
-      }
-      if (first && EVIDENCE_TAGS.has(name)) evidenceAfterFirst = true;
-      walk(node.children ?? [], false);
-    }
-  };
-  walk(document.children as unknown as DomNode[], true);
-  return {
-    text: copy.join(" "),
-    firstParagraph: first?.text,
-    evidenceAfterFirst,
-    hasHeading: headings.length > 0,
-    hasElement,
-  };
-}
-
 /**
- * The refusal for a body that arrived entity-escaped: the parsed body holds
- * no element at all while its text spells tags out as `&lt;p&gt;`. Only the
- * whole-body case is refused - a body that shows one literal tag inside a
- * real paragraph is a code sample, and renders as one.
+ * A typed fact: the refusal for a body that arrived entity-escaped, whose
+ * parsed body holds no element at all while its text spells tags out as
+ * `&lt;p&gt;`. Only the whole-body case is refused - a body that shows one
+ * literal tag inside a real paragraph is a code sample, and renders as one.
  */
 export const ESCAPED_BODY_REFUSAL =
   "the body arrived HTML-escaped (&lt;p&gt; where <p> was meant), so it would render as literal tags instead of markup; send raw HTML tags.";
 
-function escapedBodyRefusal(body: string, shape: BodyShape): string | undefined {
-  if (shape.hasElement || !ESCAPED_TAG.test(body)) return undefined;
-  return ESCAPED_BODY_REFUSAL;
+function escapedBodyRefusal(body: string): string | undefined {
+  if (!ESCAPED_TAG.test(body)) return undefined;
+  const hasElement = parseDocument(body, { decodeEntities: true }).children.some((node) =>
+    ELEMENT_TYPES.has(node.type),
+  );
+  return hasElement ? undefined : ESCAPED_BODY_REFUSAL;
 }
 
-/** The usual card's figure column: a 560 px card less its 1 px border, 20 px
- * body padding each side and 4 px frame padding each side. Draw-at-true-size
+/** A product fact: the usual card's figure column, a 560 px card less its
+ * 1 px border, 20 px body padding each side and 4 px frame padding each side. Draw-at-true-size
  * measures the 11 px floor here, not at the 350 px column a card gets with a
  * thread beside it. A narrower card shrinks labels with the drawing, and that
  * shrink is accepted: the emitter cannot know the captain's window. */
@@ -369,8 +286,8 @@ function openingOptions(select: ControlNode): {
 }
 
 /**
- * A required choice question that arrives answered (contract 4.56; FI3-517
- * direction A), and where its answer is written: a radio or checkbox
+ * Consent: a required choice question that arrives answered (contract 4.56;
+ * FI3-517 direction A), and where its answer is written: a radio or checkbox
  * written `checked`, or a select whose opening option has a value.
  */
 export type PreansweredQuestion = {
@@ -458,9 +375,10 @@ function preansweredRefusal(body: string): string | undefined {
 }
 
 /**
- * The mark on a question's Something else row (FI3-1002), as a refusal
- * names it. Every hook is read in either spelling (`hasHook`), so a card a
- * crewmate on the other side of the Infinitary rename writes passes too.
+ * Consent: the mark on a question's Something else row (FI3-1002), as a
+ * refusal names it. Every hook is read in either spelling (`hasHook`), so a
+ * card a crewmate on the other side of the Infinitary rename writes passes
+ * too.
  */
 const WRITE_IN_MARK = "data-inf-write-in";
 /** The mark on a question's fieldset or select whose options are the only answers. */
@@ -556,20 +474,12 @@ function writeInRefusal(body: string): string | undefined {
 }
 
 /**
- * The shape and voice rules both boundaries share (WI-11). Returns the
- * corrective refusal, or undefined when the card passes.
+ * The shape rules both boundaries share (WI-11). Returns the corrective
+ * refusal, or undefined when the card passes.
  */
-export function lintCardShape(
-  card: ShapedCard,
-  options: { warm?: boolean } = {},
-): string | undefined {
-  // L3: the title leads with the work, never a bare SHA or PR number.
-  if (SHA_LEAD.test(card.title.trim()) || BARE_PR_TITLE.test(card.title.trim())) {
-    return "the title must name the work in plain language, not lead with a SHA or be only a PR number.";
-  }
-
-  // The host's own effect is the agent-down cards' and no agent's: an
-  // agent that wants the captain in Settings declares open.
+export function lintCardShape(card: ShapedCard): string | undefined {
+  // Consent: the host's own effect is the agent-down cards' and no agent's:
+  // an agent that wants the captain in Settings declares open.
   const hostEffect = card.actions.find((action) => action.effect?.kind === "host");
   if (hostEffect) {
     return `action "${hostEffect.id}" carries a host effect, which only the app's own cards may; declare settle or open, or no effect for a choice that returns to you.`;
@@ -577,7 +487,8 @@ export function lintCardShape(
   const fake = fakeSettleRefusal(card.actions);
   if (fake) return fake;
 
-  // A card with actions is a decision (one card shape, ruling D1 a).
+  // A product fact (D-9): a card with actions is a decision (one card
+  // shape, ruling D1 a), with 2 or 3 actions and one default.
   const decision = card.actions.length > 0;
   if (decision) {
     const count = decisionActionsRefusal(card.actions);
@@ -593,51 +504,23 @@ export function lintCardShape(
     }
   }
 
-  // The prose rules read a body as copy, and a preview is not copy: it is
-  // the mock of a thing, whose visible text is labels on a drawing. Shape,
-  // not kind, decides - this is the exemption the retired live-prototype
-  // kind used to carry (isPreviewBody). The action rules above still apply:
-  // a preview that offers a choice is still a decision with one default.
-  // The voice rules below do not: a preview returns before them.
+  // A product fact: no figure text under 11 px, in a preview too.
   const figureRefusal = figureTypeRefusal(card.body);
   if (figureRefusal) return figureRefusal;
+  // A preview is the mock of a thing, whose controls carry its settings: the
+  // question rules below read a body as a question, so a preview returns
+  // before them. Shape, not kind, decides (isPreviewBody). The action rules
+  // above still apply: a preview that offers a choice is still a decision.
   if (isPreviewBody(card.body)) return undefined;
-  const shape = readBody(card.body);
 
-  // The real defect first: an escaped body has no first <p> either, and
-  // refusing it for that would name the wrong fix.
-  const escaped = escapedBodyRefusal(card.body, shape);
+  const escaped = escapedBodyRefusal(card.body);
   if (escaped) return escaped;
 
   if (decision) {
-    if (!shape.firstParagraph) {
-      return "lead the decision with its answer: a first <p> holding one sentence, then the evidence.";
-    }
-    if (!shape.evidenceAfterFirst) {
-      return "add the evidence after the one-sentence answer: a paragraph, list, table, or figure showing why the default is the right step.";
-    }
     const preanswered = preansweredRefusal(card.body);
     if (preanswered) return preanswered;
     const writeIn = writeInRefusal(card.body);
     if (writeIn) return writeIn;
-  }
-
-  if (shape.text.length > HEADING_STRUCTURE_CHARS && !shape.hasHeading) {
-    return `this body is ${shape.text.length} characters of text with no headings; give it heading structure (h3 or h4 sections), move detail into <details>, or shorten it.`;
-  }
-
-  // L4: voice mechanics, over the visible copy only - a script's `!==` is
-  // not an exclamation point.
-  // A warm card (a crewmate's card that holds its place, such as a lesson)
-  // may praise with "!" and the chess pawn; every other card keeps the
-  // calm voice.
-  const warm = options.warm === true;
-  if (!warm && (card.title.includes("!") || shape.text.includes("!"))) {
-    return NO_EXCLAMATION_REFUSAL;
-  }
-  const unglyphed = (text: string) => (warm ? text.replace(WARM_GLYPHS, "") : text);
-  if (EMOJI.test(unglyphed(card.title)) || EMOJI.test(unglyphed(shape.text))) {
-    return "card copy is calm and factual: no emoji.";
   }
   return undefined;
 }
@@ -671,20 +554,20 @@ export type CardLintContext = {
   crewmateOwesCompletion?: (taskId: string) => boolean;
 };
 
-/** The P1 attach-first refusal for a note that names no task and asserts nothing. */
+/** A typed fact: the P1 attach-first refusal for a note that names no task and asserts nothing. */
 export const NOTE_NEEDS_TASK_REFUSAL =
   "every card is about a task: pass task_id when this answers a question about existing work (the about line, the tasks index, or crew_status name it), or standalone true only when the ask is a one-off with no connection or consequence to any work.";
 
 /**
- * The closed-task choice refusal: the click refuses every choice on a card
- * whose task is closed (`CrewSupervisor.act`), so the emit names the ways
- * out instead of putting up buttons that cannot work.
+ * A typed fact: the closed-task choice refusal - the click refuses every
+ * choice on a card whose task is closed (`CrewSupervisor.act`), so the emit
+ * names the ways out instead of putting up buttons that cannot work.
  */
 export function closedTaskChoiceRefusal(taskId: string): string {
   return `task ${taskId} is closed, so a choice on a card about it cannot be taken. Either file the follow-up with create_task, with basis ${taskId} so its report and answers carry over, and pass the new task_id; or emit this decision without task_id (it becomes its own decision task and the choice comes back to you), then name basis ${taskId} on the work the choice starts. A note with no actions may still carry the closed task's id.`;
 }
 
-/** The one structural settle check: a settle effect must know its task. */
+/** A typed fact: the one structural settle check - a settle effect must know its task. */
 export function settleNeedsTaskRefusal(
   card: Pick<EmittedCard, "actions" | "taskId">,
 ): string | undefined {
@@ -698,13 +581,13 @@ export function settleNeedsTaskRefusal(
 }
 
 /**
- * The merge-card refusal (contract v3.6, captain lock 3 on the visual-density
- * audit, 4.4b row 9). "Never author a merge card for a crewmate's task" has
- * been a captain ruling since v2.0 and prose did not hold it: on 2026-09-19,
- * after each of four reviews passed, the Firstmate steered the crewmate to
- * emit its completion card AND emitted its own merge card in the same turn,
- * so the captain got two merge cards per task and the Firstmate closed three
- * of its own as duplicates. WI-12 only caught the case where the crewmate's
+ * Consent, held as a ceiling: the merge-card refusal (contract v3.6, captain
+ * lock 3 on the visual-density audit, 4.4b row 9). "Never author a merge
+ * card for a crewmate's task" has been a captain ruling since v2.0 and prose
+ * did not hold it: on 2026-09-19, after each of four reviews passed, the
+ * Firstmate steered the crewmate to emit its completion card AND emitted its
+ * own merge card in the same turn, so the captain got two merge cards per
+ * task and the Firstmate closed three of its own as duplicates. WI-12 only caught the case where the crewmate's
  * card was already on screen; here the Firstmate got there first, which is
  * why this reads the crew rather than the stack. A task whose crewmate has
  * already emitted its completion card is not covered: a settle refusal's ways
@@ -714,7 +597,12 @@ export function crewmateOwesCompletionRefusal(taskId: string): string {
   return `task ${taskId} still has its own crewmate, and a crewmate's completion card is the one merge decision on its task: steer it with steer_crewmate to emit that card (or revise it), instead of carrying a settle merge effect yourself.`;
 }
 
-/** The WI-12 steer-not-answer refusal: the crewmate's card is revised, not re-answered. */
+/**
+ * A ceiling: the WI-12 steer-not-answer refusal - the crewmate's card is
+ * revised, not re-answered. It compensates for a first mate that answered a
+ * crewmate's card beside it, and is marked as one so a later audit can ask
+ * whether the instruction now holds without it.
+ */
 export function steerNotAnswerRefusal(taskId: string, card: { id: string; title: string }): string {
   return `task ${taskId} already has its crewmate's card "${card.title}" (${card.id}) on screen: steer the crewmate with steer_crewmate to revise card ${card.id} (same id) with what you would add, instead of answering it in a new card.`;
 }
@@ -724,7 +612,7 @@ export function steerNotAnswerRefusal(taskId: string, card: { id: string; title:
  * undefined when the card passes. Order: attach-first (with the
  * closed-task choice refusal), the carded-task refusal, and the
  * settle-needs-a-task check (the decision-integrity rules), then the shared
- * shape and voice rules.
+ * shape rules.
  */
 export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): string | undefined {
   // Attach first (task-system P1, D1): a task_id must name a record; a note
@@ -742,8 +630,8 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   if (card.actions.length === 0 && !card.taskId && !card.standalone) {
     return NOTE_NEEDS_TASK_REFUSAL;
   }
-  // Opening a task's browser with the captain in control is its crewmate's
-  // request alone (docs/task-browser.md, "Asking for help").
+  // Consent: opening a task's browser with the captain in control is its
+  // crewmate's request alone (docs/task-browser.md, "Asking for help").
   const browserOpen = card.actions.find(
     (action) => action.effect?.kind === "open" && action.effect.target === "browser",
   );
@@ -819,14 +707,14 @@ function readPictureDeclaration(body: string): PictureDeclaration {
   return { sections, noPictureSentence };
 }
 
-/** The one refusal for a merge card that shows no picture and states no reason. */
+/** Consent: the one refusal for a merge card that shows no picture and states no reason. */
 export const COMPLETION_PICTURES_REFUSAL =
   "the completion decision shows no pictures: put at least one result picture under After and, for each existing view it changed, its picture under Before; mark a figure data-inf-new when the view is new, so it needs no Before picture; or, when a person sees nothing different, state why in one sentence in an element marked data-inf-no-picture.";
 
 /**
- * The elements the New tag cannot be drawn on: the card stylesheet draws it
- * as `[data-inf-new]::before`, and these generate no `::before` box in the
- * app's Chromium (measured in the card frame, FI3-770).
+ * A physical limit: the elements the New tag cannot be drawn on - the card
+ * stylesheet draws it as `[data-inf-new]::before`, and these generate no
+ * `::before` box in the app's Chromium (measured in the card frame, FI3-770).
  */
 const NO_NEW_TAG = new Set(["img", "svg", "video", "canvas", "iframe", "object", "embed", "input"]);
 
@@ -853,63 +741,27 @@ export function untaggedNewMarkRefusal(element: string): string {
 }
 
 /**
- * Lint one crewmate card (WI-11): the shared shape and voice rules. A
- * crewmate's card is about its own task by construction, so the settle check
- * needs no task here; a crewmate babysits its own CI before it offers a
- * merge, and the host writes the CI state and its own holds on the card.
- * The evidence contract left this boundary at v3.6 (captain lock 3): the
- * five headings are the report's and the PR body's, not the card's; v4.37
- * adds only the completion card's own four-heading outline, and v4.69 asks
- * its After section for a picture (or a stated reason) and its Before for
- * the pictures of the views that already existed. The picture check reads
- * only what the body declares, never the change, never which view a picture
- * shows, and never how many there are above one; a Quick-care task is exempt.
- * On every crewmate card, at every care level, a data-inf-new mark sits only
- * where the New tag can be drawn: a picture marked itself would show no tag.
+ * Lint one crewmate card (WI-11): the shared shape rules. A crewmate's card
+ * is about its own task by construction, so the settle check needs no task
+ * here; a crewmate babysits its own CI before it offers a merge, and the
+ * host writes the CI state and its own holds on the card. The evidence
+ * contract left this boundary at v3.6 (captain lock 3): the five headings
+ * are the report's and the PR body's, not the card's; v4.37 adds only the
+ * completion card's own four-heading outline, and v4.69 asks its After
+ * section for a picture (or a stated reason) and its Before for the pictures
+ * of the views that already existed - consent, since the captain's merge
+ * click rests on them. The picture check reads only what the body declares,
+ * never the change, never which view a picture shows, and never how many
+ * there are above one; a Quick-care task is exempt. On every crewmate card,
+ * at every care level, a data-inf-new mark sits only where the New tag can
+ * be drawn: a picture marked itself would show no tag.
  */
-/**
- * A ready plan's buttons, as HANDOFF names them. The default is one of the
- * two start labels; the other two are fixed. Design-only and a question
- * still being asked are declared facts, never a reading of the sentences.
- */
-export function readyPlanButtonRefusal(
-  actions: readonly { label?: string; default?: boolean }[],
-): string | undefined {
-  const start = actions.find((action) => action.default)?.label;
-  const expected =
-    start === APPROVE_AND_BUILD || start === START_THE_NEXT_STEP
-      ? [start, SAVE_AND_DEFER, ABANDON]
-      : [];
-  const labels = actions.map((action) => action.label);
-  const matches =
-    actions.length === 3 &&
-    expected.length === 3 &&
-    expected.every((label) => labels.includes(label)) &&
-    new Set(labels).size === 3;
-  if (matches) return undefined;
-  return `a ready plan's default is "${APPROVE_AND_BUILD}" or "${START_THE_NEXT_STEP}", beside "${SAVE_AND_DEFER}" and "${ABANDON}". Pass asking true when the card still asks a question, or design_only true for a design-only exploration; any other buttons are refused.`;
-}
-
 export function lintCrewmateCard(
-  card: ShapedCard & { asking?: boolean; designOnly?: boolean; holdsPlace?: boolean },
-  options: { rigor?: Rigor; readyPlan?: boolean; tieredStory?: boolean; savedStory?: boolean } = {},
+  card: ShapedCard,
+  options: { rigor?: Rigor; tieredStory?: boolean } = {},
 ): string | undefined {
-  // The host supplies this fact only after reading a published saved story.
-  // Keep its conventional breaking marker on screen; lint the authored words.
-  const shapeCard = options.savedStory
-    ? { ...card, title: conventionalTitleCopy(card.title) }
-    : card;
-  const shapeRefusal = lintCardShape(shapeCard, { warm: card.holdsPlace === true });
+  const shapeRefusal = lintCardShape(card);
   if (shapeRefusal) return shapeRefusal;
-  if (
-    options.readyPlan &&
-    card.actions.length > 0 &&
-    card.asking !== true &&
-    card.designOnly !== true
-  ) {
-    const buttons = readyPlanButtonRefusal(card.actions);
-    if (buttons) return buttons;
-  }
   const untagged = untaggedNewMark(card.body);
   if (untagged) return untaggedNewMarkRefusal(untagged);
   // The declared effect identifies a completion decision, never its words

@@ -182,27 +182,26 @@ The refusal names the fix, the figure that holds it.
 
 Both boundaries - the crewmate's `emit_card` (Pi or Claude) and the first mate's - run the shape rules in `src/core/pi/cardLint.ts`, reading the body with htmlparser2.
 It asks about SHAPE, never about safety: the frame is what contains a body (below), so nothing here is load-bearing for containment.
+A rule refuses only what the host may hard-code (`docs/principles.md`, "Build the agent's reach, never its verdicts"): a typed fact it holds, consent for an effect, a physical limit, or a product fact the captain ruled.
+How a card is worded, how long it runs, how it opens, where its evidence sits and what its buttons are called are its author's verdicts, which the card contract states as goals and no rule refuses (INF-484 move 5).
 A refused card is never shown, and the refusal text names the fix:
 
-- a body that arrived entity-escaped (`&lt;p&gt;` where `<p>` was meant, with no real element in it) is refused as exactly that, asking for raw tags - the Sep 15 Claude crewmates sent such bodies and were told about sentence counts four times running, which is why this check runs first;
-- a card with actions is a decision: it gives 2 or 3 actions (`CARD_MECHANICS`), has exactly one `default`, and evidence (a paragraph, list, table, or figure) follows its first paragraph.
+- a typed fact: a body that arrived entity-escaped (`&lt;p&gt;` where `<p>` was meant, with no real element in it) is refused as exactly that, asking for raw tags - the Sep 15 Claude crewmates sent such bodies and were told about sentence counts four times running;
+- a product fact (D-9): a card with actions is a decision: it gives 2 or 3 actions (`CARD_MECHANICS`) and has exactly one `default`.
   The count reads the card the captain gets, so a crewmate's completion decision counts the host's merge and discard pair, and the host's saved sign-in on a request card is added after the lint (`docs/task-browser.md`, "Saved sign-ins"), because the crewmate never learns that a site is saved.
   The refusal names the rule, the actions it counted and the fix: one action needs the other choice beside it, or a note with no actions when nothing is asked; four or more keep the two or three that matter.
-  Nothing counts the sentences of that paragraph any more: the counter refused the Sep 15 completion cards whose lead named the PR and its CI state, facts the host renders itself now;
-- a decision that is not a preview asks a `required` radio, checkbox or select question unpicked (contract 4.56): one that arrives `checked` or `selected` is refused, with the question's name and the fix - leave it unpicked and mark the recommendation `data-inf-recommended` ("Questions in the body" below);
-- a decision that is not a preview ends every radio group, select and group of two or more checkboxes with a Something else row (FI3-1002): one without the row and without `data-inf-options-only` is refused, with the question's name and the row to add ("Something else" below);
-- an action whose id or label reads like a merge or a landing carries a `settle` effect - a "Merge the pull request" button with no effect would run nothing when clicked, which is exactly the Sep 4-5 dogfood failure - and no action from an agent carries the host's own effect;
-- at the crewmate boundary only, a declared `settle merge` decision has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
-- a body with more than 1,200 characters of visible text has headings;
-- no exclamation points or emoji in visible copy (a script's `!==` is not copy), and a title never leads with a SHA or is only a PR number;
-- measurable figure text that would draw under 11px in the usual 750px column is refused, and the refusal names the repair: a full-width drawing of at most 750 units, or larger type, and a pixel width for a smaller drawing.
+- consent: a decision that is not a preview asks a `required` radio, checkbox or select question unpicked (contract 4.56): one that arrives `checked` or `selected` is refused, with the question's name and the fix - leave it unpicked and mark the recommendation `data-inf-recommended` ("Questions in the body" below);
+- consent: a decision that is not a preview ends every radio group, select and group of two or more checkboxes with a Something else row (FI3-1002): one without the row and without `data-inf-options-only` is refused, with the question's name and the row to add ("Something else" below);
+- consent: an action whose id or label reads like a merge or a landing carries a `settle` effect - a "Merge the pull request" button with no effect would run nothing when clicked, which is exactly the Sep 4-5 dogfood failure - and no action from an agent carries the host's own effect;
+- consent, at the crewmate boundary only: a declared `settle merge` decision has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
+- a product fact: measurable figure text that would draw under 11px in the usual 750px column is refused, and the refusal names the repair: a full-width drawing of at most 750 units, or larger type, and a pixel width for a smaller drawing.
   It does not measure the narrow card, and it does not refuse a small drawing stretched to 100 percent.
 
 The five headings are not asked of a completion card's open body.
 They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
-A conventional title's breaking marker (`!:`) is metadata, not excited copy; the saved title keeps it, while its summary and body still follow the calm-copy rule.
+A conventional title's breaking marker (`!:`) is metadata, not excited copy; the saved title keeps it.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
 Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
 Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
@@ -211,7 +210,7 @@ The host renders its body from the same version as the PR and keeps the risk cha
 Picture-only pairs may sit side by side; any pair containing a recording stacks in both outputs to fit GitHub's and GitLab's native players.
 
 The lint asks for shape, never for the absence of words: there is no progress-phrase ban list, and the merge-claim rule is a consistency check on an action, not a ban on what a body may say.
-The first mate's boundary adds attach-first (`task_id` or `standalone`), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`), the settle-needs-task rule, and the carded-task refusal below.
+The first mate's boundary adds typed facts - attach-first (`task_id` or `standalone`), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its completion card.
 There is no CI gate and no PR-link rule at either boundary since v2.0: the crewmate's completion card is the one merge decision and the first mate never authors one for a crewmate's task (ruling D3), and a settle card's facts are the host's line above.
 
 The task's final report needs no tool: its record shows a sandboxed body with plain reports safely wrapped and links preserved.

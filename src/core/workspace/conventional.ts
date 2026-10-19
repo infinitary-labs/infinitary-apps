@@ -12,13 +12,6 @@ export function requireConventional(subject: string, what = "commit"): string {
   return subject;
 }
 
-/** A conventional breaking marker is title metadata, not an exclamation in its copy. */
-export function conventionalTitleCopy(subject: string): string {
-  if (!SUBJECT.test(subject) || subject.includes("\n")) return subject;
-  const colon = subject.indexOf(":");
-  return subject[colon - 1] === "!" ? subject.slice(0, colon - 1) + subject.slice(colon) : subject;
-}
-
 /**
  * Check only commits introduced by the branch, not historical commits on its
  * base. Merge commits that take newer work in are skipped: git names them,

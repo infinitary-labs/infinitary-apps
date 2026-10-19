@@ -25232,13 +25232,11 @@
                       "properties": {
                         "label": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 60
+                          "minLength": 1
                         },
                         "short": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 12
+                          "minLength": 1
                         },
                         "state": {
                           "type": "string",

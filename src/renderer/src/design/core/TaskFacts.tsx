@@ -3,6 +3,7 @@ import { feedRelativeAge } from "@shared/feed";
 import { reasoningWord } from "@shared/reasoning";
 import type { TaskFacts } from "@shared/taskFacts";
 import {
+  clipPlanLine,
   foldPlan,
   PLAN_FOLD_PAST,
   type PlanItemState,
@@ -184,7 +185,10 @@ function PlanCount({ plan }: { plan: TaskPlan }) {
   );
 }
 
-type PlanNode = Pick<TaskPlanItem, "label" | "short" | "state"> & { group?: number };
+type PlanNode = Pick<TaskPlanItem, "label" | "short" | "state"> & {
+  group?: number;
+  fold?: "done" | "later";
+};
 
 /** The short label under a progress dot. A fuller name, or a cut short label, stays on hover. */
 function PlanShort({ node }: { node: PlanNode }) {
@@ -201,21 +205,37 @@ function PlanShort({ node }: { node: PlanNode }) {
  * The plan on the line (the crew summary): one dot per item with its short
  * label under it, the line filled in behind the finished dots. Past
  * `PLAN_FOLD_PAST` items the finished ones fold into one counted dot; a line
- * that still holds more than eight staggers its labels above and below.
+ * that still holds more than eight staggers its labels above and below, and
+ * past the dots it holds the items after the current one fold into one last
+ * counted dot (`clipPlanLine`), their names on hover and whole on the record.
  */
 function PlanDots({ plan }: { plan: TaskPlan }) {
   const fold = foldPlan(plan.items);
-  const nodes: PlanNode[] = fold
+  const unclipped: PlanNode[] = fold
     ? [
         {
           state: "done",
           short: `${fold.folded.length} done`,
           label: fold.folded.map((item) => item.label).join(", "),
           group: fold.folded.length,
+          fold: "done",
         },
         ...fold.rest,
       ]
     : plan.items;
+  const clip = clipPlanLine(unclipped);
+  const nodes: PlanNode[] = clip
+    ? [
+        ...clip.shown,
+        {
+          state: clip.later.every((node) => node.state === "done") ? "done" : "next",
+          short: `${clip.later.length} more`,
+          label: clip.later.map((node) => node.label).join(", "),
+          group: clip.later.length,
+          fold: "later",
+        },
+      ]
+    : unclipped;
   const { done, total } = planCounts(plan.items);
   return (
     <div
@@ -227,7 +247,7 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
     >
       {nodes.map((node, index) => (
         <div
-          key={node.group ? "folded" : node.label}
+          key={node.fold ? `folded-${node.fold}` : node.label}
           className="dot"
           data-plan-item={node.state}
           data-plan-prev={index > 0 ? nodes[index - 1]?.state : undefined}
@@ -240,6 +260,16 @@ function PlanDots({ plan }: { plan: TaskPlan }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/** The current item on the plan's row, cut to its line with the whole label on hover. */
+function PlanCurrent({ words }: { words: string }) {
+  const fit = useOverflowTitle(words);
+  return (
+    <span className="current" data-task-plan-current="" ref={fit.ref} title={fit.title}>
+      {words}
+    </span>
   );
 }
 
@@ -523,13 +553,15 @@ export function TaskFactRows({
           {/* The same words on both surfaces: the count and the current item. */}
           <div className="plan" data-task-fact="plan" data-task-plan-items={plan.items.length}>
             <PlanCount plan={plan} />
-            <span className="current" data-task-plan-current="">
-              {current
-                ? current.label
-                : planCounts(plan.items).done === planCounts(plan.items).total
-                  ? "All done"
-                  : "Between items"}
-            </span>
+            <PlanCurrent
+              words={
+                current
+                  ? current.label
+                  : planCounts(plan.items).done === planCounts(plan.items).total
+                    ? "All done"
+                    : "Between items"
+              }
+            />
             <Age at={plan.at} now={now} focusable={focusable} />
           </div>
         </div>

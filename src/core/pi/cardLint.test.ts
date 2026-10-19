@@ -1,21 +1,14 @@
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { describe, expect, it } from "vitest";
-import {
-  ABANDON,
-  APPROVE_AND_BUILD,
-  SAVE_AND_DEFER,
-  START_THE_NEXT_STEP,
-} from "../prompts/cardContract";
+import { ABANDON, SAVE_AND_DEFER } from "../prompts/cardContract";
 import {
   type CardLintContext,
   COMPLETION_PICTURES_REFUSAL,
   closedTaskChoiceRefusal,
   ESCAPED_BODY_REFUSAL,
-  HEADING_STRUCTURE_CHARS,
   lintCardShape,
   lintCrewmateCard,
   lintFirstmateCard,
-  NO_EXCLAMATION_REFUSAL,
   untaggedNewMarkRefusal,
   writeInGaps,
 } from "./cardLint";
@@ -40,8 +33,8 @@ const COMPLETION_PAIR = [
  * corrective text naming the fix; a passing card returns undefined. The
  * shape rules run at both boundaries; the gates are the Firstmate's. The
  * fixtures follow the Sep 14 session: cards the v1 ban list refused that
- * were legitimate must pass, and the 3,885-character "delivered" note must
- * not.
+ * were legitimate must pass, and since INF-484 move 5 so does the
+ * 3,885-character "delivered" note: how long a card runs is its author's.
  */
 
 function context(overrides: Partial<CardLintContext> = {}): CardLintContext {
@@ -209,37 +202,19 @@ describe("lintCardShape (both boundaries)", () => {
     ).toMatch(/exactly one default, and this one marks 2 \(wait, merge-pr\)/);
   });
 
-  it("wants the answer first, then evidence, and counts no sentences (v2.0)", () => {
-    // The Sep 15 completion cards led with "PR #141 on x, branch y -> main.
-    // CI (linux-checks) is green on the head commit." and were refused for
-    // having two sentences; the facts are the host's to render now, and a
-    // lead of two sentences is not a shape defect a regex can judge.
-    expect(
-      lintCardShape(
-        decision({
-          body: "<p>Merge it. CI is green and the diff is small.</p><ul><li>x</li></ul>",
-        }),
-      ),
-    ).toBeUndefined();
-    expect(lintCardShape(decision({ body: "<p>Merge the auth refactor.</p>" }))).toMatch(
-      /add the evidence after the one-sentence answer/,
-    );
-    expect(lintCardShape(decision({ body: "<ul><li>a</li></ul>" }))).toMatch(
-      /lead the decision with its answer/,
-    );
-    // Evidence can be a list, a table, or a figure, and headings may lead.
-    for (const evidence of [
-      "<ul><li>CI green</li></ul>",
-      "<table><tr><td>CI</td><td>green</td></tr></table>",
-      '<figure><svg viewBox="0 0 10 10"></svg></figure>',
+  it("leaves how a decision opens and where its evidence sits to its author (INF-484 move 5)", () => {
+    // The Sep 15 completion cards led with two sentences and were refused
+    // for it; E16 (INF-365) counted the cards refused for no lead paragraph
+    // or no evidence after it. Each is the author's verdict, and shows.
+    for (const body of [
+      "<p>Merge it. CI is green and the diff is small.</p><ul><li>x</li></ul>",
+      "<p>Merge the auth refactor.</p>",
+      "<ul><li>a</li></ul>",
+      "<h3>Auth</h3><p>Merge the refactor.</p><ul><li>CI green</li></ul>",
+      "Merge the refactor.",
     ]) {
-      expect(
-        lintCardShape(decision({ body: `<h3>Auth</h3><p>Merge the refactor.</p>${evidence}` })),
-        evidence,
-      ).toBeUndefined();
+      expect(lintCardShape(decision({ body })), body).toBeUndefined();
     }
-    // A plain-text decision: its first run of text is the answer.
-    expect(lintCardShape(decision({ body: "Merge the refactor." }))).toMatch(/add the evidence/);
   });
 
   it("names an entity-escaped body as such, never as a shape problem (v2.0)", () => {
@@ -367,17 +342,9 @@ describe("lintCardShape (both boundaries)", () => {
     });
   });
 
-  it("refuses the 3,885-character delivered note without headings, and passes it structured", () => {
-    const refusal = lintCardShape(note({ title: "What delivered means", body: DELIVERED_NOTE }));
-    expect(DELIVERED_NOTE.replace(/<[^>]+>/g, "").length).toBeGreaterThan(HEADING_STRUCTURE_CHARS);
-    expect(refusal).toMatch(/characters of text with no headings.*heading structure/);
+  it("shows the 3,885-character delivered note without headings: its length is its author's (INF-484 move 5)", () => {
     expect(
-      lintCardShape(
-        note({
-          title: "What delivered means",
-          body: `<h3>Definition</h3>${DELIVERED_NOTE}`,
-        }),
-      ),
+      lintCardShape(note({ title: "What delivered means", body: DELIVERED_NOTE })),
     ).toBeUndefined();
   });
 
@@ -401,21 +368,17 @@ describe("lintCardShape (both boundaries)", () => {
     }
   });
 
-  it("reads voice rules over visible copy only", () => {
-    expect(lintCardShape(note({ body: "<p>Done!</p>" }))).toMatch(/exclamation/);
-    expect(lintCardShape(note({ title: "Quota 🎉" }))).toMatch(/emoji/);
-    // A script's !== is behavior, not copy.
-    expect(
-      lintCardShape(
-        note({ body: "<p>Drawn by the card.</p><script>if (a !== b) draw();</script>" }),
-      ),
-    ).toBeUndefined();
-  });
-
-  it("L3: refuses SHA-led and bare-PR titles", () => {
-    expect(lintCardShape(note({ title: "b45f6627 is green" }))).toMatch(/plain language/);
-    expect(lintCardShape(note({ title: "PR 23" }))).toMatch(/plain language/);
-    expect(lintCardShape(note({ title: "The auth refactor PR is green" }))).toBeUndefined();
+  it("leaves the voice and the title's wording to the author (INF-484 move 5)", () => {
+    // E16 (INF-365) counted cards refused for "!" and for an emoji; L3
+    // refused a title led by a version. Each is the author's verdict, and shows.
+    for (const card of [
+      note({ body: "<p>Done!</p>" }),
+      note({ title: "Quota 🎉" }),
+      note({ title: "b45f6627 is green" }),
+      note({ title: "PR 23" }),
+    ]) {
+      expect(lintCardShape(card), card.title).toBeUndefined();
+    }
   });
 
   it("leaves a preview body to the frame, and still holds it to the action rules", () => {
@@ -427,9 +390,11 @@ describe("lintCardShape (both boundaries)", () => {
         { id: "turn", label: "Turn back" },
       ],
     };
-    // No lead paragraph, no evidence element, no headings: the prose rules
-    // do not read a preview (isPreviewBody).
-    expect(lintCardShape(prototype)).toBeUndefined();
+    // A preview's controls carry its current settings, so the question
+    // rules do not read it (isPreviewBody).
+    const picked =
+      '<fieldset><legend>Course</legend><label><input type="radio" name="course" value="north" required checked> North</label></fieldset>';
+    expect(lintCardShape({ ...prototype, body: `${prototype.body}${picked}` })).toBeUndefined();
     // The decision rules still do - a preview that offers a choice marks one.
     expect(
       lintCardShape({
@@ -437,13 +402,13 @@ describe("lintCardShape (both boundaries)", () => {
         actions: prototype.actions.map(({ default: _default, ...action }) => action),
       }),
     ).toMatch(/default true/);
-    // A body of prose with the same shape is still held to them.
-    expect(lintCardShape({ ...prototype, body: "<div>Hold the course</div>" })).toMatch(
-      /lead the decision with its answer/,
+    // A body of prose with the same question is still held to them.
+    expect(lintCardShape({ ...prototype, body: `<p>Hold the course.</p>${picked}` })).toContain(
+      'the required question "course" arrives already answered',
     );
   });
 
-  it("holds a body whose scripts only move its figures to the prose rules (FI3-796)", () => {
+  it("holds a body whose scripts only move its figures to the question rules (FI3-796)", () => {
     const figure =
       '<figure aria-label="Ten runs after the fix, one more on each press">' +
       '<button type="button">Next run</button>' +
@@ -457,22 +422,18 @@ describe("lintCardShape (both boundaries)", () => {
         { id: "keep", label: "Keep it", default: true },
       ],
     };
-    // A lead, then the figure as its evidence; the script's !== is not copy.
     expect(lintCardShape(moving)).toBeUndefined();
-    // The prose rules read it: no lead paragraph is refused...
-    expect(lintCardShape({ ...moving, body: figure })).toMatch(/lead the decision with its answer/);
-    // ...and so is a required question that arrives answered.
-    expect(
-      lintCardShape({
-        ...moving,
-        body: `${moving.body}<fieldset><legend>Ship it?</legend><label><input type="radio" name="ship" value="yes" required checked> Yes</label></fieldset>`,
-      }),
-    ).toContain('the required question "ship" arrives already answered');
+    // The question rules read it: a required question that arrives answered is refused.
+    const answered =
+      '<fieldset><legend>Ship it?</legend><label><input type="radio" name="ship" value="yes" required checked> Yes</label></fieldset>';
+    expect(lintCardShape({ ...moving, body: `${moving.body}${answered}` })).toContain(
+      'the required question "ship" arrives already answered',
+    );
     // The same script outside its figure makes the body a preview again.
     expect(
       lintCardShape({
         ...moving,
-        body: figure.replace(/<script>.*<\/script><\/figure>/, "</figure><script>step();</script>"),
+        body: `${figure.replace(/<script>.*<\/script><\/figure>/, "</figure><script>step();</script>")}${answered}`,
       }),
     ).toBeUndefined();
   });
@@ -707,24 +668,10 @@ describe("lintCrewmateCard", () => {
       expect(lintCrewmateCard(completion(outline.replace("Why", "<em>why</em>")))).toBeUndefined();
     });
 
-    it("keeps conventional breaking markers on saved-story titles without allowing excited copy (INF-470)", () => {
+    it("shows a saved story's conventional breaking marker (INF-470, INF-484 move 5)", () => {
       for (const title of ["fix!: correct the story", "fix(cards)!: correct the story"]) {
-        const card = { ...completion(outline), title };
-        expect(lintCrewmateCard(card, { savedStory: true })).toBeUndefined();
-        expect(lintCrewmateCard(card)).toBe(NO_EXCLAMATION_REFUSAL);
-        expect(lintCrewmateCard({ ...card, title: `${title}!` }, { savedStory: true })).toBe(
-          NO_EXCLAMATION_REFUSAL,
-        );
-        expect(
-          lintCrewmateCard({ ...card, body: `${outline}<p>Great!</p>` }, { savedStory: true }),
-        ).toBe(NO_EXCLAMATION_REFUSAL);
+        expect(lintCrewmateCard({ ...completion(outline), title })).toBeUndefined();
       }
-      expect(
-        lintCrewmateCard(
-          { ...completion(outline), title: "This is not conventional!: a title" },
-          { savedStory: true },
-        ),
-      ).toBe(NO_EXCLAMATION_REFUSAL);
     });
 
     it.each(COMPLETION_CARD_HEADINGS)(
@@ -1164,42 +1111,15 @@ describe("lintFirstmateCard", () => {
 });
 
 describe("ready-plan buttons", () => {
-  const ready = (actions: EmittedCard["actions"], flags: Partial<EmittedCard> = {}) =>
-    lintCrewmateCard(decision({ actions, ...flags }), { readyPlan: true });
-  const planActions = (start: string) => [
-    { id: "later", label: SAVE_AND_DEFER },
-    { id: "drop", label: ABANDON },
-    { id: "go", label: start, default: true },
-  ];
-
-  it("accepts either start label as the default and refuses any other ready-plan buttons", () => {
-    expect(ready(planActions(APPROVE_AND_BUILD))).toBeUndefined();
-    expect(ready(planActions(START_THE_NEXT_STEP))).toBeUndefined();
-    expect(
-      ready([
-        { id: "leave", label: "Leave everything unchanged" },
-        { id: "agree", label: "Agree to this plan", default: true },
-      ]),
-    ).toMatch(/ready plan's default/);
-  });
-
-  it("keeps a declared question and a declared design-only exploration", () => {
-    const question = [
-      { id: "a", label: "Check Claude first", default: true },
-      { id: "b", label: "Leave it" },
-    ];
-    expect(ready(question, { asking: true })).toBeUndefined();
-    expect(ready(question, { designOnly: true })).toBeUndefined();
-    expect(ready(question)).toMatch(/asking true/);
-  });
-
-  it("does not apply the button contract outside a plan task", () => {
+  it("leaves a ready plan's button labels to its author (INF-484 move 5)", () => {
+    // E16 (INF-365) counted a ready plan refused for its own start label.
     expect(
       lintCrewmateCard(
         decision({
           actions: [
-            { id: "leave", label: "Leave it" },
-            { id: "agree", label: "Agree to this plan", default: true },
+            { id: "build", label: "Build it", default: true },
+            { id: "later", label: SAVE_AND_DEFER },
+            { id: "drop", label: ABANDON },
           ],
         }),
       ),

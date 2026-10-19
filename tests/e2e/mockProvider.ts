@@ -96,7 +96,6 @@ import {
   LESSON_ROUND_ONE_TITLE,
   LESSON_ROUND_REVIEW_TITLE,
   LESSON_ROUND_TWO_TITLE,
-  LESSON_WARM_REFUSAL,
   LESSON_WELCOME_BODY,
   LESSON_WELCOME_TITLE,
   lessonRoundBody,
@@ -6671,22 +6670,6 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             } else if (!calledTool(body, "emit_card")) {
               if (!results.includes(LESSON_LEARNER_LINE))
                 throw new Error("The second subject did not read the shared learner file");
-              // An unmarked card keeps the calm voice: this one is refused.
-              streamToolCalls([
-                {
-                  name: "emit_card",
-                  args: {
-                    id: "lessons-fractions",
-                    title: LESSON_FRACTIONS_GOAL_TITLE,
-                    body: LESSON_FRACTIONS_GOAL_BODY,
-                    actions: [
-                      { id: "start", label: "Let's start", default: true },
-                      { id: "stop-today", label: "Stop for today" },
-                    ],
-                  },
-                },
-              ]);
-            } else if (results.includes(LESSON_WARM_REFUSAL) && !results.includes("Card shown")) {
               streamToolCalls([
                 {
                   name: "write",

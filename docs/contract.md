@@ -153,6 +153,8 @@ A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing
 Task delivery facts carry an optional `reviewCapOwner`: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the captain hold (`docs/delivery-rigor.md`).
 The home alone sets it and enforces the gate it chooses.
 
+A plan item's `label` and `short` in `inf:tasks:detail` carry no length limit: a plan keeps its crewmate's words, and each surface cuts what it cannot show (`docs/task-record.md`).
+
 `teach` and `retrieval` are work and usage kinds; `teach` is also a model reason's `kind`, and `R10` one of its rules.
 
 Crew speed has a per-model write (`inf:models:speed:set`), the placed speed read (`inf:work:speed`), and optional speed fields on model rows (`speed`, `speeds`), task shapes (`override_speed`) and the placed spec (`speed`).

@@ -7158,8 +7158,6 @@ export class CrewSupervisor {
     // backend's tool emitted the card; a refusal is the tool's error text.
     const refusal = lintCrewmateCard(finished, {
       rigor: this.policiesOf(this.options.tasks.get(task.id))?.rigor.value,
-      readyPlan: record?.shape?.kind === "plan",
-      savedStory: presentationChecked !== undefined,
       tieredStory:
         presentationChecked !== undefined &&
         ownPresentation?.revisions.find((story) => story.revision === presentationChecked.revision)
@@ -9105,8 +9103,10 @@ export class CrewSupervisor {
 
   /**
    * note_progress: one line on the crewmate's own timeline; proof of life
-   * too. Once a valid plan exists, every note carries the whole list. The
-   * host refuses an omitted or unfit list in words, writing nothing.
+   * too. A note that carries a list replaces the plan; one that omits it
+   * keeps the last list standing rather than being refused (INF-484 move 5:
+   * never refuse a shape). Only a list no surface could draw is refused in
+   * words, writing nothing.
    */
   private noteProgress(task: TaskRuntime, text: string, plan?: unknown): string {
     const line = text.replace(/\s+/g, " ").trim();
@@ -9116,19 +9116,19 @@ export class CrewSupervisor {
       const read = readPlanItems(plan);
       if ("refusal" in read) return read.refusal;
       items = read.items;
-    } else if (
+    }
+    const planned =
+      !items &&
       this.options.tasks
         .timeline(task.id)
         .some(
           (event) => event.kind === "progress" && !("refusal" in readPlanItems(event.data?.plan)),
-        )
-    ) {
-      return "Progress note was refused: send the whole plan with every note after your first list, unchanged if nothing moved. Nothing was written.";
-    }
+        );
     this.options.tasks.noteProgress(task.id, line.slice(0, 500), "crewmate", items);
     this.noteTaskActivity(task);
-    return items
-      ? "Noted on your task's timeline, with your plan."
+    if (items) return "Noted on your task's timeline, with your plan.";
+    return planned
+      ? "Noted on your task's timeline; your last plan stands."
       : "Noted on your task's timeline.";
   }
 

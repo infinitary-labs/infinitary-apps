@@ -409,11 +409,10 @@ export function hideRecord(page: Page): Locator {
 
 /**
  * Every drawing of a task's record on the stage: the shown entry, and the
- * one the stage holds, inert, while the next card gets ready. Opening the
- * record again before its held drawing leaves shows that drawing as it is,
- * a question its bar was asking included (docs/renderer.md, "Replacement
- * presentation and the prepared successor"), so a journey that hides a
- * record to meet it afresh waits until there is none.
+ * one the stage holds, inert, while the next card gets ready or as it drops
+ * away (docs/renderer.md, "Replacement presentation and the prepared
+ * successor"). None is left once the record's Hide has finished, so a
+ * journey waits until there is none before it goes on.
  */
 export function recordDrawings(page: Page, taskId: string): Locator {
   return page.locator(`[data-stage-entry] [data-task-record="${taskId}"]`);

@@ -285,8 +285,7 @@ async function openRecord(page: Page, taskId: string): Promise<void> {
 /**
  * Hide the shown record and wait until the stage draws it nowhere: the next
  * card can take a moment to get ready, and until then the record's drawing
- * stays, so opening it again in that moment would bring back that drawing
- * as it was, not the record afresh.
+ * stays as it drops away.
  */
 async function closeRecord(page: Page): Promise<void> {
   const id = await pane(page).getAttribute("data-task-record");

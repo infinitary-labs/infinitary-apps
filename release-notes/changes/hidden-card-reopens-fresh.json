@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hidden-card-reopens-fresh",
+      "reason": "Fixes a regression no release carried: since the unreleased steady task record opening, a card hidden in front of a task record and opened again before the record appeared came back as it was, typed words included. It now opens fresh, as it did in every release."
+    }
+  ]
+}

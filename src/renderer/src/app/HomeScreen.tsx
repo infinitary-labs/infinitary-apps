@@ -546,10 +546,17 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     const box = shellRef.current?.getBoundingClientRect();
     frozen = { ...last, rect: { width: box?.width ?? last.view.width, height: box?.height ?? 0 } };
   }
-  // A card that arrives while the last one drops away takes the stage as on
-  // an empty one: the dropping drawing is never shown again.
+  // The drawing of a card that left the stack, once it has (`departed`).
+  const departedKey = useRef<string | null>(null);
+  // The drawing of a card that left the stack is never shown again. A card
+  // that arrives while the last one drops away takes the stage as on an
+  // empty one, and the card that left, put up again before the entry that
+  // took its place is ready, is born afresh: Hide let its place go.
   const base =
-    slots.shown === null && slots.outgoing && selection !== null
+    slots.outgoing &&
+    selection !== null &&
+    (slots.shown === null ||
+      (slots.outgoing.key === departedKey.current && slots.outgoing.id === selection))
       ? retireSlot(slots, slots.outgoing.key)
       : slots;
   let stage = selectSlots(
@@ -747,6 +754,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   // A departure starts its drop immediately, independently of the next
   // document. Only paging/replacement may hold a drawing until ready.
   const departed = stage.outgoing && !shown.some((entry) => entry.id === stage.outgoing?.id);
+  if (departed) departedKey.current = stage.outgoing?.key ?? null;
   const leaving = stage.revealed || departed ? (stage.outgoing?.key ?? null) : null;
   // Capture readiness when the departure starts; becoming ready later must
   // not restart a drop already in progress. A prepared page that drew held

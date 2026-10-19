@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "key-journeys-wait-for-a-focusable-target",
+      "reason": "Test only: the journeys' key helpers wait until their target can take focus before focusing it, because a task record stays inert until its body draws (INF-510) and a focus call on it did nothing. No shipped behavior changed."
+    }
+  ]
+}

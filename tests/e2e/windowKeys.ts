@@ -246,6 +246,43 @@ async function holdsFocus(target: Locator, acrossFrames = false): Promise<boolea
 }
 
 /**
+ * Whether `target` can take focus: neither it nor any frame it sits in is
+ * inside an inert part of its document. `focus()` on an inert element does
+ * nothing, and the stage keeps a card inert until it appears: a task record
+ * waits for its body to draw (INF-510).
+ */
+async function canTakeFocus(target: Locator): Promise<boolean> {
+  const handles: ElementHandle<Node>[] = [];
+  try {
+    let element: ElementHandle<Node> | null = await target.elementHandle({ timeout: 1_000 });
+    while (element) {
+      handles.push(element);
+      const inert = await element.evaluate(
+        (node) => (node as Element).closest?.("[inert]") != null,
+      );
+      if (inert) return false;
+      const frame = await element.ownerFrame();
+      element = frame?.parentFrame() ? await frame.frameElement() : null;
+    }
+    return true;
+  } catch {
+    // Not drawn yet, or drawn again since: ask again.
+    return false;
+  } finally {
+    await Promise.all(handles.map((handle) => handle.dispose().catch(() => {})));
+  }
+}
+
+/** Returns once `target` can take focus (`canTakeFocus`), so a `focus()` call is not spent on it. */
+async function untilFocusable(target: Locator): Promise<void> {
+  await expect
+    .poll(() => canTakeFocus(target), {
+      message: "the target can take focus: nothing inert holds it",
+    })
+    .toBe(true);
+}
+
+/**
  * Returns once `target` holds the window's focus, so the key a journey
  * presses next reaches it: focus moves into a frame of its own a moment
  * after `focus()` returns.
@@ -261,11 +298,14 @@ export async function untilFocused(target: Locator): Promise<void> {
  * `focus()` call returns before focus has moved: into a frame of its own it
  * lands a moment later, and a key pressed in between goes wherever focus
  * still was. A journey that focuses an element goes through here, or
- * presses a key on it through `pressKey`. The press takes its turn behind
- * any other input to the page (`takeTurn`, tests/e2e/inputQueue.ts).
+ * presses a key on it through `pressKey`. A target that cannot take focus
+ * yet, such as a card the stage has not shown, is focused once it can. The
+ * press takes its turn behind any other input to the page (`takeTurn`,
+ * tests/e2e/inputQueue.ts).
  */
 export async function focusOn(target: Locator): Promise<void> {
   await takeTurn(target.page(), async () => {
+    await untilFocusable(target);
     await target.focus();
     await focusLanded(target);
   });
@@ -286,6 +326,7 @@ async function focusLanded(target: Locator): Promise<void> {
 /** Presses `key` on `target` once it holds the window's focus, as `focusOn` does, and one press at a time per page. */
 export async function pressKey(target: Locator, key: string): Promise<void> {
   await takeTurn(target.page(), async () => {
+    await untilFocusable(target);
     await target.focus();
     await focusLanded(target);
     await target.page().keyboard.press(key);

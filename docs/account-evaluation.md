@@ -88,6 +88,9 @@ The shared reader preserves Claude's input, output, cache-read and cache-write c
 Each assistant entry's `usage` and each case's `usageTotals` use `null` for an absent or invalid counter; a reported zero remains zero.
 Each case names its `usageSource`: Claude uses the normalized `turn_end` totals, including the client's side-model calls that are absent from `native`, while Pi uses its native assistant entries.
 The runner never adds Claude's transcript usage to its turn totals, and never assigns a whole turn's usage to one assistant message.
+Claude's client counts a request in its turn totals only once that request's answer has finished, yet it runs a call while the answer still streams.
+So a turn the run cuts on that call's refusal, at a call limit or when its client ends can leave the request in flight out of those totals.
+When a request the runner saw begin has no finished assistant entry (one with a stop reason) in the transcript, every counter of the case is unknown, never the smaller sum of the requests that finished.
 `usage.json` sums those case totals; any unknown contribution makes that counter's total unknown, not a partial sum or zero.
 A case skipped before a connection attempt consumes nothing; an attempted case with no usage evidence is unknown.
 Input reservations and observed request counts remain separate from actual usage, and client side calls do not increase `callsUsed`.
@@ -137,6 +140,7 @@ pnpm exec vitest run tests/account-eval.test.ts tests/account-eval-usage.test.ts
 
 The complete twelve-case path runs on the e2e mock Pi provider and the mock Claude client, with disposable HOME and local fake endpoints.
 The Claude usage proof scripts two tool-using cases with nonzero cache counters, checks native per-message usage and whole-run totals against the local server's independent token ledger, and repeats with deliberately missing transcript and turn counters to check explicit unknowns.
+A scripted local endpoint leaves the second request's answer open after a call the evaluation refuses, and the case and `usage.json` read unknown although the client reported the first request's smaller total.
 `tests/account-eval-usage.test.ts` also checks partial unknowns, side-model contributions and reported zeros; `src/core/storage/sessionReader.test.ts` checks repeated content blocks and late usage updates.
 It checks sheet/hash admission, registry checksums, native response/model/usage artifacts, all twelve normal endings, review fields left unapproved, repeat-run refusal, graph effects and repeated-start refusal.
 The allowance proofs build the twelve real hosts: the sheet gives every case its full allowance under the ceiling, a plan padded past the ceiling states smaller allowances, and one twelve-case run on the mock provider opens every session with exactly its sheet allowance (the old running reservation opened cases six to eight with 5 calls even when every case made one request).

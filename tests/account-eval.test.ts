@@ -914,6 +914,102 @@ describe("Claude evaluation usage artifacts", () => {
       }
     },
   );
+
+  it("never reports a request the run cut mid-answer as a smaller definite total", async () => {
+    // INF-441: a live run cut a case on its second request's refused call, and the client's turn
+    // totals held only the first request, so usage.json read cacheRead 0 where 23,327 were read.
+    // The client runs a call while its request still streams; this reply never finishes, so the
+    // evaluation's refusal of a merge always cuts the second request mid-answer.
+    const root = scratchDir("eval-claude-cut-");
+    const api = await startStubApi(() => true);
+    closeProvider = api.close;
+    const ledger: { input: number; output: number; cacheRead: number; cacheWrite: number }[] = [];
+    api.answer(({ n, body }, res) => {
+      const crew = body.tools?.find((tool) => tool.name.endsWith("crew_status"));
+      const settle = body.tools?.find((tool) => tool.name.endsWith("settle_task"));
+      const followup = body.messages?.some(
+        (message) =>
+          Array.isArray(message.content) &&
+          message.content.some((part) => part.type === "tool_result"),
+      );
+      // What the server reports; the cut reply reports only its opening counters.
+      const usage = !crew
+        ? { input: 13, output: 2, cacheRead: 0, cacheWrite: 0 }
+        : followup
+          ? { input: 3, output: 1, cacheRead: 700, cacheWrite: 200 }
+          : { input: 5, output: 17, cacheRead: 0, cacheWrite: 900 };
+      ledger.push(usage);
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      writeAnthropicEvent(res, "message_start", {
+        type: "message_start",
+        message: {
+          id: `msg_cut_${n}`,
+          type: "message",
+          role: "assistant",
+          model: body.model,
+          content: [],
+          stop_reason: null,
+          stop_sequence: null,
+          usage: {
+            input_tokens: usage.input,
+            output_tokens: followup ? usage.output : 0,
+            cache_read_input_tokens: usage.cacheRead,
+            cache_creation_input_tokens: usage.cacheWrite,
+          },
+        },
+      });
+      writeAnthropicText(res, 0, "Read the crew, then settle.");
+      if (!crew) return finishAnthropicStream(res, "end_turn", usage.output);
+      if (!followup) {
+        writeAnthropicToolUse(res, 1, { id: `tool_crew_${n}`, name: crew.name, args: {} });
+        return finishAnthropicStream(res, "tool_use", usage.output);
+      }
+      writeAnthropicToolUse(res, 1, {
+        id: `tool_settle_${n}`,
+        name: settle!.name,
+        args: { task_id: "BUILD", mode: "merge-pr" },
+      });
+    });
+    const opts = options(root, "claude");
+    const test = approvalCases.find((row) => row.role === "firstmate")!;
+    const deps = {
+      module: { ...approvalEvaluation, cases: [test] },
+      registryHash: () => "unchanged-disposable-registry",
+      scratch: () => scratchDir("eval-case-"),
+      crewClient: () => true,
+      factory: boxedClaudeFactory(root, Number(new URL(api.url).port)),
+    };
+    const dry = await runEvaluation(opts, deps);
+    await runEvaluation(
+      { ...opts, live: true, claudeCrewTurn: true, approvedHash: dry.sheetHash },
+      deps,
+    );
+    const record = JSON.parse(readFileSync(join(opts.out, `${test.id}.json`), "utf8"));
+    expect(record).toMatchObject({ reason: "tool refusal or failure", requests: 2 });
+    expect(record.results.map((row: { result: string }) => row.result)).toEqual([
+      "success",
+      "refused",
+    ]);
+    // The client did report a definite turn total, and the second request never finished.
+    expect(
+      record.frames.find((frame: { type: string }) => frame.type === "turn_end").usage,
+    ).toBeDefined();
+    expect(
+      record.native
+        .filter((entry: { role: string }) => entry.role === "assistant")
+        .map((entry: { stopReason?: string }) => entry.stopReason),
+    ).toEqual(["toolUse", undefined]);
+    const unknown = { input: null, output: null, cacheRead: null, cacheWrite: null };
+    expect(record.usageTotals).toEqual(unknown);
+    const usage = JSON.parse(readFileSync(join(opts.out, "usage.json"), "utf8"));
+    expect(usage).toMatchObject({ stop: "tool refusal or failure", usageTotals: unknown });
+    if (process.env.INFINITARY_EVAL_PROOF_DIR) {
+      const proof = join(process.env.INFINITARY_EVAL_PROOF_DIR, "cut-usage");
+      mkdirSync(proof, { recursive: true });
+      cpSync(opts.out, proof, { recursive: true });
+      writeFileSync(join(proof, "mock-api-usage.json"), JSON.stringify(ledger, null, 2));
+    }
+  });
 });
 
 describe("answer ownership evaluation", () => {

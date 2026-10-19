@@ -488,6 +488,8 @@ export async function runEvaluation(
           .catch(() => {});
       };
       let requestCount = 0;
+      // Every request the client began, the one the call limit refuses included: each spent usage.
+      let requestsBegun = 0;
       let resultBytesLeft = limits.toolResultBytes;
       const started = Date.now();
       try {
@@ -589,6 +591,7 @@ export async function runEvaluation(
           unsubscribe = session.subscribe((event) => {
             if (event.type === "turn_end") turnUsages.push(turnUsage(event.usage));
             if (event.type === "request_started") {
+              requestsBegun++;
               if (callsUsed >= LIMITS.calls || requestCount >= maxTurns) {
                 bounded = "model call limit";
                 stop = bounded;
@@ -673,13 +676,21 @@ export async function runEvaluation(
             response.role === "assistant" ? [tokenUsage(response.usage)] : [],
           );
           // Never add the transcript to turn totals: they describe overlapping calls.
-          // Claude's turn totals also include its client's own side calls.
+          // Claude's turn totals also include its client's own side calls, but count a request
+          // only once its answer finished: one cut mid-answer has no stop reason here, and is
+          // missing from them, so they are a smaller number than was spent.
+          const finished = native.filter(
+            (message) =>
+              message.role === "assistant" &&
+              typeof message.stopReason === "string" &&
+              message.stopReason !== "error",
+          ).length;
           const rows = usageSource === "turn_end" ? turnUsages : assistantUsage;
+          const uncounted =
+            usageSource === "turn_end" ? finished < requestsBegun : nativeRequest < requestCount;
           caseUsage = sumUsage([
             ...rows,
-            ...(!rows.length || (usageSource === "native" && nativeRequest < requestCount)
-              ? [tokenUsage(undefined)]
-              : []),
+            ...(!rows.length || uncounted ? [tokenUsage(undefined)] : []),
           ]);
         }
         const served = native

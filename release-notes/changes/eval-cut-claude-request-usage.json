@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "eval-cut-claude-request-usage",
+      "reason": "Developer-only account evaluation artifacts: a Claude case cut while a request was still answering now marks its usage unknown instead of a smaller total. Nothing in the shipped app changed."
+    }
+  ]
+}

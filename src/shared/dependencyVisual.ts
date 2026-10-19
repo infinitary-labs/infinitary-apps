@@ -6,9 +6,10 @@
  * Satellites are only an idle dependency wait with one visible crewmate on
  * the same computer, and at most three of them. Everything else that still
  * has both crewmates keeps its slot and uses a tether. Either way an arrow
- * points at the blocker at all times (INF-304). A missing or remote blocker
- * is not a cue here: the summary names that key, and no crewmate is
- * invented.
+ * points at the blocker at all times (INF-304). A missing blocker is not a
+ * cue here: the summary names that key, and no crewmate is invented. A
+ * blocker on another computer is not a cue either, so nobody moves; the
+ * stage draws that wait as an arrow across to it (`crewedWaits`, INF-556).
  */
 
 export const DEPENDENCY_VISUAL = {
@@ -96,6 +97,27 @@ export function centerCues(nodes: readonly CenterNode[]): CenterCue[] {
     });
   }
   return cues;
+}
+
+export type CrewedWait = { waiterId: string; blockerId: string };
+
+/**
+ * Every recorded wait whose two ends both have a crewmate, wherever each one
+ * runs. The multi-computer stage draws the ones that cross computers; a wait
+ * inside one computer is already a cue on that computer's orbit.
+ */
+export function crewedWaits(nodes: readonly CenterNode[]): CrewedWait[] {
+  const byKey = new Map(nodes.map((node) => [node.key, node]));
+  return nodes.flatMap((waiter) =>
+    waiter.crewed
+      ? waiter.blockedBy.flatMap((key) => {
+          const blocker = byKey.get(key);
+          return blocker?.crewed && blocker.id !== waiter.id
+            ? [{ waiterId: waiter.id, blockerId: blocker.id }]
+            : [];
+        })
+      : [],
+  );
 }
 
 export type ListTask = { id: string; key: string; blockedBy: readonly string[] };

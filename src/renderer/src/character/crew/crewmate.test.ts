@@ -142,6 +142,24 @@ describe("the arrow from a waiting crewmate or a reviewer", () => {
     expect(tip).toBeLessThan(120 - settled.size / 2);
   });
 
+  // Captain (INF-556): "the gray color is okay", and "for a reviewer relationship, it
+  // should use the orange color that we use as active".
+  it("draws a wait in the quiet gray and a review in the working ember, at rest and lit", () => {
+    const quiet: CrewColors = { ...colors, quiet: [148, 156, 168] };
+    const paint = (lit: boolean, kind: "wait" | "review") => {
+      const rec = recordingContext();
+      drawDependencyLink(rec.ctx, { x: 0, y: 0 }, { x: 120, y: 0 }, 0, 0, quiet, lit, kind);
+      const line = rec.log.find((entry) => entry.startsWith("S")) ?? "";
+      const style = line.slice(1).split("@")[0] ?? "";
+      const alpha = Number(style.split(",")[3]?.replace(")", ""));
+      return { color: channels(style), alpha, width: line.split("/")[1] };
+    };
+    expect(paint(false, "wait")).toEqual({ color: [148, 156, 168], alpha: 0.28, width: "1" });
+    expect(paint(true, "wait")).toEqual({ color: colors.accent, alpha: 0.7, width: "1.4" });
+    expect(paint(false, "review")).toEqual({ color: colors.hot, alpha: 0.28, width: "1" });
+    expect(paint(true, "review")).toEqual({ color: colors.hot, alpha: 0.7, width: "1.4" });
+  });
+
   it("is drawn however close the two crewmates come on screen, pointing at the one waited on", () => {
     for (const apart of [44, 30, 18, 8, 3]) {
       const { strokes, start, tip } = arrow(apart);

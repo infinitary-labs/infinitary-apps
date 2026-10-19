@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "arrows-between-computers",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Arrows now join crewmates on different computers, and a review's arrow is orange",
+      "body": "When a crewmate waits on a task running on another computer, a gray arrow now points across to that task's crewmate, like every other wait. A crewmate reviewing another task now points at it with an orange arrow, the color of working crewmates, on the same computer or across to another one.",
+      "picture": {
+        "dark": "arrows-between-computers-dark.webp",
+        "light": "arrows-between-computers-light.webp",
+        "alt": "A crewmate on this computer with gray arrows to two crewmates on Studio Mac 1, and an orange arrow from a reviewer on Studio Mac 1 back to a crewmate on this computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

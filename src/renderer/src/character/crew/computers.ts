@@ -1,4 +1,4 @@
-import type { CenterCue } from "@shared/dependencyVisual";
+import type { CenterCue, CrewedWait } from "@shared/dependencyVisual";
 import { type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
@@ -7,6 +7,7 @@ import {
   CrewOrbit,
   type CrewStatus,
   type Cue,
+  type DependencyLink,
   type LeaveMode,
   type OrbitFrame,
   type PacketDirection,
@@ -90,6 +91,7 @@ export class ComputerOrbits extends CrewOrbit {
   private owners = new Map<string, string>();
   private tiers = new Map<string, Slot | undefined>();
   private reviewEdges = new Map<string, string>();
+  private waits: readonly CrewedWait[] = [];
   constructor(now: number, random: () => number = Math.random) {
     super(now, undefined, random, "adaptive");
     this.clock = now;
@@ -363,6 +365,37 @@ export class ComputerOrbits extends CrewOrbit {
     this.pendingDependencies = [...cues];
     this.routeDependencies();
   }
+  /** Every wait between two crewmates; the ones that cross computers draw an arrow across the stage. */
+  setWaits(waits: readonly CrewedWait[]): void {
+    const key = (list: readonly CrewedWait[]) =>
+      list.map((wait) => `${wait.waiterId}>${wait.blockerId}`).join();
+    if (key(waits) === key(this.waits)) return;
+    this.waits = [...waits];
+    this.bump();
+  }
+  /**
+   * The arrows between crewmates on different computers (captain, INF-556):
+   * a wait in the quiet gray and a review in the working ember, with the
+   * same reach. Nobody moves for them: each computer's orbit circles only
+   * its own crew. A builder's merge hold on its own reviewer draws nothing,
+   * as on one computer, and an end not on the stage draws nothing.
+   */
+  private acrossLinks(crew: OrbitFrame["crew"]): DependencyLink[] {
+    const shown = new Set(crew.filter((c) => c.phase === "orbiting").map((c) => c.id));
+    const across = (from: string, to: string) =>
+      shown.has(from) && shown.has(to) && this.computerOf(from) !== this.computerOf(to);
+    const links: DependencyLink[] = [];
+    for (const [reviewer, builder] of this.reviewEdges)
+      if (across(reviewer, builder))
+        links.push({ fromId: reviewer, toId: builder, kind: "review" });
+    for (const { waiterId, blockerId } of this.waits) {
+      if (this.reviewEdges.get(blockerId) === waiterId) continue;
+      if (this.reviewEdges.get(waiterId) === blockerId) continue;
+      if (across(waiterId, blockerId))
+        links.push({ fromId: waiterId, toId: blockerId, kind: "wait" });
+    }
+    return links;
+  }
   private routeDependencies(): void {
     const byComputer = new Map<string, CenterCue[]>();
     for (const cue of this.pendingDependencies) {
@@ -540,7 +573,10 @@ export class ComputerOrbits extends CrewOrbit {
       crew: frames.flatMap((f) => f.crew).sort((a, b) => a.depth - b.depth),
       orbits: frames.flatMap((f) => f.orbits),
       packets: frames.flatMap((f) => f.packets),
-      links: frames.flatMap((f) => f.links),
+      links: [
+        ...frames.flatMap((f) => f.links),
+        ...this.acrossLinks(frames.flatMap((f) => f.crew)),
+      ],
     };
   }
 }

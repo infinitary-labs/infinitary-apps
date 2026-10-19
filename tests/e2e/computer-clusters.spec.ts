@@ -1,6 +1,10 @@
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { seedTask } from "../../src/core/tasks/seedTask";
 import type { DeviceGrant } from "../../src/shared/devices";
 import { connectClient } from "../helpers/connectionClient";
+import { scratchDir } from "../helpers/scratchDirs";
 import { clusterFixture } from "./clusterFixture";
 import { crewSummary } from "./crew";
 import { launchApp } from "./launch";
@@ -184,6 +188,79 @@ test("a crowded last-known fleet retains all 64 inspectable crew at minimum widt
       await expect(crewSummary(page)).toHaveAttribute("data-crew-summary", task.id);
       await pressKey(target, "Escape");
     }
+  } finally {
+    await app.close();
+  }
+});
+
+/** The near crew layer's lit pixels, sorted by hue: the gray of a wait and the ember of a review. */
+function arrowInk(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-crew-layer="near"]');
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) throw new Error("crew near layer missing");
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let gray = 0;
+    let ember = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const [r = 0, g = 0, b = 0, a = 0] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+      if (a === 0) continue;
+      if (Math.max(r, g, b) - Math.min(r, g, b) < 40) gray++;
+      else if (r > g && g > b && r - b > 60) ember++;
+    }
+    return { gray, ember };
+  });
+}
+
+// Captain (INF-556): "i do think drawing a wait between computers may be helpful",
+// chosen as "Solid gray, like every other wait"; "for a reviewer relationship, it
+// should use the orange color that we use as active", with "the same reach as waits".
+test("a wait and a review between computers draw their arrows across the stage", async () => {
+  const app = await launchApp({
+    userDataDir: clusterFixture([2, 2], undefined, (tasks, ids) => {
+      // This Mac's first task waits on both of the other computer's tasks.
+      tasks.link("sample-1-0", "sample-0-0", "blocks", "host");
+      tasks.link("sample-1-1", "sample-0-0", "blocks", "host");
+      // The other computer reviews this Mac's second task.
+      const worktreeDir = join(scratchDir("fm-cluster-review-"), "review");
+      mkdirSync(worktreeDir, { recursive: true });
+      seedTask(tasks, {
+        id: "review",
+        title: "Review the work on computer 0, task 1",
+        parentId: "sample-0-1",
+        shape: { kind: "review", kind_source: "host:review" },
+        status: "idle",
+        worktreeDir,
+        deviceId: ids[1],
+        sessionFile: "placed-review.jsonl",
+      });
+    }),
+    withMockProvider: true,
+  });
+  try {
+    const { page } = app;
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    const byId = new Map(board.tasks.map((task) => [task.id, task]));
+    expect(byId.get("sample-0-0")?.blockedBy.sort()).toEqual(
+      [byId.get("sample-1-0")?.key, byId.get("sample-1-1")?.key].sort(),
+    );
+    expect(byId.get("review")?.reviewOf).toBe("sample-0-1");
+    await expect(page.locator("[data-computer-cluster]")).toHaveCount(2);
+    const other = byId.get("review")?.executionDeviceId;
+    if (!other) throw new Error("The review fixture is not on the other computer");
+    for (const id of ["sample-1-0", "sample-1-1", "review"])
+      await expect(page.locator(`[data-crew-model-name="${id}"]`)).toHaveAttribute(
+        "data-crew-computer",
+        other,
+      );
+    // Every crewmate is idle, so its glyph is the cool cyan: the only gray
+    // ink is a wait's arrow and the only ember ink is a review's.
+    await expect
+      .poll(async () => {
+        const ink = await arrowInk(page);
+        return { gray: ink.gray > 40, ember: ink.ember > 40 };
+      })
+      .toEqual({ gray: true, ember: true });
   } finally {
     await app.close();
   }

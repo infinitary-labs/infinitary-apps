@@ -1,4 +1,9 @@
-import { centerCues, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
+import {
+  type CenterNode,
+  centerCues,
+  crewedWaits,
+  DEPENDENCY_VISUAL,
+} from "@shared/dependencyVisual";
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER, outerPlaneRadius } from "./computers";
@@ -250,6 +255,17 @@ describe("computer constellations", () => {
       expect(apart.get("builder")).toBe(plain.get("builder"));
     });
 
+    // Captain (INF-556): "for a reviewer relationship, it should use the orange color
+    // that we use as active", and a review between computers gets "the same reach as waits".
+    it("draws a review between computers as a review arrow across the stage", () => {
+      const model = stage({ builder: null, review: "b" }, [["review", "builder"]]);
+      expect(model.update(0, true).links).toEqual([
+        { fromId: "review", toId: "builder", kind: "review" },
+      ]);
+      model.setReview("review", null);
+      expect(model.update(0, true).links).toEqual([]);
+    });
+
     it("flies a reviewer on another computer to the first mate when its review closes", () => {
       const model = stage({ builder: "a", review: "a" }, [["review", "builder"]]);
       let now = 0;
@@ -329,16 +345,16 @@ describe("computer constellations", () => {
       );
       model.settleBootRoster(0);
       const pairs = [
-        ["waiter", "builder"],
-        ["review", "author"],
+        ["waiter", "builder", "wait"],
+        ["review", "author", "review"],
       ] as const;
       let closest = Number.POSITIVE_INFINITY;
       // A minute of stage time, frame by frame.
       for (let now = 0; now <= 60_000; now += 16) {
         const frame = model.update(now);
         const at = (id: string) => required(frame.crew.find((c) => c.id === id));
-        for (const [from, to] of pairs) {
-          expect(frame.links).toContainEqual({ fromId: from, toId: to });
+        for (const [from, to, kind] of pairs) {
+          expect(frame.links).toContainEqual({ fromId: from, toId: to, kind });
           const mine = at(from);
           // On its circle about the one it waits on or reviews, never back on its slot.
           expect(Math.hypot(mine.x - at(to).x, mine.y - at(to).y)).toBeLessThan(
@@ -355,6 +371,67 @@ describe("computer constellations", () => {
       }
       // The minute did bring an unrelated crewmate within a glyph of a circling one.
       expect(closest).toBeLessThan(1);
+    });
+  });
+
+  // Captain (INF-556): "i do think drawing a wait between computers may be helpful",
+  // chosen as "Solid gray, like every other wait".
+  describe("waits between computers", () => {
+    const node = (id: string, deviceId: string | null, blockedBy: string[] = []): CenterNode => ({
+      id,
+      key: id,
+      blockedBy,
+      deviceId,
+      idleDependency: blockedBy.length > 0,
+      crewed: true,
+    });
+    const stage = (nodes: CenterNode[], waits: boolean) => {
+      const model = new ComputerOrbits(0);
+      model.configure([device("mini")]);
+      for (const n of nodes) seed(model, n.id, n.deviceId);
+      model.setDependencies(centerCues(nodes));
+      if (waits) model.setWaits(crewedWaits(nodes));
+      model.settleBootRoster(0);
+      return model;
+    };
+    // INF-528 on this computer waits on INF-541 and INF-542 on the Mac mini.
+    const board = [
+      node("INF-528", null, ["INF-541", "INF-542"]),
+      node("INF-541", "mini"),
+      node("INF-542", "mini"),
+    ];
+
+    it("draws each wait across to the other computer, and nobody moves for it", () => {
+      const model = stage(board, true);
+      const frame = model.update(0, true);
+      expect(frame.links).toEqual([
+        { fromId: "INF-528", toId: "INF-541", kind: "wait" },
+        { fromId: "INF-528", toId: "INF-542", kind: "wait" },
+      ]);
+      const plain = stage(board, false).update(0, true);
+      expect(plain.links).toEqual([]);
+      expect(frame.crew.map((c) => [c.id, c.x, c.y])).toEqual(
+        plain.crew.map((c) => [c.id, c.x, c.y]),
+      );
+      model.setWaits([]);
+      expect(model.update(0, true).links).toEqual([]);
+    });
+
+    it("keeps a wait inside one computer on that computer's orbit, drawn once", () => {
+      const nodes = [node("waiter", "mini", ["blocker"]), node("blocker", "mini")];
+      expect(stage(nodes, true).update(0, true).links).toEqual([
+        { fromId: "waiter", toId: "blocker", kind: "wait" },
+      ]);
+    });
+
+    it("draws no arrow back from a builder to its reviewer on another computer", () => {
+      // The host records the builder's merge hold on its review as a wait.
+      const nodes = [node("builder", null, ["review"]), node("review", "mini")];
+      const model = stage(nodes, true);
+      model.setReview("review", "builder");
+      expect(model.update(0, true).links).toEqual([
+        { fromId: "review", toId: "builder", kind: "review" },
+      ]);
     });
   });
 });

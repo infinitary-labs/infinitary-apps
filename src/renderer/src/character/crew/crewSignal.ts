@@ -1,4 +1,4 @@
-import { type CenterNode, centerCues } from "@shared/dependencyVisual";
+import { type CenterNode, centerCues, crewedWaits } from "@shared/dependencyVisual";
 import type { FmEvent } from "@shared/events";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { TaskView } from "@shared/tasks";
@@ -46,7 +46,9 @@ function centerNode(task: TaskView): CenterNode {
 
 /** The sequenced board's waits, for whichever orbit holds each crewmate. */
 export function applyCrewDependencies(model: CrewOrbit, tasks: readonly TaskView[]): void {
-  model.setDependencies(centerCues(tasks.map(centerNode)));
+  const nodes = tasks.map(centerNode);
+  model.setDependencies(centerCues(nodes));
+  if (model instanceof ComputerOrbits) model.setWaits(crewedWaits(nodes));
 }
 
 function leaveModeOf(status: TaskView["status"]): LeaveMode {

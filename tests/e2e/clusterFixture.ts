@@ -9,7 +9,16 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type DeviceGrant, parsePairingLink } from "../../src/shared/devices";
 import { scratchDir } from "../helpers/scratchDirs";
-export function clusterFixture(counts: number[], peers?: DeviceGrant[]) {
+/**
+ * `counts[m]` idle crewmates on computer `m` (0 is this Mac), as
+ * `sample-<m>-<i>`; `relate` then adds rows and relationships among them,
+ * given each computer's device id.
+ */
+export function clusterFixture(
+  counts: number[],
+  peers?: DeviceGrant[],
+  relate?: (tasks: TaskService, deviceIds: (string | undefined)[]) => void,
+) {
   const dir = scratchDir("fm-cluster-capture-");
   const pairing = new DevicePairing({ dir: join(dir, "devices"), ownUid: 501 });
   const ids: (string | undefined)[] = [undefined];
@@ -59,6 +68,7 @@ export function clusterFixture(counts: number[], peers?: DeviceGrant[]) {
       });
     }
   });
+  relate?.(tasks, ids);
   db.close();
   return dir;
 }

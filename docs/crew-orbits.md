@@ -133,15 +133,15 @@ Restart seeds the same relationship from the live board, and two reviews of one 
 The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits its own reviewer or points an arrow at it (the Tasks list and its gutter still show the wait).
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
 More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a circle that would leave the scene keeps the reviewer on its slot.
-Circling or on its slot, the reviewer draws a quiet arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below).
+Circling or on its slot, the reviewer draws an arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below), in the working ember (`--wire-hot`) rather than the gray (captain, INF-556: "for a reviewer relationship, it should use the orange color that we use as active").
 Like a waiting crewmate, it keeps circling when other crew pass close to it.
-A reviewer and builder on different computers stay where they are and draw no line, because each computer's orbit holds only its own crew.
+A reviewer and builder on different computers stay where they are, because each computer's orbit holds only its own crew; the reviewer's arrow still crosses the stage to the builder (captain, INF-556: "the same reach as waits"), drawn by `ComputerOrbits` beside each computer's own arrows.
 The reviewer's summary names the relation in every placement: a Reviewing row with the builder's key, opening its record, beside any Blocked by row.
 Packets and a steer's send-off aim at where the reviewer is drawn, circle included.
 The circle is always 64 scene pixels, even when it crosses the first mate; the captain chose that overlap, so no clearance rule keeps it off the first mate (INF-51).
 Reduced motion paints one settled frame.
 
-`crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the slot fallback with every reviewer's arrow, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer, two reviews, mixed companions with their arrows, and a waiting crewmate and a reviewer that keep their circles and their arrows through a minute of other crew passing close.
+`crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the slot fallback with every reviewer's arrow, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer and its arrow across, waits across computers that move nobody, the builder's hold on a remote reviewer drawing nothing, two reviews, mixed companions with their arrows, and a waiting crewmate and a reviewer that keep their circles and their arrows through a minute of other crew passing close.
 
 ## Tier solids
 
@@ -169,7 +169,10 @@ A chain, more than one blocker, a larger group, or a companion that would leave 
 Circling or on its slot, a waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker (captain, INF-304: the arrows "should be present at all times to make it more clear there's a relationship").
 The arrow keeps clear of both glyphs; as the two close in on screen, such as when the circle passes in front of the blocker, that clearance gives way so a short arrow still shows (`drawDependencyLink`).
 Crew pass close to one another and cross freely: nothing moves a circling crewmate back to its slot because another crewmate comes near (captain, INF-304: "we should just not care about collision").
-A missing or remote blocker is named in the summary.
+Each kind of relationship has its own color (captain, INF-556): a wait's arrow is 1 px at 0.28 of the quiet gray (`--fg-3`) and a review's is the same strength in the working ember (`--wire-hot`); pointing at or focusing either crewmate lights the arrow at 0.7 and 1.4 px, a wait in the accent and a review still in the ember.
+A blocker on another computer keeps its slot there and the waiter keeps its own: the wait is a solid gray arrow across the stage to it, like every other wait (captain's INF-556 choice, "Solid gray, like every other wait"; `crewedWaits` feeds `ComputerOrbits`).
+A builder's merge hold on its own reviewer on another computer draws no arrow back, as on one computer.
+A missing blocker, or one with no crewmate yet (a queued task), is named in the summary and draws no arrow.
 No crewmate is invented, and no one is moved onto another computer.
 Continuing, paused and unknown work keep their slots.
 The original slot, solid, label and computer stay reserved.
@@ -177,6 +180,7 @@ Clearing the wait removes the cue, and the offset returns on the existing spring
 Reduced motion paints one settled frame.
 Inspecting a Tasks row does not pause the stage.
 `dependencyVisual.ts` is the one projection both surfaces read.
+`crewmate.test.ts` checks each kind's color at rest and lit, and `tests/e2e/computer-clusters.spec.ts` reads a wait's gray and a review's ember off the painted stage between two computers.
 `satellites.ts` owns the circle.
 The Tasks gutter is specified in the design skill's NowPanel.
 

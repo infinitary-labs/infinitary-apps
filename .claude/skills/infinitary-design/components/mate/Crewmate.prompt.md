@@ -96,9 +96,11 @@ Its plane is spanned by the blocker's radial spoke and the main plane's normal, 
 At most three companions take that circle.
 A chain, a second blocker, a larger group, or a companion that would leave the scene stays on its own slot instead.
 Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).
+Each kind keeps its own color (captain, INF-556): a wait is the quiet gray (`--fg-3` at 0.28, 1 px) and lights in the accent; a review is the working ember (`--wire-hot`) at the same strength, at rest and lit.
+A wait or a review between crewmates on different computers is a solid arrow across the stage in its kind's color; nobody moves for it.
 As two related glyphs close in on screen the arrow's clearance gives way, so a short arrow still shows.
 Crew cross and pass close to one another freely; nothing moves a crewmate aside to keep it clear of another.
-A missing or remote blocker is a named link in the summary, never an invented crewmate and never a move.
+A missing blocker, or one with no crewmate yet, is a named link in the summary, never an invented crewmate and never a move.
 Continuing, paused and unknown work keep their slots, colors, solids, labels and review cues.
 Clearing the wait removes the cue and the offset glides home on the existing springs.
 Reduced motion paints one settled frame.

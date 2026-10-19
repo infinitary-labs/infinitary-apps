@@ -257,7 +257,7 @@ export type PacketFrame = {
 };
 
 /** An arrow from a waiting crewmate or a reviewer to the crewmate it waits on or reviews. */
-export type DependencyLink = { fromId: string; toId: string };
+export type DependencyLink = { fromId: string; toId: string; kind: "wait" | "review" };
 
 /**
  * An orbit as the crew travel it on screen: an ellipse around `x, y` with
@@ -1299,7 +1299,9 @@ export class CrewOrbit {
       }
       if (mate.phase === "orbiting") {
         for (const toId of target.arrows) {
-          if (byId.has(toId)) links.push({ fromId: frame.id, toId });
+          if (!byId.has(toId)) continue;
+          const kind = this.reviews.get(frame.id) === toId ? "review" : "wait";
+          links.push({ fromId: frame.id, toId, kind });
         }
       }
     }

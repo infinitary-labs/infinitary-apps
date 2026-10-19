@@ -306,7 +306,7 @@ describe("crew orbit wiring", () => {
       const frame = m.update(0, true);
       const slots = plain.update(0, true).crew;
       // One arrow, the reviewer's to its builder: the builder draws none back (INF-304).
-      expect(frame.links).toEqual([{ fromId: "reviewer", toId: "builder" }]);
+      expect(frame.links).toEqual([{ fromId: "reviewer", toId: "builder", kind: "review" }]);
       expect(frame.crew.find((c) => c.id === "builder")?.x).toBe(
         slots.find((c) => c.id === "builder")?.x,
       );

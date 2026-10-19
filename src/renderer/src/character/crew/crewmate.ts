@@ -23,7 +23,7 @@
 import type { Slot } from "@shared/modelSlots";
 import { noise1, TAU } from "../face";
 import { FLICKER_TUNING, filamentWaver } from "../flicker";
-import type { CrewmateFrame, PacketFrame } from "./orbit";
+import type { CrewmateFrame, DependencyLink, PacketFrame } from "./orbit";
 
 export type Rgb = [number, number, number];
 export type CrewColors = { accent: Rgb; hot: Rgb; boost: number; quiet?: Rgb };
@@ -381,7 +381,9 @@ const LINK = { startPx: 18, endPx: 21, minLinePx: 6 } as const;
  * An arrow from a waiting crewmate or a reviewer to the crewmate it waits on
  * or reviews. The arrowhead sits at the blocker. It is drawn at every
  * distance (INF-304): as the two glyphs close in on screen, the clearances
- * give way so the line never shrinks below `LINK.minLinePx`.
+ * give way so the line never shrinks below `LINK.minLinePx`. Each kind has
+ * its own color (captain, INF-556): a wait is the quiet gray and lights in
+ * the accent; a review is the working ember, at rest and lit.
  */
 export function drawDependencyLink(
   ctx: CanvasRenderingContext2D,
@@ -391,6 +393,7 @@ export function drawDependencyLink(
   cy: number,
   colors: CrewColors,
   lit: boolean,
+  kind: DependencyLink["kind"] = "wait",
 ): void {
   const ax = cx + from.x;
   const ay = cy + from.y;
@@ -408,7 +411,8 @@ export function drawDependencyLink(
   const startY = ay + dy * LINK.startPx * room;
   const endX = bx - dx * LINK.endPx * room;
   const endY = by - dy * LINK.endPx * room;
-  const color = lit ? colors.accent : (colors.quiet ?? colors.accent);
+  const color =
+    kind === "review" ? colors.hot : lit ? colors.accent : (colors.quiet ?? colors.accent);
   ctx.save();
   ctx.strokeStyle = rgba(color, lit ? 0.7 : 0.28);
   ctx.lineWidth = lit ? 1.4 : 1;

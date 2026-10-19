@@ -175,6 +175,7 @@ function paintFrame(
       cy,
       colors,
       inspected === from.id || inspected === to.id,
+      link.kind,
     );
   }
   for (const cm of frame.crew) {

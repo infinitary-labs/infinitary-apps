@@ -224,28 +224,66 @@ export const workShapeSchema = z.object({
   /**
    * The host filed this task to work in place, in its project's own folder,
    * with no working copy, branch, pull request or completion decision
-   * (INF-549, docs/task-record.md "A folder a merge left behind"). It
-   * carries the facts the folder was refused on: the default branch, the
-   * merged version the folder must reach (`reach`), origin's default branch
-   * as last read (`remote`) and the typed cause. The host renders the brief
-   * from them, and closes the task once the folder is clean, on `branch`
-   * and at or past `reach`. Only the host writes it.
+   * (INF-549, docs/task-record.md "A folder a merge left behind"). Only the
+   * host writes it, in one of two shapes.
+   *
+   * A folder a merge left behind carries the facts the folder was refused
+   * on: the default branch, the merged version the folder must reach
+   * (`reach`), origin's default branch as last read (`remote`) and the typed
+   * cause. The host closes the task once the folder is clean, on `branch`
+   * and at or past `reach`.
+   *
+   * A pull request an abandoned task could not close carries that pull
+   * request (`pull`): the host closes the task once it reads it closed.
+   *
+   * The host renders the brief from either at each start.
    */
   in_place: z
-    .object({
-      /** Absent when origin was missing or named no default branch. */
-      branch: z.string().optional(),
-      reach: z.string().optional(),
-      remote: z.string().optional(),
-      cause: folderRefreshCauseSchema,
-      /** The merged task whose refresh was refused, by key. */
-      after: z.string().optional(),
-    })
+    .union([
+      z.object({
+        /** Absent when origin was missing or named no default branch. */
+        branch: z.string().optional(),
+        reach: z.string().optional(),
+        remote: z.string().optional(),
+        cause: folderRefreshCauseSchema,
+        /** The merged task whose refresh was refused, by key. */
+        after: z.string().optional(),
+      }),
+      z.object({
+        pull: z.object({
+          number: z.number(),
+          /** The host's own label for it, such as #12 or !12. */
+          label: z.string(),
+          url: z.string().optional(),
+          /** The branch it carries where the project lives. */
+          branch: z.string().optional(),
+          /** What the host answered when Infinitary tried to close it, as it said it. */
+          problem: z.string().optional(),
+        }),
+        /** The abandoned task that opened it, by key and by id. */
+        after: z.string().optional(),
+        after_id: z.string(),
+      }),
+    ])
     .optional(),
 });
 export type WorkShape = z.infer<typeof workShapeSchema>;
-/** The in-place facts on a work shape (`WorkShape.in_place`). */
-export type InPlaceFacts = NonNullable<WorkShape["in_place"]>;
+/** The in-place facts on a work shape (`WorkShape.in_place`), either shape. */
+export type InPlaceWork = NonNullable<WorkShape["in_place"]>;
+/** The facts of a folder a merge left behind. */
+export type InPlaceFacts = Exclude<InPlaceWork, { pull: unknown }>;
+/** The facts of a pull request an abandoned task could not close. */
+export type InPlacePull = Extract<InPlaceWork, { pull: unknown }>;
+
+/** A folder a merge left behind (`WorkShape.in_place`). */
+export function isFolderRepair(facts: InPlaceWork | undefined): facts is InPlaceFacts {
+  return facts !== undefined && !("pull" in facts);
+}
+
+/** A pull request an abandoned task could not close (`WorkShape.in_place`). */
+export function isPullRepair(facts: InPlaceWork | undefined): facts is InPlacePull {
+  return facts !== undefined && "pull" in facts;
+}
 
 /**
  * Fields on a work shape a person owns. A host stamp never writes these.

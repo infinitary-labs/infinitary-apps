@@ -1,7 +1,7 @@
 import { folderRefreshWords } from "@shared/folderRefresh";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
-import type { Deliverable, InPlaceFacts, WorkKind } from "@shared/routingPolicy";
+import type { Deliverable, InPlaceFacts, InPlacePull, WorkKind } from "@shared/routingPolicy";
 
 /**
  * spawn_crewmate v2's structured intent and its fixed rendering (contract
@@ -831,6 +831,44 @@ export function renderFolderRepairBrief(
     "When something of the captain's would have to go, or you cannot tell whether it is safe, ask him on a card before you change anything.",
     "If you can tell, say what put the folder in that state.",
     `Once the folder is clean, on ${branch} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
+  ].join("\n");
+}
+
+/** The title of the task the host files for a pull request an abandoned task left open (INF-549). */
+export const PULL_REPAIR_TITLE = "Close the pull request";
+
+/**
+ * The brief of the task the host files when a discarded, cancelled, failed
+ * or superseded task's pull request could not be closed (INF-549's sibling,
+ * approved by the captain: "a brief that says close the pull request or
+ * report why not"). Filled from the facts on the record like the folder's,
+ * and like it the task ships nothing: no delivery line, no pull request of
+ * its own and no completion decision.
+ */
+export function renderPullRepairBrief(
+  facts: InPlacePull & { project: string; folder: string },
+): string {
+  const { pull } = facts;
+  const which = `${pull.label}${pull.url ? ` (${pull.url})` : ""}`;
+  return [
+    `Goal: close the pull request ${which} of ${facts.project} where the project lives, or report why it cannot be closed.`,
+    "",
+    `Infinitary filed this task itself. ${facts.after ? `It closed ${facts.after}` : "It closed a task"} without merging its work, and tried to close that task's pull request, but it could not, so the pull request is still open with nobody working on it.`,
+    "",
+    "Facts:",
+    `- Project: ${facts.project}`,
+    `- Pull request: ${pull.label}`,
+    `- Link: ${pull.url ?? "not known"}`,
+    `- Its branch where the project lives: ${pull.branch ?? "not known"}`,
+    `- The task that opened it: ${facts.after ?? "not known"}`,
+    `- What the project's host answered: ${pull.problem ?? "nothing"}`,
+    "",
+    `${IN_PLACE_OPENING}: your working directory is the project's folder, ${facts.folder}, not a working copy of your own. Leave the folder exactly as it is; this task needs nothing from it. This task has no branch, no pull request of its own and no completion decision, and it ships nothing.`,
+    `Read the pull request with github_read first. If it is already closed or merged, there is nothing to do.`,
+    `If it is open, close it with github_write: on GitHub PATCH /repos/{owner}/{repo}/pulls/${pull.number} with {"state":"closed"}, on GitLab PUT /projects/{url-encoded path}/merge_requests/${pull.number} with {"state_event":"close"}. Then read it again to see it closed.`,
+    "Never merge it, push, delete a branch, or open a pull request. Leave its branch where the project lives as it is.",
+    "If you cannot close it, report why not in a few sentences: what the host answered, and what would let it close, such as a sign-in only the captain can give. Do not try another way in.",
+    "Once it is closed, report what you did in a few sentences. Infinitary reads it closed and closes this task itself; show a card only when you must ask the captain.",
   ].join("\n");
 }
 

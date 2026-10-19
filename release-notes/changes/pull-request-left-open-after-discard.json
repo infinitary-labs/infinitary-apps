@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "pull-request-left-open-after-discard",
+      "kind": "fix",
+      "title": "A pull request a discard could not close gets a task that closes it",
+      "body": "When you discard a task but Infinitary cannot close its pull request where your project lives, the task's Activity says so, and a task named Close the pull request starts on its own. Its crewmate closes the pull request, or tells you why it cannot, and the task closes by itself once the pull request is closed.",
+      "area": "tasks",
+      "noPicture": "It shows only after a discard leaves a pull request open, as an Activity line and an ordinary task in Tasks, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

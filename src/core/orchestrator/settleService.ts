@@ -46,6 +46,7 @@ import {
   cannotMergeText,
   discardedText,
   folderNotUpdatedText,
+  pullLeftOpenText,
   unlandedWorkText,
 } from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
@@ -98,6 +99,12 @@ export type SettleOutcome = {
   stop?: MergeStop;
   /** The merge GitHub confirmed. */
   receipt?: PrOutcome["receipt"];
+  /**
+   * A sentence in the app's words that follows the outcome on the feed even
+   * when a raw failure is said plainly: the task the host started for what
+   * the settle left behind.
+   */
+  followup?: string;
 };
 
 /**
@@ -158,13 +165,13 @@ function workspaceOf(record: TaskRecord): TaskWorkspace {
 function settleFeedLine(
   title: string,
   mode: "merge-pr" | "land" | "discard",
-  result: { ok: boolean; text: string; problem?: string; plain?: string },
+  result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
 ): string {
   if (!result.problem && !result.plain) return result.text;
   const plain = result.problem ? plainProblem(result.problem) : (result.plain as string);
   if (mode === "discard") {
     return result.ok
-      ? `Discarded "${title}". Its pull request is still open where the project lives: ${plain}`
+      ? `Discarded "${title}". Its pull request is still open where the project lives: ${plain}${result.followup ? `. ${result.followup}` : ""}`
       : `Could not discard "${title}": ${plain}`;
   }
   return cannotMergeText(title, plain);
@@ -272,6 +279,15 @@ export type SettleServiceHost = {
   fileFolderRepair?: (
     merged: TaskRecord,
     refusal: FolderRefreshRefusal & { reach?: string },
+  ) => { record: TaskRecord; filed: boolean } | undefined;
+  /**
+   * An abandoned task's pull request could not be closed: the supervisor
+   * files the task that closes it, or names the one standing (INF-549's
+   * sibling).
+   */
+  filePullRepair?: (
+    abandoned: TaskRecord,
+    problem: string | undefined,
   ) => { record: TaskRecord; filed: boolean } | undefined;
   isPersonalTask(taskId: string): boolean;
   deliverableOf(record: TaskRecord): Deliverable;
@@ -1350,18 +1366,28 @@ export class SettleService {
       const refusal = this.unlandedWorkRefusal(record, work);
       return { ok: false, text: refusal.text, refusal };
     }
-    const prResult = await this.closeOpenPullRequest(taskId);
+    const prResult = await this.closeOpenPullRequest(taskId, { line: actor === "firstmate" });
     const problem = prResult.problem;
     await this.closeTask(taskId, { status: "dropped", reason: "discarded", actor });
     return {
       ok: true,
       text: discardedText(record.title, prResult.text),
       ...(problem ? { problem } : {}),
+      ...(prResult.repair ? { followup: prResult.repair } : {}),
     };
   }
 
-  /** Best effort for every abandoned attempt; never prevent local cleanup. */
-  async closeOpenPullRequest(taskId: string): Promise<PrOutcome> {
+  /**
+   * Best effort for every abandoned attempt; never prevent local cleanup.
+   * A pull request it could not close is not left with nobody on it
+   * (INF-549's sibling): the host files the task that closes it, and the
+   * note says so - on the feed too, unless the captain's own click already
+   * puts the outcome there (`line`).
+   */
+  async closeOpenPullRequest(
+    taskId: string,
+    options: { line?: boolean } = {},
+  ): Promise<PrOutcome & { repair?: string }> {
     if (this.host.taskDelivery(taskId) !== "direct-pr" || !this.host.closePullRequest) {
       return { ok: true, text: "" };
     }
@@ -1369,13 +1395,40 @@ export class SettleService {
       const message = caught instanceof Error ? caught.message : String(caught);
       return { ok: false, text: `Could not close its PR: ${message}`, problem: message };
     });
-    if (result.text && this.host.tasks.get(taskId)) {
-      this.host.tasks.note(taskId, result.text, {
+    const record = this.host.tasks.get(taskId);
+    let repair: { record: TaskRecord; filed: boolean } | undefined;
+    if (!result.ok && record?.delivery?.prNumber !== undefined) {
+      try {
+        repair = this.host.filePullRepair?.(record, result.problem);
+      } catch (caught) {
+        console.warn("[settle] the pull request repair could not be filed:", caught);
+      }
+    }
+    const said = repair
+      ? pullLeftOpenText({ key: repair.record.key || repair.record.id, filed: repair.filed })
+      : undefined;
+    const text = said ? `${result.text} ${said}` : result.text;
+    // The record's line says what it means; the raw words ride its data
+    // and the tool's answer, as every settle failure's do.
+    const line = said
+      ? `Its pull request is still open where the project lives: ${plainProblem(result.problem ?? result.text)}. ${said}`
+      : text;
+    if (line && record) {
+      this.host.tasks.note(taskId, line, {
         news: true,
-        ...(result.problem ? { data: { problem: result.problem } } : {}),
+        ...(repair && options.line !== false ? { feed: true } : {}),
+        ...(result.problem || repair
+          ? {
+              data: {
+                ...(result.problem ? { problem: result.problem } : {}),
+                ...(repair ? { feedLine: true, pullRepair: repair.record.id } : {}),
+              },
+            }
+          : {}),
+        ...(repair ? { about: [repair.record.id] } : {}),
       });
     }
-    return result;
+    return { ...result, text, ...(said ? { repair: said } : {}) };
   }
 
   /**

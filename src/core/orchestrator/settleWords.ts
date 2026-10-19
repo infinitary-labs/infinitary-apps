@@ -1,5 +1,5 @@
 import { type FolderRefreshCause, folderRefreshWords } from "@shared/folderRefresh";
-import { FOLDER_REPAIR_TITLE } from "./intentBrief";
+import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
 /**
  * The feed's receipt of a settle the captain clicked, in the app's words
@@ -52,4 +52,15 @@ export function folderNotUpdatedText(
   return repair.filed
     ? `${why} Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`
     : `${why} ${repair.key} "${FOLDER_REPAIR_TITLE}" is already doing it.`;
+}
+
+/**
+ * The task the host files for a pull request an abandoned task could not
+ * close (INF-549's sibling): filed now, or already standing for it. Said
+ * after what the host answered.
+ */
+export function pullLeftOpenText(repair: { key: string; filed: boolean }): string {
+  return repair.filed
+    ? `Infinitary started ${repair.key} "${PULL_REPAIR_TITLE}" to close it.`
+    : `${repair.key} "${PULL_REPAIR_TITLE}" is already closing it.`;
 }

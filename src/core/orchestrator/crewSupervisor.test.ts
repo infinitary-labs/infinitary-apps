@@ -30,7 +30,7 @@ import {
   type PlacementWaitRow,
   placementWait,
 } from "@shared/placement";
-import { typedFailureOf } from "@shared/plainProblem";
+import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
@@ -313,6 +313,8 @@ type SetupExtras = {
   readWorkflow?: CrewSupervisorOptions["readWorkflow"];
   downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
   closePullRequest?: (taskId: string) => Promise<{ ok: boolean; text: string }>;
+  githubRead?: CrewSupervisorOptions["githubRead"];
+  githubWrite?: CrewSupervisorOptions["githubWrite"];
   checkCi?: (taskId: string) => Promise<import("./prCi").PrCiOverall>;
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
   /** The home's knowledge, over this setup's projects. */
@@ -456,6 +458,8 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
     ...(extras.closePullRequest ? { closePullRequest: extras.closePullRequest } : {}),
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
+    ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
+    ...(extras.githubWrite ? { githubWrite: extras.githubWrite } : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.openChange ? { openChange: extras.openChange } : {}),
     ...(extras.completionPresentation
@@ -22046,6 +22050,163 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     const note = h.tasks.timeline("clicked1").find((event) => event.data?.folderRefresh);
     expect(note).toMatchObject({ text: sentence, feed: false });
     await vi.waitFor(() => expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.folder), REAL_GIT_WAIT);
+    await h.supervisor.disposeAll();
+  });
+});
+
+/**
+ * INF-549's sibling, the captain's words: "Yes, as its own small change after
+ * this one, with a brief that says close the pull request or report why not".
+ * A discard whose pull request GitHub would not close files and starts the
+ * same kind of in-place task, which reads and writes where the project lives
+ * and closes once the host reads that pull request closed.
+ */
+describe("a discard that leaves its pull request open (INF-549's sibling)", () => {
+  const refused = "Resource not accessible by integration";
+
+  async function discardRefused() {
+    const crewmate = fakeCrewmate();
+    let state: ForgePull["state"] = "open";
+    const forge = {
+      kind: "github",
+      host: "github.com",
+      place: "GitHub",
+      hasChecks: true,
+      changeFor: vi.fn(async (branch: string) => ({
+        number: 9,
+        branch,
+        headSha: "abc",
+        url: null,
+      })),
+      close: vi.fn(async () => {
+        throw new ForgeError("refused", refused);
+      }),
+      pull: vi.fn(async (number: number) => ({
+        number,
+        state,
+        merged: false,
+        headSha: "abc",
+        base: "main",
+        readiness: { kind: "unknown" },
+      })),
+      label: () => "#9",
+      url: () => "https://github.com/acme/shop/pull/9",
+    } as unknown as Forge;
+    let prCi: PrCiService;
+    const githubWrite = vi.fn(async () => "200 OK");
+    const githubRead = vi.fn(async () => "200 OK");
+    const harness = setup(crewmate, {
+      closePullRequest: (id) => prCi.close(id),
+      readPull: (id, number) => prCi.pullState(id, number),
+      githubRead,
+      githubWrite,
+    });
+    prCi = new PrCiService({ tasks: harness.tasks, repos: harness.repos, forgeFor: () => forge });
+    const { repo } = await harness.repos.setup({ kind: "init", name: "shop" });
+    harness.repos.configure(repo.id, { delivery: "direct-pr" });
+    const { taskId } = await harness.supervisor.commission({
+      title: "An idea the captain dropped",
+      intent: intentOf("try the new meter"),
+      repoId: repo.id,
+    });
+    harness.tasks.recordDelivery(taskId, {
+      prNumber: 9,
+      prUrl: "https://github.com/acme/shop/pull/9",
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const repairs = () => harness.tasks.list().filter((row) => row.shape?.in_place);
+    const closeOnGitHub = () => {
+      state = "closed";
+    };
+    return { ...harness, crewmate, repo, taskId, repairs, closeOnGitHub, forge, githubWrite };
+  }
+
+  it("the first mate's discard files and starts a task that closes the pull request or says why not, and it closes once the pull request is closed", async () => {
+    const h = await discardRefused();
+
+    const reply = await h.supervisor.settleTask(h.taskId, "discard");
+
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    const sentence = `Infinitary started ${repair.key} "Close the pull request" to close it.`;
+    expect(reply).toContain(sentence);
+    expect(h.tasks.get(h.taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    // The discarded task's record keeps the fact, as an Activity line of its own.
+    const note = h.tasks.timeline(h.taskId).find((event) => event.data?.pullRepair);
+    expect(note).toMatchObject({
+      text: `Its pull request is still open where the project lives: ${plainProblem(refused)}. ${sentence}`,
+      feed: true,
+      data: expect.objectContaining({ problem: refused }),
+    });
+    // The first mate still reads what GitHub said.
+    expect(reply).toContain(`Could not close PR: ${refused}`);
+    expect(repair).toMatchObject({ title: "Close the pull request", startPolicy: "when-ready" });
+
+    // It starts on its own, in the project's folder, with the GitHub pair and nothing that ships.
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
+    expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.repo.path);
+    expect(h.tasks.get(repair.id)).toMatchObject({ status: "active", worktreeDir: "", branch: "" });
+    const brief = h.crewmate.promptCalls[1] ?? "";
+    expect(brief).toContain("close the pull request #9 (https://github.com/acme/shop/pull/9)");
+    expect(brief).toContain("or report why it cannot be closed");
+    expect(brief).toContain(`What the project's host answered: ${refused}`);
+    expect(brief).toContain("You work in place");
+    expect(brief).not.toContain("Delivery:");
+    expect(brief).not.toContain("open_change");
+    const spec = h.specs.at(-1);
+    expect(spec?.procedure).toEqual({ delivery: "none", rigor: "none" });
+    expect(spec?.onOpenChange).toBeUndefined();
+    expect(spec?.onCheckChange).toBeUndefined();
+    expect(spec?.onGithubWrite).toBeDefined();
+    expect(spec?.onGithubRead).toBeDefined();
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"));
+
+    // Still open where the project lives: the host leaves it open.
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)?.status).toBe("active");
+
+    // Closed on GitHub: the host reads it closed and closes the task, with its own line.
+    h.closeOnGitHub();
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(h.tasks.timeline(repair.id)).toContainEqual(
+      expect.objectContaining({
+        text: "The pull request #9 is closed where the project lives.",
+        feed: true,
+      }),
+    );
+    await h.supervisor.disposeAll();
+  });
+
+  it("the captain's discard click says it once on the feed, and a second try at the same pull request files nothing new", async () => {
+    const h = await discardRefused();
+
+    await h.supervisor.requestDiscard(h.taskId);
+
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: expect.stringMatching(
+        new RegExp(
+          `^Discarded "An idea the captain dropped"\\. Its pull request is still open where the project lives: .+\\. Infinitary started ${repair.key} "Close the pull request" to close it\\.$`,
+        ),
+      ),
+    });
+    const note = h.tasks.timeline(h.taskId).find((event) => event.data?.pullRepair);
+    expect(note).toMatchObject({ feed: false });
+
+    // The same pull request again names the standing task.
+    const discarded = h.tasks.get(h.taskId);
+    if (!discarded) throw new Error("the discarded task is gone");
+    expect(h.supervisor.filePullRepair(discarded, refused)).toMatchObject({
+      record: { id: repair.id },
+      filed: false,
+    });
+    expect(h.repairs()).toHaveLength(1);
     await h.supervisor.disposeAll();
   });
 });

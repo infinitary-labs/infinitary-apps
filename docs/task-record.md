@@ -25,6 +25,12 @@ A later refusal on the same project while that task is open or active updates it
 Once a minute the host reads each such folder without changing it (`WorkspaceService.folderCurrent`), and a task whose folder is clean, on its default branch and at or past the merged version closes as finished with a line saying so, unless its crewmate is mid-turn or one of its cards is up (`CrewSupervisor.closeCurrentFolders`).
 Removing a working copy never touches a directory that is the repository itself, so a failed start of a task that works in place leaves the folder as it was.
 
+A pull request an abandoned task could not close gets the same kind of task (INF-549's sibling).
+When a discarded, cancelled, failed or superseded task's pull request is refused its close (`SettleService.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`CrewSupervisor.filePullRepair`); one stands per pull request.
+The note on the abandoned task names it, and is an Activity line unless the captain's own click already put the outcome there.
+Its brief says close the pull request or report why not (`renderPullRepairBrief`): the crewmate works in the folder without changing it, holds only the read and write tools where the project lives, and never merges, pushes or deletes a branch.
+The same minute's read closes it as finished once the host reads that pull request closed or merged.
+
 ## Derived, never stored: the basis and the review join
 
 The record keeps no stamp of a fact the graph already holds (migration 46 removed the two it had).

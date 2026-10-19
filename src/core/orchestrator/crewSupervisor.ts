@@ -129,6 +129,9 @@ import {
   type Deliverable,
   type Escalation,
   type InPlaceFacts,
+  type InPlacePull,
+  isFolderRepair,
+  isPullRepair,
   levelDefaultReasoning,
   planSkippedText,
   type WorkShape,
@@ -325,6 +328,7 @@ import {
   FOLDER_REPAIR_TITLE,
   joinParts,
   type PersonalBriefFacts,
+  PULL_REPAIR_TITLE,
   type ReviewBriefFacts,
   renderAnswerShapeSection,
   renderEscalationBrief,
@@ -332,6 +336,7 @@ import {
   renderFollowupBrief,
   renderIntentBrief,
   renderPicturesSection,
+  renderPullRepairBrief,
   renderRepairAssessmentBrief,
   renderReviewBrief,
   renderRigorSection,
@@ -1310,6 +1315,7 @@ export class CrewSupervisor {
       ...(options.readPull ? { readPull: options.readPull } : {}),
       assessRepair: (taskId) => this.assessRepair(taskId),
       fileFolderRepair: (merged, refusal) => this.fileFolderRepair(merged, refusal),
+      filePullRepair: (abandoned, problem) => this.filePullRepair(abandoned, problem),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
       deliverableOf: (record) => this.deliverableOf(record),
       taskDelivery: (taskId) => this.taskDelivery(taskId),
@@ -3248,7 +3254,7 @@ export class CrewSupervisor {
       ...(merged.key ? { after: merged.key } : {}),
     };
     const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
-      (row) => row.repoId === repo.id && row.shape?.in_place !== undefined,
+      (row) => row.repoId === repo.id && isFolderRepair(row.shape?.in_place),
     );
     if (standing) {
       this.options.tasks.recordShape(standing.id, { in_place: facts }, standing.difficulty);
@@ -3291,31 +3297,88 @@ export class CrewSupervisor {
   }
 
   /**
-   * The closing half of a folder repair (INF-549): a task working in place
-   * closes as settled, with a feed line, once the host reads its folder
-   * clean, on the default branch and at or past the merged version. A
-   * crewmate mid-turn, or a card of the task's still up, keeps it open.
+   * The host's own task for a pull request an abandoned task could not
+   * close (INF-549's sibling, the captain's "close the pull request or
+   * report why not"): filed under the project and started like the folder
+   * repair, working in place with a brief filled from the facts. One stands
+   * per pull request. Answers the task, and whether it was filed now.
+   */
+  filePullRepair(
+    abandoned: TaskRecord,
+    problem: string | undefined,
+  ): { record: TaskRecord; filed: boolean } | undefined {
+    const repo = abandoned.repoId ? this.options.repos.get(abandoned.repoId) : undefined;
+    const number = abandoned.delivery?.prNumber;
+    if (!repo || number === undefined) return undefined;
+    const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
+      (row) => {
+        const facts = row.shape?.in_place;
+        return row.repoId === repo.id && isPullRepair(facts) && facts.pull.number === number;
+      },
+    );
+    if (standing) return { record: standing, filed: false };
+    const label = abandoned.delivery?.changeLabel ?? `#${number}`;
+    const facts: InPlacePull = {
+      pull: {
+        number,
+        label,
+        ...(abandoned.delivery?.prUrl ? { url: abandoned.delivery.prUrl } : {}),
+        ...(abandoned.branch ? { branch: abandoned.branch } : {}),
+        ...(problem ? { problem } : {}),
+      },
+      ...(abandoned.key ? { after: abandoned.key } : {}),
+      after_id: abandoned.id,
+    };
+    const shape: WorkShape = {
+      kind: "chore",
+      kind_source: `${KIND_SOURCE.skipped}in-place`,
+      deliverable: "change",
+      in_place: facts,
+    };
+    const record = this.options.tasks.create({
+      id: randomUUID().slice(0, 8),
+      kind: "work",
+      title: PULL_REPAIR_TITLE,
+      goal: `Close the pull request ${label} of ${repo.name}, which ${abandoned.key || abandoned.id} left open, or report why it cannot be closed.`,
+      prompt: renderPullRepairBrief({ ...facts, project: repo.name, folder: repo.path }),
+      repoId: repo.id,
+      difficulty: tierFor(shape).bucket ?? null,
+      shape,
+      startPolicy: "when-ready",
+      status: "open",
+      actor: "host",
+    });
+    this.broadcastCrewCounts();
+    void this.sweepGates(this.now());
+    return { record, filed: true };
+  }
+
+  /**
+   * The closing half of a task that works in place (INF-549): it closes as
+   * settled, with a feed line, once the host reads what it was for done - a
+   * folder clean, on the default branch and at or past the merged version,
+   * or a pull request closed where the project lives. A crewmate mid-turn,
+   * or a card of the task's still up, keeps it open.
    */
   async closeCurrentFolders(): Promise<void> {
     const live = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()];
     for (const record of live) {
       const facts = record.shape?.in_place;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-      if (!facts?.branch || !repo || this.closingFolders.has(record.id)) continue;
+      if (!facts || !repo || this.closingFolders.has(record.id)) continue;
+      if (isFolderRepair(facts) && !facts.branch) continue;
+      if (isPullRepair(facts) && !this.options.readPull) continue;
       const state = this.tasks.get(record.id)?.state;
       if (state !== undefined && state !== "idle") continue;
       if (this.cards.snapshot().some((card) => card.taskId === record.id)) continue;
       this.closingFolders.add(record.id);
       try {
-        const current = await this.options.workspace
-          .folderCurrent(repo.path, facts.branch, facts.reach)
-          .catch(() => false);
-        if (!current) continue;
+        const line = await this.inPlaceDone(facts, repo.path);
+        if (!line) continue;
         const now = this.options.tasks.get(record.id);
         if (!now || TaskService.isClosed(now)) continue;
         const after = this.tasks.get(record.id)?.state;
         if (after !== undefined && after !== "idle") continue;
-        const line = `The project's folder is up to date: clean, on ${facts.branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${facts.branch}`}.`;
         this.options.tasks.note(record.id, line, {
           news: true,
           feed: true,
@@ -3325,13 +3388,37 @@ export class CrewSupervisor {
           status: "done",
           reason: "finished",
           actor: "host",
-          text: "the folder is up to date",
+          text: isPullRepair(facts) ? "the pull request is closed" : "the folder is up to date",
           feed: false,
         });
       } finally {
         this.closingFolders.delete(record.id);
       }
     }
+  }
+
+  /**
+   * What an in-place task was for, read without changing anything: the
+   * Activity line saying it is done, or undefined while it is not, or when
+   * it cannot be read.
+   */
+  private async inPlaceDone(
+    facts: InPlaceFacts | InPlacePull,
+    folder: string,
+  ): Promise<string | undefined> {
+    if (isPullRepair(facts)) {
+      const pull = await this.options
+        .readPull?.(facts.after_id, facts.pull.number)
+        .catch(() => undefined);
+      if (pull?.state !== "closed") return undefined;
+      return `The pull request ${facts.pull.label} is ${pull.merged ? "merged" : "closed"} where the project lives.`;
+    }
+    if (!facts.branch) return undefined;
+    const current = await this.options.workspace
+      .folderCurrent(folder, facts.branch, facts.reach)
+      .catch(() => false);
+    if (!current) return undefined;
+    return `The project's folder is up to date: clean, on ${facts.branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${facts.branch}`}.`;
   }
 
   /**
@@ -4995,7 +5082,22 @@ export class CrewSupervisor {
     | "onGithubRead"
     | "onGithubWrite"
   > {
-    if (this.isPersonalTask(task.id) || this.worksInPlace(task.id)) return {};
+    if (this.isPersonalTask(task.id)) return {};
+    // A task that works in place ships nothing; the one that closes a pull
+    // request an abandoned task left open reads and writes where the project
+    // lives, and nothing else (INF-549's sibling).
+    if (this.worksInPlace(task.id)) {
+      if (!isPullRepair(this.options.tasks.get(task.id)?.shape?.in_place)) return {};
+      const { githubRead, githubWrite } = this.options;
+      return {
+        ...(githubRead
+          ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
+          : {}),
+        ...(githubWrite
+          ? { onGithubWrite: (input: GithubWriteInput) => githubWrite(task.id, input) }
+          : {}),
+      };
+    }
     const {
       prepareChange,
       openChange,
@@ -7031,7 +7133,7 @@ export class CrewSupervisor {
       (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
     ) {
       throw new Error(
-        "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a completion card is never emitted. Report what you did with report; Infinitary closes the task once the folder is up to date. A card is only for a question the captain must answer.",
+        "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a completion card is never emitted. Report what you did with report; Infinitary closes the task once what it was for is done. A card is only for a question the captain must answer.",
       );
     }
     // An answer task ships nothing (Task B), so it has no completion card
@@ -9207,8 +9309,12 @@ export class CrewSupervisor {
     // A folder repair is rendered again from its facts as they stand now: a
     // later refusal may have moved the version the folder must reach.
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (shape.in_place && repo)
-      return renderFolderRepairBrief({ ...shape.in_place, project: repo.name, folder: repo.path });
+    if (shape.in_place && repo) {
+      const where = { project: repo.name, folder: repo.path };
+      return isPullRepair(shape.in_place)
+        ? renderPullRepairBrief({ ...shape.in_place, ...where })
+        : renderFolderRepairBrief({ ...shape.in_place, ...where });
+    }
     const personal = this.isPersonalTask(record.id);
     const delivery =
       shape.deliverable === "answer" || personal

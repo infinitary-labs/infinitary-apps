@@ -24,6 +24,18 @@ export function footerGroups<A extends Pick<CardAction, "variant" | "default">>(
 }
 
 /**
+ * The button a footer draws for an action: its own variant, else primary
+ * for the default and secondary for the rest, so a card the app builds
+ * itself draws its default like an agent's (design skill ResponseCard,
+ * FinishSetup, AddAMac's update card).
+ */
+export function footerVariant(
+  action: Pick<CardAction, "variant" | "default">,
+): NonNullable<CardAction["variant"]> {
+  return action.variant ?? (action.default ? "primary" : "secondary");
+}
+
+/**
  * A footer's actions in the order its choice keys press them
  * (docs/keyboard.md): the default first, at ⌘1 wherever it is drawn, then
  * the rest from the right edge leftward, so the recommended step is always

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "device-card-button-styles",
+      "kind": "fix",
+      "title": "The recommended button is filled on the cards about your other computers",
+      "body": "The card that finishes setting up another computer and the card that asks to update one now fill their recommended button, like every other card. On the card that asks to change a project, Not now is now a quiet text button.",
+      "area": "cards",
+      "picture": {
+        "dark": "device-card-button-styles-dark.webp",
+        "light": "device-card-button-styles-light.webp",
+        "alt": "The card that finishes setting up a Mac mini, with Add a subscription as the filled button at the right edge and Not now as quiet text above"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

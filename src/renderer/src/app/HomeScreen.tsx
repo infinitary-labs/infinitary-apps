@@ -73,7 +73,7 @@ import {
 } from "../cards/cardMaximize";
 import { useCardPresentation } from "../cards/cardPresentation";
 import { useCardTask } from "../cards/cardTask";
-import { choiceOrder, footerGroups } from "../cards/footerGroups";
+import { choiceOrder, footerGroups, footerVariant } from "../cards/footerGroups";
 import { PanelCardView } from "../cards/PanelCardView";
 import {
   PastCardColumn,
@@ -1923,7 +1923,7 @@ function StackedCard({
                   aria-keyshortcuts={choiceKey?.keys ? choiceKey["aria-keyshortcuts"] : undefined}
                   // The key sits inside the button at the size its label gives it.
                   keys={choiceKey?.keys}
-                  variant={action.variant ?? "secondary"}
+                  variant={footerVariant(action)}
                   style={{
                     minWidth: 0,
                     maxWidth: "100%",

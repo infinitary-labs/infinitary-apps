@@ -125,6 +125,7 @@ export class ProjectChanges {
         {
           id: `not-now-${offer.token}`,
           label: "Not now",
+          variant: "ghost",
           effect: { kind: "host", op: "decline-project-change", arg: JSON.stringify(offer) },
         },
       ],

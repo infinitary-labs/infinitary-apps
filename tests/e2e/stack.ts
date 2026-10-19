@@ -129,6 +129,41 @@ export async function stagePrepared(page: Page): Promise<void> {
 }
 
 /**
+ * Returns once the stage has come to rest and the window has drawn it at
+ * rest: nothing is leaving, and the shown entry, the cards peeking behind it
+ * and the card's height have finished their moves (`stageMoves.ts`,
+ * `cardPresentation.ts`). Chromium sends a native press to the page it
+ * finds under the pointer in what the window last drew, and as a move ends
+ * that can be stale: a press on the shown card's page then lands on the
+ * window's own page, on the frame's element, so the page inside never hears
+ * it and its field never takes focus. A journey whose native press goes
+ * into the shown card's page right after the stage changed waits here, as
+ * the captain clicks a card once it has come to rest.
+ */
+export async function stageAtRest(page: Page): Promise<void> {
+  await expect(page.locator('[data-card-layer] [data-stage-entry="outgoing"]')).toHaveCount(0);
+  await page.waitForFunction(
+    () =>
+      [
+        ...document.querySelectorAll(
+          "[data-card-layer] :is([data-stage-entry], [data-card-peek], [data-card-presentation])",
+        ),
+      ].every((moving) =>
+        moving.getAnimations().every((animation) => animation.playState !== "running"),
+      ),
+    undefined,
+    { polling: "raf" },
+  );
+  // Two frames: the first draws the stage at rest, the second starts after it.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
+
+/**
  * A click inside a card's frame: a picture, a link or an answer in a card's
  * body, or a button on a panel card's page. Chromium drops a native click
  * into a sandboxed frame while the window is hidden, so the press is played

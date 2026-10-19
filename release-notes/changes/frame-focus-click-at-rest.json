@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "frame-focus-click-at-rest",
+      "reason": "Test only: the end-to-end journey that clicks into a card right after the panel's consent card drops away now waits until the cards have stopped moving, so on a loaded Mac the click is no longer sent to the window instead of the card. Nothing in the app changes."
+    }
+  ]
+}

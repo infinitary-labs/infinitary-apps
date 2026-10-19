@@ -11,7 +11,7 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { pager, showCard, shownCardFrame, shownEntry } from "./stack";
+import { pager, showCard, shownCardFrame, shownEntry, stageAtRest } from "./stack";
 import { focusedRegion, pressWindowKey, regionAfter, typeInto } from "./windowKeys";
 
 /**
@@ -396,6 +396,8 @@ test("a card's script cannot take focus back from a panel's field right after th
     if (target === null) throw new Error("the panel's field has no box");
     // Focus has not been in the card yet, so its script has not tried.
     const resting = await heightOf(frame);
+    // The consent card has just dropped away: the captain clicks once the stage is at rest.
+    await stageAtRest(page);
     // e2e-frame-actions: native -- The captain's own click in the card is what lets its script take focus.
     await scratch.click();
     await expect(scratch).toBeFocused();

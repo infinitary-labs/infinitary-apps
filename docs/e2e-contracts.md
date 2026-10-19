@@ -74,6 +74,7 @@ After a card script finishes sending synthetic gestures while focus is elsewhere
 
 Chromium drops native clicks into a hidden window's sandboxed frames, so an e2e spec dispatches clicks in-frame with `clickInBody` (`tests/e2e/stack.ts`), which focuses the target before dispatching its click.
 The `e2e-frame-actions` lint follows frame locator chains and helpers and refuses native pointer actions; a journey whose subject is native input itself keeps a reason next to that action (`docs/testing.md`, "The lint").
+Such a native press into the shown card's page right after the stage changed waits for `stageAtRest` (`tests/e2e/stack.ts`): as a stage move ends, Chromium can still aim a press by the window's earlier drawing and send it to the window's own page, on the frame's element, so the page inside never hears it.
 `clickInBody` is a focus and a click, not a full pointer press: where the target acts on `pointerdown` as well, such as a Tasks row that closes its summary on `pointerdown` and opens its record on the click, the journey dispatches `pointerdown` before it (`tests/e2e/crew-hover.spec.ts`).
 A dispatched pointer event never moves Chromium's native pointer, so a journey keeps a target's entry and exit in one stream.
 After a native hover onto a key, a dispatched `pointerover` elsewhere leaves the native pointer on that key, and its next native hover sends only `pointermove`, never the `pointerover` that opens a summary; `tests/e2e/card-task-keys.spec.ts` dispatches both, and keeps one sliding journey for native entry across the frame boundary.

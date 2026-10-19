@@ -173,9 +173,10 @@ The runner waits for simulator boot completion before launching tests and uses o
 
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
-`phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/`, `docs/contract.json` or the phone-contract generator and its shape guard.
+`phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/` or the phone-contract generator and its shape guard.
 The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py` and its replacement helper `scripts/replaced-phone-runs.ts`.
-Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does.
+Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
+Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
 The native job uses `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.

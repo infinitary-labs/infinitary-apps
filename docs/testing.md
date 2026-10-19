@@ -93,7 +93,8 @@ Unit tests are unchanged.
 
 ## Native phone checks on the pull request
 
-`phone.yml` selects the iPhone and iPad gate for `ios/`, `docs/contract.json`, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
+`phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
+A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
 The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py` and the replacement helper `scripts/replaced-phone-runs.ts`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.

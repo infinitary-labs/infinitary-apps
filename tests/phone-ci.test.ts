@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
-import { phoneDecision } from "../scripts/affected-phone";
+import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { DEVICE_GATES, NATIVE_JOB } from "../scripts/replaced-phone-runs";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone/shared-contract PRs.
@@ -58,7 +58,6 @@ const [IPHONE, IPAD] = DEVICE_GATES as [string, string];
 describe("the native pull-request gate", () => {
   it.each([
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
-    "docs/contract.json",
     "scripts/generate-phone-contract.ts",
     "scripts/phone-contract-shapes.ts",
     ".github/workflows/phone.yml",
@@ -81,6 +80,37 @@ describe("the native pull-request gate", () => {
     "scripts/generate-phone-theme.ts",
   ])("honors the captain's narrower lane by skipping %s alone", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("false");
+  });
+  // INF-496 (captain: "Skip it too: the phone still sees only a number"): the phone sees
+  // docs/contract.json only as the version line of its generated file.
+  const generated = (...lines: string[]) =>
+    ["--- a/f", "+++ b/f", "@@ -3 +3 @@", ...lines].join("\n");
+  const version = (v: string) => `public static let version = "${v}"`;
+  it.each([
+    ["a minor version", "9.2.0", "9.3.0"],
+    ["a first-number version", "9.2.0", "10.0.0"],
+  ])("skips the Mac mini when the contract changes only %s", (_name, from, to) => {
+    const diff = generated(`-    ${version(from)}`, `+    ${version(to)}`);
+    expect(eligible(phoneDecision(["docs/contract.json", GENERATED_CONTRACT], diff).run)).toBe(
+      "false",
+    );
+  });
+  it.each([
+    [
+      "another line of the generated file",
+      generated(
+        `-    ${version("9.2.0")}`,
+        `+    ${version("9.3.0")}`,
+        "-    public static let maxFrameBytes = 1",
+        "+    public static let maxFrameBytes = 2",
+      ),
+    ],
+    ["a changed feed case", generated('+    case `newEvent` = "newEvent"')],
+    ["an unreadable file comparison", undefined],
+  ])("still selects the Mac mini for %s", (_name, diff) => {
+    expect(eligible(phoneDecision(["docs/contract.json", GENERATED_CONTRACT], diff).run)).toBe(
+      "true",
+    );
   });
   it("skips unrelated changes but never skips an unreadable comparison", () => {
     expect(eligible(phoneDecision(["docs/ios.md"]).run)).toBe("false");

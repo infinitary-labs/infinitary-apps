@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-version-only",
+      "reason": "Pull-request CI only: a change whose only effect on the phone is the contract version number no longer waits for the Mac mini's phone check, with no application change."
+    }
+  ]
+}

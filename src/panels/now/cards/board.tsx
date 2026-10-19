@@ -1018,7 +1018,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
     const project = projectName(task);
     const asking = pending?.taskId === task.id ? pending : null;
     // Only the Board's tiles are picked up; a list moves by its rows' menus.
-    const movable = view === "board" && boardMovable(tileLane) && !asking;
+    const movable = Boolean(task.key) && view === "board" && boardMovable(tileLane) && !asking;
     const items = asking ? [] : menuItems(task, tileLane);
     return (
       <div
@@ -1405,7 +1405,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
               {laneHead(
                 "waiting",
                 <>
-                  <span className="fm-board-lane-note">Decisions, not another stage</span>
+                  <span className="fm-board-lane-note">Cards waiting for you</span>
                   {waitingAll.length > band.length && (
                     <button
                       type="button"

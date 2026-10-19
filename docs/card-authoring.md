@@ -855,3 +855,19 @@ The host refuses a missing or unrelated review, stores the resolved review task 
 Every first mate card about a task names the task after its key; a card about no task retains first mate.
 Review-finding cards show the host's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
 The native phone reader shows the same label and task name without running the body or offering buttons.
+
+## Minimize a card
+
+Minimize card is the neutral minus before Maximize on every live decision, note and attention card, including maximized cards and cards with threads.
+It changes only the card’s optional saved `minimized` fact, through `CardService.setMinimized` and the views-only `inf:cards:minimize` request.
+It is independent from `awaiting`, resolution, offers, task status, the captain gate and the idle ladder; no message, feed line or notification is emitted.
+The Mac stack and pager omit minimized cards, while the phone’s read-only list is unchanged.
+Every Mac showing this first mate shares that fact, including after a restart.
+A revision or author answer clears it and the card returns unread, through the existing author close-out rule.
+Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.
+
+The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.
+`useCardReadingPlace` keeps its body’s reading place across remounts for the same run.
+Bringing it back focuses the card at the default size; a restart drops unsent drafts as before.
+The first mate’s asked `show-card` action uses `inf:cards:show`: an open card returns, and a closed card opens read-only.
+The first mate has no minimize action.

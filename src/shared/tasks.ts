@@ -266,6 +266,8 @@ export const taskViewSchema = z.object({
   outcomeSummary: z.string().nullable(),
   /** Reachable shown ready decision on a live task; not durable attention/holds. */
   waitingCardId: z.string().nullable(),
+  /** Desktop presentation only; not a decision, gate or task status. */
+  minimizedCardId: z.string().optional(),
   /** Its waiting card settles with a merge: only that card's own button merges. Absent otherwise. */
   waitingCardMerges: z.literal(true).optional(),
   /**
@@ -495,6 +497,8 @@ export const taskCardRowSchema = z.strictObject({
   kind: z.enum(["decision", "note"]),
   title: z.string(),
   state: z.enum(["open", "closed"]),
+  /** Open but taken off the Mac stack by the captain. */
+  minimized: z.literal(true).optional(),
   /** How a closed card ended (`pastEndingWords`); absent while it is open. */
   ending: z.string().optional(),
   /** When it ended, or when an open card was raised. */

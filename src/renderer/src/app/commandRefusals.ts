@@ -216,6 +216,11 @@ const REFUSALS: Readonly<
   "cards.previous": (s) => pageRefusal(s, -1),
   "cards.next": (s) => pageRefusal(s, 1),
   "cards.close": cardRefusal,
+  "cards.minimize": (s) => {
+    const refusal = cardRefusal(s);
+    if (refusal) return refusal;
+    return isHeldEntry(shownEntry(s)) ? "Only a message card can be minimized" : null;
+  },
   "cards.maximize": cardRefusal,
   // A thread exists once its first message is sent; a recording keeps focus
   // where its words will go.

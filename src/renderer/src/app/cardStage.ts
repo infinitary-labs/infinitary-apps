@@ -20,6 +20,8 @@ export type CardStage = {
   maximized: boolean;
   /** Maximizes or restores it, with the keyboard's focus on its size control. */
   toggleSize: () => void;
+  /** Only live message cards can be minimized. */
+  minimize?: () => void;
   /**
    * The thread's own collapse and the cue that opens it: folds the thread
    * into the card's foot, or puts it beside the card again. Absent while

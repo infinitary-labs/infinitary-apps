@@ -1,5 +1,5 @@
 import type { TaskDetail, TaskView } from "@shared/tasks";
-import { presentTask } from "@shared/taskWaiting";
+import { minimizedRowId, presentTask } from "@shared/taskWaiting";
 import { z } from "zod";
 import { useShellStore } from "../../app/store";
 
@@ -51,8 +51,25 @@ function showableRequiredAction(detail: Pick<TaskDetail, "status" | "requiredAct
  * again (INF-358), and only a task with neither opens its record.
  */
 export async function openTask(value: OpenTaskValue): Promise<void> {
+  const shell = useShellStore.getState();
+  const standalone = shell.cards.find(
+    (card) => card.minimized && minimizedRowId(card.id) === value.taskId,
+  );
+  if (standalone) {
+    shell.focusCard(standalone.id);
+    return;
+  }
   let detail = await window.infinitary.tasks.detail(value.taskId);
+  const cards = useShellStore.getState().cards;
+  const minimized = cards.filter(
+    (card) => card.minimized && (card.taskId === detail.id || card.id === detail.waitingCardId),
+  );
+  if (minimized.length) {
+    await Promise.all(minimized.map((card) => window.infinitary.cards.minimize(card.id, false)));
+    shell.applyCards(await window.infinitary.cards.list());
+  }
   let { waitingCardId } = presentTask(detail, useShellStore.getState().cards);
+  if (minimized[0]) waitingCardId = minimized[0].id;
   if (!waitingCardId && showableRequiredAction(detail)) {
     const shown = await window.infinitary.task.run(value.taskId, "show-card");
     if (shown.ok) {

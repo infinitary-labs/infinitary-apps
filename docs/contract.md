@@ -264,3 +264,7 @@ Saved conversation recovery runs once before conversations open, not at each ope
 
 Protocol 9.2 adds optional `reviewTaskId` to cards: the home validates that the named independent review belongs to the card's task before showing Review finding.
 Older readers ignore this additive attribution; first mate cards about tasks also carry the task's title in their existing meta line.
+
+Protocol 9.3 adds optional `minimized` on cards and record card rows, the desktop presentation-only `minimizedCardId` on task rows, and the views-only `inf:cards:minimize` and `inf:cards:show` requests.
+The first changes saved stack visibility without resolving a card; the second restores an open card or shows a closed card read-only.
+An older client ignores optional fields and keeps its current list; `inf:cards:show-past` keeps its earlier closed-card response.

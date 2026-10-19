@@ -254,3 +254,11 @@ The notice uses the existing neutral panel border, spacing and focus ring.
 In a short card it uses compact spacing and a focusable list scroller, leaving the merge buttons wholly visible above the reply row.
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
+
+## Minimize
+
+Every live decision, note and attention card has a neutral Lucide minus before Maximize, labeled Minimize card, with the installed key hint (default ⇧⌘M).
+The same control stays while maximized or threaded.
+It changes saved stack visibility, never closes a card, asks the close question or changes work, gates or notifications.
+Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.
+The body primitive accepts an owner-supplied bodyRef for keeping an in-session reading place.

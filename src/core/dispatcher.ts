@@ -420,6 +420,18 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       }
     },
 
+    "inf:cards:minimize": (cardId, minimized) => {
+      services.supervisor.setCardMinimized(cardId, minimized);
+      return { ok: true as const };
+    },
+    "inf:cards:show": (cardId) => {
+      const open = services.supervisor.showOpenCard(cardId);
+      if (open) return open;
+      const past = services.supervisor.cardPast(cardId);
+      if (!past) throw new Error(`No card ${cardId}. Read its id from the task record.`);
+      services.broadcastEvent({ type: "past_card_shown", cardId });
+      return past;
+    },
     "inf:cards:close": (cardId, submission) => {
       services.supervisor.close(cardId, submission);
       return { ok: true as const };

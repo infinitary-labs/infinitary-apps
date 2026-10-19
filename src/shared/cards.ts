@@ -949,6 +949,8 @@ export const cardSchema = z.strictObject({
    * on a card the stage shows. `CardService` is its one writer.
    */
   awaiting: cardAwaitingSchema.optional(),
+  /** Captain-only saved stack visibility, independent of author holds and task gates. */
+  minimized: z.literal(true).optional(),
   /**
    * A reply kept shown at send time (docs/card-threads.md), or a legacy reply:
    * it sorts after new arrivals while awaiting its author, in reply order. The author's

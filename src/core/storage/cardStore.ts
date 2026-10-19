@@ -73,6 +73,7 @@ type Row = {
   risk_json: string | null;
   replies: number | null;
   holds_place: number | null;
+  minimized: number | null;
   required_actions_json: string | null;
 };
 
@@ -171,6 +172,7 @@ function fromRow(row: Row): Card | undefined {
       : {}),
     ...(row.replies === 0 ? { replies: false } : {}),
     ...(row.holds_place === 1 ? { holdsPlace: true } : {}),
+    ...(row.minimized === 1 ? { minimized: true } : {}),
     ...(row.lifecycle_id ? { lifecycleId: row.lifecycle_id } : {}),
     ...(row.offer_id ? { offerId: row.offer_id } : {}),
   });
@@ -311,8 +313,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -336,7 +338,8 @@ export class CardStore {
            replies = excluded.replies,
            holds_place = excluded.holds_place,
            required_actions_json = excluded.required_actions_json,
-           review_task_id = excluded.review_task_id`,
+           review_task_id = excluded.review_task_id,
+           minimized = excluded.minimized`,
       )
       .run(
         card.id,
@@ -364,6 +367,7 @@ export class CardStore {
         card.holdsPlace ? 1 : null,
         card.requiredActions !== undefined ? JSON.stringify(card.requiredActions) : null,
         card.reviewTaskId ?? null,
+        card.minimized ? 1 : null,
       );
   }
 
@@ -613,6 +617,7 @@ export class CardStore {
             kind: cardWord(card),
             title: card.title,
             state: "open",
+            ...(card.minimized ? { minimized: true as const } : {}),
             at: card.createdAt,
           },
         });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Card } from "./cards";
 import { nowGroupOf, nowGroupsOf, taskStatusWord } from "./nowPanel";
 import type { TaskView } from "./tasks";
+import { presentBoard } from "./taskWaiting";
 
 function task(overrides: Partial<TaskView> = {}): TaskView {
   return {
@@ -38,6 +40,42 @@ function task(overrides: Partial<TaskView> = {}): TaskView {
 const needsYou = { blocked: false, held: false, needsYou: true, ready: false };
 
 describe("nowGroupOf", () => {
+  it("INF-476 puts minimized notes on their own task row, including done work, without changing its operational waiting", () => {
+    const note: Card = {
+      id: "launch-note",
+      taskId: "t1",
+      author: "firstmate",
+      priority: 20,
+      title: "The launch review is ready",
+      meta: "firstmate",
+      body: "<p>The review stays beside Friday’s launch.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      minimized: true,
+    };
+    const original = task({ status: "done", closedAt: 1000 });
+    const board = { seq: 1, at: 1000, projects: [], tasks: [original], links: [] };
+    const projected = presentBoard(board, [note]);
+    expect(projected.tasks).toHaveLength(1);
+    expect(projected.tasks[0]).toMatchObject({
+      id: original.id,
+      key: original.key,
+      status: "done",
+      waitingCardId: null,
+      minimizedCardId: note.id,
+    });
+    expect(nowGroupOf(projected.tasks[0]!)).toBe("waiting");
+    expect(board.tasks[0]).toBe(original);
+    expect(nowGroupOf(presentBoard(board, [{ ...note, minimized: undefined }]).tasks[0]!)).toBe(
+      "landed",
+    );
+    const { taskId: _task, ...standalone } = note;
+    const alone = presentBoard({ ...board, tasks: [] }, [standalone]);
+    expect(alone.tasks).toHaveLength(1);
+    expect(alone.tasks[0]).toMatchObject({ key: "", title: note.title, minimizedCardId: note.id });
+    expect(nowGroupOf(alone.tasks[0]!)).toBe("waiting");
+  });
   it("puts anything that needs the captain first, whatever its status", () => {
     expect(nowGroupOf(task({ status: "open", waitingCardId: "ready", flags: needsYou }))).toBe(
       "waiting",

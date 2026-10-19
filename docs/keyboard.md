@@ -90,6 +90,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.previous`, Show the previous card | window, run by the shell page | ⇧⌘[ (`[` or `{` with Shift) |
 | `cards.next`, Show the next card | window, run by the shell page | ⇧⌘] (`]` or `}` with Shift) |
 | `cards.close`, Close the shown card | window, run by the shell page | none: chosen by name |
+| `cards.minimize`, Minimize card | window, run by the shell page | ⇧⌘M |
 | `cards.maximize`, Maximize or restore card | window, run by the shell page | none: chosen by name (full, screen, enlarge, expand and bigger find it too) |
 | `cards.next-revision`, Go to the next revised area | window, run by the shell page | none: chosen by name; selected revision, otherwise newest released list |
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
@@ -256,6 +257,7 @@ The main process's own commands, the size keys, are never refused by the page.
   The button shows the installed key, and a person may change it in Keyboard settings.
 - `regions.next` and `regions.previous`, Go to the next or previous part of the window, move focus between the window's parts ("Parts of the window"); they refuse only while a recording runs.
 - `cards.previous` and `cards.next` are the pager's own arrows, with the same slide; `cards.close` is the close control, which still asks first, under the card's ×, when picked answers would be discarded, and the question takes focus on Keep answering.
+- `cards.minimize`, Minimize card (⇧⌘M), removes a live message from the stack without closing it or sending anything; task records, past cards and other held views refuse it.
 - `cards.maximize`, Maximize or restore card, is the card's size control (the design skill's `components/cards/ResponseCard.prompt.md`, "Maximize"), with focus on that control after it.
   The card layer lends these to the commands (`cardStage.ts`) and says which entry it shows; a command acts only while the store still shows that entry.
   They work on the home screen only, and an arrow refuses at the stack's end.

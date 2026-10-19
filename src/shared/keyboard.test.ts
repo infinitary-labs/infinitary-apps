@@ -109,6 +109,7 @@ describe("the command catalog", () => {
       "cards.previous",
       "cards.next",
       "cards.close",
+      "cards.minimize",
       "cards.maximize",
       "cards.next-revision",
       "cards.thread",

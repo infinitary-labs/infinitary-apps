@@ -8,6 +8,13 @@ import type { ProjectView, TaskBoard, TaskView } from "./tasks";
  * eligible sibling. Never invent waiting ahead of the board, or change holds.
  */
 export function presentTask<T extends TaskView>(task: T, cards: readonly Card[]): T {
+  const minimized = cards.find(
+    (card) => card.minimized && (card.taskId === task.id || card.id === task.waitingCardId),
+  );
+  if (task.minimizedCardId !== minimized?.id) {
+    const { minimizedCardId: _old, ...raw } = task;
+    task = { ...raw, ...(minimized ? { minimizedCardId: minimized.id } : {}) } as T;
+  }
   const waitingCard =
     task.waitingCardId && (task.status === "open" || task.status === "active")
       ? cards.find(
@@ -37,6 +44,7 @@ export function presentProjects(
   for (const task of tasks) {
     if (
       task.waitingCardId ||
+      task.minimizedCardId ||
       (task.requiredAction && (task.status === "open" || task.status === "active"))
     ) {
       counts.set(task.projectId, (counts.get(task.projectId) ?? 0) + 1);
@@ -50,5 +58,47 @@ export function presentProjects(
 
 export function presentBoard(board: TaskBoard, cards: readonly Card[]): TaskBoard {
   const tasks = board.tasks.map((task) => presentTask(task, cards));
+  // A taskless message has no record to open. This is a row projection, never a saved task.
+  for (const card of cards) {
+    if (
+      !card.minimized ||
+      tasks.some((task) => task.minimizedCardId === card.id || task.id === card.taskId)
+    )
+      continue;
+    if (card.taskId) continue;
+    tasks.push({
+      id: minimizedRowId(card.id),
+      key: "",
+      projectId: "",
+      parentId: null,
+      kind: "operation",
+      title: card.title,
+      goal: null,
+      priority: card.priority,
+      status: "open",
+      activity: null,
+      closedReason: null,
+      startPolicy: "on-request",
+      flags: { blocked: false, held: false, needsYou: false, ready: false },
+      blockedBy: [],
+      blocks: [],
+      children: { total: 0, closed: 0 },
+      assignee: null,
+      model: null,
+      tier: null,
+      repo: null,
+      delivery: null,
+      outcomeSummary: null,
+      waitingCardId: null,
+      minimizedCardId: card.id,
+      createdAt: card.createdAt,
+      updatedAt: card.createdAt,
+      startedAt: null,
+      closedAt: null,
+    });
+  }
   return { ...board, tasks, projects: presentProjects(board.projects, tasks) };
 }
+
+/** Stable id for the presentation-only row of a card with no task. */
+export const minimizedRowId = (cardId: string): string => `minimized-card:${cardId}`;

@@ -129,6 +129,28 @@ describe("stack visibility (WI-18)", () => {
   beforeEach(reset);
   afterEach(reset);
 
+  it("INF-476 removes minimized cards from paging and unread, and a revision returns unread without stealing the shown card", () => {
+    const choice = ready("choice", { actions: DECIDE });
+    const note = ready("note");
+    state().applyCards([choice, note]);
+    state().setReplyDraft("choice", "Keep the review beside it.");
+    state().applyCards([{ ...choice, minimized: true }, note]);
+    expect(
+      visibleStack(state().cards, state().collapsedCardIds, state().records).map(
+        (entry) => entry.id,
+      ),
+    ).toEqual(["note"]);
+    expect(state().unreadCardIds).not.toContain("choice");
+    expect(shownId()).toBe("note");
+    expect(state().replyDrafts.choice).toBe("Keep the review beside it.");
+    state().applyCards([
+      { ...choice, body: "<p>Friday keeps the review beside the launch.</p>" },
+      note,
+    ]);
+    expect(shownId()).toBe("note");
+    expect(state().unreadCardIds).toContain("choice");
+  });
+
   it("shows a card by the core's word alone: a thread message never brings a held card back", () => {
     const item = ready("a", { actions: DECIDE });
     state().applyCards([{ ...item, awaiting: "answer" }]);

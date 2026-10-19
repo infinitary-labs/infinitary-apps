@@ -87,7 +87,7 @@ A confirmed failure returns it to Backlog with Could not start, and the Backlog 
 
 ## A tile is a pointing gesture
 
-A click or Enter opens the tile's or row's task exactly as a Tasks row does (`point.openTask`): its waiting card comes forward, or its record opens at the front.
+A click or Enter opens the tile's or row's task exactly as a Tasks row does (`point.openTask`): its minimized cards or waiting decision come forward, or its record opens at the front.
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile, the same summary and beat as a Tasks row's (`point.peekTask`).
 Where neither side of the tile has room, as beside a list's full-width row in a narrow window, the summary sits under the tile or over it (`placeKeySummary`).
 The tile focus is on is the selected one, tinted as an open row is; while the board is the shown entry, the selected tile is the turn's hint, as a shown record is (`point.aim`).
@@ -146,3 +146,6 @@ When a live change takes the focused tile away - another surface moved its task,
 - Unit: `src/panels/now/boardTiles.test.ts` (lanes, words, chips, counts, pages, earlier matches and the arrows), `boardMoves.test.ts` (every drop and the menu, on the moves the app's own rule gives each row), `src/core/personal/appPanels.test.ts` (the folder compiles for the frame realm on the panel library alone, its card view as the app lists it, and the lint passes), `src/renderer/src/app/store.test.ts` (a panel card's aim as the turn's hint), `src/renderer/src/plugins/panelCards.test.ts` (a card put up again is one more revision), `src/shared/keymap.test.ts` (keys saved under `tasks.board*` carried over); `src/core/tasks/taskService.graph.test.ts` and `src/core/orchestrator/crewSupervisor.test.ts` (queue and unqueue, and a refused Start's text); `src/core/tasks/taskProtocol.test.ts` (the search's limit of 50).
 - E2E: `tests/e2e/task-board.spec.ts`, the journey by keys with a decision waiting behind the board, the window coming forward included, `tests/e2e/task-board-moves.spec.ts`, the moves by drag and by menu, `tests/e2e/task-board-pages.spec.ts`, 60 in the backlog and 300 done this week paged and reached by keys, and `tests/e2e/tasks-from-elsewhere.spec.ts`, the same folder added from elsewhere under another id running the board's journey by keys, drag and menu.
   Their helpers are `tests/e2e/taskBoard.ts`: they read inside the board's page - a tile, a lane, a view and its count, a lane's pages - take the panel whose card it is, press and drag with events dispatched in that page, and read where focus is from the page's own active element and the window's.
+
+Minimized messages use the same presentation-only waiting rows as Tasks (`docs/task-record.md`, "Minimized cards in Tasks").
+Its waiting section reads Cards waiting for you; a taskless card has only Show the card in its menu, never task moves or a crew summary.

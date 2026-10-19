@@ -48,7 +48,9 @@ Reports and other wakes cannot change these settings.
 `hands` delegates to the captain, and `yours` is captain-only.
 Sharing switches and purge stay the captain's.
 Panels and plugins gain no change ability.
-`show-card` (FI3-579 piece 4, `asked`) is the one door that brings an earlier closed card forward: the first mate reads `resolution.card.id` from `tasks` by key and passes it as `cardId`; the Cards row and the filter take the same door as `inf:cards:show-past`.
+`show-card` (`asked`) brings a card forward when the captain asks: `inf:cards:show` restores an open minimized card or shows a closed card read-only.
+The first mate reads its id from `tasks` by key; it has no action to minimize cards itself.
+The existing `inf:cards:show-past` read-only closed-card door remains compatible.
 It is no tool of its own, raises no card and runs no effect; see `docs/card-evidence.md` "The past card".
 `show-whats-new` (FI3-932, `asked`) takes the What's new door, `inf:release-notes:show`: with no value the newest release note that listed changes, or the one for a `version` its current value lists, an open note to the front of the stack and a closed one read-only; it needs no card id (`docs/release-notes.md` "Reading a note again").
 `device-invite` and `device-remove` (FI3-679 at 4.72, `hands` since FI3-683) make a pairing link and remove a paired device, and `device-address` still answers and no longer chooses an address.

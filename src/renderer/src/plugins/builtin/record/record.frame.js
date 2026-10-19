@@ -565,7 +565,7 @@
           bridge.action("open-card", { id: card.id }).catch(() => {});
         });
         const how = span("how", "");
-        if (card.state === "open") how.textContent = "On the stage";
+        if (card.state === "open") how.textContent = card.minimized ? "Minimized" : "On the stage";
         else {
           const text = card.ending ?? "Closed";
           aged(how, card.at, (at) => `${text} · ${short(at)}`);

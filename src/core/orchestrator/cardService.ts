@@ -653,9 +653,15 @@ export class CardService {
   private onTheStage(card: Card): Card {
     const version = this.staged.get(card.id);
     if (!version) return card;
-    const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = version;
+    const {
+      awaiting: _awaiting,
+      sentBackAt: _sentBackAt,
+      minimized: _minimized,
+      ...shown
+    } = version;
     return {
       ...shown,
+      ...(card.minimized ? { minimized: true as const } : {}),
       ...(card.awaiting ? { awaiting: card.awaiting } : {}),
       ...(card.sentBackAt !== undefined ? { sentBackAt: card.sentBackAt } : {}),
     };
@@ -1422,6 +1428,7 @@ export class CardService {
     // The captain's line takes an ordinary card off the stack until its
     // author answers and closes out; any other line - the author's answer, or the
     // host's "revised:" for a revision - ends his line being the newest.
+    if (who === "crewmate" || who === "firstmate") this.setMinimized(cardId, false);
     const card = this.cards.get(cardId);
     // The captain writes about the version the stage shows him; an author,
     // or the host's line for its revision, about the newest one it wrote.
@@ -2025,8 +2032,21 @@ export class CardService {
     return true;
   }
 
+  /** INF-476: saved presentation only, not a close, reply, gate or ladder interaction. */
+  setMinimized(cardId: string, minimized: boolean): void {
+    const card = this.cards.get(cardId);
+    if (!card || Boolean(card.minimized) === minimized) return;
+    const { minimized: _previous, ...rest } = card;
+    const updated: Card = { ...rest, ...(minimized ? { minimized: true } : {}) };
+    this.host.cardStore.upsert(updated);
+    this.cards.set(cardId, updated);
+    this.scheduleBroadcast();
+    this.flushBroadcast();
+  }
+
   /** Publish a newly reopened card before asking either the local or paired view to focus it. */
   showOpenCard(cardId: string): void {
+    this.setMinimized(cardId, false);
     this.broadcastSnapshot();
     this.host.broadcastEvent({ type: "open_card_shown", cardId });
   }

@@ -52,6 +52,7 @@ import type { ReleaseNotesView } from "@shared/releaseTracking";
 import type { UsageUnit } from "@shared/usage";
 import { create } from "zustand";
 import { isPreparing, MAIN_FILES_KEY, whenPrepared } from "../attachments/intake";
+import { retainCardReadingPlaces } from "../cards/cardReadingPlace";
 import {
   applyCrewDependencies,
   applyCrewEvent,
@@ -286,7 +287,7 @@ export const NOTE_COLLAPSE_TICK_MS = 60_000;
  * close-out - the core says which, docs/card-threads.md) and not collapsed.
  */
 export function visibleCards(cards: Card[], collapsed: readonly string[] = []): Card[] {
-  return cards.filter((card) => onStage(card) && !collapsed.includes(card.id));
+  return cards.filter((card) => onStage(card) && !card.minimized && !collapsed.includes(card.id));
 }
 
 /** The card currently on screen, if the stack is non-empty. */
@@ -536,7 +537,7 @@ export function reconcileStack(
     collapsed.map((id) => [id, prev.collapsedDigests[id] ?? cardDigest(byId.get(id) as Card)]),
   );
   // Nor is a card waiting on its author's first close-out: still open, only off the stage.
-  const waiting = cards.filter((card) => !onStage(card)).map((card) => card.id);
+  const waiting = cards.filter((card) => !onStage(card) || card.minimized).map((card) => card.id);
   const kept = new Set([...shown.map((card) => card.id), ...collapsed, ...waiting]);
   return {
     state: {
@@ -594,6 +595,9 @@ export type ShellState = {
   /** Open shell-held records, newest opened first (one per task). */
   records: OpenRecord[];
   cardIndex: number;
+  /** A task or record pointed at a card: focus the new visit once its body is ready. */
+  cardFocusRequest: number;
+  cardFocusTarget: string | null;
   /** Cards that joined the stack behind the shown one and were never shown (WI-18). */
   unreadCardIds: string[];
   /** Seen, aged notes collapsed out of the stack into their task records (WI-18). */
@@ -936,6 +940,7 @@ export type ShellState = {
   closePastCard: (cardId: string) => void;
   /** Brings a stacked card to the front; false when it is not on the stack. */
   focusCard: (cardId: string) => boolean;
+  minimizeCard: (cardId: string) => Promise<void>;
   applyCards: (cards: Card[]) => void;
   /** The captain dragged a card's edge; null returns it to the width the host decided. */
   dragCard: (cardId: string, width: number | null) => void;
@@ -1132,6 +1137,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   phase: "idle",
   recording: false,
   cards: [],
+  cardFocusRequest: 0,
+  cardFocusTarget: null,
   pendingCardActions: {},
   cardActionErrors: {},
   cardAnswers: {},
@@ -2230,6 +2237,22 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   closePastCard: (cardId) =>
     set((s) => closeHeld(s, (record) => "pastCardId" in record && record.pastCardId === cardId)),
   focusCard: (cardId) => {
+    const minimized = get().cards.find((card) => card.id === cardId)?.minimized;
+    if (minimized) {
+      if (changesOff(get().thisMac)) return false;
+      // The shared owner accepts the restore before this window shows it.
+      void window.infinitary.cards
+        .minimize(cardId, false)
+        .then(() => window.infinitary.cards.list())
+        .then((cards) => {
+          get().applyCards(cards);
+          get().focusCard(cardId);
+        })
+        .catch((error: unknown) => {
+          set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: String(error) } }));
+        });
+      return true;
+    }
     // Pointing at a collapsed note brings it back onto the stack.
     const collapsedCardIds = get().collapsedCardIds.filter((id) => id !== cardId);
     const index = visibleStack(get().cards, collapsedCardIds, get().records).findIndex(
@@ -2238,13 +2261,30 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     if (index < 0) return false;
     set((s) => ({
       cardIndex: index,
+      cardFocusRequest: s.cardFocusRequest + 1,
+      cardFocusTarget: cardId,
       collapsedCardIds,
       unreadCardIds: s.unreadCardIds.filter((id) => id !== cardId),
       phase: derivePhase(s.recording, s.cards, s.firstmateBusy, collapsedCardIds, s.records),
     }));
     return true;
   },
+  minimizeCard: async (cardId) => {
+    const mac = get().thisMac;
+    try {
+      if (changesOff(mac) && isView(mac)) throw new Error(changesOffWords(mac));
+      await window.infinitary.cards.minimize(cardId, true);
+    } catch (error) {
+      set((s) => ({
+        cardActionErrors: {
+          ...s.cardActionErrors,
+          [cardId]: error instanceof Error ? error.message : String(error),
+        },
+      }));
+    }
+  },
   applyCards: (cards) => {
+    retainCardReadingPlaces(new Set(cards.map((card) => card.id)));
     let noticed = 0;
     set((s) => {
       const reconciled = reconcileStack(s, cards, Date.now());

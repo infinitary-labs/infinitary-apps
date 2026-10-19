@@ -97,6 +97,44 @@ describe("CardService", () => {
     expect(cards.get(standalone)?.meta).toBe("firstmate");
   });
 
+  it("INF-476 minimizes only presentation, persists through restart, and author answers and revisions restore it", () => {
+    const { db, tasks, cardStore, gates, make } = setup();
+    seedTask(tasks, { id: "launch", title: "Prepare the launch checklist", status: "idle" });
+    const cards = make();
+    const id = cards.emitCrewmateCard("launch", { ...decision, id: "launch-choice" }, "m");
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "report");
+    cards.flushBroadcast();
+    const taskBefore = tasks.get("launch");
+    const gateCount = gates.length;
+    const threadBefore = cardStore.messages(id);
+    cards.setMinimized(id, true);
+    expect(cards.shown(id)).toMatchObject({ minimized: true, status: "ready" });
+    expect(onStage(cards.shown(id) as Card)).toBe(true);
+    expect(tasks.get("launch")).toEqual(taskBefore);
+    expect(gates).toHaveLength(gateCount);
+    expect(cardStore.messages(id)).toEqual(threadBefore);
+    expect(cardStore.forTask("launch")[0]).toMatchObject({ state: "open", minimized: true });
+    const restored = make();
+    expect(restored.snapshot().find((card) => card.id === id)?.minimized).toBe(true);
+    restored.showOpenCard(id);
+    expect(restored.get(id)?.minimized).toBeUndefined();
+    restored.setMinimized(id, true);
+    restored.replyFromCrewmate("launch", {
+      cardId: id,
+      text: "Friday keeps the review beside the launch.",
+    });
+    expect(restored.get(id)?.minimized).toBeUndefined();
+    restored.setMinimized(id, true);
+    restored.emitCrewmateCard(
+      "launch",
+      { ...decision, id, body: "<p>Keep Friday for the review.</p>" },
+      "m",
+    );
+    restored.closeOut({ kind: "crewmate", taskId: "launch" }, "report");
+    expect(restored.snapshot().find((card) => card.id === id)?.minimized).toBeUndefined();
+    db.close();
+  });
+
   it("keeps marked replies available through restart and still closes every choice", () => {
     const { tasks, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });

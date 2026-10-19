@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-minimize",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Minimize a card without closing it",
+      "body": "The minus beside Maximize takes a card off your stack without closing it or interrupting its crewmate. Click its task in Tasks to bring it back with your picked answers and reply draft. A revised card returns unread. Minimize stays in place across your Macs and restarts. You can also press ⇧⌘M or ask your first mate to show the card again.",
+      "picture": {
+        "dark": "card-minimize-dark.webp",
+        "light": "card-minimize-light.webp",
+        "alt": "A decision card has a minus before Maximize and Close, with its unanswered launch-window choices below"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

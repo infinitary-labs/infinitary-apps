@@ -59,9 +59,17 @@ Any entry hides the character, crew and labels over `--dur-slow`, snapping under
 Peeks use the same solid surface at full opacity: depth comes from their offset and hairline, not transparency.
 
 Cards sort by priority, oldest first within each band.
-Whenever the shown card leaves (close, closing action, merge, withdrawal, task closure or reply), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule, one rule for a close and a reply; a reply's own card is passed over while another card remains.
+Whenever the shown card leaves (close, minimize, closing action, merge, withdrawal, task closure or reply), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule, one rule for a close and a reply; a reply's own card is passed over while another card remains.
 Unread is this window's "new" badge, never a saved fact.
 Hiding a record reveals the first card.
 Open task records remain ahead of cards for paging; if only records remain, show the first record.
 An unseen departure moves nothing.
 Explicit jumps still show their target, and the arrows keep stack order.
+
+## Minimized cards
+
+Minimized live messages stay open but leave the stack, its pager count and new dot.
+They leave by the close navigation rule without its close question or any message.
+Their reading place, picked answers and reply draft stay for this run.
+A revision or author answer returns one unread; a pointed-at card returns at the front, focused at the default size.
+Their visibility is saved at the first mate and shared by every viewing Mac, but the phone list stays unchanged.

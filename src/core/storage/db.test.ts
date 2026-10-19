@@ -96,9 +96,10 @@ const REVERSE_MIGRATION_71 =
 /** Migration 71's table, for a fixture that seeds an older database through the one writer. */
 const MIGRATION_71_TABLE =
   "CREATE TABLE task_event_concerns (event_id INTEGER NOT NULL, task_id TEXT NOT NULL, relation TEXT NOT NULL, via TEXT, PRIMARY KEY (event_id, task_id));";
-/** Migration 77's optional continuity declaration, undone. */
-const REVERSE_MIGRATION_77 =
-  "ALTER TABLE cards DROP COLUMN review_task_id; ALTER TABLE cards DROP COLUMN required_actions_json; ALTER TABLE cards DROP COLUMN holds_place;\n";
+/** INF-476's saved visibility column, undone without deleting card rows. */
+const REVERSE_MIGRATION_88 = "ALTER TABLE cards DROP COLUMN minimized;\n";
+/** Migration 77's optional continuity declaration, with its later columns undone. */
+const REVERSE_MIGRATION_77 = `${REVERSE_MIGRATION_88}ALTER TABLE cards DROP COLUMN review_task_id; ALTER TABLE cards DROP COLUMN required_actions_json; ALTER TABLE cards DROP COLUMN holds_place;\n`;
 /** Legacy card reversal chain removes later columns before migration 70's replies column. */
 const REVERSE_MIGRATION_70 = `${REVERSE_MIGRATION_77}ALTER TABLE cards DROP COLUMN replies;\n`;
 /** Migration 69's merge-card risk, undone: the `cards` column. */
@@ -1682,7 +1683,9 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // `sent_back_at`, migration 65 (a card's live attachment)
     // `attachment_json`, migration 67 (where its task runs) `place`,
     // migration 69 (a merge card's risk) `risk_json`, and migration 70 (a
-    // card that takes no reply) `replies`.
+    // card that takes no reply) `replies`, migration 77 `holds_place`,
+    // migration 82 `required_actions_json`, migration 87 `review_task_id`,
+    // and INF-476 `minimized`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -1704,6 +1707,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "holds_place",
       "required_actions_json",
       "review_task_id",
+      "minimized",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",
@@ -3229,8 +3233,40 @@ it("migration 87 preserves legacy cards and persists reversible review attributi
   upgraded.close();
   const reopened = openDatabase(dir);
   expect(new CardStore(reopened).get("finding")?.reviewTaskId).toBe("review-footer");
-  reopened.exec("ALTER TABLE cards DROP COLUMN review_task_id");
+  reopened.exec(`${REVERSE_MIGRATION_88}ALTER TABLE cards DROP COLUMN review_task_id`);
   expect(columnNames(reopened, "cards")).toEqual(columns);
   expect(reopened.prepare("SELECT COUNT(*) AS n FROM cards").get()).toEqual({ n: 2 });
+  reopened.close();
+});
+
+it("INF-476 upgrades existing cards with no minimized state, persists a minimized card and reverses without losing it", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 87);
+  const columns = columnNames(old, "cards");
+  old
+    .prepare(
+      "INSERT INTO cards (id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('launch-review', 'card', 'firstmate', 20, 'The launch review is ready', 'firstmate', '<p>Keep the review beside the launch.</p>', '[]', 'ready', 1)",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+  const store = new CardStore(upgraded);
+  const review = store.get("launch-review");
+  if (!review) throw new Error("The upgraded launch review is missing");
+  expect(review).not.toHaveProperty("minimized");
+  store.upsert({ ...review, minimized: true });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new CardStore(reopened).get(review.id)).toMatchObject({
+    minimized: true,
+    status: "ready",
+    title: review.title,
+  });
+  reopened.exec(REVERSE_MIGRATION_88);
+  expect(columnNames(reopened, "cards")).toEqual(columns);
+  expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
+    { id: review.id, status: "ready" },
+  ]);
   reopened.close();
 });

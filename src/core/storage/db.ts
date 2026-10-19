@@ -1051,6 +1051,9 @@ const MIGRATIONS: readonly Migration[] = [
   // 87: INF-63's validated review attribution. Null leaves existing cards unchanged.
   // CardStore is the only writer; no published view reads it. Drop the column to reverse.
   (db) => addColumn(db, "cards", "review_task_id", "TEXT"),
+
+  // INF-476: presentation only; never changes card resolution or task gates.
+  (db) => addColumn(db, "cards", "minimized", "INTEGER"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1718,7 +1721,7 @@ export function assertSavedDataCompatible(userDataDir: string): void {
   // Startup owns the app's single-instance lock; no normal service writer is running.
   let known: boolean;
   try {
-    known = readDatabaseSnapshot(path, (db) => schemaHistoryKnown(db, MIGRATIONS.length));
+    known = readDatabaseSnapshot(path, (db) => schemaHistoryKnown(db, DATABASE_VERSION));
   } catch {
     // Unreadable/corrupt or unrecognized history is not permission to migrate.
     throw new UnsupportedSavedDataError("database");
@@ -1750,7 +1753,7 @@ export function openInMemoryDatabase(throughVersion?: number): AppDatabase {
 }
 
 function migrate(db: AppDatabase, throughVersion?: number): void {
-  const through = throughVersion ?? MIGRATIONS.length;
+  const through = throughVersion ?? DATABASE_VERSION;
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)");
   const applied = new Set(
     (db.prepare("SELECT version FROM schema_migrations").all() as { version: number }[]).map(
@@ -1774,7 +1777,7 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
     run();
   });
   // An optional query index adds no saved-data format or migration version.
-  if (through === MIGRATIONS.length)
+  if (through === DATABASE_VERSION)
     db.exec("CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at)");
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.

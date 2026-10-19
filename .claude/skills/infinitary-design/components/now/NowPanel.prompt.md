@@ -10,7 +10,7 @@ Empty groups are absent.
 When collapsed, the host header draws what the panel says it holds, `N waiting · N working` (`Panel.prompt.md`, "The collapsed summary"), and Open task board beside the chevron; Search tasks is drawn only while the panel is expanded.
 
 Waiting on you means a live task has a reachable ready decision: `waitingCardId`, not the broader `flags.needsYou` attention flag.
-Hidden replies, Working cards, notes, no-card holds, dead dependencies and closed tasks do not create a waiting row or compact count.
+Hidden replies, Working cards, ordinary notes, no-card holds, dead dependencies and closed tasks do not create a waiting row or compact count unless they have a minimized card.
 A ready decision behind another card counts because its task can bring it forward.
 Count each task once.
 A waiting child separates into Waiting on you while its nonwaiting parent and siblings keep their existing working grouping; do not duplicate parent context or add row decoration.
@@ -38,7 +38,7 @@ Nothing else in the rail: no chips, meters, models, or ages - everything richer 
 }} onOpen={(t)=>openRecord(t.id)}/>
 ```
 
-Clicking a row is a pointing gesture, never a write: a row waiting on you refreshes its ready decision and brings it to the front of the stack (or opens the record if no eligible choice remains); any other row opens the task's record (`TaskRecord`) as a front entry in the main card stack, shown at once.
+Clicking a row is a pointing gesture, never a work change: a row waiting on you refreshes its ready decision and brings it to the front of the stack (or opens the record if no eligible choice remains); any other row opens the task's record (`TaskRecord`) as a front entry in the main card stack, shown at once.
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
 The panel has no buttons that change a task, no drag, no inline editing, no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
@@ -178,3 +178,9 @@ Closed from the keyboard (Esc, or Enter on Close search), the filter gives focus
 Focus is the `--focus-ring` hairline and glow, drawn over whatever the row paints: a row whose record is open keeps its `--accent-dim` tint, so focus and the open task never read as one.
 A row and a group header span the panel's frame, which cuts whatever is drawn past its edge, so each draws it inside its own edge (`--focus-ring-inset`).
 A focused row scrolls into view, and opens its summary as the pointer's rest does.
+
+## Minimized cards
+
+A minimized card keeps its task’s own row under waiting on you, without an added word; even a note on finished work does so.
+A taskless minimized card has a row titled by the card.
+Click or Enter brings back that task’s minimized cards with keyboard focus at the default card size.

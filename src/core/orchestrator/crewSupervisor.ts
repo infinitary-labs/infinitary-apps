@@ -2243,6 +2243,16 @@ export class CrewSupervisor {
     this.cards.flushBroadcast();
   }
 
+  setCardMinimized(cardId: string, minimized: boolean): void {
+    this.cards.setMinimized(cardId, minimized);
+  }
+
+  showOpenCard(cardId: string): Card | undefined {
+    if (!this.cards.shown(cardId)) return undefined;
+    this.cards.showOpenCard(cardId);
+    return this.cards.shown(cardId);
+  }
+
   cardsSnapshot(): Card[] {
     return this.cards.snapshot();
   }

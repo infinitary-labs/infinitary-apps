@@ -224,6 +224,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.previous": () => onShownCard((stage) => stage.page(-1)),
   "cards.next": () => onShownCard((stage) => stage.page(1)),
   "cards.close": () => onShownCard((stage) => stage.close()),
+  "cards.minimize": () => onShownCard((stage) => stage.minimize?.()),
   "cards.maximize": () => onShownCard((stage) => stage.toggleSize()),
   "cards.next-revision": () =>
     toShownPart(cardBody, (body) =>

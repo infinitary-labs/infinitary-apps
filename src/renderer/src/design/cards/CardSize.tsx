@@ -1,7 +1,7 @@
 import type React from "react";
 import { createContext, useContext } from "react";
 import { IconButton } from "../core/IconButton";
-import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
+import { MAXIMIZE_LABEL, MINIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
 
 /**
  * The shown card's size, lent by the stage to the card it shows (design
@@ -12,6 +12,11 @@ import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
  */
 export type CardSize = {
   maximized: boolean;
+  minimize?: {
+    run: () => void;
+    keys?: string | undefined;
+    "aria-keyshortcuts"?: string | undefined;
+  };
   /**
    * Maximizes or restores the card. `byKey` (Escape, a command) also puts
    * the keyboard's focus on the size control, ringed; a click leaves it on
@@ -73,6 +78,23 @@ export function CardSizeToggle() {
   );
 }
 
+function CardMinimize() {
+  const minimize = useContext(CardSizeContext)?.minimize;
+  if (!minimize) return null;
+  return (
+    <IconButton
+      label={MINIMIZE_LABEL}
+      keys={minimize.keys}
+      aria-keyshortcuts={minimize["aria-keyshortcuts"]}
+      onClick={minimize.run}
+    >
+      <svg {...icon} aria-hidden="true">
+        <path d="M5 12h14" />
+      </svg>
+    </IconButton>
+  );
+}
+
 /**
  * A card's top-right corner: the size control, then the card's own Close or
  * Hide, which keep their meaning. Every card chrome puts its close in one.
@@ -95,6 +117,7 @@ export function CardCorner({
         ...style,
       }}
     >
+      <CardMinimize />
       <CardSizeToggle />
       {children}
     </span>

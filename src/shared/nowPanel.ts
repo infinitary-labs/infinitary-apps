@@ -57,6 +57,7 @@ export type NowGroupInput = Pick<
   | "status"
   | "requiredAction"
   | "waitingCardId"
+  | "minimizedCardId"
   | "captainWait"
   | "startPolicy"
   | "startAttempt"
@@ -64,6 +65,7 @@ export type NowGroupInput = Pick<
 >;
 
 export function nowGroupOf(task: NowGroupInput): NowGroup | null {
+  if (task.minimizedCardId) return "waiting";
   if (task.requiredAction && (task.status === "open" || task.status === "active")) return "waiting";
   // A task that is starting (a start attempt preparing or checking, or a
   // claimed row whose crewmate has not begun) is queued until it begins; a

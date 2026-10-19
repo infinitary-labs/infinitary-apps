@@ -27,6 +27,14 @@ function notifier(overrides: { enabled?: boolean; focused?: boolean } = {}) {
 }
 
 describe("CardNotifier", () => {
+  it("INF-476 minimizing and restoring an open message never posts a notification", () => {
+    const { instance, show } = notifier();
+    const review = card({ id: "launch-review", title: "The launch review is ready" });
+    instance.observe([review]);
+    instance.observe([{ ...review, minimized: true }]);
+    instance.observe([review]);
+    expect(show).not.toHaveBeenCalled();
+  });
   it("never notifies for the boot snapshot - restored cards are old news", () => {
     const { instance, show } = notifier();
     instance.observe([card({ id: "old-decision" })]);

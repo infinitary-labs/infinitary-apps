@@ -30,6 +30,7 @@ import {
   CONVERSE_TEXT_MAX_CHARS,
   cardActionSourceSchema,
   cardAnswersSchema,
+  cardSchema,
   cardsSnapshotSchema,
   cardThreadSchema,
   type DropTaskReview,
@@ -1230,6 +1231,20 @@ export const invokeContract = {
       z.unknown().optional(),
     ]),
     response: z.object({ effect: shellEffectSchema.optional(), refusal: z.string().optional() }),
+  },
+  "inf:cards:minimize": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string(), z.boolean()]),
+    response: okSchema,
+  },
+  "inf:cards:show": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string()]),
+    response: z.union([cardSchema, pastCardSchema]),
   },
   "inf:cards:close": {
     effect: "change",
@@ -3053,6 +3068,7 @@ export type FirstmateApi = {
       value?: unknown,
       submission?: CardSubmission,
     ) => Promise<InvokeResponse<"inf:cards:act">>;
+    minimize: (cardId: string, minimized: boolean) => Promise<{ ok: true }>;
     close: (cardId: string, submission?: CardSubmission) => Promise<{ ok: true }>;
     onCards: (listener: (cards: Card[]) => void) => () => void;
     /** The stage showed the captain this version (offer) of the card. */

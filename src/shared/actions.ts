@@ -691,10 +691,10 @@ const actionLines = {
   "show-card": {
     area: "general",
     tier: "asked",
-    change: "inf:cards:show-past",
+    change: "inf:cards:show",
     current: "inf:app:healthcheck",
     value: z.strictObject({ cardId: z.string().trim().min(1).max(128) }),
-    line: "Bring an earlier closed card forward on the captain's stage as it was, read-only, when asked to show or revisit it. cardId is resolution.card.id from tasks by key. It makes no new card and runs nothing. A card still on the stage is already shown.",
+    line: "Bring a card forward when the captain asks to show or revisit it. A minimized open card returns to the stack; a closed card is read-only. Read cardId from open cards or resolution.card.id in tasks by key. It makes no new card and runs nothing. Never minimize a card yourself.",
     alwaysTrail: true,
     toRequest: (v) => [v.cardId],
     readValue: () => ({}),

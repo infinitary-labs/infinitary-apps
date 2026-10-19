@@ -347,9 +347,10 @@ export function boardMenuOf(
   lane: BoardLane,
   context: BoardMoveContext,
 ): BoardMenuEntry[] {
+  if (!task.key && task.minimizedCardId) return [{ id: "card", label: "Show the card" }];
   if (!boardMovable(lane)) return [];
   const entries: BoardMenuEntry[] = [{ id: "open", label: "Open record" }];
-  if (lane === "waiting" && task.waitingCardId)
+  if (lane === "waiting" && (task.waitingCardId || task.minimizedCardId))
     entries.push({ id: "card", label: "Show the card" });
   if (lane === "working" && taskStatusOf(task).mark === "interrupted") {
     entries.push({

@@ -72,6 +72,7 @@ import {
   readingAnchor,
 } from "../cards/cardMaximize";
 import { useCardPresentation } from "../cards/cardPresentation";
+import { useCardReadingPlace } from "../cards/cardReadingPlace";
 import { useCardTask } from "../cards/cardTask";
 import { choiceOrder, footerGroups, footerVariant } from "../cards/footerGroups";
 import { PanelCardView } from "../cards/PanelCardView";
@@ -393,6 +394,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const prevKeys = useCommandKeys("cards.previous");
   const nextKeys = useCommandKeys("cards.next");
   const maximizeKeys = useCommandKeys("cards.maximize");
+  const minimizeKeys = useCommandKeys("cards.minimize");
   const cards = useShellStore((s) => s.cards);
   const entrancesReady = useShellStore((s) => s.cardsSnapshotLoaded);
   const bootCardId = useShellStore((s) => s.bootCardId);
@@ -443,7 +445,10 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
 
   // Each newly shown entry starts from the saved size. Manual restore and
   // Go to the main message override it for this visit, never the next card.
-  const focusRequest = useShellStore((s) => s.focusRequest);
+  const mainFocusRequest = useShellStore((s) => s.focusRequest);
+  const cardFocusRequest = useShellStore((s) => s.cardFocusRequest);
+  const cardFocusTarget = useShellStore((s) => s.cardFocusTarget);
+  const focusRequest = mainFocusRequest + cardFocusRequest;
   const openingSize = {
     cardId,
     defaultCardSize,
@@ -832,6 +837,22 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     };
   }, [leaving, emptied, cardId]);
 
+  const focusedVisit = useRef(0);
+  useLayoutEffect(() => {
+    if (
+      cardFocusTarget !== cardId ||
+      !cardFocusRequest ||
+      focusedVisit.current === cardFocusRequest ||
+      !stage.revealed
+    )
+      return;
+    const entry = shellRef.current?.querySelector<HTMLElement>('[data-stage-entry="shown"]');
+    if (!entry || entry.inert) return;
+    focusedVisit.current = cardFocusRequest;
+    focusWithRing(entry, { preventScroll: true });
+    useShellStore.setState({ cardFocusTarget: null });
+  }, [cardFocusTarget, cardFocusRequest, stage.revealed, cardId]);
+
   const viewing = viewer !== null && viewer.cardId === cardId ? viewer : null;
   useEffect(() => {
     if (viewer && viewer.cardId !== cardId) setViewer(null);
@@ -894,7 +915,11 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       ...sizeChoice,
       at: maximized
         ? null
-        : { entryId: cardId, focusRequest: useShellStore.getState().focusRequest },
+        : {
+            entryId: cardId,
+            focusRequest:
+              useShellStore.getState().focusRequest + useShellStore.getState().cardFocusRequest,
+          },
     });
   };
   const sized = useRef(maximized);
@@ -922,7 +947,21 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     };
   }, [maximized]);
   const cardSize: CardSize | null = cardId
-    ? { maximized, toggle: toggleSize, ...maximizeKeys }
+    ? {
+        maximized,
+        toggle: toggleSize,
+        ...maximizeKeys,
+        ...(!isHeldEntry(card)
+          ? {
+              minimize: {
+                run: () => {
+                  void useShellStore.getState().minimizeCard(card.id);
+                },
+                ...minimizeKeys,
+              },
+            }
+          : {}),
+      }
     : null;
 
   // The drawing a stack that just emptied is still dropping away, if any.
@@ -1003,6 +1042,13 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           close: () => (isHeldEntry(card) ? closeRecord() : askClose(true)),
           maximized,
           toggleSize: () => toggleSize(true),
+          ...(!isHeldEntry(card)
+            ? {
+                minimize: () => {
+                  void useShellStore.getState().minimizeCard(card.id);
+                },
+              }
+            : {}),
           ...(foldsThread ? { thread: () => showThread(view.collapsed, true) } : {}),
         }
       : null;
@@ -1796,6 +1842,7 @@ function StackedCard({
   onInteraction,
   style,
 }: StackedCardProps) {
+  const bodyRef = useCardReadingPlace(card.id);
   const pending = useShellStore((s) => s.pendingCardActions[card.id]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is
@@ -1966,6 +2013,7 @@ function StackedCard({
   return (
     <ResponseCard
       kind={chrome}
+      bodyRef={bodyRef}
       title={card.title}
       titleWords={<KeyedText text={card.title} own={card.taskId} />}
       taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}

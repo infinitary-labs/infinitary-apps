@@ -224,6 +224,8 @@ export type PanelTaskRow = {
   children: { total: number; closed: number };
   /** Reachable shown ready decision, null on hidden/working/closed tasks. */
   waitingCardId: string | null;
+  /** Desktop presentation only; leaves task status and operational waiting unchanged. */
+  minimizedCardId?: string;
   /** Its waiting card settles with a merge: only that card's own button merges. */
   waitingCardMerges?: true;
   /** Its crewmate said it waits on the captain, card or no card. */

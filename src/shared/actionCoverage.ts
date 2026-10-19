@@ -17,6 +17,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:converse": "Conversation, not an app setting",
   "inf:cards:act": "Captain card clicks",
   "inf:cards:close": "Captain card clicks",
+  "inf:cards:minimize":
+    "Captain-only saved card presentation; the first mate may restore through show-card, never minimize",
+  "inf:cards:show-past":
+    "Compatible closed-card gesture; the asked show-card action uses inf:cards:show for live and closed cards",
   "inf:cards:open-page":
     "The captain's click on a card's page from its task's project; it opens the task's browser and sets nothing",
   "inf:cards:reply": "Conversation, not an app setting",

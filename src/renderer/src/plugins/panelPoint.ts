@@ -139,7 +139,10 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
     openRecord: async (taskId) => {
       need("openRecord");
       const id = idOf("openRecord", taskId);
-      if (!listed(id) || !(await page.gate())) return false;
+      const task = listed(id);
+      if (!task || !(await page.gate())) return false;
+      if (task.minimizedCardId && !task.key)
+        return useShellStore.getState().focusCard(task.minimizedCardId);
       useShellStore.getState().openRecord(id);
       return true;
     },
@@ -155,13 +158,19 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       const frame = page.frame();
       const at = frame?.getBoundingClientRect();
       const { taskId, box } = parsed.data;
+      if (!listed(taskId)?.key) {
+        taskPeek.release(where);
+        return;
+      }
       taskPeek.set({ taskId, box: at ? offset(box, at) : box, page: where, pageFrame: frame });
     },
     showCard: async (cardId) => {
       need("showCard");
       const id = z.string().min(1).max(128).safeParse(cardId);
       if (!id.success) throw new Error("point.showCard: name the card by its waitingCardId");
-      const waits = boardOnScreen()?.tasks.some((task) => task.waitingCardId === id.data);
+      const waits = boardOnScreen()?.tasks.some(
+        (task) => task.waitingCardId === id.data || task.minimizedCardId === id.data,
+      );
       if (!waits || !(await page.gate())) return false;
       return useShellStore.getState().focusCard(id.data);
     },

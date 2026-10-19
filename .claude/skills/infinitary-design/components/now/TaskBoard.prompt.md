@@ -25,7 +25,7 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
   Find is a small input ("Find a task") that narrows this board alone by key or title, never the panel; the chip and Find narrow every lane before it is paged.
 - **The views**, over a `--line-1` hairline: Board, Backlog, Done · 7d, and Earlier matches only while Find has words - text buttons in `--text-sm` `--fg-2`, each list's whole count after it in mono `--text-xs` `--fg-3` (Backlog also `· N new` for crew filings not yet opened, Earlier matches a `+` when the search may have been cut); the pressed one is `--accent-dim` with an `--accent` border, `--fg-1`.
   Board opens first.
-- **Waiting on you**, above every view: its micro label and count, "Decisions, not another stage" in `--text-sm` `--fg-3` at the right, and Show all N while more than three wait; then at most three one-line rows (as a list's rows), or "Nothing waits on you".
+- **Waiting on you**, above every view: its micro label and count, "Cards waiting for you" in `--text-sm` `--fg-3` at the right, and Show all N while more than three wait; then at most three one-line rows (as a list's rows), or "Nothing waits on you".
   Show all N opens its own list, where these rows are not drawn again.
 - A `--line-1` hairline.
 - **Board**: three columns, Backlog, Queued and Working, `--space-3` apart, each after the first with a `--line-1` rule on its left: a micro label and mono count, then a page of five tiles `--space-2` apart, or one quiet line: "Nothing in the backlog", "Nothing queued", "Nothing working".

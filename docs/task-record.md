@@ -90,7 +90,7 @@ Drop task, Discard, stronger-model retries, provider retries and closed-work ret
 
 Approved specification: FI3-275, direction A, reachable cards, split waiting children.
 Cancellation and terminal session failure retire task cards at closure through `SettleService.closeRecord` (FI3-270); the waiting projection also independently excludes closed tasks.
-`waitingCardId` is the sole waiting fact: the first unresolved shown ready decision associated with a live task, with no `awaiting` and nonempty actions, in `CardService.snapshot()` order.
+`waitingCardId` is the operational ready-decision fact: the first unresolved shown ready decision associated with a live task, with no `awaiting` and nonempty actions, in `CardService.snapshot()` order.
 Direct associations and captain-gate references use that same test.
 A ready card behind the foreground card still counts; navigation can focus it.
 A hidden or Working sibling cannot mask another ready decision.
@@ -341,3 +341,15 @@ It preserves the selected computer, stable preparation order, explicit acceptanc
 A live resource refresh never writes it; task retention owns its lifetime.
 `v_placements_v1` publishes task id, commitment time, selected computer id/name, reservation state and snapshot JSON, without the private preparation origin, to a declared and granted read-only SQL query.
 The snapshot is never reused as fresh scheduling evidence.
+
+## Minimized cards in Tasks
+
+A minimized message remains open, with its task and operational ready-decision association unchanged.
+The desktop’s `presentTask` overlays the optional `minimizedCardId` for presentation only, never a gate or a task move.
+`nowGroupOf` puts that task’s own row under waiting on you without an added word, even for a note on a finished task.
+The raw board includes finished tasks while they have minimized cards, however old; the phone keeps its existing card list.
+`presentBoard` gives a taskless minimized card one presentation-only row, titled by the card, never a saved task.
+The task board and compact Tasks count use that same projection, and restoring or withdrawing the last minimized card removes that presentation override.
+Click or Enter restores the task’s minimized cards; a task’s existing ready card already opens on a row click through `openTask`.
+The record’s Cards row labels an open minimized card Minimized, and its link brings the live card back.
+The record’s Show the card also brings back a minimized decision.

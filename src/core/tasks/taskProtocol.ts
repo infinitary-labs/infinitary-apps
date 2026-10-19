@@ -270,8 +270,18 @@ export class TaskProtocol {
     const graph = this.graphOf(all, tasks.allLinks());
     const cutoff = now - BOARD_RECENT_MS;
     const shown = new Map<string, TaskRecord>();
+    const minimizedTasks = new Set(
+      this.options.cards
+        .snapshot()
+        .filter((card) => card.minimized)
+        .map((card) => card.taskId),
+    );
     for (const record of all) {
-      if (!TaskService.isClosed(record) || (record.closedAt ?? 0) >= cutoff) {
+      if (
+        !TaskService.isClosed(record) ||
+        (record.closedAt ?? 0) >= cutoff ||
+        minimizedTasks.has(record.id)
+      ) {
         shown.set(record.id, record);
       }
     }

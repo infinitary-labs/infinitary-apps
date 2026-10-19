@@ -877,9 +877,19 @@ describe("the core, driven with no Electron in the process", () => {
       expect(operations()).toHaveLength(operationsBefore + 1);
       // Nothing about the card changed.
       expect(await core.dispatch("inf:cards:past", ["card-show-past"])).toEqual(pastBefore);
-      // An open or unknown card is refused in words, with nothing shown or written.
-      for (const cardId of ["card-show-open", "no-such-card"])
-        expect((await ask({ cardId })).text).toContain("No closed card");
+      // INF-476: the asked door now restores an open minimized card, without resolving it.
+      await core.dispatch("inf:cards:minimize", ["card-show-open", true]);
+      expect(
+        (await core.dispatch("inf:cards:list", [])).find((card) => card.id === "card-show-open")
+          ?.minimized,
+      ).toBe(true);
+      expect(JSON.parse((await ask({ cardId: "card-show-open" })).text).action).toBe("show-card");
+      expect(
+        (await core.dispatch("inf:cards:list", [])).find((card) => card.id === "card-show-open"),
+      ).toMatchObject({ status: "ready" });
+      expect(events).toContainEqual({ type: "open_card_shown", cardId: "card-show-open" });
+      // Unknown cards still refuse; the compatible old door still refuses an open card.
+      expect((await ask({ cardId: "no-such-card" })).text).toContain("No card");
       await expect(core.dispatch("inf:cards:show-past", ["card-show-open"])).rejects.toThrow(
         /No closed card/,
       );

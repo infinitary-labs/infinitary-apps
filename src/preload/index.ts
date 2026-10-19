@@ -255,6 +255,7 @@ const api: FirstmateApi = {
       readableRequest("inf:cards:act", () =>
         invoke("inf:cards:act", cardId, actionId, source, value, submission),
       ),
+    minimize: (cardId, minimized) => invoke("inf:cards:minimize", cardId, minimized),
     close: (cardId, submission) => invoke("inf:cards:close", cardId, submission),
     onCards: (listener) => subscribe("inf:cards", listener),
     seen: (cardId, offerId) => invoke("inf:cards:seen", cardId, offerId),

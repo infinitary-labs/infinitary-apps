@@ -269,6 +269,14 @@ export const KEYBOARD_COMMANDS = {
   // The shown card's size control (design skill ResponseCard, "Maximize"):
   // chosen by name, with no key of its own to clash with, and a person may
   // give it one.
+  "cards.minimize": {
+    label: "Minimize card",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [{ key: "m", meta: true, shift: true }],
+  },
   "cards.maximize": {
     label: "Maximize or restore card",
     scope: "window",

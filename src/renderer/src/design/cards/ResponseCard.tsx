@@ -131,6 +131,8 @@ export type ResponseCardProps = {
    * and scrolls itself - a panel's card of `fill` height - takes none.
    */
   bodyStyle?: React.CSSProperties;
+  /** The owner may keep its body reading place across an in-session remount. */
+  bodyRef?: React.Ref<HTMLDivElement>;
 };
 
 const closeIcon = (
@@ -211,6 +213,7 @@ export function ResponseCard({
   bare = false,
   style,
   bodyStyle,
+  bodyRef,
 }: ResponseCardProps) {
   const k = cardKinds[kind] || cardKinds.note;
   // The title and the revised line give way to the chrome beside them.
@@ -416,6 +419,7 @@ export function ResponseCard({
           </div>
         )}
         <div
+          ref={bodyRef}
           data-card-body=""
           style={{
             flex: 1,

@@ -273,6 +273,8 @@ export class PersonalExtensions {
   private generation = 0;
   private refreshing: Promise<void> | null = null;
   private refreshAgain = false;
+  /** The workspace's git writes, one at a time (`serialWrite`). */
+  private writes: Promise<unknown> = Promise.resolve();
   private lastSnapshot: PersonalSnapshot = { extensions: [] };
   private readonly unsubscribe: (() => void)[] = [];
   private disposed = false;
@@ -311,13 +313,15 @@ export class PersonalExtensions {
   /** Seed, scan, and start watching. The whole of "on". */
   private async activate(): Promise<void> {
     try {
-      await seedPersonalWorkspace({
-        dir: this.options.workspaceDir,
-        ...(this.options.skillsSourceDir !== undefined
-          ? { skillsSourceDir: this.options.skillsSourceDir }
-          : {}),
-        log: this.log,
-      });
+      await this.serialWrite(() =>
+        seedPersonalWorkspace({
+          dir: this.options.workspaceDir,
+          ...(this.options.skillsSourceDir !== undefined
+            ? { skillsSourceDir: this.options.skillsSourceDir }
+            : {}),
+          log: this.log,
+        }),
+      );
     } catch (error) {
       // A workspace the app cannot write is a boot without personal panels,
       // never a boot without an app.
@@ -411,17 +415,23 @@ export class PersonalExtensions {
    * The end of a live crewmate turn: stamp the task onto what it touched,
    * lint those extensions, commit the workspace with the report as the
    * message, and reload. A workspace that did not change commits nothing.
+   * Two turns can end together - a captain's choice queued behind a turn
+   * starts the next one while the last one's commit runs - so the commit
+   * waits for any git write still going (`serialWrite`).
    */
   async commitTurn(taskId: string, message: string): Promise<LiveTurnCommit> {
-    const touched = await this.touched();
-    for (const id of touched) {
-      await stampOrigin(this.options.workspaceDir, id, taskId).catch(() => false);
-    }
-    const findings: PanelLintFinding[] = [];
-    for (const id of touched) {
-      findings.push(...(await this.lintFindings(id)));
-    }
-    const commit = await commitWorkspace(this.options.workspaceDir, message);
+    const { touched, findings, commit } = await this.serialWrite(async () => {
+      const touched = await this.touched();
+      for (const id of touched) {
+        await stampOrigin(this.options.workspaceDir, id, taskId).catch(() => false);
+      }
+      const findings: PanelLintFinding[] = [];
+      for (const id of touched) {
+        findings.push(...(await this.lintFindings(id)));
+      }
+      const commit = await commitWorkspace(this.options.workspaceDir, message);
+      return { touched, findings, commit };
+    });
     await this.refresh();
     return {
       committed: commit.committed,
@@ -648,6 +658,21 @@ export class PersonalExtensions {
   }
 
   /**
+   * Runs one git write on the workspace - the seed's heal, a turn's commit,
+   * a removal - once every write before it has finished, failed or not.
+   * Two at once race for git's index lock, and the loser fails on
+   * `index.lock: File exists` or `cannot lock ref 'HEAD'`, which leaves a
+   * turn's work uncommitted. The core is one process, so this queue is the
+   * whole lock; a read never waits for it, because reads take no lock
+   * (`changedPaths`).
+   */
+  private serialWrite<T>(write: () => Promise<T>): Promise<T> {
+    const run = this.writes.then(write, write);
+    this.writes = run.catch(() => {});
+    return run;
+  }
+
+  /**
    * "Get rid of it" (talk-to-personalize Step 1, plan section 5.3 step 6):
    * the extension's directory leaves the workspace in one commit under the
    * app's identity - git keeps the history, so the removal is as reversible
@@ -672,8 +697,11 @@ export class PersonalExtensions {
     entry.server?.dispose();
     this.loaded.delete(id);
     this.dropDraft(id);
-    let committed = false;
-    if (await isGitRepo(this.options.workspaceDir)) {
+    const committed = await this.serialWrite(async () => {
+      if (!(await isGitRepo(this.options.workspaceDir))) {
+        await rm(dir, { recursive: true, force: true });
+        return false;
+      }
       try {
         // Tracked files leave the index and the tree together; what was
         // never committed goes with the directory below.
@@ -689,16 +717,15 @@ export class PersonalExtensions {
           "--",
           id,
         ]);
-        committed = true;
+        return true;
       } catch (error) {
         // Nothing staged (an untracked extension), or a repo state the commit
         // cannot pass: the directory is gone either way.
         await rm(dir, { recursive: true, force: true });
         this.log(`personal: removed ${id} without a commit: ${errorText(error)}`);
+        return false;
       }
-    } else {
-      await rm(dir, { recursive: true, force: true });
-    }
+    });
     this.options.store.clearExtension(id);
     await this.refresh();
     return { removed: true, committed };

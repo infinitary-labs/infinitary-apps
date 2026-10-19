@@ -32,8 +32,16 @@ import { cardReply, clickInBody, expectNoCard, showCard, shownCard, shownEntry }
 import { pressKey } from "./windowKeys";
 
 const OTHER = "Another question";
+/**
+ * Reads the personal workspace. The host may be committing a turn as the
+ * journey reads, so a read never takes git's optional index lock, which
+ * would fail that commit (`changedPaths`, src/core/personal/liveWorkspace.ts).
+ */
 const git = (dir: string, ...args: string[]) =>
-  execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" }).trim();
+  execFileSync("git", ["--no-optional-locks", "-C", dir, ...args], { encoding: "utf8" }).trim();
+/** A file as the workspace's last commit holds it; empty until a commit holds it. */
+const committedFile = (dir: string, path: string) =>
+  git(dir, "ls-tree", "HEAD", "--", path) ? git(dir, "show", `HEAD:${path}`) : "";
 
 type TaskRow = {
   id: string;
@@ -213,9 +221,10 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       const { page } = launched;
       await choose(page, "Stop for today");
       await expect(shownCard(page, LESSON_WELCOME_TITLE)).toBeVisible({ timeout: 60_000 });
-      // The host commits the turn when it ends: the committed file is the saved one.
+      // The host commits the turn when it ends, after the commits of the turns
+      // before it (INF-539): the committed file is the saved one once that work is done.
       await expect
-        .poll(() => git(workspace, "show", "HEAD:lessons/chess/progress.md"))
+        .poll(() => committedFile(workspace, "lessons/chess/progress.md"), { timeout: 60_000 })
         .toBe(readFileSync(join(workspace, "lessons", "chess", "progress.md"), "utf8").trim());
       await expect.poll(() => git(workspace, "status", "--porcelain")).toBe("");
       const progress = readFileSync(join(workspace, "lessons", "chess", "progress.md"), "utf8");

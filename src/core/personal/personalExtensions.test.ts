@@ -381,6 +381,33 @@ describe("PersonalExtensions live build loop (Step 4)", () => {
     }
   });
 
+  it("commits lesson turns that end together one after another, none failing on git's lock", async () => {
+    // INF-539: a choice the captain made while a lesson turn was finishing
+    // started the next turn as the last one's commit ran. The two commits
+    // raced for git's index lock, one failed on `index.lock: File exists`,
+    // and the first mate was woken about a lesson with nothing wrong.
+    const h = await harness();
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    const progress = (round: number) =>
+      `# Chess\nGoal: beat my dad at chess\n## Skills\n- rook slides | practising | round ${round}\n`;
+    try {
+      const reports = ["Round ready.", "Round ready.", "Progress saved.", "Round ready."];
+      const turns = reports.map((report, index) => {
+        h.write("lessons/chess/progress.md", progress(index + 1));
+        return service.commitTurn("t-lesson", report);
+      });
+      // A turn whose commit lost the race rejects with git's words.
+      const commits = await Promise.all(turns);
+      expect(commits.some((commit) => commit.committed)).toBe(true);
+      const workspace = (...args: string[]) =>
+        execFileSync("git", ["-C", h.workspaceDir, ...args], { encoding: "utf8" });
+      expect(workspace("show", "HEAD:lessons/chess/progress.md")).toBe(progress(reports.length));
+      expect(workspace("status", "--porcelain")).toBe("");
+    } finally {
+      service.dispose();
+    }
+  });
+
   it("lints one extension or every touched one, naming the compiler's verdict, and refuses a capture without a host", async () => {
     const h = await harness();
     h.write("good/panel.tsx", PANEL);

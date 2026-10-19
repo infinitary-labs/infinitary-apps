@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "now-panel-press-after-card-appears",
+      "reason": "Test only: the Tasks panel journey now waits for the decision card a row brought forward to appear before it presses another row. The card takes focus as it appears, and a press made before then lost its click, so on hosted Linux no record opened. No shipped behavior changed."
+    }
+  ]
+}

@@ -37,7 +37,7 @@ import {
   taskFact,
   taskKey,
 } from "./rails";
-import { closeOpenCards, pager, showCard, shownCard } from "./stack";
+import { closeOpenCards, pager, showCard, shownCard, shownEntry } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressKey } from "./windowKeys";
 
@@ -357,6 +357,12 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
       await expect(shownCard(page, card.title)).toHaveCount(0);
       await pressRow(page, key);
       await expect(shownCard(page, card.title)).toBeVisible();
+      // The card appears once its body has drawn, and only then takes the
+      // window's focus (`focusCard`); until then the card it replaces stays
+      // in sight. The captain presses the next row once it has appeared: a
+      // press before then loses its click when the card takes focus between
+      // the press's focus and its click, so no record opens (INF-532).
+      await expect(shownEntry(page)).toHaveCSS("opacity", "1");
       await expect(recordCard(page)).toHaveCount(0);
 
       // Unrelated work still opens its record without disturbing the choices.

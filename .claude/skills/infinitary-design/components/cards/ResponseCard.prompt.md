@@ -227,6 +227,7 @@ Hide only hides; the saved card, its thread and its record keep everything.
 
 - **PAST strip.**
   The first row, `--text-xs` mono `--fg-3`, uppercase: a `PAST` mark in `--accent`, the task key where the card has a task, then how it ended and when: `You chose Approve and build`, `Closed without choosing`, `Withdrawn by its author`, `Taken down when the task ended`, `Taken down by the app`, `Closed as a duplicate`; the time reads absolute (`2 Oct, 18:14`).
+  `You chose` is only the captain's own click on a footer button; a choice the body's own script made reads in its card author's name, `Your first mate chose Keep this chart` or `Its crewmate chose Keep this chart`.
   The strip carries no button but Hide.
   Words: past card, never version, lifecycle or resolution.
 - **The body is the version the captain last saw**, in the normal card frame, with its figures and pictures.

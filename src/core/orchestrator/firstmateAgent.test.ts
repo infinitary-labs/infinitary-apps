@@ -1172,6 +1172,27 @@ describe("FirstmateAgent", () => {
     expect(turn.split("[user]\n")[1]).toBe("build this plan again");
   });
 
+  // INF-500: a body script's choice read as the captain's in the turn context.
+  it("tells the turn a closed card's script choice was its author's, never the captain's", async () => {
+    const { agent, session, supervisor } = setup();
+    const id = supervisor.addFirstmateCard({
+      title: "Read the harbour chart",
+      body: "<p>The survey is ready.</p>",
+      actions: [{ id: "keep", label: "Keep this chart", default: true }],
+    });
+    supervisor.act(id, "keep", "frame");
+    await drained(session, 1);
+    session.emitTurnEnd("Kept the chart.");
+    session.resolveNextPrompt();
+    expect(supervisor.cardPast(id)?.ending).toMatchObject({ how: "chose", by: "frame" });
+    await agent.converse({ text: "why was this kept?", pastCardId: id });
+    expect(decodeContext(session.prompts.at(-1) as string).about).toMatch(
+      new RegExp(
+        `^past card ${id} "Read the harbour chart" \\(Your first mate chose Keep this chart\\) - `,
+      ),
+    );
+  });
+
   it("ignores a pastCardId that was never saved", async () => {
     const { agent, session } = setup();
     await agent.converse({ text: "hello there", pastCardId: "card-gone" });

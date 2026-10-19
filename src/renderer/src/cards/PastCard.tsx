@@ -1,5 +1,5 @@
 import type { CardWidth, PastCard } from "@shared/cards";
-import { pastEndingWords } from "@shared/pastCard";
+import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
 import { HIDE_RECORD_LABEL } from "@shared/recordDrop";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -133,7 +133,7 @@ export function PastCardColumn({
     () => ({ fill: () => past.answers, onAnswers: noop, readOnly: true as const }),
     [past.answers],
   );
-  const strip = [taskKey, pastEndingWords(past.ending), pastTime(past.ending.at)]
+  const strip = [taskKey, pastCardEndingWords(past), pastTime(past.ending.at)]
     .filter(Boolean)
     .join(" · ");
   const endingCut = useCutWords(strip);

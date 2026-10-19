@@ -22,7 +22,7 @@ import {
   type PastEnding,
   replyWithSettings,
 } from "@shared/cards";
-import { pastEndingWords } from "@shared/pastCard";
+import { pastCardEndingWords } from "@shared/pastCard";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
 import type { AppDatabase } from "./db";
@@ -632,7 +632,7 @@ export class CardStore {
           kind: cardWord(past),
           title: past.title,
           state: "closed",
-          ending: pastEndingWords(past.ending),
+          ending: pastCardEndingWords(past),
           at: past.ending.at,
         },
       });

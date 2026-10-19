@@ -36,6 +36,7 @@ import {
   SETTLE_FACTS_OPEN,
   type SettleFact,
   type ShellEffect,
+  scriptChooser,
   settleEffectOf,
   type TaskLifecycleOp,
   type TaskMoveFrom,
@@ -9848,8 +9849,7 @@ export class CrewSupervisor {
       ...(valueJson !== undefined ? { frameValue: valueJson } : {}),
       ...(context ? { context } : { contextGap: decisionTaskId ? "task-missing" : "no-task" }),
     };
-    const by =
-      source === "chrome" ? "captain" : card.author === "crewmate" ? "crewmate" : "firstmate";
+    const by = source === "chrome" ? "captain" : scriptChooser(card.author);
     // Resolution records the choice and its true source, not operation
     // success. All actions retire their card before external work starts.
     // An answer task closes on this very resolution (Task B), so its

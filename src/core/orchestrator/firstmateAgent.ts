@@ -20,7 +20,7 @@ import type { FmEvent, FmUsage } from "@shared/events";
 import { forgePlace } from "@shared/forge";
 import type { ForgeSignInState } from "@shared/forges";
 import type { LastTurnReply } from "@shared/lastTurn";
-import { pastEndingWords } from "@shared/pastCard";
+import { pastCardEndingWords } from "@shared/pastCard";
 import { isRunawayProviderError, plainProblem } from "@shared/plainProblem";
 import {
   backendForProvider,
@@ -3210,7 +3210,7 @@ export class FirstmateAgent {
     const hinted = hintTaskId ? this.options.tasks.get(hintTaskId) : undefined;
     const past = pastCardId ? this.options.supervisor.cardPast(pastCardId) : undefined;
     const pastLine = past
-      ? `past card ${past.id} "${past.title}" (${pastEndingWords(past.ending)}) - the captain is reading it as history${
+      ? `past card ${past.id} "${past.title}" (${pastCardEndingWords(past)}) - the captain is reading it as history${
           hinted ? ` on ${hinted.key || hinted.id}` : ""
         }; it is closed and nothing on it can be clicked, so any change comes through your tools`
       : undefined;

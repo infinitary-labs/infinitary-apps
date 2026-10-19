@@ -1191,13 +1191,22 @@ describe("CardService evidence", () => {
     const withdrawn = cards.addFirstmateCard({ ...decision, id: "fm-w", taskId: "t1" });
     clock += 10;
     const open = cards.addFirstmateCard({ ...decision, id: "fm-o", taskId: "t1" });
+    clock += 10;
+    // INF-500: what CrewSupervisor.act hands over when the body's own script chose.
+    const scripted = cards.addFirstmateCard({ ...decision, id: "fm-s", taskId: "t1" });
     cards.resolve(cards.shown(chosen) as Card, "right", "right");
     cards.dismiss(cards.shown(dismissed) as Card);
     cards.close(withdrawn, { kind: "firstmate" }, "obsolete now");
+    cards.resolve(cards.shown(scripted) as Card, "left", "left", undefined, "firstmate", {
+      source: "frame",
+    });
 
+    // The receipt keeps the script's channel; the row credits the card's author.
+    expect(cardStore.past(scripted)?.ending).toMatchObject({ how: "chose", by: "frame" });
     expect(
       cardStore.forTask("t1").map((row) => [row.id, row.state, row.kind, row.ending ?? null]),
     ).toEqual([
+      [scripted, "closed", "decision", "Your first mate chose Left"],
       [open, "open", "decision", null],
       [withdrawn, "closed", "decision", "Withdrawn by its author"],
       [dismissed, "closed", "decision", "Closed without choosing"],

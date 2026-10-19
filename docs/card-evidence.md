@@ -56,6 +56,8 @@ The export reads past it: the episode schema does not carry it.
 ### The past card
 
 `CardStore.past` reads a closed card back for the stage (`inf:cards:past`, FI3-579): the newest `seen` offer on the card's lifecycle, else the offer its closing interaction chose from, else the newest offer, else the row itself; how it ended from the closing `action` or `exit` observation; the answers from that action (the row's `answers_json` as a fallback); and the thread.
+Its ending's `by` is that observation's actor, so a choice the body's own script made stays `frame`.
+`pastCardEndingWords` (`src/shared/pastCard.ts`) credits such a choice to the card's author by `scriptChooser`, the rule its resolution follows, so the past card, the record's Cards row and the first mate's turn never say the captain chose it.
 Its actions travel without their `effect`.
 It is a pure read: it records no observation, takes no turn and never reopens the card.
 
@@ -65,7 +67,7 @@ The first mate's call leaves one feed line and operation record; the captain's o
 What's new brings a closed release note forward the same way, broadcasting `past_card_shown` from `inf:release-notes:show` (`docs/release-notes.md` "Reading a note again").
 
 The record's Cards row (FI3-579 piece 1) lists a task's cards through `TaskDetail.cards`: `CardStore.forTask` reads the rows filed under the task plus the card ids its timeline names (`card_raised` / `card_resolved` refs, which reach a first mate decision's card that carries no task id), newest first.
-A closed card reads as the version last seen with `pastEndingWords`; an open one, a folded seen note included, reads "On the stage".
+A closed card reads as the version last seen with `pastCardEndingWords`; an open one, a folded seen note included, reads "On the stage".
 A purged card is absent.
 The row's link goes through the one door above for a closed card (`window.infinitary.cards.showPast`) and `focusCard` for an open one.
 The cross on a card writes one feed line, `You closed "<title>". It stays on KEY's record.`, from `CrewSupervisor.close`; a card with no record to point at keeps the plain "captain dismissed" line.

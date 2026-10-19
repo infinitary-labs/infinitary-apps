@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "past-card-script-choice",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Past cards no longer say you chose what a card chose itself",
+      "body": "When a card made a choice from inside its own content, its past card and its task's record said you chose it, and your first mate was told the same. They now name the card's author, such as Your first mate chose Keep this chart. A choice you make with the buttons at the foot of a card still reads You chose.",
+      "picture": {
+        "dark": "past-card-script-choice-dark.webp",
+        "light": "past-card-script-choice-light.webp",
+        "alt": "A past card's top line reads Your first mate chose Keep this chart above Read the harbour chart, with Keep this chart marked chosen"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

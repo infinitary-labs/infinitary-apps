@@ -1359,6 +1359,15 @@ export const CARD_OBSERVATION_ACTORS = [
 ] as const;
 export type CardObservationActor = (typeof CARD_OBSERVATION_ACTORS)[number];
 
+/**
+ * Who a choice by a body's own script is credited to: its card's author, and
+ * on a host card the first mate. The resolution and the past card's words
+ * both read it, so neither ever names the captain for a `frame` choice.
+ */
+export function scriptChooser(author: CardAuthor): "firstmate" | "crewmate" {
+  return author === "crewmate" ? "crewmate" : "firstmate";
+}
+
 /** The channel it came through, host-stamped. */
 export const CARD_OBSERVATION_SOURCES = [
   // The card's own footer buttons.

@@ -499,7 +499,7 @@ export const taskCardRowSchema = z.strictObject({
   state: z.enum(["open", "closed"]),
   /** Open but taken off the Mac stack by the captain. */
   minimized: z.literal(true).optional(),
-  /** How a closed card ended (`pastEndingWords`); absent while it is open. */
+  /** How a closed card ended (`pastCardEndingWords`); absent while it is open. */
   ending: z.string().optional(),
   /** When it ended, or when an open card was raised. */
   at: z.number(),

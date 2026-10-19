@@ -16701,6 +16701,96 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
+  it("reopens every trivial review cap on the first mate's steer without a captain gate (accepted INF-166 A)", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      // Two consecutive qualifying caps: the accepted answer explicitly removed once-only.
+      for (const [index, finding] of [
+        "F1 warning protocol version: raise the minor - auto-fix",
+        "F1 info PR description: say likely - ask-user",
+      ].entries()) {
+        const head = `${index}${HEAD.slice(1)}`;
+        vi.mocked(workspace.branchHead).mockResolvedValue(head);
+        tasks.recordDelivery(builderId, { reviewRounds: 2, reviewRoundSha: undefined });
+        await reportTurn(
+          reviewer,
+          reviewId,
+          `verdict: findings\n${finding}\nrisk: low - words and version.`,
+        );
+        expect(tasks.get(builderId)?.delivery).toMatchObject({
+          reviewRounds: 3,
+          reviewCapOwner: "firstmate",
+          reviewSha: head,
+        });
+        expect(tasks.get(builderId)?.gate).toBeNull();
+        expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
+          "review: findings (first mate can reopen)",
+        );
+        expect(ops.at(-1)).toContain("This hold is yours");
+        expect(ops.at(-1)).not.toContain('"held": "review-cap"');
+        await expect(supervisor.steerCrewmate(reviewId, "re-review")).rejects.toThrow("steer task");
+        await supervisor.steerCrewmate(builderId, "Apply the finding; say likely.");
+        await tick();
+        expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
+        expect(tasks.get(builderId)?.delivery?.reviewCapOwner).toBeUndefined();
+        expect(tasks.get(builderId)?.gate).toBeNull();
+        const resets = tasks.timeline(builderId).filter((event) => event.kind === "cap_reset");
+        expect(resets).toHaveLength(index + 1);
+        expect(resets.at(-1)).toMatchObject({ actor: "firstmate", feed: true });
+        const nextHead = `${index + 1}${HEAD.slice(1)}`;
+        vi.mocked(workspace.branchHead).mockResolvedValue(nextHead);
+        await supervisor.steerCrewmate(reviewId, `re-review at ${nextHead}`);
+        await tick();
+      }
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: pass\nNo findings.\nrisk: low - words and version.",
+      );
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
+      expect(tasks.get(reviewId)?.status).toBe("done");
+      // Delegation never releases a CI cap, even when both caps coexist.
+      tasks.recordDelivery(builderId, {
+        ciRounds: 3,
+        ciCapAt: Date.now(),
+        reviewRounds: 3,
+        reviewCapAt: Date.now(),
+        reviewCapOwner: "firstmate",
+      });
+      supervisor.holdForCiCap(builderId, { rounds: 3, headSha: HEAD });
+      await supervisor.steerCrewmate(builderId, "Apply another wording fix.");
+      await tick();
+      expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
+      expect(tasks.get(builderId)?.delivery?.ciRounds).toBe(3);
+      expect(tasks.get(builderId)?.gate?.reason).toBe("the CI cap");
+    } finally {
+      repo.dispose();
+    }
+  });
+
   describe("the served text of every cap wake (the typed envelope, P3)", () => {
     const heldBlock = (id: string, held: string) => `
 \`\`\`json
@@ -16824,6 +16914,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
             v: 1,
             facts: {
               kind: "review-cap",
+              owner: "captain",
               task: { id: builderId, title: "Fix the meter test" },
               rounds: 3,
               cap: 2,

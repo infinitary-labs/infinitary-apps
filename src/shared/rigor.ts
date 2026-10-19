@@ -292,6 +292,23 @@ export function parseReviewFindings(text: string): ReviewFinding[] {
   return findings;
 }
 
+/** INF-166 direction A: only the reviewer's typed facts route the cap.
+ * Unknown severity/action (or no readable findings) fails toward the captain.
+ * The captain chose this on every qualifying cap, not only the first.
+ */
+export function reviewCapOwner(findings: ReviewFinding[]): "firstmate" | "captain" {
+  return findings.length > 0 &&
+    findings.every(
+      ({ severity, action }) =>
+        (severity === "info" || severity === "warning") &&
+        (action === "auto-fix" ||
+          action === "no-op" ||
+          (severity === "info" && action === "ask-user")),
+    )
+    ? "firstmate"
+    : "captain";
+}
+
 /**
  * Whether a set of findings holds the merge (the no-mistakes blocking
  * rule, captain-approved 2026-09-19): an error or warning severity blocks,

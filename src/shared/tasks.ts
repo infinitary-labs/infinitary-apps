@@ -150,6 +150,7 @@ export const taskDeliveryViewSchema = z.object({
   /** The head the last COUNTED findings round read: a round is one per head. */
   reviewRoundSha: z.string().optional(),
   reviewCapAt: z.number().optional(),
+  reviewCapOwner: z.enum(["firstmate", "captain"]).optional(),
   /** The captain answered a Firstmate decision card on the task since the cap. */
   capAnsweredAt: z.number().optional(),
   /**

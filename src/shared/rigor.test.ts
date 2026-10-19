@@ -11,6 +11,7 @@ import {
   REVIEW_ROUND_CAP,
   type RigorInput,
   reportEvidenceHeadings,
+  reviewCapOwner,
   reviewCapReached,
   rigorFor,
   rigorRequiresEvidence,
@@ -304,5 +305,28 @@ describe("withoutIntentLead: a report's headline starts past its Intent section"
     expect(withoutIntentLead("Intentionally left the flag off.")).toBe(
       "Intentionally left the flag off.",
     );
+  });
+});
+
+// Accepted INF-166 A, with the captain's every-time reopening choice.
+describe("review cap ownership", () => {
+  it.each([
+    ["F1 info PR description: say likely - ask-user", "firstmate"],
+    ["F1 warning protocol version: raise the minor - auto-fix", "firstmate"],
+    ["F1 warning comment: optional wording - no-op", "firstmate"],
+    ["F1 error codesign requirement: missing equals - auto-fix", "captain"],
+    ["F1 warning evidence: run on the live Mac? - ask-user", "captain"],
+    ["F1 protocol version: raise the minor - auto-fix", "captain"],
+    ["F1 warning protocol version: missing action", "captain"],
+    ["", "captain"],
+  ])("routes %s to %s", (report, owner) => {
+    expect(reviewCapOwner(parseReviewFindings(report))).toBe(owner);
+  });
+  it("keeps a mixed round with a serious finding captain-owned", () => {
+    expect(
+      reviewCapOwner(
+        parseReviewFindings("F1 info wording - ask-user\nF2 error signing - auto-fix"),
+      ),
+    ).toBe("captain");
   });
 });

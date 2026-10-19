@@ -7,7 +7,8 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
-import { nowFrame, pressRow, recordFrame } from "./rails";
+import { regionShot } from "./pictures";
+import { dockRegion, nowFrame, pressRow, recordFrame } from "./rails";
 
 /**
  * A round cap is a hold on the task's gate (the primitives review, P2; the
@@ -93,6 +94,52 @@ test("a capped task with its decision card up waits on the captain; one without 
       document.getAnimations().every((animation) => animation.playState !== "running"),
     );
     await page.screenshot({ path: test.info().outputPath("cap-gate-record.png") });
+  } finally {
+    await launched.close();
+  }
+});
+
+// Accepted INF-166 A: a qualifying review cap belongs to the first mate,
+// every time; the captain's board must not call that task held or waiting.
+// Real saved delivery facts and the boot reconciler own this UI fact.
+test("a first-mate review cap stays working without a captain gate after launch", async () => {
+  const userDataDir = scratchDir("infinitary-delegated-cap-");
+  const db = openDatabase(userDataDir);
+  const tasks = new TaskService({ db });
+  const worktreeDir = join(userDataDir, "worktrees", "review-wording");
+  mkdirSync(worktreeDir, { recursive: true });
+  seedTask(tasks, {
+    id: "review-wording",
+    title: "Fix the review wording",
+    status: "completed",
+    worktreeDir,
+    outcome: "The reviewer asks to say likely in the pull request description.",
+  });
+  tasks.recordDelivery("review-wording", {
+    headSha: HEAD,
+    reviewRounds: 3,
+    reviewCapAt: Date.now(),
+    reviewCapOwner: "firstmate",
+    reviewVerdict: "findings",
+    reviewRoundSha: HEAD,
+  });
+  db.close();
+  const launched = await launchApp({ userDataDir });
+  try {
+    const { page } = launched;
+    const state = () =>
+      page.evaluate(async () => {
+        const board = await window.infinitary.tasks.board();
+        const task = board.tasks.find((entry) => entry.id === "review-wording");
+        return task ? { key: task.key, ...task.flags, card: task.waitingCardId } : null;
+      });
+    await expect.poll(state).toMatchObject({ held: false, needsYou: false, card: null });
+    const key = (await state())?.key ?? "";
+    await expect(
+      nowFrame(page).locator('[data-now-group="working"]').locator(`[data-now-key="${key}"]`),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await regionShot(dockRegion(page, "now"), test.info().outputPath("delegated-cap-working.png"));
   } finally {
     await launched.close();
   }

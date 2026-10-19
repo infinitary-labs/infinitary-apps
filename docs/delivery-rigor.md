@@ -318,19 +318,27 @@ The strict fresh all-current-checks-accepted gate (including the zero-check loca
 **Review rounds.**
 Every stated `findings` verdict at a head not yet counted is one round on the builder (`reviewRounds`; `reviewRoundSha` is the last counted head, so a repeated verdict at the same head records the verdict and spends nothing, and a verdict-less report spends nothing at all - the two shapes that produced the phantom rounds of 2026-09-19).
 The first round is the review itself, so the cap bounds the re-reviews after it (`REVIEW_ROUND_CAP`, 2): a third findings is one past it.
-That findings wake carries the cap - one wake, never a second - stamps `reviewCapAt`, and while it holds a steer to the review task (a re-review) is refused as text naming the way out; `crew_status` and the context crew lines say `review: findings (cap reached)`.
+That findings wake carries the cap - one wake, never a second - stamps `reviewCapAt` and `reviewCapOwner`, and while it holds a steer to the review task (a re-review) is refused as text naming the way out.
+The owner comes from the capping findings (`reviewCapOwner` in shared rigor): a nonempty round whose findings all have readable severity and action, no error, and no warning ask-user goes to the first mate.
+Info ask-user findings go to the first mate too.
+An error, a warning ask-user, an unreadable severity/action or no readable findings keeps the cap the captain's; older holds without an owner remain the captain's.
+`crew_status` names the first mate's hold as `review: findings (first mate can reopen)` and the captain's as `review: findings (cap reached)`.
+The typed cap wake names the owner; a first-mate hold carries no captain choices and tells the first mate to decide info asks and steer the builder with the fixes and its decision, without a cap card.
+That steer clears only the review counters and cap, records a first-mate `cap_reset` on the timeline and one feed line, and releases re-review.
+This happens every time the capping findings qualify, not only once per task (the captain's accepted INF-166 answer).
 
 **The answer reopens the rounds.**
 The captain answers the first mate's decision card on the task (`capAnsweredAt`, stamped by the captain's resolution of a first mate card there since the cap - a dismissal is not an answer), and the first mate's next steer to the task with that answer, or the captain's own steer, clears both counters and both caps together and writes one `cap_reset` timeline event (feed: no).
-A first mate steer before the answer reopens nothing.
+A first mate steer before the answer reopens no captain-owned cap.
 Supervision steers never do.
 
 **The caps are gates** (the primitives review's P2, captain-approved 2026-09-26).
-A cap is a wait on the captain by definition, so it is a hold on the gate the task already has rather than a second place a wait lives: while a cap stands (`ciCapAt` / `reviewCapAt` set and not answered since), the builder carries a `captain` gate, ref the head the cap was reached at and reason `the CI cap` / `the review cap` (`standingCap`, placed by `IdleLadder.syncCaptainGate`).
+A captain-owned cap is a hold on the gate the task already has rather than a second place a wait lives: while a CI cap or captain-owned review cap stands and is not answered since, the builder carries a `captain` gate, ref the head the cap was reached at and reason `the CI cap` / `the review cap` (`standingCap`, placed by `IdleLadder.syncCaptainGate`).
+A first-mate-owned review cap places no captain gate; its reopening cannot release a CI cap or any decision card's gate.
 When the first mate raises its decision card on the task the gate names that card; the captain's answer releases it (`capAnsweredAt` is the release), and the relaying steer clears the caps.
 A close is not an answer: the gate goes back to the head, and the idle clock restarts at the close.
 Rounds and heads stay delivery facts.
-So the board shows a capped task `held`, waiting on the captain once the card is up, and the idle ladder reads the gate instead of treating a capped crewmate as a stalled one (`docs/report-sort.md`).
+So the board shows a captain-capped task `held`, waiting on the captain once the card is up, and the idle ladder reads the gate instead of treating a capped crewmate as a stalled one (`docs/report-sort.md`).
 Migration 47 gave rows capped before this their gate (logged in `cap_gate_backfill`).
 
 The five headings stay required in the report and the PR body.
@@ -490,7 +498,8 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
   `tests/e2e/rigor-reviewed.spec.ts` is the binding test.
 - The tier as a record, with host holds (delivery rigor phase 3; `docs/delivery-rigor.md` "The record and its holds"): a repository's standing rigor is `repos.rigor` (migration 36; null = derive), set by talking through `app_change project-settings` with `changes.rigor` of `quick`, `standard`, `reviewed`, or `default` (`configure_repo` is retired) or Settings → Projects - the `project settings` feed line names the care only when set.
   The round caps are RECORDS on the builder's delivery facts: `observeCheckRepair` counts one CI round only for an unsuccessful declared own repair (`ciRounds`; a passing repair spends nothing, and a legacy uncapped red-head count is archived rather than charged; a crewmate's `check_change` and the host's watch write the same ledger), stamps `ciCapAt` once at `CI_ROUND_CAP` (3) and tells `CrewSupervisor.holdForCiCap` through the `onCap` seam - ONE `[fm-op]`, and `pendingCiGate` refuses the completion card while the cap holds, even on a green reading, before any gh call; every stated `findings` verdict at a head not yet counted is a `reviewRounds` round (`reviewRoundSha` is the last counted head - a repeat at the same head records the verdict and spends nothing) and the third is one past `REVIEW_ROUND_CAP` (2): that findings wake carries the cap (never a second wake), `reviewCapAt` holds, and a steer to the review task is refused as text naming the door.
-  The answer is the captain's resolution of a first mate card on the task since the cap (`capAnsweredAt`; a dismissal is not one) followed by a first mate or captain steer to the task, which clears both counters and both caps together in one `cap_reset` timeline event; a first mate steer before the answer reopens nothing.
+  The answer is the captain's resolution of a first mate card on the task since the cap (`capAnsweredAt`; a dismissal is not one) followed by a first mate or captain steer to the task, which clears both counters and both caps together in one `cap_reset` timeline event; a first mate steer before the answer reopens no captain-owned cap.
+  First-mate-owned review caps instead reopen only the review counters on the first mate's steer, without a captain answer, as described under "Review rounds".
   The evidence contract was linted at the crewmate card boundary (`lintCrewmateCard` with the task's rigor) until contract v3.6 removed that rule and the rigor option with it (captain lock 3: the card was the third copy of a record the report and the PR body already carried); the five headings stay REQUIRED in the report and the PR body, and the task's holds (the personal workspace, an unpassed review, a standing CI cap) still speak before the shape rules.
   Reviewer placement (Q5): `Router.decide` takes `avoidProvider` on a review task - the builder's provider off its newest `routing_decisions` row (`Router.servedProvider`) - prefers another signed-in provider at the same tier, falls back with the reason recorded, never descends a tier, and records rule `R9`; the replay scorer keys on `kind_source`, so the new rule id needs no tolerance there.
   Observe's crewmate header renders rigor, review verdict/risk and the reviewed builder; the C5 join carries `review_of`/`review_verdict`/`review_risk`, null on a pre-phase-2 database.

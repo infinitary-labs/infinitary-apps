@@ -4,6 +4,9 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
+Protocol 9.3 adds optional `reviewCapOwner` to task delivery facts: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the existing captain hold.
+Older readers ignore the optional field; the home owns routing and gate enforcement.
+
 Protocol 5.0 adds the project-change card’s apply and decline host ops, and optional name, path and origin fields to project configuration.
 The closed host-op enum requires a major change; project configuration retains its policy fields.
 Protocol 5.0 also adds `request_write` to a card action's effect: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").

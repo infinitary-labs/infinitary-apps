@@ -119,6 +119,7 @@ import {
   parseReviewReport,
   REVIEW_ROUND_CAP,
   type Rigor,
+  reviewCapOwner,
   reviewCapReached,
 } from "@shared/rigor";
 import type { RiskAssessment } from "@shared/risk";
@@ -3331,7 +3332,10 @@ export class CrewSupervisor {
     // The review cap (phase 3) outranks the open review: the reviewer may
     // still be idle on the task, but no re-review goes out until the
     // decision the cap asked for is answered.
-    if (record.delivery?.reviewCapAt !== undefined) return "review: findings (cap reached)";
+    if (record.delivery?.reviewCapAt !== undefined)
+      return record.delivery.reviewCapOwner === "firstmate"
+        ? "review: findings (first mate can reopen)"
+        : "review: findings (cap reached)";
     const open = this.openReviewOf(record.id);
     if (open) return `review open (${open.key || open.id})`;
     if (verdict) return `review: ${verdict}`;
@@ -5992,7 +5996,15 @@ export class CrewSupervisor {
       briefed: builder.shape?.rigor === "reviewed",
     };
     this.hooks.notifyOp(
-      capped ? this.ladder.holdForReviewCap(builder, rounds, at, verdict) : { facts: verdict },
+      capped
+        ? this.ladder.holdForReviewCap(
+            builder,
+            rounds,
+            at,
+            verdict,
+            reviewCapOwner(parsed.findings),
+          )
+        : { facts: verdict },
       "crewmate-report",
       task.id,
     );
@@ -6174,7 +6186,7 @@ export class CrewSupervisor {
     const reviewBuilder = this.reviewBuilderOf(this.options.tasks.get(taskId));
     if (reviewBuilder && reviewBuilder.delivery?.reviewCapAt !== undefined) {
       throw new Error(
-        `Task ${taskId} is the review of task ${reviewBuilder.id}, which hit its review cap (${reviewBuilder.delivery.reviewRounds ?? 0} findings rounds; the cap is ${REVIEW_ROUND_CAP} re-reviews): no re-review goes out until the captain answers the decision card on task ${reviewBuilder.id} and you steer task ${reviewBuilder.id} with the answer, which reopens the rounds.`,
+        `Task ${taskId} is the review of task ${reviewBuilder.id}, which hit its review cap (${reviewBuilder.delivery.reviewRounds ?? 0} findings rounds; the cap is ${REVIEW_ROUND_CAP} re-reviews): ${reviewBuilder.delivery.reviewCapOwner === "firstmate" ? `steer task ${reviewBuilder.id} with the fixes or your decision to reopen its rounds before re-reviewing` : `no re-review goes out until the captain answers the decision card on task ${reviewBuilder.id} and you steer task ${reviewBuilder.id} with the answer, which reopens the rounds.`}`,
       );
     }
     // The captain's close of a card is not his answer to a cap.

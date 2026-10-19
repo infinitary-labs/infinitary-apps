@@ -307,6 +307,8 @@ export type TaskDelivery = {
   /** The head the last COUNTED findings round read: a round is one per head. */
   reviewRoundSha?: string;
   reviewCapAt?: number;
+  /** Absent on older holds: those remain captain-owned. */
+  reviewCapOwner?: "firstmate" | "captain";
   capAnsweredAt?: number;
   /**
    * The host's watch on the change's checks (docs/forge.md, "The check
@@ -419,7 +421,8 @@ export type CiWatch = {
 
 /**
  * A round cap that stands on a builder: placed (`ciCapAt` / `reviewCapAt`)
- * and not yet answered (`capAnsweredAt`). It is what places the builder's
+ * and not yet answered (`capAnsweredAt`), excluding first-mate review holds.
+ * It is what places the builder's
  * `captain` gate when no card is up (docs/delivery-rigor.md, "The caps"):
  * `reason` is the gate's, `head` its ref - the head the cap was reached at.
  */
@@ -427,7 +430,7 @@ export type StandingCap = { held: "ci-cap" | "review-cap"; reason: string; head?
 
 export function standingCap(delivery: TaskDelivery | null | undefined): StandingCap | undefined {
   const ciAt = delivery?.ciCapAt;
-  const reviewAt = delivery?.reviewCapAt;
+  const reviewAt = delivery?.reviewCapOwner === "firstmate" ? undefined : delivery?.reviewCapAt;
   if (!delivery || (ciAt === undefined && reviewAt === undefined)) return undefined;
   const capAt = Math.max(ciAt ?? 0, reviewAt ?? 0);
   if (delivery.capAnsweredAt !== undefined && delivery.capAnsweredAt >= capAt) return undefined;

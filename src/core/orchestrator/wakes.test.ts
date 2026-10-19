@@ -268,6 +268,30 @@ describe("renderWake", () => {
     expect(capped).toContain('"held": "review-cap"');
   });
 
+  it("serves delegated review caps without captain choices and preserves legacy captain wakes (INF-166)", () => {
+    const task = { id: "t1", title: "Fix the pin" };
+    const wake = reviewCapWake(task, {
+      rounds: 3,
+      cap: 2,
+      owner: "firstmate",
+      findings: {
+        kind: "review-verdict",
+        task: { id: "r1", title: "Review" },
+        builder: task,
+        crewmate: "crewmate 2",
+        verdict: "findings",
+        excerpt: "F1 info say likely - ask-user",
+        cards: [],
+      },
+    });
+    expect(wake.facts).toMatchObject({ owner: "firstmate" });
+    expect(wake.ways).toBeUndefined();
+    expect(renderWake(wake)).toContain("your steer reopens the review rounds, every time");
+    expect(renderWake({ facts: { kind: "review-cap", task, rounds: 3, cap: 2 } })).toContain(
+      "until the captain answers",
+    );
+  });
+
   it("words each reviewed-tier step on the wake it arises on (FI3-566 cut C)", () => {
     const task = { id: "t1", title: "Fix the pin" };
     const review = { id: "r1", title: "Review: Fix the pin" };

@@ -320,6 +320,8 @@ export type WakeFacts =
   | {
       /** The review round cap was reached: it rides the findings wake that reached it. */
       kind: "review-cap";
+      /** Missing on queued legacy wakes means captain. */
+      owner?: "firstmate" | "captain";
       /** The task under review, which the cap holds. */
       task: WakeTask;
       /** Findings rounds counted, and the re-reviews the cap allows. */
@@ -1186,7 +1188,12 @@ export function ciCapWake(
 /** The findings wake that reached the review cap, with the cap riding it. */
 export function reviewCapWake(
   builder: WakeTask,
-  facts: { rounds: number; cap: number; findings: ReviewVerdictFacts },
+  facts: {
+    rounds: number;
+    cap: number;
+    findings: ReviewVerdictFacts;
+    owner?: "firstmate" | "captain";
+  },
   premiumCanServe = true,
 ): TypedWake {
   return {
@@ -1196,8 +1203,11 @@ export function reviewCapWake(
       rounds: facts.rounds,
       cap: facts.cap,
       findings: facts.findings,
+      owner: facts.owner ?? "captain",
     },
-    ways: crewHoldWays(builder.id, builder, undefined, premiumCanServe),
+    ...(facts.owner === "firstmate"
+      ? {}
+      : { ways: crewHoldWays(builder.id, builder, undefined, premiumCanServe) }),
   };
 }
 
@@ -1485,6 +1495,9 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ),
       );
     case "review-cap":
+      if (facts.owner === "firstmate") {
+        return `${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")} This is findings round ${facts.rounds} on task ${facts.task.id}, past the review cap of ${facts.cap} re-reviews. This hold is yours: no finding needs a captain decision. Decide info ask-user findings yourself and steer the builder with the fixes and your decision; your steer reopens the review rounds, every time the capping findings qualify. Do not ask the captain about this cap. ${REVIEWER_IDLE_NEXT}`;
+      }
       return `${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")}${renderHold(
         hold(
           "review-cap",

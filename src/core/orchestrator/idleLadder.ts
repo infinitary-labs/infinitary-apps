@@ -1227,22 +1227,23 @@ export class IdleLadder {
   /**
    * The review cap (phase 3), the CI cap's twin: a third findings verdict
    * is one past the two re-reviews the tier allows. Stamps `reviewCapAt`
-   * on the builder, which places its captain gate, and returns the
+   * on the builder with its owner (legacy absence means captain), and returns the
    * `findings` wake with the cap riding it, so the cap is one wake and not
    * a second; a re-review steer to the review task is refused while it
-   * holds.
+   * holds. Only a captain-owned cap places the captain gate.
    */
   holdForReviewCap(
     builder: TaskRecord,
     rounds: number,
     at: number,
     findings: ReviewVerdictFacts,
+    owner: "firstmate" | "captain" = "captain",
   ): TypedWake {
-    this.host.tasks.recordDelivery(builder.id, { reviewCapAt: at });
+    this.host.tasks.recordDelivery(builder.id, { reviewCapAt: at, reviewCapOwner: owner });
     this.syncCaptainGate(builder.id, at);
     return reviewCapWake(
       builder,
-      { rounds, cap: REVIEW_ROUND_CAP, findings },
+      { rounds, cap: REVIEW_ROUND_CAP, findings, owner },
       this.host.premiumCanServe?.(),
     );
   }
@@ -1291,6 +1292,30 @@ export class IdleLadder {
     const record = this.host.tasks.get(taskId);
     const delivery = record?.delivery;
     if (!record || !delivery) return;
+    // Delegated review caps never authorize reopening the independent CI cap.
+    if (
+      actor === "firstmate" &&
+      delivery.reviewCapAt !== undefined &&
+      delivery.reviewCapOwner === "firstmate"
+    ) {
+      this.host.tasks.recordDelivery(
+        taskId,
+        {
+          reviewRounds: undefined,
+          reviewRoundSha: undefined,
+          reviewCapAt: undefined,
+          reviewCapOwner: undefined,
+        },
+        {
+          kind: "cap_reset",
+          actor,
+          feed: true,
+          text: "The first mate reopened the review rounds: the findings need no captain decision.",
+        },
+      );
+      this.syncCaptainGate(taskId, this.host.now());
+      return;
+    }
     const capAt = Math.max(delivery.ciCapAt ?? 0, delivery.reviewCapAt ?? 0);
     if (capAt === 0) return;
     const answered =
@@ -1313,6 +1338,7 @@ export class IdleLadder {
         reviewRounds: undefined,
         reviewRoundSha: undefined,
         reviewCapAt: undefined,
+        reviewCapOwner: undefined,
         capAnsweredAt: undefined,
       },
       {

@@ -45,7 +45,7 @@ import {
   taskKey,
   taskLine,
 } from "./rails";
-import { cardSurface, showCard, shownCard } from "./stack";
+import { cardSurface, showCard, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
 /**
@@ -463,9 +463,18 @@ test("while a decision card waits the bar keeps Drop task, and Show the card bri
 });
 
 /**
+ * How long a record whose body frame has not drawn stays unseen before it
+ * appears as it is: the stage's hold, the frame watchdog's budget
+ * (`HOLD_LIMIT_MS`, FRAME_WATCHDOG_INTERVAL_MS x FRAME_WATCHDOG_MISSES),
+ * plus slack.
+ */
+const RECORD_HOLD_WINDOW_MS = 1_000 * 4 + 3_000;
+
+/**
  * Holds every mount of a record's body frame (`inf:frames:mount`) until the
  * returned release, which serves them and puts the app's own handler back:
- * the record reveals on its own facts while its body cannot load, so a press
+ * the record waits for its body to draw (INF-510) and, when its hold ends
+ * with the body still unable to load, appears as it is (FI3-948), so a press
  * goes down before that frame draws and grows the card, in order, never by
  * timing it. Every other frame mounts as usual.
  */
@@ -504,17 +513,20 @@ async function holdRecordBodies(app: ElectronApplication): Promise<() => Promise
 }
 
 test("a press on the bar that goes down before the record's body draws lands on its control", async () => {
-  // INF-204: the record reveals before its body frame draws, and that frame
-  // then grows the card at once, with no easing. The card holds still under
-  // the press, as it does while it eases, so the release lands where the
-  // press went down; then the card settles at its grown height.
+  // INF-204: a record whose body frame has not drawn when its hold ends
+  // appears without it, and that frame then grows the card at once, with no
+  // easing. The card holds still under the press, as it does while it eases,
+  // so the release lands where the press went down; then the card settles at
+  // its grown height.
   const { app, page } = launched;
   const serveBodies = await holdRecordBodies(app);
   let down = false;
   try {
     await pressRow(page, keys["rc-press"] as string);
     await expect(pane(page)).toHaveAttribute("data-task-record", "rc-press");
-    await expect(pane(page)).toHaveCSS("opacity", "1");
+    // It appears, its body still pending, once its hold ends: until then the
+    // card it replaces stays in sight and takes the press.
+    await expect(shownEntry(page)).toHaveCSS("opacity", "1", { timeout: RECORD_HOLD_WINDOW_MS });
     const body = pane(page).locator("[data-record-body]");
     await expect(body.locator("[data-frame-mount-pending]")).toBeVisible();
     await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);

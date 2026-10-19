@@ -14,6 +14,17 @@ What reads them is `CrewSupervisor.reconcileIdle` and the crew line's `stalled` 
 `device_id` (migration 63, written only by `TaskService.setDevice`) names the paired computer that runs work holding the task's conversation, and null is this Mac (`docs/helper.md`, "The home's side").
 Such a row has no working copy here, so the boot keeps it active once its conversation was recorded (`sessionFile`) rather than by its `worktreeDir`, never marks its turn interrupted, and reads it as resumable whatever its activity: a turn it was running went on there.
 
+## A folder a merge left behind
+
+After a merge the host brings the project's folder up to date only by fast-forwarding a clean folder on its default branch (`WorkspaceService.refreshManagedCheckout`); any other state is refused with a typed cause (`FolderRefreshCause`, `src/shared/folderRefresh.ts`, which owns its words), such as edits of its own, another branch, no branch, a failed fetch or a diverged default branch (INF-549).
+A refusal is kept on the merged task's record as a note naming the cause, the branch, the merged version and origin's version as last read (`data.folderRefresh`); on the first mate's own settle that note is the Activity line, and on the captain's click the settle's own line already carries the same sentence.
+The host then files one task under the project, "Bring the folder up to date", and starts it the way a when-ready task starts, with no reminder or card of its own (`CrewSupervisor.fileFolderRepair`).
+Its shape carries the facts as `in_place`, a host stamp: the crewmate's working directory is the folder itself, with no working copy and no branch, and the task ships nothing, so it has no delivery, rigor or autonomy, no delivery tools and no completion decision, and it runs on this Mac whatever the project's Runs on says.
+Its brief is filled from those facts at each start (`renderFolderRepairBrief`): the crewmate judges whether the folder is safe to bring up to date, may set edits aside on a backup branch or a stash, and asks the captain on a card before it discards or overwrites anything, moves the folder off its default branch, pushes or opens a pull request.
+A later refusal on the same project while that task is open or active updates its facts, notes it, and tells its crewmate; it files nothing new.
+Once a minute the host reads each such folder without changing it (`WorkspaceService.folderCurrent`), and a task whose folder is clean, on its default branch and at or past the merged version closes as finished with a line saying so, unless its crewmate is mid-turn or one of its cards is up (`CrewSupervisor.closeCurrentFolders`).
+Removing a working copy never touches a directory that is the repository itself, so a failed start of a task that works in place leaves the folder as it was.
+
 ## Derived, never stored: the basis and the review join
 
 The record keeps no stamp of a fact the graph already holds (migration 46 removed the two it had).

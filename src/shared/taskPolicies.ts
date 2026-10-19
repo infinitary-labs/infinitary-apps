@@ -30,6 +30,8 @@ export type PolicyRecord = {
     autonomy_ask?: boolean;
     rigor_ask?: NonNullable<RepoView["rigor"]>;
     policies?: TaskPolicyState;
+    /** Present on a task that works in place in its project's folder: it ships nothing. */
+    in_place?: object;
   } | null;
 };
 const sourceSchema = z.enum(["task", "project"]);
@@ -56,6 +58,7 @@ export function effectiveTaskPolicies(
     (record.kind !== undefined && record.kind !== "work") ||
     shape?.kind === "review" ||
     shape?.deliverable === "answer" ||
+    shape?.in_place !== undefined ||
     repo?.kind === "personal"
   )
     return null;

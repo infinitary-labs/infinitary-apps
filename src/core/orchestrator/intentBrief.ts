@@ -1,6 +1,7 @@
+import { folderRefreshWords } from "@shared/folderRefresh";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
-import type { Deliverable, WorkKind } from "@shared/routingPolicy";
+import type { Deliverable, InPlaceFacts, WorkKind } from "@shared/routingPolicy";
 
 /**
  * spawn_crewmate v2's structured intent and its fixed rendering (contract
@@ -788,6 +789,48 @@ export function renderRepairAssessmentBrief(facts: RepairAssessmentFacts): strin
     "The crewmate's account of the repair:",
     `Evidence: ${facts.evidence}`,
     `Validation at ${facts.toHead}: ${facts.validation}`,
+  ].join("\n");
+}
+
+/** The title of the task the host files for a folder a merge left behind (INF-549). */
+export const FOLDER_REPAIR_TITLE = "Bring the folder up to date";
+
+/** How the in-place brief's own sentence opens; a scripted stand-in tells it by this. */
+export const IN_PLACE_OPENING = "You work in place";
+
+/**
+ * The brief of the task the host files when it could not bring a project's
+ * folder up to date after a merge (INF-549, approved by the captain): every
+ * line is filled from the facts on the record, modelled on INB-9's
+ * hand-written brief without its delivery line. It names no delivery, no
+ * pull request and no completion decision, because the task ships nothing.
+ */
+export function renderFolderRepairBrief(
+  facts: InPlaceFacts & { project: string; folder: string },
+): string {
+  const branch = facts.branch ?? "the default branch";
+  const reach = facts.reach ?? `origin's ${branch} as you fetch it`;
+  return [
+    `Goal: bring the folder of ${facts.project} at ${facts.folder} up to date: checked out on its default branch${facts.branch ? ` ${facts.branch}` : ""}, with no uncommitted edits, and at or past ${reach}.`,
+    "",
+    `Infinitary filed this task itself. ${facts.after ? `After it merged ${facts.after}` : "After a merge"}, it could not bring the project's folder up to date: ${folderRefreshWords(facts.cause)}. It only ever fast-forwards a clean folder on its default branch, so the rest is yours to judge.`,
+    "",
+    "Facts:",
+    `- Project: ${facts.project}`,
+    `- Folder: ${facts.folder}`,
+    `- Default branch: ${facts.branch ?? "not named by where the project lives"}`,
+    `- Merged version: ${facts.reach ?? "not known"}`,
+    `- ${branch} where the project lives, as last read: ${facts.remote ?? "not read"}`,
+    `- Why it was not brought up to date: ${folderRefreshWords(facts.cause)}`,
+    "",
+    `${IN_PLACE_OPENING}: your working directory is this folder itself, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+    `Read the folder first: its status, the branch it is on, its stashes, and how its ${branch} compares with origin's.`,
+    `Judge whether it is safe to bring up to date. A clean folder on ${branch} only needs a fetch and a fast-forward.`,
+    `Uncommitted edits or unpushed commits are the captain's: set them aside safely, on a backup branch or a stash with a message naming this task, then bring ${branch} up to date, and report exactly what you set aside and where.`,
+    "Never do any of these without the captain's word on a card: discard or overwrite uncommitted edits or unpushed commits, switch the folder off its default branch, push, or open a pull request. Setting edits aside on a backup branch or a stash is allowed.",
+    "When something of the captain's would have to go, or you cannot tell whether it is safe, ask him on a card before you change anything.",
+    "If you can tell, say what put the folder in that state.",
+    `Once the folder is clean, on ${branch} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
   ].join("\n");
 }
 

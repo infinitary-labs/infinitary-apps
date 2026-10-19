@@ -698,6 +698,102 @@ describe("refreshManagedCheckout", () => {
     expect(await workspace.refreshManagedCheckout(local)).toMatchObject({ refreshed: false });
     expect(await git(local, ["status", "--porcelain"])).toContain("dirty.txt");
   });
+
+  /**
+   * INF-549, the captain's words: "when a project folder couldn't be brought
+   * up to date ... this needs to be corrected durably". The refusal names
+   * which state stopped it, so the task the host files can say so.
+   */
+  describe("names why a folder was not brought up to date", () => {
+    async function behindOrigin() {
+      const { workspace } = await service();
+      const remote = join(scratchDir("infinitary-refresh-remote-"), "remote.git");
+      await git(dirname(remote), ["init", "--bare", remote]);
+      const local = await workspace.ensureDefaultRepo();
+      await git(local, ["remote", "add", "origin", remote]);
+      await git(local, ["push", "-u", "origin", "main"]);
+      await git(local, ["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"]);
+      const commit = (message: string) =>
+        git(local, [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.com",
+          "commit",
+          "--allow-empty",
+          "-m",
+          message,
+        ]);
+      await commit("feat: the merged change");
+      await git(local, ["push", "origin", "main"]);
+      const merged = await git(local, ["rev-parse", "HEAD"]);
+      await git(local, ["reset", "--hard", "HEAD~1"]);
+      return { workspace, local, merged, commit };
+    }
+
+    it("edits of its own", async () => {
+      const { workspace, local, merged } = await behindOrigin();
+      writeFileSync(join(local, "draft.txt"), "the captain's draft\n");
+      expect(await workspace.refreshManagedCheckout(local)).toEqual({
+        refreshed: false,
+        cause: "dirty",
+        branch: "main",
+        remote: merged,
+      });
+      expect(await git(local, ["status", "--porcelain"])).toContain("draft.txt");
+    });
+
+    it("another branch, and no branch", async () => {
+      const { workspace, local } = await behindOrigin();
+      await git(local, ["checkout", "-b", "spike"]);
+      expect(await workspace.refreshManagedCheckout(local)).toMatchObject({
+        cause: "other-branch",
+        branch: "main",
+      });
+      await git(local, ["checkout", "--detach"]);
+      expect(await workspace.refreshManagedCheckout(local)).toMatchObject({ cause: "detached" });
+    });
+
+    it("commits that are not where the project lives", async () => {
+      const { workspace, local, merged, commit } = await behindOrigin();
+      await commit("chore: only in the folder");
+      expect(await workspace.refreshManagedCheckout(local)).toEqual({
+        refreshed: false,
+        cause: "diverged",
+        branch: "main",
+        remote: merged,
+      });
+    });
+
+    it("never removes the folder a task worked in place in", async () => {
+      // A folder repair starts in the project's own folder (INF-549); a
+      // failed start hands that folder back as its "worktree".
+      const { workspace, local } = await behindOrigin();
+      writeFileSync(join(local, "draft.txt"), "the captain's draft\n");
+      await workspace.removeTaskWorktree({
+        taskId: "fold1111",
+        cwd: local,
+        branch: "",
+        repoDir: local,
+      });
+      expect(readFileSync(join(local, "draft.txt"), "utf8")).toBe("the captain's draft\n");
+      expect(await git(local, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
+    });
+
+    it("reads the folder current only when clean, on the branch and at or past the merged version", async () => {
+      const { workspace, local, merged } = await behindOrigin();
+      expect(await workspace.folderCurrent(local, "main", merged)).toBe(false);
+      await git(local, ["merge", "--ff-only", merged]);
+      writeFileSync(join(local, "draft.txt"), "the captain's draft\n");
+      expect(await workspace.folderCurrent(local, "main", merged)).toBe(false);
+      rmSync(join(local, "draft.txt"));
+      expect(await workspace.folderCurrent(local, "main", merged)).toBe(true);
+      // With no merged version known, origin's branch as last fetched stands in.
+      expect(await workspace.folderCurrent(local, "main")).toBe(true);
+      await git(local, ["checkout", "-b", "spike"]);
+      expect(await workspace.folderCurrent(local, "main", merged)).toBe(false);
+    });
+  });
 });
 
 describe("landTaskWork (Q5, forge-agnostic local landing)", () => {

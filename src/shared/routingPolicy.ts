@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { crewSpeedSchema } from "./crewSpeed";
+import { folderRefreshCauseSchema } from "./folderRefresh";
 import {
   type IntelligenceBucket,
   intelligenceBucketSchema,
@@ -220,8 +221,31 @@ export const workShapeSchema = z.object({
    * confidence, on the captain's call.
    */
   kind_detail: z.string().optional(),
+  /**
+   * The host filed this task to work in place, in its project's own folder,
+   * with no working copy, branch, pull request or completion decision
+   * (INF-549, docs/task-record.md "A folder a merge left behind"). It
+   * carries the facts the folder was refused on: the default branch, the
+   * merged version the folder must reach (`reach`), origin's default branch
+   * as last read (`remote`) and the typed cause. The host renders the brief
+   * from them, and closes the task once the folder is clean, on `branch`
+   * and at or past `reach`. Only the host writes it.
+   */
+  in_place: z
+    .object({
+      /** Absent when origin was missing or named no default branch. */
+      branch: z.string().optional(),
+      reach: z.string().optional(),
+      remote: z.string().optional(),
+      cause: folderRefreshCauseSchema,
+      /** The merged task whose refresh was refused, by key. */
+      after: z.string().optional(),
+    })
+    .optional(),
 });
 export type WorkShape = z.infer<typeof workShapeSchema>;
+/** The in-place facts on a work shape (`WorkShape.in_place`). */
+export type InPlaceFacts = NonNullable<WorkShape["in_place"]>;
 
 /**
  * Fields on a work shape a person owns. A host stamp never writes these.
@@ -255,6 +279,7 @@ export const HOST_STAMP_FIELDS = [
   "escalation",
   "rigor",
   "autonomy",
+  "in_place",
 ] as const satisfies readonly (keyof WorkShape)[];
 
 /**

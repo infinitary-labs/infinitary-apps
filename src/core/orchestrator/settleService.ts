@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type Card, settleEffectOf } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
+import type { FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
 import type { MergeRelationship } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
@@ -41,7 +42,12 @@ import {
 } from "./mergeAuthorization";
 import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
 import { reviewCoversHead } from "./reviewCarry";
-import { cannotMergeText, discardedText, unlandedWorkText } from "./settleWords";
+import {
+  cannotMergeText,
+  discardedText,
+  folderNotUpdatedText,
+  unlandedWorkText,
+} from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
 
 /**
@@ -259,6 +265,14 @@ export type SettleServiceHost = {
    * when it stopped or ran past its bound without answering.
    */
   assessRepair?: (taskId: string) => void;
+  /**
+   * A merge's project folder could not be brought up to date: the supervisor
+   * files the task that does it, or updates the one standing (INF-549).
+   */
+  fileFolderRepair?: (
+    merged: TaskRecord,
+    refusal: FolderRefreshRefusal & { reach?: string },
+  ) => { record: TaskRecord; filed: boolean } | undefined;
   isPersonalTask(taskId: string): boolean;
   deliverableOf(record: TaskRecord): Deliverable;
   taskDelivery(taskId: string): RepoDelivery | undefined;
@@ -649,13 +663,10 @@ export class SettleService {
     ) {
       const refresh = await this.host.workspace
         .refreshManagedCheckout(repo.path)
-        .catch((caught) => ({
-          refreshed: false as const,
-          reason: caught instanceof Error ? caught.message : String(caught),
-        }));
+        .catch((): FolderRefreshRefusal => ({ refreshed: false, cause: "unreadable" }));
       refreshText = refresh.refreshed
         ? " The managed checkout is up to date."
-        : ` Merged where the project lives, but the managed checkout was not refreshed: ${refresh.reason}.`;
+        : ` ${this.folderNotUpdated(record, actor, refresh, result.receipt?.sha)}`;
     }
     void this.host.sweepGates(this.host.now());
     return {
@@ -663,6 +674,48 @@ export class SettleService {
       text: `${result.text}${refreshText}`,
       ...(result.receipt ? { receipt: result.receipt } : {}),
     };
+  }
+
+  /**
+   * A merge whose project folder the host could not bring up to date
+   * (INF-549): the typed fact is kept on the merged task's record, the task
+   * that brings the folder up to date is filed (or the standing one told),
+   * and the sentence returns for the settle's own text. The captain's click
+   * already puts that text in Activity (`reportOutcome`); the first mate's
+   * own settle has no line of its own, so its note is the line.
+   */
+  private folderNotUpdated(
+    record: TaskRecord,
+    actor: "captain" | "firstmate",
+    refusal: FolderRefreshRefusal,
+    reach: string | undefined,
+  ): string {
+    let repair: { record: TaskRecord; filed: boolean } | undefined;
+    try {
+      repair = this.host.fileFolderRepair?.(record, { ...refusal, ...(reach ? { reach } : {}) });
+    } catch (caught) {
+      console.warn("[settle] the folder repair could not be filed:", caught);
+    }
+    const text = folderNotUpdatedText(
+      refusal.cause,
+      repair ? { key: repair.record.key || repair.record.id, filed: repair.filed } : undefined,
+    );
+    this.host.tasks.note(record.id, text, {
+      news: true,
+      feed: actor === "firstmate",
+      data: {
+        feedLine: true,
+        folderRefresh: {
+          cause: refusal.cause,
+          ...(refusal.branch ? { branch: refusal.branch } : {}),
+          ...(reach ? { reach } : {}),
+          ...(refusal.remote ? { remote: refusal.remote } : {}),
+          ...(repair ? { repair: repair.record.id } : {}),
+        },
+      },
+      ...(repair ? { about: [repair.record.id] } : {}),
+    });
+    return text;
   }
 
   /**

@@ -1,3 +1,6 @@
+import { type FolderRefreshCause, folderRefreshWords } from "@shared/folderRefresh";
+import { FOLDER_REPAIR_TITLE } from "./intentBrief";
+
 /**
  * The feed's receipt of a settle the captain clicked, in the app's words
  * (`SettleService`): a discard that went through, and a merge that did not,
@@ -33,4 +36,20 @@ export function unlandedWorkText(
     work.dirty ? "uncommitted edits" : "",
   ].filter(Boolean);
   return `Cannot discard ${task.key} "${task.title}" without confirm: ${parts.join(" and ")} that were never merged. Discard with confirm to abandon ${parts.length === 1 ? "it" : "them"}, or ${keepMode === "merge-pr" ? "merge the pull request" : "merge the branch"} instead.`;
+}
+
+/**
+ * A merge whose project folder the host could not bring up to date
+ * (INF-549): why, in plain words, and the task that does it - filed now, or
+ * already standing for the project.
+ */
+export function folderNotUpdatedText(
+  cause: FolderRefreshCause,
+  repair: { key: string; filed: boolean } | undefined,
+): string {
+  const why = `Merged, but your project's folder was not brought up to date: ${folderRefreshWords(cause)}.`;
+  if (!repair) return why;
+  return repair.filed
+    ? `${why} Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`
+    : `${why} ${repair.key} "${FOLDER_REPAIR_TITLE}" is already doing it.`;
 }

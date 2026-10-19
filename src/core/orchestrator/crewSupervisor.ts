@@ -74,6 +74,7 @@ import {
 import type { CrewCounts, FmEvent } from "@shared/events";
 import { factDotSvg } from "@shared/factDot";
 import { reportSummary } from "@shared/feed";
+import { type FolderRefreshRefusal, folderRefreshWords } from "@shared/folderRefresh";
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
@@ -127,6 +128,7 @@ import type { RiskAssessment } from "@shared/risk";
 import {
   type Deliverable,
   type Escalation,
+  type InPlaceFacts,
   levelDefaultReasoning,
   planSkippedText,
   type WorkShape,
@@ -320,11 +322,13 @@ import {
   briefText,
   deliverableFor,
   type EscalationBriefFacts,
+  FOLDER_REPAIR_TITLE,
   joinParts,
   type PersonalBriefFacts,
   type ReviewBriefFacts,
   renderAnswerShapeSection,
   renderEscalationBrief,
+  renderFolderRepairBrief,
   renderFollowupBrief,
   renderIntentBrief,
   renderPicturesSection,
@@ -804,7 +808,7 @@ type PlacementRecord = {
   repoId: string | null;
   parentId?: string | null;
   deviceId?: string | null;
-  shape?: { kind?: string; runs_on_ask?: string } | null;
+  shape?: { kind?: string; runs_on_ask?: string; in_place?: object } | null;
 };
 
 export type InterruptSource = {
@@ -1227,6 +1231,8 @@ export class CrewSupervisor {
    * said once per project and computer until that computer signs in.
    */
   private readonly deviceForgeSaid = new Set<string>();
+  /** Folder repairs whose folder is being read now, so one tick reads each once. */
+  private readonly closingFolders = new Set<string>();
   /**
    * Starts the captain pressed that wait for the Firstmate to apply his
    * standing directions: the wake's inbox row, and where the press came from
@@ -1303,6 +1309,7 @@ export class CrewSupervisor {
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
       assessRepair: (taskId) => this.assessRepair(taskId),
+      fileFolderRepair: (merged, refusal) => this.fileFolderRepair(merged, refusal),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
       deliverableOf: (record) => this.deliverableOf(record),
       taskDelivery: (taskId) => this.taskDelivery(taskId),
@@ -1725,7 +1732,9 @@ export class CrewSupervisor {
    * asks, and here without a word.
    */
   private runsOnlyHere(record: PlacementRecord): boolean {
-    if (!this.options.machines || isRepairAssessment(record.shape)) return true;
+    // A folder repair runs where the folder is (INF-549).
+    if (!this.options.machines || isRepairAssessment(record.shape) || record.shape?.in_place)
+      return true;
     if (!record.repoId) return false;
     const repo = this.options.repos.get(record.repoId);
     return !repo || runsHereOnly(repo) !== null;
@@ -3218,6 +3227,114 @@ export class CrewSupervisor {
   }
 
   /**
+   * The host's own task for a project folder a merge could not bring up to
+   * date (INF-549, the captain's approved plan): filed under the project and
+   * started like any queued task whose wait ended, working in place with a
+   * brief filled from the facts. One stands per project: a later refusal
+   * while it stands updates its facts and files nothing new. Answers the
+   * task, and whether it was filed now.
+   */
+  fileFolderRepair(
+    merged: TaskRecord,
+    refusal: FolderRefreshRefusal & { reach?: string },
+  ): { record: TaskRecord; filed: boolean } | undefined {
+    const repo = merged.repoId ? this.options.repos.get(merged.repoId) : undefined;
+    if (!repo) return undefined;
+    const facts: InPlaceFacts = {
+      cause: refusal.cause,
+      ...(refusal.branch ? { branch: refusal.branch } : {}),
+      ...(refusal.reach ? { reach: refusal.reach } : {}),
+      ...(refusal.remote ? { remote: refusal.remote } : {}),
+      ...(merged.key ? { after: merged.key } : {}),
+    };
+    const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
+      (row) => row.repoId === repo.id && row.shape?.in_place !== undefined,
+    );
+    if (standing) {
+      this.options.tasks.recordShape(standing.id, { in_place: facts }, standing.difficulty);
+      const update = `Another merge, ${merged.key || merged.id}, could not bring the folder up to date either: ${folderRefreshWords(facts.cause)}. The folder must now reach ${facts.reach ?? `origin's ${facts.branch ?? "default branch"}`}.`;
+      this.options.tasks.note(standing.id, update, { news: true });
+      if (this.tasks.has(standing.id)) {
+        void this.steerInternal(standing.id, update, {
+          actor: "supervisor",
+          via: "supervision",
+          decision: null,
+          cardId: null,
+        }).catch(() => {});
+      }
+      const record = this.options.tasks.get(standing.id);
+      return record ? { record, filed: false } : undefined;
+    }
+    const shape: WorkShape = {
+      kind: "chore",
+      kind_source: `${KIND_SOURCE.skipped}in-place`,
+      deliverable: "change",
+      in_place: facts,
+    };
+    const record = this.options.tasks.create({
+      id: randomUUID().slice(0, 8),
+      kind: "work",
+      title: FOLDER_REPAIR_TITLE,
+      goal: `Bring the folder of ${repo.name} up to date with the merged version.`,
+      prompt: renderFolderRepairBrief({ ...facts, project: repo.name, folder: repo.path }),
+      repoId: repo.id,
+      difficulty: tierFor(shape).bucket ?? null,
+      shape,
+      startPolicy: "when-ready",
+      status: "open",
+      actor: "host",
+    });
+    this.broadcastCrewCounts();
+    // It starts on this very sweep, the way a when-ready plan does.
+    void this.sweepGates(this.now());
+    return { record, filed: true };
+  }
+
+  /**
+   * The closing half of a folder repair (INF-549): a task working in place
+   * closes as settled, with a feed line, once the host reads its folder
+   * clean, on the default branch and at or past the merged version. A
+   * crewmate mid-turn, or a card of the task's still up, keeps it open.
+   */
+  async closeCurrentFolders(): Promise<void> {
+    const live = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()];
+    for (const record of live) {
+      const facts = record.shape?.in_place;
+      const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+      if (!facts?.branch || !repo || this.closingFolders.has(record.id)) continue;
+      const state = this.tasks.get(record.id)?.state;
+      if (state !== undefined && state !== "idle") continue;
+      if (this.cards.snapshot().some((card) => card.taskId === record.id)) continue;
+      this.closingFolders.add(record.id);
+      try {
+        const current = await this.options.workspace
+          .folderCurrent(repo.path, facts.branch, facts.reach)
+          .catch(() => false);
+        if (!current) continue;
+        const now = this.options.tasks.get(record.id);
+        if (!now || TaskService.isClosed(now)) continue;
+        const after = this.tasks.get(record.id)?.state;
+        if (after !== undefined && after !== "idle") continue;
+        const line = `The project's folder is up to date: clean, on ${facts.branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${facts.branch}`}.`;
+        this.options.tasks.note(record.id, line, {
+          news: true,
+          feed: true,
+          data: { feedLine: true },
+        });
+        await this.settle.closeTask(record.id, {
+          status: "done",
+          reason: "finished",
+          actor: "host",
+          text: "the folder is up to date",
+          feed: false,
+        });
+      } finally {
+        this.closingFolders.delete(record.id);
+      }
+    }
+  }
+
+  /**
    * An independent assessment's verdict on its builder's undecided repair
    * (FI3-663). Accepted, the kept merge runs again under every gate; any
    * other verdict ended the approval with a hold, and the builder is told
@@ -3384,6 +3501,15 @@ export class CrewSupervisor {
     const repoId = this.options.tasks.get(taskId)?.repoId;
     if (!repoId) return false;
     return this.options.repos.get(repoId)?.kind === "personal";
+  }
+
+  /**
+   * A task the host filed to work in place in its project's folder (INF-549,
+   * `WorkShape.in_place`): no working copy, no delivery, no merge, and no
+   * completion decision; the host closes it when the folder is up to date.
+   */
+  private worksInPlace(taskId: string): boolean {
+    return this.options.tasks.get(taskId)?.shape?.in_place !== undefined;
   }
 
   /**
@@ -4226,6 +4352,9 @@ export class CrewSupervisor {
     const personal = live ? this.options.personal : undefined;
     const machine = this.machineOf(taskId);
     const placed = machine !== LOCAL_MACHINE_ID;
+    // A folder repair (INF-549) works in its project's own folder, as the
+    // personal workspace does, with none of that workspace's own rules.
+    const inPlace = !live && !placed && this.worksInPlace(taskId);
     // On a computer that runs work, its working copy is there, made by that
     // computer from where the project lives (docs/helper.md, "Its working
     // copies"). This Mac makes none, so the runtime holds no workspace a
@@ -4258,10 +4387,10 @@ export class CrewSupervisor {
           builder && headSha ? { task: builder.id, headSha } : undefined,
         );
         cwd = elsewhere.cwd;
-      } else if (live && repoDir) {
-        // The personal workspace (Step 4): the crewmate works in the workspace
-        // workspace itself. No worktree, no branch; the record's workspace
-        // columns stay empty so no close ever tries to remove one.
+      } else if ((live || inPlace) && repoDir) {
+        // The personal workspace (Step 4), or a folder repair: the crewmate
+        // works in the repository itself. No worktree, no branch; the record's
+        // workspace columns stay empty so no close ever tries to remove one.
         task.workspace = { taskId, cwd: repoDir, branch: "", repoDir };
       } else {
         const headSha = this.reviewBuilderOf(record) ? record?.delivery?.headSha : undefined;
@@ -4333,7 +4462,7 @@ export class CrewSupervisor {
             task.workspace?.repoDir ??
             repoDir ??
             (elsewhere ? await this.options.workspace.ensureDefaultRepo() : ""),
-          worktreeDir: live || !task.workspace ? "" : task.workspace.cwd,
+          worktreeDir: live || inPlace || !task.workspace ? "" : task.workspace.cwd,
           branch: task.workspace?.branch ?? elsewhere?.branch ?? "",
           ...(elsewhere ? { elsewhere: true } : {}),
         },
@@ -4866,7 +4995,7 @@ export class CrewSupervisor {
     | "onGithubRead"
     | "onGithubWrite"
   > {
-    if (this.isPersonalTask(task.id)) return {};
+    if (this.isPersonalTask(task.id) || this.worksInPlace(task.id)) return {};
     const {
       prepareChange,
       openChange,
@@ -5178,6 +5307,7 @@ export class CrewSupervisor {
     if (
       shape?.kind === "review" ||
       repo?.kind === "personal" ||
+      shape?.in_place !== undefined ||
       this.deliverableOf(record) === "answer"
     ) {
       return;
@@ -6896,6 +7026,14 @@ export class CrewSupervisor {
         "Card refused: this task builds in place on the personal workspace - there is no merge, land, or discard, and a completion card is never emitted. Report what you built with report instead; a card is only for a genuine decision the captain must make.",
       );
     }
+    if (
+      this.worksInPlace(task.id) &&
+      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
+    ) {
+      throw new Error(
+        "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a completion card is never emitted. Report what you did with report; Infinitary closes the task once the folder is up to date. A card is only for a question the captain must answer.",
+      );
+    }
     // An answer task ships nothing (Task B), so it has no completion card
     // either: the card carrying the answer IS the deliverable, and the task
     // closes when the captain resolves it.
@@ -7502,6 +7640,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (record?.status !== "active" || record.kind !== "work") return false;
     if (record.shape?.kind === "review" || this.isPersonalTask(taskId)) return false;
+    if (record.shape?.in_place) return false;
     // An answer task emits no completion card at all (Task B): it ships
     // nothing, so nobody owes one.
     if (this.deliverableOf(record) === "answer") return false;
@@ -7584,6 +7723,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(task.id);
     if (!record || TaskService.isClosed(record)) return;
     if (this.isPersonalTask(task.id) || this.deliverableOf(record) === "answer") return;
+    if (record.shape?.in_place) return;
     this.options.tasks.recordCardRefusal(task.id, refusal);
   }
 
@@ -8343,6 +8483,7 @@ export class CrewSupervisor {
       ticker.register("idle-ladder", WATCHDOG_TICK_MS, (now) => this.reconcileIdle(now)),
       ticker.register("firstmate-quiet", WATCHDOG_TICK_MS, (now) => this.hooks.checkQuiet?.(now)),
       ticker.register("gate-sweep", WATCHDOG_TICK_MS, (now) => void this.sweepGates(now)),
+      ticker.register("in-place-folders", WATCHDOG_TICK_MS, () => void this.closeCurrentFolders()),
       ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => void this.pollCheckWatches(now)),
       ticker.register("kept-merges", WATCHDOG_TICK_MS, (now) =>
         this.settle.reconcileMergeAuthorizations(now),
@@ -9063,6 +9204,11 @@ export class CrewSupervisor {
    */
   private queuedBrief(record: TaskRecord, shape: WorkShape): string {
     if (shape.escalation) return record.prompt;
+    // A folder repair is rendered again from its facts as they stand now: a
+    // later refusal may have moved the version the folder must reach.
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (shape.in_place && repo)
+      return renderFolderRepairBrief({ ...shape.in_place, project: repo.name, folder: repo.path });
     const personal = this.isPersonalTask(record.id);
     const delivery =
       shape.deliverable === "answer" || personal

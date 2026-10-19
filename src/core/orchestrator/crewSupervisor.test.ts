@@ -21871,3 +21871,174 @@ describe("an Automatic wait in Activity", () => {
     await restarted.disposeAll();
   });
 });
+
+/**
+ * INF-549, the captain's words: "when a project folder couldn't be brought up
+ * to date, were you informed? if so, why didn't you either resolve it, or ask
+ * me? this needs to be corrected durably in infinitary." His approved plan: a
+ * refused refresh leaves a note and a line on the merged task, and the host
+ * files and starts one regular task under the project that works in the
+ * folder itself, with no delivery line, and closes it once the folder is
+ * clean, on the default branch and at or past the merged version.
+ */
+describe("a merge that leaves the project's folder behind (INF-549, real git)", {
+  timeout: 60_000,
+}, () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+  const run = (dir: string, ...args: string[]) =>
+    git(dir, ["-c", "user.name=T", "-c", "user.email=t@l", ...args]);
+
+  /** A project whose folder holds the captain's draft while origin moved on by one merge. */
+  async function behindAfterMerge() {
+    const crewmate = fakeCrewmate();
+    let merged = "";
+    const mergePullRequest = vi.fn(async () => ({
+      ok: true,
+      text: "Change #2 is in on GitHub.",
+      receipt: { head: merged, sha: merged },
+    }));
+    const harness = setup(crewmate, { realWorkspace: true, mergePullRequest });
+    const { repo } = await harness.repos.setup({ kind: "init", name: "shop" });
+    const folder = repo.path;
+    await run(folder, "commit", "--allow-empty", "-m", "chore: start");
+    const origins = scratchDir("infinitary-folder-origin-");
+    const remote = join(origins, "origin.git");
+    await git(origins, ["init", "--bare", "--initial-branch=main", remote]);
+    await run(folder, "remote", "add", "origin", remote);
+    await run(folder, "push", "-u", "origin", "main");
+    await run(folder, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
+    // Merging is automatic in this project, as it was for the folder INB-9 repaired.
+    harness.repos.configure(repo.id, { origin: remote, delivery: "direct-pr", autonomy: true });
+    // The pull request merged where the project lives, not in the folder.
+    const clones = scratchDir("infinitary-folder-clone-");
+    const other = join(clones, "clone");
+    await git(clones, ["clone", remote, other]);
+    await run(other, "commit", "--allow-empty", "-m", "feat: the merged change (#2)");
+    await run(other, "push", "origin", "main");
+    merged = await git(other, ["rev-parse", "HEAD"]);
+    writeFileSync(join(folder, "draft.txt"), "the captain's draft\n");
+    const ship = (id: string, title: string) =>
+      seedTask(harness.tasks, {
+        id,
+        title,
+        status: "idle",
+        repoId: repo.id,
+        repoDir: folder,
+      });
+    return { ...harness, crewmate, repo, folder, merged, ship };
+  }
+
+  function repairOf(tasks: TaskService, repoId: string) {
+    return tasks.list().filter((row) => row.repoId === repoId && row.shape?.in_place);
+  }
+
+  it("the first mate's own merge files and starts the repair in the folder, with no delivery line, and the repair closes once the folder is current", async () => {
+    const h = await behindAfterMerge();
+    h.ship("shipped1", "Ship the shop");
+
+    const reply = await h.supervisor.settleTask("shipped1", "merge-pr");
+
+    const [repair] = repairOf(h.tasks, h.repo.id);
+    if (!repair) throw new Error("no repair task was filed");
+    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`;
+    expect(reply).toContain(sentence);
+    expect(h.tasks.get("shipped1")).toMatchObject({ status: "done", closedReason: "merged" });
+    // The fact is kept on the merged task's record, and it is the Activity
+    // line, since the first mate's own settle writes none of its own.
+    const note = h.tasks.timeline("shipped1").find((event) => event.data?.folderRefresh);
+    expect(note).toMatchObject({ text: sentence, feed: true });
+    expect(note?.data?.folderRefresh).toMatchObject({
+      cause: "dirty",
+      branch: "main",
+      reach: h.merged,
+    });
+    expect(repair).toMatchObject({
+      title: "Bring the folder up to date",
+      startPolicy: "when-ready",
+    });
+
+    // It starts on its own, in the folder itself, with a brief that names no delivery.
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    const session = h.sessionSpecs.at(-1);
+    expect(session?.cwd).toBe(h.folder);
+    expect(h.tasks.get(repair.id)).toMatchObject({ status: "active", worktreeDir: "", branch: "" });
+    const brief = h.crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(`Folder: ${h.folder}`);
+    expect(brief).toContain(`Merged version: ${h.merged}`);
+    expect(brief).toContain(
+      "Why it was not brought up to date: it has edits that are not committed",
+    );
+    expect(brief).toContain("You work in place");
+    expect(brief).not.toContain("Delivery:");
+    expect(brief).not.toContain("open_change");
+    expect(h.specs.at(-1)?.procedure).toEqual({ delivery: "none", rigor: "none" });
+    expect(h.specs.at(-1)?.onOpenChange).toBeUndefined();
+
+    // A second refusal while it stands updates it and files nothing new.
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
+    h.ship("shipped2", "Ship the shop again");
+    expect(await h.supervisor.settleTask("shipped2", "merge-pr")).toContain(
+      `${repair.key} "Bring the folder up to date" is already doing it.`,
+    );
+    expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1);
+    // The standing crewmate is told of the newer version, on a turn of its own.
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
+    expect(h.crewmate.promptCalls[1]).toContain("Another merge, SHOP-");
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
+
+    // Still behind: the host leaves it open.
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)?.status).toBe("active");
+
+    // The crewmate sets the draft aside and fast-forwards; the host sees it
+    // and closes the task as settled, with its own line.
+    await run(h.folder, "stash", "push", "-u", "-m", `${repair.key}: the captain's draft`);
+    await run(h.folder, "pull", "--ff-only", "origin", "main");
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(h.tasks.timeline(repair.id)).toContainEqual(
+      expect.objectContaining({
+        text: `The project's folder is up to date: clean, on main and at or past ${h.merged.slice(0, 7)}.`,
+        feed: true,
+      }),
+    );
+    await h.supervisor.disposeAll();
+  });
+
+  it("the captain's merge click keeps the fact on the record, and its own line says it once", async () => {
+    const h = await behindAfterMerge();
+    h.ship("clicked1", "Ship the shop");
+    const card = h.supervisor.addFirstmateCard({
+      requiredActions: [],
+      taskId: "clicked1",
+      title: "Ready to merge",
+      body: "Merge the shop change.",
+      actions: [{ id: "merge", label: "Merge", effect: SETTLE_MERGE }],
+    });
+    h.supervisor.act(card, "merge");
+
+    // The merge closes the task first; the folder is read after it.
+    await vi.waitFor(() => expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.tasks.get("clicked1")).toMatchObject({ status: "done", closedReason: "merged" });
+    const [repair] = repairOf(h.tasks, h.repo.id);
+    if (!repair) throw new Error("no repair task was filed");
+    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`;
+    await vi.waitFor(
+      () =>
+        expect(h.events).toContainEqual({
+          type: "firstmate_note",
+          text: expect.stringContaining(sentence),
+        }),
+      REAL_GIT_WAIT,
+    );
+    const note = h.tasks.timeline("clicked1").find((event) => event.data?.folderRefresh);
+    expect(note).toMatchObject({ text: sentence, feed: false });
+    await vi.waitFor(() => expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.folder), REAL_GIT_WAIT);
+    await h.supervisor.disposeAll();
+  });
+});

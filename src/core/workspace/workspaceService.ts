@@ -5,6 +5,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { HERE } from "@shared/deviceNames";
+import type { FolderRefreshCause, FolderRefreshRefusal } from "@shared/folderRefresh";
 import type { KnownForgeHost } from "@shared/forge";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
@@ -462,11 +463,12 @@ export class WorkspaceService {
 
   /**
    * Best-effort refresh for a registered managed checkout after host merge.
-   * Only the clean checked-out default branch may fast-forward from origin.
+   * Only the clean checked-out default branch may fast-forward from origin;
+   * every other state is refused with its typed cause (INF-549).
    */
   async refreshManagedCheckout(
     repoDir: string,
-  ): Promise<{ refreshed: true } | { refreshed: false; reason: string }> {
+  ): Promise<{ refreshed: true } | FolderRefreshRefusal> {
     const prior = this.refreshQueues.get(repoDir) ?? Promise.resolve();
     const run = prior.catch(() => {}).then(() => this.refreshManagedCheckoutOnce(repoDir));
     this.refreshQueues.set(repoDir, run);
@@ -479,47 +481,73 @@ export class WorkspaceService {
 
   private async refreshManagedCheckoutOnce(
     repoDir: string,
-  ): Promise<{ refreshed: true } | { refreshed: false; reason: string }> {
-    const fail = (reason: string) => ({ refreshed: false as const, reason });
+  ): Promise<{ refreshed: true } | FolderRefreshRefusal> {
     const remotes = await git(repoDir, ["remote"]).catch(() => "");
-    if (!remotes.split("\n").includes("origin")) return fail("no origin remote");
-    const branch = await git(repoDir, [
-      "symbolic-ref",
-      "--quiet",
-      "--short",
-      "refs/remotes/origin/HEAD",
-    ])
-      .then((head) => (head.startsWith("origin/") ? head.slice("origin/".length) : ""))
-      .catch(() => "");
-    if (!branch) return fail("origin does not declare its default branch");
-    const check = async (): Promise<string | null> => {
+    if (!remotes.split("\n").includes("origin")) return { refreshed: false, cause: "no-origin" };
+    const branch = await this.originDefaultBranch(repoDir);
+    if (!branch) return { refreshed: false, cause: "no-default-branch" };
+    const fail = (cause: FolderRefreshCause, remote?: string | null): FolderRefreshRefusal => ({
+      refreshed: false,
+      cause,
+      branch,
+      ...(remote ? { remote } : {}),
+    });
+    const check = async (): Promise<{ head: string } | { cause: FolderRefreshCause }> => {
       const current = await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
         () => "",
       );
-      if (current !== branch) return null;
-      if (await git(repoDir, ["status", "--porcelain"]).catch(() => "dirty")) return null;
-      return resolveCommit(repoDir, `refs/heads/${branch}`);
+      if (!current) return { cause: "detached" };
+      if (current !== branch) return { cause: "other-branch" };
+      if (await git(repoDir, ["status", "--porcelain"]).catch(() => "dirty")) {
+        return { cause: "dirty" };
+      }
+      const head = await resolveCommit(repoDir, `refs/heads/${branch}`);
+      return head ? { head } : { cause: "unreadable" };
     };
+    const tracked = () => resolveCommit(repoDir, `refs/remotes/origin/${branch}`);
     const before = await check();
-    if (!before) return fail("checkout is dirty, detached, or not on the default branch");
+    if ("cause" in before) return fail(before.cause, await tracked());
     try {
       await this.fetchDefaultBranch(repoDir, branch);
     } catch (caught) {
       console.warn(`[workspace] refreshing ${repoDir}: ${gitFailure(caught)}`);
-      return fail("fetch from origin failed or timed out");
+      return fail("fetch-failed", await tracked());
     }
-    const remote = await resolveCommit(repoDir, `refs/remotes/origin/${branch}`);
-    if (!remote) return fail("origin default branch was not available");
-    if (!(await isAncestor(repoDir, before, remote)))
-      return fail("origin has diverged from the local checkout");
+    const remote = await tracked();
+    if (!remote) return fail("no-remote-branch");
+    if (!(await isAncestor(repoDir, before.head, remote))) return fail("diverged", remote);
     const current = await check();
-    if (current !== before) return fail("checkout changed while refresh was in progress");
+    if (!("head" in current) || current.head !== before.head) return fail("changed", remote);
     try {
       await git(repoDir, ["merge", "--ff-only", remote]);
       return { refreshed: true };
     } catch {
-      return fail("fast-forward was refused");
+      return fail("fast-forward-refused", remote);
     }
+  }
+
+  /** The default branch origin declares, or "" when it declares none. */
+  private async originDefaultBranch(repoDir: string): Promise<string> {
+    return git(repoDir, ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"])
+      .then((head) => (head.startsWith("origin/") ? head.slice("origin/".length) : ""))
+      .catch(() => "");
+  }
+
+  /**
+   * Whether a project's folder is up to date, read without changing it
+   * (INF-549): clean, on `branch`, and at or past `reach` - or, with no
+   * `reach` known, at or past origin's `branch` as last fetched.
+   */
+  async folderCurrent(repoDir: string, branch: string, reach?: string): Promise<boolean> {
+    const current = await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
+      () => "",
+    );
+    if (!branch || current !== branch) return false;
+    if (await git(repoDir, ["status", "--porcelain"]).catch(() => "dirty")) return false;
+    const head = await resolveCommit(repoDir, `refs/heads/${branch}`);
+    const target = reach ?? (await resolveCommit(repoDir, `refs/remotes/origin/${branch}`));
+    if (!head || !target) return false;
+    return isAncestor(repoDir, target, head);
   }
 
   /**
@@ -844,6 +872,10 @@ export class WorkspaceService {
    * A tree the rename cannot move is removed in place, as before.
    */
   async removeTaskWorktree(workspace: TaskWorkspace): Promise<void> {
+    // A task that works in place (the personal workspace, a folder repair)
+    // has the repository itself as its directory: there is no worktree, and
+    // the fallback below would delete the folder.
+    if (!workspace.cwd || resolve(workspace.cwd) === resolve(workspace.repoDir)) return;
     if (await this.parkInPool(workspace)) {
       try {
         await git(workspace.repoDir, ["branch", "-D", workspace.branch]);

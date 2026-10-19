@@ -57,3 +57,18 @@ An action a person repeats becomes a command in `KEYBOARD_COMMANDS`, so command 
 It gets a default key only where none clashes, and its control shows the key hint.
 An end-to-end journey drives it by keys.
 How a feature does each of those is `docs/keyboard.md` ("A new feature").
+
+## Standing build principle (captain, 2026-10-19)
+
+**Build the agent's reach, never its verdicts.**
+The models behind the first mate and the crew improve with every release, outside our control.
+Code we write to decide for them is written against today's model and stays there.
+So the host hard-codes only what is closed: a typed fact it holds, consent for an effect, and a physical limit of the process it runs in.
+Everything else is a verdict: what a person meant, what should happen next, how much is enough.
+A verdict goes to the agent: give it the fact, the primitive and the evidence, say the goal in its instructions, and record what it declared.
+A number, a category or an order the host made up is a verdict, not a fact.
+Where such a limit stays, the agent reads it, a refusal names the fact it rests on, and a way out is typed beside it.
+Code that compensates for what a model cannot yet do is a ceiling: prefer the fact and the primitive, and remove the compensation when no model needs it.
+When a rule breaks on a case, the fix generalizes the primitive or the goal; it never adds the case.
+Instructions follow the same rule: they say goals and boundaries once, not a list of cases, and they are measured by replay, never enforced by a word list.
+This extends "Put ambiguous judgments in agent instructions" (2026-09-23) from what a person meant to every judgment about what should happen.

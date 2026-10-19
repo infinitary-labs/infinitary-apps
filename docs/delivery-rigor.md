@@ -13,6 +13,7 @@ Declined findings converge through `user_chose_to_ignore`.
 Validation is agent-driven and evidence-first; no configured command is mandated in the pipeline.
 The reviewer is a crewmate, never an external pipeline.
 Autonomy on is consent to merge at any risk: there is no risk-high captain card.
+Every new hold, cap, constant or served sentence answers which of the four kinds in `docs/principles.md` ("Build the agent's reach, never its verdicts", 2026-10-19) it is - a typed fact the host holds, consent for an effect, a physical limit of the process, or otherwise a verdict that goes to the agent - and since that is a judgment, its author and its reviewer ask it, never a lint.
 
 ## Why instruction first
 

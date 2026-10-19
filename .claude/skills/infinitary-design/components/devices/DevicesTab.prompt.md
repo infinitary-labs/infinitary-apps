@@ -188,6 +188,9 @@ Another user on this computer uses its local copy and makes no public download l
 Updated over your network, a computer that is sent this computer's copy - an older one, or one whose download failed - counts it the same way, "Sending Infinitary to Mac mini… 42.3 MB sent", and once it answers that it starts again, its row reads "Starting Infinitary on Mac mini…" until it is back on this computer's version.
 A download over your network goes on when the connection drops: once that computer is back, the row picks its count up again and follows it until it runs this computer's version, never saying it was out of reach while it may still be downloading.
 A stop names inactivity, not a failure to reach the computer.
+A stop by the thirty-minute time limit, before Infinitary starts there, names that limit the same way: "Updating Infinitary on Mac mini stopped at its 30-minute time limit." and "Nothing changed there.
+Ask again.", never "Could not reach".
+It stays above the list until the next action, as any refusal but a computer that did not answer does.
 The row keeps its existing type, spacing, focus and disabled controls.
 Remove on a computer that takes no new work asks as for one out of reach, with its own first line: "Remove Mac mini?
 It takes no new work." over "Its unmerged work on website is still there.

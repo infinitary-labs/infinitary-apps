@@ -38,6 +38,14 @@ export function parseRemoteLoginAddress(text: string): string | null {
 }
 
 /**
+ * How long an add or update over Remote Login may send, install, check and
+ * start before the home stops it: a Mac's moving transfer has no such
+ * ceiling, only what follows it (docs/devices.md, "Downloading on a Mac
+ * reached by its address").
+ */
+export const REMOTE_LOGIN_TIME_LIMIT_MS = 30 * 60_000;
+
+/**
  * Where an operation over Remote Login stands, as the feed and Settings ->
  * Devices say it: reaching the address (letting Firstmate's own key in there
  * with the password the captain typed once is still reaching it), setting
@@ -493,8 +501,21 @@ export const remoteLoginWords = {
     mismatch
       ? `${name}'s download did not match, so ${HERE.this} is sending its copy.`
       : `${name} could not download Infinitary, so ${HERE.this} is sending its copy.`,
-  inactive: (name: string, doing: RemoteLoginDoing): readonly [string, string] => [
-    `${doing === "update" ? "Updating Infinitary on" : "Preparing Infinitary for"} ${name} stopped after two minutes with nothing moving.`,
+  /**
+   * What stopped an add or update before Infinitary started there: two
+   * minutes with nothing moving (`inactive`), or its time limit (`timeout`),
+   * never what SSH answered once it was stopped.
+   */
+  stopped: (
+    name: string,
+    doing: RemoteLoginDoing,
+    why: "inactive" | "timeout",
+  ): readonly [string, string] => [
+    `${doing === "update" ? "Updating Infinitary on" : "Preparing Infinitary for"} ${name} ${
+      why === "inactive"
+        ? "stopped after two minutes with nothing moving"
+        : `stopped at its ${REMOTE_LOGIN_TIME_LIMIT_MS / 60_000}-minute time limit`
+    }.`,
     "Nothing changed there. Ask again.",
   ],
   uncertain: (name: string): readonly [string, string] => [

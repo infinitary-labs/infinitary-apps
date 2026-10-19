@@ -22,7 +22,11 @@ import {
   PAIRING_LINK_PREFIX,
   parsePairingLink,
 } from "@shared/devices";
-import { type RemoteLoginAddOptions, remoteLoginWords } from "@shared/remoteLogin";
+import {
+  REMOTE_LOGIN_TIME_LIMIT_MS,
+  type RemoteLoginAddOptions,
+  remoteLoginWords,
+} from "@shared/remoteLogin";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
 import { macRelease } from "../../../tests/helpers/macRelease";
@@ -756,6 +760,94 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(readFileSync(record, "utf8")).toContain(
       `started: work remove --from-home ${expected}\n`,
     );
+  });
+
+  // INF-325: "Could not reach kunchen@mac-home." after the 30-minute limit
+  // stopped an update; SSH exits 255 once stopped, which is not why.
+  it("says the time limit stopped an update before it started there, never that it could not reach that computer", async () => {
+    const sshd = await server();
+    const them = otherUser();
+    const record = join(scratchDir("infinitary-remote-record-"), "started");
+    const held = scratchDir("infinitary-held-check-");
+    const ready = join(held, "ready");
+    const resume = join(held, "resume");
+    // That computer checks and unpacks the copy it got for longer than the limit.
+    const marker = `printf "${UPDATE_STARTING}`;
+    const ssh = sshd.ssh({
+      remote: them.env,
+      programs: {
+        [marker]: `touch "${ready}"; while [ ! -f "${resume}" ]; do sleep 1; done; ${marker}`,
+      },
+    });
+    const at = await home({ ssh, bundle: standInBundle(record) });
+    const device = await addChecked(at.remote, sshd.address);
+    at.said.splice(0);
+    const checking = new Promise<void>((resolve) => {
+      const watcher = watch(held, () => {
+        if (existsSync(ready)) {
+          watcher.close();
+          resolve();
+        }
+      });
+    });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const updating = at.remote.update(device.id).catch((error: unknown) => error);
+      await checking;
+      await vi.advanceTimersByTimeAsync(REMOTE_LOGIN_TIME_LIMIT_MS);
+      const refused = await updating;
+      const lines = remoteLoginWords.stopped(deviceLabel(device), "update", "timeout");
+      expect(refused).toBeInstanceOf(RemoteLoginRefusedError);
+      expect((refused as Error).message).toBe(lines.join("\n"));
+      expect(at.lines().slice(-2)).toEqual([...lines]);
+      expect(readFileSync(record, "utf8")).not.toContain("started: work update");
+    } finally {
+      vi.useRealTimers();
+      writeFileSync(resume, "resume");
+    }
+  });
+
+  // INF-325: setting up has the same limit, on its own SSH connection.
+  it("says the time limit stopped setting it up, never that it could not reach that computer", async () => {
+    const sshd = await server();
+    const them = otherUser();
+    const record = join(scratchDir("infinitary-remote-record-"), "started");
+    const held = scratchDir("infinitary-held-join-");
+    const gate = {
+      when: "join" as const,
+      ready: join(held, "ready"),
+      resume: join(held, "resume"),
+    };
+    const bundle = standInFirstmate(record, THEIR_UID, {
+      joined: "at-login",
+      updated: "none",
+      startGate: gate,
+    });
+    const at = await home({ ssh: sshd.ssh({ remote: them.env }), bundle });
+    const joining = new Promise<void>((resolve) => {
+      const watcher = watch(held, () => {
+        if (existsSync(gate.ready)) {
+          watcher.close();
+          resolve();
+        }
+      });
+    });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const adding = addChecked(at.remote, sshd.address).catch((error: unknown) => error);
+      await joining;
+      // The limit, then the wait the connection gets to end by itself.
+      await vi.advanceTimersByTimeAsync(REMOTE_LOGIN_TIME_LIMIT_MS + 10_000);
+      const refused = await adding;
+      const lines = remoteLoginWords.stopped("Mac mini", "add", "timeout");
+      expect(refused).toBeInstanceOf(RemoteLoginRefusedError);
+      expect((refused as Error).message).toBe(lines.join("\n"));
+      expect(at.lines().slice(-2)).toEqual([...lines]);
+      expect(at.pairing.list()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+      writeFileSync(gate.resume, "resume");
+    }
   });
 
   it("says when it could not remove all it set up there, and that the computer tries again at its next login", async () => {

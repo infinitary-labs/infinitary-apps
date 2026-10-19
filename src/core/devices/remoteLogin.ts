@@ -8,6 +8,7 @@ import {
   type LinuxInstaller,
   type LinuxInstalls,
   parseRemoteLoginAddress,
+  REMOTE_LOGIN_TIME_LIMIT_MS,
   type RemoteLoginAddAnswer,
   type RemoteLoginAddOptions,
   type RemoteLoginCopy,
@@ -45,7 +46,7 @@ import {
   readDownloadCount,
   UPDATE_STARTING,
 } from "./remoteDownload";
-import { runSsh, SSH_FAILED, SSH_OPTIONS, SshMaster, type SshProgram } from "./ssh";
+import { runSsh, SSH_FAILED, SSH_OPTIONS, SshMaster, type SshProgram, type SshResult } from "./ssh";
 import { type PasswordMethod, passwordMethods, placeOwnKey } from "./sshPassword";
 import { sshRefusal } from "./sshRefusal";
 import {
@@ -214,7 +215,7 @@ type Look = {
 };
 
 const LOOK_TIMEOUT_MS = 90_000;
-const SEND_TIMEOUT_MS = 30 * 60_000;
+const SEND_TIMEOUT_MS = REMOTE_LOGIN_TIME_LIMIT_MS;
 /** The copy's count is said at most this often between its first bytes and its end. */
 const COPY_EVERY_MS = 1_000;
 const IDLE_TIMEOUT_MS = 2 * 60_000;
@@ -520,7 +521,8 @@ export class RemoteLogin {
               : { timeoutMs: backstopMs }),
           });
           copy.end();
-          if (ran.stopped === "inactive" && !starting) return step.inactive(name);
+          // Stopped before it started there: what stopped it, never what SSH answered after.
+          if (ran.stopped && !starting) return step.stopped(name, ran.stopped);
         }
         const outcome = readWorkOutcome(ran.stdout);
         if (outcome?.firstmate === "updated") {
@@ -749,12 +751,19 @@ export class RemoteLogin {
         const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
         const backstopMs = this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS;
         let backstop: ReturnType<typeof setTimeout> | undefined;
+        // The time limit stopped it: said as that, never as what SSH answered after.
+        let timedOut = false;
+        const refuse = (refusal: RemoteLoginRefusal): never =>
+          timedOut ? step.stopped(name, "timeout") : step.refuse(refusal, { name });
         const clearBackstop = () => {
           if (backstop) clearTimeout(backstop);
         };
         const startBackstop = () => {
           clearBackstop();
-          backstop = setTimeout(() => void opened.stop(), backstopMs);
+          backstop = setTimeout(() => {
+            timedOut = true;
+            void opened.stop();
+          }, backstopMs);
           backstop.unref();
         };
         startBackstop();
@@ -767,14 +776,12 @@ export class RemoteLogin {
           const stage = heard.get("stage") ?? "";
           if (!ready) {
             const ran = await master.exited;
-            return step.refuse(ran.code === SSH_FAILED ? sshRefusal(ran.stderr) : "failed", {
-              name,
-            });
+            return refuse(ran.code === SSH_FAILED ? sshRefusal(ran.stderr) : "failed");
           }
           if (!(await master.forward(socket, pairing.port))) {
             const alive = master.alive();
             await master.stop();
-            return step.refuse(alive ? "forwarding-refused" : "unreachable", { name });
+            return refuse(alive ? "forwarding-refused" : "unreachable");
           }
           // The bytes sent so far, said as they move, each count in place of the one before.
           const run = { id: `copy-${randomUUID()}` };
@@ -814,7 +821,7 @@ export class RemoteLogin {
             startBackstop();
             downloaded = got.code === 0 && !got.stopped;
             if (!downloaded) {
-              if (!master.alive()) return step.refuse("unreachable", { name });
+              if (!master.alive()) return refuse("unreachable");
               step.say(
                 at.stage,
                 remoteLoginWords.downloadFallback(name, got.code === 7),
@@ -830,7 +837,7 @@ export class RemoteLogin {
                 this.builds.for(at.far, at.chip),
                 master.exited.then(() => ({ refusal: "failed" as const })),
               ]);
-              if ("refusal" in gotBuild) return step.refuse(gotBuild.refusal, { name });
+              if ("refusal" in gotBuild) return refuse(gotBuild.refusal);
               build = gotBuild;
               unpack = at.far.unpack[build.form] ?? null;
             }
@@ -859,10 +866,10 @@ export class RemoteLogin {
               mac ? { idleTimeoutMs } : {},
             );
             if (mac) startBackstop();
-            if (sent.stopped === "inactive") return step.inactive(name);
+            if (sent.stopped) return step.stopped(name, sent.stopped);
             if (sent.code !== 0) {
               await master.stop();
-              return step.refuse(sent.code === SSH_FAILED ? "unreachable" : "failed", { name });
+              return refuse(sent.code === SSH_FAILED ? "unreachable" : "failed");
             }
             copy.end();
           }
@@ -909,8 +916,8 @@ export class RemoteLogin {
               },
             );
           }
-          if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr), { name });
-          return step.refuse("failed", { name });
+          if (ran.code === SSH_FAILED) return refuse(sshRefusal(ran.stderr));
+          return refuse("failed");
         } finally {
           clearBackstop();
         }
@@ -1008,6 +1015,7 @@ export class RemoteLogin {
     if ("refusal" in build) return at.step.refuse(build.refusal, { name: at.name });
     if (build.form === "bundle") return at.step.refuse("failed", { name: at.name });
     const sent = await this.sendDeb(at.address, build, at);
+    if (sent === "stopped") return at.step.stopped(at.name, "timeout");
     if (sent === "failed") return at.step.refuse("failed", { name: at.name });
     at.step.say(
       at.stage === "updating" ? "updating" : at.stage,
@@ -1032,11 +1040,12 @@ export class RemoteLogin {
       };
     }
     if (outcome === "mismatch") return at.step.refuse("build-unverified", { name: at.name });
+    if (outcome === "stopped") return at.step.stopped(at.name, "timeout");
     if (outcome !== "ok") return at.step.refuse("failed", { name: at.name });
     return "ready";
   }
 
-  /** Sends the checked deb and answers the path it was kept at, or `failed`. */
+  /** Sends the checked deb and answers the path it was kept at, `stopped` by the time limit, or `failed`. */
   private async sendDeb(
     address: string,
     build: Exclude<FarBuild, { form: "bundle" }>,
@@ -1046,7 +1055,7 @@ export class RemoteLogin {
       stage: RemoteLoginStage;
       deviceId?: string;
     },
-  ): Promise<string | "failed"> {
+  ): Promise<string | "stopped" | "failed"> {
     const run = { id: `copy-${randomUUID()}` };
     const copy = copyCount(
       (bytes) =>
@@ -1069,6 +1078,7 @@ export class RemoteLogin {
       timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
     });
     copy.end();
+    if (ran.stopped) return "stopped";
     const path = /^infinitary:deb=(\/\S+)$/m.exec(ran.stdout)?.[1] ?? "";
     if (ran.code !== 0 || !REMOTE_PATH.test(path)) return "failed";
     return path;
@@ -1084,13 +1094,14 @@ export class RemoteLogin {
     debPath: string,
     sha256: string,
     secret: Buffer | null,
-  ): Promise<"ok" | "wrong" | "mismatch" | "failed"> {
+  ): Promise<"ok" | "wrong" | "mismatch" | "stopped" | "failed"> {
     const ran = await runSsh({
       ...this.sshFor(address),
       command: sudoInstallCommand(debPath, sha256, secret !== null),
       ...(secret ? { stdin: (sink: Writable) => writeSecret(secret, sink) } : {}),
       timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
     });
+    if (ran.stopped) return "stopped";
     if (ran.code === 0) return "ok";
     if (ran.code === 65) return "mismatch";
     if (secret && sudoRejected(ran.stderr)) return "wrong";
@@ -1146,6 +1157,8 @@ export class RemoteLogin {
           step.caution(remoteLoginWords.notInBackground(device, "update"), { deviceId: device.id });
         return this.device(device.id);
       }
+      // Stopped by the time limit while `work update` ran there: it may already have updated.
+      if (ran.stopped) return step.uncertain(deviceLabel(device));
       if (ran.code === SSH_FAILED) return step.refuse(sshRefusal(ran.stderr));
       return step.refuse("failed");
     } finally {
@@ -1410,8 +1423,8 @@ export class RemoteLogin {
         for (const line of said) emit("refused", line, "warn", { name });
         throw new RemoteLoginRefusedError("failed", said);
       },
-      inactive: (name: string): never => {
-        const said = remoteLoginWords.inactive(name, doing);
+      stopped: (name: string, why: NonNullable<SshResult["stopped"]>): never => {
+        const said = remoteLoginWords.stopped(name, doing, why);
         for (const line of said) emit("refused", line, "warn", { name });
         throw new RemoteLoginRefusedError("failed", said);
       },

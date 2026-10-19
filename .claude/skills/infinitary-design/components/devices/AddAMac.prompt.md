@@ -30,6 +30,8 @@ A refusal is two feed lines with `warn` dots, never a card:
 - Infinitary's own key placed there, and still not let in: "sam@mini.local did not let Infinitary's own key in, after it was placed there." and "Its Remote Login may read keys from another file.
   Add it with a command instead."
 - no answer: "Could not reach sam@mini.local." and "Check its address and that it is awake, then ask again."
+- stopped by its thirty-minute time limit before Infinitary started there: "Preparing Infinitary for Mac mini stopped at its 30-minute time limit." and "Nothing changed there.
+  Ask again.", never "Could not reach", since that computer answered all along.
 - another system, or Linux on a chip with no published build: "Infinitary cannot run on sam@mini.local's system." and "It runs work on Macs, and on Linux computers with an x64 chip.
   Nothing changed there."
 - a Linux computer that lacks what its work needs: "Studio needs xvfb, libfuse2 and libgtk-3-0 before it can run your first mate's work." and "Install them there with its software app or package manager, then ask again.", naming each of git, Xvfb, FUSE 2 and the libraries Infinitary needs to start there that it lacks, by the package its own package manager installs, before anything is sent.

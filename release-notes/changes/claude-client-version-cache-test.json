@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-client-version-cache-test",
+      "reason": "Test only: the Claude client version-cache test now updates its stub client the way the native installer does, so it stops failing on Linux's coarse file clock. No shipped behavior changed."
+    }
+  ]
+}

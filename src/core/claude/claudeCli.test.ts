@@ -1,4 +1,11 @@
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
@@ -214,7 +221,12 @@ describe("checkClaudeClient", () => {
 
   it("reads the version once per build of the binary", async () => {
     const home = tree();
-    const executable = client(join(home, ".local", "bin", "claude"), "2.1.278");
+    // The native installer's layout (`knownClaudeHomes`): a launcher symlink
+    // onto one file per build under `~/.local/share/claude/versions`.
+    const versions = join(home, ".local", "share", "claude", "versions");
+    const executable = join(home, ".local", "bin", "claude");
+    mkdirSync(join(executable, ".."), { recursive: true });
+    symlinkSync(client(join(versions, "2.1.278"), "2.1.278"), executable);
     let reads = 0;
     const read = async () => {
       reads += 1;
@@ -224,8 +236,12 @@ describe("checkClaudeClient", () => {
     await checkClaudeClient(hermetic(home), options);
     await checkClaudeClient(hermetic(home), options);
     expect(reads).toBe(1);
-    // The client's own updater replaces the file; the next check reads again.
-    writeFileSync(executable, `#!/bin/sh\necho "2.1.300 (Claude Code)"\nexit 0\n`);
+    // The client's own updater installs the new build beside the old one and
+    // repoints the launcher; the next check reads again. Rewriting the old
+    // file in place is not what it does, and at the same size Linux's coarse
+    // file clock can leave that file's identity unchanged (INF-482).
+    unlinkSync(executable);
+    symlinkSync(client(join(versions, "2.1.300"), "2.1.300"), executable);
     await checkClaudeClient(hermetic(home), options);
     expect(reads).toBe(2);
   });

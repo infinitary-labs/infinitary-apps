@@ -4,6 +4,10 @@ What a client of the home is written against: `docs/contract.json`, every core r
 A paired view, the helper and a native app read the same file.
 How the connection carries it is `docs/connection.md`; how a device pairs is `docs/devices.md`.
 
+Protocol 10.0 adds version 2 to the saved story's closed version set, with bounded typed checked facts beside folded verification.
+The new union member requires a major version; version-1 saved stories remain readable and keep their rendering (`docs/forge.md`, "Saved change stories").
+A computer on an older major must update before taking work.
+
 Protocol 9.3 adds optional `reviewCapOwner` to task delivery facts: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the existing captain hold.
 Older readers ignore the optional field; the home owns routing and gate enforcement.
 

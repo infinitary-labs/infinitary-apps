@@ -5,6 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
 import { presentationCommitMessage } from "../../src/core/forge";
 import { openDatabase } from "../../src/core/storage/db";
+import { TaskStore } from "../../src/core/storage/taskStore";
 import {
   FORGE_SECTION_WORDS,
   forgeKeyPage,
@@ -53,6 +54,7 @@ import {
   MOCK_CONTINUE_STORY,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
   MOCK_GITHUB_STORY,
   MOCK_LOCATED_CARD_TITLE,
   MOCK_PROJECT_LIVES_CARD_TITLE,
@@ -61,9 +63,10 @@ import {
   WORKFLOW_DISPATCH_MARKER,
   WORKFLOW_EVIDENCE_MARKER,
 } from "./mockProvider";
-import { heroShot } from "./pictures";
+import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
+import { readSavedData } from "./savedData";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
@@ -531,6 +534,8 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   // The branch went up through git with the app's helper answering, and
   // the change opened on GitHub carries exactly that version.
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
+  // The author waited for the background completion rather than repeating git.
+  expect(git("-C", bare, "rev-list", "--count", `refs/heads/main..refs/heads/${branch}`)).toBe("1");
   expect(github.requests()).toContain("POST /repos/octo/meterlab/pulls");
 
   const frame = cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE);
@@ -545,7 +550,43 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
       launched.app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []),
     )
     .toEqual(["https://github.com/octo/meterlab/pull/100"]);
-  await page.screenshot({ path: test.info().outputPath("forge-signin-completion-card.png") });
+  // INF-467: the real publication path reads one short story in two tiers.
+  const presentation = readSavedData(
+    launched.userDataDir,
+    (db) => new TaskStore(db).get(task?.id as string)?.delivery?.presentation,
+  );
+  expect(presentation?.revisions.at(-1)?.version).toBe(2);
+  expect(presentation?.revisions.at(-1)?.title).toBe(MOCK_GITHUB_CHANGE.title);
+  const published = presentation?.published?.region ?? "";
+  expect(published).toContain(`- [x] ${MOCK_GITHUB_STORY.checked[0]?.check}`);
+  expect(published).not.toContain(sentUp);
+  expect(published).not.toContain("Checks are pending");
+  expect(published).not.toContain("Required actions");
+  await expect(frame.locator("li").last()).toContainText(
+    MOCK_GITHUB_STORY.checked[0]?.result ?? "",
+  );
+  const evidence = frame.locator("details");
+  await expect(evidence).toHaveCount(1);
+  await expect(evidence).not.toHaveAttribute("open", "");
+  await expect(evidence.locator("p")).toBeHidden();
+  const pictureDir = process.env.INFINITARY_STORY_PICTURES;
+  await resizeWindow(launched.app, page, { width: 1280, height: 1000 });
+  await regionShot(
+    shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE),
+    pictureDir
+      ? join(pictureDir, "card-after.png")
+      : test.info().outputPath("forge-signin-completion-card.png"),
+  );
+  await focusOn(evidence.locator("summary"));
+  await pressKey(evidence.locator("summary"), "Enter");
+  await expect(evidence.locator("p")).toHaveText(MOCK_GITHUB_STORY.verification);
+  if (pictureDir) {
+    await regionShot(
+      shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE),
+      join(pictureDir, "card-details-after.png"),
+    );
+    writeFileSync(join(pictureDir, "published-story.md"), published);
+  }
 
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect(putInLine(page, task?.key as string)).toBeVisible({ timeout: 30_000 });
@@ -1256,13 +1297,15 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   // click merges it there.
   const title = `meterlab ${GITHUB_CHANGE_PROMPT_MARKER}`;
   await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
-  await expect(shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE)).toBeVisible({ timeout: 45_000 });
+  await expect(shownCard(page, MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE)).toBeVisible({
+    timeout: 45_000,
+  });
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/fm/task-${task?.id}`);
   expect(github.requests()).toContain("POST /api/v3/repos/octo/meterlab/pulls");
-  const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));
+  const facts = factsStrip(cardBody(page, MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE));
   await expect(
     facts.change.locator(`a[href="https://${ENTERPRISE}/octo/meterlab/pull/100"]`),
   ).toHaveText("#100");

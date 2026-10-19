@@ -28,6 +28,7 @@ import {
 } from "../forge";
 import type { StagedChangePresentation } from "../pi/changePresentation";
 import type { TaskService } from "../tasks/taskService";
+import { requireConventional } from "../workspace/conventional";
 
 export type PresentationLedger = Pick<
   TaskService,
@@ -93,6 +94,7 @@ export class ChangePresentations {
               "Keep the original Before base and destination; reconcile changed project identity or visibility before publishing.",
             );
           const revision = (prior?.revision ?? 0) + 1;
+          if (staged.version === 2) requireConventional(staged.title, "story title");
           const story = changePresentationSchema.parse({
             ...staged,
             taskId,
@@ -168,6 +170,8 @@ export class ChangePresentations {
     inheritedContentHash?: string,
   ): Promise<ForgeChange> {
     const story = this.current(taskId, revision);
+    if (story.version === 2 && title !== story.title)
+      throw new Error("Use the saved conventional title for the pull request and completion card.");
     if (!forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
     const words = hostWords(forge);

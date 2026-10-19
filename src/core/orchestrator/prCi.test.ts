@@ -2528,6 +2528,7 @@ describe("shared story delivery boundaries", () => {
           whatChanged: story.whatChanged,
           before: story.before,
           after: story.after,
+          checked: [{ check: "Retained evidence", result: "The reply picture is selected." }],
           verification: story.verification,
           risk: story.risk,
           requiredActions: [],

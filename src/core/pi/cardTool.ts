@@ -393,7 +393,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
  */
 export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: a future github.com pull request or gitlab.com merge request, and its completion card, use the story prepare_change returns.",
-  "Pass that current revision here and to open_change as presentation, not body; supply the saved title, give one settle merge action, and omit body, body_file, risk and required_actions.",
+  "Pass that current revision here and to open_change as presentation, not body; supply the saved conventional title on both surfaces, give one settle merge action, and omit body, body_file, risk and required_actions.",
   "The host uses the saved story after the checks pass.",
   "Pictures and recordings on it are the selected, inspected, publishable ones, with no local path or private thread.",
   "Existing pull requests, self-hosted GitLab, GitHub Enterprise, plain Git and local-only delivery keep body and the five headings.",

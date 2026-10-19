@@ -110,7 +110,7 @@ export async function stageChangePresentation(
     });
     const { publishable: _publishable, views: _sourceViews, ...story } = draft;
     return {
-      version: 1,
+      version: 2,
       ...story,
       projectText: story.projectText ?? "",
       views,

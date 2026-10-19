@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { presentationCommitMessage, presentationRegionMarkers } from "../../src/core/forge";
+import { presentationMarkdownText } from "../../src/core/forge/presentation";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -26,6 +27,7 @@ import {
   GITLAB_EVIDENCE_MARKER,
   MOCK_GITHUB_CHANGE,
   MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
   MOCK_GITHUB_STORY,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
@@ -178,7 +180,11 @@ for (const host of HOSTS) {
       await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
 
       // The completion card cleared the checks gate on GitLab's pipeline.
-      const card = shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE);
+      const savedStory = host === "gitlab.com";
+      const cardTitle = savedStory
+        ? MOCK_GITHUB_CHANGE_CARD_TITLE
+        : MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE;
+      const card = shownCard(page, cardTitle);
       await expect(card).toBeVisible({ timeout: 45_000 });
       const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
         (row) => row.title === title,
@@ -189,7 +195,7 @@ for (const host of HOSTS) {
       expect(gitlab.requests()).toContain(`POST /api/v4/projects/${project}/merge_requests`);
       expect(gitlab.requests()).toContain(`GET /api/v4/projects/${project}/pipelines/101/jobs`);
       const webUrl = `https://${host}/${GITLAB_STUB_PROJECT}/-/merge_requests/1`;
-      const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));
+      const facts = factsStrip(cardBody(page, cardTitle));
       await expect(facts.change.locator(`a[href="${webUrl}"]`)).toHaveText("!1");
       await expect(facts.checks).toHaveText(CHECK_WORDS.green);
       expect(
@@ -210,14 +216,13 @@ for (const host of HOSTS) {
 
       // gitlab.com's merge request carries the saved story's generated region;
       // a server's own host keeps the description the crewmate gave.
-      const savedStory = host === "gitlab.com";
       const description = gitlab.descriptions().get(1) ?? "";
       if (savedStory) {
         const { start, end } = presentationRegionMarkers(task.id);
         expect(description.startsWith(start)).toBe(true);
         expect(description.endsWith(end)).toBe(true);
         expect(description).toContain("## Why");
-        expect(description).toContain(`No pictures: `);
+        expect(description).toContain(presentationMarkdownText(MOCK_GITHUB_STORY.noPicture ?? ""));
       } else {
         expect(description).toBe(MOCK_GITHUB_CHANGE.body);
       }

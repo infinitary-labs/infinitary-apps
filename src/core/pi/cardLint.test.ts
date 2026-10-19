@@ -15,6 +15,7 @@ import {
   lintCardShape,
   lintCrewmateCard,
   lintFirstmateCard,
+  NO_EXCLAMATION_REFUSAL,
   untaggedNewMarkRefusal,
   writeInGaps,
 } from "./cardLint";
@@ -706,6 +707,26 @@ describe("lintCrewmateCard", () => {
       expect(lintCrewmateCard(completion(outline.replace("Why", "<em>why</em>")))).toBeUndefined();
     });
 
+    it("keeps conventional breaking markers on saved-story titles without allowing excited copy (INF-470)", () => {
+      for (const title of ["fix!: correct the story", "fix(cards)!: correct the story"]) {
+        const card = { ...completion(outline), title };
+        expect(lintCrewmateCard(card, { savedStory: true })).toBeUndefined();
+        expect(lintCrewmateCard(card)).toBe(NO_EXCLAMATION_REFUSAL);
+        expect(lintCrewmateCard({ ...card, title: `${title}!` }, { savedStory: true })).toBe(
+          NO_EXCLAMATION_REFUSAL,
+        );
+        expect(
+          lintCrewmateCard({ ...card, body: `${outline}<p>Great!</p>` }, { savedStory: true }),
+        ).toBe(NO_EXCLAMATION_REFUSAL);
+      }
+      expect(
+        lintCrewmateCard(
+          { ...completion(outline), title: "This is not conventional!: a title" },
+          { savedStory: true },
+        ),
+      ).toBe(NO_EXCLAMATION_REFUSAL);
+    });
+
     it.each(COMPLETION_CARD_HEADINGS)(
       "names the first missing heading, %s, and the repair",
       (heading) => {
@@ -779,6 +800,16 @@ describe("lintCrewmateCard", () => {
       expect(
         lintCrewmateCard(completion(`${outline}<style>p { margin: 0; }</style>`)),
       ).toBeUndefined();
+    });
+
+    it("accepts INF-467's new outline only for a host-validated saved story", () => {
+      const body =
+        "<h3>Why</h3><p>Six cards drew the recommended button first.</p><h3>What changed</h3><ul><li>The default is at the right edge.</li></ul><h3>Before and after</h3><p>Before: the default was first. After: it is last.</p><h3>Checked</h3><ul><li>The six card pictures show the default at the right edge.</li></ul>";
+      expect(lintCrewmateCard(completion(body), { tieredStory: true })).toBeUndefined();
+      expect(lintCrewmateCard(completion(body))).toContain('"Before" heading');
+      expect(
+        lintCrewmateCard(completion(body.replace("<h3>Checked</h3>", "")), { tieredStory: true }),
+      ).toContain('"Checked" heading');
     });
 
     describe("pictures (contract v4.69)", () => {

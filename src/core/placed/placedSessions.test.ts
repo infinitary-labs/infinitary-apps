@@ -1691,7 +1691,7 @@ describe("a task that runs on a computer that runs work", () => {
             name: "prepare_change",
             args: {
               story: {
-                title: "The change shows its evidence",
+                title: "fix: show the selected evidence",
                 publishable: true,
                 base: project.main,
                 head: project.main,
@@ -1715,6 +1715,7 @@ describe("a task that runs on a computer that runs work", () => {
                     ],
                   },
                 ],
+                checked: [{ check: "Selected picture", result: "The retained image is readable." }],
                 verification: ["Opened the selected picture."],
                 risk,
                 requiredActions: [],
@@ -1739,6 +1740,8 @@ describe("a task that runs on a computer that runs work", () => {
       source,
     );
     expect(story?.head).toBe(project.main);
+    expect(story?.version).toBe(2);
+    expect(story?.checked).toHaveLength(1);
     // INF-169 F13: only the home retains prepared copies after transfer.
     expect(readdirSync(at.folders("t-story").cards)).toEqual([]);
     expect(readFileSync(picture)).toEqual(source);

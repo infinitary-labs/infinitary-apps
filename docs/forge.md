@@ -620,10 +620,20 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 A future github.com pull request or gitlab.com merge request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
-It records Why, What changed, Before, After, ordered view identities, captions, capture versions, verification, all seven risk explanations, required actions and unfinished work.
+New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
+Aim for 150 open words on the card and 250 on the pull request.
+The schema carries the captain’s selected item counts; the author owns sentence length and word targets, with no invented per-sentence character refusal.
+`verification` keeps commands, file names and counts behind How it was checked on both surfaces; nonempty unfinished work folds under Not done.
+The card keeps its risk radar; the pull request gives one line naming dimensions above low and folds the seven-row assessment.
+Empty required-action and unfinished sections, a frozen checks status and story/version stamps are absent.
+Authors never put code versions, hashes or revision numbers in prose, captions, alt text, verification or project text, even folded; this is instruction only, with no prose refusal or redaction.
+Capture versions and applicability remain retained data, never rendered on new stories.
+Version-1 saved stories keep their rendering; already published descriptions are not rewritten automatically.
 Changed views have Before and After media; new views have only After; an invisible change has no views and an explicit no-picture reason.
-An author may group two media as an adjacent view, with the same ordering in both outputs.
-Picture-only pairs appear side by side; a pair containing a recording stacks in both outputs because GitHub's and GitLab's native players ignore the requested width and overflow a two-column table.
+Under Before and after, each changed view pairs its Before pictures with its After pictures, with one caption per view and labels for each state.
+A new view carries the New tag and After evidence only.
+A view containing a recording stacks in both outputs because GitHub's and GitLab's native players ignore the requested width and overflow a two-column table.
+Version-1 stories retain the author's optional adjacent grouping within each state.
 The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
 Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.
 Public project-template text and issue references are supplied as `projectText` outside the generated region on the first publication.
@@ -677,8 +687,8 @@ A task whose pull request was opened before saved stories and has since closed f
 One that merged outside the app stops there like a merged published story: nothing more is opened for it.
 Hosted files can outlive a failed or abandoned opening, and local cleanup never deletes them.
 
-The first published description says checks are pending.
-After checks finish, the author updates verification in a new story revision and deliberately republishes it before offering completion.
+New stories print no publication-time checks status; the host's live checks strip remains authoritative.
+If checked facts change after publication, the author updates them and verification in a new story revision and deliberately republishes it before offering completion.
 A replacement keeps the original Before base and evidence; After needs fresh captures or an explicit applicability declaration for the current committed version.
 Confirmed receipts are reused after restart without another upload, while an open PR keeps its last complete story until the replacement is ready.
 The generated region carries stable markers and a last-published hash; replacement normalizes CRLF to LF, preserves the surrounding words, and refuses edits inside it.

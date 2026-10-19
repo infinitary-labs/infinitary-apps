@@ -2540,18 +2540,19 @@ export const WORKFLOW_EVIDENCE_MARKER = "inspect the hosted measurement evidence
 export const GITLAB_EVIDENCE_MARKER = "inspect the GitLab pipeline evidence";
 export const GITHUB_CHANGE_PROMPT_MARKER = "open the meter fix as a proposed change";
 export const CONTINUE_CHANGE_PROMPT_MARKER = "open the staged meter fix then carry on";
-export const CONTINUE_CHANGE_CARD_TITLE = "The first meter fix is ready";
 export const CONTINUE_CHANGE_TITLE = "Continue: check the landed meter";
-export const MOCK_GITHUB_CHANGE_CARD_TITLE = "The meter fix is open as a proposed change";
 /** The proposed change each of those two crewmates opens: its title and body. */
 export const MOCK_GITHUB_CHANGE = {
-  title: "fix: the meter reads on time",
+  title: "fix!: the meter reads on time",
   body: "## Intent\nThe meter reads on time.",
 };
 export const MOCK_CONTINUE_CHANGE = {
   title: "fix: stage the meter",
   body: "## Intent\nStage the meter.",
 };
+export const MOCK_GITHUB_CHANGE_CARD_TITLE = MOCK_GITHUB_CHANGE.title;
+export const MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE = "The meter fix is open as a proposed change";
+export const CONTINUE_CHANGE_CARD_TITLE = MOCK_CONTINUE_CHANGE.title;
 
 /** INF-132: a scripted github.com or gitlab.com author prepares the same typed story as a real crewmate. */
 export const MOCK_GITHUB_STORY: Omit<
@@ -2562,6 +2563,7 @@ export const MOCK_GITHUB_STORY: Omit<
   whatChanged: ["The meter reads on time."],
   before: ["The meter reading lagged."],
   after: ["The meter reads on time."],
+  checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
   verification: ["Checked the committed meter change."],
   views: [],
   noPicture: "This disposable git change has no visible interface.",
@@ -4011,8 +4013,8 @@ function checkRepairMove(
  */
 export const KEPT_MERGE_MARKER = "exercise a kept merge";
 export const KEPT_MERGE_ON_CLAUDE = "on Claude";
-export const KEPT_MERGE_CARD = "The kept-merge change is ready";
 export const KEPT_MERGE_TITLE = "feat: keep the merge click";
+export const KEPT_MERGE_CARD = KEPT_MERGE_TITLE;
 // e2e-typed-words: the mock's own steer to the kept-merge crewmate; it only shares a phrase with the product's
 const KEPT_MERGE_REPAIR = `${KEPT_MERGE_MARKER} bring it up to date`;
 
@@ -4159,8 +4161,8 @@ function keptMergeMove(
  * spawn to CLAUDE_CREW_MODEL.
  */
 export const GUIDED_MERGE_MARKER = "hold a kept merge for guidance";
-export const GUIDED_MERGE_CARD = "The guided change is ready";
 export const GUIDED_MERGE_TITLE = "feat: hold the merge for guidance";
+export const GUIDED_MERGE_CARD = GUIDED_MERGE_TITLE;
 export const GUIDED_MERGE_QUESTION = "Rename the guided file?";
 /** The captain's ask in the main input: the Firstmate steers it to the crewmate in his turn. */
 export const GUIDED_MERGE_ASK = `${GUIDED_MERGE_MARKER}: ask whether to rename the file`;
@@ -8001,32 +8003,50 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           streamText("Evidence returned.");
           return;
         }
-        if (!isFirstmate && latestUserTail.includes(GITHUB_CHANGE_PROMPT_MARKER) && wantsStream) {
-          const gitReading = sinceLastUser(body).results[0];
+        if (!isFirstmate && body.includes(GITHUB_CHANGE_PROMPT_MARKER) && wantsStream) {
+          // INF-470: this publication journey must also work when git completes
+          // as a background job. Read its actual completion, never the job-start
+          // receipt as if it were the git output, and never repeat the command.
+          const messages = (JSON.parse(body) as ChatRequest).messages ?? [];
+          const results = messages.flatMap(toolResults);
+          const gitReading = [
+            ...results,
+            ...messages
+              .filter((message) => message.role === "user")
+              .map((message) => messageText(message.content)),
+          ].find((reading) =>
+            /https:\/\/(?:github|gitlab)[^\s]*\n[0-9a-f]{40}\n[0-9a-f]{40}/.test(reading),
+          );
           // INF-132: github.com and gitlab.com take a saved story; a server's own host keeps its body.
           const savedStory = /https:\/\/(?:github|gitlab)\.com\//.test(gitReading ?? "");
-          if (!hasToolResults) {
+          if (!calledTool(body, "bash")) {
             streamToolCalls([
               {
                 name: "bash",
                 args: {
-                  command:
-                    'git commit --allow-empty -m "fix: the meter reads on time" && git push origin HEAD && git config --get remote.origin.url && git rev-parse main HEAD',
+                  background: true,
+                  command: `git commit --allow-empty -m "${MOCK_GITHUB_CHANGE.title}" && git push origin HEAD && git config --get remote.origin.url && git rev-parse main HEAD`,
                 },
               },
             ]);
             return;
           }
-          if (calledTool(latestUserTail, "emit_card")) {
+          if (!gitReading) {
+            streamText("Waiting for the committed change.");
+            return;
+          }
+          if (calledTool(body, "emit_card")) {
             streamText("done");
             return;
           }
-          if (latestUserTail.includes("overall: green")) {
+          if (results.some((result) => result.includes("overall: green"))) {
             streamToolCalls([
               {
                 name: "emit_card",
                 args: {
-                  title: MOCK_GITHUB_CHANGE_CARD_TITLE,
+                  title: savedStory
+                    ? MOCK_GITHUB_CHANGE_CARD_TITLE
+                    : MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
                   ...(savedStory
                     ? { presentation: preparedRevision(body) }
                     : { body: MOCK_STANDARD_CARD_BODY }),
@@ -8044,11 +8064,11 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             ]);
             return;
           }
-          if (latestUserTail.includes("Read its checks with check_change")) {
+          if (results.some((result) => result.includes("Read its checks with check_change"))) {
             streamToolCalls([{ name: "check_change", args: {} }]);
             return;
           }
-          if (savedStory && !calledTool(latestUserTail, "prepare_change")) {
+          if (savedStory && !calledTool(body, "prepare_change")) {
             streamToolCalls([prepareMockStory(MOCK_GITHUB_CHANGE_CARD_TITLE, gitReading)]);
             return;
           }

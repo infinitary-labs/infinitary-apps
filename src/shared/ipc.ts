@@ -391,7 +391,7 @@ import { workRequests, workRequestWire } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "9.3.0";
+export const PROTOCOL_VERSION = "10.0.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request

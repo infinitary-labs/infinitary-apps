@@ -202,6 +202,11 @@ The five headings are not asked of a completion card's open body.
 They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
 The saved story's title wins over the title field, and its risk and required actions supply the host's controls.
+A conventional title's breaking marker (`!:`) is metadata, not excited copy; the saved title keeps it, while its summary and body still follow the calm-copy rule.
+Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
+Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
+Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
+Version-1 stories keep their existing drawing; the report, legacy descriptions and free-form completion outline stay unchanged.
 The host renders its body from the same version as the PR and keeps the risk chart, requirements and merge controls under their existing owners.
 Picture-only pairs may sit side by side; any pair containing a recording stacks in both outputs to fit GitHub's and GitLab's native players.
 

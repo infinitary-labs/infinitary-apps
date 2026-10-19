@@ -291,3 +291,91 @@ describe("the layout GitLab can actually display", () => {
     ).toThrow(/unconfirmed attachment/);
   });
 });
+
+// INF-467 direction B and the captain's submitted answers: conventional title,
+// no rendered code versions, checked facts with folded commands, paired states.
+describe("version-two stories read in two tiers", () => {
+  function tiered(kinds: ("picture" | "recording")[] = ["picture"]): ChangePresentation {
+    const selected = story(kinds, "private");
+    return {
+      ...selected,
+      version: 2,
+      title: "fix(cards): keep recordings whole",
+      checked: [{ check: "Recording", result: "Both players remain whole." }],
+      verification: ["Opened both native players and compared their full frames."],
+      views: selected.views.map((view) => ({
+        ...view,
+        layout: undefined,
+        after: view.after.map((entry) => ({
+          ...entry,
+          applicability: `Still applies from ${head}.`,
+        })),
+      })),
+    };
+  }
+  it("pairs each view's two states and folds commands without printing version data or empty boilerplate", () => {
+    const selected = tiered();
+    const card = presentationCardBody(selected);
+    const body = presentationMarkdown(selected, urls, "pending");
+    const document = parseDocument(card);
+    expect(inGrid(card)).toHaveLength(1);
+    expect(figures(card).map((figure) => DomUtils.getText(figure))).toEqual(["Before", "After"]);
+    const details = DomUtils.findAll((node) => node.name === "details", document.children);
+    expect(details).toHaveLength(1);
+    const detail = details[0];
+    if (!detail) throw new Error("Missing command fold");
+    expect(DomUtils.getText(detail)).toContain(selected.verification[0]);
+    expect(details[0]?.attribs.open).toBeUndefined();
+    const checks = DomUtils.findAll((node) => node.name === "li", document.children);
+    expect(checks.map((item) => DomUtils.getText(item))).toContain(
+      "✓ Recording: Both players remain whole.",
+    );
+    expect(body).toContain("- [x] Recording: Both players remain whole\\.");
+    expect(body).toContain("<th>Before</th><th>After</th>");
+    expect(body).toContain("<summary>Full risk assessment</summary>");
+    expect(body).toContain("Risk: low in every dimension");
+    for (const rendered of [card, body]) {
+      expect(rendered).not.toContain(head);
+      expect(rendered).not.toMatch(
+        /Story 1|Evidence applicability|Checks are pending|Nothing remains|Required actions|Not done/,
+      );
+    }
+    expect(body).toBe(presentationMarkdown(selected, urls, "passed"));
+  });
+  it("stacks every recording and mixed view, marks new views, and retains substantive unfinished work in a fold", () => {
+    const selected = tiered(["picture", "recording"]);
+    selected.unfinished = ["Continue: inspect playback starts once this is merged."];
+    const card = presentationCardBody(selected);
+    const body = presentationMarkdown(selected, urls, "passed");
+    expect(inGrid(card)).toHaveLength(0);
+    expect(body).not.toContain("<table>");
+    expect(body.split("\n\n").filter((block) => block === urls.get(video))).toHaveLength(2);
+    expect(card).toContain("<summary>Not done</summary>");
+    expect(body).toContain("<summary>Not done</summary>");
+    const view = selected.views[0];
+    if (!view) throw new Error("Missing selected view");
+    view.kind = "new";
+    view.before = [];
+    const fresh = presentationCardBody(selected);
+    expect(fresh).toContain("data-inf-new");
+    expect(figures(fresh).map((figure) => DomUtils.getText(figure))).toEqual(["After", "After"]);
+    expect(presentationMarkdown(selected, urls, "passed")).toContain("### New: The comparison");
+  });
+  it("names only raised risk dimensions in the open line and preserves GitLab's native media and inert prose", () => {
+    const selected = tiered(["recording"]);
+    selected.destination.host = "gitlab.com";
+    selected.risk.behavior = { level: "medium", why: "Adds an optional comparison." };
+    selected.checked = [{ check: "/merge", result: "This remains text." }];
+    const receipt = new Map([
+      [image, `/uploads/${"a".repeat(32)}/picture.png`],
+      [video, `/uploads/${"b".repeat(32)}/recording.mp4`],
+    ]);
+    const body = presentationMarkdown(selected, receipt, "passed");
+    const openRisk = body.split("### Risk\n\n")[1]?.split("<details>")[0];
+    expect(openRisk).toContain("Behavior, medium");
+    expect(openRisk).not.toContain("Dependencies");
+    expect(body).toContain(`![Sample recording 1](${receipt.get(video)})`);
+    expect(body).toContain("- [x] \\/merge:");
+    expect(body).not.toMatch(/^\/merge/m);
+  });
+});

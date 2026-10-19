@@ -33,6 +33,13 @@ export const presentationViewSchema = z.strictObject({
   after: z.array(presentationMediaSchema).min(1).max(20),
 });
 
+/** INF-467: a checked fact is a short subject and its observed result, not a command transcript. */
+export const presentationCheckSchema = z.strictObject({
+  check: words,
+  result: words,
+});
+const checked = z.array(presentationCheckSchema).min(1).max(6);
+
 /** Typed publication intent: the author, not a prose classifier, decides what is safe to share. */
 export const changePresentationDraftSchema = z
   .strictObject({
@@ -40,13 +47,14 @@ export const changePresentationDraftSchema = z
     base: head,
     head,
     publishable: z.literal(true),
-    why: paragraphs,
-    whatChanged: paragraphs,
-    before: paragraphs,
-    after: paragraphs,
+    why: z.array(words).min(1).max(2),
+    whatChanged: z.array(words).min(1).max(5),
+    before: z.array(words).length(1),
+    after: z.array(words).length(1),
     views: z.array(presentationViewSchema).max(30),
     noPicture: words.optional(),
-    verification: paragraphs,
+    checked,
+    verification: z.array(words).max(20),
     risk: riskDeclarationSchema,
     requiredActions: requiredActionsSchema,
     unfinished: z.array(words).max(20),
@@ -80,7 +88,7 @@ export const retainedPresentationMediaSchema = z.strictObject({
 export type RetainedPresentationMedia = z.infer<typeof retainedPresentationMediaSchema>;
 
 const savedPresentationShape = z.strictObject({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   taskId: z.string(),
   revision: z.number().int().positive(),
   destination: z.strictObject({
@@ -108,7 +116,8 @@ const savedPresentationShape = z.strictObject({
     }),
   ),
   noPicture: words.optional(),
-  verification: paragraphs,
+  checked: checked.optional(),
+  verification: z.array(words).max(20),
   risk: riskDeclarationSchema,
   requiredActions: requiredActionsSchema,
   unfinished: z.array(words),
@@ -116,7 +125,9 @@ const savedPresentationShape = z.strictObject({
   assets: z.array(presentationAssetSchema),
   pictures: z.array(cardPictureSchema),
 });
-export const changePresentationSchema = savedPresentationShape.superRefine(evidenceRelations);
+export const changePresentationSchema = savedPresentationShape
+  .superRefine(evidenceRelations)
+  .superRefine(storyTiers);
 export type ChangePresentation = z.infer<typeof changePresentationSchema>;
 
 export const stagedChangePresentationSchema = savedPresentationShape
@@ -125,7 +136,8 @@ export const stagedChangePresentationSchema = savedPresentationShape
     destination: true,
     revision: true,
   })
-  .superRefine(evidenceRelations);
+  .superRefine(evidenceRelations)
+  .superRefine(storyTiers);
 export type StagedChangePresentation = z.infer<typeof stagedChangePresentationSchema>;
 export const presentationRecoverySchema = z.strictObject({
   retryOpening: z.literal(true).optional(),
@@ -223,4 +235,27 @@ function evidenceRelations(
     }
   }
   if (JSON.stringify(draft).length > 60000) issue("The story is too large; shorten its text.");
+}
+
+/** Keep old saved stories readable without rewriting their authored content. */
+function storyTiers(
+  story: {
+    version: number;
+    checked?: unknown[];
+    why: string[];
+    whatChanged: string[];
+    before: string[];
+    after: string[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (story.version !== 2) return;
+  if ([story.before, story.after].some((lines) => lines.length !== 1))
+    ctx.addIssue({ code: "custom", message: "Give one Before and one After account." });
+  if (!story.checked?.length)
+    ctx.addIssue({ code: "custom", message: "A new story needs checked facts." });
+  if (story.why.length > 2)
+    ctx.addIssue({ code: "custom", message: "Give at most two Why entries." });
+  if (story.whatChanged.length > 5)
+    ctx.addIssue({ code: "custom", message: "Give at most five change bullets." });
 }

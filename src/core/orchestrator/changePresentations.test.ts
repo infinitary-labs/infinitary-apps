@@ -122,7 +122,7 @@ async function arrange() {
     url: (value) => value.url,
   };
   const draft: ChangePresentationDraft = {
-    title: "The change carries its pictures",
+    title: "feat: share the change story",
     base: HEAD,
     head: HEAD,
     publishable: true,
@@ -153,6 +153,7 @@ async function arrange() {
         ],
       },
     ],
+    checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
     verification: ["Opened both pictures and read the description back."],
     risk,
     requiredActions: [],
@@ -217,13 +218,39 @@ async function arrange() {
 }
 
 describe("saved change publication", () => {
+  // INF-467 submitted answers: short typed parts, with instruction-only version hygiene.
+  it("keeps selected item counts typed and prose judgments with the author (INF-467, captain reach ruling)", async () => {
+    const at = await arrange();
+    const root = { taskId: TASK, worktree: at.worktree, dir: at.media };
+    await expect(stageChangePresentation({ ...at.draft, checked: [] }, root)).rejects.toThrow();
+    await expect(
+      stageChangePresentation({ ...at.draft, checked: Array(7).fill(at.draft.checked[0]) }, root),
+    ).rejects.toThrow();
+    // The captain's 2026-10-19 reach ruling leaves brevity to the author,
+    // not a character threshold the host invented for a sentence.
+    const why = [
+      "The pull request and its completion card should present the same inspected evidence, without asking the reader to work through repeated command transcripts. The shorter reading should keep the comparison visible while leaving the full verification available for a reader who opens the details.",
+    ];
+    const staged = await stageChangePresentation(
+      { ...at.draft, why, verification: [`The inspected code is ${HEAD}.`] },
+      root,
+    );
+    expect(staged.verification).toEqual([`The inspected code is ${HEAD}.`]);
+    await expect(at.service.prepare(TASK, staged, at.forge)).resolves.toBe(1);
+    expect(at.tasks.changePresentation(TASK)?.revisions[0]?.why).toEqual(why);
+    await expect(
+      at.service.publish(TASK, 1, at.forge, BRANCH, "fix: a different name"),
+    ).rejects.toThrow("saved conventional title");
+    expect(at.upload).not.toHaveBeenCalled();
+  });
+
   // INF-285 F3: the complete rendered description must fit before any upload.
   it("refuses a valid story whose escaped Markdown exceeds GitHub's body limit before uploading", async () => {
     const at = await arrange();
     const staged = await stageChangePresentation(
       {
         ...at.draft,
-        whatChanged: Array.from(
+        verification: Array.from(
           { length: 12 },
           (_, index) => `${index + 1}. ${"Compare <before> & <after> in [the view]. ".repeat(90)}`,
         ),
@@ -249,7 +276,7 @@ describe("saved change publication", () => {
       const next = await stageChangePresentation(
         {
           ...at.draft,
-          whatChanged: Array.from({ length: 3 }, () =>
+          verification: Array.from({ length: 3 }, () =>
             "The next view includes the inspected recording poster. ".repeat(50),
           ),
           views: at.draft.views.map((view) => ({
@@ -284,7 +311,7 @@ describe("saved change publication", () => {
       const at = await arrange();
       const staged = {
         ...at.staged,
-        whatChanged: Array.from({ length: 10 }, () =>
+        verification: Array.from({ length: 10 }, () =>
           "Compare <before> & <after> in [the view]. ".repeat(90),
         ),
         projectText: "",
@@ -360,13 +387,13 @@ describe("saved change publication", () => {
     const change = await at.publish();
     expect(at.order).toEqual(["upload", "upload", "open"]);
     const card = await at.service.completion(TASK, 1, HEAD);
-    for (const heading of ["Why", "What changed", "Before", "After"]) {
+    for (const heading of ["Why", "What changed", "Before and after", "Checked"]) {
       expect(change.body).toContain(`## ${heading}`);
       expect(card.body).toContain(`<h3>${heading}</h3>`);
     }
-    expect(change.body).toContain("Checks are pending");
-    expect(change.body).toContain("Story 1");
-    expect(card.body).toContain("Story 1");
+    expect(change.body).not.toContain("Checks are pending");
+    expect(change.body).not.toContain("Story 1");
+    expect(card.body).not.toContain("Story 1");
     expect(card.riskDeclaration).toEqual(at.draft.risk);
     expect(card.requiredActions).toEqual(at.draft.requiredActions);
     expect(card.pictures.map((picture) => picture.alt)).toEqual(
@@ -374,7 +401,7 @@ describe("saved change publication", () => {
     );
     expect(change.body).not.toContain(at.root);
     expect(change.body).not.toContain("app-frame:");
-    const headings = ["Why", "What changed", "Before", "After"];
+    const headings = ["Why", "What changed", "Before and after", "Checked"];
     expect(headings.map((heading) => change.body?.indexOf(`## ${heading}`))).toEqual(
       headings
         .map((heading) => change.body?.indexOf(`## ${heading}`))
@@ -435,8 +462,8 @@ describe("saved change publication", () => {
     const card = await at.service.completion(TASK, 1, HEAD);
     expect(change.body?.match(/<td width="50%">/g)).toHaveLength(2);
     expect(card.body).toContain('class="inf-grid"');
-    expect(card.body.match(/data-inf-new/g)).toHaveLength(2);
-    expect(change.body?.match(/\*\*New\*\*/g)).toHaveLength(2);
+    expect(card.body.match(/data-inf-new/g)).toHaveLength(1);
+    expect(change.body).toContain("### New: Completion story");
     expect(card.requiredActions).toEqual([requirement]);
     expect(change.body).toContain(requirement.title);
     expect(change.body).toContain(requirement.criterion.replaceAll(".", "\\."));
@@ -611,7 +638,7 @@ describe("saved change publication", () => {
     await at.publish(2);
     expect(at.change?.body).toMatch(/^Human introduction/);
     expect(at.change?.body).toMatch(/Human footnote$/);
-    expect(at.change?.body).toContain("Story 2");
+    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(2);
     expect(at.change?.body).not.toContain("Story 1");
     expect(at.upload).toHaveBeenCalledTimes(2);
     if (!at.change) throw new Error("Missing updated change");

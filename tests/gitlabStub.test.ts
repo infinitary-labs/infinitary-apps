@@ -430,7 +430,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       inspected: true as const,
     });
     const draft = {
-      title: "The merge request carries its pictures",
+      title: "feat: carry the evidence",
       base: HEAD,
       head: HEAD,
       publishable: true as const,
@@ -454,6 +454,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
           after: [{ ...media0(DEMO_RECORDING.path, DEMO_POSTER.alt), poster: DEMO_POSTER.path }],
         },
       ],
+      checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
       verification: ["Opened both pictures and played the recording."],
       risk,
       requiredActions: [],
@@ -526,7 +527,9 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
           "The inspected light completion view",
           DEMO_POSTER.alt,
         ][index];
-        expect(description.split("\n\n")).toContain(`![${alt}](${reference})`);
+        if (upload.filename === "recording.mp4")
+          expect(description).toContain(`![${alt}](${reference})`);
+        else expect(description).toContain(`<img src="${reference}" alt="${alt}" width="320">`);
         const served = await fetch(
           `${new URL(at.gitlab.url).origin}/-/project/7/uploads/${upload.secret}/${upload.filename}`,
           { headers: { Authorization: `Bearer ${GITLAB_STUB_KEY}` } },
@@ -676,7 +679,11 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       const after = at.service();
       const second = await after.prepare(
         TASK,
-        await at.stage({ ...at.draft, verification: ["The pipeline passed for this version."] }),
+        await at.stage({
+          ...at.draft,
+          checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
+          verification: ["The pipeline passed for this version."],
+        }),
         at.forge,
       );
       const replaced = await after.publish(
@@ -695,7 +702,8 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       expect(description.split(start)).toHaveLength(2);
       expect(description.split(end)).toHaveLength(2);
       expect(description).toContain("The pipeline passed for this version\\.");
-      expect(description).toContain(`Story ${second}`);
+      expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(second);
+      expect(description).not.toContain("Story ");
 
       const change = await at.forge.changeFor(STORY_BRANCH);
       if (!change) throw new Error("The merge request is not open");

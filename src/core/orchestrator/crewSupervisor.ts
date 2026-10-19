@@ -7020,6 +7020,11 @@ export class CrewSupervisor {
     const refusal = lintCrewmateCard(finished, {
       rigor: this.policiesOf(this.options.tasks.get(task.id))?.rigor.value,
       readyPlan: record?.shape?.kind === "plan",
+      savedStory: presentationChecked !== undefined,
+      tieredStory:
+        presentationChecked !== undefined &&
+        ownPresentation?.revisions.find((story) => story.revision === presentationChecked.revision)
+          ?.version === 2,
     });
     if (refusal) throw new CardRefusedError(`Card refused: ${refusal}`, "shape", refusal);
     // A saved sign-in is offered after the lint: the crewmate never learns

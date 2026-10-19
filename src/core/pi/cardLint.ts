@@ -5,6 +5,7 @@ import {
   ELEMENT_TYPES,
   HEADING_TAGS,
   NON_COPY,
+  TIERED_STORY_HEADINGS,
   textOf,
 } from "@shared/cardHeadings";
 import {
@@ -22,6 +23,7 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
+import { conventionalTitleCopy } from "../workspace/conventional";
 import type { EmittedCard } from "./cardTool";
 
 /**
@@ -890,9 +892,14 @@ export function readyPlanButtonRefusal(
 
 export function lintCrewmateCard(
   card: ShapedCard & { asking?: boolean; designOnly?: boolean; holdsPlace?: boolean },
-  options: { rigor?: Rigor; readyPlan?: boolean } = {},
+  options: { rigor?: Rigor; readyPlan?: boolean; tieredStory?: boolean; savedStory?: boolean } = {},
 ): string | undefined {
-  const shapeRefusal = lintCardShape(card, { warm: card.holdsPlace === true });
+  // The host supplies this fact only after reading a published saved story.
+  // Keep its conventional breaking marker on screen; lint the authored words.
+  const shapeCard = options.savedStory
+    ? { ...card, title: conventionalTitleCopy(card.title) }
+    : card;
+  const shapeRefusal = lintCardShape(shapeCard, { warm: card.holdsPlace === true });
   if (shapeRefusal) return shapeRefusal;
   if (
     options.readyPlan &&
@@ -912,14 +919,17 @@ export function lintCrewmateCard(
   }
   const headings = bodyHeadings(card.body).map((heading) => heading.toLowerCase());
   let cursor = 0;
-  for (const heading of COMPLETION_CARD_HEADINGS) {
+  const outline = options.tieredStory ? TIERED_STORY_HEADINGS : COMPLETION_CARD_HEADINGS;
+  for (const heading of outline) {
     const at = headings.indexOf(heading.toLowerCase(), cursor);
     if (at === -1) {
-      return `the completion decision is missing the "${heading}" heading in order; give the body headed sections ${COMPLETION_CARD_HEADINGS.join(", ")} in that order, with the answer in the title alone.`;
+      return `the completion decision is missing the "${heading}" heading in order; give the body headed sections ${outline.join(", ")} in that order, with the answer in the title alone.`;
     }
     cursor = at + 1;
   }
-  if (options.rigor === "quick") return undefined;
+  // The saved story's schema and retained-media reader have already checked each
+  // view's evidence relationships; free-form HTML still declares them below.
+  if (options.tieredStory || options.rigor === "quick") return undefined;
   const { sections, noPictureSentence } = readPictureDeclaration(card.body);
   if (noPictureSentence) return undefined;
   const before = sections.get("before");

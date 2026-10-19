@@ -2,39 +2,21 @@ import { createHash } from "node:crypto";
 import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
 import type { AttachmentMediaType } from "./attachments";
+import {
+  presentationMarkdownText as markdown,
+  presentationHtmlText,
+  presentationRegionMarkers,
+} from "./presentationText";
+import { tieredPresentationCardBody, tieredPresentationMarkdown } from "./presentationTiers";
 import { githubAttachmentUrl } from "./providers/github/attachments";
 import { gitlabAttachmentName, gitlabAttachmentUrl } from "./providers/gitlab/attachments";
 
-export function presentationRegionMarkers(taskId: string): { start: string; end: string } {
-  if (!/^[A-Za-z0-9_-]+$/.test(taskId)) throw new Error("Invalid story task identity.");
-  return {
-    start: `<!-- infinitary-story:${taskId}:start -->`,
-    end: `<!-- infinitary-story:${taskId}:end -->`,
-  };
-}
+export {
+  presentationHtmlText,
+  presentationMarkdownText,
+  presentationRegionMarkers,
+} from "./presentationText";
 
-/** Deliberately plain, escaped author prose; general card HTML is never scraped or exported. */
-export function presentationHtmlText(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-/**
- * Author prose as inert Markdown: no markup, and no line that GitLab runs as
- * a quick action (`/merge`, `/close`) when it saves the description; `\/`
- * renders as `/` on both hosts (INF-290 F2).
- */
-function markdown(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replace(/[\\`*_{}[\]()#+.!|~/-]/g, "\\$&")
-    .replaceAll("\n", " ");
-}
 const versionWords = (story: ChangePresentation) =>
   `Story ${story.revision} · demonstrated version ${story.head}`;
 
@@ -95,7 +77,7 @@ function adjacentPictures(
 }
 
 /** Recordings use each host's own native player; GitHub's also signs private media. */
-export function presentationMarkdown(
+function legacyPresentationMarkdown(
   story: ChangePresentation,
   urls: ReadonlyMap<string, string>,
   checks: "pending" | "passed",
@@ -198,6 +180,22 @@ export function presentationMarkdown(
     .join("\n\n");
 }
 
+/** Saved version-one stories keep their drawing; new stories share the two-tier reading. */
+export function presentationMarkdown(
+  story: ChangePresentation,
+  urls: ReadonlyMap<string, string>,
+  checks: "pending" | "passed",
+): string {
+  return story.version === 1
+    ? legacyPresentationMarkdown(story, urls, checks)
+    : tieredPresentationMarkdown(story, urls);
+}
+export function presentationCardBody(story: ChangePresentation): string {
+  return story.version === 1
+    ? legacyPresentationCardBody(story)
+    : tieredPresentationCardBody(story);
+}
+
 /** INF-228 F2: a squash carries the author's summary, not the evidence presentation. */
 export function presentationCommitMessage(
   story: Pick<ChangePresentation, "whatChanged" | "projectText">,
@@ -209,7 +207,7 @@ export function presentationCommitMessage(
 }
 
 /** The exact same story; CardService keeps the risk chart, requirements and merge controls. */
-export function presentationCardBody(story: ChangePresentation): string {
+function legacyPresentationCardBody(story: ChangePresentation): string {
   const text = presentationHtmlText;
   const paragraphs = (lines: string[]) => lines.map((line) => `<p>${text(line)}</p>`).join("\n");
   const assetUrl = (id: string) => {

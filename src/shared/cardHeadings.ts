@@ -13,6 +13,13 @@ import { ElementType, parseDocument } from "htmlparser2";
 
 /** Finished code-work cards' loose outline, not the report's evidence contract. */
 export const COMPLETION_CARD_HEADINGS = ["Why", "What changed", "Before", "After"] as const;
+/** INF-467: only a host-validated version-two saved story takes this outline. */
+export const TIERED_STORY_HEADINGS = [
+  "Why",
+  "What changed",
+  "Before and after",
+  "Checked",
+] as const;
 
 /** Elements whose text is never card copy. */
 export const NON_COPY = new Set(["script", "style", "template"]);

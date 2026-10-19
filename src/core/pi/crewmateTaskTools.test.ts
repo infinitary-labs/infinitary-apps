@@ -129,7 +129,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
   prepare_change: {
     params: {
       story: {
-        title: "Recovery keeps the confirmed uploads",
+        title: "fix: keep confirmed uploads",
         base: "5ca2d466ee21f9733827383f23df81f3874e0d10",
         head: "5ca2d466ee21f9733827383f23df81f3874e0d10",
         publishable: true,
@@ -139,6 +139,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
         after: ["A confirmed receipt is reused."],
         views: [],
         noPicture: "This changes internal upload recovery, not a visible view.",
+        checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
         verification: ["Restart recovery passed."],
         risk: RISK,
         requiredActions: [],

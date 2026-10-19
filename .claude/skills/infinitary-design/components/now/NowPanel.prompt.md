@@ -97,9 +97,10 @@ The status, the task title and the project wrap in full; the other summary facts
 The task record draws the same values in the same order, keeps the browser line with Now and Progress, and places the fact strip just above its action bar, after Goal and your words, Activity and Details.
 A smaller surface shows fewer of them, never different ones; the Tasks row stays a mark, key and title.
 
-- **Now** is the newest row of the record's Activity, of any kind (an opened pull request, a checks reading, a report's headline, a progress note), in Activity's own words, with that row's short age (`now`, `2m`, `3h`, `1d`, mono `--text-xs` `--fg-3`) at the line's right edge and the absolute time on hover.
+- **Now** is the crewmate's own newest doing: its own newest row of Activity (an opened pull request, a checks reading, a report's headline, a progress note), or when newer the description of its newest command, read, edit or search (Activity's plain reading when it gave none) or the sentence it last wrote, never a message the app sent it, a compaction or the start line once it acted (`docs/task-record.md`, "The Now line").
+  It reads in those words, with that doing's short age (`now`, `2m`, `3h`, `1d`, mono `--text-xs` `--fg-3`) at the line's right edge and the absolute time on hover.
   Where its words name the task's pull request, the record links them (`../cards/TaskRecord.prompt.md`, "Pull request links"); the summary keeps them plain.
-  Absent when the record has no row.
+  Absent when the record has no row; a crewmate that did nothing since a message reads its last doing at its true age.
 - **Progress** (FI3-734, the captain's Build it on the steps-view preview) is the plan the crewmate reported last with a progress note: a short, high-level list of what the task takes, each item done, current, next or skipped, as declared.
   Its label is `Progress`, so the side label column is 66px on both surfaces.
   A note that carries a list replaces it whole; one that omits it leaves the last list standing.

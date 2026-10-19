@@ -32,6 +32,18 @@ function claudeCall(seconds: number, name: string, input: Line): Line {
   };
 }
 
+/** A Claude client's line for the words it wrote, as it writes a text block. */
+function claudeText(seconds: number, text: string): Line {
+  return {
+    type: "assistant",
+    sessionId: SESSION,
+    isSidechain: false,
+    uuid: `w${seconds}`,
+    timestamp: iso(seconds),
+    message: { id: `m${seconds}`, role: "assistant", content: [{ type: "text", text }] },
+  };
+}
+
 const CLAUDE_HEAD: Line = {
   type: "queue-operation",
   operation: "enqueue",
@@ -209,5 +221,59 @@ describe("a crewmate's actions, read from its kept session", () => {
     ]);
     // A task with no kept session has done nothing to read.
     expect(setup().reader.of(task("t5"))).toEqual([]);
+  });
+
+  // INF-557: the Now line reads the last sentence the crewmate wrote between its notes.
+  it("reads the last sentence the crewmate wrote, past its thinking and a list's mark, never a sidechain's", () => {
+    const { reader, write } = setup();
+    expect(reader.said(task("t6"))).toBeNull();
+    write(
+      "t6",
+      `${SESSION}.jsonl`,
+      jsonl([
+        CLAUDE_HEAD,
+        claudeText(1, "Push access confirmed; now finding the e2e helper that seeds a session."),
+        claudeCall(2, "Read", { file_path: `${WORKTREE}/tests/e2e/crew.ts` }),
+        claudeText(
+          3,
+          "The cause is the timer.\n\n- Wait on the saved row instead. Then rerun the journey.",
+        ),
+        {
+          ...claudeText(4, "A helper's own words."),
+          isSidechain: true,
+        },
+        {
+          ...claudeText(5, ""),
+          message: {
+            id: "m5",
+            role: "assistant",
+            content: [{ type: "thinking", thinking: "Should I check the lint too?" }],
+          },
+        },
+      ]),
+    );
+    expect(reader.said(task("t6"))).toEqual({ at: T0 + 3000, text: "Then rerun the journey." });
+    write(
+      "t6",
+      "2026-10-07T12-00-00-000Z_pi.jsonl",
+      jsonl([
+        { type: "session", version: 3, id: "pi-6", timestamp: iso(0), cwd: WORKTREE },
+        {
+          type: "message",
+          timestamp: iso(9),
+          message: {
+            role: "assistant",
+            content: [
+              { type: "text", text: "Building the NOW change from the plan." },
+              { type: "toolCall", id: "c9", name: "bash", arguments: { command: "pnpm build" } },
+            ],
+          },
+        },
+      ]),
+    );
+    expect(reader.said(task("t6"))).toEqual({
+      at: T0 + 9000,
+      text: "Building the NOW change from the plan.",
+    });
   });
 });

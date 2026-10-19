@@ -231,7 +231,7 @@ A line whose fact the record already holds - the captain's reply or a line he ty
 An event is written once, on its own task, and names the other tasks it concerns (FI3-1189's rule 1).
 `TaskService` derives them in the transaction that writes the event, only from the typed links as they stand then, and keeps them in `task_event_concerns` (migration 71): the event, the other task, how the event's task stands to it, and the task a replacement carried it through (`via`).
 `TaskService.concerning` reads them, and that task's Activity shows each as a row naming the task that wrote it (`TaskActivityLine.from`), whose key at the line's end is a link to that task.
-Such a row takes no fold, and the task's Now line stays its own newest row (`taskFactsOf`).
+Such a row takes no fold, and it never stands as the task's Now line ("The Now line" below).
 
 | Event | Concerns | How it reads there |
 | --- | --- | --- |
@@ -257,7 +257,7 @@ Every pull request the record names by its number links to its page where the ho
 `condenseActivity` says which words of a line name one, as `TaskActivityLine.change`: the span of the text and the page, never a copy of the words.
 On the task's own lines that is the task's pull request, from the `pr_opened` event's `prUrl`, wherever its label stands as a whole token (`#965`, not `#9650`), with "pull request " or "PR " just before it taken in; on a linked task's line it is that task's pull request (`ConcernedEventView.from.changeUrl`, its delivery's `prUrl`).
 A pull request with no `https` page, or a branch on a plain Git host, gives no span.
-Now carries its row's span (`taskFactsOf`), so the record links it there too; the record's frame links the Activity lines, and a click goes where every link in the record goes.
+Now carries its row's span when it reads a row (`taskFactsOf`), so the record links it there too; the record's frame links the Activity lines, and a click goes where every link in the record goes.
 `recordActivity.test.ts` holds the spans, `record.frame.test.ts` the frame's links, and `tests/e2e/task-card-links.spec.ts` opens the pull request from the fact strip, from Now by keys and from an Activity line.
 The `tasks` query's rows carry the same change as `change`, its label and its page (`taskChangeOf`), so an agent that names a task's pull request on a card links the page it was given (FI3-1307; `docs/card-authoring.md`, "Pull request numbers").
 
@@ -265,7 +265,7 @@ The `tasks` query's rows carry the same change as `change`, its label and its pa
 
 Activity also holds what the task's crewmate did: each call it made to a tool other than the app's own, read from the sessions the app keeps for the task (FI3-1189's rule 3, the captain's "Folded under the row they led to").
 The calls are never copied into the timeline, whose ordinary history folds into counts past 500 events (`TIMELINE_CAP`); the session already keeps every call, and nothing prunes it (`docs/task-retention.md`).
-`CrewActions` (`src/core/tasks/crewActions.ts`) reads every session in `crewmates/<task>/sessions/` through the one session reader (`sessionToolCalls`, `src/core/storage/sessionReader.ts`), with the Claude client's own file standing in for the app's copy of the same session while it holds a turn's tail the copy has not caught up with (`createCrewmateTranscriptResolver`).
+`CrewActions` (`src/core/tasks/crewActions.ts`) reads every session in `crewmates/<task>/sessions/` through the one session reader (`sessionAssistantLines`, `src/core/storage/sessionReader.ts`), with the Claude client's own file standing in for the app's copy of the same session while it holds a turn's tail the copy has not caught up with (`createCrewmateTranscriptResolver`).
 It follows each file as it grows: a read parses only the whole lines appended since the last, and only a line that can be an assistant's.
 A call to the app's own tools (`CREWMATE_TOOLS`) is left out, because what it did is already an event: a report, an update, a card, a pull request.
 So is a shell call that runs one of the app's own task commands, such as `infinitary-browser-axi` (`runsTaskCommand`, `docs/axi-commands.md`): the task's browser line and timeline already say what its browser did, and never what was typed into a page.
@@ -277,6 +277,17 @@ The task card's Crewmate tab reads the same sessions whole, as a transcript, thr
 
 `condenseActivity` folds each action under the first row recorded at or after it, the row it led to, as the row's `actions`, and what no row followed yet under the newest row; an update a report restates takes what led to it along under the report.
 On the record, a line's count and what it opens to hold its actions and its folded events together, in time order.
+
+## The Now line
+
+Now says what the crewmate is doing: its own newest doing, with that doing's age (`nowOf` in `src/shared/taskFacts.ts`; INF-554's audit, built as INF-557).
+It is the newest of three things the record already holds.
+The first is the crewmate's own newest row: a progress note, a report, a card, a pull request or its checks.
+The second is its newest action, in the description it gave the call or the plain reading Activity writes for it.
+The third is the last sentence it wrote in its session (`TaskDetail.said`), which `CrewActions.said` reads on the same pass as its actions, from the last line with words of its newest assistant line, never its thinking or a helper's sidechain.
+A message the app sent the crewmate and a compaction stay in Activity and never stand as Now, so a crewmate that did nothing since reads its last doing at its true age, and a stalled crewmate looks stalled.
+Before its first doing, Now is the task's own newest row but those, such as the start line; a row another task wrote is Activity's alone.
+Who wrote a row is its kind, a typed fact; Now never reads a row's words to choose.
 
 ## Notes
 

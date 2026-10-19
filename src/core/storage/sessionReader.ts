@@ -208,7 +208,28 @@ const ASSISTANT_LINE: Record<SessionDialect, RegExp> = {
  * appended since its last read.
  */
 export function sessionToolCalls(text: string, dialect: SessionDialect): SessionToolCall[] {
-  const calls: SessionToolCall[] = [];
+  return sessionAssistantLines(text, dialect).flatMap((line) => line.calls);
+}
+
+/** One assistant line of a session's own conversation: the words it wrote and the calls it made. */
+export type SessionAssistantLine = {
+  /** When the session recorded it; null when its line names no time. */
+  at: number | null;
+  /** Its text parts, in order; never its thinking. */
+  texts: string[];
+  calls: SessionToolCall[];
+};
+
+/**
+ * The assistant lines of a session's own conversation, in file order, read
+ * as `sessionToolCalls` reads them, with the words each wrote beside its
+ * calls (INF-557: a crewmate's Now line reads its last sentence).
+ */
+export function sessionAssistantLines(
+  text: string,
+  dialect: SessionDialect,
+): SessionAssistantLine[] {
+  const lines: SessionAssistantLine[] = [];
   for (const line of text.split("\n")) {
     if (!ASSISTANT_LINE[dialect].test(line)) continue;
     const entry = parseLine(line);
@@ -217,32 +238,44 @@ export function sessionToolCalls(text: string, dialect: SessionDialect): Session
       const message = entry.message as JsonRecord | undefined;
       if (entry.type !== "message" || message?.role !== "assistant") continue;
       if (!Array.isArray(message.content)) continue;
-      const at = timeOf(entry) ?? timeOf(message);
+      const read: SessionAssistantLine = {
+        at: timeOf(entry) ?? timeOf(message),
+        texts: [],
+        calls: [],
+      };
       for (const part of message.content as unknown[]) {
         if (!part || typeof part !== "object") continue;
         const typed = part as JsonRecord;
+        if (typed.type === "text" && typeof typed.text === "string") {
+          read.texts.push(typed.text);
+          continue;
+        }
         if (typed.type !== "toolCall" || typeof typed.name !== "string") continue;
         const args = typed.arguments;
-        calls.push({
-          at,
+        read.calls.push({
+          at: read.at,
           name: typed.name,
           arguments: args && typeof args === "object" ? (args as JsonRecord) : {},
         });
       }
+      lines.push(read);
       continue;
     }
     if (entry.type !== "assistant" || entry.isSidechain === true) continue;
     const body = entry.message as JsonRecord | undefined;
+    const read: SessionAssistantLine = { at: timeOf(entry), texts: [], calls: [] };
     for (const block of assistantBlocks(body?.content)) {
+      if (block.type === "text") read.texts.push(String(block.text));
       if (block.type !== "toolCall") continue;
-      calls.push({
-        at: timeOf(entry),
+      read.calls.push({
+        at: read.at,
         name: String(block.name),
         arguments: block.arguments as JsonRecord,
       });
     }
+    lines.push(read);
   }
-  return calls;
+  return lines;
 }
 
 /**

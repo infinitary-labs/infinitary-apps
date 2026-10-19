@@ -734,6 +734,7 @@ export async function createServices(
   let observeEvent: (event: FmEvent) => void = () => {};
   let browserFactOf: (taskId: string) => TaskBrowserFact | undefined = () => undefined;
   let crewActionsOf: (record: TaskRecord) => readonly TaskActionLine[] = () => [];
+  let crewSaidOf: (record: TaskRecord) => TaskActionLine | null = () => null;
   // The Crewmate tab's transcripts, read from the same files (late-bound
   // too), and what each crewmate is writing now, fed from the seam below.
   let crewTranscripts: CrewTranscripts | undefined;
@@ -806,6 +807,7 @@ export async function createServices(
     browser: (taskId) => browserFactOf(taskId),
     // Late-bound too: what a crewmate did, from its kept session, read below.
     actions: (record) => crewActionsOf(record),
+    said: (record) => crewSaidOf(record),
     transcript: {
       of: (record, events, closed) =>
         crewTranscripts?.of(record, events, closed) ?? emptyTranscript(record.id),
@@ -877,6 +879,7 @@ export async function createServices(
     appTools: new Set(CREWMATE_TOOLS.map((tool) => tool.name)),
   });
   crewActionsOf = (record) => crewActions.of(record);
+  crewSaidOf = (record) => crewActions.said(record);
   crewTranscripts = new CrewTranscripts({
     recordDirOf: (taskId) => crewmateSessionsDir(paths, taskId),
     currentSession: (record) => crewmateTranscript(record).path,

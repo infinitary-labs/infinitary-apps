@@ -144,6 +144,8 @@ export type TaskProtocolOptions = {
    * at each read (`CrewActions`; docs/task-record.md, "A crewmate's actions").
    */
   actions?: (record: TaskRecord) => readonly TaskActionLine[];
+  /** The last sentence the task's crewmate wrote, read the same way (`CrewActions.said`). */
+  said?: (record: TaskRecord) => TaskActionLine | null;
   /**
    * The crewmate's sessions as its Crewmate tab reads them, at each read
    * (`CrewTranscripts`; docs/task-card-tabs.md, "The Crewmate tab").
@@ -478,6 +480,7 @@ export class TaskProtocol {
         keyOf,
         actions: this.options.actions?.(record) ?? [],
       }),
+      said: this.options.said?.(record) ?? null,
       plan: planOf(timeline),
       closing: closingOf(record, events),
       problem: problemOf(events),

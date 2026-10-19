@@ -11,7 +11,14 @@ import {
 } from "./taskBrowser";
 import type { TaskPlan } from "./taskPlan";
 import { type TaskStatusInput, type TaskStatusReading, taskStatusOf } from "./taskPresentation";
-import type { TaskActivityLine, TaskActivityRow, TaskDeliveryView, TaskView } from "./tasks";
+import type {
+  TaskActionLine,
+  TaskActivityLine,
+  TaskActivityRow,
+  TaskDeliveryView,
+  TaskEventKind,
+  TaskView,
+} from "./tasks";
 import { CHECK_WORDS, CHECKS_NOT_READ_WORDS, REVIEW_WORDS } from "./vocabulary";
 
 /**
@@ -81,9 +88,9 @@ export type TaskFacts = {
   status: TaskStatusReading;
   title: string;
   /**
-   * The newest row of the record's Activity, of any kind (the captain's
-   * now_source), with the words that name its pull request where it has a
-   * page: undefined until the record is read, null when it has none.
+   * The crewmate's own newest doing (`nowOf`, INF-557), with the words that
+   * name its pull request where it has a page: undefined until the record
+   * is read, null when it has none.
    */
   now: { text: string; at: number; change?: TaskActivityLine["change"] } | null | undefined;
   /**
@@ -108,6 +115,7 @@ export type TaskFacts = {
 export type TaskFactsInput = TaskStatusInput &
   Pick<TaskView, "key" | "title" | "model" | "tier" | "delivery"> & {
     activityLog?: readonly TaskActivityRow[];
+    said?: TaskActionLine | null;
     plan?: TaskPlan | null;
     reasoning?: Reasoning;
     modelReason?: ModelReason;
@@ -117,22 +125,11 @@ export type TaskFactsInput = TaskStatusInput &
 /** One projection for the crew summary and the task record, so one task reads the same on both. */
 export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => string): TaskFacts {
   const model = task.model ? modelName(task.model) : null;
-  // Now is the task's own: a line another task wrote is Activity's alone.
-  const newest = task.activityLog?.findLast((row) => !row.from);
   return {
     key: task.key,
     status: taskStatusOf(task),
     title: task.title,
-    now:
-      task.activityLog === undefined
-        ? undefined
-        : newest
-          ? {
-              text: newest.text,
-              at: newest.at,
-              ...(newest.change ? { change: newest.change } : {}),
-            }
-          : null,
+    now: task.activityLog === undefined ? undefined : nowOf(task.activityLog, task.said ?? null),
     plan: task.activityLog === undefined ? undefined : (task.plan ?? null),
     model,
     // The readout belongs to a model: none of it stands without one.
@@ -142,6 +139,51 @@ export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => 
     delivery: deliveryOf(task),
     browser: task.browser ? browserLineOf(task.browser, task) : null,
   };
+}
+
+/** The rows a crewmate's own work writes: a note, a report, a card, a pull request, its checks. */
+const DOING_KINDS: ReadonlySet<TaskEventKind> = new Set([
+  "progress",
+  "report",
+  "card_raised",
+  "pr_opened",
+  "ci",
+]);
+
+/**
+ * Rows the app writes to the crewmate or about its session, which never
+ * stand as its Now: a message it was sent, and a compaction.
+ */
+const SENT_KINDS: ReadonlySet<TaskEventKind> = new Set(["steered", "compacted"]);
+
+/**
+ * The Now line (INF-554's audit, plan approved as INF-557): the crewmate's
+ * own newest doing, with that doing's time - the newest of its own rows
+ * (`DOING_KINDS`), the last sentence it wrote (`said`) and its newest
+ * action, in the description it gave the call or Activity's plain reading
+ * of it. A message the app sent it never stands as Now, so a crewmate that
+ * did nothing since reads its last doing at its true age. Before it did
+ * anything, Now is the newest row of the task's own but those, such as the
+ * start line. A row another task wrote is Activity's alone.
+ */
+export function nowOf(
+  log: readonly TaskActivityRow[],
+  said: TaskActionLine | null,
+): TaskFacts["now"] {
+  const own = log.filter((row) => !row.from);
+  const row = own.findLast((line) => DOING_KINDS.has(line.kind));
+  let newest: { text: string; at: number; change?: TaskActivityLine["change"] } | undefined = row
+    ? { text: row.text, at: row.at, ...(row.change ? { change: row.change } : {}) }
+    : undefined;
+  const actions = own.flatMap((line) => line.actions ?? []);
+  for (const doing of said ? [...actions, said] : actions) {
+    if (!newest || doing.at > newest.at) newest = { text: doing.text, at: doing.at };
+  }
+  if (newest) return newest;
+  const before = own.findLast((line) => !SENT_KINDS.has(line.kind));
+  return before
+    ? { text: before.text, at: before.at, ...(before.change ? { change: before.change } : {}) }
+    : null;
 }
 
 /** The record's Browser line: the site, then who drives an open browser or what stopped it. */

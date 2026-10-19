@@ -309,7 +309,7 @@ Once the record's read answers, the whole projection is that read's, the same on
 | first | task key, the shared status mark and word with its reason, wrapping when long | `tasks.board`, then `tasks.detail`: `taskStatusOf` |
 | TASK | the task's title, wrapping in full | `tasks.board`, then `tasks.detail` |
 | PROJECT | the project's display name, wrapping, under Task; absent when the board has no name for it | the Tasks row's own lookup, `projectNameOf`: `tasks.board` `projects` by `projectId`, else empty |
-| NOW | the newest row of the record's condensed Activity, of any kind, and its short age | `tasks.detail` `activityLog`, read only while that crewmate is pointed at, live while open |
+| NOW | the crewmate's own newest doing - its own row, its newest action or its last sentence - and that doing's short age (`docs/task-record.md`, "The Now line") | `tasks.detail` `activityLog` and `said`, read only while that crewmate is pointed at, live while open |
 | MODEL (strip) | the full model display name; absent before assignment | the one model-name lookup (`modelNames`, `src/shared/modelDisplayName.ts`) the labels, the record and the core's `ModelSlots.nameOf` use |
 | INTELLIGENCE (strip) | the level the crewmate is served on, as the `SlotBadge` Settings → Models draws it; absent before routing | `tasks.board` `tier`, the level the crewmate's solid shows |
 | REASONING (strip) | the reasoning its session opened at ("Extra high", "Model's own"); absent when the record cannot say | `tasks.detail` `reasoning` through `reasoningWord` (`docs/routing.md` "Reasoning effort") |

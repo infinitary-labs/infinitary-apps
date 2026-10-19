@@ -140,6 +140,102 @@ describe("the shared task facts", () => {
     expect(taskFactsOf(detail({ activityLog: [] }), names).now).toBeNull();
   });
 
+  // INF-554's audit and the plan approved as INF-557: Now is the crewmate's own
+  // newest doing, never a message the app sent it, "compacted" or the start
+  // line once it acted. The rows and words are the audit's own sample pairs.
+  describe("Now reads the crewmate's own newest doing (INF-557)", () => {
+    const brief = row(
+      "progress",
+      "Brief: steady two unit cases that fail only under CI load.",
+      now - 3_600_000,
+    );
+    const sent = row(
+      "steered",
+      "[job] background job e5ff5145 finished: \"python3 - <<'PY' import urllib.request\" exited 0 after 2s.",
+      now - 900_000,
+    );
+
+    it("reads its newest action over a message it was sent and a compaction", () => {
+      const facts = taskFactsOf(
+        detail({
+          activityLog: [
+            { ...brief, actions: [{ at: now - 3_000_000, text: "Read src/shared/taskFacts.ts" }] },
+            {
+              ...sent,
+              actions: [
+                { at: now - 30_000, text: "Run both whole test files locally after the fix" },
+              ],
+            },
+            row("compacted", "compacted", now - 20_000),
+          ],
+        }),
+        names,
+      );
+      expect(facts.now).toEqual({
+        text: "Run both whole test files locally after the fix",
+        at: now - 30_000,
+      });
+    });
+
+    it("reads the sentence it last wrote when that is newer than its actions", () => {
+      const facts = taskFactsOf(
+        detail({
+          activityLog: [
+            { ...brief, actions: [{ at: now - 60_000, text: "Ran pnpm typecheck" }] },
+            sent,
+          ],
+          said: { at: now - 10_000, text: "Both cases pass under load now; next the local gate." },
+        }),
+        names,
+      );
+      expect(facts.now).toEqual({
+        text: "Both cases pass under load now; next the local gate.",
+        at: now - 10_000,
+      });
+    });
+
+    it("keeps its own last doing at its true age when it did nothing since a message", () => {
+      const facts = taskFactsOf(
+        detail({
+          activityLog: [brief, { ...sent, at: now - 5_000 }],
+          said: { at: now - 4_000_000, text: "Reading the test rulings first." },
+        }),
+        names,
+      );
+      expect(facts.now).toEqual({ text: brief.text, at: brief.at });
+    });
+
+    it("keeps the start line until its first action, past a message sent before it", () => {
+      const start = row("dispatched", "crewmate 58 started on claude-opus-5-5.", now - 60_000);
+      const steer = row("steered", "Carry on from where you stopped.", now - 30_000);
+      expect(taskFactsOf(detail({ activityLog: [start, steer] }), names).now).toEqual({
+        text: start.text,
+        at: start.at,
+      });
+      const acted = taskFactsOf(
+        detail({
+          activityLog: [
+            start,
+            { ...steer, actions: [{ at: now - 20_000, text: "Read docs/testing.md" }] },
+          ],
+        }),
+        names,
+      );
+      expect(acted.now).toEqual({ text: "Read docs/testing.md", at: now - 20_000 });
+    });
+
+    it("never reads a row another task wrote", () => {
+      const other = {
+        ...row("merged", "INF-531, which this task waits for, merged pull request #160.", now),
+        from: { id: "t9", key: "INF-531" },
+      };
+      expect(taskFactsOf(detail({ activityLog: [brief, other] }), names).now).toEqual({
+        text: brief.text,
+        at: brief.at,
+      });
+    });
+  });
+
   it("carries the plan the record read, held open until it answers (FI3-734)", () => {
     const { activityLog: _, plan: __, ...board } = detail();
     expect(taskFactsOf(board, names).plan).toBeUndefined();

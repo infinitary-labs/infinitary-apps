@@ -558,6 +558,12 @@ export const taskDetailSchema = taskViewSchema.extend({
   /** The timeline condensed for reading (the record's Activity; the popup audit, A8). */
   activityLog: z.array(taskActivityRowSchema),
   /**
+   * The last sentence the crewmate wrote in its session, with its time
+   * (`CrewActions.said`): its Now line between its notes (INF-557). Absent
+   * or null when it wrote none, or nothing reads its sessions.
+   */
+  said: taskActionLineSchema.nullable().optional(),
+  /**
    * The latest plan the crewmate reported with a progress note (FI3-734):
    * the whole list as declared, with its time; null when it never sent one.
    */

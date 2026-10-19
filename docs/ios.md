@@ -317,7 +317,7 @@ The runner waits for simulator boot completion before launching tests and uses o
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
 `phone.yml` runs this same gate on iPhone and iPad for pull requests touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
-The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py` and its replacement helper `scripts/replaced-phone-runs.ts`.
+The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, its command-lease helper `scripts/with-mac-check.py`, its replacement helper `scripts/replaced-phone-runs.ts` and its virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
@@ -341,6 +341,24 @@ Setup, evidence upload, the choosers and Linux jobs remain independent.
 Neither device's failure is ignored, and iPad still runs after an iPhone failure unless the job was cancelled or a newer push replaced its version.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
+
+### The phone check in a virtual Mac
+
+The repository variable `PHONE_VIRTUAL_MAC` moves the pull request's two device gates off the Mac mini and into a fresh virtual Mac cloned from the lane's image (`docs/testing.md`, "A virtual Mac as a runner").
+Unset or empty, `native-phone` runs exactly as described above.
+Set, the job runs on the phone check's own runner, labelled `mini-mac-vm`, which takes no Mac mini slot, and it installs no packages on the Mac itself.
+`scripts/virtual-mac/phone.sh start` deletes a clone an earlier check left, clones `infinitary-lane` as `infinitary-lane-phone`, starts it with the pull request's committed version and installs its packages inside it.
+The version rides in as a `git archive` of the checkout, because a pull request's checkout is shallow and a bundle of it cannot be fetched into an empty clone.
+Each gate step then runs `phone.sh gate`, which runs `scripts/test-phone.ts` inside the clone and copies the device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gates keep, a failed device's included.
+The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
+No gate in the virtual Mac takes the Mac check lease, so phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
+The `mac-mini-phone` queue is what keeps one phone clone running at a time.
+Set to `in-turn`, it runs the iPhone, the replacement check and then the iPad, as on the Mac mini; set to `together`, it runs both devices at once in one step, `Read and recover on iPhone and iPad at once`, right after the replacement check; any other value runs them in turn.
+The script prints in UTC when the virtual Mac started and when each device began and ended.
+The image and its base image's download take about 80 GB together in tart's own `~/.tart` on the Mac mini.
+Set the variable only once that runner is registered, finds `tart` on its search path and the image is built; otherwise every phone check waits for the runner or fails at its first step.
+The Mac mini's idle watchdog counts a running `tart run` process as work for up to three hours, so it does not restart the Mac under a phone check.
+While the variable is set, a crewmate's own `pnpm test:phone` stays on the Mac mini under the lease and checks the iPhone alone, leaving both devices to the pull request's phone check; `github_read` of `/repos/{owner}/{repo}/actions/variables` lists the variable when it is set.
 
 ## Generated and bundled assets
 

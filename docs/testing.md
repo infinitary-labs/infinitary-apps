@@ -95,7 +95,7 @@ Unit tests are unchanged.
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py` and the replacement helper `scripts/replaced-phone-runs.ts`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py`, the replacement helper `scripts/replaced-phone-runs.ts` and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
 The `native-phone` job runs the same disposable `scripts/test-phone.ts` gate for both devices on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
@@ -115,6 +115,7 @@ The admission allowance covers the CI job waiting behind active desktop journeys
 Desktop work may run between the two device gates.
 Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
 `tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure and cancellation.
+With the repository variable `PHONE_VIRTUAL_MAC` set, both device gates run in a fresh virtual Mac on their own runner and take no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ## Journeys on the pull request
@@ -410,6 +411,7 @@ A virtual Mac runs the journeys like the Mac mini does only when its image holds
 It clones Cirrus Labs' `macos-tahoe-xcode:26.4` with 6 CPUs and 16 GB as `infinitary-lane`, and `provision.sh` adds Node 24, the `packageManager` pnpm, a warm pnpm store and the two things below inside it.
 Each part checks itself as the image is built, and the image is renamed into place only once all of them pass, so a fix lands in the script and never in an image by hand.
 `scripts/virtual-mac/run.sh <files>` runs journeys in a fresh clone of the image the way `journeys.yml` runs them on the Mac mini, on the working copy's committed version, keeps the run's log and `test-results/runs/` in `test-results/virtual-mac/`, and deletes the clone.
+`scripts/virtual-mac/phone.sh` runs the phone check's device gates in a clone of the same image when `PHONE_VIRTUAL_MAC` is set (`docs/ios.md`, "The phone check in a virtual Mac").
 
 ### The runner's microphone access
 

@@ -35,7 +35,9 @@ if (basename(process.argv[1]) === 'pnpm' && process.argv[2] !== 'build') process
 console.log('started:' + process.env.CHECK_NAME);
 process.stdin.once('data', () => process.exit(0));
 `;
-  for (const name of ["node", "pnpm"]) writeFileSync(join(bin, name), workload, { mode: 0o755 });
+  // tart stands in for the virtual Mac a switched-on phone gate runs in (INF-524).
+  for (const name of ["node", "pnpm", "tart"])
+    writeFileSync(join(bin, name), workload, { mode: 0o755 });
   const env = {
     ...hostEnv(),
     HOME: home,
@@ -44,15 +46,20 @@ process.stdin.once('data', () => process.exit(0));
     PATH: `${bin}:${hostEnv().PATH}`,
     FILES: "tests/e2e/activity-runs.spec.ts",
     RUNNER_TEMP: root,
+    PHONE_VIRTUAL_MAC: "",
   };
   const trace: string[] = [];
   const children: Work[] = [];
   function launch(
     name: string,
-    kind: "desktop" | "iphone" | "ipad" | "package",
+    kind: "desktop" | "iphone" | "ipad" | "package" | "virtual-iphone" | "virtual-both",
     fail = false,
     args = "",
   ): Work {
+    // A virtual Mac gate is the same step with the repository switch set.
+    const virtual =
+      kind === "virtual-iphone" ? "in-turn" : kind === "virtual-both" ? "together" : "";
+    const step = virtual ? (kind === "virtual-both" ? "both" : "iphone") : kind;
     const command =
       kind === "package"
         ? `${JSON.parse(readFileSync("package.json", "utf8")).scripts["test:phone"]} ${args}`
@@ -66,7 +73,7 @@ process.stdin.once('data', () => process.exit(0));
               ),
             )
             .jobs[kind === "desktop" ? "affected-journeys" : "native-phone"].steps.find(
-              (step: { id?: string }) => step.id === (kind === "desktop" ? "e2e" : kind),
+              (item: { id?: string }) => item.id === (kind === "desktop" ? "e2e" : step),
             ).run;
     const child = spawn("bash", ["-e", "-c", command], {
       cwd: resolve("."),
@@ -74,6 +81,7 @@ process.stdin.once('data', () => process.exit(0));
         ...env,
         CHECK_NAME: name,
         CHECK_FAIL: fail ? "yes" : "",
+        PHONE_VIRTUAL_MAC: virtual,
       },
       detached: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -237,6 +245,33 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       await desktop.wait("started:after-failure");
       desktop.release();
       expect(await desktop.result).toBe(0);
+    } finally {
+      await f.close();
+    }
+  });
+  // INF-517, the captain's answer on INF-79's rule: in a virtual Mac a phone check waits only
+  // for other phone checks (the mac-mini-phone queue), never for running journeys.
+  it("starts a virtual Mac's device gates beside running journeys, taking no lease", async () => {
+    const f = fixture();
+    try {
+      const desktop = f.launch("desktop-a", "desktop");
+      await desktop.wait("started:desktop-a");
+      const iphone = f.launch("virtual-iphone", "virtual-iphone");
+      await iphone.wait("started:virtual-iphone");
+      const both = f.launch("virtual-both", "virtual-both");
+      await both.wait("started:virtual-both");
+      // Journeys still hold their shared lease, and no phone waits at the entry lock.
+      expect(await f.probe("exclusive")).toBe("busy");
+      expect(await f.probe("exclusive", true)).toBe("free");
+      const next = f.launch("desktop-b", "desktop");
+      await next.wait("started:desktop-b");
+      for (const work of [iphone, both, desktop, next]) work.release();
+      expect(await iphone.result).toBe(0);
+      expect(await both.result).toBe(0);
+      expect(await desktop.result).toBe(0);
+      expect(await next.result).toBe(0);
+      const failed = f.launch("failed-virtual-phone", "virtual-iphone", true);
+      expect(await failed.result).toBe(7);
     } finally {
       await f.close();
     }

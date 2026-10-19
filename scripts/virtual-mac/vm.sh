@@ -1,6 +1,6 @@
 # shellcheck shell=bash
-# Sourced by image.sh and run.sh: start a virtual Mac without a window, wait
-# for its guest agent and shared folders, and stop it again.
+# Sourced by image.sh, run.sh and phone.sh: start a virtual Mac without a
+# window, wait for its guest agent and shared folders, and stop it again.
 
 TART="${TART:-tart}"
 # Where the guest sees the folders a --dir share names.
@@ -19,7 +19,9 @@ vm_exec() {
 start_vm() {
   local name="$1" log="$2" ready="$3"
   shift 3
-  "$TART" run "$name" --no-graphics "$@" > "$log" 2>&1 &
+  # Its own input and output, so it can outlive the step that started it
+  # (phone.sh starts it in one step and deletes it in a later one).
+  "$TART" run "$name" --no-graphics "$@" < /dev/null > "$log" 2>&1 &
   VM_PID=$!
   for _ in $(seq 1 100); do
     if vm_exec "$name" 30 test -e "$ready" > /dev/null 2>&1; then

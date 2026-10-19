@@ -26,7 +26,8 @@ function eligible(run: boolean): string {
 }
 
 // INF-487: a device gate's actual condition, given the iPhone gate's outcome and
-// the reading of the replacement check right before the gate.
+// the reading of the replacement check right before the gate, with the virtual Mac
+// switch off.
 function gateStarts(gate: string, iphone: string, replaced: string): string {
   const steps = workflow.jobs[NATIVE_JOB].steps;
   const at = steps.findIndex((item: { name: string }) => item.name === gate);
@@ -45,15 +46,91 @@ function gateStarts(gate: string, iphone: string, replaced: string): string {
       }),
     },
   );
-  const ast = new Parser(new Lexer(expression).lex().tokens, ["steps"], [cancelled]).parse();
+  const ast = new Parser(
+    new Lexer(expression).lex().tokens,
+    ["steps", "vars"],
+    [cancelled],
+  ).parse();
   const functions = new Map([
     ["cancelled", { ...cancelled, call: () => new data.BooleanData(false) }],
   ]);
-  return new Evaluator(ast, new data.Dictionary({ key: "steps", value: context }), functions)
-    .evaluate()
-    .coerceString();
+  const contexts = new data.Dictionary(
+    { key: "steps", value: context },
+    { key: "vars", value: new data.Dictionary() },
+  );
+  return new Evaluator(ast, contexts, functions).evaluate().coerceString();
 }
-const [IPHONE, IPAD] = DEVICE_GATES as [string, string];
+const [IPHONE, IPAD, BOTH] = DEVICE_GATES as [string, string, string];
+
+// INF-524 (the captain's approved plan INF-517): the repository variable that moves the
+// device gates into a virtual Mac. GitHub reads an unset variable as "".
+const OFF = "";
+const IN_TURN = "in-turn";
+const TOGETHER = "together";
+const VIRTUAL_MAC_STEPS = ["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"];
+type Step = { id?: string; name?: string; uses?: string; if?: string; run?: string };
+type Plain = { [key: string]: string | Plain };
+const STATUS = ["success", "always", "cancelled", "failure"];
+
+function toData(value: Plain): data.Dictionary {
+  const dictionary = new data.Dictionary();
+  for (const [key, item] of Object.entries(value))
+    dictionary.add(key, typeof item === "string" ? new data.StringData(item) : toData(item));
+  return dictionary;
+}
+
+// Whether a workflow expression holds, as GitHub reads its truthiness.
+function holds(
+  expression: string,
+  contexts: Plain,
+  status: { failed?: boolean; cancelled?: boolean } = {},
+): boolean {
+  const bare = expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+  const functions = STATUS.map((name) => ({ name, minArgs: 0, maxArgs: 0 }));
+  const values: Record<string, boolean> = {
+    success: !status.failed && !status.cancelled,
+    always: true,
+    cancelled: Boolean(status.cancelled),
+    failure: Boolean(status.failed),
+  };
+  const ast = new Parser(
+    new Lexer(`!!(${bare})`).lex().tokens,
+    Object.keys(contexts),
+    functions,
+  ).parse();
+  const calls = new Map(
+    functions.map((f) => [
+      f.name,
+      { ...f, call: () => new data.BooleanData(Boolean(values[f.name])) },
+    ]),
+  );
+  return new Evaluator(ast, toData(contexts), calls).evaluate().coerceString() === "true";
+}
+
+// A step's condition with GitHub's implied success() when it names no status function.
+function condition(step: Step): string {
+  const written = step.if ? String(step.if).replace(/^\$\{\{\s*|\s*\}\}$/g, "") : "success()";
+  return STATUS.some((name) => written.includes(`${name}()`))
+    ? written
+    : `success() && (${written})`;
+}
+
+// The native job's steps that run, in order, for a value of the switch, with every
+// step succeeding and each replacement check reading `replaced`.
+function stepsThatRun(virtualMac: string, replaced = "false"): Step[] {
+  const seen: Plain = {};
+  const ran: Step[] = [];
+  for (const step of workflow.jobs[NATIVE_JOB].steps as Step[]) {
+    const runs = holds(condition(step), { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac } });
+    const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
+    if (step.id)
+      seen[step.id] = { outcome: runs ? "success" : "skipped", outputs: { replaced: reading } };
+    if (runs) ran.push(step);
+  }
+  return ran;
+}
+const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
+const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
 
 describe("the native pull-request gate", () => {
   it.each([
@@ -70,6 +147,10 @@ describe("the native pull-request gate", () => {
     "scripts/affected-phone.ts",
     "scripts/with-mac-check.py",
     "scripts/replaced-phone-runs.ts",
+    // INF-524: the virtual Mac path the switch turns on.
+    "scripts/virtual-mac/phone.sh",
+    "scripts/virtual-mac/phone-job.sh",
+    "scripts/virtual-mac/vm.sh",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });
@@ -154,13 +235,15 @@ describe("the native pull-request gate", () => {
   });
   it("names the native job and its simulator steps as the replacement script reads them", () => {
     const gates = workflow.jobs[NATIVE_JOB].steps
-      .filter((step: { run?: string }) => step.run?.includes("scripts/test-phone.ts"))
+      .filter((step: { run?: string }) =>
+        /scripts\/test-phone\.ts|scripts\/virtual-mac\/phone\.sh gate/.test(step.run ?? ""),
+      )
       .map((step: { name: string }) => step.name);
     expect(gates).toEqual(DEVICE_GATES);
   });
   it("reads the pull request's latest version right before each device gate", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps;
-    for (const gate of DEVICE_GATES) {
+    for (const gate of [IPHONE, IPAD]) {
       const at = steps.findIndex((step: { name: string }) => step.name === gate);
       expect(steps[at - 1].run).toBe("node scripts/replaced-phone-runs.ts stop-if-replaced");
     }
@@ -196,5 +279,109 @@ describe("the native pull-request gate", () => {
       ).toBe("mini-mac");
     }
     expect(workflow.jobs["native-phone"]["continue-on-error"]).toBeUndefined();
+  });
+  it("runs today's steps on the Mac mini while the virtual Mac switch is off", () => {
+    const all = names(workflow.jobs[NATIVE_JOB].steps);
+    expect(names(stepsThatRun(OFF))).toEqual(
+      all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name)),
+    );
+    for (const step of stepsThatRun(OFF).filter(isGate)) {
+      // The step's shell takes the Mac check lease unless the switch is set.
+      expect(step.run).toMatch(
+        /^if \[ -n "\$PHONE_VIRTUAL_MAC" \]; then exec .*; fi\npython3 scripts\/with-mac-check\.py exclusive /,
+      );
+    }
+    // The gates' shell sees the switch as the repository sets it, empty when unset.
+    const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
+      /^\$\{\{\s*|\s*\}\}$/g,
+      "",
+    );
+    for (const value of [OFF, IN_TURN, TOGETHER])
+      expect(holds(`(${shell}) == '${value}'`, { vars: { PHONE_VIRTUAL_MAC: value } })).toBe(true);
+  });
+  it("runs the device gates in a fresh virtual Mac on its own runner when the switch is on", () => {
+    const expression = workflow.jobs[NATIVE_JOB]["runs-on"];
+    const runner = (virtualMac: string, macRunner: string) =>
+      [virtualMac && "mini-mac-vm", macRunner, "mini-mac"].find(Boolean);
+    for (const virtualMac of [OFF, IN_TURN, TOGETHER])
+      for (const macRunner of ["", "mini-mac"]) {
+        const vars = { PHONE_VIRTUAL_MAC: virtualMac, MAC_RUNNER: macRunner };
+        for (const label of ["mini-mac", "mini-mac-vm"])
+          expect(
+            holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, { vars }),
+          ).toBe(runner(virtualMac, macRunner) === label);
+      }
+    const inTurn = names(stepsThatRun(IN_TURN));
+    const together = names(stepsThatRun(TOGETHER));
+    // The packages install inside the clone, never on this Mac.
+    for (const ran of [inTurn, together])
+      expect(ran.filter((name) => name.startsWith("Install") || name.startsWith("pnpm/"))).toEqual(
+        [],
+      );
+    const gatesIn = (ran: string[]) =>
+      ran.slice(
+        ran.indexOf("Start a fresh virtual Mac"),
+        ran.indexOf("Delete the virtual Mac") + 1,
+      );
+    expect(
+      gatesIn(inTurn).filter(
+        (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
+      ),
+    ).toEqual(["Start a fresh virtual Mac", IPHONE, IPAD, "Delete the virtual Mac"]);
+    expect(
+      gatesIn(together).filter(
+        (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
+      ),
+    ).toEqual(["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"]);
+    // In the virtual Mac no gate takes the Mac check lease: phone checks wait only for each
+    // other through the mac-mini-phone queue (the captain's answer on INF-79's rule).
+    expect(
+      stepsThatRun(IN_TURN)
+        .filter(isGate)
+        .map((step) => step.run?.split("\n")[0]),
+    ).toEqual([
+      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone; fi',
+      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate ipad; fi',
+    ]);
+    expect(
+      stepsThatRun(TOGETHER)
+        .filter(isGate)
+        .map((step) => step.run),
+    ).toEqual(["scripts/virtual-mac/phone.sh gate iphone ipad"]);
+  });
+  it("deletes the virtual Mac however the job ends, and never starts one with the switch off", () => {
+    const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
+    const remove = steps.find((step) => step.name === "Delete the virtual Mac") as Step;
+    expect(remove.run).toBe("scripts/virtual-mac/phone.sh delete");
+    for (const outcome of ["success", "failure", "cancelled"])
+      for (const status of [{}, { failed: true }, { cancelled: true }])
+        expect(holds(condition(remove), { steps: { vm: { outcome } }, vars: {} }, status)).toBe(
+          true,
+        );
+    expect(
+      holds(
+        condition(remove),
+        { steps: { vm: { outcome: "skipped" } }, vars: {} },
+        { failed: true },
+      ),
+    ).toBe(false);
+    // A replaced version's clone is deleted too, and starts no gate.
+    for (const virtualMac of [IN_TURN, TOGETHER]) {
+      const ran = names(stepsThatRun(virtualMac, "true"));
+      expect(ran.filter((name) => DEVICE_GATES.includes(name))).toEqual([]);
+      expect(ran).toContain("Delete the virtual Mac");
+    }
+  });
+  it("reads the latest version right before every device gate, whichever way the switch is set", () => {
+    // INF-487: no simulator exists before a gate; the virtual Mac's start creates none.
+    for (const virtualMac of [OFF, IN_TURN, TOGETHER]) {
+      const ran = stepsThatRun(virtualMac);
+      const gates = ran.filter(isGate);
+      expect(gates.length).toBeGreaterThan(0);
+      for (const gate of gates)
+        expect(ran[ran.indexOf(gate) - 1]?.run).toBe(
+          "node scripts/replaced-phone-runs.ts stop-if-replaced",
+        );
+    }
   });
 });

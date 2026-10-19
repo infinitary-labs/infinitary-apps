@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "one-task-lit-everywhere",
+      "kind": "improvement",
+      "title": "Point at a task anywhere and it lights up everywhere",
+      "body": "Point at a crewmate, or focus its name, and its row in Tasks, its tile on the task board and every mention of its key in a card, a thread, Activity and Knowledge light up. Point at a Tasks row, a tile or a key and the crewmate gets its corner brackets. It all clears the moment you move off, and the crew keep circling at their own pace.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "one-task-lit-everywhere-dark.webp",
+        "light": "one-task-lit-everywhere-light.webp",
+        "alt": "A crewmate with corner brackets and its summary, and its row in the Tasks panel lit"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

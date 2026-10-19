@@ -246,11 +246,14 @@ describe("pointing, moves, the view and the rail in the frame realm", () => {
   });
 
   it("reads the view and whether the panel is collapsed from view state, and speaks to its rail through actions", async () => {
-    expect(frameView({ view: { openTaskIds: ["t1", 3], shownTaskId: "t1" } })).toEqual({
+    expect(
+      frameView({ view: { openTaskIds: ["t1", 3], shownTaskId: "t1", litTaskId: "t2" } }),
+    ).toEqual({
       openTaskIds: ["t1"],
       shownTaskId: "t1",
+      litTaskId: "t2",
     });
-    expect(frameView(null)).toEqual({ openTaskIds: [], shownTaskId: null });
+    expect(frameView(null)).toEqual({ openTaskIds: [], shownTaskId: null, litTaskId: null });
     const bridge = fakeBridge();
     const rail = frameRail({ collapsed: true }, bridge.api, () => {});
     expect(rail.collapsed).toBe(true);

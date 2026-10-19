@@ -310,7 +310,8 @@
   transition: background var(--dur-fast) var(--ease-out);
 }
 
-.fm-board-tile:hover {
+.fm-board-tile:hover,
+.fm-board-tile[data-board-lit] {
   background: var(--bg-3);
 }
 
@@ -444,7 +445,8 @@
   border-color: transparent;
 }
 
-.fm-board-tile[data-board-row]:hover {
+.fm-board-tile[data-board-row]:hover,
+.fm-board-tile[data-board-row][data-board-lit] {
   background: var(--bg-3);
 }
 

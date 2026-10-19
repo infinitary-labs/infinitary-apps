@@ -123,12 +123,17 @@ function frameTasks(bridge: FrameBridgeApi): PanelTasks {
 
 /** What the captain has open, as the host last pushed it (`view`); empty before it does. */
 export function frameView(state: unknown): PanelView {
-  const view = (state as { view?: { openTaskIds?: unknown; shownTaskId?: unknown } } | null)?.view;
+  const view = (
+    state as {
+      view?: { openTaskIds?: unknown; shownTaskId?: unknown; litTaskId?: unknown };
+    } | null
+  )?.view;
   const openTaskIds = Array.isArray(view?.openTaskIds)
     ? view.openTaskIds.filter((id): id is string => typeof id === "string")
     : [];
   const shownTaskId = typeof view?.shownTaskId === "string" ? view.shownTaskId : null;
-  return { openTaskIds, shownTaskId };
+  const litTaskId = typeof view?.litTaskId === "string" ? view.litTaskId : null;
+  return { openTaskIds, shownTaskId, litTaskId };
 }
 
 /**

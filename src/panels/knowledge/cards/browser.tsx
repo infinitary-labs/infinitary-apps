@@ -93,7 +93,7 @@ function useRead<T>(
   return held && held.key === key ? held.value : null;
 }
 
-export default function KnowledgeBrowser({ card, reads, point }: PanelProps) {
+export default function KnowledgeBrowser({ card, reads, point, view }: PanelProps) {
   const born = useMemo(() => placeOf(card?.kept ?? null), [card?.kept]);
   const [place, setPlace] = useState<Place>(born);
   const patch = useCallback(
@@ -232,7 +232,8 @@ export default function KnowledgeBrowser({ card, reads, point }: PanelProps) {
     [entry, directionRead],
   );
   const taskOf = usePanelTaskKeys(reads, entryWords);
-  const taskKeys = useMemo(() => ({ taskOf, point }), [taskOf, point]);
+  const litTaskId = view.litTaskId;
+  const taskKeys = useMemo(() => ({ taskOf, point, litTaskId }), [taskOf, point, litTaskId]);
 
   // -- choosing ---------------------------------------------------------------
   // Opening something by key, or in a narrow card where the inspector takes

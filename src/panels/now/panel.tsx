@@ -216,7 +216,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
         placed.set(id, Math.round(box.top - rootBox.top + box.height / 2));
       }
       const listed = [...rows.values()].flatMap((group) => group.map((row) => row.task));
-      const next = listEdges(listed, placed, restedId).flatMap((edge) => {
+      const next = listEdges(listed, placed, restedId ?? view.litTaskId).flatMap((edge) => {
         const fromY = placed.get(edge.fromId);
         const toY = placed.get(edge.toId);
         return fromY === undefined || toY === undefined ? [] : [{ ...edge, fromY, toY }];
@@ -439,7 +439,8 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
               }}
             >
               {edges.map((edge) => {
-                const lit = restedId === edge.fromId || restedId === edge.toId;
+                const rested = restedId ?? view.litTaskId;
+                const lit = rested === edge.fromId || rested === edge.toId;
                 return (
                   <path
                     key={`${edge.fromId}-${edge.toId}`}
@@ -471,6 +472,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
                 }
                 open={isOpen}
                 selectedTaskIds={view.openTaskIds}
+                litTaskId={view.litTaskId}
                 stop={stop}
                 onStop={setLastStop}
                 onToggle={() => toggle(group)}
@@ -499,6 +501,7 @@ export function Group({
   newCount = 0,
   open,
   selectedTaskIds,
+  litTaskId,
   stop = null,
   onStop,
   onToggle,
@@ -513,6 +516,8 @@ export function Group({
   newCount?: number;
   open: boolean;
   selectedTaskIds: readonly string[];
+  /** The task a rest anywhere in the window lights (INF-237): its row takes the rest look. */
+  litTaskId: string | null;
   /** The list's one Tab stop (./nav.ts), when it is in this group. */
   stop?: string | null;
   /** Focus reached a stop in this group: it becomes the list's Tab stop. */
@@ -586,6 +591,7 @@ export function Group({
                 data-now-blockers={task.blockedBy.join(" ") || undefined}
                 data-now-status={task.status}
                 data-now-selected={selectedTaskIds.includes(task.id) ? "" : undefined}
+                data-now-lit={litTaskId === task.id ? "" : undefined}
                 data-now-trailing={trailing.name || trailing.place ? "" : undefined}
                 data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
                 data-now-connecting={trailing.connecting ? "" : undefined}

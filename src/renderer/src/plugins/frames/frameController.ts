@@ -127,6 +127,11 @@ export type FrameMountSpec = {
    */
   taskKeys?: readonly string[];
   /**
+   * The one of those keys a rest elsewhere in the window lights (INF-237),
+   * or null: pushed with the keys and again to every new document.
+   */
+  litKey?: string | null;
+  /**
    * A gesture on a linked key: `rest` with the key's box in the frame's
    * viewport, `leave`, or `open`. Only for a key this mount's document was
    * told, so a frame can point at no task its body does not name. A mount
@@ -379,6 +384,13 @@ export class FrameController {
     if (this.ready && keys) this.port.post({ fm: V, type: "tasks", keys: [...keys] });
   }
 
+  /** Pushes the key a rest elsewhere lights; a document not yet born gets it on its `ready`. */
+  setLitKey(key: string | null): void {
+    if ((this.spec.litKey ?? null) === key) return;
+    this.spec = { ...this.spec, litKey: key };
+    if (this.ready) this.port.post({ fm: V, type: "lit", key });
+  }
+
   /** Pushes the knowledge references a card body links; a document not yet born gets them on its `ready`. */
   setEntryRefs(refs: readonly FrameEntryRef[] | undefined): void {
     this.spec = { ...this.spec, entryRefs: refs };
@@ -457,6 +469,7 @@ export class FrameController {
         if (this.spec.taskKeys) {
           this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
         }
+        if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
         if (this.spec.entryRefs) {
           this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
         }

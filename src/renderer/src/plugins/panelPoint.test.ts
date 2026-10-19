@@ -199,12 +199,19 @@ describe("the view a panel that reads the board is handed", () => {
     expect(panelViewOf(panelViewKey(shell()))).toEqual({
       openTaskIds: ["t-open"],
       shownTaskId: "t-open",
+      litTaskId: null,
     });
     shell().emitPanelCard("desk", { ...reader, id: "r" }, true);
     shell().aimPanelCard("desk", "r", "t-waits");
     expect(panelViewOf(panelViewKey(shell()))).toEqual({
       openTaskIds: ["t-open"],
       shownTaskId: "t-waits",
+      litTaskId: null,
     });
+  });
+
+  it("carries the lit task, so every panel draws the rest anywhere in the window (INF-237)", () => {
+    expect(panelViewOf(panelViewKey(shell(), "t-lit")).litTaskId).toBe("t-lit");
+    expect(panelViewKey(shell(), "t-lit")).not.toBe(panelViewKey(shell()));
   });
 });

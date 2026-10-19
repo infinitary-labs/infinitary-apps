@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { Box } from "../../character/crew/hover";
+import { litTask } from "./litTask";
 
 /**
  * A task key the pointer rests on in a card body (FI3-594): the key's box
@@ -76,6 +77,9 @@ export const taskPeek = {
   set(next: TaskPeek): void {
     if (same(pointed, next)) return;
     pointed = next;
+    // What the pointer or the keyboard rests on is lit on every surface (./litTask.ts).
+    if (next) litTask.set(next.taskId, "peek");
+    else litTask.release("peek");
     for (const listener of listeners) listener();
   },
   /**

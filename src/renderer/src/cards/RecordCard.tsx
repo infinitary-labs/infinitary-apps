@@ -305,6 +305,7 @@ export function RecordCard({
               onAction: (id, value) => void openCard(id, value),
               onLink: openLink,
               taskKeys: links.keys,
+              litKey: links.lit,
               onTask: (gesture, key, box, frame) => {
                 const run = () =>
                   taskKeyGesture(gesture, key, box, {

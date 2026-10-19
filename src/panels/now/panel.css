@@ -198,7 +198,8 @@
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
-[data-now-row]:hover {
+[data-now-row]:hover,
+[data-now-row][data-now-lit] {
   background: var(--bg-3);
 }
 /* Headers and rows span the frame, which cuts what is drawn past its

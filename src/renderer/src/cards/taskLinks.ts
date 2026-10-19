@@ -2,6 +2,7 @@ import type { FrameBox, FrameTaskGesture } from "@shared/plugins/bridge";
 import { taskKeysIn } from "@shared/taskKeys";
 import type { TaskBoard, TaskView } from "@shared/tasks";
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useLitTaskId } from "../plugins/point/litTask";
 import { openTask } from "../plugins/point/openTask";
 import { taskPeek } from "../plugins/point/taskPeek";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
@@ -10,10 +11,12 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
  * The tasks a body or a line names (FI3-594, FI3-1271; the design skill's
  * core rule "Task keys"): `keys` are the keys the words write that are
  * exactly a recorded task's key, other than the task they are about, and
- * `task` reads that task as it is now.
+ * `task` reads that task as it is now. `lit` is the one of those keys a rest
+ * elsewhere in the window lights (INF-237), or null.
  */
 export type TaskLinks = {
   keys: readonly string[];
+  lit: string | null;
   task: (key: string) => TaskView | undefined;
 };
 
@@ -128,6 +131,13 @@ export const taskKeyIndex = {
   byId(id: string): TaskView | undefined {
     return boardById.get(id);
   },
+  /** The key of the recorded task `id`, on the board or among the earlier work looked up, or undefined. */
+  keyOf(id: string): string | undefined {
+    const row = boardById.get(id);
+    if (row) return row.key;
+    for (const task of earlier.values()) if (task.id === id) return task.key;
+    return undefined;
+  },
   /** The board's row whose waiting decision is the card `cardId`, or undefined. */
   waitingOn(cardId: string): TaskView | undefined {
     return boardByCard.get(cardId);
@@ -180,7 +190,10 @@ export function useTaskLinks(text: string, own?: string): TaskLinks {
     (key: string) => (keys.includes(key) ? taskKeyIndex.task(key) : undefined),
     [keys],
   );
-  return useMemo(() => ({ keys, task }), [keys, task]);
+  const litId = useLitTaskId();
+  const litKey = litId === null ? undefined : taskKeyIndex.keyOf(litId);
+  const lit = litKey !== undefined && keys.includes(litKey) ? litKey : null;
+  return useMemo(() => ({ keys, lit, task }), [keys, lit, task]);
 }
 
 /** What a body's frame is shown in: its card, with a thread beside it when one is open. */

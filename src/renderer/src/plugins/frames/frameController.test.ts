@@ -879,6 +879,25 @@ describe("a card body's task keys (FI3-594)", () => {
     expect(posted).toContainEqual({ fm: 2, type: "tasks", keys: ["FI3-572", "SCR-3"] });
   });
 
+  it("tells a document the key a rest elsewhere lights, at once and again to every new document (INF-237)", () => {
+    const { controller, posted } = harness({ taskKeys: ["FI3-572"] });
+    born(controller);
+    posted.length = 0;
+    controller.setLitKey("FI3-572");
+    expect(posted).toEqual([{ fm: 2, type: "lit", key: "FI3-572" }]);
+    posted.length = 0;
+    controller.setLitKey("FI3-572");
+    expect(posted).toEqual([]);
+    born(controller, "doc-2");
+    expect(posted).toContainEqual({ fm: 2, type: "lit", key: "FI3-572" });
+    posted.length = 0;
+    controller.setLitKey(null);
+    expect(posted).toEqual([{ fm: 2, type: "lit", key: null }]);
+    posted.length = 0;
+    born(controller, "doc-3");
+    expect(posted.some((message) => message.type === "lit")).toBe(false);
+  });
+
   it("hands a rest, a leave and an open on a linked key to the mount", () => {
     const onTask = vi.fn();
     const { controller } = harness({ taskKeys: ["FI3-572"], onTask });

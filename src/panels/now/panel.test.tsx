@@ -53,7 +53,12 @@ function board(): PanelTaskBoard {
   return { seq: 1, at: 1, projects: [project], tasks: [task()] };
 }
 
-function group(name: "backlog" | "landed" | "earlier", open: boolean, row = task()): string {
+function group(
+  name: "backlog" | "landed" | "earlier",
+  open: boolean,
+  row = task(),
+  litTaskId: string | null = null,
+): string {
   return renderToStaticMarkup(
     <Group
       group={name}
@@ -61,6 +66,7 @@ function group(name: "backlog" | "landed" | "earlier", open: boolean, row = task
       board={board()}
       open={open}
       selectedTaskIds={[]}
+      litTaskId={litTaskId}
       onToggle={() => {}}
       onOpen={() => {}}
     />,
@@ -101,6 +107,14 @@ describe("the earlier group", () => {
     );
     expect(html).toContain("data-now-dot");
     expect(html).toContain('data-now-status="done"');
+  });
+});
+
+describe("a row lit by a rest elsewhere in the window (INF-237)", () => {
+  it("marks only the lit task's row, as the view hands it", () => {
+    expect(group("backlog", true, task(), "t1")).toContain("data-now-lit");
+    expect(group("backlog", true, task(), "t2")).not.toContain("data-now-lit");
+    expect(group("backlog", true, task(), null)).not.toContain("data-now-lit");
   });
 });
 

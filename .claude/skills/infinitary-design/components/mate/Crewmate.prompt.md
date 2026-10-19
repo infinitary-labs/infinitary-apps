@@ -72,6 +72,8 @@ Its type is never scaled with a fitted formation.
 It is read-only and has no buttons, so its change is plain text, never a link; a click on the crewmate (or its name) opens the same task record its Tasks row opens, which has the full text.
 It works at every crew size and on every orbit, whether or not names show.
 Resting on a Tasks row opens the same summary for that row's task, placed beside the row (`components/now/NowPanel`, Row hover).
+That rest also puts the summary's corner brackets (`--fg-3`) round the task's crewmate on the stage, at once, with no summary or hairline: the stage neither slows nor pauses (the 2026-10-01 ruling), and the brackets follow the crewmate as it moves.
+The same brackets mark it for a rest on a task key or tile of its task; the crewmate the pointer is on draws its own with its summary, and the stage's rest on a crewmate lights that task's row, tile and keys in turn (`components/now/NowPanel`, "The lit row").
 Reduced motion: the scene is already still, so only the summary applies.
 
 Keep small (≤32px); crewmates never become a focal point.

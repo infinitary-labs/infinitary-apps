@@ -17,6 +17,7 @@ import { BOARD_RECENT_MS } from "../../src/shared/tasks";
 import {
   crewFormation,
   crewInspecting,
+  crewModelName,
   crewModelNames,
   crewSummary,
   nextFrame,
@@ -466,6 +467,66 @@ test("sliding into a Tasks row from either side opens its summary", async () => 
         await page.screenshot({ path: test.info().outputPath(`row-slide/from-${side}.png`) });
       });
     }
+  } finally {
+    await app.close();
+  }
+});
+
+/**
+ * INF-237 ("hover a task anywhere, highlight it everywhere"): a crewmate on
+ * the stage and its Tasks row light each other, by the pointer and by the
+ * keyboard, with the stage neither slowed nor paused by a rest on the row.
+ */
+test("a crewmate and its Tasks row light each other, and the stage keeps its speed", async () => {
+  const fixture = await roster(2);
+  const app = await launchApp({ ...fixture, withMockProvider: true });
+  try {
+    const { page } = app;
+    mkdirSync(test.info().outputPath("lit-task"), { recursive: true });
+    await expect(crewModelNames(page)).toHaveCount(2);
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    const byId = (id: string) => {
+      const task = board.tasks.find((row) => row.id === id);
+      if (!task) throw new Error(`The seeded task ${id} is missing`);
+      return task;
+    };
+    const first = byId("hover-crew-0");
+    const second = byId("hover-crew-1");
+    await expandDock(page, "now");
+    const formation = page.locator("[data-crew-formation]");
+    const stage = page.locator('canvas[data-crew-layer="near"]');
+
+    await test.step("pointing at a crewmate lights its row at once, and moving off clears it", async () => {
+      await pointAtCrewmate(page, second.id);
+      await expect(nowRow(page, second.key)).toHaveAttribute("data-now-lit", "");
+      await expect(nowRow(page, first.key)).not.toHaveAttribute("data-now-lit", "");
+      await page.mouse.move(4, 400);
+      await expect(nowRow(page, second.key)).not.toHaveAttribute("data-now-lit", "");
+    });
+
+    await test.step("resting on a row puts brackets on its crewmate, with no summary and no slowing", async () => {
+      await restOnRow(page, second.key);
+      await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, second.id);
+      await expect(formation).toHaveAttribute("data-crew-lit", second.id);
+      await expect(page.locator(`[data-crew-lit-target="${second.id}"]`)).toBeVisible();
+      // The stage's own summary and its pause are for the pointer on a crewmate.
+      await expect(page.locator("[data-crew-target]")).toHaveCount(0);
+      expect(await crewInspecting(page)).toBeNull();
+      await page.screenshot({ path: test.info().outputPath("lit-task/row-to-crewmate.png") });
+      await page.mouse.move(4, 400);
+      await expect(formation).not.toHaveAttribute("data-crew-lit", /.+/);
+      await expect(page.locator("[data-crew-lit-target]")).toHaveCount(0);
+    });
+
+    await test.step("the keyboard lights the same: a focused name lights its row, a focused row its crewmate", async () => {
+      await focusOn(crewModelName(page, first.id));
+      await expect(nowRow(page, first.key)).toHaveAttribute("data-now-lit", "");
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await expect(nowRow(page, first.key)).not.toHaveAttribute("data-now-lit", "");
+      await focusOn(nowRow(page, second.key));
+      await expect(formation).toHaveAttribute("data-crew-lit", second.id);
+      expect(await crewInspecting(page)).toBeNull();
+    });
   } finally {
     await app.close();
   }

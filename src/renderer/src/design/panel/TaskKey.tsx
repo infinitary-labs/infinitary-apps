@@ -31,6 +31,12 @@ export type TaskKeyProps = {
   onRest: (key: HTMLElement | null) => void;
   /** A click or Enter: open the task. */
   onOpen: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => void;
+  /**
+   * A rest elsewhere in the window lights this key's task (INF-237): the
+   * key takes the look its own rest gives it. The caller reads the window's
+   * lit task; this library stays free of the store.
+   */
+  lit?: boolean;
 };
 
 /**
@@ -38,8 +44,9 @@ export type TaskKeyProps = {
  * rest opens the task's summary and whose click or Enter opens the task.
  * It moves no words: it is the key, where the words write it.
  */
-export function TaskKey({ children, look = "prose", onRest, onOpen }: TaskKeyProps) {
-  const [hot, setHot] = useState(false);
+export function TaskKey({ children, look = "prose", onRest, onOpen, lit = false }: TaskKeyProps) {
+  const [resting, setHot] = useState(false);
+  const hot = resting || lit;
   const rested = useRef(false);
   const rest = (key: HTMLElement | null) => {
     rested.current = key !== null;
@@ -51,6 +58,7 @@ export function TaskKey({ children, look = "prose", onRest, onOpen }: TaskKeyPro
       tabIndex={0}
       data-task-key={children}
       data-look={look}
+      data-task-lit={lit ? "" : undefined}
       style={{
         cursor: "pointer",
         color: look === "prose" || hot ? "var(--accent)" : "inherit",
@@ -210,6 +218,22 @@ export function usePanelTaskKeys(reads: PanelReads, texts: readonly string[]): P
   }, [named]);
 }
 
+/**
+ * `litTaskId` when one of the keys `texts` write names that task, else null:
+ * a memoized row hands this to `PanelTaskKeyText`, so a rest elsewhere
+ * draws again only the rows that write the lit task's key (INF-237).
+ */
+export function litTaskIn(
+  texts: readonly string[],
+  taskOf: PanelTaskKeys,
+  litTaskId: string | null,
+): string | null {
+  if (litTaskId === null) return null;
+  return texts.some((text) => taskKeysIn(text).some((key) => taskOf(key) === litTaskId))
+    ? litTaskId
+    : null;
+}
+
 /** A key's box in its page, for `point.peekTask`. */
 function boxOf(key: HTMLElement) {
   const { top, right, bottom, left } = key.getBoundingClientRect();
@@ -226,11 +250,14 @@ export function PanelTaskKeyText({
   taskOf,
   point,
   look,
+  litTaskId = null,
 }: {
   text: string;
   taskOf: PanelTaskKeys;
   point: Pick<PanelPoint, "peekTask" | "openTask">;
   look?: TaskKeyLook;
+  /** The panel's `view.litTaskId`: a key of that task takes its rest look (INF-237). */
+  litTaskId?: string | null;
 }) {
   return (
     <TaskKeyWords
@@ -241,6 +268,7 @@ export function PanelTaskKeyText({
         return (
           <TaskKey
             {...(look ? { look } : {})}
+            lit={litTaskId === taskId}
             onRest={(at) => point.peekTask(at ? { taskId, box: boxOf(at) } : null)}
             onOpen={() => void point.openTask(taskId).catch(() => {})}
           >

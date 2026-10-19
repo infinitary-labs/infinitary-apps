@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { litTask, useLitTaskId } from "../../plugins/point/litTask";
 import { requestCharacterReceive, requestCharacterSendoff } from "../emoteSignal";
 import { useAnimationLoop } from "../motion";
 import { skipHiddenPaint } from "../paintHidden";
@@ -298,6 +299,19 @@ export function CrewOrbit({
   const inspecting = interactive ? (focused ?? hovered) : null;
   const inspectingRef = useRef(inspecting);
   inspectingRef.current = inspecting;
+  // The crewmate inspected is the task lit everywhere (INF-237); its rest ends it.
+  useEffect(() => {
+    if (inspecting) litTask.set(inspecting, "stage");
+    else litTask.release("stage");
+    return () => litTask.release("stage");
+  }, [inspecting]);
+  // A rest elsewhere - a Tasks row, a key - lights its crewmate with the
+  // brackets alone: no summary, no hairline, and the stage neither slows nor pauses.
+  const litId = useLitTaskId();
+  const litCrewId = interactive && litId !== null && litId !== inspecting ? litId : null;
+  const litCrewRef = useRef(litCrewId);
+  litCrewRef.current = litCrewId;
+  const litTargetRef = useRef<HTMLDivElement>(null);
   // The stage pauses the moment a crewmate is acquired; its summary opens a
   // beat later, moves to the next crewmate at once, and fades as it goes
   // (./summaryMotion).
@@ -487,6 +501,40 @@ export function CrewOrbit({
     angleRef.current = at.line.angle;
     if (!layer.hasAttribute("data-placed")) layer.setAttribute("data-placed", "");
   }, []);
+  // The lit crewmate's brackets follow the painted crewmate as the summary's
+  // do; every write compares first, so a paused stage touches no DOM. A lit
+  // task that is no crewmate here draws nothing.
+  const placeLit = useCallback(() => {
+    const view = viewRef.current;
+    const root = rootRef.current;
+    const target = litTargetRef.current;
+    const cm = view?.frame.crew.find((c) => c.id === litCrewRef.current && c.phase !== "leaving");
+    const present = Boolean(view && cm);
+    if (root) {
+      if (present && root.getAttribute("data-crew-lit") !== litCrewRef.current)
+        root.setAttribute("data-crew-lit", litCrewRef.current ?? "");
+      else if (!present && root.hasAttribute("data-crew-lit"))
+        root.removeAttribute("data-crew-lit");
+    }
+    if (!target) return;
+    writeStyle(target, "display", present ? "" : "none");
+    if (!view || !cm) return;
+    const reach = (cm.size * view.scale) / 2 + CREW_HOVER.bracketPadPx;
+    const px = (value: number) => `${Math.round(value * 10) / 10}px`;
+    writeStyle(target, "width", px(reach * 2));
+    writeStyle(target, "height", px(reach * 2));
+    writeStyle(
+      target,
+      "transform",
+      `translate(${px(cm.x * view.scale - reach)}, ${px(cm.y * view.scale - reach)})`,
+    );
+  }, []);
+  // Under reduced motion no frame would place it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: litCrewId is the thing to place for
+  useLayoutEffect(() => {
+    placeLit();
+  }, [litCrewId, placeLit]);
+
   // Placed before its first paint, and again whenever its text changes its
   // size or the window changes; under reduced motion no frame would do it.
   // A first placement slides it in; a new crewmate moves it from where it stood.
@@ -707,6 +755,7 @@ export function CrewOrbit({
     const travel = String(Math.round(frame.travel * 100) / 100);
     if (near.canvas.dataset.crewTravel !== travel) near.canvas.dataset.crewTravel = travel;
     if (shownRef.current) placeSummary();
+    placeLit();
     const present = new Set<string>();
     for (const cm of frame.crew) {
       const element = nameRefs.current.get(cm.id);
@@ -991,6 +1040,22 @@ export function CrewOrbit({
             Next computers
           </button>
         </nav>
+      )}
+      {/* The lit crewmate's brackets (INF-237): the summary's brackets alone. */}
+      {litCrewId && (
+        <div className="fm-crew-summary-layer" data-placed="" aria-hidden="true">
+          <div
+            ref={litTargetRef}
+            className="fm-crew-target"
+            data-crew-lit-target={litCrewId}
+            style={{ display: "none" }}
+          >
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
       )}
       {/* Outside the fitted formation, so the summary's type is never scaled. */}
       {summary && shown && (

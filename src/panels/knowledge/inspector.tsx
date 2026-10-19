@@ -56,6 +56,8 @@ import {
 export type InspectorTaskKeys = {
   taskOf: PanelTaskKeys;
   point: Pick<PanelPoint, "peekTask" | "openTask">;
+  /** The panel's `view.litTaskId` (INF-237). */
+  litTaskId: string | null;
 };
 export const InspectorTaskKeysContext = createContext<InspectorTaskKeys | null>(null);
 
@@ -68,6 +70,7 @@ export function Words({ text, look }: { text: string; look?: TaskKeyLook }) {
       text={text}
       taskOf={keys.taskOf}
       point={keys.point}
+      litTaskId={keys.litTaskId}
       {...(look ? { look } : {})}
     />
   );

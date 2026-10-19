@@ -10,6 +10,7 @@ import { z } from "zod";
 import { mainMessageRefusal, type ShellState, shownCard, useShellStore } from "../app/store";
 import { isView } from "../devices/viewWords";
 import { pluginHost } from "./host";
+import { useLitTaskId } from "./point/litTask";
 import { openTask } from "./point/openTask";
 import { taskPeek } from "./point/taskPeek";
 import { boardOnScreen, searchedTask } from "./reads/appExecutor";
@@ -265,6 +266,7 @@ export function framePointAction(
 export const NO_VIEW: PanelView = Object.freeze({
   openTaskIds: Object.freeze([]) as unknown as string[],
   shownTaskId: null,
+  litTaskId: null,
 });
 
 /**
@@ -272,9 +274,10 @@ export const NO_VIEW: PanelView = Object.freeze({
  * key so a reader re-renders only when it moves: the tasks whose records
  * are on the stack, and the task of the entry on screen - a record, a
  * task's browser or Crewmate tab, or a panel card's aim (the task board's
- * selected tile).
+ * selected tile), and the task lit by a rest anywhere in the window
+ * (`litTaskId`, ./point/litTask.ts).
  */
-export function panelViewKey(s: ShellState): string {
+export function panelViewKey(s: ShellState, litTaskId: string | null = null): string {
   const shown = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
   const openTaskIds = s.records.flatMap((held) => ("taskId" in held ? [held.taskId] : []));
   const shownTaskId =
@@ -283,17 +286,22 @@ export function panelViewKey(s: ShellState): string {
     shown?.crewmateTaskId ??
     shown?.panelCard?.aim ??
     null;
-  return JSON.stringify([openTaskIds, shownTaskId]);
+  return JSON.stringify([openTaskIds, shownTaskId, litTaskId]);
 }
 
 /** The view a key names. */
 export function panelViewOf(key: string): PanelView {
-  const [openTaskIds, shownTaskId] = JSON.parse(key) as [string[], string | null];
-  return { openTaskIds, shownTaskId };
+  const [openTaskIds, shownTaskId, litTaskId] = JSON.parse(key) as [
+    string[],
+    string | null,
+    string | null,
+  ];
+  return { openTaskIds, shownTaskId, litTaskId };
 }
 
 /** `PanelProps.view`, following the stack: empty for a panel that does not read the board. */
 export function usePanelView(readsBoard: boolean): PanelView {
-  const key = useShellStore((s) => (readsBoard ? panelViewKey(s) : ""));
+  const lit = useLitTaskId();
+  const key = useShellStore((s) => (readsBoard ? panelViewKey(s, lit) : ""));
   return useMemo(() => (key ? panelViewOf(key) : NO_VIEW), [key]);
 }

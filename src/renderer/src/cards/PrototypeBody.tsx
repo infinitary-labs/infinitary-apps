@@ -401,6 +401,7 @@ function cardFrameSpec(
     ...(props.links
       ? {
           taskKeys: props.links.keys,
+          litKey: props.links.lit,
           onTask: (gesture, key, box) => {
             const links = props.links;
             if (!links) return;

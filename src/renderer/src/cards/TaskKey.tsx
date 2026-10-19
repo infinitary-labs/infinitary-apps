@@ -2,6 +2,7 @@ import type { TaskView } from "@shared/tasks";
 import { useRef } from "react";
 import { useShellStore } from "../app/store";
 import { TaskKey, type TaskKeyLook, TaskKeyWords } from "../design/panel/TaskKey";
+import { useLitTaskId } from "../plugins/point/litTask";
 import { openTaskFromKey } from "../plugins/point/openTask";
 import { taskPeek } from "../plugins/point/taskPeek";
 import { useTaskLinks } from "./taskLinks";
@@ -57,9 +58,11 @@ export function TaskKeyLink({
   look?: TaskKeyLook;
 }) {
   const rest = useKeyRest(task.id);
+  const lit = useLitTaskId() === task.id;
   return (
     <TaskKey
       {...(look ? { look } : {})}
+      lit={lit}
       onRest={rest}
       onOpen={(event) => {
         if (!event.nativeEvent.isTrusted) return;
@@ -88,9 +91,11 @@ export function CardTaskKey({
   cardId: string;
 }) {
   const rest = useKeyRest(task.id);
+  const lit = useLitTaskId() === task.id;
   return (
     <TaskKey
       look="quiet"
+      lit={lit}
       onRest={rest}
       onOpen={(event) => {
         if (!event.nativeEvent.isTrusted) return;

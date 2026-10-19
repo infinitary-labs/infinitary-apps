@@ -139,7 +139,12 @@ import { mediatedFetchRequestSchema } from "./fetch";
  * on a click or Enter. The keyboard rests on a key as the pointer does: a
  * key the keyboard moves focus to posts `rest` once the window has brought
  * it into view, and losing focus posts `leave`. Linking moves no text, so it
- * is not a live change.
+ * is not a live change. The host also tells the document which of its keys a
+ * rest elsewhere in the window lights - a Tasks row, a crewmate, another
+ * key (INF-237) - in a `lit` message with the key or null: the bridge marks
+ * `data-inf-lit` on every link to that key, again on links it makes later,
+ * and the frame stylesheet draws it as the hover mark. Marking moves no
+ * text either.
  *
  * Its KNOWLEDGE REFERENCES are linked the same way (docs/knowledge.md,
  * "References in an answer"): the host tells the document which entry ids
@@ -273,7 +278,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var form = { on: false, locked: false, fill: null, filling: false, staged: {}, first: new WeakMap(), last: "", fields: new WeakMap() };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, label, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
-  var keys = { known: null, rested: null, quiet: null };
+  var keys = { known: null, rested: null, quiet: null, lit: null };
   var entries = { known: null };
   var caps = { pictures: false, escape: false };
   var held = { element: null, start: null, end: null, direction: null };
@@ -605,6 +610,9 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       keys.known = any ? known : null;
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkKeys, { once: true });
       else linkKeys();
+    } else if (data.type === "lit") {
+      keys.lit = typeof data.key === "string" ? data.key : null;
+      markLit();
     } else if (data.type === "entries") {
       var named = {};
       var some = false;
@@ -1473,6 +1481,17 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     // The same words in the same place: a mark is not the body changing.
     if (changed) sizeWatch.takeRecords();
   }
+  // The key lit by a rest elsewhere in the window (INF-237) takes the hover mark, on every link to it.
+  function markLit() {
+    document.querySelectorAll("a[data-inf-task]").forEach(function (link) {
+      var on = keys.lit !== null && link.getAttribute("data-inf-task") === keys.lit;
+      if (on === link.hasAttribute("data-inf-lit")) return;
+      if (on) link.setAttribute("data-inf-lit", "");
+      else link.removeAttribute("data-inf-lit");
+    });
+    // A mark is not the body changing.
+    sizeWatch.takeRecords();
+  }
   function linkKeys() {
     if ((!keys.known && !entries.known) || !document.body) return;
     var found = [];
@@ -1485,6 +1504,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     var linked = false;
     found.forEach(function (text) { if (linkText(text)) linked = true; });
     if (!linked) return;
+    markLit();
     // The same words in the same place: linking is not the body changing.
     sizeWatch.takeRecords();
     keyWatch.takeRecords();
@@ -1646,7 +1666,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-h49nA/iUS/5L6woR7RLrp2tKdLST+VVcHEoy96V7Sd8=";
+export const FRAME_BRIDGE_SHA256 = "sha256-Vxn73dr4R6nVKDfx6tqlnVozyXyqiUpfH0eXMzYuuwc=";
 
 // --- the envelope, frame -> host -------------------------------------------
 
@@ -1921,6 +1941,8 @@ export type HostMessage =
   /** The host just gave the frame focus back: the element that last had it takes it again. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "focus" }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "tasks"; keys: string[] }
+  /** The linked key a rest elsewhere in the window lights (INF-237), or null: the bridge marks `data-inf-lit` on each link to it. */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "lit"; key: string | null }
   /** The knowledge entries the body names that the window reads, with each reference's words. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "entries"; entries: FrameEntryRef[] }
   /** The document's markup anew: the bridge rewrites only what differs, in place. */

@@ -333,7 +333,19 @@ A task board tile rests the same way from the board's card, and its summary sits
 `placeRowSummary` (`crew/hover.ts`) puts it outside the Tasks panel on the stage's side, centred on the row, inside the window under the top bar and clear of the input and the other rail's panels (rising above what is in the way, then the other side), with the hairline from the panel's edge at the row's middle; there are no brackets.
 The host also lets it go when the pointer moves anywhere outside the frame, on Esc (which then goes no further, so a record open under the summary stays), a scroll that carries the frame, a resize or the window losing focus.
 A move the window receives aimed at the frame element itself is not outside it: Chromium sends one as the pointer crosses into the frame, often just after the frame has reported the row, and the frame never reports that row again.
-It never touches the stage: no crewmate is inspected and nothing slows.
+It never inspects a crewmate and never slows the stage; the lit task below puts brackets on that task's crewmate, and nothing else.
+
+**The lit task** (INF-237, "hover a task anywhere, highlight it everywhere").
+A rest on a task on any surface lights it on every surface that shows it.
+`plugins/point/litTask.ts` is a second small window-view store beside `taskPeek`: `{ taskId, by }` or none, one at a time, the last rest winning, and a source lets go only of what it lit.
+`taskPeek.set` and `taskPeek.release` feed it, so every Tasks row, board tile, panel key, card-frame key and window key publishes with no change of its own; `CrewOrbit` feeds it the crewmate it inspects (a pointer rest or a focused name, `by: "stage"`) and lets go when it stops inspecting.
+It is lit the instant a rest begins and cleared the instant it ends, with no beat; the summary keeps its own 130 ms.
+The stage follows it with the corner brackets alone: for a lit crewmate that is not the one it inspects, `CrewOrbit` draws the `.fm-crew-target` brackets round the painted crewmate (`placeLit`, per frame with compare-before-write, and once under reduced motion) and sets `data-crew-lit` on the formation.
+There is no summary, no hairline, no pause and no slowing: `data-stage-rate` and the stage clock are untouched, as the 2026-10-01 ruling says a row's rest never moves the stage.
+A lit task that is no crewmate here, or whose crewmate is leaving, draws nothing.
+Its other followers are the Tasks row (`data-now-lit`), the board tile (`data-board-lit`), a panel's keys (`PanelView.litTaskId`), a card body's or record's keys (`data-inf-lit`, `docs/ui-plugins.md` "Pointing and the view") and the keys the window draws (`data-task-lit`).
+Nothing is scrolled or paged into view: a lit row lights where it is.
+It is window view state: nothing is saved and nothing crosses IPC.
 
 **From a task key** (FI3-594, FI3-1271; the design skill's core rule "Task keys").
 A card body's or a task record's frame reports the key it rests on (`cards/taskLinks.ts`), and a key the window draws - a thread line, a card's title, the record's Now line, a Settings row - reports itself (`cards/TaskKey.tsx`, an `AnchorPeek`); the same store and layer show the same summary for that key's task.

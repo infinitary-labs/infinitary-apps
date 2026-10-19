@@ -90,6 +90,7 @@ export const HELPER_EXPORTS: readonly string[] = [
   "useOverflowTitle",
   "useRestLabel",
   "usePanelTaskKeys",
+  "litTaskIn",
 ];
 
 /** A gallery's pointing goes nowhere: it has no tasks to point at. */

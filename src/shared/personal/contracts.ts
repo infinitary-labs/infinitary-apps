@@ -1092,6 +1092,13 @@ export type PanelView = {
   openTaskIds: string[];
   /** The task of the entry on screen now - a record, a task's browser, or a card's aim - or null. */
   shownTaskId: string | null;
+  /**
+   * The task the pointer or the keyboard rests on anywhere in the window - a
+   * Tasks row or tile, a crewmate, a task key in a card, a thread, an
+   * Activity line - or null. A panel draws it as its own rest, without the
+   * summary (INF-237).
+   */
+  litTaskId: string | null;
 };
 
 // --- moving tasks -----------------------------------------------------------------

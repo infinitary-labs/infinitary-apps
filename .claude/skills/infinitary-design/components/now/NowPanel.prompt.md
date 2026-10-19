@@ -126,6 +126,14 @@ Facts carry stable identities (`data-task-fact`), never their labels' words.
 Resting the pointer, or the keyboard's focus, on any Tasks row - backlog, queued, working, idle, interrupted, waiting on you or done, and a row the filter found in earlier work - opens the crew summary (`components/mate/Crewmate`, Reading a crewmate) for that row's task: the same panel, the same shared facts in the same order and words, after the same beat (130ms).
 The row gains nothing: it stays a mark, key and title.
 
+### The lit row (INF-237)
+
+A rest on the same task anywhere else - its crewmate on the stage (the pointer or a focused name), a task key in a card, a thread, a title, the record, Activity, Knowledge or Settings, a board tile - lights its row at once, with no summary and no beat.
+The row takes exactly its own hover look: the `--bg-3` surface, and its blocker lines in `--accent`.
+It moves nothing and scrolls nothing: a row out of view stays out of view.
+It clears the instant the rest ends, and the row's own `--dur-fast` background transition rides it (a cut under reduced motion).
+One task is lit at a time, the last rest winning.
+
 ## Blocked by (FI3-1680)
 
 Recorded blockers also draw as quiet lines in a 36px gutter to the left of the rows, in addition to the rows' own padding.

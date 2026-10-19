@@ -27,6 +27,9 @@ One rule, one summary and one way of opening serve every place; a card body's ke
 - **How it reads.**
   In words - a card's body or title, a thread line, the record's Now line, its Waiting on box and the words of a task, a refusal, a finding's statement - as the body's other links: `--accent`, underlined, in the font around it, with a pointer cursor; resting on it gives it the row hover surface (`--bg-3`, `--radius-s`).
   In a dense list - an Activity line, the record's Activity and Details, a Usage row, Knowledge's who-and-when lines - it keeps the list's own type and color (the dim mono a key has there), underlined, and turns `--accent` while it is rested on or focused, so a column of keys never outshouts the words.
+- **Lit by a rest elsewhere (INF-237).**
+  While the same task rests anywhere else - its crewmate, its Tasks row or tile, another key - every key of that task takes the look its own rest gives it: the row hover surface in words, `--accent` in a dense list.
+  No summary opens for it and nothing moves; it clears the instant that rest ends.
 - **Rest.**
   Resting on a key opens the crew summary for its task (`../mate/Crewmate`, Reading a crewmate) after the same beat (130ms): the same panel and the same shared facts, in the same order and words, as its Tasks row (`../now/NowPanel`, Row hover).
   A key on a card - its body, title, thread, or the record - sits outside the card, level with the key (`../cards/ResponseCard`, "Task keys in a body"); a key in a panel on its rail sits beside the panel, as a Tasks row's summary does; a key in Settings sits outside the Settings section.

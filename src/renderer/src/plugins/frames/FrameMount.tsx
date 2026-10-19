@@ -222,6 +222,11 @@ export function useFrameController(
     );
   }, [taskKeys]);
 
+  const litKey = spec.litKey ?? null;
+  useEffect(() => {
+    controllerRef.current?.setLitKey(litKey);
+  }, [litKey]);
+
   // Compared by content too: the references and the words each is read by.
   const entryRefs = spec.entryRefs ? JSON.stringify(spec.entryRefs) : undefined;
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { litTask } from "./litTask";
 import { taskPeek } from "./taskPeek";
 
 /** The task the pointer rests on: a card body's task key, the window's own key, or a task in a panel's page. */
@@ -50,5 +51,21 @@ describe("the key or task the pointer rests on", () => {
     expect(taskPeek.get()).toBe(own);
     taskPeek.release(anchor);
     expect(taskPeek.get()).toBeNull();
+  });
+
+  it("lights the task it rests on and clears it when the rest ends, and never what the stage lit (INF-237)", () => {
+    const page = {} as HTMLElement;
+    taskPeek.set({ taskId: "t1", box, page, pageFrame: null });
+    expect(litTask.get()).toEqual({ taskId: "t1", by: "peek" });
+    taskPeek.release(page);
+    expect(litTask.get()).toBeNull();
+    litTask.set("t2", "stage");
+    taskPeek.set({ taskId: "t1", box, page, pageFrame: null });
+    taskPeek.release(page);
+    // The stage's crewmate was replaced by the rest and the rest's let-go clears it; a stage rest set after stays.
+    litTask.set("t2", "stage");
+    taskPeek.set(null);
+    expect(litTask.get()).toEqual({ taskId: "t2", by: "stage" });
+    litTask.release("stage");
   });
 });

@@ -2,6 +2,7 @@ import type { PanelFeedLine, PanelPoint, PanelProps } from "@infinitary/contract
 import {
   feedRelativeAge,
   focusWithRing,
+  litTaskIn,
   type PanelTaskKeys,
   PanelTaskKeyText,
   useOverflowTitle,
@@ -68,12 +69,15 @@ const Row = memo(function Row({
   fresh,
   taskOf,
   point,
+  litTaskId,
 }: {
   line: PanelFeedLine;
   age: string;
   fresh: boolean;
   taskOf: PanelTaskKeys;
   point: PanelPoint;
+  /** The lit task when this line writes its key, else null: only such a line draws again. */
+  litTaskId: string | null;
 }) {
   const kind = semanticKind(line.kind);
   const [reveal] = useState(fresh);
@@ -97,12 +101,24 @@ const Row = memo(function Row({
         {line.taskKey && (
           <>
             <span className="key" data-feed-key={line.taskKey}>
-              <PanelTaskKeyText text={line.taskKey} taskOf={taskOf} point={point} look="quiet" />
+              <PanelTaskKeyText
+                text={line.taskKey}
+                taskOf={taskOf}
+                point={point}
+                look="quiet"
+                litTaskId={litTaskId}
+              />
             </span>{" "}
           </>
         )}
         <span className="text" data-feed-text="">
-          <PanelTaskKeyText text={line.text} taskOf={taskOf} point={point} look="quiet" />
+          <PanelTaskKeyText
+            text={line.text}
+            taskOf={taskOf}
+            point={point}
+            look="quiet"
+            litTaskId={litTaskId}
+          />
         </span>
       </span>
       <span className="time" data-feed-time={String(line.at)}>
@@ -112,7 +128,7 @@ const Row = memo(function Row({
   );
 });
 
-export default function ActivityPanel({ reads, asks, rail, point }: PanelProps) {
+export default function ActivityPanel({ reads, asks, rail, point, view }: PanelProps) {
   const [lines, setLines] = useState<readonly PanelFeedLine[] | null>(null);
   // Which keys the lines write name tasks: the board's, or earlier work's.
   const words = useMemo(
@@ -300,6 +316,7 @@ export default function ActivityPanel({ reads, asks, rail, point }: PanelProps) 
                 age={feedRelativeAge(line.at, now)}
                 taskOf={taskOf}
                 point={point}
+                litTaskId={litTaskIn([line.taskKey ?? "", line.text], taskOf, view.litTaskId)}
                 fresh={
                   !snapshotKeys.current?.has(keys[i] ?? "") && line.at >= performance.timeOrigin
                 }

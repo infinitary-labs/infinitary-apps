@@ -91,6 +91,7 @@ A click or Enter opens the tile's or row's task exactly as a Tasks row does (`po
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile, the same summary and beat as a Tasks row's (`point.peekTask`).
 Where neither side of the tile has room, as beside a list's full-width row in a narrow window, the summary sits under the tile or over it (`placeKeySummary`).
 The tile focus is on is the selected one, tinted as an open row is; while the board is the shown entry, the selected tile is the turn's hint, as a shown record is (`point.aim`).
+A rest also lights the tile's task everywhere else it shows (the lit task, `docs/crew-orbits.md`), and a rest elsewhere lights its tile: the tile takes its hover surface as `data-board-lit`, and nothing about it changes size or moves.
 A click, Enter or a rest writes nothing; the moves below are the board's only writes.
 
 ## Moves

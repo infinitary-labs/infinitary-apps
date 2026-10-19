@@ -61,6 +61,7 @@ A child whose parent is on another page stands alone there with "part of KEY".
 
 A click or Enter opens the tile's task as a Tasks row does: its waiting card comes forward, or its record opens at the front.
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile after the usual beat, with the same hairline (`NowPanel.prompt.md`, "Row hover").
+A rest on the same task elsewhere lights its tile at once with the tile's hover surface only (`--bg-3`): no summary, and the status reason keeps its two lines, so nothing moves (`NowPanel.prompt.md`, "The lit row").
 The tile focus is on is the selected one, and while the board is shown it points the first mate's input turn at its task, as a shown record does.
 
 The tiles and rows are one Tab stop after the board's own row and views: ↑ ↓ within a lane and onto its other pages, Home and End to the lane's real ends, turning its page and bringing the tile into view, ← → to the nearest drawn tile in the next column that has one, ↓ from Waiting on you's last row into the first column and ↑ from a lane's top back to it.

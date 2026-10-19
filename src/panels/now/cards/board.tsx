@@ -287,7 +287,7 @@ function newestWrite(board: PanelTaskBoard, tiles: ReadonlyMap<BoardLane, BoardT
 /** One lane as its view draws it: the page shown, and how many a page holds. */
 type DrawnLane = { lane: BoardLane; page: BoardPage; size: number };
 
-export default function TaskBoardCard({ card, reads, point, tasks }: PanelProps) {
+export default function TaskBoardCard({ card, reads, point, tasks, view: windowView }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
   // The place this page was born with, then the board's own as it moves.
   const born = useMemo(() => placeOf(card?.kept ?? null), [card?.kept]);
@@ -1041,6 +1041,8 @@ export default function TaskBoardCard({ card, reads, point, tasks }: PanelProps)
           data-board-lane={tileLane}
           data-board-row={row ? "" : undefined}
           data-board-selected={selected === task.id ? "" : undefined}
+          // A rest anywhere in the window lights the tile as its own rest does (INF-237).
+          data-board-lit={windowView.litTaskId === task.id ? "" : undefined}
           data-board-movable={movable ? "" : undefined}
           tabIndex={stop === task.id ? 0 : -1}
           aria-label={`${task.key} · ${task.title} · ${project} · ${label}`}

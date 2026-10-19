@@ -171,9 +171,10 @@ export const FRAME_BASE_STYLE = `
   li + li { margin-top: var(--space-1); }
   a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
   /* A task key the bridge linked (FI3-594) reads as a link in the words around it;
-     resting on it marks it with a row's hover surface while its summary is open. */
+     resting on it marks it with a row's hover surface while its summary is open,
+     and so does a rest on the same task elsewhere in the window (data-inf-lit, INF-237). */
   a[data-inf-task] { cursor: pointer; border-radius: var(--radius-s); }
-  a[data-inf-task]:hover { background: var(--bg-3); }
+  a[data-inf-task]:hover, a[data-inf-task][data-inf-lit] { background: var(--bg-3); }
   /* A knowledge reference the bridge linked (docs/knowledge.md, "References in an
      answer"): the entry's id as a link, led by a dot in its standing's state color -
      ok for checked with evidence, warn for one to recheck or with differing evidence. */

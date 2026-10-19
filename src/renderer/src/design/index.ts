@@ -87,6 +87,7 @@ export { Row, type RowProps } from "./panel/Row";
 // `tasks.board` and `tasks.search` links the keys its words write, and
 // resting on one or clicking it points at that task (`point`).
 export {
+  litTaskIn,
   type PanelTaskKeys,
   PanelTaskKeyText,
   TaskKey,

@@ -294,6 +294,69 @@ test("a task key in a card body opens its task's summary on a rest and the task 
   }
 });
 
+/**
+ * INF-237 ("hover a task anywhere, highlight it everywhere"): a rest on a
+ * key in a card body lights its Tasks row and every other key of that task,
+ * and a rest on a Tasks row lights every key of its task - in the card
+ * body's frame and the key the card's own head draws.
+ */
+test("a task key and its Tasks row light each other, and every other key of that task", async () => {
+  const userDataDir = scratchDir("infinitary-card-task-keys-lit-");
+  const seeded = seed(userDataDir);
+  const launched = await launchApp({ userDataDir, gpuBenchmarking: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, SUMMARY_CARD);
+    const body = cardBody(page, SUMMARY_CARD);
+    const keyLinks = (key: string) => linkedTaskKeys(body).filter({ hasText: key });
+    await expandDock(page, "now");
+    await openGroup(page, "backlog");
+    await expect(nowRow(page, seeded.format)).toBeVisible();
+
+    await test.step("a rest on a key lights its row and each key of that task, and no other", async () => {
+      // The format key is written twice in the body.
+      await expect(keyLinks(seeded.format)).toHaveCount(2);
+      await restOnFramedKey(page, keyLinks(seeded.format).first());
+      await expect(nowRow(page, seeded.format)).toHaveAttribute("data-now-lit", "");
+      await expect(keyLinks(seeded.format).nth(1)).toHaveAttribute("data-inf-lit", "");
+      await expect(keyLinks(seeded.ledger).first()).not.toHaveAttribute("data-inf-lit", "");
+      await expect(nowRow(page, seeded.ledger)).not.toHaveAttribute("data-now-lit", "");
+      await page.screenshot({ path: test.info().outputPath("lit-key-to-row.png") });
+      // Leaving the key clears every mark at once.
+      await body.getByText("name no task").dispatchEvent("pointerover");
+      await expect(nowRow(page, seeded.format)).not.toHaveAttribute("data-now-lit", "");
+      await expect(linkedTaskKeys(body).and(page.locator("[data-inf-lit]"))).toHaveCount(0);
+    });
+
+    await test.step("a rest on a row lights each key of its task in the body, the last rest winning", async () => {
+      await restOnRow(page, seeded.ledger);
+      await expect(keyLinks(seeded.ledger).first()).toHaveAttribute("data-inf-lit", "");
+      await expect(keyLinks(seeded.format).first()).not.toHaveAttribute("data-inf-lit", "");
+      await restOnRow(page, seeded.format);
+      await expect(keyLinks(seeded.format).first()).toHaveAttribute("data-inf-lit", "");
+      await expect(keyLinks(seeded.ledger).first()).not.toHaveAttribute("data-inf-lit", "");
+      await page.mouse.move(4, 400);
+      await expect(keyLinks(seeded.format).first()).not.toHaveAttribute("data-inf-lit", "");
+    });
+
+    await test.step("the key the card's own head draws lights too, and lights the row", async () => {
+      // The summary card's own task is its author's.
+      const head = taskKeyLinks(shownCard(page, SUMMARY_CARD)).filter({ hasText: seeded.author });
+      await expect(head).toHaveCount(1);
+      await restOnRow(page, seeded.author);
+      await expect(nowRow(page, seeded.author)).toHaveAttribute("data-now-lit", "");
+      await expect(head).toHaveAttribute("data-task-lit", "");
+      await page.mouse.move(4, 400);
+      await expect(head).not.toHaveAttribute("data-task-lit", "");
+      await restOnTaskKey(page, head);
+      await expect(nowRow(page, seeded.author)).toHaveAttribute("data-now-lit", "");
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
 test("sliding into a task key from beside the card opens its summary", async () => {
   const userDataDir = scratchDir("infinitary-card-task-keys-slide-");
   const seeded = seed(userDataDir);
@@ -593,8 +656,12 @@ test("a task key in Activity opens its summary beside the panel, by pointer and 
     await test.step("resting on a key in the words opens its task's summary beside the panel", async () => {
       await restOnTaskKey(page, taskKeyLinks(line).nth(1));
       await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, work.ledger.id);
+      // The rest is the lit task (INF-237): the panel draws it from the view the window hands it.
+      await expect(taskKeyLinks(line).nth(1)).toHaveAttribute("data-task-lit", "");
+      await expect(taskKeyLinks(line).nth(2)).not.toHaveAttribute("data-task-lit", "");
       await page.mouse.move(700, 400);
       await expect(rowSummary(page)).toHaveCount(0);
+      await expect(taskKeyLinks(line).nth(1)).not.toHaveAttribute("data-task-lit", "");
     });
 
     await test.step("each key is a Tab stop after the list, and focusing one opens its summary", async () => {

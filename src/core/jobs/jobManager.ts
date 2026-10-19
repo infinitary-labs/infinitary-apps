@@ -32,10 +32,13 @@ export type JobExit = {
   /**
    * It never exited where it ran: the run of the computer that runs work
    * ended first, and its next start says so once (`SessionHost`). `quit`:
-   * that run's own stop killed it, `durationMs` in. `crash`: the run ended
-   * without its stop, so the command may have run on, even to the end.
+   * that run's own stop killed it, `durationMs` in, or the home's quit
+   * ended the Claude client it ran in (`CrewSupervisor`). `crash`: the run
+   * ended without its stop, so the command may have run on, even to the
+   * end. `client`: a Claude client's background task, which ended with its
+   * client while Infinitary ran on (`CrewSupervisor`, `SessionHost`).
    */
-  interrupted?: "quit" | "crash";
+  interrupted?: "quit" | "crash" | "client";
 };
 
 /**

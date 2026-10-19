@@ -9,7 +9,12 @@ import {
 import type { CardPicture } from "@shared/cards";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
-import { invokeContract, keepsCardTypefaces, type WorkInvokeChannel } from "@shared/ipc";
+import {
+  hearsClientJobEnds,
+  invokeContract,
+  keepsCardTypefaces,
+  type WorkInvokeChannel,
+} from "@shared/ipc";
 import {
   isWorkOrderChannel,
   PLACED_EVENTS_MAX_PER_REQUEST,
@@ -89,7 +94,9 @@ import type { WorkingCopies } from "./workingCopies";
  * `interrupted` at its next start, as a turn on the home ends when the home
  * quits, and each background job's end it had not told yet - an exit the
  * home had not answered, or a job its end cut off, a Claude client's
- * background tasks among them - is told to its home once.
+ * background tasks among them - is told to its home once. So is each
+ * background task a Claude client still ran when it ended while this
+ * computer ran on.
  */
 
 export type SessionHostOptions = {
@@ -200,10 +207,11 @@ type Held = {
   jobs: number | undefined;
   /**
    * The background tasks the open conversation's own client runs now (a
-   * Claude conversation's), each with its row in the task's job rows, so a
-   * stop that ends the client with them is told at the next start.
+   * Claude conversation's), each by its row in the task's job rows, so an
+   * end of the client that takes them with it is told: now, or at the next
+   * start when it is this computer's stop.
    */
-  clientTasks: Set<string>;
+  clientTasks: Map<string, PlacedJob>;
   /** The account of this computer's own the open conversation is bound to, if it is one. */
   account: string | undefined;
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
@@ -302,13 +310,12 @@ export class SessionHost {
    * The background tasks the conversation's own client runs now (a Claude
    * conversation's), as its client lists them: each new one gets a row,
    * and one the client no longer lists loses its row, since the client
-   * tells its own model how it ended. A client that ended (`count`
-   * unknown) runs none. A row the last run left is told at this start and
-   * never touched here.
+   * tells its own model how it ended. A row the last run left is told at
+   * this start and never touched here.
    */
   private keepClientTasks(held: Held, tasks: readonly ClientBackgroundTask[]): void {
     const live = new Set(tasks.map((task) => task.id));
-    for (const id of held.clientTasks) {
+    for (const id of held.clientTasks.keys()) {
       if (live.has(id)) continue;
       held.clientTasks.delete(id);
       this.options.tasks.forgetJob(held.task, id);
@@ -316,13 +323,34 @@ export class SessionHost {
     if (held.state.closed) return;
     for (const task of tasks) {
       if (held.clientTasks.has(task.id)) continue;
-      held.clientTasks.add(task.id);
-      this.options.tasks.keepJob(held.task, {
-        id: task.id,
-        command: task.description,
-        startedAt: this.now(),
-      });
+      const row: PlacedJob = { id: task.id, command: task.description, startedAt: this.now() };
+      held.clientTasks.set(task.id, row);
+      this.options.tasks.keepJob(held.task, row);
     }
+  }
+
+  /**
+   * The conversation's client ended while this computer runs on - the home
+   * let go of it (its quit does), a moved contract reopened it, or it
+   * stopped by itself - and each background task it still listed ended with
+   * it (INF-405). Its row keeps that end until the home answers, and the
+   * home is told now, once, so its crewmate never waits on the task.
+   */
+  private clientEnded(held: Held): void {
+    for (const row of held.clientTasks.values()) {
+      const job: PlacedJob = {
+        ...row,
+        exit: {
+          exitCode: null,
+          durationMs: Math.max(0, this.now() - row.startedAt),
+          tail: "",
+          interrupted: "client",
+        },
+      };
+      this.options.tasks.keepJob(held.task, job);
+      this.tellJobEnd(held, job);
+    }
+    held.clientTasks.clear();
   }
 
   /**
@@ -346,10 +374,12 @@ export class SessionHost {
   /**
    * Tells the home a job's end, the one its crewmate waits for, once: its
    * exit, or - for a job the last run here left running - that it never
-   * exited, because that run's stop killed it or the run ended without one.
-   * It goes under the job's own call id, and its row goes only once the
-   * home answers, so a stop before then asks again at the next start and
-   * the home answers that from what it kept.
+   * exited, because that run's stop killed it or the run ended without one,
+   * or because the Claude client it ran in ended first. It goes under the
+   * job's own call id, and its row goes only once the home answers, so a
+   * stop before then asks again at the next start and the home answers that
+   * from what it kept. A home known to be older hears a client's end
+   * without why (`CLIENT_JOB_ENDS_SINCE`), as an exit by signal.
    */
   private tellJobEnd(held: Held, job: PlacedJob): void {
     const forget = () => {
@@ -360,6 +390,14 @@ export class SessionHost {
       forget();
       return;
     }
+    const home = this.options.homeVersion?.() ?? null;
+    const { interrupted, ...exit } = job.exit ?? {
+      exitCode: null,
+      durationMs: Math.max(0, (job.stoppedAt ?? job.startedAt) - job.startedAt),
+      tail: "",
+      interrupted: job.stoppedAt === undefined ? ("crash" as const) : ("quit" as const),
+    };
+    const older = interrupted === "client" && home !== null && !hearsClientJobEnds(home);
     // A job's end is its own request: it carries no tool's cancellation,
     // so a tool that started the job cannot withdraw the end.
     void this.call(held, "inf:work:job-exit", {
@@ -367,12 +405,8 @@ export class SessionHost {
       exit: {
         jobId: job.id,
         command: job.command,
-        ...(job.exit ?? {
-          exitCode: null,
-          durationMs: Math.max(0, (job.stoppedAt ?? job.startedAt) - job.startedAt),
-          tail: "",
-          interrupted: job.stoppedAt === undefined ? "crash" : "quit",
-        }),
+        ...exit,
+        ...(interrupted && !older ? { interrupted } : {}),
       },
     }).then(forget, (error: unknown) => {
       // Stopping first: its row stays for the next start.
@@ -403,7 +437,7 @@ export class SessionHost {
       held.unsubscribe = null;
       // The client's background tasks end with it: their rows say this stop
       // killed them, for the next start to tell.
-      for (const id of held.clientTasks)
+      for (const id of held.clientTasks.keys())
         this.options.tasks.jobRows.markStoppedByQuit(id, held.task, this.now());
       held.clientTasks.clear();
       if (held.session) sessions.push(held.session);
@@ -778,9 +812,11 @@ export class SessionHost {
         if (event.type === "turn_failed" && event.cutOff && held.account)
           this.options.accounts?.noteCutOff(held.account, event.cutOff);
         if (event.type === "background_work_changed") {
-          this.keepClientTasks(held, event.tasks ?? []);
           // The home hears the count, as before; the tasks stay here.
           this.record(held, { type: "background_work_changed", count: event.count });
+          // A client that ended (`count` unknown) took what it ran with it.
+          if (event.count === undefined) this.clientEnded(held);
+          else this.keepClientTasks(held, event.tasks ?? []);
           return;
         }
         this.record(held, event);
@@ -817,6 +853,8 @@ export class SessionHost {
     held.renewal = undefined;
     held.backend = null;
     if (!session) return;
+    // Its client ends now, and what it ran in the background with it.
+    this.clientEnded(held);
     session.dispose();
     await session.closed().catch(() => undefined);
   }
@@ -1208,7 +1246,7 @@ export class SessionHost {
       speed: false,
       backend: null,
       jobs: undefined,
-      clientTasks: new Set(),
+      clientTasks: new Map(),
       account: undefined,
       renewal: undefined,
       opening: null,

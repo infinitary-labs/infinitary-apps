@@ -233,9 +233,9 @@ export type SessionEvent =
       /**
        * The background tasks the backend's own client runs now and ends
        * with it, when it names them (a Claude session's): each by the id
-       * its model was given and what the model said it is. A computer that
-       * runs work keeps them, so its next start can tell the home of any
-       * its stop cut off (`SessionHost`).
+       * its model was given and what the model said it is. Whoever holds
+       * the client keeps them, so the crewmate is told of each the client's
+       * end or a stop cuts off (`CrewSupervisor`, `SessionHost`).
        */
       tasks?: readonly ClientBackgroundTask[];
     }

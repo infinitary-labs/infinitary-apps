@@ -8226,6 +8226,39 @@ describe("background job results (R2)", () => {
     expect(tasks.get(taskId)?.activity).toBe("idle");
   });
 
+  // INF-405: a Claude client that ends while Infinitary runs on takes the
+  // background tasks it still ran with it, and the crewmate must never wait
+  // on them.
+  it("tells the crewmate once, as its next turn, of each background task its Claude client still ran when the client ended (INF-405)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    await supervisor.commission({ title: "Suite", intent: intentOf("run the suite") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    const suite = { id: "bybac1mss", description: "Run the long suite" };
+    crewmate.emit({
+      type: "background_work_changed",
+      count: 2,
+      tasks: [suite, { id: "b7rk2q0zt", description: "Lint the project" }],
+    });
+    // The lint finished: the client told its own model.
+    crewmate.emit({ type: "background_work_changed", count: 1, tasks: [suite] });
+    crewmate.emit({ type: "background_work_changed", count: undefined });
+    await tick();
+    expect(crewmate.promptCalls.slice(1)).toEqual([
+      expect.stringContaining(
+        '[job] background job bybac1mss did not finish: "Run the long suite" was stopped after',
+      ),
+    ]);
+    // The next client's attach says it runs none yet: nothing is told again.
+    crewmate.finishPrompt();
+    await tick();
+    crewmate.emit({ type: "background_work_changed", count: undefined });
+    await tick();
+    expect(crewmate.promptCalls).toHaveLength(2);
+  });
+
   it("delivers a job result as the idle crewmate's next turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
@@ -9222,6 +9255,55 @@ describe("the durable inbox (design A)", () => {
 
     // The stranded guidance became the resumed crewmate's next turn.
     expect(bootCrewmate.promptCalls).toEqual(["use the other library"]);
+  });
+
+  // INF-405: the quit lets go of each Claude client, and the background
+  // tasks it still ran end with it; the next boot tells the crewmate once.
+  it("tells a crewmate once, at the next boot, of each background task its Claude client still ran when the quit let go of it (INF-405)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Suite", intent: intentOf("Start") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    crewmate.emit({
+      type: "background_work_changed",
+      count: 1,
+      tasks: [{ id: "bybac1mss", description: "Run the long suite" }],
+    });
+    hostNow += 12 * 60_000;
+
+    await supervisor.disposeAll();
+    const bootCrewmate = fakeCrewmate();
+    const inbox = new InboxStore(db, { now: hostClock });
+    const fresh = new CrewSupervisor({
+      now: hostClock,
+      ...crewSessions(
+        paths,
+        vi.fn(async () => bootCrewmate),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: new TaskService({ db, strict: true, now: hostClock }),
+      cardStore,
+      inbox,
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    inbox.resetInFlight();
+    await fresh.sweepInbox(hostNow);
+    await tick();
+
+    expect(bootCrewmate.promptCalls).toEqual([
+      expect.stringContaining(
+        '[job] background job bybac1mss did not finish: "Run the long suite" was stopped after 12m 0s, when Infinitary stopped on the computer running it.',
+      ),
+    ]);
+    bootCrewmate.finishPrompt();
+    await tick();
+    expect(inbox.allFor(taskId)).toEqual([]);
+    await fresh.disposeAll();
   });
 
   it("replays a turn the app closed under at every launch, saying so, and never sets it aside", async () => {

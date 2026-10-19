@@ -371,6 +371,27 @@ describe("a job's exit wake", () => {
       '[job] background job 45d291d9 did not finish there: "pnpm test:ios" was still running when Infinitary ended unexpectedly on the computer running it, and it may have kept running, even to the end. No exit will come; check what it left before you run it again.',
     );
   });
+
+  // INF-405: a Claude client's background task ends with its client, so its
+  // crewmate hears that no end will come and does not wait for one.
+  it("says a Claude client's background task did not finish when the client it ran in ended", () => {
+    expect(
+      served(
+        {
+          jobId: "bybac1mss",
+          ownerId: "t1",
+          command: "Run the long suite",
+          exitCode: null,
+          durationMs: 4 * 60_000 + 30_000,
+          tail: "",
+          interrupted: "client",
+        },
+        "crewmate",
+      ),
+    ).toBe(
+      '[job] background job bybac1mss did not finish: "Run the long suite" was stopped after 4m 30s, when the Claude Code process it ran in ended. No exit will come; run it again if you still need its result.',
+    );
+  });
 });
 
 describe("a crewmate's shell from a Dock launch (the person's search path)", () => {

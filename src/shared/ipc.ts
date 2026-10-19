@@ -390,7 +390,7 @@ import { workRequests, workRequestWire } from "./work";
  * alone: no test pins the number and no ledger lists the bumps, so two
  * changes that both take the next minor write the same line and merge.
  */
-export const PROTOCOL_VERSION = "9.1.0";
+export const PROTOCOL_VERSION = "9.2.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -589,6 +589,20 @@ export const CARD_TYPEFACES_SINCE = "8.9.0";
 /** Whether a home keeps a preview's project fonts (`CARD_TYPEFACES_SINCE`). */
 export function keepsCardTypefaces(homeVersion: string): boolean {
   return speaksSince(homeVersion, CARD_TYPEFACES_SINCE);
+}
+
+/**
+ * The first contract whose home hears a background job's end as `client`
+ * (`inf:work:job-exit`, src/shared/work.ts): a Claude client that ended
+ * while the computer running it ran on took the task with it. A computer
+ * says so only to a home it does not know is older, which reads the
+ * request strictly; to that one it says the end without why.
+ */
+export const CLIENT_JOB_ENDS_SINCE = "9.2.0";
+
+/** Whether a home hears a job's end as its Claude client's (`CLIENT_JOB_ENDS_SINCE`). */
+export function hearsClientJobEnds(homeVersion: string): boolean {
+  return speaksSince(homeVersion, CLIENT_JOB_ENDS_SINCE);
 }
 
 /**

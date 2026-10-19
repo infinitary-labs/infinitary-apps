@@ -680,7 +680,9 @@ export const workRequests = {
    * `quit` when the run's own stop killed it, `crash` when the run ended
    * without one, so the command may have run on. A background task its
    * Claude client ran there comes only so, by the id its model was given,
-   * with its description as the command.
+   * with its description as the command; from protocol 9.2
+   * (`CLIENT_JOB_ENDS_SINCE`), `client` when the client ended with it while
+   * that computer ran on.
    */
   "inf:work:job-exit": {
     effect: "change",
@@ -691,7 +693,7 @@ export const workRequests = {
         exitCode: z.number().int().nullable(),
         durationMs: z.number().nonnegative(),
         tail: z.string(),
-        interrupted: z.enum(["quit", "crash"]).optional(),
+        interrupted: z.enum(["quit", "crash", "client"]).optional(),
       }),
     }),
     response: doneSchema,

@@ -79,12 +79,16 @@ const placedJobSchema = z.object({
   startedAt: z.number(),
   /** When this computer's stop killed it (`JobManager.disposeAll`); absent, nothing stopped it. */
   stoppedAt: z.number().optional(),
-  /** It exited, and its home has not answered its end yet (`SessionHost.jobExit`). */
+  /**
+   * It exited, or ended with the Claude client it ran in (`client`), and its
+   * home has not answered its end yet (`SessionHost`).
+   */
   exit: z
     .object({
       exitCode: z.number().int().nullable(),
       durationMs: z.number().nonnegative(),
       tail: z.string(),
+      interrupted: z.literal("client").optional(),
     })
     .optional(),
 });

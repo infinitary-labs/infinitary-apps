@@ -768,8 +768,8 @@ export type WakeFacts =
       durationMs: number;
       /** The output's tail, already capped; absent when there was none. */
       tail?: string;
-      /** It never exited: its computer's run ended first (`JobExit.interrupted`). */
-      interrupted?: "quit" | "crash";
+      /** It never exited: its computer's run, or its Claude client, ended first (`JobExit.interrupted`). */
+      interrupted?: "quit" | "crash" | "client";
     }
   | {
       /** A schedule came due (R3). */
@@ -1967,8 +1967,9 @@ function answersText(choice: WakeChoice, source?: "chrome" | "frame"): string {
 
 /**
  * A job's end as its owner hears it: its exit, or that it never exited
- * because the run of the computer it ran on ended first - and so no exit
- * will come, which is what the owner may have been waiting for.
+ * because the run of the computer it ran on, or the Claude client it ran
+ * in, ended first - and so no exit will come, which is what the owner may
+ * have been waiting for.
  */
 function renderJobExit(facts: Extract<WakeFacts, { kind: "job-exit" }>): string {
   const job = `${facts.to === "firstmate" ? "[fm-op]" : "[job]"} background job ${facts.jobId}`;
@@ -1976,6 +1977,8 @@ function renderJobExit(facts: Extract<WakeFacts, { kind: "job-exit" }>): string 
     return `${job} did not finish: "${facts.command}" was stopped after ${formatJobDuration(facts.durationMs)}, when Infinitary stopped on the computer running it. No exit will come; run it again if you still need its result.`;
   if (facts.interrupted === "crash")
     return `${job} did not finish there: "${facts.command}" was still running when Infinitary ended unexpectedly on the computer running it, and it may have kept running, even to the end. No exit will come; check what it left before you run it again.`;
+  if (facts.interrupted === "client")
+    return `${job} did not finish: "${facts.command}" was stopped after ${formatJobDuration(facts.durationMs)}, when the Claude Code process it ran in ended. No exit will come; run it again if you still need its result.`;
   return `${job} finished: "${facts.command}" exited ${facts.exitCode ?? "by signal"} after ${formatJobDuration(facts.durationMs)}${facts.tail !== undefined ? `. Output tail:\n${facts.tail}` : " with no output"}`;
 }
 

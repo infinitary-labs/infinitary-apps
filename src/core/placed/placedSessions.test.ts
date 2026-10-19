@@ -1330,6 +1330,50 @@ describe("a task that runs on a computer that runs work", () => {
     expect(claude.served().length - asked).toBe(1);
   });
 
+  // INF-405: the home's quit lets go of each conversation it holds there,
+  // and an idle Claude client ends with its background work while that
+  // computer runs on; the crewmate is told once, as its next turn, when the
+  // home is back.
+  it("tells a Claude crewmate once, as its next turn, that its background work there ended when the home's restart let go of its client (INF-405)", async () => {
+    const claude = await scriptedClaudeWorld();
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude });
+    const waiting = "The suite runs in the background; I will pick up its result.";
+    claude.answer({ text: waiting });
+    await at.start("t-claude-let-go");
+    const before = at.home();
+    await expect.poll(() => before.tasks.get("t-claude-let-go")?.outcome).toBe(waiting);
+    claude.listBackgroundTasks([{ id: "bybac1mss", description: "Run the long suite" }]);
+    await expect
+      .poll(() => {
+        const record = before.tasks.get("t-claude-let-go");
+        return record && before.supervisor.workPosture(record);
+      })
+      .toEqual({ state: "active", reason: "job" });
+    const asked = claude.served().length;
+
+    // The home restarts while the crewmate waits; that computer runs on.
+    claude.answer({ text: "Running the suite again." });
+    await at.restartHome();
+    const home = at.home();
+    await expect
+      .poll(() => home.tasks.get("t-claude-let-go")?.outcome)
+      .toBe("Running the suite again.");
+    expect(claude.served().length - asked).toBe(1);
+    expect(claude.served().at(-1)?.said).toContain(
+      '[job] background job bybac1mss did not finish: "Run the long suite" was stopped',
+    );
+    // Once: nothing is left there to tell again, its lane is empty, and
+    // another restart of either tells it nothing more.
+    expect(existsSync(join(at.folders("t-claude-let-go").root, "jobs.json"))).toBe(false);
+    expect(home.inbox.allFor("t-claude-let-go")).toEqual([]);
+    await at.restartHome();
+    await at.inReach("t-claude-let-go");
+    await at.restartComputer();
+    await at.inReach("t-claude-let-go");
+    expect(claude.served().length - asked).toBe(1);
+  });
+
   it("tells a Claude crewmate its brief and where its earlier conversation is when that computer's update starts it over, and only once (INF-296)", async () => {
     const claude = await scriptedClaudeWorld();
     stops.push(scriptedClaudeCleanup);

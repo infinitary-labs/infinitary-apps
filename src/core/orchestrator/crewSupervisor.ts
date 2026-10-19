@@ -182,6 +182,7 @@ import type {
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
+import { jobExitWake } from "../jobs/jobManager";
 import {
   knowledgeShortlist,
   renderBriefKnowledge,
@@ -223,6 +224,7 @@ import { escalationFloor, legacyShapeFromDifficulty, tierFor } from "../routing/
 import { type RouteResult, type Router, requiresReasoningWait } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import {
+  type ClientBackgroundTask,
   type ControlProfile,
   LOCAL_MACHINE_ID,
   type ModelSession,
@@ -823,6 +825,12 @@ type TaskRuntime = {
   clientJobs?: number;
   /** When the client's background work last went from none to some: the job bound's clock. */
   clientJobsSince?: number;
+  /**
+   * The background tasks this Mac's Claude client runs for the crewmate, by
+   * id, each with what the model said it is and when it was first seen: the
+   * ones a client end, or the quit, cuts off (`follow`, `disposeAll`).
+   */
+  clientTasks: Map<string, { description: string; since: number }>;
   /** Text streamed in the current assistant turn. */
   currentTurnText: string;
   /** The last completed turn's text - the report shown on the task card. */
@@ -4179,6 +4187,7 @@ export class CrewSupervisor {
       wallClockEscalated: false,
       inFlightInboxIds: [],
       steeredInboxIds: [],
+      clientTasks: new Map(),
     };
     this.tasks.set(taskId, task);
     this.broadcastCrewCounts();
@@ -4721,11 +4730,14 @@ export class CrewSupervisor {
   private follow(task: TaskRuntime, session: ModelSession): () => void {
     task.clientJobs = undefined;
     task.clientJobsSince = undefined;
+    task.clientTasks.clear();
     return session.subscribe((event) => {
       if (event.type === "background_work_changed") {
         task.clientJobs = event.count;
         task.clientJobsSince =
           (event.count ?? 0) > 0 ? (task.clientJobsSince ?? this.now()) : undefined;
+        if (event.count === undefined) this.clientEnded(task);
+        else if (event.tasks) this.keepClientTasks(task, event.tasks);
         this.broadcastCrewCounts();
         return;
       }
@@ -4757,6 +4769,53 @@ export class CrewSupervisor {
       this.applyEvent(task, event);
       this.options.broadcastEvent(enrichEvent(task, event));
     });
+  }
+
+  /**
+   * The background tasks this Mac's Claude client names for the crewmate
+   * now, each keeping when it was first seen. A conversation on another
+   * computer names none here: that computer keeps and tells its own
+   * (`SessionHost`).
+   */
+  private keepClientTasks(task: TaskRuntime, named: readonly ClientBackgroundTask[]): void {
+    const kept: TaskRuntime["clientTasks"] = new Map();
+    for (const { id, description } of named)
+      kept.set(id, { description, since: task.clientTasks.get(id)?.since ?? this.now() });
+    task.clientTasks = kept;
+  }
+
+  /**
+   * The crewmate's Claude client ended while this Mac ran on, and the
+   * background tasks it still ran ended with it: each becomes the
+   * crewmate's `[job]` turn, once, so it never waits on them. A task being
+   * stopped has nobody waiting.
+   */
+  private clientEnded(task: TaskRuntime): void {
+    if (!task.cancelled)
+      for (const [id, run] of task.clientTasks)
+        this.deliverJobResult(task.id, this.clientTaskEnd(task, id, run, "client"));
+    task.clientTasks.clear();
+  }
+
+  /** A Claude client's background task that ended with it, as the crewmate's `job-exit` wake. */
+  private clientTaskEnd(
+    task: TaskRuntime,
+    id: string,
+    run: { description: string; since: number },
+    interrupted: "client" | "quit",
+  ): WakeBody {
+    return jobExitWake(
+      {
+        jobId: id,
+        ownerId: task.id,
+        command: run.description,
+        exitCode: null,
+        durationMs: Math.max(0, this.now() - run.since),
+        tail: "",
+        interrupted,
+      },
+      "crewmate",
+    );
   }
 
   /**
@@ -6356,6 +6415,7 @@ export class CrewSupervisor {
       wallClockEscalated: false,
       inFlightInboxIds: [],
       steeredInboxIds: [],
+      clientTasks: new Map(),
     };
     const livePersonal = this.isPersonalTask(record.id) ? this.options.personal : undefined;
     // Register before opening the session: a resumed provider can carry on
@@ -10807,7 +10867,16 @@ export class CrewSupervisor {
     this.cards.dispose();
     for (const unregister of this.watchdog ?? []) unregister();
     this.watchdog = undefined;
-    for (const task of this.tasks.values()) this.releaseSession(task);
+    for (const task of this.tasks.values()) {
+      // A Claude client's background tasks end with it here: each waits on
+      // the crewmate's lane as its `[job]` turn, which the next start's
+      // sweep delivers once (`sweepInbox`).
+      if (!task.cancelled)
+        for (const [id, run] of task.clientTasks)
+          this.options.inbox.enqueue(task.id, this.clientTaskEnd(task, id, run, "quit"));
+      task.clientTasks.clear();
+      this.releaseSession(task);
+    }
     this.tasks.clear();
     return this.settled(QUIT_SETTLE_MS);
   }

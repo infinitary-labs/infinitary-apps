@@ -43,6 +43,7 @@ import { CoreEventBus } from "../events";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
+import type { ClientBackgroundTask } from "../session/session";
 import { type CrewmateTool, crewmateTool } from "../session/tools";
 import { joinHome } from "./join";
 import { PlacedTasks } from "./placedTasks";
@@ -1695,7 +1696,8 @@ describe("a conversation held on a computer that runs work", () => {
       ]);
 
       // A client that ends while this computer runs on takes its tasks with
-      // it, and leaves no row for a later start to tell as cut off.
+      // it: the home hears that at once (INF-405), and no row is left for a
+      // later start to tell as cut off.
       claude.answer({ text: "The suite runs again." });
       await at.order("inf:session:open", [{ orderId: "open:tasks:2", task: TASK, spec }]);
       await at.order("inf:session:prompt", [
@@ -1708,7 +1710,128 @@ describe("a conversation held on a computer that runs work", () => {
       await expect.poll(rows).toEqual([]);
       await at.restartComputer();
       await at.inReach();
-      expect(told()).toHaveLength(1);
+      expect(
+        told().map((effect) => (effect.request.exit as { interrupted?: string }).interrupted),
+      ).toEqual(["quit", "client"]);
+    } finally {
+      claude.endClient();
+    }
+  });
+
+  // INF-405: a Claude client this computer lets go of while it runs on - for
+  // the home's detach (its quit or restart), or to reopen the conversation
+  // for a contract it now speaks - ends with the background tasks it still
+  // ran, and the crewmate must never wait on them. A close ends the task, so
+  // it tells nothing.
+  it("tells the home once that a Claude client's background tasks ended with it when this computer let it go while running on, asking again after a restart until the home answers, and tells nothing at a close (INF-405)", async () => {
+    const claude = await scriptedClaudeWorld();
+    const at = await placed({ claude });
+    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+    const tasks = new PlacedTasks(at.dataDir);
+    const rows = () =>
+      tasks.jobs(TASK).map(({ id, exit }) => (exit ? { id, ended: exit.interrupted } : { id }));
+    const told = () =>
+      at.home.effects
+        .filter((effect) => effect.channel === "inf:work:job-exit")
+        .map((effect) => effect.request.exit);
+    const asks = (id: string) => at.home.asked.filter((ask) => ask.callId === `job:${id}`).length;
+    const endedWithClient = (id: string, description: string) => ({
+      jobId: id,
+      command: description,
+      exitCode: null,
+      durationMs: expect.any(Number),
+      tail: "",
+      interrupted: "client",
+    });
+    const running = async (round: number, instructions: string, task: ClientBackgroundTask) => {
+      claude.answer({ text: "It runs in the background." });
+      await at.order("inf:session:open", [
+        { orderId: `open:${round}`, task: TASK, spec: { ...spec, instructions } },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: `prompt:${round}`, task: TASK, text: "Run it in the background." },
+      ]);
+      await at.ended(round);
+      claude.listBackgroundTasks([task]);
+      await expect.poll(rows).toEqual([{ id: task.id }]);
+    };
+    const suite = { id: "bybac1mss", description: "Run the long suite" };
+    const build = { id: "b2kq7d0wa", description: "Build the app" };
+    const lint = { id: "b7rk2q0zt", description: "Lint the project" };
+    const answers = at.home.hold("inf:work:job-exit");
+    try {
+      // The home's detach ends the idle client: the home is asked at once,
+      // and the row keeps the client's end until it answers.
+      await running(1, spec.instructions, suite);
+      await at.order("inf:session:detach", [{ orderId: "detach:1", task: TASK }]);
+      await answers.reached;
+      expect(rows()).toEqual([{ id: suite.id, ended: "client" }]);
+      // A restart before the home answered asks again under the same id.
+      await at.restartComputer();
+      await expect.poll(() => asks(suite.id)).toBe(2);
+      answers.open();
+      await expect.poll(rows).toEqual([]);
+      expect(told()).toEqual([endedWithClient(suite.id, suite.description)]);
+
+      // A reopen for new instructions lets go of the idle client too.
+      await running(2, spec.instructions, build);
+      await at.order("inf:session:open", [
+        {
+          orderId: "open:reopen",
+          task: TASK,
+          spec: { ...spec, instructions: `${spec.instructions} Its contract moved.` },
+        },
+      ]);
+      await expect.poll(rows).toEqual([]);
+      expect(told()).toEqual([
+        endedWithClient(suite.id, suite.description),
+        endedWithClient(build.id, build.description),
+      ]);
+
+      // A close ends the task: its tasks go untold, and no row is left.
+      await running(3, `${spec.instructions} Its contract moved.`, lint);
+      await at.order("inf:session:close", [{ orderId: "close:1", task: TASK }]);
+      expect(rows()).toEqual([]);
+      await at.restartComputer();
+      expect(told()).toHaveLength(2);
+    } finally {
+      answers.open();
+      claude.endClient();
+    }
+  });
+
+  // INF-405: a home on a contract before `CLIENT_JOB_ENDS_SINCE` reads only
+  // the ends it knows, so it hears a client's as an ordinary end, never one
+  // its contract refuses (docs/contract.md).
+  it("tells a home on an older contract a Claude client's ended task as an ordinary end, with no reason it cannot read (INF-405)", async () => {
+    const claude = await scriptedClaudeWorld();
+    const at = await placed({ claude, homeVersion: "9.1.0" });
+    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+    const tasks = new PlacedTasks(at.dataDir);
+    try {
+      claude.answer({ text: "The suite runs in the background." });
+      await at.order("inf:session:open", [{ orderId: "open:older", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "prompt:older", task: TASK, text: "Run the suite in the background." },
+      ]);
+      await at.ended(1);
+      claude.listBackgroundTasks([{ id: "bybac1mss", description: "Run the long suite" }]);
+      await expect.poll(() => tasks.jobs(TASK).length).toBe(1);
+      await at.order("inf:session:detach", [{ orderId: "detach:older", task: TASK }]);
+      await expect.poll(() => tasks.jobs(TASK)).toEqual([]);
+      expect(
+        at.home.effects
+          .filter((effect) => effect.channel === "inf:work:job-exit")
+          .map((effect) => effect.request.exit),
+      ).toEqual([
+        {
+          jobId: "bybac1mss",
+          command: "Run the long suite",
+          exitCode: null,
+          durationMs: expect.any(Number),
+          tail: "",
+        },
+      ]);
     } finally {
       claude.endClient();
     }

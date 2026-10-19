@@ -907,7 +907,7 @@ function HomeDevicesTab() {
     }
   };
 
-  // A link past its ten minutes reads as expired, whether or not the tab
+  // A link past its thirty minutes reads as expired, whether or not the tab
   // was open when it ran out.
   const shown: LinkPanel | null =
     panel?.state === "open" && panel.invite.expiresAt <= now

@@ -71,7 +71,7 @@ export type JoinCommandInput = {
 };
 
 /**
- * What a command keeps of its link's ten minutes for getting Firstmate from
+ * What a command keeps of its link's thirty minutes for getting Firstmate from
  * this Mac instead of its download (INF-369 F2, the captain's choice: time
  * sized to the copy, so a slow network still finishes): a minute to unpack
  * it and join, plus the time a copy of the download's stated size needs at

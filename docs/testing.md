@@ -130,7 +130,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 `scripts/affected-journeys.ts` chooses the files from the diff (`--base`, `--head`, `--json` for the reasons):
 
 1. a spec file the change edits;
-2. a spec whose import closure through `tests/e2e/` reaches a changed helper;
+2. a spec whose import closure reaches a changed helper, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 5 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a property of four or more letters, an export, or a camelCase name);
 4. a spec whose helpers name a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
@@ -156,8 +157,8 @@ A hook name inside a longer token, such as a document path, does not count.
 A fragment inside a longer quote does not count, and a sentence held only by the stand-in does not select every journey that reaches it.
 The hook and sentence rules read the diff, not the product's meaning.
 They match the whole hook and the whole quoted sentence, so a fragment in the shared stand-in does not select every journey.
-A change nothing in `tests/e2e` reaches runs nothing and the chooser reports so in its summary.
-A change to a helper most journeys import (`launch.ts`, the stand-in) still runs them all, because that is the break this check exists to catch.
+A change no journey or helper it imports reaches runs nothing and the chooser reports so in its summary.
+A change to a helper most journeys import (`launch.ts`, the stand-in, or a shared helper they reach such as `tests/helpers/completionCard.ts`) still runs them all, because that is the break this check exists to catch.
 The Mac job refuses an empty file list, builds once, then runs exactly the chosen files with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
 It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.

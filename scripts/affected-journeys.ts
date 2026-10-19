@@ -16,8 +16,10 @@ import { fileURLToPath } from "node:url";
  * affected when
  *
  * 1. it is a spec file the change edits;
- * 2. a helper it imports under `tests/e2e/` is a file the change edits.
- *    A helper most journeys import still runs them all;
+ * 2. a helper it imports, directly or through another helper, is a file the
+ *    change edits: one under `tests/e2e/`, a shared one under `tests/` such
+ *    as `tests/helpers/`, or a script. A helper most journeys import still
+ *    runs them all;
  * 3. it imports a changed module of `src/shared/` and names a symbol that
  *    module's diff adds or removes. Importing the file is not enough;
  * 4. it, or a helper it imports, names a renderer hook (`data-*`) as a whole
@@ -30,12 +32,16 @@ import { fileURLToPath } from "node:url";
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
- * that file. A change nothing in `tests/e2e` reaches runs no journey. The
- * release's full Mac check is `verify.yml` and is not this selection.
+ * that file. A change no journey or helper it imports reaches runs no
+ * journey. The release's full Mac check is `verify.yml` and is not this
+ * selection.
  */
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const E2E = "tests/e2e";
+
+/** A module of the product, as opposed to the test code a journey runs. */
+const isSource = (file: string) => file.startsWith("src/");
 
 export type Reasons = Map<string, string[]>;
 
@@ -106,10 +112,11 @@ export function closureOf(
         source === undefined ? [] : importsOf(file, source, (candidate) => read(candidate) !== undefined);
       cache.set(file, imports);
     }
-    // Only the journey layer is walked into: a module of `src/` is a leaf, since
-    // what its own imports change reaches a journey through the hooks and words
-    // below, not through the import.
-    if (file.startsWith(`${E2E}/`)) for (const next of imports) walk(next);
+    // Only the test code a journey runs is walked into - `tests/e2e`, the shared
+    // helpers under `tests/` and a script it imports. A module of `src/` is a
+    // leaf, since what its own imports change reaches a journey through the
+    // hooks and words below, not through the import.
+    if (!isSource(file)) for (const next of imports) walk(next);
   };
   walk(entry);
   return [...seen];
@@ -282,7 +289,7 @@ export function select({ changed, sourceDiff, specs, read }: Change): Reasons {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
     for (const file of reach)
-      if (file !== spec && changedSet.has(file) && file.startsWith(`${E2E}/`))
+      if (file !== spec && changedSet.has(file) && !isSource(file))
         add(spec, `imports ${file}, which the change edits`);
     const narrow = reach.filter((file) => file.startsWith(`${E2E}/`) && (file === spec || !wide(file)));
     const narrowText = narrow.map((file) => read(file) ?? "").join("\n");

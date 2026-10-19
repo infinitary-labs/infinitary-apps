@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-for-shared-test-helpers",
+      "reason": "The pull request's journey check now also runs the journeys that import a changed shared test helper under tests/ or a script. Only which tests a pull request runs changed; no shipped behavior changed."
+    }
+  ]
+}

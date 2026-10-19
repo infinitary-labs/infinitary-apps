@@ -53,6 +53,60 @@ describe("which journeys a change affects", () => {
     expect(picked({ changed: ["tests/e2e/launch.ts"] })).toEqual(specs);
   });
 
+  it("runs every spec that reaches a changed helper outside tests/e2e, through any helper", () => {
+    // INF-520: tests/helpers/completionCard.ts, which every journey reaches
+    // through the stand-in, picked no journey when a change edited it.
+    const files = new Map<string, string>([
+      [
+        "tests/e2e/launch.ts",
+        'import { scratchDir } from "../helpers/scratchDirs";\nimport { startMockProvider } from "./mockProvider";',
+      ],
+      [
+        "tests/e2e/mockProvider.ts",
+        'import { completionCardBody } from "../helpers/completionCard";',
+      ],
+      [
+        "tests/helpers/completionCard.ts",
+        'import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";',
+      ],
+      ["tests/helpers/scratchDirs.ts", "export function scratchDir(prefix: string) {}"],
+      ["tests/helpers/fakeSession.ts", "export class FakeSession {}"],
+      ["tests/fixtures/ollamaServer.ts", "export function startOllamaServer() {}"],
+      ["scripts/interaction-metrics.ts", "export function interactionMetrics() {}"],
+      ["src/shared/cardHeadings.ts", "export const COMPLETION_CARD_HEADINGS = [];"],
+      ["tests/e2e/risk-chart.spec.ts", 'import { launchApp } from "./launch";'],
+      [
+        "tests/e2e/ollama-context.spec.ts",
+        'import { launchApp } from "./launch";\nimport { startOllamaServer } from "../fixtures/ollamaServer";',
+      ],
+      [
+        "tests/e2e/forge-signin.spec.ts",
+        'import { launchApp } from "./launch";\nimport { interactionMetrics } from "../../scripts/interaction-metrics";',
+      ],
+    ]);
+    const journeys = [...files.keys()].filter((file) => file.endsWith(".spec.ts"));
+    const chosen = (changed: string[]) =>
+      select({ changed, sourceDiff: "", specs: journeys, read: (file) => files.get(file) });
+    const deep = chosen(["tests/helpers/completionCard.ts"]);
+    expect([...deep.keys()].sort()).toEqual([...journeys].sort());
+    expect(deep.get("tests/e2e/risk-chart.spec.ts")).toEqual([
+      "imports tests/helpers/completionCard.ts, which the change edits",
+    ]);
+    expect([...chosen(["tests/helpers/scratchDirs.ts"]).keys()].sort()).toEqual(
+      [...journeys].sort(),
+    );
+    expect([...chosen(["tests/fixtures/ollamaServer.ts"]).keys()]).toEqual([
+      "tests/e2e/ollama-context.spec.ts",
+    ]);
+    expect([...chosen(["scripts/interaction-metrics.ts"]).keys()]).toEqual([
+      "tests/e2e/forge-signin.spec.ts",
+    ]);
+    // A helper only unit tests import runs no journey, and a module of src/ is
+    // where the closure stops: its edit selects through rules 3 to 5, not this one.
+    expect([...chosen(["tests/helpers/fakeSession.ts"]).keys()]).toEqual([]);
+    expect([...chosen(["src/shared/cardHeadings.ts"]).keys()]).toEqual([]);
+  });
+
   it("runs the specs whose helpers read a hook as a whole token", () => {
     const sourceDiff = [
       "--- a/src/renderer/src/Board.tsx",

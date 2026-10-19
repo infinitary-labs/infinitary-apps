@@ -537,7 +537,7 @@ A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plug
   The Knowledge browser's Ask about this uses it (`docs/knowledge.md`).
 - `openSettings(section, item?)` opens Settings at a section this window offers, by its id, and hands that section `item`, at most 128 characters on one line, to show on arrival (the shell's `settingsItem`, which the section reads once and clears); it answers false for a section the window does not offer, a view's hidden sections among them.
   Like `draft` it names nothing of the app's record, so every panel has it (`PANEL_OPEN_SETTINGS_ACTION`), and it counts only from the captain's own click or key.
-  The Automation panel's rows use it to open a rule's sheet (`docs/automation.md`).
+  The Automation panel's rows use it to open a rule's sheet, and its header's Open Automation, an ask, to open the full list (`docs/automation.md`).
 
 The host checks every id against the board it presented (`boardOnScreen`): a task or a card the board does not list does nothing - except a closed task the panel's own `tasks.search` found, which it may open and point at, so a board's Find reaches done and dropped work.
 Opening, bringing forward, aiming and drafting move the captain's focus or his words, so they count only from his own click or key in that page - the window's own gesture for a panel of his own (`windowGesture`), the frame holding the window's focus for one from elsewhere - and answer false otherwise; resting, and letting go of an aim with `aim(null)`, need no click.

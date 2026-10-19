@@ -112,12 +112,13 @@ It starts collapsed; the rail keeps the collapse choice by the panel's id, so it
 Collapsed, its header counts the running rules as active and, when there are any, the paused ones: "1 active · 2 paused", or "1 active"; a draft or a finished rule is in neither count.
 Each row shows a rule's state, name and next run; a draft reads Draft where a running rule shows its next run.
 A click or Enter opens that rule's sheet in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in the sheet; nothing runs, pauses or changes.
+Expanded, its header shows Open Automation, the app's open button, as Knowledge's header does; it names no card, so it is pressed into the panel, which opens Settings → Automation at the full list through `point.openSettings("automation")` (docs/ui-plugins.md, "A panel's cards").
 Hiding or collapsing the panel changes nothing about delivery.
 A rail already holding three panels refuses it, which is logged, so the captain's own panels keep their places.
 
 ## Where it shows
 
-Settings → Automation, the Automation panel, and command search's Open Automation (`settings.automation`) and Pause all automations (`automation.pause-all`), neither with a default key.
+Settings → Automation, the Automation panel and its header's Open Automation, and command search's Open Automation (`settings.automation`) and Pause all automations (`automation.pause-all`), neither with a default key.
 
 ## On a computer that controls another
 

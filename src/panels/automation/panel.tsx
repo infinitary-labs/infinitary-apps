@@ -23,8 +23,9 @@ const UNREADABLE_SUMMARY = "cannot be read";
  *
  * A row is a pointing gesture: a click or Enter opens that rule's sheet in
  * Settings → Automation (`point.openSettings`), and nothing runs, pauses or
- * changes. The rows are one Tab stop, ↑ ↓ move between them, and F6 brings
- * focus here (`asks.onFocus`).
+ * changes. The header's Open Automation, pressed into the panel as an ask,
+ * opens the same section at the full list. The rows are one Tab stop, ↑ ↓
+ * move between them, and F6 brings focus here (`asks.onFocus`).
  *
  * A list that cannot be read is not an empty one: the rules as the app last
  * read them stay, under its words for why, and the panel stays on its rail.
@@ -63,6 +64,15 @@ export default function AutomationPanel({ reads, rail, asks, point }: PanelProps
       ...(unreadable ? [{ text: UNREADABLE_SUMMARY }] : []),
     ]);
   }, [rail, rules, unreadable]);
+
+  // The header's Open Automation: Settings → Automation, every rule listed.
+  useEffect(
+    () =>
+      asks.subscribe((button) => {
+        if (button === "open") void point.openSettings("automation").catch(() => false);
+      }),
+    [asks, point],
+  );
 
   // F6 lands on the list's stop.
   useEffect(

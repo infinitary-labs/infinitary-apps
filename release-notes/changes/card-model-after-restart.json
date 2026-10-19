@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-model-after-restart",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card names its model after an update",
+      "body": "A card from a crewmate working on another Mac now names its model even when it was written in the first turn after that Mac's app updated, instead of reading Unknown model.",
+      "noPicture": "This corrects a label's value in an existing chip, not a new view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

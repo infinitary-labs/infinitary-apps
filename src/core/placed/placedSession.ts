@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { Reasoning } from "@shared/reasoning";
 import type {
   PlacedEvent,
@@ -9,6 +10,7 @@ import type {
   WorkOrderChannel,
   WorkOrderResponse,
 } from "@shared/work";
+import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { crewmateResume } from "../orchestrator/crewSession";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
@@ -299,9 +301,27 @@ export class PlacedSession implements ModelSession {
         this.emit(interrupted ? { ...ended, error: this.link.interrupted(false) } : ended);
         return;
       }
+      case "model_served":
+        // The computer's session names its model once the client answers,
+        // which a conversation it opened with none does mid-turn; the state
+        // it sends at that turn's end comes too late for the card's chip.
+        this.serving(event.model);
+        this.emit(event as SessionEvent);
+        return;
       default:
         this.emit(event as SessionEvent);
     }
+  }
+
+  private serving(model: { provider: string; id: string }): void {
+    const held = this.state.model;
+    if (held?.provider === model.provider && held.id === model.id) return;
+    const { modelLabel: _stale, ...rest } = this.state;
+    const name =
+      model.provider === CLAUDE_PROVIDER_ID
+        ? CLAUDE_MODELS.find((known) => known.id === model.id)?.name
+        : undefined;
+    this.state = { ...rest, model, ...(name ? { modelLabel: name } : {}) };
   }
 
   /** Where it resumes from there, as the computer named it. */

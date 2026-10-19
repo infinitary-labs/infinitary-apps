@@ -410,6 +410,16 @@ export async function scriptedClaudeWorld(
         return;
       }
       client.turn = { steers: [], toolDone: false, requests: 0 };
+      // LAB (INF-293 reproduction): the real client opens every query with a
+      // system init that names the model it runs, the spec's or its default.
+      if (!(client as { inited?: boolean }).inited) {
+        (client as { inited?: boolean }).inited = true;
+        emit({
+          type: "system",
+          subtype: "init",
+          model: (attachment.options as { model?: string }).model ?? "claude-opus-5-5",
+        });
+      }
       if (client.rolling) {
         emit(says.running);
         emit(says.ack(message));

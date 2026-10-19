@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { type ElectronApplication, expect, type Locator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -19,8 +19,9 @@ import {
 } from "../../src/shared/recordDrop";
 import type { TaskBoard } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { nextFrame } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { minimumWindowSize, resizeWindow } from "./layout";
+import { atRest, minimumWindowSize, resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
@@ -58,14 +59,15 @@ import { focusOn, pressKey } from "./windowKeys";
  * the next slot - Start on planned work (disabled while something blocks
  * it, which the body's attention box names), Continue on interrupted work,
  * Show the card while a decision card waits, nothing otherwise. Tab reaches
- * them in the order shown. Closed work has no bar.
+ * them in the order shown. Closed work has no bar. A press on the bar lands
+ * on its control even when the record grows under it (INF-204).
  * The model is a fact in a record's readout (FI3-565 piece 2) and an outline
  * chip beside the meta line on a card's head, never truncated and never
  * pushed out, even at the narrowest window.
  *
  * The fixture is a record the app boots into: backlog rows on request (one
- * behind a blocker), and an idle crewmate with a decision card waiting and a
- * note beside it on the stack. Interrupted work is made the way the captain
+ * behind a blocker, one a crewmate filed), and an idle crewmate with a
+ * decision card waiting and a note beside it on the stack. Interrupted work is made the way the captain
  * meets it: a real crewmate's turn, and an app that quit while it was still
  * running - the next boot reads the row as interrupted.
  */
@@ -173,6 +175,16 @@ function seeded(): string {
     model: { provider: "fm-mock", id: LONG_MODEL },
     outcome: "Two channels look deep enough.",
     createdAt: next(),
+  });
+  // A follow-up its crewmate filed, as file_followup does: its record leads
+  // with why it was filed, so its body draws taller than the card's floor.
+  tasks.fileFollowup({
+    id: "rc-press",
+    originId: "rc-decision",
+    title: "Coil the mooring lines",
+    goal: "The mooring lines are coiled, dried and stowed in the forward locker.",
+    prompt: "",
+    why: "While sounding the channel I found the mooring lines left wet on deck since the last tide. Wet lines stiffen in the locker, and the next crew to need them finds them short. Coiling them is not part of picking a channel, so I left them as they are.",
   });
   const cards = new CardStore(db);
   const card = (fields: Partial<Card> & Pick<Card, "id" | "title">): Card => ({
@@ -448,6 +460,93 @@ test("while a decision card waits the bar keeps Drop task, and Show the card bri
   expect(board.tasks.find((task) => task.id === "rc-decision")?.waitingCardId).toBe(
     "card-rc-decision-1",
   );
+});
+
+/**
+ * Holds every mount of a record's body frame (`inf:frames:mount`) until the
+ * returned release, which serves them and puts the app's own handler back:
+ * the record reveals on its own facts while its body cannot load, so a press
+ * goes down before that frame draws and grows the card, in order, never by
+ * timing it. Every other frame mounts as usual.
+ */
+async function holdRecordBodies(app: ElectronApplication): Promise<() => Promise<void>> {
+  await app.evaluate(({ ipcMain }) => {
+    const channel = "inf:frames:mount";
+    const handlers = (
+      ipcMain as typeof ipcMain & {
+        _invokeHandlers: Map<string, Parameters<typeof ipcMain.handle>[1]>;
+      }
+    )._invokeHandlers;
+    const mount = handlers.get(channel);
+    if (!mount) throw new Error("Frame mount handler missing");
+    const held: (() => void)[] = [];
+    (globalThis as typeof globalThis & { releaseRecordBodies?: () => void }).releaseRecordBodies =
+      () => {
+        ipcMain.removeHandler(channel);
+        ipcMain.handle(channel, mount);
+        for (const serve of held.splice(0)) serve();
+      };
+    ipcMain.removeHandler(channel);
+    ipcMain.handle(channel, async (event, ...args) => {
+      // The record's template, by the hook its body paints into.
+      const html = (args[0] as { template?: { html?: unknown } } | undefined)?.template?.html;
+      if (typeof html === "string" && html.includes("data-record-content"))
+        await new Promise<void>((resolve) => held.push(resolve));
+      return mount(event, ...args);
+    });
+  });
+  return () =>
+    app.evaluate(() =>
+      (
+        globalThis as typeof globalThis & { releaseRecordBodies?: () => void }
+      ).releaseRecordBodies?.(),
+    );
+}
+
+test("a press on the bar that goes down before the record's body draws lands on its control", async () => {
+  // INF-204: the record reveals before its body frame draws, and that frame
+  // then grows the card at once, with no easing. The card holds still under
+  // the press, as it does while it eases, so the release lands where the
+  // press went down; then the card settles at its grown height.
+  const { app, page } = launched;
+  const serveBodies = await holdRecordBodies(app);
+  let down = false;
+  try {
+    await pressRow(page, keys["rc-press"] as string);
+    await expect(pane(page)).toHaveAttribute("data-task-record", "rc-press");
+    await expect(pane(page)).toHaveCSS("opacity", "1");
+    const body = pane(page).locator("[data-record-body]");
+    await expect(body.locator("[data-frame-mount-pending]")).toBeVisible();
+    await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);
+    // The press goes where the revealed card rests.
+    await atRest(end(page));
+    const drop = await end(page).boundingBox();
+    const pending = await body.boundingBox();
+    const card = await cardSurface(page).boundingBox();
+    if (!drop || !pending || !card) throw new Error("The record is not on screen");
+    await page.mouse.move(drop.x + drop.width / 2, drop.y + drop.height / 2);
+    await page.mouse.down();
+    down = true;
+    await serveBodies();
+    await expectRecordBody(page);
+    // The size watcher has heard the drawn frame: it reads before the paint after it.
+    await nextFrame(page);
+    expect((await body.boundingBox())?.height).toBeGreaterThan(pending.height);
+    await page.mouse.up();
+    down = false;
+    await expect(footer(page)).toHaveAttribute("data-record-footer", "confirm");
+    // Released, the card takes the room its drawn body needs.
+    await expect
+      .poll(async () => (await cardSurface(page).boundingBox())?.height)
+      .toBeGreaterThan(card.height);
+    await closeRecord(page);
+    await expect(
+      page.evaluate(() => window.infinitary.tasks.detail("rc-press").then((task) => task.status)),
+    ).resolves.toBe("open");
+  } finally {
+    if (down) await page.mouse.up();
+    await serveBodies();
+  }
 });
 
 test("Drop task asks once, then hides the record, keeps the task on it and leaves the backlog", async () => {

@@ -356,9 +356,10 @@ export function recordFrame(page: Page): FrameLocator {
 /**
  * The shown record's body has drawn. The host reveals the record once its
  * own facts are on screen, before this frame draws (FI3-948), and the frame
- * then grows the card. A press on the record's controls in that gap can
- * release beside the control. A journey waits here inside the open, not at
- * the press. A record that could not be read never draws this body.
+ * then grows the card. The card holds still only once a press is down, so
+ * a press aimed at the record's controls in that gap can go down beside the
+ * control. A journey waits here inside the open, not at the press. A record
+ * that could not be read never draws this body.
  */
 export async function expectRecordBody(page: Page): Promise<void> {
   await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();

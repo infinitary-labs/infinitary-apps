@@ -18,7 +18,7 @@ type Presentation = {
   target: number;
   cap: number;
   animation: Animation | null;
-  /** A press landed while the shell eased: it holds still until the release. */
+  /** A press landed on the shell: it holds still until the release. */
   pressed: boolean;
 };
 
@@ -237,26 +237,30 @@ export function useCardPresentation(
   }, []);
 
   /**
-   * A press on the card while its height eases: the card holds where it is
-   * until the press is released, so the control under the pointer stays
-   * under it and the click lands; then it settles at once. Snapping to the
-   * target on the press would move that control away mid-click.
+   * A press on the card: the card holds where it is until the press is
+   * released, so the control under the pointer stays under it and the click
+   * lands; then it settles at once. That holds while its height eases and
+   * when it would jump with no easing, as a task record does when its body
+   * frame draws after the record appears (INF-204). Snapping to the target
+   * on the press would move that control away mid-click.
    */
   const pressGeometry = useCallback(() => {
     const shell = ref.current;
     const held = state.current;
-    if (!shell || !held.animation || held.pressed) {
+    if (!shell || held.pressed) {
       cancelGeometry();
       return;
     }
-    const height = shell.getBoundingClientRect().height;
-    held.animation.cancel();
-    held.animation = null;
+    if (held.animation) {
+      const height = shell.getBoundingClientRect().height;
+      held.animation.cancel();
+      held.animation = null;
+      shell.style.height = `${height}px`;
+      shell.dataset.cardGeometry = "held";
+    }
     held.deadline = 0;
     held.replacement = false;
     held.pressed = true;
-    shell.style.height = `${height}px`;
-    shell.dataset.cardGeometry = "held";
     const release = () => {
       window.removeEventListener("pointerup", release, true);
       window.removeEventListener("pointercancel", release, true);

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-holds-under-any-press",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A button you press on a growing card still works",
+      "body": "A task record grows once its details finish drawing. A press on Drop task, Start or Show the card at that moment used to miss, because the button moved before you let go. The card now stays still while you hold the press, then grows.",
+      "noPicture": "The fix is in how a press lands while a card grows, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public let id: String
     public let title: String
     public let meta: String?
+    public let reviewTaskId: String?
     public let author: String
 }
 

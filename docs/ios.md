@@ -43,6 +43,7 @@ An undecodable record, invalid pin or invalid address discards only the saved Ma
 
 The session sends a view hello and its current in-memory epoch/sequence cursor, and asks only `inf:cards:list` and `inf:feed:recent`.
 Card bodies are never rendered or executed; the list shows titles and attribution.
+A card carrying the host-validated `reviewTaskId` shows Review finding above its title, and first mate cards about tasks name their task in the existing meta line.
 Activity shows the newest line first and uses the Mac's feed wording, not a second event-to-words implementation.
 The native contract constants are generated from `docs/contract.json` with `node scripts/generate-phone-contract.ts`.
 `pnpm generate:contract` updates them together, and `pnpm check` refuses stale native constants or theme values.

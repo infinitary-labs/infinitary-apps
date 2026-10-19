@@ -207,6 +207,7 @@ describe("createEmitCardTool", () => {
       "reply",
       "actions",
       "task_id",
+      "review_task_id",
       "standalone",
     ]);
     expect(crewTool.description).toBe(EMIT_CARD_TOOL_DESCRIPTION);
@@ -321,12 +322,18 @@ describe("createEmitCardTool", () => {
     const tool = piToolOf(
       createEmitCardTool(onCard, undefined, { role: "firstmate" }),
     ) as unknown as AnyTool;
-    await tool.execute("t1", { title: "Note", body: "x", task_id: " t9 " });
+    await tool.execute("t1", {
+      title: "Note",
+      body: "x",
+      task_id: " t9 ",
+      review_task_id: " review-1 ",
+    });
     expect(onCard).toHaveBeenLastCalledWith({
       title: "Note",
       body: "x",
       actions: [],
       taskId: "t9",
+      reviewTaskId: "review-1",
     });
     await tool.execute("t2", { title: "Note", body: "x", standalone: true });
     expect(onCard).toHaveBeenLastCalledWith({

@@ -6658,6 +6658,9 @@
             "taskId": {
               "type": "string"
             },
+            "reviewTaskId": {
+              "type": "string"
+            },
             "author": {
               "type": "string",
               "enum": [
@@ -8057,6 +8060,9 @@
               "id": {
                 "type": "string"
               },
+              "reviewTaskId": {
+                "type": "string"
+              },
               "taskId": {
                 "type": "string"
               },
@@ -8748,6 +8754,9 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string"
+          },
+          "reviewTaskId": {
             "type": "string"
           },
           "taskId": {
@@ -42921,6 +42930,9 @@
               "type": "string"
             },
             "taskId": {
+              "type": "string"
+            },
+            "reviewTaskId": {
               "type": "string"
             },
             "author": {

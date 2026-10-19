@@ -1,3 +1,4 @@
+import { REVIEW_FINDING_LABEL } from "@shared/cards";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
 import { IconButton } from "../core/IconButton";
@@ -35,6 +36,8 @@ export type ResponseCardProps = {
    * task's record. Absent on a card about no task.
    */
   taskKey?: React.ReactNode;
+  /** Host-validated review attribution, separate from the decision kind. */
+  reviewFinding?: boolean;
   /** Mono metadata line: relative time, crewmate ref. */
   meta?: string;
   /**
@@ -185,6 +188,7 @@ export function ResponseCard({
   title,
   titleWords,
   taskKey,
+  reviewFinding,
   meta,
   place,
   model,
@@ -258,6 +262,11 @@ export function ResponseCard({
               <Badge tone={k.tone} dot style={{ flexShrink: 0 }}>
                 {k.label}
               </Badge>
+              {reviewFinding && (
+                <Badge tone="warn" style={{ flexShrink: 0 }}>
+                  {REVIEW_FINDING_LABEL}
+                </Badge>
+              )}
               {headExtra}
               {(taskKey || meta || place || model) && (
                 // The meta line and the model chip share the room between the

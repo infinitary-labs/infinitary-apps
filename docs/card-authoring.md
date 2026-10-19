@@ -847,3 +847,11 @@ This is generic card behavior, not a lesson type or a new action effect.
 New completion offers declare `required_actions`, including an empty list when none exist (`docs/required-actions.md`).
 The host draws their action, target and consequence outside the scrolling body beside Merge.
 A declaration grants no execution permission; a successful merge creates durable captain confirmation records, not crewmate continuations.
+
+## Review finding attribution
+
+The first mate passes `review_task_id` when relaying an independent review's findings on its builder's `task_id` (INF-63, accepted direction B).
+The host refuses a missing or unrelated review, stores the resolved review task id and draws Review finding beside the card's kind.
+Every first mate card about a task names the task after its key; a card about no task retains first mate.
+Review-finding cards show the host's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
+The native phone reader shows the same label and task name without running the body or offering buttons.

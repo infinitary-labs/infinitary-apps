@@ -161,6 +161,9 @@ struct PhoneView: View {
                         if session.cards.isEmpty { Text("No cards to read yet.").foregroundStyle(PhoneTheme.secondary) }
                         ForEach(session.cards) { card in
                             VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                                if card.reviewTaskId != nil {
+                                    Text("Review finding").font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
+                                }
                                 Text(card.title).font(PhoneFont.headline)
                                 Text(card.author == "firstmate" ? "Your first mate" : card.author == "host" ? "Infinitary" : "Crewmate")
                                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)

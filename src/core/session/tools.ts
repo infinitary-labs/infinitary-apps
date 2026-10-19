@@ -73,6 +73,8 @@ export type EmittedCardInput = {
   id?: string;
   /** Task named by a Firstmate settle/merge decision. */
   taskId?: string;
+  /** The independent review whose findings the first mate relays; host validates reviewOf. */
+  reviewTaskId?: string;
   /** The pictures the tool verified in the body, for the card row (card pictures, phase 2). */
   pictures?: CardPicture[];
   /** The author's width hint: it can only widen what the body's facts ask for. */
@@ -130,7 +132,7 @@ export type DeclaredCardInput = Omit<EmittedCardInput, "actions"> & { actions: D
 type CarriedFields<T extends never> = T;
 export type PlacedToolFieldCoverage = CarriedFields<
   | Exclude<
-      keyof Omit<DeclaredCardInput, "taskId" | "attachment" | "risk">,
+      keyof Omit<DeclaredCardInput, "taskId" | "reviewTaskId" | "attachment" | "risk">,
       keyof InvokeRequest<"inf:work:card">[0]["card"]
     >
   | Exclude<keyof CheckChangeInput, keyof InvokeRequest<"inf:work:check-change">[0]["input"]>

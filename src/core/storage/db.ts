@@ -1048,7 +1048,13 @@ const MIGRATIONS: readonly Migration[] = [
       if (changed) write.run(JSON.stringify(placement), row.id);
     }
   },
+  // 87: INF-63's validated review attribution. Null leaves existing cards unchanged.
+  // CardStore is the only writer; no published view reads it. Drop the column to reverse.
+  (db) => addColumn(db, "cards", "review_task_id", "TEXT"),
 ];
+
+/** The current database format, derived from the embedded migration ledger. */
+export const DATABASE_VERSION = MIGRATIONS.length;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;

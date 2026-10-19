@@ -153,6 +153,8 @@ export type EmittedCard = {
    * card. Only the Firstmate's schema carries it.
    */
   taskId?: string;
+  /** The independent review whose findings the first mate relays; host validates reviewOf. */
+  reviewTaskId?: string;
   /**
    * The explicit assertion that a note is a one-off with no connection to
    * any work (D1): only then does the host file it as its own question
@@ -362,20 +364,22 @@ const riskParam = Type.Object(
   { description: CARD_PARAMS.risk },
 );
 
-/** The Firstmate's two attach-first fields (task-system P1); no crewmate schema carries them. */
+/** The Firstmate's attribution and attach-first fields (task-system P1); no crewmate schema carries them. */
 const firstmateCardParams = {
   task_id: Type.Optional(Type.String({ description: CARD_PARAMS.task_id })),
+  review_task_id: Type.Optional(Type.String({ description: CARD_PARAMS.review_task_id })),
   standalone: Type.Optional(Type.Boolean({ description: CARD_PARAMS.standalone })),
 };
 
 export type EmitCardRole = "crewmate" | "firstmate";
 
-/** The emit_card params every role passes, plus the Firstmate's two attach-first fields. */
+/** The emit_card params every role passes, plus the Firstmate's attribution and attach-first fields. */
 type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"> & {
   actions?: Static<typeof crewmateBrowserCardParams>["actions"];
   /** As the call carried it: the host reads it again (`riskDeclarationOf`). */
   risk?: unknown;
   task_id?: string;
+  review_task_id?: string;
   standalone?: boolean;
   browser_button?: string;
   browser_handoff?: { site: string; reason: string; after: string };
@@ -683,9 +687,12 @@ async function emitCard(
       : {}),
     ...(params.asking ? { asking: true } : {}),
     ...(params.design_only ? { designOnly: true } : {}),
-    // The two attach-first fields exist only in the Firstmate's schema; a
+    // The attribution and attach-first fields exist only in the Firstmate's schema; a
     // crewmate's runtime never passes them.
     ...(firstmate && params.task_id?.trim() ? { taskId: params.task_id.trim() } : {}),
+    ...(firstmate && params.review_task_id?.trim()
+      ? { reviewTaskId: params.review_task_id.trim() }
+      : {}),
     ...(firstmate && params.standalone ? { standalone: true } : {}),
   };
   const cardId = await options.onCard(card);

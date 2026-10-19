@@ -1854,10 +1854,10 @@ function StackedCard({
   // long the body is, and the body shows the rest (`splitSettleFacts`).
   const split = useMemo(
     () =>
-      card.actions.some((action) => settleEffectOf(action))
+      card.reviewTaskId || card.actions.some((action) => settleEffectOf(action))
         ? splitSettleFacts(card.body)
         : undefined,
-    [card.actions, card.body],
+    [card.actions, card.body, card.reviewTaskId],
   );
   const body = split?.body ?? card.body;
   // A merge card's risk chart is chrome at its top right (docs/card-authoring.md
@@ -1969,7 +1969,8 @@ function StackedCard({
       title={card.title}
       titleWords={<KeyedText text={card.title} own={card.taskId} />}
       taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
-      meta={cardMetaWords(card.meta)}
+      meta={card.author === "firstmate" && task ? task.title : cardMetaWords(card.meta)}
+      reviewFinding={Boolean(card.reviewTaskId)}
       place={card.place}
       model={card.model}
       revised={card.changes ? revisedLine(card.changes) : undefined}

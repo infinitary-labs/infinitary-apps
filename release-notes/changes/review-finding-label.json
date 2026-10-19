@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "review-finding-label",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Review findings name the task they are about",
+      "body": "When your first mate brings you a review finding, the app labels it Review finding and shows the task's name. Beside the choices, it shows the review's result, the version reviewed and its risk. Every first mate card about a task now names that task. Infinitary on iPhone and iPad shows the review label and task name too.",
+      "picture": {
+        "dark": "review-finding-label-dark.webp",
+        "light": "review-finding-label-light.webp",
+        "alt": "A review-finding decision card names the task beside its key and shows the reviewed version and risk beside the choices."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

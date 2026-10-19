@@ -5694,6 +5694,7 @@ export async function startMockProvider(): Promise<MockProviderServer> {
                 name: "emit_card",
                 args: {
                   task_id: builderId,
+                  review_task_id: latestUserTail.match(/on review task ([\w-]+)/)?.[1] ?? "missing",
                   title: MOCK_REVIEW_ASK_CARD_TITLE,
                   body:
                     `<p>${MOCK_REVIEW_ASK_FINDING}</p>` +

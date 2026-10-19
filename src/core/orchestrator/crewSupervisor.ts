@@ -8075,7 +8075,7 @@ export class CrewSupervisor {
     // never a hold (Q4), or where the review stands while it is live.
     if (this.policiesOf(record)?.rigor.value === "reviewed") {
       const review = record.delivery;
-      if (review?.reviewVerdict === "pass") {
+      if (review?.reviewVerdict) {
         const at = review.reviewSha
           ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
           : "";
@@ -8083,17 +8083,11 @@ export class CrewSupervisor {
         cell(
           "review",
           "Review",
-          `${statusDot("ok")}${REVIEW_WORDS.pass}${at}${risk}`,
+          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
           review.reviewRiskNote,
         );
       } else if (this.openReviewOf(record.id)) {
         cell("review", "Review", `${statusDot("running")}open`);
-      } else if (review?.reviewVerdict) {
-        cell(
-          "review",
-          "Review",
-          `${statusDot(review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}`,
-        );
       } else {
         cell("review", "Review", `${statusDot("idle")}awaiting`);
       }

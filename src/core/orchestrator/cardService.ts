@@ -314,7 +314,8 @@ export class CardService {
     };
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
-      if (!card.actions.some((action) => action.effect?.kind === "settle")) return card;
+      if (!card.reviewTaskId && !card.actions.some((action) => action.effect?.kind === "settle"))
+        return card;
       const facts = this.host.settleFacts(card.taskId);
       const split = facts ? splitSettleFacts(card.body) : undefined;
       if (!facts || !split) return relabeled(card);
@@ -565,7 +566,11 @@ export class CardService {
       if (!this.cards.has(id)) this.changes.delete(id);
     }
     return [...this.cards.values()]
-      .map((card) => this.withChanges(this.onTheStage(card)))
+      .map((card) => {
+        const shown = this.withChanges(this.onTheStage(card));
+        const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
+        return shown.author === "firstmate" && task ? { ...shown, meta: task.title } : shown;
+      })
       .sort(compareStack);
   }
 
@@ -683,7 +688,9 @@ export class CardService {
     return this.upsertEmitted(input, {
       ...(input.taskId ? { taskId: input.taskId } : {}),
       author: "firstmate",
-      meta: FIRSTMATE_CARD_META,
+      meta:
+        (input.taskId ? this.host.tasks.get(input.taskId)?.title : undefined) ??
+        FIRSTMATE_CARD_META,
       mintId: () => {
         this.cardSeq += 1;
         return `${FIRSTMATE_CARD_PREFIX}${this.cardSeq}-${randomUUID().slice(0, 6)}`;
@@ -807,11 +814,29 @@ export class CardService {
         `Task ${task.id} is closed, so a choice on a card about it cannot be taken; a card with actions needs an open task.`,
       );
     }
+    if (input.reviewTaskId) {
+      const review = this.host.tasks.resolve(input.reviewTaskId);
+      if (
+        context.author !== "firstmate" ||
+        !task ||
+        review?.shape?.kind !== "review" ||
+        review.shape.kind_source !== "host:review" ||
+        review.parentId !== task.id
+      ) {
+        throw new Error(
+          "Card refused: review_task_id must name an independent review of task_id. The card is unchanged.",
+        );
+      }
+      input = { ...input, reviewTaskId: review.id };
+    }
     // A settle card carries the facts the host holds about its task -
     // project, crewmate model, posture, PR link, CI state (contract v2.0,
     // captain ruling D4; the fact strip at v2.7) - on add and on every
     // in-place revision, so no prompt asks an agent to write them.
-    if (context.taskId && input.actions.some((action) => settleEffectOf(action))) {
+    if (
+      context.taskId &&
+      (input.reviewTaskId || input.actions.some((action) => settleEffectOf(action)))
+    ) {
       const facts = this.host.settleFacts(context.taskId);
       if (facts) input = { ...input, body: `${input.body}${facts}` };
     }
@@ -994,6 +1019,7 @@ export class CardService {
         author: card.author,
         title: card.title,
         meta: card.meta,
+        ...(card.reviewTaskId ? { reviewTaskId: card.reviewTaskId } : {}),
         ...(card.model ? { model: card.model } : {}),
         ...(card.place ? { place: card.place } : {}),
         body: card.body,
@@ -2372,6 +2398,7 @@ function offerFingerprint(card: Card): string {
         ...(card.asking ? [{ asking: true }] : []),
         ...(card.designOnly ? [{ designOnly: true }] : []),
         ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
+        ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
       ]),
     )
     .digest("hex");
@@ -2488,6 +2515,7 @@ function buildEmittedCard(
     id,
     ...(context.taskId ? { taskId: context.taskId } : {}),
     author: context.author,
+    ...(input.reviewTaskId ? { reviewTaskId: input.reviewTaskId } : {}),
     priority: cardPriority(input),
     title: input.title,
     meta: context.meta,

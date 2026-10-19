@@ -47,6 +47,7 @@ const ONE_CARD_KIND = "card";
 type Row = {
   id: string;
   task_id: string | null;
+  review_task_id: string | null;
   kind: string;
   author: Card["author"];
   priority: number;
@@ -148,6 +149,7 @@ function fromRow(row: Row): Card | undefined {
   const parsed = cardSchema.safeParse({
     id: row.id,
     ...(row.task_id ? { taskId: row.task_id } : {}),
+    ...(row.review_task_id ? { reviewTaskId: row.review_task_id } : {}),
     author: row.author,
     priority: row.priority,
     title: row.title,
@@ -309,8 +311,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -333,7 +335,8 @@ export class CardStore {
            risk_json = excluded.risk_json,
            replies = excluded.replies,
            holds_place = excluded.holds_place,
-           required_actions_json = excluded.required_actions_json`,
+           required_actions_json = excluded.required_actions_json,
+           review_task_id = excluded.review_task_id`,
       )
       .run(
         card.id,
@@ -360,6 +363,7 @@ export class CardStore {
         card.replies === false ? 0 : null,
         card.holdsPlace ? 1 : null,
         card.requiredActions !== undefined ? JSON.stringify(card.requiredActions) : null,
+        card.reviewTaskId ?? null,
       );
   }
 
@@ -712,6 +716,9 @@ export class CardStore {
     return {
       id: card.id,
       ...(card.taskId ? { taskId: card.taskId } : {}),
+      ...((offer ? offer.reviewTaskId : card.reviewTaskId)
+        ? { reviewTaskId: offer ? offer.reviewTaskId : card.reviewTaskId }
+        : {}),
       author: offer?.author ?? card.author,
       title: offer?.title ?? card.title,
       meta: offer?.meta ?? card.meta,

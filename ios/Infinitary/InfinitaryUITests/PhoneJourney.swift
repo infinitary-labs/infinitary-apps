@@ -61,6 +61,8 @@ import XCTest
         XCTAssertEqual((refused["devices"] as? [Any])?.count, 0)
         picture("wrong-mac")
         try await join()
+        // Create the review before taking the feed snapshot used by the Activity assertions.
+        _ = try await home("review-finding")
         let first = try await home("state", method: "GET")
         let devices = try XCTUnwrap(first["devices"] as? [[String: Any]])
         let phone = try XCTUnwrap(devices.first)
@@ -69,6 +71,11 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
         XCTAssertFalse(app.buttons["Merge"].exists)
         picture("cards")
+        // INF-63 accepted B: the phone reads the host-validated finding label and builder's task name.
+        XCTAssertTrue(app.staticTexts["Review finding"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Check the phone connection"].exists)
+        XCTAssertFalse(app.buttons["Keep it"].exists)
+        picture("review-finding")
         // INF-136 #2: no product traffic for longer than both former pairing deadlines.
         let idle = try await home("idle")
         let idleBefore = try XCTUnwrap(idle["before"] as? [String: Int])

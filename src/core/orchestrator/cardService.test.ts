@@ -56,6 +56,47 @@ describe("CardService", () => {
     vi.useRealTimers();
   });
 
+  // INF-63 accepted direction B: attribution comes from the linked review, not body wording.
+  it("validates and persists review attribution, names the task, and refreshes its facts", () => {
+    const { tasks, cardStore, make } = setup();
+    seedTask(tasks, { id: "builder", title: "Fix the footer", status: "idle" });
+    seedTask(tasks, {
+      id: "review",
+      title: "Review the footer",
+      status: "idle",
+      parentId: "builder",
+      shape: { kind: "review", kind_source: "host:review", basis: "builder" },
+    });
+    seedTask(tasks, { id: "other", title: "Other work", status: "idle" });
+    let verdict = "findings abc1234 · risk low";
+    const cards = make(() => `${SETTLE_FACTS_OPEN}${verdict}</div>`);
+    for (const input of [
+      { reviewTaskId: "missing", taskId: "builder" },
+      { reviewTaskId: "review", taskId: "other" },
+      { reviewTaskId: "review" },
+      { reviewTaskId: "builder", taskId: "builder" },
+    ]) {
+      expect(() => cards.addFirstmateCard({ ...decision, ...input })).toThrow(
+        "independent review of task_id",
+      );
+    }
+    expect([...cards.values()]).toHaveLength(0);
+    const id = cards.addFirstmateCard({ ...decision, taskId: "builder", reviewTaskId: "review" });
+    expect(cardStore.get(id)).toMatchObject({ reviewTaskId: "review", meta: "Fix the footer" });
+    expect(cards.get(id)?.body).toContain(verdict);
+    verdict = "findings def5678 · risk medium";
+    cards.refreshSettleFacts();
+    expect(cards.get(id)?.body).toContain(verdict);
+    expect(cards.get(id)?.body).not.toContain("abc1234");
+    const restored = make();
+    expect(restored.get(id)?.reviewTaskId).toBe("review");
+    const ordinary = cards.addFirstmateCard({ ...decision, taskId: "builder" });
+    expect(cards.get(ordinary)).toMatchObject({ meta: "Fix the footer" });
+    expect(cards.get(ordinary)?.reviewTaskId).toBeUndefined();
+    const standalone = cards.addFirstmateCard(decision);
+    expect(cards.get(standalone)?.meta).toBe("firstmate");
+  });
+
   it("keeps marked replies available through restart and still closes every choice", () => {
     const { tasks, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });

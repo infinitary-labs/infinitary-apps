@@ -214,7 +214,7 @@ export function reviewFindingsNext(briefed: boolean): string {
   const relay = briefed
     ? "Steer the builder with every auto-fix finding verbatim; its brief says how to fix them."
     : `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`;
-  return `${relay} Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. ${REVIEWER_IDLE_NEXT}`;
+  return `${relay} Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. ${REVIEWER_IDLE_NEXT}`;
 }
 
 /** What a builder's report asks of its open review, which last returned findings or blocked. */

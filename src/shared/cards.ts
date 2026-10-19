@@ -853,6 +853,8 @@ export type CardSubmission = z.infer<typeof cardSubmissionSchema>;
 
 /** The meta line of a card the Firstmate itself writes, where a crewmate's card names its task. */
 export const FIRSTMATE_CARD_META = "firstmate";
+/** INF-63: the app-owned label for a validated independent review. */
+export const REVIEW_FINDING_LABEL = "Review finding";
 
 /** How a card's meta line reads: the first mate's own cards say who wrote them in words, never the stored name. */
 export function cardMetaWords(meta: string): string {
@@ -866,6 +868,8 @@ export function cardMetaWords(meta: string): string {
 export const cardSchema = z.strictObject({
   id: z.string(),
   taskId: z.string().optional(),
+  /** Host-validated independent review of this card’s task (INF-63). */
+  reviewTaskId: z.string().optional(),
   author: cardAuthorSchema,
   /** Higher shows first in the stack. */
   priority: z.number(),
@@ -1084,6 +1088,7 @@ export type PastEnding = (typeof PAST_ENDINGS)[number];
  */
 export const pastCardSchema = z.strictObject({
   id: z.string(),
+  reviewTaskId: z.string().optional(),
   taskId: z.string().optional(),
   author: cardAuthorSchema,
   title: z.string(),
@@ -1431,6 +1436,7 @@ export const CARD_OBSERVATION_NOTE_MAX = 500;
  * before the capture existed, whose start is unknown.
  */
 export const cardOfferPayloadSchema = z.strictObject({
+  reviewTaskId: z.string().optional(),
   basis: z.enum(["emitted", "put", "legacy-initial-snapshot"]),
   /** SHA-256 of the shown content, for a reader matching offers across cards. */
   fingerprint: z.string(),

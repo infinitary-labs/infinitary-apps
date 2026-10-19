@@ -258,3 +258,6 @@ The device visibility answer has only `shown`; every build offers a phone withou
 Task places, computer sign-ins and placement explanations carry the core reach value instead of published connecting/out-of-reach flags.
 Placed instructions keep the home's words unchanged, without the browser-command swap for 8.0–8.3 computers.
 Saved conversation recovery runs once before conversations open, not at each open (`docs/helper.md`, "After the one-time move").
+
+Protocol 9.2 adds optional `reviewTaskId` to cards: the home validates that the named independent review belongs to the card's task before showing Review finding.
+Older readers ignore this additive attribution; first mate cards about tasks also carry the task's title in their existing meta line.

@@ -16,6 +16,7 @@ A permission refusal says how to allow the camera or local network, without repl
 Once joined, the top line names the computer and says whether it is in reach.
 Out of reach shows the last heard time and retains only the current in-memory view.
 Cards and Activity are separate tabs; Cards initially lists titles and attribution read-only, without executing card bodies or showing inert action buttons.
+A review-finding card shows Review finding in the warning color above its title, and the builder’s task name in its attribution.
 Activity puts the newest line first so returning to it shows the Mac's latest work.
 Each empty list says plainly it has nothing to show.
 In reach, Leave asks for confirmation and removes this phone from the Mac.

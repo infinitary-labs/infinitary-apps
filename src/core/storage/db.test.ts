@@ -18,7 +18,7 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { CardStore } from "./cardStore";
 import type { AppDatabase } from "./db";
-import { openDatabase, openInMemoryDatabase } from "./db";
+import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "./db";
 import { INBOX_GRACE_MS, InboxStore, inboxContentHash } from "./inboxStore";
 import { SettingsStore } from "./settingsStore";
 import { UsageStore } from "./usageStore";
@@ -78,7 +78,7 @@ const PROVENANCE_COLUMNS = [
 const LABEL_COLUMNS = ["missed_escalation", "missed_note", "missed_at"] as const;
 
 /** Every migration shipped today; the head moves as migrations are added. */
-const ALL_VERSIONS = Array.from({ length: 86 }, (_, index) => index + 1);
+const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) => index + 1);
 /** Migration 68's reply line, undone: the `captain_asks` column. */
 const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
 /** Migration 80's delivery columns, undone. */
@@ -98,7 +98,7 @@ const MIGRATION_71_TABLE =
   "CREATE TABLE task_event_concerns (event_id INTEGER NOT NULL, task_id TEXT NOT NULL, relation TEXT NOT NULL, via TEXT, PRIMARY KEY (event_id, task_id));";
 /** Migration 77's optional continuity declaration, undone. */
 const REVERSE_MIGRATION_77 =
-  "ALTER TABLE cards DROP COLUMN required_actions_json; ALTER TABLE cards DROP COLUMN holds_place;\n";
+  "ALTER TABLE cards DROP COLUMN review_task_id; ALTER TABLE cards DROP COLUMN required_actions_json; ALTER TABLE cards DROP COLUMN holds_place;\n";
 /** Legacy card reversal chain removes later columns before migration 70's replies column. */
 const REVERSE_MIGRATION_70 = `${REVERSE_MIGRATION_77}ALTER TABLE cards DROP COLUMN replies;\n`;
 /** Migration 69's merge-card risk, undone: the `cards` column. */
@@ -1703,6 +1703,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "replies",
       "holds_place",
       "required_actions_json",
+      "review_task_id",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",
@@ -3206,5 +3207,30 @@ it("migration 86 retains connecting in saved placement verdicts without the old 
     new TaskService({ db: reopened }).get("connecting-placement")?.placement?.snapshot.candidates[0]
       ?.reach,
   ).toBe("connecting");
+  reopened.close();
+});
+
+// INF-63: a review-finding label survives an upgrade and restart without relabeling old cards.
+it("migration 87 preserves legacy cards and persists reversible review attribution", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 86);
+  const columns = columnNames(old, "cards");
+  old
+    .prepare(
+      "INSERT INTO cards (id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('legacy', 'card', 'firstmate', 15, 'Before', 'firstmate', '<p>Old.</p>', '[]', 'ready', 1)",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  const store = new CardStore(upgraded);
+  const legacy = store.get("legacy") as Card;
+  expect(legacy.reviewTaskId).toBeUndefined();
+  store.upsert({ ...legacy, id: "finding", reviewTaskId: "review-footer" });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new CardStore(reopened).get("finding")?.reviewTaskId).toBe("review-footer");
+  reopened.exec("ALTER TABLE cards DROP COLUMN review_task_id");
+  expect(columnNames(reopened, "cards")).toEqual(columns);
+  expect(reopened.prepare("SELECT COUNT(*) AS n FROM cards").get()).toEqual({ n: 2 });
   reopened.close();
 });

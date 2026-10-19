@@ -9,6 +9,7 @@ import {
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
+import { REVIEW_FINDING_LABEL } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskView } from "../../src/shared/tasks";
 import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -16,6 +17,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
+import { resizeWindow } from "./layout";
 import {
   FM_SYSTEM_MARKER,
   MERGE_PROMPT_MARKER,
@@ -36,11 +38,13 @@ import {
   REVIEWED_TIER_PROMPT_MARKER,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
+import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
 import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
 import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
+import { setThemeViaSettings } from "./theme";
 
 /**
  * Delivery rigor, phase 2 (`docs/delivery-rigor.md`, the reviewed tier),
@@ -194,6 +198,7 @@ test.afterAll(async () => {
 test("a reviewed task is held by its reviewer until the review passes, then merges with the review on its card", async () => {
   const { page, mockProvider } = launched;
   const input = promptInput(page);
+  await resizeWindow(launched.app, page, { width: 1280, height: 900 });
 
   // 1. The builder: a direct-pr task the captain asked to ship reviewed
   //    (the mock Firstmate passes rigor_ask, the captain's words on care).
@@ -245,6 +250,13 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   //    the builder's task from the Firstmate.
   await expect(reportLine(page, review.key).first()).toBeVisible({ timeout: 30_000 });
   await expect(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+  const findingCard = shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
+  await expect(findingCard.getByText(REVIEW_FINDING_LABEL, { exact: true })).toBeVisible();
+  await expect(findingCard.locator("[data-card-meta]")).toHaveText(builder.title);
+  const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
+  await expect(findingFacts.project).toContainText(REPO_NAME);
+  await expect(findingFacts.review).toContainText(HEAD_SHA.slice(0, 7));
+  await expect(findingFacts.review).toContainText("risk medium");
   await expect(page.getByRole("button", { name: "Keep the copy" })).toBeVisible();
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_FIX_REPORT) }),
@@ -254,6 +266,15 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     .toMatchObject({
       delivery: expect.objectContaining({ reviewVerdict: "findings", reviewRisk: "medium" }),
     });
+
+  for (const theme of ["dark", "light"] as const) {
+    await setThemeViaSettings(page, theme);
+    await regionShot(
+      shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE),
+      test.info().outputPath(`review-finding-${theme}.png`),
+    );
+  }
+  await setThemeViaSettings(page, "dark");
 
   // 5. The hold: a merge asked for while the review is open is refused by
   //    the blocks edge, and nothing was merged. The refusal's words are
@@ -300,6 +321,16 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   await page.screenshot({ path: test.info().outputPath("rigor-reviewed-pager.png") });
   await showCard(page, MOCK_REVIEW_CAP_CARD_TITLE);
   await expect(page.getByRole("button", { name: MOCK_REVIEW_CAP_RETRY_LABEL })).toBeVisible();
+  await expect(shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE).locator("[data-card-meta]")).toHaveText(
+    builder.title,
+  );
+  await expect(
+    shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE).getByText(REVIEW_FINDING_LABEL, { exact: true }),
+  ).toHaveCount(0);
+  await regionShot(
+    shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE),
+    test.info().outputPath("task-card-dark.png"),
+  );
   // No re-review goes out while the cap holds: the Firstmate's steer to
   // the reviewer is refused (its words are crewSupervisor.test.ts's), so
   // the reviewer's record gains no steer.

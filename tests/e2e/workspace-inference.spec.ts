@@ -3,7 +3,6 @@ import { writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
-import { cardMetaWords, FIRSTMATE_CARD_META } from "../../src/shared/cards";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
@@ -89,9 +88,7 @@ test("an ambiguous request yields one clarifying card whose answer reaches First
 
   // Exactly one concise decision card, from Firstmate itself.
   await expect(shownCard(page, MOCK_WHICH_PROJECT_TITLE)).toBeVisible({ timeout: 30_000 });
-  await expect(cardMeta(page, MOCK_WHICH_PROJECT_TITLE)).toHaveText(
-    cardMetaWords(FIRSTMATE_CARD_META),
-  );
+  await expect(cardMeta(page, MOCK_WHICH_PROJECT_TITLE)).toHaveText(MOCK_WHICH_PROJECT_TITLE);
 
   const alphaName = repoAlpha.split("/").at(-1) as string;
   const betaName = repoBeta.split("/").at(-1) as string;

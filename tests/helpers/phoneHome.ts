@@ -121,6 +121,28 @@ export async function startPhoneHome(
           await connection.settled();
           break;
         }
+        case "POST review-finding": {
+          const review = seedTask(core.services.tasks, {
+            id: "phone-review",
+            title: "Review the phone connection",
+            status: "idle",
+            parentId: task.id,
+            shape: { kind: "review", kind_source: "host:review", basis: task.id },
+          });
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-review-finding",
+            taskId: task.id,
+            reviewTaskId: review.id,
+            title: "Review the phone connection finding",
+            body: "<p>The review needs your choice on the Mac.</p>",
+            actions: [
+              { id: "keep", label: "Keep it", default: true },
+              { id: "change", label: "Change it" },
+            ],
+          });
+          result = { ok: true };
+          break;
+        }
         case "GET state":
           result = {
             devices: core.services.devices.list(),

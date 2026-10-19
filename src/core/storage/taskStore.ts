@@ -270,6 +270,13 @@ export type TaskDelivery = {
    */
   reviewChange?: string;
   /**
+   * On a REVIEW task: the version an earlier review of its builder passed,
+   * when this review was commissioned for a later one (INF-401). Every
+   * turn of this review reads only the difference since it. Not a
+   * published field.
+   */
+  passedHead?: string;
+  /**
    * A later head a pass covered because its change reading matched.
    * No longer written: the reading stored with that version covers it.
    * An older record's value still covers its head.

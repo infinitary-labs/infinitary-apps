@@ -15979,6 +15979,86 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     }
   });
 
+  it("scopes a review commissioned after an earlier pass to the difference since it, through its re-review (INF-401)", async () => {
+    // The captain's direction: after an unavoidable update, the re-review
+    // checks only the update's difference, not the whole change again.
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const firstReviewer = fakeCrewmate();
+      const updateReviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [firstReviewer, updateReviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      const passed = "15911c8f2a6d0e3b4c5a69788796a5b4c3d2e1f0";
+      const updated = "fbc93601d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7";
+      const fixed = "2d0fa6b9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3";
+      const review = () =>
+        supervisor.commission({
+          title: "Review",
+          intent: intentOf("fix it"),
+          shape: { review_of: builderId },
+        });
+
+      // The first review has no earlier pass: it reads the whole change.
+      vi.mocked(workspace.branchHead).mockResolvedValue(passed);
+      const { taskId: firstId } = await review();
+      await tick();
+      expect(firstReviewer.promptCalls[0]).not.toContain("An earlier review already passed");
+      expect(tasks.get(firstId)?.delivery?.passedHead).toBeUndefined();
+      await reportTurn(firstReviewer, firstId, "verdict: pass\nNo findings.\nrisk: low - small.");
+      expect(tasks.get(builderId)?.delivery).toMatchObject({
+        reviewVerdict: "pass",
+        reviewSha: passed,
+      });
+
+      // The builder brings its branch up to date; the next review reads
+      // only what changed since the pass.
+      vi.mocked(workspace.branchHead).mockResolvedValue(updated);
+      const { taskId: updateId } = await review();
+      await tick();
+      const brief = updateReviewer.promptCalls[0] ?? "";
+      expect(brief).toContain(`Review branch fm/task-${builderId} at head ${updated}`);
+      expect(brief).toContain(`An earlier review already passed this change at ${passed}`);
+      expect(brief).toContain(`git range-diff <default>..${passed} <default>..${updated}`);
+      expect(tasks.get(updateId)?.delivery).toMatchObject({ headSha: updated, passedHead: passed });
+      expect(
+        tasks.timeline(builderId).findLast((event) => event.text.includes("review opened"))?.text,
+      ).toContain(
+        `at ${updated.slice(0, 7)}, only what changed since the pass at ${passed.slice(0, 7)}`,
+      );
+
+      // A findings round keeps the scope at the fixed head, though the
+      // builder's latest verdict is no longer that pass.
+      await reportTurn(
+        updateReviewer,
+        updateId,
+        "verdict: findings\nF1 error src/meter.ts:12 the update drops the flush - auto-fix\nrisk: medium - one line moves.",
+      );
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("findings");
+      vi.mocked(workspace.branchHead).mockResolvedValue(fixed);
+      await supervisor.steerCrewmate(updateId, `re-review at head ${fixed}`);
+      await tick();
+      const reread = updateReviewer.promptCalls.at(-1) ?? "";
+      expect(reread).toContain(`at head ${fixed}`);
+      expect(reread).toContain(`git range-diff <default>..${passed} <default>..${fixed}`);
+      expect(tasks.get(updateId)?.delivery).toMatchObject({ headSha: fixed, passedHead: passed });
+    } finally {
+      repo.dispose();
+    }
+  });
+
   it("answers a review given a named model with the model that took it, since a review never routes on one (FI3-444)", async () => {
     const repo = directPrRepo();
     try {

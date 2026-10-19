@@ -713,6 +713,12 @@ export type ReviewBriefFacts = {
   changedFiles: string[] | null;
   /** The change reading at the assigned commit, when it could be read. */
   changeReading?: string;
+  /**
+   * The version an earlier review of this change passed, when the
+   * assigned commit is another one (INF-401). The review then reads only
+   * what changed since that pass.
+   */
+  passedHead?: string;
 };
 
 /** How the review instruction opens; a scripted stand-in recognizes the reviewer by it. */
@@ -794,7 +800,8 @@ export function renderRepairAssessmentBrief(facts: RepairAssessmentFacts): strin
  * risk ladder, the ignore-list convergence rule, and the two lines the
  * host parses (`verdict:` first, `risk:` last). A brief with no captain
  * words is a loud failure: the reviewer judges the change against them, so
- * there is nothing to review without them.
+ * there is nothing to review without them. A review after an earlier pass
+ * names that passed version and reads only the difference since it.
  */
 export function renderReviewBrief(
   intent: SpawnIntent,
@@ -811,6 +818,22 @@ export function renderReviewBrief(
   const target = facts.prUrl
     ? `${assigned}. A pull request is already open at ${facts.prUrl}; review the assigned commit, not that pull request's recorded head.`
     : assigned;
+  // After an earlier pass, only what changed since it is reviewed (INF-401;
+  // the captain's direction: after an unavoidable update, the re-review
+  // checks only the update's difference, not the whole change again).
+  const passed = facts.passedHead && facts.passedHead !== facts.headSha ? facts.passedHead : null;
+  const scope = passed
+    ? [
+        "",
+        `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit - what bringing it up to date, or later work, changed - not the whole change again: after an unavoidable update, the re-review checks only the update's difference (the captain's rule). git range-diff <default>..${passed} <default>..${facts.headSha} lines the two versions up commit by commit; for one path, compare git diff <default>...${passed} -- <path> with git diff <default>...${facts.headSha} -- <path>. Read the rest of the change only where you need it to judge the difference. If ${passed} is not in this working copy, say so and review the whole change instead.`,
+      ]
+    : [];
+  const coverage = passed
+    ? `List which paths in the changed-file checklist below changed since ${passed}, and check each of them, and each path the passed version touched that this one no longer does, against the diff; an omitted path is not clean, while a path whose change reads the same as at ${passed} was reviewed there and needs no second look. On re-review at a new head, recompute the checklist from its diff and compare it with ${passed} again.`
+    : "Check every path in the changed-file checklist below against the diff; an omitted path is not clean. On re-review at a new head, recompute the complete checklist from its diff.";
+  const fullPass = passed
+    ? "Do a full pass over the difference before reporting"
+    : "Do a full review pass before reporting";
   return [
     `Goal: review the change for "${facts.builderTitle}" and report findings.`,
     "The verdict report is the whole deliverable of this internal review; emit no outcome card.",
@@ -819,12 +842,13 @@ export function renderReviewBrief(
     userWords,
     "",
     `${REVIEW_BRIEF_OPENING}: change nothing, commit nothing, push nothing. ${target}, against the user's words above and the builder's report below. Read the diff and whatever surrounding code, call sites, shared helpers, tests and invariants you need to understand root cause; focus findings on risks introduced by the changed code. Do not run tests: the builder's Verified section is the test record, together with the builder's evidence folder, which this brief names below when there is one (evidence is never committed, so the diff holds none; read the folder, never write to it) - say whether that evidence could demonstrate the intent, and report missing evidence as a finding instead of running anything yourself. Analyze for bugs, risks, and code simplification opportunities; simplification means reducing complexity through non-functional refactoring, never removing features, changing product behavior, or stripping intentional user-facing output. Treat security issues, performance regressions, breaking changes, and insufficient error handling as risks.`,
+    ...scope,
     "",
-    `Check every path in the changed-file checklist below against the diff; an omitted path is not clean. On re-review at a new head, recompute the complete checklist from its diff. If you cannot inspect a path, name the gap and do not call that path reviewed. Check sibling sites of each broken invariant and name all affected sites in a finding; trace the normal callers to distinguish an isolated symptom from the whole defect class. Only comment on things that genuinely matter. Be concise and actionable; no generic advice like "add more tests". Do not report styling, formatting, linting, compilation, or type-checking issues. Do a full review pass before reporting: do not stop after the first valid finding - continue until you have enumerated all material issues you can substantiate.`,
+    `${coverage} If you cannot inspect a path, name the gap and do not call that path reviewed. Check sibling sites of each broken invariant and name all affected sites in a finding; trace the normal callers to distinguish an isolated symptom from the whole defect class. Only comment on things that genuinely matter. Be concise and actionable; no generic advice like "add more tests". Do not report styling, formatting, linting, compilation, or type-checking issues. ${fullPass}: do not stop after the first valid finding - continue until you have enumerated all material issues you can substantiate.`,
     "",
     facts.changedFiles === null
       ? `The assigned commit ${facts.headSha} is not in this working copy. Report the gap and do not claim a clean review.`
-      : `Changed-file checklist at ${facts.headSha} (committed paths against the default branch):`,
+      : `Changed-file checklist at ${facts.headSha} (committed paths against the default branch${passed ? `; compare each with ${passed}` : ""}):`,
     ...(facts.changedFiles ?? []).map((path) => `- ${JSON.stringify(path)}`),
     "",
     `Report one finding per line: id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence, and an action - auto-fix for a non-functional, non-user-visible issue (correctness, error handling, security, performance, mechanical code quality) safely fixable without discussing the author's intent; ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt; no-op for an informational note. Open your report with exactly one line, verdict: pass|findings|blocked, and close with one line, risk: low|medium|high, with one sentence why - low: well-bounded, mostly cosmetic, or straightforward with little ambiguity; medium: room to improve but safe to merge first with concerns addressed as follow-ups; high: should not be merged without explicit human approval. A clean change is verdict: pass with no findings. Info findings never block: a review whose findings are all info/no-op is read as a pass.`,

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-after-update-reads-difference",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A review after an update checks only what changed",
+      "body": "When a reviewed change has to be brought up to date after its review passed, the next review checks only what changed since that pass, not the whole change again.",
+      "noPicture": "Nothing new on screen: the reviewer's instructions name the version that passed and ask only for the difference since it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

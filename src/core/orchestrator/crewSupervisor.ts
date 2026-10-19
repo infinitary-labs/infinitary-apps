@@ -2920,7 +2920,17 @@ export class CrewSupervisor {
       ...input.intent,
       goal: `Review the change for "${builder.title}" and report findings.`,
     };
-    const brief = renderReviewBrief(intent, delivery, facts);
+    // A review after an earlier pass reads only what changed since that
+    // pass (INF-401): the passed version rides the brief and this review's
+    // own record, so its later turns keep the same scope.
+    const passed =
+      builder.delivery?.reviewVerdict === "pass" ? builder.delivery.reviewSha : undefined;
+    const passedHead = passed && passed !== headSha ? passed : undefined;
+    const brief = renderReviewBrief(
+      intent,
+      delivery,
+      passedHead ? { ...facts, passedHead } : facts,
+    );
     const taskId = randomUUID().slice(0, 8);
     const title = `Review: ${builder.title}`.slice(0, 64);
     // The host establishes the kind: a review is never classified, and its
@@ -2962,6 +2972,7 @@ export class CrewSupervisor {
     this.options.tasks.recordDelivery(taskId, {
       headSha,
       ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
+      ...(passedHead ? { passedHead } : {}),
     });
     // The hold: the review blocks the builder's close until it is done.
     // The parent edge deliberately does not carry it - a child out of the
@@ -2974,8 +2985,8 @@ export class CrewSupervisor {
       {
         kind: "review",
         text: `review opened - ${title} reads branch ${builder.branch} at ${headSha.slice(0, 7)}${
-          prUrl ? ` (pull request ${prUrl} is not the assigned head)` : ""
-        }`,
+          passedHead ? `, only what changed since the pass at ${passedHead.slice(0, 7)}` : ""
+        }${prUrl ? ` (pull request ${prUrl} is not the assigned head)` : ""}`,
         feed: false,
         data: { reviewTaskId: taskId },
       },
@@ -3072,10 +3083,12 @@ export class CrewSupervisor {
         },
       );
     }
+    // The scope set at commission holds for every turn (INF-401).
+    const passedHead = review.delivery?.passedHead;
     const brief = renderReviewBrief(
       review.intent,
       this.taskDelivery(builder.id) ?? "local-only",
-      facts,
+      passedHead ? { ...facts, passedHead } : facts,
     );
     // Re-send the assignment even when the head stayed put: a previous
     // prompt may have failed after preparation but before the model read it.

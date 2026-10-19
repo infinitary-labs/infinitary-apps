@@ -377,6 +377,38 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).not.toContain('- "src/meter.ts"');
   });
 
+  it("asks a review after an earlier pass for the difference since that pass only (INF-401)", () => {
+    // The captain's direction: after an unavoidable update, the re-review
+    // checks only the update's difference, not the whole change again.
+    const intent = { goal: "g", userWords: "make the meter test stop flaking" };
+    const passed = "fedcba9876543210fedcba9876543210fedcba98";
+    const brief = renderReviewBrief(intent, "direct-pr", { ...facts, passedHead: passed });
+    expect(brief).toContain(`Review branch fm/task-abc12345 at head ${facts.headSha}`);
+    expect(brief).toContain(
+      `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit`,
+    );
+    expect(brief).toContain("not the whole change again");
+    expect(brief).toContain(`git range-diff <default>..${passed} <default>..${facts.headSha}`);
+    expect(brief).toContain(
+      `a path whose change reads the same as at ${passed} was reviewed there and needs no second look`,
+    );
+    expect(brief).toContain("an omitted path is not clean");
+    expect(brief).toContain(
+      `Changed-file checklist at ${facts.headSha} (committed paths against the default branch; compare each with ${passed}):\n- "src/meter.ts"\n- "tests/meter.test.ts"`,
+    );
+    expect(brief).toContain("Do a full pass over the difference before reporting");
+    expect(brief).not.toContain("recompute the complete checklist");
+    expect(brief).not.toContain("Do a full review pass");
+
+    const whole = renderReviewBrief(intent, "direct-pr", facts);
+    expect(whole).not.toContain("An earlier review already passed");
+    expect(whole).toContain("Do a full review pass before reporting");
+    // A pass at the assigned commit itself leaves nothing to scope.
+    expect(renderReviewBrief(intent, "direct-pr", { ...facts, passedHead: facts.headSha })).toBe(
+      whole,
+    );
+  });
+
   it("is byte-stable: the same facts render the same brief", () => {
     const intent = { goal: "g", userWords: "review this carefully" };
     expect(renderReviewBrief(intent, "direct-pr", facts)).toBe(

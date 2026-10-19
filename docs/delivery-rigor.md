@@ -231,6 +231,9 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    Before a re-review turn, the host refreshes the clean review copy to the new assigned commit; edits or unexpected commits refuse the refresh without losing work.
    Guidance during a review waits for the next turn, and the verdict records the commit assigned to that turn, not a later builder head.
    The reviewer checks every listed path, does not call an omitted path clean, and recomputes the checklist at a new head.
+   A review commissioned after an earlier review of the same builder passed at another version names that passed version and reads only what changed since it, not the whole change again (INF-401, the captain's direction for an unavoidable update).
+   Its brief gives the reviewer `git range-diff` between the two versions, keeps the complete checklist to compare path by path, and says a path whose change reads the same was reviewed at the pass.
+   The review task records that version as `passedHead`, so each later turn of that review, a re-review after findings included, keeps the same scope.
    The builder's committed head must be available on the builder's computer before the reviewer can start at that commit.
    A bounded follow-up coverage turn is not implied.
    It is read-only by instruction - change nothing, commit nothing, push nothing, run no tests: the builder's Verified section and the builder's evidence folder (named in the brief) are the test record; evidence is never committed.

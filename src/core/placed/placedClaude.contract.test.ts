@@ -237,10 +237,16 @@ it.each([
   const { tasks, paths, devices } = world.placement;
   const ask = devices.ask.bind(devices);
   const copiedAt: number[] = [];
+  let copying = 0;
   const sent = vi.spyOn(devices, "ask").mockImplementation(async (device, channel, args) => {
-    const answer = await ask(device, channel, args);
-    if (channel === "inf:session:copy") copiedAt.push(now);
-    return answer;
+    if (channel === "inf:session:copy") copying += 1;
+    try {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:copy") copiedAt.push(now);
+      return answer;
+    } finally {
+      if (channel === "inf:session:copy") copying -= 1;
+    }
   });
   const session = await world.factory.open({
     ...crewmateSessionSpec(
@@ -344,15 +350,20 @@ it.each([
       finishTool();
       await expect.poll(() => events.includes("tool_end")).toBe(true);
       await expect.poll(() => events.filter((type) => type === "request_started").length).toBe(2);
+      // The last call ended and the next request hangs, so no event follows:
+      // once a copy brings the result home, the loop runs out with no copy on
+      // its way and none armed. Read the loop before firing: right after firing
+      // an armed copy the schedule is empty whether or not the loop stops (INF-454).
       await expect
         .poll(() => {
+          const loop = { copying, armed: scheduled.size };
           fireNext();
-          return (
-            read().lines.some((line) => line.kind === "tool" && line.result !== null) &&
-            scheduled.size === 0
-          );
+          return {
+            ...loop,
+            result: read().lines.some((line) => line.kind === "tool" && line.result !== null),
+          };
         })
-        .toBe(true);
+        .toEqual({ copying: 0, armed: 0, result: true });
     } else if (ending === "turn-end") {
       await session.abort();
       await asking;

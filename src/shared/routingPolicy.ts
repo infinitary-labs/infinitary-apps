@@ -237,6 +237,11 @@ export const workShapeSchema = z.object({
    * request (`pull`): the host closes the task once it reads it closed.
    *
    * The host renders the brief from either at each start.
+   *
+   * Work the first mate declared works in the project's folder
+   * (`in_folder` on its ask, INF-567) carries `folder: true`: its brief is
+   * the first mate's intent, it runs on the computer keeping the folder
+   * whatever the project's Runs on says, and it closes as any task does.
    */
   in_place: z
     .union([
@@ -264,6 +269,7 @@ export const workShapeSchema = z.object({
         after: z.string().optional(),
         after_id: z.string(),
       }),
+      z.object({ folder: z.literal(true) }),
     ])
     .optional(),
 });
@@ -271,13 +277,20 @@ export type WorkShape = z.infer<typeof workShapeSchema>;
 /** The in-place facts on a work shape (`WorkShape.in_place`), either shape. */
 export type InPlaceWork = NonNullable<WorkShape["in_place"]>;
 /** The facts of a folder a merge left behind. */
-export type InPlaceFacts = Exclude<InPlaceWork, { pull: unknown }>;
+export type InPlaceFacts = Extract<InPlaceWork, { cause: unknown }>;
 /** The facts of a pull request an abandoned task could not close. */
 export type InPlacePull = Extract<InPlaceWork, { pull: unknown }>;
 
 /** A folder a merge left behind (`WorkShape.in_place`). */
 export function isFolderRepair(facts: InPlaceWork | undefined): facts is InPlaceFacts {
-  return facts !== undefined && !("pull" in facts);
+  return facts !== undefined && "cause" in facts;
+}
+
+/** Work the first mate declared works in the project's folder (`WorkShape.in_place`). */
+export function isFolderWork(
+  facts: InPlaceWork | undefined,
+): facts is Extract<InPlaceWork, { folder: true }> {
+  return facts !== undefined && "folder" in facts;
 }
 
 /** A pull request an abandoned task could not close (`WorkShape.in_place`). */
@@ -386,6 +399,12 @@ export const workShapeAskSchema = workShapeSchema
      * carries a builder pointer beyond `basis`.
      */
     review_of: z.string().optional(),
+    /**
+     * The first mate's declaration that this task works in its project's
+     * own folder, not a working copy (INF-567): the host stamps
+     * `in_place: { folder: true }` from it.
+     */
+    in_folder: z.boolean().optional(),
   });
 export type WorkShapeAsk = z.infer<typeof workShapeAskSchema>;
 

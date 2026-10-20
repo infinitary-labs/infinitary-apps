@@ -141,10 +141,14 @@ export type PersonalBriefFacts = {
  * it builds in place, so `delivery` is undefined and the line is not
  * written.
  */
+/** The project whose own folder declared folder work works in (INF-567). */
+export type FolderBriefFacts = { project: string; folder: string };
+
 export function renderIntentBrief(
   intent: SpawnIntent,
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
+  folder?: FolderBriefFacts,
 ): string {
   const lines: string[] = [`Goal: ${intent.goal}`, ""];
   lines.push(
@@ -180,7 +184,24 @@ export function renderIntentBrief(
     if (lines.at(-1) !== "") lines.push("");
     lines.push(...renderPersonalFacts(personal));
   }
+  if (folder) {
+    if (lines.at(-1) !== "") lines.push("");
+    lines.push(...renderFolderFacts(folder));
+  }
   return lines.join("\n");
+}
+
+/**
+ * What folder work is told (INF-567): the folder itself is its working
+ * directory, on the computer that keeps it, and it ships nothing. The
+ * captain's edits there are his, as in the folder repair's brief.
+ */
+function renderFolderFacts(folder: FolderBriefFacts): string[] {
+  return [
+    `${IN_PLACE_OPENING}: your working directory is the folder of ${folder.project} at ${folder.folder} itself, on the computer that keeps it, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+    "Uncommitted edits, unpushed commits and stashes in the folder are the captain's. Never discard or overwrite them, switch the folder's branch, push, or open a pull request without his word on a card; setting edits aside on a backup branch or a stash with a message naming this task is allowed.",
+    "Your completion is a report of what you did, never a completion card.",
+  ];
 }
 
 /** How a personal brief's own sentence opens; a scripted stand-in tells the build in place by it. */
@@ -244,8 +265,9 @@ export function renderEscalationBrief(
   delivery: RepoDelivery | undefined,
   escalation: EscalationBriefFacts,
   personal?: PersonalBriefFacts,
+  folder?: FolderBriefFacts,
 ): string {
-  const base = renderIntentBrief(intent, delivery, personal);
+  const base = renderIntentBrief(intent, delivery, personal, folder);
   const previous = escalation.previousModel
     ? `${escalation.previousKey}, on ${escalation.previousModel}`
     : escalation.previousKey;

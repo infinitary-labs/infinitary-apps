@@ -3253,6 +3253,8 @@ export class FirstmateAgent {
         // Where the project lives and, where its changes go there, the
         // app's sign-in (git integration PR 1.3).
         lives: this.livesFact(repo),
+        // The computer keeping its folder, and where its tasks run (INF-567).
+        ...this.placesFact(repo),
         ...(repo.kind === "personal"
           ? { delivery: "builds in place" }
           : {
@@ -3349,6 +3351,12 @@ export class FirstmateAgent {
    * names none (the captain's constraint: a host is never required); a
    * plain host names its address, which is all there is to know about it.
    */
+  /** A project's folder computer and where its tasks run, while another computer runs work. */
+  private placesFact(repo: RepoView): { folder_on?: string; tasks_run_on?: string } {
+    const places = this.options.supervisor.projectPlaces(repo);
+    return places ? { folder_on: places.folder, tasks_run_on: places.tasks } : {};
+  }
+
   private livesFact(repo: RepoView): string {
     const host = repo.host;
     if (!host) return "none";

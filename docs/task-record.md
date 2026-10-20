@@ -31,6 +31,13 @@ The note on the abandoned task names it, and is an Activity line unless the capt
 Its brief says close the pull request or report why not (`renderPullRepairBrief`): the crewmate works in the folder without changing it, holds only the read and write tools where the project lives, and never merges, pushes or deletes a branch.
 The same minute's read closes it as finished once the host reads that pull request closed or merged.
 
+Work on a project's folder itself is the first mate's to declare, by its own judgment (INF-567, direction A).
+`spawn_crewmate`'s `shape.in_folder` stamps `in_place: { folder: true }` (`CrewSupervisor.workShape`), and a stronger-model retry keeps it.
+Such a task runs on this Mac, which keeps the folder, whatever the project's Runs on says, and works in the folder with no working copy, branch, delivery, rigor or completion decision, as the folder repair does.
+Its brief is the first mate's intent with no Delivery line, closed by a paragraph naming the folder and that the captain's edits there are his (`renderIntentBrief`'s folder facts).
+It needs a project other than the personal workspace, and refuses `runs_on_ask`, `delivery_ask` and `review_of` beside it; nothing spawns.
+It closes as any task does: the host's folder-reading close never reads it.
+
 ## Derived, never stored: the basis and the review join
 
 The record keeps no stamp of a fact the graph already holds (migration 46 removed the two it had).

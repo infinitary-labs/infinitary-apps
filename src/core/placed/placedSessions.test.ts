@@ -68,6 +68,7 @@ import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSe
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import { crewmateComputerNote } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import { Router } from "../routing/router";
@@ -941,6 +942,10 @@ describe("a task that runs on a computer that runs work", () => {
     const brief = api.requests[requests];
     expect(said(brief)).toContain("Fix the footer.");
     expect(JSON.stringify(brief?.body.system)).toContain(at.folders("t-first").evidence);
+    // It is told which computer it is on (INF-567: "hmm this is because we
+    // set this up on my macbook?"), so a folder path from the home reads as
+    // naming nothing there.
+    expect(JSON.stringify(brief?.body.system)).toContain(crewmateComputerNote("Mac mini"));
     // Each callback had its effect here once, and the brief left the lane.
     expect(kinds(home, "t-first").filter((kind) => kind === "progress")).toHaveLength(1);
     expect(home.inbox.allFor("t-first")).toEqual([]);

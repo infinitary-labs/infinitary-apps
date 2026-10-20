@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import {
@@ -80,7 +80,7 @@ import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
-import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
+import { CREWMATE_BROWSER_LINE, crewmateComputerNote } from "../pi/piResources";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/placedSessions";
@@ -339,6 +339,8 @@ type SetupExtras = {
   bind?: CrewSupervisorOptions["bind"];
   /** Open cards a previous build saved, there before the supervisor starts. */
   savedCards?: Card[];
+  /** The computers that run work for this one, as the crew reads them. */
+  machines?: CrewMachines;
 };
 
 function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
@@ -447,6 +449,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
         }
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
+    ...(extras.machines ? { machines: extras.machines } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
     ...(extras.serveability ? { serveability: extras.serveability } : {}),
@@ -22207,6 +22210,126 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
       filed: false,
     });
     expect(h.repairs()).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+});
+
+/**
+ * INF-567, the captain's words: "hmm this is because we set this up on my
+ * macbook? pass this evidence back to first mate and ask it to figure out
+ * how to handle this kind of local inconsistencies". His approved plan,
+ * direction A: a task the first mate declares as folder work runs on the
+ * computer keeping the folder, inside it, shipping nothing, even when the
+ * project's Runs on names another computer.
+ */
+describe("work the first mate declares in a project's folder (INF-567, real git)", {
+  timeout: 60_000,
+}, () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+  const MINI = "mini-device";
+
+  /** A project whose Runs on is the Mac mini, which is out of reach, as INB-9's was set. */
+  async function runsOnTheMini() {
+    const crewmate = fakeCrewmate();
+    const machines = {
+      computers: () => [MINI],
+      ready: () => false,
+      nameOf: () => "Kun's Mac mini",
+      placeOf: () => ({ label: "Kun's Mac mini", where: "on Kun's Mac mini" }),
+      signInWait: () => undefined,
+    } as unknown as CrewMachines;
+    const harness = setup(crewmate, { realWorkspace: true, machines });
+    const { repo } = await harness.repos.setup({ kind: "init", name: "business" });
+    await git(repo.path, [
+      "-c",
+      "user.name=T",
+      "-c",
+      "user.email=t@l",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "chore: start",
+    ]);
+    const remote = join(scratchDir("infinitary-folder-work-origin-"), "origin.git");
+    await git(dirname(remote), ["init", "--bare", "--initial-branch=main", remote]);
+    harness.repos.configure(repo.id, { origin: remote, delivery: "direct-pr" });
+    harness.repos.setRunsOn(repo.id, MINI);
+    return { ...harness, crewmate, repo };
+  }
+
+  const intent = (goal: string) => ({
+    goal,
+    userWords: "bring the business folder up to date",
+    constraints: [],
+  });
+
+  it("starts on this computer inside the folder with no delivery line, while an ordinary task of the project waits for the Mac mini", async () => {
+    const h = await runsOnTheMini();
+
+    // An ordinary task follows the project's Runs on and waits for that computer.
+    const ordinary = await h.supervisor.commission({
+      title: "Edit the one-pager",
+      intent: intent("Edit the one-pager."),
+      repoId: h.repo.id,
+    });
+    expect(ordinary.crewmate).toBe("queued");
+    expect(h.tasks.get(ordinary.taskId)?.deviceId).toBe(MINI);
+
+    // Folder work starts here, in the folder itself.
+    const folder = await h.supervisor.commission({
+      title: "Bring the business folder up to date",
+      intent: intent("Bring the business folder up to date with main."),
+      repoId: h.repo.id,
+      shape: { in_folder: true },
+    });
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.tasks.get(folder.taskId)).toMatchObject({
+      status: "active",
+      deviceId: null,
+      worktreeDir: "",
+      branch: "",
+    });
+    expect(h.tasks.get(folder.taskId)?.shape?.in_place).toEqual({ folder: true });
+    expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.repo.path);
+    const brief = h.crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(`the folder of business at ${h.repo.path} itself`);
+    expect(brief).not.toContain("Delivery:");
+    expect(h.specs.at(-1)?.procedure).toEqual({ delivery: "none", rigor: "none" });
+    expect(h.specs.at(-1)?.onOpenChange).toBeUndefined();
+    // A crewmate on the computer keeping the folder is told no computer's name.
+    expect(h.specs.at(-1)?.computer).toBeUndefined();
+    expect(h.sessionSpecs.at(-1)?.instructions.base).not.toContain(
+      crewmateComputerNote("Kun's Mac mini"),
+    );
+
+    // The host's folder-repair closing never reads this task.
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(folder.taskId)?.status).toBe("active");
+    await h.supervisor.disposeAll();
+  });
+
+  it("plans folder work with the same shape and brief, and refuses a Runs on beside it", async () => {
+    const h = await runsOnTheMini();
+    const planned = h.supervisor.plan({
+      title: "Bring the business folder up to date",
+      intent: intent("Bring the business folder up to date with main."),
+      repoId: h.repo.id,
+      shape: { in_folder: true },
+    });
+    expect(planned.shape?.in_place).toEqual({ folder: true });
+    expect(planned.prompt).toContain("You work in place");
+    expect(planned.prompt).not.toContain("Delivery:");
+    await expect(
+      h.supervisor.commission({
+        title: "Folder work on the mini",
+        intent: intent("Bring the business folder up to date with main."),
+        repoId: h.repo.id,
+        shape: { in_folder: true, runs_on_ask: MINI },
+      }),
+    ).rejects.toThrow("omit runs_on_ask");
     await h.supervisor.disposeAll();
   });
 });

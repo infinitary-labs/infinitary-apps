@@ -5,9 +5,11 @@ import { dirname, join } from "node:path";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import { type Card, onStage } from "@shared/cards";
+import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
+import { AUTOMATIC_WORD } from "@shared/placement";
 import { plainProblem } from "@shared/plainProblem";
 import { type DecisionRecord, decisionRecordSchema } from "@shared/provenance";
 import type { ModelsCatalogView, Slot } from "@shared/quota";
@@ -59,6 +61,7 @@ import {
 import { parseTasksQueryText } from "../pi/taskTools";
 import { piToolsOf } from "../pi/toolSpec";
 import type { ModelRuntime } from "../pi/types";
+import type { CrewMachines } from "../placed/placedSessions";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
 import type {
@@ -337,6 +340,8 @@ function setup(
     }) => void;
     /** A previous run's database: this setup is that app, restarted. */
     db?: ReturnType<typeof openInMemoryDatabase>;
+    /** The computers that run work for this one, as the crew reads them. */
+    machines?: CrewMachines;
   } = {},
 ) {
   const paths = appPathsFor(scratchDir("infinitary-agent-"));
@@ -374,6 +379,7 @@ function setup(
     broadcastCards: (snapshot) => {
       cards = snapshot;
     },
+    ...(options.machines ? { machines: options.machines } : {}),
   });
   const session = options.session ?? fakeSession();
   const specs: SessionSpec[] = [];
@@ -809,6 +815,55 @@ describe("FirstmateAgent", () => {
     expect(lives().meter).toBe("github (GitHub no longer accepts the sign-in)");
     // The sign-in never rides the context.
     expect(agent.buildContextBlock()).not.toContain("gho_test");
+  });
+
+  // INF-567, the captain's words: "hmm this is because we set this up on my
+  // macbook? pass this evidence back to first mate and ask it to figure out
+  // how to handle this kind of local inconsistencies". His approved plan: the
+  // first mate's context names, for each project, the computer keeping its
+  // folder and where its tasks run.
+  it("names the computer keeping each project's folder and where its tasks run, once another computer runs work (INF-567)", async () => {
+    const machines = {
+      computers: () => ["mini"],
+      nameOf: (id: string) => (id === "mini" ? "Kun's Mac mini" : id),
+    } as unknown as CrewMachines;
+    const adopt = async (repos: RepoRegistry, name: string) => {
+      const dir = scratchDir(`infinitary-places-${name}-`);
+      execFileSync("git", ["init", "--initial-branch=main", dir], { stdio: "pipe" });
+      execFileSync(
+        "git",
+        ["-C", dir, "remote", "add", "origin", `https://github.com/octo/${name}.git`],
+        {
+          stdio: "pipe",
+        },
+      );
+      return (await repos.setup({ kind: "adopt", path: dir, name })).repo;
+    };
+    const places = (agent: FirstmateAgent) =>
+      Object.fromEntries(
+        decodeContext(agent.buildContextBlock()).repos.map((repo) => [
+          repo.name,
+          { folder_on: repo.folder_on, tasks_run_on: repo.tasks_run_on },
+        ]),
+      );
+
+    const { agent, repos } = setup({ machines });
+    const business = await adopt(repos, "business");
+    repos.setRunsOn(business.id, "mini");
+    await adopt(repos, "meter");
+    await repos.setup({ kind: "init", name: "kept-here" });
+    expect(places(agent)).toEqual({
+      business: { folder_on: HERE.this, tasks_run_on: "Kun's Mac mini" },
+      meter: { folder_on: HERE.this, tasks_run_on: AUTOMATIC_WORD },
+      "kept-here": { folder_on: HERE.this, tasks_run_on: HERE.this },
+    });
+
+    // With no other computer, where its tasks run cannot differ: nothing is said.
+    const alone = setup();
+    await adopt(alone.repos, "business");
+    expect(places(alone.agent)).toEqual({
+      business: { folder_on: undefined, tasks_run_on: undefined },
+    });
   });
 
   it("fans orchestrator deltas out so Observe can follow Firstmate live", async () => {

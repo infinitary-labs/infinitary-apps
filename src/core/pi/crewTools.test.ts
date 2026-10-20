@@ -132,6 +132,21 @@ describe("crew tools", () => {
     );
   });
 
+  it("carries the first mate's declaration that the work is on the project's folder (INF-567)", async () => {
+    // The captain's approved plan: the first mate declares folder work by its own judgment.
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Bring the business folder up to date",
+      goal: "The business folder is clean, on main and at origin's main",
+      user_words: "bring the business folder up to date",
+      repo_id: "r1",
+      shape: { in_folder: true },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", shape: { in_folder: true } }),
+    );
+  });
+
   it("carries a task-level delivery ask through, without touching the repo", async () => {
     const { delegate, byName } = toolset();
     await byName.get("spawn_crewmate")?.execute("t1", {
@@ -569,6 +584,7 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
       "autonomy_ask",
       "runs_on_ask",
       "internal_step",
+      "in_folder",
       "skipped_plan_because",
       "review_of",
     ]);

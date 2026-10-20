@@ -42,6 +42,8 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   machineId: string;
   /** The task worktree the crewmate operates in. */
   cwd: string;
+  /** The name of the other computer it runs on, absent on this one (INF-567). */
+  computer?: string;
   /**
    * The task's temporary folder on the computer it runs on. Bulk working
    * material goes here and is removed when the task closes.
@@ -191,6 +193,7 @@ export function crewmateSessionSpec(
     spec.browser !== undefined && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
     spec.procedure,
     spec.tempDir,
+    spec.computer,
   );
   const tools = bindTools(CREWMATE_TOOLS, spec);
   return {

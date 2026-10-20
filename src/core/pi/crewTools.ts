@@ -231,16 +231,16 @@ const SHAPE_FIELD_RULES = {
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository's default is unchanged.",
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
+  in_folder: "Work on the project's folder itself: runs there, in it; ships nothing.",
   skipped_plan_because:
-    "On a direct build with no chosen basis, which parts of the sequences test passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host records and shows it, and does not judge it.",
+    "On a direct build with no chosen basis, which parts of the sequences test passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
-    "The task whose committed work an independent reviewer checks, read-only; pass the user's original words as user_words and the same repo_id.",
+    "The task whose committed work an independent reviewer checks, read-only; pass the user's original words and the same repo_id.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
 const START_AFTER_FIELD_RULES = {
-  after_task:
-    "the named task (a task id from crew_status) finishes; the same as one blocked_by entry",
+  after_task: "the named task finishes; the same as one blocked_by entry",
   when_quota_resets:
     "quota returns for a scope: a provider name from the quota line, or bucket:premium / bucket:high / bucket:medium / bucket:low",
   at_time: "an ISO 8601 date-time",
@@ -271,6 +271,7 @@ const SHAPE_FIELDS = {
   autonomy_ask: "boolean",
   runs_on_ask: "string",
   internal_step: "boolean",
+  in_folder: "boolean",
   skipped_plan_because: "string",
   review_of: "string",
 } as const;
@@ -333,8 +334,8 @@ export function createCrewTools(delegate: CrewDelegate) {
       "Pass a structured intent - a one-sentence goal, the user's words verbatim, typed",
       "constraints, and an optional delivery note - and the crewmate briefs itself from it",
       "on its first turn. Do not author a brief.",
-      "Pass repo_id to bind a managed repository; omit it for repo-less work (the default",
-      "workspace). Lessons and the user's own panels on the rails use personal_ui true: the",
+      "Pass repo_id to bind a project, or omit it for the default workspace.",
+      "Lessons and the user's own panels on the rails use personal_ui true: the",
       "host binds the personal workspace itself (no repo_id) and the crewmate builds in place,",
       "so name an existing surface's id in the goal for a change.",
       "Never ask a crewmate to run security, codesign or any Keychain command against the real",
@@ -392,6 +393,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             autonomy_ask: Type.Optional(Type.Boolean()),
             runs_on_ask: Type.Optional(Type.String()),
             internal_step: Type.Optional(Type.Boolean()),
+            in_folder: Type.Optional(Type.Boolean()),
             skipped_plan_because: Type.Optional(Type.String()),
             review_of: Type.Optional(Type.String()),
           },
@@ -629,6 +631,7 @@ function shapeAskFrom(params: {
   runs_on_ask?: string;
   placement_requirements?: PlacementRequirements;
   internal_step?: boolean;
+  in_folder?: boolean;
   review_of?: string;
   skipped_plan_because?: string;
 }): WorkShapeAsk | undefined {
@@ -655,6 +658,7 @@ function shapeAskFrom(params: {
       ? { placement_requirements: params.placement_requirements }
       : {}),
     ...(params.internal_step ? { internal_step: true } : {}),
+    ...(params.in_folder ? { in_folder: true } : {}),
     ...(reviewOf ? { review_of: reviewOf } : {}),
     ...(params.skipped_plan_because?.trim()
       ? { skipped_plan_because: params.skipped_plan_because.trim() }

@@ -815,6 +815,10 @@ The first mate sets it only from the captain's words, never by judging, and only
   The personal workspace and a project kept on this Mac only always run here, and have none.
   A review has no independent choice: it follows the computer its builder actually uses.
   A task with no project runs here unless the captain asks, and has no project to follow: it runs on a computer only by its own Runs on, or its parent's.
+  Work the first mate declares on a project's folder itself runs here, where the folder is, and has none (`docs/task-record.md`, "A folder a merge left behind").
+- **What each side is told** (INF-567).
+  Once a computer that runs work is on the list, the first mate's context names, for each project, the computer keeping its folder (`folder_on`, always this computer) and where its tasks start (`tasks_run_on`: a computer's name, Automatic, or this computer) (`CrewSupervisor.projectPlaces`).
+  A crewmate on a computer that runs work reads one line naming that computer and saying a project folder's path names nothing there (`crewmateComputerNote`); a crewmate here reads none.
 - **Kept until it starts.**
   An edit, or a move under another parent or into another project, re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
   A move made while a queued task's start waits on a computer - reading its sign-ins or the models it serves, or Automatic comparing computers - starts that start over from the record (`CrewSupervisor.startPlace`, INF-409).

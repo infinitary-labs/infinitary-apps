@@ -131,6 +131,7 @@ import {
   type InPlaceFacts,
   type InPlacePull,
   isFolderRepair,
+  isFolderWork,
   isPullRepair,
   levelDefaultReasoning,
   planSkippedText,
@@ -326,6 +327,7 @@ import {
   deliverableFor,
   type EscalationBriefFacts,
   FOLDER_REPAIR_TITLE,
+  type FolderBriefFacts,
   joinParts,
   type PersonalBriefFacts,
   PULL_REPAIR_TITLE,
@@ -1934,6 +1936,27 @@ export class CrewSupervisor {
     };
   }
 
+  /**
+   * Where a project's folder is and where its new tasks start, for the
+   * first mate's context (INF-567): the folder is always on this computer,
+   * which keeps the record, while its tasks follow the project's Runs on.
+   * Absent while no other computer runs work, when the two cannot differ.
+   */
+  projectPlaces(repo: RepoView): { folder: string; tasks: string } | undefined {
+    const machines = this.options.machines;
+    if (!machines || machines.computers().length === 0) return undefined;
+    const runsOn = runsHereOnly(repo) === null ? repo.runsOn : null;
+    return {
+      folder: HERE.this,
+      tasks:
+        runsOn === AUTOMATIC_COMPUTER
+          ? AUTOMATIC_WORD
+          : runsOn
+            ? machines.nameOf(runsOn)
+            : HERE.this,
+    };
+  }
+
   /** The Details row's words once a task's own Runs on is `ask` ("Mac mini (This task)"). */
   runsOnWords(taskId: string, ask: string | null): string {
     const record = this.options.tasks.get(taskId);
@@ -2625,6 +2648,8 @@ export class CrewSupervisor {
     // An independent review (delivery rigor phase 2) is its own commission:
     // the host briefs it from the record and holds the builder's merge.
     if (input.shape?.review_of?.trim()) {
+      if (input.shape.in_folder)
+        throw new Error(`${NOTHING_SPAWNED} A review reads its builder's branch; omit in_folder.`);
       // Review placement belongs to the builder, never a second choice.
       if (input.shape.runs_on_ask?.trim())
         throw new Error(
@@ -2676,20 +2701,33 @@ export class CrewSupervisor {
     // (Task A), and an ANSWER task commits nothing, pushes nothing and
     // opens no pull request (Task B). So the brief is rendered from the
     // shape, once the deliverable on it is settled.
+    // Folder work (INF-567) ships nothing either, and is told the folder.
     const renderBrief = (shaped: WorkShape): string => {
+      // A stronger-model retry of folder work inherits it with no ask of its own.
+      const inheritedRepo =
+        !placement.folder && isFolderWork(shaped.in_place) && boundRepoId
+          ? this.options.repos.get(boundRepoId)
+          : undefined;
+      const folder =
+        placement.folder ??
+        (inheritedRepo ? { project: inheritedRepo.name, folder: inheritedRepo.path } : undefined);
       const delivery =
-        placement.personal || shaped.deliverable === "answer" ? undefined : placement.delivery;
+        placement.personal || folder || shaped.deliverable === "answer"
+          ? undefined
+          : placement.delivery;
       return escalation
         ? renderEscalationBrief(
             input.intent,
             delivery,
             escalation.facts,
             personal ? { ...personal, kind: shaped.kind } : undefined,
+            folder,
           )
         : renderIntentBrief(
             input.intent,
             delivery,
             personal ? { ...personal, kind: shaped.kind } : undefined,
+            folder,
           );
     };
     const taskId = randomUUID().slice(0, 8);
@@ -3365,7 +3403,7 @@ export class CrewSupervisor {
     for (const record of live) {
       const facts = record.shape?.in_place;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-      if (!facts || !repo || this.closingFolders.has(record.id)) continue;
+      if (!facts || isFolderWork(facts) || !repo || this.closingFolders.has(record.id)) continue;
       if (isFolderRepair(facts) && !facts.branch) continue;
       if (isPullRepair(facts) && !this.options.readPull) continue;
       const state = this.tasks.get(record.id)?.state;
@@ -3619,7 +3657,12 @@ export class CrewSupervisor {
     shape?: WorkShapeAsk;
   }): TaskRecord {
     const placement = this.resolveGraphPlacement(input);
-    const brief = renderIntentBrief(input.intent, placement.delivery);
+    const brief = renderIntentBrief(
+      input.intent,
+      placement.folder ? undefined : placement.delivery,
+      undefined,
+      placement.folder,
+    );
     const taskId = randomUUID().slice(0, 8);
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);
     const shape = this.withDeliverable(this.workShape(input.shape), input.intent);
@@ -3672,6 +3715,8 @@ export class CrewSupervisor {
     delivery: RepoDelivery;
     /** The bound repository is the personal workspace: it builds in place. */
     personal: boolean;
+    /** The project and folder declared folder work works in (INF-567). */
+    folder?: FolderBriefFacts;
     parentId: string | undefined;
     blockedBy: string[];
   } {
@@ -3687,6 +3732,7 @@ export class CrewSupervisor {
       repoId = repo.id;
     }
     const repo = repoId ? this.options.repos.get(repoId) : undefined;
+    const folder = input.shape?.in_folder ? this.folderWorkOf(repo, input.shape) : undefined;
     const delivery = this.resolveSpawnDelivery(repo, input.intent, input.shape);
     const blockedBy = [
       ...new Set((input.blockedBy ?? []).map((ref) => this.resolveTaskRef(ref, "blocked_by").id)),
@@ -3695,9 +3741,43 @@ export class CrewSupervisor {
       repoId,
       delivery,
       personal: repo?.kind === "personal",
+      ...(folder ? { folder } : {}),
       parentId: parent?.id,
       blockedBy,
     };
+  }
+
+  /**
+   * The project and folder a task declared as folder work works in
+   * (INF-567): a registered project of the captain's, never the personal
+   * workspace, which builds in place already. The folder decides where it
+   * runs and that it ships nothing, so a Runs on, a delivery or a review
+   * named beside it is refused.
+   */
+  private folderWorkOf(repo: RepoView | undefined, ask: WorkShapeAsk): FolderBriefFacts {
+    if (!repo) {
+      throw new Error(
+        `${NOTHING_SPAWNED} in_folder needs a project: pass the repo_id of the project whose folder the task works in.`,
+      );
+    }
+    if (repo.kind === "personal") {
+      throw new Error(
+        `${NOTHING_SPAWNED} The personal workspace already builds in place; omit in_folder.`,
+      );
+    }
+    const clash = ask.runs_on_ask?.trim()
+      ? "runs_on_ask"
+      : ask.delivery_ask
+        ? "delivery_ask"
+        : ask.review_of?.trim()
+          ? "review_of"
+          : undefined;
+    if (clash) {
+      throw new Error(
+        `${NOTHING_SPAWNED} Folder work runs on the computer keeping ${repo.name}'s folder and ships nothing; omit ${clash}.`,
+      );
+    }
+    return { project: repo.name, folder: repo.path };
   }
 
   /**
@@ -3906,6 +3986,8 @@ export class CrewSupervisor {
       // Whether the work is one of the Firstmate's own steps does not change
       // with the attempt either.
       const internalStep = ask?.internal_step ?? inherited?.internal_step;
+      // So does working in the project's folder (INF-567).
+      const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
       return {
         kind: inherited?.kind ?? "unclear",
         kind_source: "none",
@@ -3925,6 +4007,7 @@ export class CrewSupervisor {
             }
           : {}),
         ...(internalStep ? { internal_step: true } : {}),
+        ...(inFolder ? { in_place: { folder: true as const } } : {}),
         ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
         escalate_from: escalation.stamp.from,
         escalation: escalation.stamp,
@@ -3946,6 +4029,7 @@ export class CrewSupervisor {
         ? { placement_requirements: ask.placement_requirements }
         : {}),
       ...(ask?.internal_step ? { internal_step: true } : {}),
+      ...(ask?.in_folder ? { in_place: { folder: true as const } } : {}),
       ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
     };
   }
@@ -4741,6 +4825,10 @@ export class CrewSupervisor {
     const briefed = {
       ...crewmate,
       procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
+      // A crewmate on another computer is told which one (INF-567).
+      ...(crewmate.machineId !== LOCAL_MACHINE_ID && this.options.machines
+        ? { computer: this.options.machines.nameOf(crewmate.machineId) }
+        : {}),
     };
     const spec = this.options.sessionSpec
       ? this.options.sessionSpec(briefed, binding)
@@ -9311,6 +9399,12 @@ export class CrewSupervisor {
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
     if (shape.in_place && repo) {
       const where = { project: repo.name, folder: repo.path };
+      // Folder work (INF-567) is the first mate's intent, told the folder.
+      if (isFolderWork(shape.in_place)) {
+        return record.intent
+          ? renderIntentBrief(record.intent, undefined, undefined, where)
+          : record.prompt;
+      }
       return isPullRepair(shape.in_place)
         ? renderPullRepairBrief({ ...shape.in_place, ...where })
         : renderFolderRepairBrief({ ...shape.in_place, ...where });

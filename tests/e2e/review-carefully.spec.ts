@@ -163,12 +163,15 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   );
 
   // 4. The first mate started the review; its brief names the open pull
-  //    request and the card the captain read, saved whole as a file.
+  //    request and the card the captain read, saved whole as a file. The
+  //    reviewer sends its brief only after its row exists (INF-632).
   const review = await taskRow((task) => task.reviewOf === builder.id);
-  const brief = (mockProvider?.requestBodies() ?? []).find(
-    (body) => body.includes(REVIEW_BRIEF_MARKER) && body.includes(MOCK_CAREFUL_CARD_TITLE),
-  );
-  expect(brief).toBeDefined();
+  const briefed = () =>
+    (mockProvider?.requestBodies() ?? []).find(
+      (body) => body.includes(REVIEW_BRIEF_MARKER) && body.includes(MOCK_CAREFUL_CARD_TITLE),
+    );
+  await expect.poll(() => briefed() ?? null, { timeout: 30_000 }).not.toBeNull();
+  const brief = briefed();
   expect(brief).toContain("pull/57");
   const saved = brief?.match(/(\/[^\s"\\]*merge-card-[^\s"\\]+\.html)/)?.[1];
   expect(saved).toBeDefined();

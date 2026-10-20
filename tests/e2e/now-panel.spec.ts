@@ -215,7 +215,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), task?.id ?? "");
     expect(detail).toMatchObject({ delivery: null, policies: { rigor: { value: "quick" } } });
     await expect(careFact).toContainText(CARE_WORDS.quick);
-    // Now, the newest Activity row of any kind, leads the record: the report's headline.
+    // Now, the crewmate's own newest doing, leads the record: the report's headline.
     await expect(taskFact(pane, "now")).toHaveText(reportSummary(MOCK_COMPLETION_TEXT));
     // Each section opens on its own; native disclosure is keyboard accessible
     // even inside the sandbox.
@@ -294,8 +294,10 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     );
     await expect(record.locator('[data-record-section="words"]')).toHaveAttribute("open", "");
     await expect(record.locator('[data-record-section="timeline"]')).toHaveAttribute("open", "");
-    // Now follows the newest row live: the captain's ask.
-    await expect(taskFact(recordCard(page), "now")).toHaveText(new RegExp(escapeRegExp(ASK)));
+    // Now is the crewmate's own newest doing (INF-557; docs/task-record.md,
+    // "The Now line"): the captain's ask, the newest row now on the record,
+    // stays Activity's, and Now still reads the report's headline.
+    await expect(taskFact(recordCard(page), "now")).toHaveText(reportSummary(MOCK_COMPLETION_TEXT));
 
     await hideRecord(page).click();
     await expect(recordCard(page)).toHaveCount(0);

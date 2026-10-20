@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-of-new-main-notes",
+      "reason": "Release review of the notes main added after the first attempt at this alpha failed its checks: rewords the busy-computer browser and phone look notes, names your first mate in the quick lesson choices note, drops what a crewmate is told from the folder work note, and keeps the three highlights. Nothing in the app changes."
+    }
+  ]
+}

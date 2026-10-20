@@ -4,7 +4,7 @@
       "id": "browser-answer-on-a-busy-mac",
       "kind": "fix",
       "title": "A crewmate keeps its browser's answers on a very busy computer",
-      "body": "When the computer is very busy, a crewmate waiting on a page now still gets the page's answer in the same step. Before, that answer could come back separately, later, and the crewmate could wait on the page again.",
+      "body": "When the computer is very busy, a crewmate waiting on a page now still gets the page's answer right away. Before, that answer could arrive later on its own, and the crewmate could wait on the page again.",
       "area": "crewmates",
       "noPicture": "Nothing on screen changes: the crewmate gets the page's answer instead of waiting on the page again.",
       "provenance": { "origin": "change" }

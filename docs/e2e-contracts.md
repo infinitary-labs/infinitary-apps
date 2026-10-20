@@ -247,6 +247,12 @@ A session runs turns when it names a session (`--session-id=`, `--resume=`) or a
   The mock provider cuts the seat off per class (`cutClaudeSeat`: the vendor's 401, a 429 with `rejected` plan-window headers and a reset, the 403 organisation refusal), and holds a first mate step open for a steer (`FM_SEAT_HOLD_MARKER`, `releaseHeldFirstmate`): the spec releases it only once the client's own transcript shows the steer queued - an order, never a clock.
   A Codex account beside it signs in with a dummy token shaped like Codex's (its claims name a ChatGPT account) and the app's `models.json` points Codex at the mock, which answers Codex's own dialect (`POST .../codex/responses`, server-sent Responses events, the zstd-compressed body read plain; the client's WebSocket attempt meets no upgrade and falls back) - so a move to Codex, and one back to Claude, run end to end.
 
+## A helper in the test process
+
+A journey that runs another Mac's helper inside the Playwright worker imports `startHelper` from `tests/e2e/helperRun.ts`, never from `src/core/helper/run.ts`.
+The helper loads its sign-ins and conversations code with the first order that needs it, and Playwright compiles code first loaded during a test on the worker's own thread without keeping the compile for the next run.
+Loaded then, the compile froze the test's clock for seconds inside a timed wait on a busy runner (INF-615); `helperRun.ts` loads both as the spec file loads, before any test's clock starts.
+
 ## Notes moved from AGENTS.md
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.

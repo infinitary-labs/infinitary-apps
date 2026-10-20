@@ -4,7 +4,6 @@ import { userInfo } from "node:os";
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { joinHome } from "../../src/core/helper/join";
-import { type HelperRun, startHelper } from "../../src/core/helper/run";
 import { renderWake } from "../../src/core/orchestrator/wakes";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import {
@@ -16,6 +15,7 @@ import { devicePlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
+import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   MOCK_PROPOSED_WORK,

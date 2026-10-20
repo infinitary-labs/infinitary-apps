@@ -7,7 +7,6 @@ import type { ClaudeAuthBackendOptions } from "../../src/core/claude/claudeAuth"
 import { NO_BROWSER } from "../../src/core/claude/claudeCli";
 import { startComputerAccounts } from "../../src/core/helper/accounts";
 import { joinHome } from "../../src/core/helper/join";
-import { type HelperRun, startHelper } from "../../src/core/helper/run";
 import { startSignIns } from "../../src/core/helper/signIns";
 import type { HostKeychain, HostKeychainQuery } from "../../src/core/host";
 import { configureGitSignIn, hostEnv } from "../../src/core/hostEnv";
@@ -25,6 +24,7 @@ import { customApiBlock, fillCustomApi, saveCustomApi } from "./customApi";
 import { startCustomApiFixture } from "./customApiFixture";
 import { type GitHubStub, STUB_USER_CODE, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
+import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import {

@@ -10,7 +10,6 @@ import { JoinedHome } from "@core/devices/joinedHome";
 import { OWN_KEY_COMMENT } from "@core/devices/ownKey";
 import { writeInstalled } from "@core/helper/background";
 import { joinHome, keepApp } from "@core/helper/join";
-import { type HelperRun, startHelper } from "@core/helper/run";
 import { catalogRefreshesSettled } from "@core/pi/modelRuntime";
 import { expect, type Page, test } from "@playwright/test";
 import { CONNECTION_CLOSE } from "@shared/connection";
@@ -29,7 +28,6 @@ import { nearbyMacsWords } from "@shared/nearbyMacs";
 import { remoteLoginWords, type WorkOutcome } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import electronPath from "electron";
-
 import {
   NO_NEW_WORK,
   PANEL_WORDS,
@@ -53,6 +51,7 @@ import {
 import { waitForFirstmateIdle } from "./crew";
 import { startDemo } from "./demo";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
+import { type HelperRun, startHelper } from "./helperRun";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";

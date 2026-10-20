@@ -1,4 +1,8 @@
-import { type FolderRefreshCause, folderRefreshWords } from "@shared/folderRefresh";
+import {
+  type FolderNoticed,
+  type FolderRefreshCause,
+  folderRefreshWords,
+} from "@shared/folderRefresh";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
 /**
@@ -52,6 +56,29 @@ export function folderNotUpdatedText(
   return repair.filed
     ? `${why} Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`
     : `${why} ${repair.key} "${FOLDER_REPAIR_TITLE}" is already doing it.`;
+}
+
+/**
+ * Work refused because the project's folder is missing (INF-572): the
+ * folder, what could not happen, and the task that brings it back - filed
+ * now, or already standing for the project.
+ */
+export function folderMissingText(
+  folder: string,
+  noticed: FolderNoticed,
+  repair: { key: string; filed: boolean } | undefined,
+): string {
+  const what =
+    noticed === "land"
+      ? "nothing can be merged into it"
+      : noticed === "branch-home"
+        ? "the task's branch cannot come to it from the computer it runs on"
+        : "this task cannot start on this computer";
+  const why = `Your project's folder ${folder} is missing, so ${what}.`;
+  if (!repair) return why;
+  return repair.filed
+    ? `${why} Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to bring it back.`
+    : `${why} ${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`;
 }
 
 /**

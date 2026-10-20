@@ -22058,6 +22058,249 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
 });
 
 /**
+ * INF-572, the captain's words: "pass this evidence back to first mate and
+ * ask it to figure out how to handle this kind of local inconsistencies".
+ * The approved plan: a missing folder is called missing wherever work needs
+ * it, refuses that work naming the folder and its repair, and the repair
+ * starts above it; at each app start a clean folder behind on its default
+ * branch is brought up to date, one with edits or its own commits gets the
+ * repair, a missing one and one on another branch are left alone, and a
+ * repair the captain closed comes back only once where the project lives moved on.
+ */
+describe("a project folder that is missing or behind (INF-572, real git)", {
+  timeout: 60_000,
+}, () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+  const run = (dir: string, ...args: string[]) =>
+    git(dir, ["-c", "user.name=T", "-c", "user.email=t@l", ...args]);
+
+  /** A project with an address, its folder level with origin, and a clone that merges "on the website". */
+  async function project() {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #2 is in on GitHub." }));
+    const harness = setup(crewmate, { realWorkspace: true, mergePullRequest });
+    const { repo: created } = await harness.repos.setup({ kind: "init", name: "shop" });
+    const folder = created.path;
+    await run(folder, "commit", "--allow-empty", "-m", "chore: start");
+    const origins = scratchDir("infinitary-missing-origin-");
+    const remote = join(origins, "origin.git");
+    await git(origins, ["init", "--bare", "--initial-branch=main", remote]);
+    await run(folder, "remote", "add", "origin", remote);
+    await run(folder, "push", "-u", "origin", "main");
+    await run(folder, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
+    // Merging is automatic, so the first mate's own merge goes through.
+    const repo = harness.repos.configure(created.id, {
+      origin: remote,
+      delivery: "direct-pr",
+      autonomy: true,
+    });
+    const clone = join(scratchDir("infinitary-missing-clone-"), "clone");
+    await git(dirname(clone), ["clone", remote, clone]);
+    const mergeOnWebsite = async (message: string) => {
+      await run(clone, "commit", "--allow-empty", "-m", message);
+      await run(clone, "push", "origin", "main");
+      return git(clone, ["rev-parse", "HEAD"]);
+    };
+    const repairs = () =>
+      harness.tasks.list().filter((row) => row.repoId === repo.id && row.shape?.in_place);
+    const notes = () =>
+      harness.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+    return { ...harness, crewmate, repo, folder, remote, mergeOnWebsite, repairs, notes };
+  }
+
+  it("a merge's update calls a deleted folder missing, and its repair starts above it and closes once the folder is back", async () => {
+    const h = await project();
+    seedTask(h.tasks, {
+      id: "shipped1",
+      title: "Ship the shop",
+      status: "idle",
+      repoId: h.repo.id,
+      repoDir: h.folder,
+    });
+    rmSync(h.folder, { recursive: true, force: true });
+
+    const reply = await h.supervisor.settleTask("shipped1", "merge-pr");
+
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    expect(reply).toContain(
+      `Merged, but your project's folder was not brought up to date: it is missing. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`,
+    );
+    expect(repair.shape?.in_place).toMatchObject({ cause: "missing" });
+
+    // It starts in the folder that held the missing one, with the missing folder's brief.
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    const parent = dirname(h.folder);
+    expect(h.sessionSpecs.at(-1)?.cwd).toBe(parent);
+    expect(h.tasks.get(repair.id)?.shape?.in_place).toMatchObject({ started_in: parent });
+    const brief = h.crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(`Goal: bring back the folder of shop at ${h.folder}`);
+    expect(brief).toContain(`your working directory is ${parent}`);
+    expect(brief).toContain(`clone it again from there into exactly ${h.folder}`);
+    expect(brief).toContain("In every other case change nothing and ask the captain on a card");
+    expect(brief).toContain(`Where the project lives: ${h.remote}`);
+    h.crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
+
+    // Still missing: it stays open.
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)?.status).toBe("active");
+
+    // The crewmate clones it again; the host reads it back and closes the task.
+    await git(parent, ["clone", h.remote, h.folder]);
+    await h.supervisor.closeCurrentFolders();
+    expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(h.tasks.timeline(repair.id)).toContainEqual(
+      expect.objectContaining({
+        text: "The project's folder is back: clean, on main and level with origin's main.",
+        feed: true,
+      }),
+    );
+    await h.supervisor.disposeAll();
+  });
+
+  it("refuses a task starting on this computer while its folder is missing, naming the folder and the one repair", async () => {
+    const h = await project();
+    seedTask(h.tasks, {
+      id: "header01",
+      title: "Fix the header",
+      status: "queued",
+      repoId: h.repo.id,
+    });
+    seedTask(h.tasks, {
+      id: "footer01",
+      title: "Fix the footer",
+      status: "queued",
+      repoId: h.repo.id,
+    });
+    rmSync(h.folder, { recursive: true, force: true });
+
+    await h.supervisor.dispatchQueuedTask("header01");
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    const header = h.tasks.get("header01");
+    expect(header?.status).toBe("open");
+    expect(header?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
+    expect(header?.gate?.reason).toContain(
+      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started ${repair.key} "Bring the folder up to date" to bring it back.`,
+    );
+    expect(repair.shape?.in_place).toMatchObject({
+      cause: "missing",
+      noticed: "start",
+      after: header?.key,
+    });
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.crewmate.promptCalls[0]).toContain(
+      `When ${header?.key} was starting on this computer`,
+    );
+
+    // A second task finds the same repair standing, and nothing new is filed.
+    await h.supervisor.dispatchQueuedTask("footer01");
+    expect(h.tasks.get("footer01")?.gate?.reason).toContain(
+      `${repair.key} "Bring the folder up to date" is already bringing it back.`,
+    );
+    expect(h.repairs()).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  it("refuses a merge into a folder that is missing, and files its repair", async () => {
+    const h = await project();
+    h.repos.configure(h.repo.id, { delivery: "local-only" });
+    seedTask(h.tasks, {
+      id: "landed01",
+      title: "Land the shop",
+      status: "idle",
+      repoId: h.repo.id,
+      repoDir: h.folder,
+      branch: "fm/task-landed01",
+    });
+    rmSync(h.folder, { recursive: true, force: true });
+
+    const reply = await h.supervisor.settleTask("landed01", "land");
+
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    expect(reply).toContain(
+      `Your project's folder ${h.folder} is missing, so nothing can be merged into it.`,
+    );
+    expect(h.tasks.get("landed01")?.status).not.toBe("done");
+    expect(repair.shape?.in_place).toMatchObject({ cause: "missing", noticed: "land" });
+    await h.supervisor.disposeAll();
+  });
+
+  it("at app start brings a clean folder up to date, files the repair for one with edits, and leaves one on another branch or missing", async () => {
+    const h = await project();
+    // Merged on the website: the clean folder moves forward, with one line.
+    const first = await h.mergeOnWebsite("feat: merged on the website (#3)");
+    await h.supervisor.checkFoldersAtStart();
+    expect(await git(h.folder, ["rev-parse", "HEAD"])).toBe(first);
+    expect(h.notes()).toEqual([
+      "The folder of shop was behind where the project lives; Infinitary brought its main up to date.",
+    ]);
+    expect(h.repairs()).toEqual([]);
+
+    // On another branch: left alone, and nothing is said.
+    const second = await h.mergeOnWebsite("feat: another merge (#4)");
+    await run(h.folder, "checkout", "-b", "spike");
+    await h.supervisor.checkFoldersAtStart();
+    expect(await git(h.folder, ["rev-parse", "main"])).toBe(first);
+    expect(h.repairs()).toEqual([]);
+
+    // Behind with the captain's edits: the repair, which says the start found it.
+    await run(h.folder, "checkout", "main");
+    writeFileSync(join(h.folder, "draft.txt"), "the captain's draft\n");
+    await h.supervisor.checkFoldersAtStart();
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    expect(repair.shape?.in_place).toMatchObject({
+      cause: "dirty",
+      noticed: "app-start",
+      branch: "main",
+      remote: second,
+    });
+    expect(repair.prompt).toContain("When the app started and read where the project lives");
+    expect(h.notes()).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  it("at app start leaves a missing folder for the work that next needs it", async () => {
+    const h = await project();
+    await h.mergeOnWebsite("feat: merged on the website (#3)");
+    rmSync(h.folder, { recursive: true, force: true });
+    await h.supervisor.checkFoldersAtStart();
+    expect(h.repairs()).toEqual([]);
+    expect(h.notes()).toEqual([]);
+    await h.supervisor.disposeAll();
+  });
+
+  it("files a repair the captain closed again only once where the project lives has moved on", async () => {
+    const h = await project();
+    await h.mergeOnWebsite("feat: merged on the website (#3)");
+    await run(h.folder, "commit", "--allow-empty", "-m", "chore: the captain's own commit");
+    await h.supervisor.checkFoldersAtStart();
+    const [closed] = h.repairs();
+    if (!closed) throw new Error("no repair task was filed");
+    expect(closed.shape?.in_place).toMatchObject({ cause: "diverged" });
+    h.tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+
+    // The next start: nothing moved where the project lives, so nothing is filed.
+    await h.supervisor.checkFoldersAtStart();
+    expect(h.repairs()).toHaveLength(1);
+
+    // Where the project lives moved on: the repair comes back once.
+    const moved = await h.mergeOnWebsite("feat: a later merge (#5)");
+    await h.supervisor.checkFoldersAtStart();
+    const again = h.repairs().filter((row) => row.id !== closed.id);
+    expect(again).toHaveLength(1);
+    expect(again[0]?.shape?.in_place).toMatchObject({ cause: "diverged", remote: moved });
+    await h.supervisor.disposeAll();
+  });
+});
+
+/**
  * INF-549's sibling, the captain's words: "Yes, as its own small change after
  * this one, with a brief that says close the pull request or report why not".
  * A discard whose pull request GitHub would not close files and starts the

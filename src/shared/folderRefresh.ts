@@ -7,6 +7,7 @@ import { z } from "zod";
  * state is one of these, and the task the host then files carries it.
  */
 export const folderRefreshCauseSchema = z.enum([
+  "missing",
   "no-origin",
   "no-default-branch",
   "dirty",
@@ -21,6 +22,16 @@ export const folderRefreshCauseSchema = z.enum([
 ]);
 export type FolderRefreshCause = z.infer<typeof folderRefreshCauseSchema>;
 
+/**
+ * What found a project's folder in a state the host could not work with
+ * (INF-572): a merge's update (the only one before it, and what a repair
+ * with none recorded was filed by), a task starting on this computer, a
+ * branch coming home from a computer that runs work, a merge into the
+ * folder itself, or the check at each app start.
+ */
+export const folderNoticedSchema = z.enum(["merge", "start", "branch-home", "land", "app-start"]);
+export type FolderNoticed = z.infer<typeof folderNoticedSchema>;
+
 /** A refused refresh: the typed cause, and what the host read before it stopped. */
 export type FolderRefreshRefusal = {
   refreshed: false;
@@ -34,6 +45,8 @@ export type FolderRefreshRefusal = {
 /** Each cause in the words a person reads, after "could not be brought up to date: ". */
 export function folderRefreshWords(cause: FolderRefreshCause): string {
   switch (cause) {
+    case "missing":
+      return "it is missing";
     case "no-origin":
       return "it does not know where the project lives";
     case "no-default-branch":

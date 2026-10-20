@@ -74,7 +74,11 @@ import {
 import type { CrewCounts, FmEvent } from "@shared/events";
 import { factDotSvg } from "@shared/factDot";
 import { reportSummary } from "@shared/feed";
-import { type FolderRefreshRefusal, folderRefreshWords } from "@shared/folderRefresh";
+import {
+  type FolderNoticed,
+  type FolderRefreshRefusal,
+  folderRefreshWords,
+} from "@shared/folderRefresh";
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
@@ -285,6 +289,7 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
   type DependencyInstall,
   keptRefFor,
+  nearestFolderAbove,
   type TaskWorkspace,
   type WorkspaceService,
   type WorktreeAcquisition,
@@ -362,6 +367,7 @@ import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
+import { folderMissingText } from "./settleWords";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
@@ -1317,6 +1323,7 @@ export class CrewSupervisor {
       ...(options.readPull ? { readPull: options.readPull } : {}),
       assessRepair: (taskId) => this.assessRepair(taskId),
       fileFolderRepair: (merged, refusal) => this.fileFolderRepair(merged, refusal),
+      folderMissing: (repoId, noticed, by) => this.folderMissing(repoId, noticed, by),
       filePullRepair: (abandoned, problem) => this.filePullRepair(abandoned, problem),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
       deliverableOf: (record) => this.deliverableOf(record),
@@ -3291,12 +3298,122 @@ export class CrewSupervisor {
       ...(refusal.remote ? { remote: refusal.remote } : {}),
       ...(merged.key ? { after: merged.key } : {}),
     };
+    return this.fileRepairFor(
+      repo,
+      facts,
+      `Another merge, ${merged.key || merged.id}, could not bring the folder up to date either: ${folderRefreshWords(facts.cause)}. The folder must now reach ${facts.reach ?? `origin's ${facts.branch ?? "default branch"}`}.`,
+    );
+  }
+
+  /**
+   * Work that needs a project's folder found it missing (INF-572, the
+   * captain's approved plan): a task starting on this computer, a branch
+   * coming home, or a merge into the folder. The repair that brings it back
+   * is filed, or the standing one named, and the words refusing that work
+   * return, naming the folder and the repair.
+   */
+  folderMissing(repoId: string, noticed: FolderNoticed, by?: TaskRecord): string {
+    const repo = this.options.repos.get(repoId);
+    if (!repo) return "The project's folder is missing.";
+    let repair: { record: TaskRecord; filed: boolean } | undefined;
+    try {
+      repair = this.fileRepairFor(
+        repo,
+        { cause: "missing", noticed, ...(by?.key ? { after: by.key } : {}) },
+        `The folder ${repo.path} is now missing: bring it back instead. Find out why it is missing, and clone it again into the same path only if it was deleted; otherwise ask the captain on a card.`,
+      );
+    } catch (caught) {
+      console.warn("[crew] the folder repair could not be filed:", caught);
+    }
+    return folderMissingText(
+      repo.path,
+      noticed,
+      repair ? { key: repair.record.key || repair.record.id, filed: repair.filed } : undefined,
+    );
+  }
+
+  /**
+   * The check at each app start, on the computer that keeps the record
+   * (INF-572, the captain's answers): every project with an address where it
+   * lives is read once, in the background. A missing folder waits until work
+   * needs it; a folder on another branch or on none is left alone; one that
+   * is behind and clean on its default branch is brought up to date, with
+   * one Activity line; one behind with edits or its own commits gets the
+   * repair, unless the captain closed one for that same version of where
+   * the project lives. A read that fails changes nothing.
+   */
+  async checkFoldersAtStart(): Promise<void> {
+    if (typeof this.options.workspace.refreshAtStart !== "function") return;
+    for (const repo of this.options.repos.list()) {
+      if (repo.kind !== "project" || !repo.origin) continue;
+      try {
+        const reading = await this.options.workspace.refreshAtStart(repo.path);
+        if (reading.outcome === "refreshed") {
+          this.options.broadcastEvent({
+            type: "firstmate_note",
+            text: `The folder of ${repo.name} was behind where the project lives; Infinitary brought its ${reading.branch} up to date.`,
+          });
+          continue;
+        }
+        if (reading.outcome !== "refused") continue;
+        const { refusal } = reading;
+        if (this.repairClosedAt(repo.id, refusal.remote)) continue;
+        this.fileRepairFor(
+          repo,
+          {
+            cause: refusal.cause,
+            noticed: "app-start",
+            ...(refusal.branch ? { branch: refusal.branch } : {}),
+            ...(refusal.remote ? { remote: refusal.remote } : {}),
+          },
+          `At the app's start the folder was still behind where the project lives: ${folderRefreshWords(refusal.cause)}.`,
+        );
+      } catch (caught) {
+        console.warn(`[crew] reading the folder of ${repo.name} at start:`, caught);
+      }
+    }
+  }
+
+  /**
+   * Whether the captain closed this project's latest folder repair while
+   * where the project lives stood at `remote` (INF-572, the captain's answer 4): the
+   * start check files it again only once that has moved on.
+   */
+  private repairClosedAt(repoId: string, remote: string | undefined): boolean {
+    if (!remote) return false;
+    const last = this.options.tasks
+      .list()
+      .filter((row) => row.repoId === repoId && isFolderRepair(row.shape?.in_place))
+      .filter((row) => row.status === "dropped")
+      .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0]?.shape?.in_place;
+    return isFolderRepair(last) && (last.remote === remote || last.reach === remote);
+  }
+
+  /**
+   * Files a project's folder repair, or updates the one standing with the
+   * newer facts and tells its crewmate `update`. A folder found missing
+   * again while its repair already knows tells nobody anything new.
+   */
+  private fileRepairFor(
+    repo: RepoView,
+    facts: InPlaceFacts,
+    update: string,
+  ): { record: TaskRecord; filed: boolean } | undefined {
     const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
       (row) => row.repoId === repo.id && isFolderRepair(row.shape?.in_place),
     );
     if (standing) {
-      this.options.tasks.recordShape(standing.id, { in_place: facts }, standing.difficulty);
-      const update = `Another merge, ${merged.key || merged.id}, could not bring the folder up to date either: ${folderRefreshWords(facts.cause)}. The folder must now reach ${facts.reach ?? `origin's ${facts.branch ?? "default branch"}`}.`;
+      const prior = standing.shape?.in_place;
+      if (isFolderRepair(prior) && prior.cause === "missing" && facts.cause === "missing") {
+        return { record: standing, filed: false };
+      }
+      const kept =
+        isFolderRepair(prior) && prior.started_in ? { started_in: prior.started_in } : {};
+      this.options.tasks.recordShape(
+        standing.id,
+        { in_place: { ...facts, ...kept } },
+        standing.difficulty,
+      );
       this.options.tasks.note(standing.id, update, { news: true });
       if (this.tasks.has(standing.id)) {
         void this.steerInternal(standing.id, update, {
@@ -3315,12 +3432,18 @@ export class CrewSupervisor {
       deliverable: "change",
       in_place: facts,
     };
+    const goal =
+      facts.cause === "missing"
+        ? `Bring back the folder of ${repo.name}, which is missing.`
+        : facts.reach
+          ? `Bring the folder of ${repo.name} up to date with the merged version.`
+          : `Bring the folder of ${repo.name} up to date with where the project lives.`;
     const record = this.options.tasks.create({
       id: randomUUID().slice(0, 8),
       kind: "work",
       title: FOLDER_REPAIR_TITLE,
-      goal: `Bring the folder of ${repo.name} up to date with the merged version.`,
-      prompt: renderFolderRepairBrief({ ...facts, project: repo.name, folder: repo.path }),
+      goal,
+      prompt: this.folderRepairBrief(repo, facts),
       repoId: repo.id,
       difficulty: tierFor(shape).bucket ?? null,
       shape,
@@ -3332,6 +3455,42 @@ export class CrewSupervisor {
     // It starts on this very sweep, the way a when-ready plan does.
     void this.sweepGates(this.now());
     return { record, filed: true };
+  }
+
+  /** A folder repair's brief, rendered from its facts and its project as they stand now. */
+  private folderRepairBrief(
+    repo: Pick<RepoView, "name" | "path" | "origin">,
+    facts: InPlaceFacts,
+  ): string {
+    const workdir =
+      facts.started_in ?? (existsSync(repo.path) ? undefined : nearestFolderAbove(repo.path));
+    return renderFolderRepairBrief({
+      ...facts,
+      project: repo.name,
+      folder: repo.path,
+      origin: repo.origin,
+      ...(workdir ? { workdir } : {}),
+    });
+  }
+
+  /**
+   * Where a task that works in place runs: its project's folder, or, for a
+   * folder repair that found it missing, the folder above it that exists,
+   * kept on the record so a resume opens there again (INF-572).
+   */
+  private inPlaceDir(taskId: string, folder: string): string {
+    const record = this.options.tasks.get(taskId);
+    const facts = record?.shape?.in_place;
+    if (!record || !isFolderRepair(facts)) return folder;
+    if (facts.started_in) return facts.started_in;
+    if (existsSync(folder)) return folder;
+    const started_in = nearestFolderAbove(folder);
+    this.options.tasks.recordShape(
+      taskId,
+      { in_place: { ...facts, started_in } },
+      record.difficulty,
+    );
+    return started_in;
   }
 
   /**
@@ -3404,7 +3563,6 @@ export class CrewSupervisor {
       const facts = record.shape?.in_place;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
       if (!facts || isFolderWork(facts) || !repo || this.closingFolders.has(record.id)) continue;
-      if (isFolderRepair(facts) && !facts.branch) continue;
       if (isPullRepair(facts) && !this.options.readPull) continue;
       const state = this.tasks.get(record.id)?.state;
       if (state !== undefined && state !== "idle") continue;
@@ -3451,12 +3609,22 @@ export class CrewSupervisor {
       if (pull?.state !== "closed") return undefined;
       return `The pull request ${facts.pull.label} is ${pull.merged ? "merged" : "closed"} where the project lives.`;
     }
-    if (!facts.branch) return undefined;
+    // A repair that never read a default branch - the folder was missing,
+    // or named none - reads it from the folder as it stands now (INF-572).
+    const branch =
+      facts.branch ??
+      (typeof this.options.workspace.folderDefaultBranch === "function"
+        ? await this.options.workspace.folderDefaultBranch(folder).catch(() => "")
+        : "");
+    if (!branch) return undefined;
     const current = await this.options.workspace
-      .folderCurrent(folder, facts.branch, facts.reach)
+      .folderCurrent(folder, branch, facts.reach)
       .catch(() => false);
     if (!current) return undefined;
-    return `The project's folder is up to date: clean, on ${facts.branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${facts.branch}`}.`;
+    if (facts.cause === "missing") {
+      return `The project's folder is back: clean, on ${branch} and level with origin's ${branch}.`;
+    }
+    return `The project's folder is up to date: clean, on ${branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${branch}`}.`;
   }
 
   /**
@@ -4562,8 +4730,14 @@ export class CrewSupervisor {
         // The personal workspace (Step 4), or a folder repair: the crewmate
         // works in the repository itself. No worktree, no branch; the record's
         // workspace columns stay empty so no close ever tries to remove one.
-        task.workspace = { taskId, cwd: repoDir, branch: "", repoDir };
+        const cwd = inPlace ? this.inPlaceDir(taskId, repoDir) : repoDir;
+        task.workspace = { taskId, cwd, branch: "", repoDir };
       } else {
+        // A task that needs the project's folder here is refused while it
+        // is missing, naming it and the repair that brings it back (INF-572).
+        if (spec.repoId && repoDir && !existsSync(repoDir)) {
+          throw new Error(this.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)));
+        }
         const headSha = this.reviewBuilderOf(record) ? record?.delivery?.headSha : undefined;
         this.options.tasks.beginPlacementPreparation(taskId);
         task.workspace = await this.options.workspace.createTaskWorktree(
@@ -6735,9 +6909,13 @@ export class CrewSupervisor {
       });
     }
     // On a computer that runs work, its working copy is there; this Mac holds none.
+    // A folder repair that started above its missing folder resumes there (INF-572).
+    const startedIn = isFolderRepair(record.shape?.in_place)
+      ? record.shape.in_place.started_in
+      : undefined;
     const cwd =
       machine === LOCAL_MACHINE_ID
-        ? record.worktreeDir || record.repoDir
+        ? startedIn || record.worktreeDir || record.repoDir
         : this.options.machines?.folders(machine, record.id)?.work;
     if (cwd === undefined) throw new Error("The computer this task runs on is out of reach.");
     this.crewmateSeq += 1;
@@ -9407,7 +9585,7 @@ export class CrewSupervisor {
       }
       return isPullRepair(shape.in_place)
         ? renderPullRepairBrief({ ...shape.in_place, ...where })
-        : renderFolderRepairBrief({ ...shape.in_place, ...where });
+        : this.folderRepairBrief(repo, shape.in_place);
     }
     const personal = this.isPersonalTask(record.id);
     const delivery =

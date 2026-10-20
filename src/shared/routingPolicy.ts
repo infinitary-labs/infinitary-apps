@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { crewSpeedSchema } from "./crewSpeed";
-import { folderRefreshCauseSchema } from "./folderRefresh";
+import { folderNoticedSchema, folderRefreshCauseSchema } from "./folderRefresh";
 import {
   type IntelligenceBucket,
   intelligenceBucketSchema,
@@ -227,8 +227,8 @@ export const workShapeSchema = z.object({
    * (INF-549, docs/task-record.md "A folder a merge left behind"). Only the
    * host writes it, in one of two shapes.
    *
-   * A folder a merge left behind carries the facts the folder was refused
-   * on: the default branch, the merged version the folder must reach
+   * A folder a merge left behind, or one missing or behind where other work
+   * found it (INF-572), carries the facts the folder was refused on: the default branch, the merged version the folder must reach
    * (`reach`), origin's default branch as last read (`remote`) and the typed
    * cause. The host closes the task once the folder is clean, on `branch`
    * and at or past `reach`.
@@ -251,8 +251,16 @@ export const workShapeSchema = z.object({
         reach: z.string().optional(),
         remote: z.string().optional(),
         cause: folderRefreshCauseSchema,
-        /** The merged task whose refresh was refused, by key. */
+        /** The merged task whose refresh was refused, by key, or the task that found the folder. */
         after: z.string().optional(),
+        /** What found the folder so (INF-572); absent on a repair a merge filed before it. */
+        noticed: folderNoticedSchema.optional(),
+        /**
+         * Where the repair's crewmate works when the folder was missing as it
+         * started: the nearest folder above it that exists (INF-572). A resume
+         * opens there again, even once the folder is back.
+         */
+        started_in: z.string().optional(),
       }),
       z.object({
         pull: z.object({

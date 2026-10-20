@@ -1592,6 +1592,11 @@ export async function createServices(
     // repository here, or this Mac's local workspace for a task with none.
     homeRepo: async (repoId) =>
       repoId ? repos.get(repoId)?.path : await workspace.ensureDefaultRepo(),
+    // A branch never comes into a missing folder: the refusal names it and
+    // the repair that brings it back (INF-572). Late-bound: the crew is set up below.
+    folderMissing: (repoId, taskId): string =>
+      supervisor.folderMissing(repoId, "branch-home", tasks.get(taskId)),
+    projectOrigin: (repoId) => repos.get(repoId)?.origin,
     projects: () => repos.list().map((repo) => repo.id),
     // A task there is routed among that computer's own sign-ins, with the
     // models they say they serve, as this Mac's catalog describes them.

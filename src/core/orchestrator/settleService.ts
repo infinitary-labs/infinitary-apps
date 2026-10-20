@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { type Card, settleEffectOf } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
-import type { FolderRefreshRefusal } from "@shared/folderRefresh";
+import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
 import type { MergeRelationship } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
@@ -281,6 +282,12 @@ export type SettleServiceHost = {
     refusal: FolderRefreshRefusal & { reach?: string },
   ) => { record: TaskRecord; filed: boolean } | undefined;
   /**
+   * Work found the project's folder missing: the supervisor files the task
+   * that brings it back, or names the one standing, and answers the words
+   * refusing that work (INF-572).
+   */
+  folderMissing?: (repoId: string, noticed: FolderNoticed, by?: TaskRecord) => string;
+  /**
    * An abandoned task's pull request could not be closed: the supervisor
    * files the task that closes it, or names the one standing (INF-549's
    * sibling).
@@ -524,12 +531,20 @@ export class SettleService {
       // A branch on a computer that runs work merges from here once it is
       // home, in the repository it came home to.
       const home = record.deviceId ? await this.host.placed?.bringBranchHome(taskId) : undefined;
+      const repoDir = home ?? record.repoDir;
+      // A merge into a folder that is gone is refused, and the folder's
+      // repair filed (INF-572).
+      const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
+      if (repo && repoDir && !existsSync(repoDir) && this.host.folderMissing) {
+        const text = this.host.folderMissing(repo.id, "land", record);
+        return { ok: false, text: `Cannot merge: ${text}`, problem: text };
+      }
       const { mode } = await this.host.workspace.landTaskWork(
         {
           taskId,
           cwd: record.worktreeDir,
           branch: record.branch,
-          repoDir: home ?? record.repoDir,
+          repoDir,
         },
         beforeDispatch,
       );

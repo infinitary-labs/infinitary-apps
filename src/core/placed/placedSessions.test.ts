@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join, relative } from "node:path";
 import type { AccountView } from "@shared/accounts";
@@ -78,6 +86,7 @@ import { CrewTranscripts } from "../tasks/crewTranscript";
 import { seedTask } from "../tasks/seedTask";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
+import { ProjectChanges } from "../workspace/projectChanges";
 import { keptRefFor } from "../workspace/workspaceService";
 import { NO_PLACED_TASK } from "./placedWork";
 
@@ -1895,6 +1904,57 @@ describe("a task that runs on a computer that runs work", () => {
     expect(landed.text).toBe('Merged "website" into main.');
     expect(await git(moved, ["rev-parse", "main"])).toBe(tip);
     expect(await git(repo.path, ["rev-parse", "main"])).toBe(project.main);
+  });
+
+  // INF-572, the captain's approved plan: a project's folder deleted on this
+  // Mac does not stop a task bound for the computer that runs work, which
+  // clones its own; its branch cannot come home into the missing folder, so
+  // its merge is refused naming the folder, and the folder's repair is filed.
+  it("starts a task there while this Mac's folder is missing, and refuses its branch coming home into it (INF-572)", async () => {
+    const project = await gitProject();
+    const at = await world();
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "local-only" });
+    // Every start reads the folder's address first, as the app wires it.
+    const changes = new ProjectChanges({
+      repos: home.repos,
+      devices: () => [],
+      raiseCard: () => {},
+      tell: () => {},
+    });
+    home.supervisor.setProjectChange({
+      apply: () => {},
+      decline: () => {},
+      inspect: (repoId) => changes.inspect(repoId),
+    });
+    rmSync(project.home, { recursive: true, force: true });
+
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-gone", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-gone")?.activity).toBe("idle");
+    const work = at.folders("t-gone").work;
+    expect(await git(work, ["rev-parse", "HEAD"])).toBe(project.main);
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    await commit(work, "feat: a blue footer");
+
+    const landed = await home.supervisor.settleTaskDetailed(
+      "t-gone",
+      "land",
+      undefined,
+      undefined,
+      "captain",
+    );
+    const repair = home.tasks
+      .list()
+      .find((row) => row.repoId === repo.id && row.shape?.in_place !== undefined);
+    if (!repair) throw new Error("no repair task was filed");
+    expect(repair.shape?.in_place).toMatchObject({ cause: "missing", noticed: "branch-home" });
+    expect(landed.text).toContain(
+      `Your project's folder ${project.home} is missing, so nothing can be merged into it.`,
+    );
+    expect(home.tasks.get("t-gone")?.status).toBe("active");
+    expect(existsSync(project.home)).toBe(false);
   });
 
   // INF-45: read_workflow's description promises a short read and a run

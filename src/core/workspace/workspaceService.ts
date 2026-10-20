@@ -185,6 +185,22 @@ export type WorktreeRetirement =
   | { outcome: "removed"; kept: KeptWork | null }
   | { outcome: "kept"; reason: string };
 
+/**
+ * Where a repair works while its project's folder is missing (INF-572): the
+ * folder that held it, or the nearest folder above that which exists.
+ */
+export function nearestFolderAbove(path: string): string {
+  let dir = dirname(resolve(path));
+  while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir);
+  return dir;
+}
+
+/** What the check at each app start found in a project's folder (`refreshAtStart`). */
+export type FolderStartReading =
+  | { outcome: "missing" | "unread" | "elsewhere" | "current" }
+  | { outcome: "refreshed"; branch: string; from: string; to: string }
+  | { outcome: "refused"; refusal: FolderRefreshRefusal };
+
 export class WorkspaceService {
   /** Retired trees still being deleted in the background. */
   private readonly deletions = new Set<Promise<void>>();
@@ -482,7 +498,11 @@ export class WorkspaceService {
   private async refreshManagedCheckoutOnce(
     repoDir: string,
   ): Promise<{ refreshed: true } | FolderRefreshRefusal> {
-    const remotes = await git(repoDir, ["remote"]).catch(() => "");
+    // A folder that is gone is missing, and one git cannot read is
+    // unreadable: neither says where the project lives (INF-572).
+    if (!existsSync(repoDir)) return { refreshed: false, cause: "missing" };
+    const remotes = await git(repoDir, ["remote"]).catch(() => null);
+    if (remotes === null) return { refreshed: false, cause: "unreadable" };
     if (!remotes.split("\n").includes("origin")) return { refreshed: false, cause: "no-origin" };
     const branch = await this.originDefaultBranch(repoDir);
     if (!branch) return { refreshed: false, cause: "no-default-branch" };
@@ -524,6 +544,75 @@ export class WorkspaceService {
     } catch {
       return fail("fast-forward-refused", remote);
     }
+  }
+
+  /**
+   * The check at each app start (INF-572, the captain's answers): one fetch
+   * of the folder's default branch from where the project lives, then the
+   * same rule as after a merge - only a clean folder on its default branch
+   * moves forward, by fast-forward. A folder on another branch or on none
+   * is left alone without a fetch; a folder at or past origin's is left as
+   * it is; one that is behind with edits or its own commits is refused
+   * with its cause, for its repair. Anything that cannot be read is
+   * `unread`, and the next start reads it again.
+   */
+  async refreshAtStart(repoDir: string): Promise<FolderStartReading> {
+    const prior = this.refreshQueues.get(repoDir) ?? Promise.resolve();
+    const run = prior.catch(() => {}).then(() => this.refreshAtStartOnce(repoDir));
+    this.refreshQueues.set(repoDir, run);
+    try {
+      return await run;
+    } finally {
+      if (this.refreshQueues.get(repoDir) === run) this.refreshQueues.delete(repoDir);
+    }
+  }
+
+  private async refreshAtStartOnce(repoDir: string): Promise<FolderStartReading> {
+    if (!existsSync(repoDir)) return { outcome: "missing" };
+    const remotes = await git(repoDir, ["remote"]).catch(() => "");
+    if (!remotes.split("\n").includes("origin")) return { outcome: "unread" };
+    const branch = await this.originDefaultBranch(repoDir);
+    if (!branch) return { outcome: "unread" };
+    const onBranch = async () =>
+      (await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(() => "")) ===
+      branch;
+    if (!(await onBranch())) return { outcome: "elsewhere" };
+    try {
+      await this.fetchDefaultBranch(repoDir, branch);
+    } catch (caught) {
+      console.warn(`[workspace] reading ${repoDir} at start: ${gitFailure(caught)}`);
+      return { outcome: "unread" };
+    }
+    const remote = await resolveCommit(repoDir, `refs/remotes/origin/${branch}`);
+    const head = await resolveCommit(repoDir, `refs/heads/${branch}`);
+    if (!remote || !head) return { outcome: "unread" };
+    if (await isAncestor(repoDir, remote, head)) return { outcome: "current" };
+    const refused = (cause: FolderRefreshCause): FolderStartReading => ({
+      outcome: "refused",
+      refusal: { refreshed: false, cause, branch, remote },
+    });
+    const dirty = async () =>
+      !!(await git(repoDir, ["status", "--porcelain"]).catch(() => "dirty"));
+    if (await dirty()) return refused("dirty");
+    if (!(await isAncestor(repoDir, head, remote))) return refused("diverged");
+    if (
+      !(await onBranch()) ||
+      (await dirty()) ||
+      (await resolveCommit(repoDir, `refs/heads/${branch}`)) !== head
+    ) {
+      return refused("changed");
+    }
+    try {
+      await git(repoDir, ["merge", "--ff-only", remote]);
+      return { outcome: "refreshed", branch, from: head, to: remote };
+    } catch {
+      return refused("fast-forward-refused");
+    }
+  }
+
+  /** The default branch the folder's origin declares, or "" when it declares none or is gone. */
+  async folderDefaultBranch(repoDir: string): Promise<string> {
+    return existsSync(repoDir) ? this.originDefaultBranch(repoDir) : "";
   }
 
   /** The default branch origin declares, or "" when it declares none. */

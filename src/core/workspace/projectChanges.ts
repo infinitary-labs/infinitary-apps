@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { ACTIONS, type ActionActor, type ActionName, isProjectChange } from "@shared/actions";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
@@ -168,6 +169,9 @@ export class ProjectChanges {
   async inspect(repoId: string): Promise<void> {
     const repo = this.options.repos.get(repoId);
     if (!repo || repo.kind === "personal") return;
+    // A missing folder says nothing about the address, and a task bound for
+    // another computer needs no folder here (INF-572).
+    if (!existsSync(repo.path)) return;
     const origin = await this.options.repos.detectedOrigin(repoId);
     if (origin !== repo.origin)
       await this.request(

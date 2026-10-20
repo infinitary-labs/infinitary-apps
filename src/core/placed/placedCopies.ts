@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { closeSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
@@ -62,6 +62,13 @@ export type PlacedCopiesOptions = {
   paths: AppPaths;
   /** The home's repository for a task: its project's, or this Mac's own local workspace. */
   homeRepo: (repoId: string | null) => Promise<string | undefined>;
+  /**
+   * The project's folder here is missing as a task's branch would come into
+   * it: the words refusing it, naming the folder and its repair (INF-572).
+   */
+  folderMissing?: (repoId: string, taskId: string) => string;
+  /** A project's saved address where it lives, cloned from while its folder here is missing. */
+  projectOrigin?: (repoId: string) => string | null | undefined;
   /** Every project's id, to find the one a leftover working copy there was cloned from. */
   projects: () => readonly string[];
   /** A paired computer's name, as Devices lists it. */
@@ -337,6 +344,12 @@ export class PlacedCopies {
       try {
         repoDir = await this.options.homeRepo(record.repoId ?? null);
         if (!repoDir) throw new Error("The source task has no repository here.");
+        if (record.repoId && !existsSync(repoDir)) {
+          throw new Error(
+            this.options.folderMissing?.(record.repoId, taskId) ??
+              `The project's folder ${repoDir} is missing.`,
+          );
+        }
         const ref = `refs/heads/${record.branch}`;
         const sha = await this.take(deviceId, taskId, repoDir, "branch", ref);
         if (strict && (!sha || (await commitOf(repoDir, ref)) !== sha))
@@ -666,9 +679,12 @@ export class PlacedCopies {
   private async originOf(repoId: string): Promise<{ origin: string; name: string }> {
     const name = this.options.projectName(repoId) ?? "the project";
     const repoDir = await this.options.homeRepo(repoId);
-    const origin = repoDir
-      ? await git(repoDir, ["remote", "get-url", "origin"]).catch(() => "")
-      : "";
+    // A folder missing here does not stop that computer cloning from the
+    // project's saved address (INF-572).
+    const origin =
+      repoDir && existsSync(repoDir)
+        ? await git(repoDir, ["remote", "get-url", "origin"]).catch(() => "")
+        : (this.options.projectOrigin?.(repoId) ?? "");
     if (!origin)
       throw new Error(`${name} has no origin to clone it from, so it runs on ${HERE.this} only.`);
     return { origin: withoutSignIn(origin), name };

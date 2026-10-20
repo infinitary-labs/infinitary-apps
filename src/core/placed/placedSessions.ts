@@ -288,6 +288,10 @@ export type PlacedSessionsOptions = {
    * kept work are brought into it (`PlacedCopies`).
    */
   homeRepo?: (repoId: string | null) => Promise<string | undefined>;
+  /** Words refusing a branch whose project's folder here is missing (`PlacedCopies`, INF-572). */
+  folderMissing?: (repoId: string, taskId: string) => string;
+  /** A project's saved address, cloned from while its folder here is missing (`PlacedCopies`). */
+  projectOrigin?: (repoId: string) => string | null | undefined;
   /** Every project's id, to find the one a leftover working copy there was cloned from. */
   projects?: () => readonly string[];
   /**
@@ -468,6 +472,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       devices: options.devices,
       paths: options.paths,
       homeRepo: options.homeRepo ?? (async () => undefined),
+      ...(options.folderMissing ? { folderMissing: options.folderMissing } : {}),
+      ...(options.projectOrigin ? { projectOrigin: options.projectOrigin } : {}),
       projects: options.projects ?? (() => []),
       deviceName: (deviceId) => this.nameOf(deviceId),
       projectName: options.projectName,

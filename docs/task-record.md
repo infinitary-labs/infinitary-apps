@@ -25,6 +25,20 @@ A later refusal on the same project while that task is open or active updates it
 Once a minute the host reads each such folder without changing it (`WorkspaceService.folderCurrent`), and a task whose folder is clean, on its default branch and at or past the merged version closes as finished with a line saying so, unless its crewmate is mid-turn or one of its cards is up (`CrewSupervisor.closeCurrentFolders`).
 Removing a working copy never touches a directory that is the repository itself, so a failed start of a task that works in place leaves the folder as it was.
 
+A folder that is gone is `missing`, and one git cannot read is `unreadable`; neither reads as having no address (INF-572).
+Work that needs the folder notices it then, never earlier: a merge's update says it is missing, and a task starting on this computer, a branch coming home from a computer that runs work (`PlacedCopies.bringBranchHome`), and a merge into the folder itself (`SettleService`) are refused with words naming the folder and its repair (`CrewSupervisor.folderMissing`, `folderMissingText`).
+Each files or names the same "Bring the folder up to date" task, with `in_place.noticed` saying what found it; a folder found missing again while its repair knows it tells nobody anything new.
+A refused start waits on the captain like any start that failed.
+A task bound for a computer that runs work still starts: the start's read of the folder's address skips a missing folder (`ProjectChanges.inspect`), and that computer clones from the project's saved address.
+A missing folder's repair works in the folder that held it, or the nearest folder above that exists, recorded as `in_place.started_in` so a resume opens there again (`nearestFolderAbove`).
+Its brief has the crewmate find out why the folder is missing, clone it again into the same path only when it was deleted, and otherwise ask the captain on a card.
+A repair that never read a default branch reads it from the folder's own `origin/HEAD` when the minute's read comes round, so it closes once the folder is back, clean, on that branch and level with origin's.
+
+At each app start, the computer that keeps the record reads every project with an address once, in the background (`CrewSupervisor.checkFoldersAtStart`, `WorkspaceService.refreshAtStart`).
+A missing folder is left for the work that next needs it; a folder on another branch or on none is left alone without a fetch; one that cannot be read, or is level with or ahead of origin's default branch, is left as it is.
+A clean folder behind on its default branch is fast-forwarded, as after a merge, with one Activity line.
+One behind with edits or commits of its own gets the repair, with `noticed: "app-start"`, unless the captain dropped the project's latest repair while origin's default branch stood where it stands now; once that moves on, the next start files it again.
+
 A pull request an abandoned task could not close gets the same kind of task (INF-549's sibling).
 When a discarded, cancelled, failed or superseded task's pull request is refused its close (`SettleService.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`CrewSupervisor.filePullRepair`); one stands per pull request.
 The note on the abandoned task names it, and is an Activity line unless the captain's own click already put the outcome there.

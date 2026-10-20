@@ -822,28 +822,59 @@ export const IN_PLACE_OPENING = "You work in place";
 
 /**
  * The brief of the task the host files when it could not bring a project's
- * folder up to date after a merge (INF-549, approved by the captain): every
- * line is filled from the facts on the record, modelled on INB-9's
- * hand-written brief without its delivery line. It names no delivery, no
- * pull request and no completion decision, because the task ships nothing.
+ * folder up to date after a merge (INF-549, approved by the captain), or
+ * when other work found the folder missing or behind (INF-572): every line
+ * is filled from the facts on the record, modelled on INB-9's hand-written
+ * brief without its delivery line. It names no delivery, no pull request and
+ * no completion decision, because the task ships nothing. A missing folder's
+ * brief has the crewmate find out why, from the folder above it, and clone
+ * it again only when it was deleted.
  */
 export function renderFolderRepairBrief(
-  facts: InPlaceFacts & { project: string; folder: string },
+  facts: InPlaceFacts & {
+    project: string;
+    folder: string;
+    /** Where the project lives, when it has an address. */
+    origin?: string | null;
+    /** The crewmate's working directory, when it is not the folder itself. */
+    workdir?: string;
+  },
 ): string {
   const branch = facts.branch ?? "the default branch";
   const reach = facts.reach ?? `origin's ${branch} as you fetch it`;
-  return [
-    `Goal: bring the folder of ${facts.project} at ${facts.folder} up to date: checked out on its default branch${facts.branch ? ` ${facts.branch}` : ""}, with no uncommitted edits, and at or past ${reach}.`,
-    "",
-    `Infinitary filed this task itself. ${facts.after ? `After it merged ${facts.after}` : "After a merge"}, it could not bring the project's folder up to date: ${folderRefreshWords(facts.cause)}. It only ever fast-forwards a clean folder on its default branch, so the rest is yours to judge.`,
-    "",
+  const found = folderFoundBy(facts);
+  const factLines = [
     "Facts:",
     `- Project: ${facts.project}`,
     `- Folder: ${facts.folder}`,
+    `- Where the project lives: ${facts.origin || "nowhere; it is kept only on this computer"}`,
     `- Default branch: ${facts.branch ?? "not named by where the project lives"}`,
     `- Merged version: ${facts.reach ?? "not known"}`,
     `- ${branch} where the project lives, as last read: ${facts.remote ?? "not read"}`,
     `- Why it was not brought up to date: ${folderRefreshWords(facts.cause)}`,
+  ];
+  if (facts.cause === "missing") {
+    const workdir = facts.workdir ?? facts.folder;
+    return [
+      `Goal: bring back the folder of ${facts.project} at ${facts.folder}: there again, checked out on its default branch, with no uncommitted edits, and level with where the project lives.`,
+      "",
+      `Infinitary filed this task itself. ${found}, the project's folder was not there: ${folderRefreshWords(facts.cause)}. Work that needs the folder cannot run until it is back.`,
+      "",
+      ...factLines,
+      "",
+      `${IN_PLACE_OPENING}: your working directory is ${workdir}, the nearest folder above the missing one that exists, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+      "Find out why the folder is missing first: whether it was deleted, moved or renamed elsewhere, sits on a drive that is not connected, or was kept only on this computer.",
+      `Only if it was deleted, and the project has an address where it lives, clone it again from there into exactly ${facts.folder}. A fresh clone cannot bring back branches or edits that were only in the deleted folder: say so in your report.`,
+      "In every other case change nothing and ask the captain on a card what to do. Never move, rename or delete another folder, and never clone into any other path.",
+      `Once the folder is back, clean, on its default branch and level with where the project lives, report what you did and why it was missing in a few sentences. Infinitary sees the folder back and closes this task itself; show a card only when you must ask the captain.`,
+    ].join("\n");
+  }
+  return [
+    `Goal: bring the folder of ${facts.project} at ${facts.folder} up to date: checked out on its default branch${facts.branch ? ` ${facts.branch}` : ""}, with no uncommitted edits, and at or past ${reach}.`,
+    "",
+    `Infinitary filed this task itself. ${found}, it could not bring the project's folder up to date: ${folderRefreshWords(facts.cause)}. It only ever fast-forwards a clean folder on its default branch, so the rest is yours to judge.`,
+    "",
+    ...factLines,
     "",
     `${IN_PLACE_OPENING}: your working directory is this folder itself, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
     `Read the folder first: its status, the branch it is on, its stashes, and how its ${branch} compares with origin's.`,
@@ -854,6 +885,23 @@ export function renderFolderRepairBrief(
     "If you can tell, say what put the folder in that state.",
     `Once the folder is clean, on ${branch} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
   ].join("\n");
+}
+
+/** What found the folder, opening the repair brief's account (INF-572). */
+function folderFoundBy(facts: InPlaceFacts): string {
+  const who = facts.after ?? "a task";
+  switch (facts.noticed) {
+    case "start":
+      return `When ${who} was starting on this computer`;
+    case "branch-home":
+      return `When ${who}'s branch was coming here from the computer it runs on`;
+    case "land":
+      return `When it was merging ${who} into the folder`;
+    case "app-start":
+      return "When the app started and read where the project lives";
+    default:
+      return facts.after ? `After it merged ${facts.after}` : "After a merge";
+  }
 }
 
 /** The title of the task the host files for a pull request an abandoned task left open (INF-549). */

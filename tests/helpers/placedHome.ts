@@ -212,6 +212,11 @@ export function startPlacedHome(options: {
     // into this Mac's own local workspace for a task with none.
     homeRepo: async (repoId) =>
       repoId ? repos.get(repoId)?.path : await workspace.ensureDefaultRepo(),
+    // A branch never comes into a missing folder: the refusal names it and
+    // the repair that brings it back (INF-572). Late-bound: the crew is set up below.
+    folderMissing: (repoId, taskId): string =>
+      supervisor.folderMissing(repoId, "branch-home", tasks.get(taskId)),
+    projectOrigin: (repoId) => repos.get(repoId)?.origin,
     projects: () => repos.list().map((repo) => repo.id),
     signIns: (deviceId) => signIns.signInsOf(deviceId),
     saidSignIns: (deviceId) => signIns.lastSaid(deviceId),

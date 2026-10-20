@@ -45,6 +45,9 @@ export async function startCore(host: HostCapabilities): Promise<Core> {
   services.projectSetups.bindDispatch(dispatch);
   services.projectChanges.bindDispatch(dispatch);
   await services.projectChanges.inspectAll();
+  // Each project's folder is read once against where the project lives, in
+  // the background, so the window opens as fast as before (INF-572).
+  void services.supervisor.checkFoldersAtStart();
   return {
     services,
     paths: services.paths,

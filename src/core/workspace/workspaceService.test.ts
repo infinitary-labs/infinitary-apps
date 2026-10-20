@@ -793,6 +793,111 @@ describe("refreshManagedCheckout", () => {
       await git(local, ["checkout", "-b", "spike"]);
       expect(await workspace.folderCurrent(local, "main", merged)).toBe(false);
     });
+
+    /**
+     * INF-572, the captain's approved plan: a merge's update on a folder
+     * that is not there says "it is missing", and one git cannot read says
+     * so, never that it does not know where the project lives.
+     */
+    it("a folder that is gone, and one git cannot read", async () => {
+      const { workspace, local } = await behindOrigin();
+      rmSync(join(local, ".git"), { recursive: true, force: true });
+      expect(await workspace.refreshManagedCheckout(local)).toEqual({
+        refreshed: false,
+        cause: "unreadable",
+      });
+      rmSync(local, { recursive: true, force: true });
+      expect(await workspace.refreshManagedCheckout(local)).toEqual({
+        refreshed: false,
+        cause: "missing",
+      });
+      expect(await workspace.folderDefaultBranch(local)).toBe("");
+    });
+  });
+
+  /**
+   * INF-572, the captain's answers for the check at each app start: a clean
+   * folder behind on its default branch is brought up to date as after a
+   * merge; one with edits or its own commits is refused for its repair; a
+   * folder on another branch or on none is left alone; a missing folder is
+   * left for the work that next needs it.
+   */
+  describe("reads a folder once at app start", () => {
+    async function behind() {
+      const { workspace } = await service();
+      const remote = join(scratchDir("infinitary-start-remote-"), "remote.git");
+      // Named, so a clone checks out main whatever git's own default is.
+      await git(dirname(remote), ["init", "--bare", "--initial-branch=main", remote]);
+      const local = await workspace.ensureDefaultRepo();
+      await git(local, ["remote", "add", "origin", remote]);
+      await git(local, ["push", "-u", "origin", "main"]);
+      await git(local, ["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"]);
+      const clone = join(scratchDir("infinitary-start-clone-"), "clone");
+      await git(dirname(clone), ["clone", remote, clone]);
+      const commit = (dir: string, message: string) =>
+        git(dir, [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.com",
+          "commit",
+          "--allow-empty",
+          "-m",
+          message,
+        ]);
+      // Merged on the project's host, so the folder never saw it.
+      await commit(clone, "feat: merged on the website (#3)");
+      await git(clone, ["push", "origin", "main"]);
+      const merged = await git(clone, ["rev-parse", "HEAD"]);
+      const before = await git(local, ["rev-parse", "HEAD"]);
+      return { workspace, local, merged, before, commit };
+    }
+
+    it("brings a clean folder on its default branch up to date, then finds it current", async () => {
+      const { workspace, local, merged, before } = await behind();
+      expect(await workspace.refreshAtStart(local)).toEqual({
+        outcome: "refreshed",
+        branch: "main",
+        from: before,
+        to: merged,
+      });
+      expect(await git(local, ["rev-parse", "HEAD"])).toBe(merged);
+      expect(await workspace.refreshAtStart(local)).toEqual({ outcome: "current" });
+    });
+
+    it("refuses one with edits or its own commits, and leaves it as it is", async () => {
+      const { workspace, local, merged, before, commit } = await behind();
+      writeFileSync(join(local, "draft.txt"), "the captain's draft\n");
+      expect(await workspace.refreshAtStart(local)).toEqual({
+        outcome: "refused",
+        refusal: { refreshed: false, cause: "dirty", branch: "main", remote: merged },
+      });
+      expect(await git(local, ["rev-parse", "HEAD"])).toBe(before);
+      rmSync(join(local, "draft.txt"));
+      await commit(local, "chore: only in the folder");
+      expect(await workspace.refreshAtStart(local)).toMatchObject({
+        outcome: "refused",
+        refusal: { cause: "diverged", remote: merged },
+      });
+    });
+
+    it("leaves a folder on another branch or on none, and a missing one", async () => {
+      const { workspace, local, before } = await behind();
+      await git(local, ["checkout", "-b", "spike"]);
+      expect(await workspace.refreshAtStart(local)).toEqual({ outcome: "elsewhere" });
+      await git(local, ["checkout", "--detach"]);
+      expect(await workspace.refreshAtStart(local)).toEqual({ outcome: "elsewhere" });
+      expect(await git(local, ["rev-parse", "HEAD"])).toBe(before);
+      rmSync(local, { recursive: true, force: true });
+      expect(await workspace.refreshAtStart(local)).toEqual({ outcome: "missing" });
+    });
+
+    it("changes nothing when where the project lives cannot be read", async () => {
+      const { workspace, local, before } = await behind();
+      await git(local, ["remote", "set-url", "origin", join(local, "nowhere.git")]);
+      expect(await workspace.refreshAtStart(local)).toEqual({ outcome: "unread" });
+      expect(await git(local, ["rev-parse", "HEAD"])).toBe(before);
+    });
   });
 });
 

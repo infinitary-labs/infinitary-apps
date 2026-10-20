@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "missing-or-behind-folder",
+      "kind": "fix",
+      "title": "A missing or behind project folder is called what it is",
+      "body": "When your project's folder has been deleted, Infinitary now says it is missing instead of showing an error, and starts Bring the folder up to date, which finds out why from the folder above it and clones it again only if it was deleted. Tasks that need the folder wait with that reason, while tasks on another computer start as usual. Each time the app starts, a clean folder that fell behind where your project lives, such as after a merge on GitHub's website, is brought up to date with one line in Activity.",
+      "area": "projects",
+      "noPicture": "It shows only as Activity lines and an ordinary task in Tasks when a folder is missing or behind, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

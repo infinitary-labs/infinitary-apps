@@ -617,7 +617,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verify).toContain("workflow_call:");
     expect(verify).toContain("workflow_dispatch:");
     expect(verify).not.toMatch(/^\s*(schedule|pull_request|push):/m);
-    expect(verify).toContain("pnpm test:e2e");
+    expect(verify).toContain("pnpm exec playwright test");
     expect(verify).toContain("pnpm replay:gate");
     expect(verify).toContain("vars.MAC_RUNNER || 'macos-15'");
   });
@@ -758,12 +758,16 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   };
 
   /**
-   * Whether Actions runs a step in the mac lane once the earlier steps ended
-   * with these outcomes: its condition through GitHub's own evaluator, with
-   * the status functions the job's state gives, and a condition naming none
-   * of them runs only on success().
+   * Whether Actions runs a step in a lane (the mac lane unless named) once
+   * the earlier steps ended with these outcomes: its condition through
+   * GitHub's own evaluator, with the status functions the job's state gives,
+   * and a condition naming none of them runs only on success().
    */
-  const stepRuns = (step: Step | undefined, outcomes: Record<string, string>) => {
+  const stepRuns = (
+    step: Step | undefined,
+    outcomes: Record<string, string>,
+    lane: "mac" | "linux-checks" = "mac",
+  ) => {
     const failed = Object.values(outcomes).includes("failure");
     const status: Array<[string, boolean]> = [
       ["success", !failed],
@@ -792,7 +796,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         value: new data.Dictionary({ key: "outcome", value: new data.StringData(outcome) }),
       })),
     );
-    const matrix = new data.Dictionary({ key: "lane", value: new data.StringData("mac") });
+    const matrix = new data.Dictionary({ key: "lane", value: new data.StringData(lane) });
     const context = new data.Dictionary(
       { key: "steps", value: steps },
       { key: "matrix", value: matrix },
@@ -877,7 +881,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     const steps = verify.jobs.lane.steps;
     const e2e = steps.findIndex((step) => step.id === "e2e");
-    expect(steps[e2e]?.run).toBe("pnpm test:e2e");
+    expect(steps[e2e]?.run).toBe("pnpm exec playwright test");
     const result = steps[e2e]?.env?.PLAYWRIGHT_JSON_OUTPUT_FILE ?? "";
     expect(result).not.toBe("");
     const upload = (path: string) =>
@@ -1038,10 +1042,87 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       "- `rows.spec.ts:12` the rows › docks (desktop)\n- `rows.spec.ts:20` the rows › moves (desktop)",
     );
 
-    // A unit failure keeps e2e from starting: the stage is named, and no result is claimed.
+    // A failed stage is named, and an e2e suite that left no result claims none.
     const early = summarizeRun(summarize, { install: "success", unit: "failure" });
     expect(early.summary).toContain("First failed stage: **unit**.");
     expect(early.summary).toContain("No e2e result: the suite did not run to its end.");
+  });
+
+  /**
+   * INF-663 (the captain asked whether the full check discovers every
+   * failure or only the first): each stage waits only on the stages it
+   * needs, so a red unit test no longer skips the e2e suite, the client
+   * check, the replay gate or the package smoke. The job still ends red on
+   * any failure, so release.yml still refuses to sign ("signs only after
+   * full verification", below).
+   */
+  it("runs each stage when its own inputs passed, whatever else failed, and still ends red", () => {
+    const verify = loadYamlFile(".github/workflows/verify.yml") as {
+      jobs: { lane: { steps: Step[] } };
+    };
+    const steps = verify.jobs.lane.steps;
+    const stage = (id: string) => steps.find((step) => step.id === id);
+    const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
+    const needs: Record<string, string[]> = {
+      "dev-signing": ["install"],
+      unit: ["install"],
+      build: ["install"],
+      recorder: ["install"],
+      e2e: ["build", "dev-signing", "recorder"],
+      "claude-client": ["install"],
+      replay: ["install"],
+      package: ["build", "dev-signing"],
+      codesign: ["package"],
+      "data-folder": ["package"],
+      "bundled-git": ["package"],
+      helper: ["package"],
+    };
+    const upstream = (id: string): string[] =>
+      (needs[id] ?? []).flatMap((input) => [input, ...upstream(input)]);
+    for (const [id, inputs] of Object.entries(needs)) {
+      // Every earlier stage it does not stand on failed: it still runs.
+      const earlier = ids.slice(0, ids.indexOf(id));
+      const unrelatedRed = Object.fromEntries(
+        earlier.map((other) => [other, upstream(id).includes(other) ? "success" : "failure"]),
+      );
+      expect(stepRuns(stage(id), unrelatedRed), `${id} after unrelated failures`).toBe(true);
+      // Any input red or skipped: it does not.
+      for (const input of inputs)
+        for (const outcome of ["failure", "skipped"])
+          expect(
+            stepRuns(stage(id), { ...unrelatedRed, [input]: outcome }),
+            `${id} after ${input} ${outcome}`,
+          ).toBe(false);
+    }
+
+    // The failure INF-663 read on main (release run 39337627117): a red unit
+    // stage skipped every later stage. Now each one runs.
+    const unitRed = Object.fromEntries(
+      ids.map((id) => [id, id === "unit" ? "failure" : "success"]),
+    );
+    const later = ids.slice(ids.indexOf("unit") + 1).filter((id) => id !== "perf");
+    expect(later.filter((id) => !stepRuns(stage(id), unitRed))).toEqual([]);
+
+    // The linux-checks lane the same way: a red check skips none of the others.
+    const linux = steps.filter(
+      (step) => step.run?.startsWith("pnpm ") && step.if?.includes("linux-checks"),
+    );
+    expect(linux.map((step) => step.run)).toEqual([
+      "pnpm typecheck",
+      "pnpm check",
+      "pnpm lint:adherence",
+      "pnpm test",
+    ]);
+    for (const step of [...linux, stage("build")]) {
+      const afterRed = { install: "success", "an earlier check": "failure" };
+      expect(stepRuns(step, afterRed, "linux-checks"), step?.run).toBe(true);
+      expect(stepRuns(step, { install: "failure" }, "linux-checks"), step?.run).toBe(false);
+    }
+
+    // A red stage still fails the job: only the summary, a report, may not.
+    expect(
+      steps.filter((step) => step["continue-on-error"]).map((step) => step.name ?? step.id),
+    ).toEqual(["Summarize"]);
   });
 
   /**
@@ -2057,7 +2138,11 @@ describe("the signed channel workflow", () => {
               workflowValue(candidate.if, {
                 matrix: { lane: name },
                 inputs: {},
-                steps: { e2e: { outcome: "success" } },
+                steps: Object.fromEntries(
+                  (lane.steps ?? []).flatMap(({ id }) =>
+                    id ? [[id, { outcome: "success" }]] : [],
+                  ),
+                ),
               }) === true),
         )
         .map((candidate) => candidate.run);
@@ -2066,7 +2151,12 @@ describe("the signed channel workflow", () => {
     );
     expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(prGate)].toSorted());
     expect(runsIn("mac")).toEqual(
-      expect.arrayContaining(["pnpm test", "pnpm test:e2e", "pnpm replay:gate"]),
+      expect.arrayContaining([
+        "pnpm test",
+        "pnpm build",
+        "pnpm exec playwright test",
+        "pnpm replay:gate",
+      ]),
     );
     expect(runsIn("mac")).not.toContain("pnpm typecheck");
     // The release's summary names each profile's lanes and what it omits,

@@ -127,39 +127,51 @@ jobs:
       # signs the dev Electron here, the way `pnpm dev` does on a person's
       # Mac: e2e runs on it signed, and the codesign stage checks it.
       - id: dev-signing
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm codesign:local
+      # Each later stage waits only on the stages it needs, never on every
+      # stage before it: !cancelled() lets it run after an unrelated failure,
+      # and its inputs' outcomes keep it from running on a broken one. So one
+      # red stage leaves every independent stage's result on the run, and the
+      # job still ends red on any failure, which keeps release.yml from signing.
+      #
       # linux-checks: the commands of ci.yml's PR jobs, in one job on hosted Linux.
       # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"),
-      # where the PR jobs run only the probes a change reaches.
-      - if: matrix.lane == 'linux-checks'
+      # where the PR jobs run only the probes a change reaches. Each needs only
+      # the install; its build is the shared one below.
+      - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm typecheck
-      - if: matrix.lane == 'linux-checks'
+      - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm check
-      - if: matrix.lane == 'linux-checks'
+      - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm lint:adherence
-      - if: matrix.lane == 'linux-checks'
+      - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm test
-      - if: matrix.lane == 'linux-checks'
-        run: pnpm build
       # The unit suite on macOS too: some suites are darwin-only (the local
       # code signing contract in tests/local-codesign.test.ts, among others)
       # and skip on the Linux PR check, so this is the only CI that runs them.
       # About 25s in CI.
       - id: unit
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm test
+      # The app built once, in both lanes: the mac lane's e2e suite and
+      # package smoke both run on it.
+      - id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm build
       # Playwright's window recorder is not part of an install. A journey that
       # records would otherwise fetch it in the middle of its test, and where
       # the fetch fails the window never reports itself loaded.
-      - if: matrix.lane == 'mac'
+      - id: recorder
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
-      # test:e2e builds once before launching the complete desktop suite.
+      # The complete desktop suite, on the build above and the signed dev
+      # Electron (`pnpm test:e2e` is the same two commands in one).
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
       - id: e2e
-        if: matrix.lane == 'mac'
-        run: pnpm test:e2e
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        run: pnpm exec playwright test
         env:
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
       # What the e2e run leaves for whoever reads it (docs/testing.md):
@@ -202,7 +214,7 @@ jobs:
       # ones; --no-deps, because the desktop lane is the other lanes' teardown
       # and a teardown project ignores the file filter.
       - id: perf
-        if: ${{ inputs.perf && matrix.lane == 'mac' }}
+        if: ${{ !cancelled() && inputs.perf && matrix.lane == 'mac' && steps.e2e.outcome != 'skipped' }}
         run: |
           grep -l "tag: PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
         env:
@@ -219,7 +231,7 @@ jobs:
       # updated or replaced from here; only a runner with none gets one the
       # way a person does, from the vendor's native installer.
       - id: claude-client
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: |
           claude_bin="$(command -v claude || true)"
           if [ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ]; then claude_bin="$HOME/.local/bin/claude"; fi
@@ -234,7 +246,7 @@ jobs:
       # committed captain sessions and fails on any metric that regressed
       # from tests/fixtures/replay/baseline.json.
       - id: replay
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm replay:gate
       - uses: actions/upload-artifact@v4
         if: always() && matrix.lane == 'mac'
@@ -251,31 +263,31 @@ jobs:
       # `pnpm codesign:local` generated this runner's own local certificate
       # (docs/local-code-signing.md) and it dies with the runner.
       - id: package
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' }}
         run: pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml
         env:
           CSC_FOR_PULL_REQUEST: "true"
       - id: codesign
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: pnpm codesign:verify
       # The local dev bundle is the dev flavor: it must open
       # <appData>/infinitary-dev, never the installed release's folder
       # (src/shared/userDataFolders.ts). The release's own folder is checked
       # on the signed app in release.yml.
       - id: data-folder
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: scripts/check-user-data-dir.sh "dist/mac-universal/Infinitary Dev.app" infinitary-dev
       # The app's own git (docs/forge.md): both architectures ship, and the
       # runner's answers through the directory a crewmate's shell runs it
       # from, with no search path at all.
       - id: bundled-git
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: scripts/check-bundled-git.sh "dist/mac-universal/Infinitary Dev.app"
       # The app runs work for another Mac with no window (docs/helper.md):
       # started as `<app> work`, on the runner's own architecture and on
       # Intel through Rosetta when the runner has it.
       - id: helper
-        if: matrix.lane == 'mac'
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: scripts/check-helper.sh "dist/mac-universal/Infinitary Dev.app"
       # The run-alone pass (docs/testing.md "Each test owns its
       # prerequisites"): each later test of a spec file that shares one app
@@ -311,6 +323,8 @@ jobs:
             install=${{ steps.install.outcome }}
             dev-signing=${{ steps.dev-signing.outcome }}
             unit=${{ steps.unit.outcome }}
+            build=${{ steps.build.outcome }}
+            recorder=${{ steps.recorder.outcome }}
             e2e=${{ steps.e2e.outcome }}
             perf=${{ steps.perf.outcome }}
             claude-client=${{ steps.claude-client.outcome }}

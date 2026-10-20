@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "verify-stages-on-their-inputs",
+      "reason": "CI only: verify's stages each wait on the stages they need, so one red stage no longer skips the others; nothing in the app changes."
+    }
+  ]
+}

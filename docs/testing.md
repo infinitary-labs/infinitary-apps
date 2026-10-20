@@ -422,8 +422,12 @@ The recipe:
   The picture costs about 100 ms per app close and is dropped when the test passed.
 - **`e2e-demos`** is every demo a journey recorded (`testInfo.outputPath("demo")`, "Recording a demo" above), kept whenever the suite ran, passed or failed, so a requested demo can be watched from the run's page.
 - All four are kept 14 days.
-  None can fail the job, and none runs when an earlier stage kept e2e from starting.
+  None can fail the job, and none runs when a stage the suite needs kept it from starting.
 - **`e2e-alone`** is the run-alone pass's directory ("Each test owns its prerequisites", above): `alone-results.json`, with every test it ran, how each ended and its first error, and each test's output, beside the trace and picture of each that failed; kept whenever the pass ran.
+- **Every stage reports**: each stage waits only on the stages it needs, never on every stage before it (INF-663).
+  The unit suite, the client check and the replay gate need the install; the e2e suite needs the build, the signed dev Electron and the recorder; the package smoke needs the build and the signed dev Electron; the four package checks need the package.
+  So a red unit test still leaves the e2e suite's and the package's results on the run, and the linux-checks lane's checks and build each run whatever another of them did.
+  The job still ends red on any failure, so `release.yml` still refuses to sign.
 - **The job summary** names the requested ref and the exact commit checked out, the first failed stage, the e2e counts (skipped includes a serial file's tests that did not run), every failure in the order it started and the first one's assertion, and then the run-alone pass's counts and each test that failed alone.
   It reads the stages' outcomes and the JSON, never the log's prose, and decides nothing about which failure caused which: that stays with whoever reviews the evidence.
   It reports and never gates.

@@ -163,7 +163,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/plugins/pluginInstaller.test.ts` | real git at the run's own priority, npm pack (a local registry that answers nothing), tar | 10 s on the npm test, 5 s default for the rest |
 | `src/main/host/darwinKeychain.scratch.test.ts` | `security` (opt-in, `INFINITARY_SCRATCH_KEYCHAIN_PROBE=1`) | 120 s on the opt-in unlock test, 5 s default for the rest |
 | `src/main/host/claudeKeychainAccess.integration.test.ts` | isolated `security` on a throwaway keychain (darwin only) | 5 s default |
-| `src/core/devices/remoteLogin.test.ts` | the Mac's own `sshd` on loopback (`tests/helpers/sshServer.ts`, macOS only, skipped without it), ssh, ssh-keygen, tar, curl, openssl | 10 s, 30 s on the check-line and password tests |
+| `src/core/devices/remoteLogin.test.ts` | the Mac's own `sshd` on loopback (`tests/helpers/sshServer.ts`, macOS only, skipped without it), ssh, ssh-keygen, tar, curl, openssl | 15 s (Mac slowest per-case fastest 2.1 s); 30 s on the check-line and password tests, and on the Mac's download describe (Mac slowest per-case fastest 5.7 s) |
 | `src/core/devices/relay.test.ts` | a stand-in relay on Node, and on macOS `/usr/bin/nc`, carrying the real connection on loopback | 5 s default |
 | `src/core/devices/dnsSd.test.ts` | a stand-in for macOS's dns-sd, a shell script per run (`tests/helpers/dnsSdStandIn.ts`); the held run (`runDnsSdHeld`) waits out a one-second `-t`, 1.4 s the slowest | 5 s default |
 | `src/core/helper/fromHome.test.ts` | a folder held by a live process, waited for on the real clock | 5 s default |

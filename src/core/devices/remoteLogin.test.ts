@@ -87,8 +87,9 @@ import { placeOwnKey } from "./sshPassword";
  * `tests/e2e/run-work.spec.ts`.
  */
 
-// Real processes: sshd, ssh, tar, curl and openssl (slowest measured 1.3 s).
-vi.setConfig({ testTimeout: 10_000 });
+// Real processes: sshd, ssh, tar, curl and openssl (Mac slowest per-case
+// fastest 2.1 s, docs/test-cohorts.md "Budgets").
+vi.setConfig({ testTimeout: 15_000 });
 
 const standIn = (async (channel) => {
   throw new Error(`Rejected ${channel}`);
@@ -1245,8 +1246,12 @@ function escapeRegExp(text: string): string {
 
 // Accepted INF-322: Add and Update download on an older addressed Mac,
 // report real byte observations, and send the home bundle only on failure.
+// Its slowest cases add and update over SSH against a release of their own,
+// and each download waits out at least one of the script's once-a-second
+// counts (Mac slowest per-case fastest 5.7 s).
 describe.runIf(SSH_SERVER_AVAILABLE && process.platform === "darwin")(
   "an addressed Mac downloads its own copy",
+  { timeout: 30_000 },
   () => {
     async function fixture(
       paceMs = 0,
@@ -1342,8 +1347,12 @@ describe.runIf(SSH_SERVER_AVAILABLE && process.platform === "darwin")(
       }
     });
 
-    it("immediately sends its counted copy on download or checksum failure, for Add and Update", async () => {
-      for (const failure of ["fail", "corrupt"] as const) {
+    it.each([
+      ["download", "fail"],
+      ["checksum", "corrupt"],
+    ] as const)(
+      "immediately sends its counted copy on %s failure, for Add and Update",
+      async (_what, failure) => {
         const { at, release, record, address } = await fixture();
         release.mode(failure);
         try {
@@ -1368,8 +1377,8 @@ describe.runIf(SSH_SERVER_AVAILABLE && process.platform === "darwin")(
         } finally {
           await release.stop();
         }
-      }
-    });
+      },
+    );
 
     it("reports bytes so far without inventing a total when release storage sends no size", async () => {
       const { at, release, address } = await fixture();

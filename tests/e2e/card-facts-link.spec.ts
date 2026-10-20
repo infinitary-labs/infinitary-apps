@@ -1,3 +1,5 @@
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -58,12 +60,20 @@ test("a press on the fact strip's pull request link opens it though the strip re
   const db = openDatabase(userDataDir);
   try {
     const tasks = new TaskService({ db });
-    // The crewmate's model is on the record from the start, so the strip
-    // has every cell before the first press.
+    // A crewmate that finished its work, its working copy kept (INF-568).
+    // A record with no working copy is a start that did not finish: the app
+    // puts it back on the queue at launch and starts it again, and its model
+    // leaves the strip until the new start names it - a cell coming and
+    // going before the link, which moves the link under the press. The model
+    // is on the record from the start, so the strip has every cell before
+    // the first press and keeps them.
+    const worktreeDir = join(userDataDir, "worktrees", TASK);
+    mkdirSync(worktreeDir, { recursive: true });
     seedTask(tasks, {
       id: TASK,
       title: "Fix the meter",
       status: "completed",
+      worktreeDir,
       model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
     // Read 93 s ago: the strip says "read 2 min ago" for the next minute, so

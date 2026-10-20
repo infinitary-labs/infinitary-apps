@@ -1,7 +1,7 @@
 {
   "name": "infinitary",
   "version": "0.1.30",
-  "description": "Local-only Electron desktop app: a calm first mate that routes your tasks to crewmates running on your own AI subscriptions.",
+  "description": "Your own AI studio: a first mate and crew that work for you, on your computer, with your own AI subscriptions.",
   "license": "Apache-2.0",
   "author": "Kun Chen",
   "type": "module",

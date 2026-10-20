@@ -5,7 +5,7 @@
 pkgname=@PKGNAME@
 pkgver=@PKGVER@
 pkgrel=1
-pkgdesc="A calm first mate for your AI subscriptions"
+pkgdesc="Your own AI studio: a first mate and crew that work for you"
 arch=('x86_64')
 url="https://github.com/infinitary-labs/homebrew-tap"
 license=('Apache-2.0')

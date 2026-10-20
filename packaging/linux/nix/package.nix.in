@@ -148,7 +148,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "A calm first mate for your AI subscriptions";
+    description = "Your own AI studio: a first mate and crew that work for you";
     homepage = "https://github.com/infinitary-labs/homebrew-tap";
     license = lib.licenses.asl20;
     mainProgram = "infinitary";

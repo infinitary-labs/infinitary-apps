@@ -97,6 +97,10 @@ The standard's dictionary was not adopted: it has no "pass", "fail", "fix", "now
    No figure of speech: "the third number is higher", not "27 beats 26".
 5. Three or more actions in a row are a numbered list.
 
+**Brand words.**
+Use: your own, craftsmanship, made with care, a record of every task, and studio in a sentence ("your own AI studio"), never as a name.
+Never use: factory, autopilot, replace, 10x, "AI Studio" as a name, or words that make the crew sound small or limited.
+
 **Where the table does not apply.**
 Observe (a developer surface in development and alpha builds only), the record pane's evidence rows and the fact strip's identifiers, a crewmate's own report to the first mate (it is read by a model), the corpus and the exporters, and everything under `docs/`.
 Code comments and the AGENTS file keep their technical names; they are not the app.

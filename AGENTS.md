@@ -4,7 +4,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 ## What this project is
 
-Infinitary is a local-only Electron desktop app: a calm AI first mate that routes work to the user's own LLM subscriptions (Codex, Grok, Claude Max, OpenRouter, ...). No SaaS, no hosted backend, no account system from us. Product vision, interaction model, and constraints: `.claude/skills/infinitary-design/readme.md`.
+Infinitary is an Electron desktop app: your own AI studio, a calm first mate and a crew of AI agents that work on the person's own computer and model subscriptions (Codex, Grok, Claude, OpenRouter, ...). Craftsmanship, not mass production: each task is scoped, done in its own working copy, checked, shown with evidence and recorded. The app needs no account or service of ours, and the person's work never passes through us. Product vision, interaction model, and constraints: `.claude/skills/infinitary-design/readme.md`.
 
 ## Principles (captain; full text in `docs/principles.md`)
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * The two switches (roadmap 1.4; captain locks F2b and F4c, written out in
- * `DATA-TERMS.md`; Diagnostics on by default since the EONA alpha decision
+ * `DATA-TERMS.md`; Diagnostics on by default since the captain's decision
  * of 2026-09-22, and widened to the event set by the captain the same day):
  * what may leave this machine FOR US. No feature is gated on either.
  *
@@ -35,7 +35,7 @@ export const DATA_TERMS = {
   /** The file, beside the code that sends the payload. */
   file: "DATA-TERMS.md",
   /** The version of the terms this build ships; a widening bumps it. */
-  version: "draft-1",
+  version: "draft-2",
 } as const;
 
 export const sharingChannelSchema = z.enum(["diagnostics", "contribution"]);

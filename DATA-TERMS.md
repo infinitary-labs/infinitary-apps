@@ -1,26 +1,22 @@
 # Data terms
 
-**Status: draft. Not in force, not published.** These terms name the company as the party, and the company does not exist yet. Until Eona Labs, Inc. is formed and these terms are published with the public beta, nothing is collected under them: Firstmate 3000 runs in privacy mode, the contribution switch is absent from every build, and no diagnostic leaves your machine. Counsel reviews this document before publication. The version that is in force is the one in the repository beside the code that sends the payload.
+**Status: draft 2. Not in force, not published.** These terms name the company as the party, and the company does not exist yet. Until it is formed and these terms are published with the public beta, nothing is collected under them, and the contribution switch is absent from every build. Counsel reviews this document before publication. The version in force is the one in the repository beside the code that sends the payload.
 
 ## 1. Who we are and what this covers
 
-"We" and "us" mean Eona Labs, Inc. ("the company") [placeholder: the company is not formed yet; the name is confirmed, or corrected, before these terms are published]. "Firstmate 3000" or "the app" means the desktop application published from this repository. "You" means the person running it.
+"We" and "us" mean [the company] ("the company") [placeholder: its name goes here before these terms are published]. "Infinitary" or "the app" means the desktop application published from this repository. "You" means the person running it.
 
 These terms cover two things and nothing else: what the app sends us when you turn a switch on, and what we may do with it. Your sign-ins to the AI providers you already pay for go from your machine to those providers directly, under their terms, and are not covered here because they never pass through us.
 
-## 2. Privacy mode is the default
+## 2. Your work is yours
 
-Out of the box, the app sends us nothing. Not a transcript, not a prompt, not a line of code, not a card, not a decision record, not a count, not an error. We do not run a service the app depends on, and there is no account with us.
+Your conversations, tasks, code, knowledge and the record of every task stay on your computer. They go to the model providers you sign in to, on your own accounts and under their terms. They go to the place a project lives, such as GitHub, when you ask for that. They never come to us. We never see your model use, never charge you for it and never resell it. Using the app needs no account with us, and nothing in it depends on a service of ours. No feature is gated on a switch below: everything the app can do, it does with both switches off.
 
-Privacy mode is not a promise that nothing leaves your machine. Your work goes to the AI providers you signed in to, because that is what the app does. Privacy mode is the promise that nothing goes to us.
+## 3. Two switches
 
-No feature of the app is gated on turning a switch on. Everything the app can do, it does in privacy mode.
+**Diagnostics, on by default.** Anonymous usage events from a fixed list in the app's code: the app opening, a first mate turn finishing or failing, and how far first-time setup has come. Each carries the app version and a random install ID tied to nothing about you. Never a transcript, a prompt, code, a card, a name or a path. The app tells you on its first launch, before anything is sent, and one switch turns it off. Turning it back on starts a new, unrelated install ID.
 
-## 3. Two switches, both off by default
-
-**Diagnostics.** Counts, errors, versions and timings: how often something ran, what failed, which build. Never a transcript, a prompt, code, or a card body.
-
-**Contribution.** Redacted records of the Firstmate's own decisions: what it was asked, what it chose to do, and what came of it, in the same shapes the app's own corpus export packages, with secrets scrubbed. Before the first record is sent, the app shows you the full payload. Every record after that is inspectable in the app before and after it is sent.
+**Contribution.** Redacted records of the first mate's own decisions: what it was asked, what it chose to do, and what came of it, in the same shapes the app's own corpus export packages, with secrets scrubbed. Before the first record is sent, the app shows you the full payload. Every record after that is inspectable in the app before and after it is sent.
 
 Each switch is one setting. Turning one on is your consent for that switch alone, under the version of these terms the app shows you at that moment.
 
@@ -39,8 +35,6 @@ We will never sell contributions. We will never hand them to a third party as da
 The app asks you about contribution once, at the moment you enable the local model, because that model was trained on contributions like yours. "No" is a full answer: the local model works the same either way, and the app does not ask again on its own.
 
 If you contribute, you get each new version of the weights we release before anyone else, and a credit in the model card if you want one.
-
-If we ever offer to run the model for you on our machines (hosted convenience), that service requires contribution, because we pay to serve it. The app itself never does.
 
 ## 7. Stopping
 

@@ -4,7 +4,7 @@ Infinitary is licensed under the Apache License, Version 2.0 (see `LICENSE`). By
 
 ## While the repository is private
 
-Pull requests from outside are not merged yet: the repository opens with the public beta, and the first outside contribution lands after Eona Labs, Inc. is the Licensor. Until then, feedback is a conversation - an issue here if you have access, or the channel you were invited through.
+Pull requests from outside are not merged yet: the repository opens with the public beta, and the first outside contribution lands after the company that will publish Infinitary is the Licensor. Until then, feedback is a conversation - an issue here if you have access, or the channel you were invited through.
 
 ## How the code is worked on
 

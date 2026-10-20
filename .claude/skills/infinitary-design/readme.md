@@ -1,6 +1,8 @@
 # Infinitary — Design System
 
 Infinitary is an AI assistant for software development and general knowledge work, shipped as an Electron desktop app (light + dark theme, dark default).
+**Your own AI studio**: a first mate and crew that work for you, on a computer that is yours.
+Each piece of work is made with care and recorded.
 The product feeling: **calm, peaceful, confident, futuristic, a bit of space-travel fantasy, minimal, distraction-free**.
 
 ## Product concepts

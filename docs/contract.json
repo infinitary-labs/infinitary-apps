@@ -7045,6 +7045,14 @@
                   },
                   "danger": {
                     "type": "boolean"
+                  },
+                  "care": {
+                    "type": "string",
+                    "enum": [
+                      "quick",
+                      "standard",
+                      "reviewed"
+                    ]
                   }
                 },
                 "required": [
@@ -8066,6 +8074,14 @@
                     },
                     "danger": {
                       "type": "boolean"
+                    },
+                    "care": {
+                      "type": "string",
+                      "enum": [
+                        "quick",
+                        "standard",
+                        "reviewed"
+                      ]
                     }
                   },
                   "required": [
@@ -8580,6 +8596,14 @@
                     },
                     "danger": {
                       "type": "boolean"
+                    },
+                    "care": {
+                      "type": "string",
+                      "enum": [
+                        "quick",
+                        "standard",
+                        "reviewed"
+                      ]
                     }
                   },
                   "required": [
@@ -9690,6 +9714,14 @@
                     },
                     "danger": {
                       "type": "boolean"
+                    },
+                    "care": {
+                      "type": "string",
+                      "enum": [
+                        "quick",
+                        "standard",
+                        "reviewed"
+                      ]
                     }
                   },
                   "required": [
@@ -10386,6 +10418,14 @@
                 },
                 "danger": {
                   "type": "boolean"
+                },
+                "care": {
+                  "type": "string",
+                  "enum": [
+                    "quick",
+                    "standard",
+                    "reviewed"
+                  ]
                 }
               },
               "required": [
@@ -44981,6 +45021,14 @@
                   },
                   "danger": {
                     "type": "boolean"
+                  },
+                  "care": {
+                    "type": "string",
+                    "enum": [
+                      "quick",
+                      "standard",
+                      "reviewed"
+                    ]
                   }
                 },
                 "required": [

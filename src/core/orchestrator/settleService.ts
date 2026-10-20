@@ -213,12 +213,12 @@ export type TaskClose = {
   data?: Record<string, unknown>;
 };
 
-/** A typed merge/discard completion offer, never an unrelated decision. */
+/** A typed merge/discard completion offer (with the host's Review carefully), never an unrelated decision. */
 export function isRoutineMergeCard(card: Card): boolean {
   return (
     card.author === "crewmate" &&
     card.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
-    card.actions.every((action) => settleEffectOf(action))
+    card.actions.every((action) => settleEffectOf(action) || action.care)
   );
 }
 

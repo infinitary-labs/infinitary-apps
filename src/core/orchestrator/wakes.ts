@@ -1433,10 +1433,17 @@ function scheduledSource(facts: Extract<WakeFacts, { kind: "scheduled" }>): stri
   return rule + project;
 }
 
+/**
+ * What Careful asks of work already built when care rises to it (INF-562):
+ * the reviewed procedure for a change that may already have a pull request.
+ */
+export const CAREFUL_NOTICE =
+  "Careful means an independent review before the merge. Commit any remaining work on your branch and report under the five headings without pushing; the first mate starts the review of your committed version. A pull request already open stays as it is until the review passes: no push and no new story. When the first mate relays a pass on the version already pushed, emit the completion card again as soon as its checks read passed. After fixes, push once to the same pull request after the pass, and emit the completion card when the fresh checks pass.";
+
 function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">): string {
   switch (facts.kind) {
     case "task-policies-changed":
-      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.`;
+      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
     case "idle-nudge":
       if (facts.thread) return IDLE_THREAD_NUDGE_TEXT;
       if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true);

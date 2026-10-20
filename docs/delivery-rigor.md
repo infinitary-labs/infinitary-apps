@@ -183,9 +183,25 @@ GitHub unattended merges also check draft, conflicts, head and review readiness 
 Once a merge has been sent it cannot be recalled; the first mate says so, and any retry reads the new policy.
 Changing delivery keeps commits, published work and the original pull request linked; switching back reuses that identity when possible and never silently closes it or falls back on missing access.
 Higher care requires missing validation or review before the next push or merge, including a pull request already opened; the reviewed gate requires a pass for this change.
+A rise in care, however the captain asked for it, takes that task's merge card down, so no Merge offered at the old care is left to fail; the crewmate brings a new one after the work the new care needs.
 Lower care removes only a host review's policy-owned blocking edge; review history, failed checks, repair counts and other holds stay.
 Queued or waiting work does not start merely because a policy changed, and active crews receive the notice through the existing inbox rather than restarting.
 `tests/e2e/task-policies.spec.ts` exercises keyboard edits, sources, Activity, reset/restart and an already-ready result under passing and failed checks; the supervisor and workspace tests cover the asynchronous cancellation boundaries.
+
+### Raising care from a merge card
+
+Every merge card on a Quick or Default pull request the captain merges himself carries a Review carefully button between Discard and Merge, keyed ⌘2 (INF-562; Merge keeps ⌘1 and Discard moves to ⌘3).
+Local merges, work that merges on its own, Careful tasks, requests to merge another pull request and the first mate's own cards get no button.
+The host adds it in `withCompletionActions` as an action with `care: reviewed` and no effect; the card lint does not count it among the author's two or three choices.
+The captain's click closes the card and mints no merge approval.
+It sets care to Careful through `TaskService.updateFields` with the captain as the actor and "from the merge card" in Activity and the feed, then the choice reaches the crewmate like any choice on its card, which starts it with the care notice ahead of it.
+A body's script cannot press it.
+The pull request stays as it is: nothing is pushed, closed or marked as a draft, and its checks reading stays.
+The care notice tells the crewmate to commit, report without pushing and wait for the review; the first mate starts it as on any Careful task.
+The reviewer's brief adds the merge card the captain read, saved whole beside the builder's source cards (quoted in the brief when the work runs on another computer), with its risk chart as lines.
+A pass on the version already pushed brings a new merge card once its checks read passed, with no push; after fixes the crewmate pushes once to the same pull request after the pass.
+The new card reads Care Careful and the review's verdict, with no Review carefully button.
+The review round cap and the check repair allowance do not change, and asking the first mate in words still works.
 
 ## The evidence contract
 

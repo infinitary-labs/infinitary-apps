@@ -2528,6 +2528,7 @@ function buildEmittedCard(
         ...(action.default ? { default: true } : {}),
         ...(action.effect ? { effect: action.effect } : {}),
         ...(danger ? { danger: true } : {}),
+        ...(action.care ? { care: action.care } : {}),
       };
     });
   const width = decidedCardWidth(input);

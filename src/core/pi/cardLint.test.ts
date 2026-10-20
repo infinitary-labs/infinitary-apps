@@ -339,6 +339,21 @@ describe("lintCardShape (both boundaries)", () => {
           }),
         ),
       ).toContain("this one gives 4 (choice-1, choice-2, merge, discard)");
+      // INF-562: the host's Review carefully beside the pair is never the
+      // author's choice, so the author's own action still fits.
+      const careful = {
+        id: "review-carefully",
+        label: "Review carefully",
+        care: "reviewed" as const,
+      };
+      expect(
+        lintCrewmateCard(
+          decision({
+            body: outline,
+            actions: [own[0], ...COMPLETION_PAIR, careful] as EmittedCard["actions"],
+          }),
+        ),
+      ).toBeUndefined();
     });
   });
 

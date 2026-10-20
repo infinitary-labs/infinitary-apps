@@ -40,6 +40,7 @@ import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../src/core/prompts/cardCo
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import { CREATE_PANEL_DRAFT } from "../../src/shared/createPanelSlot";
 import { HERE } from "../../src/shared/deviceNames";
+import { REVIEW_CAREFULLY_WORDS } from "../../src/shared/vocabulary";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -2721,6 +2722,19 @@ export const MOCK_AUTONOMY_CARD_TITLE = (title: string) => `Ready to merge - ${t
 export const MOCK_AUTONOMY_REPORT =
   "Intent: the meter reads on the first paint. What changed: the panel awaits the snapshot. Verified: pnpm test on the final commit; the PR is green. Risk: low. Not done: nothing.";
 
+/**
+ * Review carefully (INF-562). Briefed with this marker on a direct-pr
+ * repository at Default care, the mock crewmate saves its change and emits
+ * its completion card. The captain's Review carefully reaches it as a
+ * choice, and it reports without pushing, in the words the mock Firstmate
+ * answers with a review. The mock reviewer passes a brief that names the
+ * card the captain read; told the review passed, the crewmate emits its
+ * completion card again.
+ */
+export const REVIEW_CAREFULLY_MARKER = "ship at default care, then review carefully";
+export const MOCK_CAREFUL_CARD_TITLE = "The meter reads on time, ready to merge";
+export const MOCK_CAREFUL_REVIEWED_CARD_TITLE = "The meter reads on time, reviewed";
+
 export const REVIEWED_TIER_PROMPT_MARKER = "ship at the reviewed tier";
 /** The reviewed builder's change: its first save point's subject, and the pull request's title. */
 export const MOCK_REVIEWED_CHANGE = {
@@ -2732,6 +2746,9 @@ export const REVIEW_BRIEF_MARKER = REVIEW_BRIEF_OPENING;
 export const MOCK_REVIEWED_BUILDER_REPORT =
   "Intent: the meter test passes ten runs in a row. What changed: the test awaits the job queue flush before it reads the meter. Verified: pnpm test and pnpm test:e2e on the final commit; the PR is green on its head. Risk: low, one test file changed. Not done: nothing.";
 const REVIEWED_BUILDER_NEEDLE = "the PR is green on its head";
+/** The careful builder's report after Review carefully: committed, nothing pushed. */
+export const MOCK_CAREFUL_BUILDER_REPORT =
+  "Intent: the meter reads on the first paint. What changed: nothing since the merge card; the work is committed and nothing was pushed. Verified: pnpm test on the final commit; the PR is green on its head. Risk: low. Not done: the review.";
 export const MOCK_REVIEW_AUTOFIX_FINDING =
   "F1 error tests/meter.test.ts:12 the flush is awaited after the read, so the race stands - auto-fix";
 export const MOCK_REVIEW_ASK_FINDING =
@@ -6064,7 +6081,8 @@ export async function startMockProvider(): Promise<MockProviderServer> {
                     rigor_ask: title.includes(REVIEWED_TIER_PROMPT_MARKER)
                       ? "reviewed"
                       : title.includes(STANDARD_TIER_PROMPT_MARKER) ||
-                          title.includes(STANDARD_TIER_HOST_BUTTONS_MARKER)
+                          title.includes(STANDARD_TIER_HOST_BUTTONS_MARKER) ||
+                          title.includes(REVIEW_CAREFULLY_MARKER)
                         ? "standard"
                         : "quick",
                   },
@@ -7347,6 +7365,12 @@ export async function startMockProvider(): Promise<MockProviderServer> {
         // third - the whole history rides the body, so the count is read off
         // it. Its final text is its report.
         if (!isFirstmate && body.includes(REVIEW_BRIEF_MARKER) && wantsStream) {
+          // A review the captain asked for from his merge card passes once
+          // its brief names the card he read (INF-562).
+          if (body.includes(MOCK_CAREFUL_CARD_TITLE)) {
+            streamText(MOCK_REVIEW_PASS_REPORT);
+            return;
+          }
           const rereviews = body.split(MOCK_REREVIEW_STEER).length - 1;
           if (!latestUserTail.includes(MOCK_REREVIEW_STEER)) {
             streamText(MOCK_REVIEW_FINDINGS_REPORT);
@@ -7355,6 +7379,46 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           } else {
             streamText(MOCK_REVIEW_REFINDINGS_REPORT);
           }
+          return;
+        }
+        // The careful builder (INF-562): its change and completion card at
+        // Default care; after Review carefully a report with nothing pushed;
+        // after the pass its completion card again.
+        if (!isFirstmate && body.includes(REVIEW_CAREFULLY_MARKER) && wantsStream) {
+          const card = (title: string): ScriptedCall[] => [
+            {
+              name: "emit_card",
+              args: {
+                title,
+                body: MOCK_STANDARD_DRAWN_BODY,
+                actions: MOCK_STANDARD_MERGE_ONLY_ACTIONS,
+              },
+            },
+            { name: "report", args: { text: MOCK_STANDARD_REPORT } },
+          ];
+          if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
+            if (!hasToolResults) streamToolCalls(card(MOCK_CAREFUL_REVIEWED_CARD_TITLE));
+            else streamText("done");
+            return;
+          }
+          if (
+            latestUserTail.includes("the user chose") &&
+            latestUserTail.includes(REVIEW_CAREFULLY_WORDS)
+          ) {
+            streamText(MOCK_CAREFUL_BUILDER_REPORT);
+            return;
+          }
+          if (!calledTool(body, "bash")) {
+            streamToolCalls([
+              {
+                name: "bash",
+                args: { command: `git commit --allow-empty -m "${MOCK_REVIEWED_CHANGE.title}"` },
+              },
+            ]);
+            return;
+          }
+          if (!calledTool(body, "emit_card")) streamToolCalls(card(MOCK_CAREFUL_CARD_TITLE));
+          else streamText("done");
           return;
         }
         // The reviewed builder: a green report and no card on its brief, the

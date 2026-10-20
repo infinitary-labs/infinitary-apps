@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "review-carefully",
+      "kind": "feature",
+      "title": "Review carefully from a merge card",
+      "body": "When a merge card looks risky, press Review carefully, or ⌘2, beside Merge. The task becomes Careful: an independent reviewer reads the work and the card you were reading, and a new merge card comes back once the review passes. The pull request stays as it is until then.",
+      "area": "cards",
+      "picture": {
+        "dark": "review-carefully-dark.webp",
+        "light": "review-carefully-light.webp",
+        "alt": "A merge card with Discard, Review carefully and Merge the pull request, keyed ⌘3, ⌘2 and ⌘1"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

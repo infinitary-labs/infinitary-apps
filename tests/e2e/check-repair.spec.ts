@@ -190,7 +190,8 @@ test("two baseline failures and one flake request diagnosis without a captain ca
       .toEqual([CI_REPAIR_CARD]);
     await expect(await completionAction(app.page, CI_REPAIR_CARD)).toBeVisible();
     // The crewmate declared the merge alone, without a label, as it is told;
-    // the host attached its own pair in its place (FI3-249).
+    // the host attached its own pair in its place (FI3-249), and, at Default
+    // care, Review carefully with no effect of its own (INF-562).
     const completion = (await app.page.evaluate(() => window.infinitary.cards.list())).find(
       (card) => card.title === CI_REPAIR_CARD,
     );
@@ -198,6 +199,7 @@ test("two baseline failures and one flake request diagnosis without a captain ca
       new Map([
         ["merge", { kind: "settle", mode: "merge" }],
         ["discard", { kind: "settle", mode: "discard" }],
+        ["review-carefully", undefined],
       ]),
     );
     const frame = cardBody(app.page, CI_REPAIR_CARD);

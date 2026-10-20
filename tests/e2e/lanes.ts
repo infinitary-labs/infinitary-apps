@@ -118,6 +118,7 @@ export const APPLICATION_SUITES = [
   "work-posture.spec.ts",
   "rigor-reviewed.spec.ts",
   "rigor-standard.spec.ts",
+  "review-carefully.spec.ts",
   "routing-escalation.spec.ts",
   "run-work.spec.ts",
   "settle-effects.spec.ts",

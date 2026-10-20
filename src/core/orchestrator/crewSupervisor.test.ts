@@ -37,12 +37,14 @@ import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { RiskDeclaration } from "@shared/risk";
 import { isFolderRepair, type WorkShape } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
+import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
 import {
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
+  REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
@@ -138,6 +140,7 @@ import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
 import { Ticker } from "./ticker";
 import {
+  CAREFUL_NOTICE,
   ciCapWake,
   GUIDANCE_MARK_WORDS,
   IDLE_NUDGE_TEXT,
@@ -3698,6 +3701,72 @@ describe("CrewSupervisor", () => {
       expect(result.text).toContain("Merged");
       expect(h.forge.merges).toEqual([APPROVED]);
       expect(h.tasks.get(h.taskId)?.status).toBe("done");
+    });
+
+    /**
+     * INF-562, the captain's ask: "the most natural place to make use of the
+     * careful care level is when a merge completion card is raised, and they
+     * looked at the card and felt it's risky" - a Quick or Default pull
+     * request's merge card offers Review carefully beside Merge.
+     */
+    it("Review carefully on a merge card makes the task Careful from the captain and starts its crewmate", async () => {
+      const h = await approved();
+      const careful = h.card.actions.find((action) => action.care);
+      expect(careful).toMatchObject({ label: REVIEW_CAREFULLY_WORDS, care: "reviewed" });
+      expect(careful?.effect).toBeUndefined();
+      // Drawn between Discard and Merge: the default stays last.
+      expect(h.card.actions.map((action) => action.label)).toEqual([
+        "Discard",
+        REVIEW_CAREFULLY_WORDS,
+        MERGE_WORDS["merge-pr"],
+      ]);
+      // A body's script cannot press it.
+      expect(() => h.supervisor.act(h.card.id, careful?.id ?? "", "frame")).toThrow(
+        "only from the card controls",
+      );
+      expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBeUndefined();
+      const turns = h.crewmate.promptCalls.length;
+
+      h.supervisor.act(h.card.id, careful?.id ?? "");
+      await tick();
+      expect(h.cards().find((card) => card.id === h.card.id)).toBeUndefined();
+      expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBe("reviewed");
+      expect(h.authorization()).toBeUndefined();
+      const edit = h.tasks
+        .timeline(h.taskId)
+        .find((event) => event.kind === "note" && event.text.includes("Care: Careful"));
+      expect(edit).toMatchObject({ actor: "captain" });
+      expect(edit?.text).toContain("from the merge card");
+      // The care notice and the choice start the idle crewmate together.
+      await vi.waitFor(() => expect(h.crewmate.promptCalls.length).toBeGreaterThan(turns));
+      const turn = h.crewmate.promptCalls.slice(turns).join("\n");
+      expect(turn).toContain(CAREFUL_NOTICE);
+      expect(turn).toContain(REVIEW_CAREFULLY_WORDS);
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("raising care in words takes the old merge card down, and lowering it does not", async () => {
+      const h = await approved();
+      const edit = (rigor: "quick" | "standard" | "reviewed") => {
+        const record = h.tasks.get(h.taskId);
+        const before = record
+          ? effectiveTaskPolicies(record, record.repoId ? h.repos.get(record.repoId) : undefined)
+          : null;
+        h.tasks.updateFields(h.taskId, { policies: { rigor } }, "firstmate");
+        h.supervisor.policiesChanged(h.taskId, { rigor }, before);
+      };
+      const up = (id: string) => h.cards().some((card) => card.id === id);
+      edit("standard");
+      await vi.waitFor(() => expect(up(h.card.id)).toBe(false));
+      await h.emit("Ready at Default");
+      await tick();
+      const shown = h.cards().find((card) => card.title === "Ready at Default") as Card;
+      expect(shown).toBeDefined();
+      edit("quick");
+      await tick();
+      expect(up(shown.id)).toBe(true);
+      edit("reviewed");
+      await vi.waitFor(() => expect(up(shown.id)).toBe(false));
     });
 
     it("self-merging still waits for failed checks and merges only after a fresh accepted reading", async () => {

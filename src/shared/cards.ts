@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SPELLINGS } from "./codeNames.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
+import { rigorSchema } from "./rigor.ts";
 
 /** Eligibility uses the shown version, never the pending durable head. */
 export function isReadyDecision(card: Card): boolean {
@@ -319,6 +320,13 @@ export const cardActionSchema = z.object({
   effect: cardEffectSchema.optional(),
   /** A destructive choice: rendered in the danger variant. */
   danger: z.boolean().optional(),
+  /**
+   * The care the captain's click sets on the card's task before the choice
+   * returns to its author like any reply (INF-562, docs/delivery-rigor.md
+   * "Raising care from a merge card"). Only the host adds it, to the merge
+   * card it words; no agent declares it, and a body's script cannot press it.
+   */
+  care: rigorSchema.optional(),
 });
 export type CardAction = z.infer<typeof cardActionSchema>;
 

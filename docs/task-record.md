@@ -64,7 +64,7 @@ A review's builder is its parent (the one stored join), and which review a build
 
 ## Live task policies
 
-The captain changes a named open task's Delivery, Merging and Care by talking to the first mate, not through new record controls.
+The captain changes a named open task's Delivery, Merging and Care by talking to the first mate, not through new record controls; the one exception is a merge card's Review carefully, which raises Care to Careful (`docs/delivery-rigor.md`, "Raising care from a merge card").
 `update_task` takes `delivery: direct-pr|local-only|project`, `autonomy: on|off|project`, and `rigor: quick|standard|reviewed|project`.
 Omission preserves a policy; `project` resets it to the current project setting, including a project's permission to merge on its own.
 An explicit request is consent; ambiguity about the task, policy or consent gets one specific question rather than a routine confirmation.

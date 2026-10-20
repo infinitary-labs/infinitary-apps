@@ -3,6 +3,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { InvokeRequest } from "@shared/ipc";
 import type { RequiredAction } from "@shared/requiredActions";
+import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
@@ -56,6 +57,8 @@ export type EmittedAction = {
   default?: boolean;
   effect?: CardEffect;
   danger?: boolean;
+  /** The care the captain's click sets on the task; the host's own, never declared. */
+  care?: Rigor;
 };
 
 /**
@@ -123,7 +126,7 @@ export type EmittedCardInput = {
  * is told to declare no labels and its schema asks for none (FI3-249); the
  * host refuses any action it keeps that has no words.
  */
-export type DeclaredAction = Omit<EmittedAction, "label"> & { label?: string };
+export type DeclaredAction = Omit<EmittedAction, "label" | "care"> & { label?: string };
 
 /** A crewmate's card as its tool hands it to the host, before the host words its own buttons. */
 export type DeclaredCardInput = Omit<EmittedCardInput, "actions"> & { actions: DeclaredAction[] };

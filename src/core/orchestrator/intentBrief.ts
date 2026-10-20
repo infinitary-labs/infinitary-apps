@@ -742,7 +742,46 @@ export type ReviewBriefFacts = {
    * what changed since that pass.
    */
   passedHead?: string;
+  /**
+   * The merge card the captain was reading when he pressed Review carefully
+   * (INF-562): its title, the file it is saved whole in (or its body, when
+   * no file could be written there), the pictures in it and its risk chart.
+   */
+  captainCard?: CaptainCardFacts;
 };
+
+/** The merge card behind a careful review, as the captain read it (INF-562). */
+export type CaptainCardFacts = {
+  title: string;
+  file?: string;
+  body?: string;
+  pictures?: string[];
+  /** Each risk dimension as one line: its name, level and the builder's why. */
+  risk?: string[];
+};
+
+/** The reviewer's section on the merge card the captain read (INF-562). */
+function captainCardLines(card: CaptainCardFacts): string[] {
+  return [
+    `The captain asked for this review from the merge card he was reading, "${card.title}": he pressed Review carefully because the work looked risky to him. Read that card - its story and its risk chart - and weigh what it says against the diff; it is the builder's account of the change, not proof of it.`,
+    ...(card.file
+      ? [
+          "It is saved whole - any script and style included - in this file on this machine; open it to read the card:",
+          `- ${card.file}`,
+        ]
+      : card.body
+        ? ["The card, as the captain read it:", card.body]
+        : []),
+    ...(card.pictures?.length
+      ? [
+          "The pictures in that card are files on this machine:",
+          ...card.pictures.map((file) => `- ${file}`),
+        ]
+      : []),
+    ...(card.risk?.length ? ["Its risk chart, as the builder declared it:", ...card.risk] : []),
+    "",
+  ];
+}
 
 /** How the review instruction opens; a scripted stand-in recognizes the reviewer by it. */
 export const REVIEW_BRIEF_OPENING = "You are reviewing, not building";
@@ -1010,6 +1049,7 @@ export function renderReviewBrief(
     facts.builderReport,
     "",
     ...(facts.evidenceDir ? [`The builder's evidence folder: ${facts.evidenceDir}`, ""] : []),
+    ...(facts.captainCard ? captainCardLines(facts.captainCard) : []),
     `Delivery: ${DELIVERY_TEXT[delivery]}.`,
   ].join("\n");
 }

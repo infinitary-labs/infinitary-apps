@@ -128,7 +128,7 @@ import {
   reviewCapOwner,
   reviewCapReached,
 } from "@shared/rigor";
-import type { RiskAssessment } from "@shared/risk";
+import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
 import {
   type Deliverable,
   type Escalation,
@@ -176,6 +176,7 @@ import {
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
+  REVIEW_CAREFULLY_WORDS,
   REVIEW_WORDS,
   SKIP_RULES_MERGE_WORDS,
   sendWriteWords,
@@ -329,6 +330,7 @@ import {
   type BriefPictures,
   basisSectionParts,
   briefText,
+  type CaptainCardFacts,
   deliverableFor,
   type EscalationBriefFacts,
   FOLDER_REPAIR_TITLE,
@@ -1597,6 +1599,7 @@ export class CrewSupervisor {
       throw new Error(
         `${builder.key || builder.id} has no commits on its branch to review yet. Steer the crewmate to commit its work and report first.`,
       );
+    const captainCard = this.captainCardFacts(builder);
     return {
       builderTitle: builder.title,
       branch: builder.branch,
@@ -1606,7 +1609,51 @@ export class CrewSupervisor {
       evidenceDir,
       changedFiles,
       ...(changeReading ? { changeReading } : {}),
+      ...(captainCard ? { captainCard } : {}),
     };
+  }
+
+  /**
+   * The merge card the captain pressed Review carefully on (INF-562), as
+   * the stage showed it: the newest card on the builder whose chosen action
+   * set care. Saved whole beside the builder's other source cards when the
+   * work runs here; quoted in the brief when it runs on another computer.
+   */
+  private captainCardFacts(builder: TaskRecord): CaptainCardFacts | undefined {
+    const [raised] = this.options.cardStore.resolvedSince(
+      0,
+      1,
+      ({ card, offer, action }) =>
+        (offer?.actions ?? card.actions).some((entry) => entry.id === action && entry.care),
+      builder.id,
+    );
+    if (!raised) return undefined;
+    const shown = raised.offer ?? raised.card;
+    const declared = shown.risk?.declared;
+    const risk = declared
+      ? RISK_DIMENSIONS.map(
+          (dimension) =>
+            `- ${RISK_WORDS[dimension].label}: ${declared[dimension].level} - ${declared[dimension].why}`,
+        )
+      : undefined;
+    const files = cardPictureFiles(shown.body, this.options.paths.crewmatesDir);
+    const facts: CaptainCardFacts = {
+      title: shown.title,
+      ...(files.pictures.length && !builder.deviceId ? { pictures: files.pictures } : {}),
+      ...(risk ? { risk } : {}),
+    };
+    if (!builder.deviceId) {
+      const dir = crewmateSourceCardsDir(this.options.paths, builder.id);
+      const file = join(dir, `merge-card-${raised.card.id.replace(/[^A-Za-z0-9_-]/g, "-")}.html`);
+      try {
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(file, files.body, "utf8");
+        return { ...facts, file };
+      } catch {
+        // A card that cannot be saved rides in the brief whole.
+      }
+    }
+    return { ...facts, body: files.body };
   }
 
   /**
@@ -5757,6 +5804,23 @@ export class CrewSupervisor {
           taskId,
         );
     }
+    // Care that rises asks for more before a merge, so the merge card
+    // offered at the old care comes down rather than leave a Merge that
+    // now fails (INF-562); the crewmate brings a new one after the work
+    // the new care needs. However the captain asked: words or the card.
+    const rank = { quick: 0, standard: 1, reviewed: 2 } as const;
+    if (before && rank[policies.rigor.value] > rank[before.rigor.value]) {
+      for (const card of this.cards.values()) {
+        if (card.taskId !== taskId || !isRoutineMergeCard(card)) continue;
+        this.cards.takeDown(
+          card.id,
+          `The captain made this task ${CARE_WORDS[policies.rigor.value]}.`,
+        );
+        if (record.delivery?.captainWait?.cardId === card.id)
+          this.options.tasks.recordDelivery(taskId, { captainWait: undefined });
+      }
+      this.ladder.syncCaptainGate(taskId, this.now());
+    }
     this.broadcastCrewCounts();
     return policyEditConsequences({
       edits,
@@ -8000,7 +8064,23 @@ export class CrewSupervisor {
       danger: true,
       effect: { kind: "settle", mode: "discard" },
     };
-    return { ...input, actions: [...declared, merge, discard] };
+    // A Quick or Default pull request can be made Careful from its merge
+    // card (INF-562): drawn between Discard and Merge, so it takes ⌘2.
+    const careful: EmittedAction[] = this.offersCareful(taskId)
+      ? [{ id: "review-carefully", label: REVIEW_CAREFULLY_WORDS, care: "reviewed" }]
+      : [];
+    return { ...input, actions: [...declared, merge, discard, ...careful] };
+  }
+
+  /**
+   * Whether a task's merge card offers Review carefully: pull-request work
+   * the captain merges himself, below Careful. Local merges, work that
+   * merges on its own and a Careful task get no button.
+   */
+  private offersCareful(taskId: string): boolean {
+    if (this.mergeModeFor(taskId) !== "merge-pr") return false;
+    const policies = this.policiesOf(this.options.tasks.get(taskId));
+    return policies !== null && !policies.autonomy.value && policies.rigor.value !== "reviewed";
   }
 
   /**
@@ -10371,7 +10451,7 @@ export class CrewSupervisor {
     }
     const answers = source === "chrome" ? chromeAnswers(value) : undefined;
     const decisionTaskId = card.taskId ?? associated?.id;
-    if (source === "frame" && chosen.effect) {
+    if (source === "frame" && (chosen.effect || chosen.care)) {
       throw new Error("This action is available only from the card controls.");
     }
     // The record keeps the task as it stood before this choice moves it
@@ -10503,6 +10583,10 @@ export class CrewSupervisor {
       ...(valueJson !== undefined ? { value: valueJson } : {}),
       ...(answers ? { answers } : {}),
     };
+    // Review carefully (INF-562): the captain's care lands on the record
+    // first, so its notice waits on the crewmate's lane ahead of the choice
+    // that starts it below, the way any choice on its card does.
+    if (chosen.care && card.taskId && !closedAnswer) this.careFromCard(card.taskId, chosen.care);
     switch (effect?.kind) {
       case "settle": {
         // Host-owned teardown: the host runs it instead of steering the
@@ -10639,6 +10723,27 @@ export class CrewSupervisor {
       this.steerChoice(card.taskId, card, source, choice);
     }
     return {};
+  }
+
+  /**
+   * The captain's care from a card's button (INF-562): the same writer and
+   * notice as update_task, with the captain as its author and the merge
+   * card as where it came from. A refusal is a feed line, never a silent no-op.
+   */
+  private careFromCard(taskId: string, care: Rigor): void {
+    const before = this.policiesOf(this.options.tasks.get(taskId));
+    try {
+      this.options.tasks.updateFields(
+        taskId,
+        { policies: { rigor: care }, direction: "the merge card" },
+        "captain",
+      );
+    } catch (caught) {
+      if (!(caught instanceof TaskGraphRefusal)) throw caught;
+      this.options.broadcastEvent({ type: "firstmate_note", text: caught.message, taskId });
+      return;
+    }
+    this.policiesChanged(taskId, { rigor: care }, before);
   }
 
   /** A choice on a crewmate's card, steered to its session through the task's durable lane. */

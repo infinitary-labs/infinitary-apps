@@ -52,6 +52,13 @@ export const MERGE_WORDS = {
 } as const;
 
 /**
+ * The button beside Merge on a Quick or Default pull request's merge card
+ * (INF-562, the captain's own words for it): the click makes the task
+ * Careful, so its built work is reviewed before a new merge card comes back.
+ */
+export const REVIEW_CAREFULLY_WORDS = "Review carefully";
+
+/**
  * The merge button on a completion card while its pull request's checks
  * are still running (INF-23): the click keeps the captain's approval, and
  * the app merges by itself once the checks pass.

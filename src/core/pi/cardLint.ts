@@ -121,7 +121,10 @@ function fakeSettleRefusal(actions: EmittedCard["actions"]): string | undefined 
 const DECISION_ACTIONS_MIN = 2;
 const DECISION_ACTIONS_MAX = 3;
 
-function decisionActionsRefusal(actions: EmittedCard["actions"]): string | undefined {
+function decisionActionsRefusal(all: EmittedCard["actions"]): string | undefined {
+  // The host's Review carefully rides beside its merge and discard
+  // (INF-562): it is the app's offer, never a choice the author counts.
+  const actions = all.filter((action) => !action.care);
   const count = actions.length;
   if (count >= DECISION_ACTIONS_MIN && count <= DECISION_ACTIONS_MAX) return undefined;
   const given = `a decision gives ${DECISION_ACTIONS_MIN} or ${DECISION_ACTIONS_MAX} actions, and this one gives ${count} (${actions

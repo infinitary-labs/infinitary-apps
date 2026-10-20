@@ -1,0 +1,7 @@
+{
+  "run": "39296806356",
+  "head": "8ac1e273e1e5275f21239dec318c9a22875491bd",
+  "base": "05fce95710f49c06c557069fad61a6009ec9a18d",
+  "module": "src/shared/changePresentation.ts",
+  "sourceDiff": "diff --git a/src/shared/changePresentation.ts b/src/shared/changePresentation.ts\nindex 7b945445..a2e02679 100644\n--- a/src/shared/changePresentation.ts\n+++ b/src/shared/changePresentation.ts\n@@ -152,0 +153,7 @@ export type PresentationRecovery = z.infer<typeof presentationRecoverySchema>;\n+/** INF-497: one exact passage of the words around a published story, and what replaces it. */\n+export const storyAroundSchema = z.strictObject({\n+  from: z.string().max(200000),\n+  to: z.string().max(200000),\n+});\n+export type StoryAround = z.infer<typeof storyAroundSchema>;\n+\n@@ -157,0 +165 @@ export const openChangeInputSchema = z.object({\n+  around: storyAroundSchema.optional(),\n"
+}

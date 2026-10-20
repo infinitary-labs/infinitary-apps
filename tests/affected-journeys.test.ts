@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   closureOf,
@@ -5,6 +6,7 @@ import {
   holdsPhrase,
   importsOf,
   select,
+  symbolsOfDiff,
   tokensOfDiff,
 } from "../scripts/affected-journeys.ts";
 
@@ -204,5 +206,168 @@ describe("what a diff changes in the product", () => {
     expect(
       importsOf("tests/e2e/x.ts", 'import { a } from "@shared/cards"; import "left-pad";'),
     ).toEqual(["src/shared/cards.ts"]);
+  });
+});
+
+// INF-625's accepted precision fixes. The fixtures keep the original helper
+// versions and real journey import clauses; no git process runs inside a unit test.
+describe("INF-625 motivating runs", () => {
+  for (const run of ["39319028198", "39329016218", "39366415817"]) {
+    it(`selects only changed-export importers in run ${run}`, () => {
+      const fixture = JSON.parse(
+        readFileSync(new URL(`./fixtures/affected-journeys/${run}.json`, import.meta.url), "utf8"),
+      ) as {
+        helpers: Record<string, { before: string; after: string }>;
+        imports: Record<string, string>;
+        expected: string[];
+      };
+      const read = (file: string) => fixture.imports[file] ?? fixture.helpers[file]?.after;
+      const reasons = select({
+        changed: Object.keys(fixture.helpers),
+        sourceDiff: "",
+        specs: Object.keys(fixture.imports),
+        read,
+        readBefore: (file) => fixture.helpers[file]?.before,
+      });
+      expect([...reasons.keys()].sort()).toEqual(fixture.expected);
+    });
+  }
+
+  it.each([
+    ["39296806356", "around", "OpenChangeInput"],
+    ["39317894265", "changes", "ClientFrame"],
+    ["39337683472", "flatMap", "TaskFactId"],
+    ["39381269010", "failed", "TaskView"],
+    ["39381269010", "passed", "TaskView"],
+    ["39381269010", "cancelled", "TaskView"],
+  ])(
+    "does not select a journey for an ordinary word or built-in in run %s",
+    (run, word, imported) => {
+      const fixture = JSON.parse(
+        readFileSync(new URL(`./fixtures/affected-journeys/${run}.json`, import.meta.url), "utf8"),
+      ) as { module: string; sourceDiff: string };
+      const journey = "tests/e2e/check-refresh.spec.ts";
+      const files = new Map([
+        [fixture.module, ""],
+        [
+          journey,
+          `import { ${imported} } from "../../${fixture.module.replace(/\.ts$/, "")}";\nconst reading = "${word}";`,
+        ],
+        ["tests/e2e/other.spec.ts", ""],
+      ]);
+      expect([
+        ...select({
+          changed: [fixture.module],
+          sourceDiff: fixture.sourceDiff,
+          specs: [journey, "tests/e2e/other.spec.ts"],
+          read: (file) => files.get(file),
+        }).keys(),
+      ]).toEqual([]);
+    },
+  );
+
+  it("does not let the stand-in's hooks select all importers", () => {
+    const files = new Map(FILES);
+    files.set(
+      "tests/e2e/launch.ts",
+      `${files.get("tests/e2e/launch.ts")}\nconst body = '<div data-record-section>';`,
+    );
+    expect([
+      ...select({
+        changed: ["src/renderer/src/Record.tsx"],
+        sourceDiff: "+<div data-record-section>",
+        specs,
+        read: (file) => files.get(file),
+      }).keys(),
+    ]).toEqual([]);
+  });
+
+  it("ignores app unit tests and cancels unchanged hooks and sentences per file", () => {
+    const diff = [
+      "diff --git a/src/shared/board.test.ts b/src/shared/board.test.ts",
+      '+const body = "data-board-tile";',
+      '+const words = "Start the work";',
+      "diff --git a/src/renderer/src/Board.tsx b/src/renderer/src/Board.tsx",
+      '-<li data-board-tile>{"Start the work"}</li>',
+      '+<li data-board-tile hidden>{"Start the work"}</li>',
+    ].join("\n");
+    expect(
+      picked({
+        changed: ["src/shared/board.test.ts", "src/renderer/src/Board.tsx"],
+        sourceDiff: diff,
+      }),
+    ).toEqual([]);
+    // A hook changing owners must not cancel across files.
+    expect([
+      ...tokensOfDiff(
+        "diff --git a/src/a.tsx b/src/a.tsx\n-<div data-board-tile>\ndiff --git a/src/b.tsx b/src/b.tsx\n+<div data-board-tile>",
+      ).hooks,
+    ]).toEqual(["data-board-tile"]);
+  });
+
+  it("requires a key or export declaration, not just a referenced camelCase name", () => {
+    const diff =
+      "diff --git a/src/shared/version.ts b/src/shared/version.ts\n+const x = launchApp();\n+const prose = 'launchApp: true';\n+// export const launchApp = true";
+    expect(picked({ changed: ["src/shared/version.ts"], sourceDiff: diff })).toEqual([]);
+    const declared =
+      "diff --git a/src/shared/version.ts b/src/shared/version.ts\n+export const BUILD_STAMP = 2;\n+  buildStamp: z.number(),";
+    expect([...(symbolsOfDiff(declared).get("src/shared/version.ts") ?? [])]).toEqual([
+      "BUILD_STAMP",
+      "buildStamp",
+    ]);
+  });
+});
+
+describe("changed helper names (INF-625)", () => {
+  it("follows renamed imports and re-exports without selecting unrelated names", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        new URL("./fixtures/affected-journeys/39319028198.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      helpers: Record<string, { before: string; after: string }>;
+    };
+    const files = new Map([
+      ["tests/e2e/windowKeys.ts", fixture.helpers["tests/e2e/windowKeys.ts"]?.after ?? ""],
+      ["tests/e2e/keys.ts", 'export { focusOn as focusTarget } from "./windowKeys";'],
+      ["tests/e2e/focus.spec.ts", 'import { focusTarget } from "./keys";'],
+      ["tests/e2e/key-hint.spec.ts", 'import { keyHint } from "./windowKeys";'],
+      ["tests/e2e/alias.spec.ts", 'import { focusOn as focusTarget } from "./windowKeys";'],
+    ]);
+    const specs = [...files.keys()].filter((file) => file.endsWith(".spec.ts"));
+    expect(
+      [
+        ...select({
+          changed: ["tests/e2e/windowKeys.ts"],
+          sourceDiff: "",
+          specs,
+          read: (file) => files.get(file),
+          readBefore: (file) => fixture.helpers[file]?.before,
+        }).keys(),
+      ].sort(),
+    ).toEqual(["tests/e2e/alias.spec.ts", "tests/e2e/focus.spec.ts"]);
+  });
+});
+
+describe("removed helper exports (INF-625)", () => {
+  it("still selects importers when the changed helper is deleted", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        new URL("./fixtures/affected-journeys/39319028198.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      helpers: Record<string, { before: string; after: string }>;
+    };
+    const spec = "tests/e2e/task-crewmate.spec.ts";
+    const chosen = select({
+      changed: ["tests/e2e/windowKeys.ts"],
+      sourceDiff: "",
+      specs: [spec],
+      read: (file) => (file === spec ? 'import { focusOn } from "./windowKeys";' : undefined),
+      readBefore: (file) => fixture.helpers[file]?.before,
+    });
+    expect([...chosen.keys()]).toEqual([spec]);
   });
 });

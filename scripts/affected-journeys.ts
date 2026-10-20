@@ -17,13 +17,13 @@ import { fileURLToPath } from "node:url";
  *
  * 1. it is a spec file the change edits;
  * 2. a helper it imports, directly or through another helper, is a file the
- *    change edits: one under `tests/e2e/`, a shared one under `tests/` such
- *    as `tests/helpers/`, or a script. A helper most journeys import still
- *    runs them all;
+ *    change edits, and imports an export whose declaration or body changed:
+ *    one under `tests/e2e/`, a shared one under `tests/` such as
+ *    `tests/helpers/`, or a script;
  * 3. it imports a changed module of `src/shared/` and names a symbol that
  *    module's diff adds or removes. Importing the file is not enough;
- * 4. it, or a helper it imports, names a renderer hook (`data-*`) as a whole
- *    token that the change adds or removes in `src/`; or
+ * 4. it, or a helper most journeys do not import, names a renderer hook
+ *    (`data-*`) as a whole token the change adds or removes in `src/`; or
  * 5. it, or a helper most journeys do not import, holds a sentence of two or
  *    more words as its own quoted string, one the change adds or removes in
  *    a string of `src/`; or
@@ -126,15 +126,26 @@ export function closureOf(
 export function tokensOfDiff(diff: string): { hooks: Set<string>; sentences: Set<string> } {
   const hooks = new Set<string>();
   const sentences = new Set<string>();
-  for (const line of diff.split("\n")) {
-    if (!/^[+-](?![+-])/.test(line)) continue;
-    const text = line.slice(1);
-    for (const [hook] of text.matchAll(/\bdata-[a-z][a-z0-9-]*/g)) hooks.add(hook);
-    for (const [, , sentence] of text.matchAll(/(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g)) {
-      const words = (sentence ?? "").trim();
-      if (/^[^\s${}<>=]+(?:\s+[^\s${}<>=]+)+$/.test(words) && words.length >= 8)
-        sentences.add(words);
+  // Cancellation is per file: moving words between files still changes both owners.
+  for (const part of diff.split(/^diff --git /m)) {
+    if (/^a\/src\/.*\.(?:test|spec)\.[^ ]+ /m.test(part)) continue;
+    const sides = [new Set<string>(), new Set<string>()];
+    const phrases = [new Set<string>(), new Set<string>()];
+    for (const line of part.split("\n")) {
+      if (!/^[+-](?![+-])/.test(line)) continue;
+      const side = line.startsWith("+") ? 0 : 1;
+      const text = line.slice(1);
+      for (const [hook] of text.matchAll(/\bdata-[a-z][a-z0-9-]*/g)) sides[side]?.add(hook);
+      for (const [, , sentence] of text.matchAll(/(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g)) {
+        const words = (sentence ?? "").trim();
+        if (/^[^\s${}<>=]+(?:\s+[^\s${}<>=]+)+$/.test(words) && words.length >= 8)
+          phrases[side]?.add(words);
+      }
     }
+    for (const [index, side] of sides.entries())
+      for (const hook of side) if (!sides[1 - index]?.has(hook)) hooks.add(hook);
+    for (const [index, side] of phrases.entries())
+      for (const phrase of side) if (!phrases[1 - index]?.has(phrase)) sentences.add(phrase);
   }
   return { hooks, sentences };
 }
@@ -189,16 +200,16 @@ const NOT_A_SYMBOL = new Set([
 
 /**
  * Symbols a shared-module diff adds or removes: a property key of four or
- * more letters, an export, or a camelCase name. A name on both sides of the
- * diff was moved, not changed. A name shorter than four letters (`run`, `id`,
- * `text`) is an ordinary word and does not name the change.
+ * more letters or an export, with at least one capital letter.
+ * A name on both sides of the diff was moved, not changed. A name shorter
+ * than four letters (`run`, `id`, `text`) does not name the change.
  */
 export function symbolsOfDiff(diff: string): Map<string, Set<string>> {
   const byFile = new Map<string, Set<string>>();
   for (const part of diff.split(/^diff --git /m)) {
     const path = part.match(/a\/(\S+)/)?.[1];
     // A unit test under src/shared is not a module a journey imports.
-    if (!path?.startsWith("src/shared/") || path.includes(".test.")) continue;
+    if (!path?.startsWith("src/shared/") || /\.(?:test|spec)\./.test(path)) continue;
     const added = new Set<string>();
     const removed = new Set<string>();
     for (const line of part.split("\n")) {
@@ -207,17 +218,18 @@ export function symbolsOfDiff(diff: string): Map<string, Set<string>> {
       // A colon in a comment ("holds: a line") is not a property.
       if (/^\s*(\/\/|\*|\/\*)/.test(text)) continue;
       const into = line.startsWith("+") ? added : removed;
+      const code = text.replace(/(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g, "").replace(/\/\/.*$/, "");
       // A key at the start of a line or after `{` or `,`. A parameter
       // (`event: FmEvent`) is not a symbol the change introduced.
-      for (const match of text.matchAll(/(?:^|[{,])\s*([A-Za-z_$][\w$]{3,})\s*\??\s*:/g)) {
-        if (!NOT_A_SYMBOL.has(match[1] ?? "")) into.add(match[1] ?? "");
+      for (const match of code.matchAll(/(?:^|[{,])\s*([A-Za-z_$][\w$]{3,})\s*\??\s*:/g)) {
+        if (/[A-Z]/.test(match[1] ?? "") && !NOT_A_SYMBOL.has(match[1] ?? ""))
+          into.add(match[1] ?? "");
       }
-      for (const match of text.matchAll(
+      for (const match of code.matchAll(
         /\bexport\s+(?:async\s+)?(?:function|const|let|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/g,
       )) {
-        into.add(match[1] ?? "");
+        if (/[A-Z]/.test(match[1] ?? "")) into.add(match[1] ?? "");
       }
-      for (const match of text.matchAll(/\b([a-z_$][\w$]*[A-Z][\w$]*)\b/g)) into.add(match[1] ?? "");
     }
     const delta = new Set<string>();
     for (const name of added) if (name && !removed.has(name)) delta.add(name);
@@ -232,6 +244,103 @@ function names(text: string, symbol: string): boolean {
   return new RegExp(`\\b${escaped}\\b`).test(text);
 }
 
+/** Top-level helper declarations; keep this package-free for choose-journeys. */
+function declarations(source: string): Map<string, { text: string; exported: boolean }> {
+  const result = new Map<string, { text: string; exported: boolean }>();
+  const pattern =
+    /^(export\s+)?(?:declare\s+)?(?:async\s+)?(?:function|const|let|class|type|interface|enum)\s+([\w$]+)/gm;
+  const starts = [...source.matchAll(pattern)];
+  for (const [index, start] of starts.entries()) {
+    const end = starts[index + 1]?.index ?? source.length;
+    // A declaration's leading documentation belongs to it, not its predecessor.
+    let text = source.slice(start.index, end).trim();
+    const comment = text.lastIndexOf("/**");
+    if (comment >= 0 && /^\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*$/.test(text.slice(comment)))
+      text = text.slice(0, comment).trim();
+    result.set(start[2] ?? "", { text, exported: Boolean(start[1]) });
+  }
+  for (const match of source.matchAll(/^export\s*\{([^}]+)\}(?:\s+from\s+["'][^"']+["'])?/gm)) {
+    for (const item of (match[1] ?? "").split(",")) {
+      const [local, alias] = item
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/);
+      if (local) {
+        const name = alias ?? local;
+        const declaration = name === local ? result.get(local)?.text : "";
+        result.set(name, { text: `${declaration ?? ""}\n${match[0]}`, exported: true });
+      }
+    }
+  }
+  for (const match of source.matchAll(/^export default\s+([\s\S]*?)(?=^export |$(?![\s\S]))/gm))
+    result.set("default", { text: match[0].trim(), exported: true });
+  return result;
+}
+
+/** Changed exports, including exports using an edited private declaration. */
+export function changedExports(before: string, after: string): Set<string> {
+  const old = declarations(before);
+  const next = declarations(after);
+  const all = new Set([...old.keys(), ...next.keys()]);
+  const changed = new Set([...all].filter((name) => old.get(name)?.text !== next.get(name)?.text));
+  // Imports and top-level setup have no declaration owner. They can affect any export.
+  const preamble = (source: string) =>
+    source.slice(
+      0,
+      source.search(
+        /^(?:export\s+)?(?:async\s+)?(?:function|const|let|class|type|interface|enum)\s/m,
+      ),
+    );
+  if (preamble(before) !== preamble(after)) for (const name of all) changed.add(name);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const name of all) {
+      if (changed.has(name)) continue;
+      const text = `${old.get(name)?.text ?? ""}\n${next.get(name)?.text ?? ""}`;
+      if ([...changed].some((dependency) => names(text, dependency))) {
+        changed.add(name);
+        grew = true;
+      }
+    }
+  }
+  return new Set(
+    [...changed].filter((name) => old.get(name)?.exported || next.get(name)?.exported),
+  );
+}
+
+/** The imported name is the original export, not a local alias. */
+function importsChangedName(
+  file: string,
+  source: string,
+  target: string,
+  exports: Set<string>,
+  read: Change["read"],
+): boolean {
+  for (const match of source.matchAll(
+    /(?:import|export)\s+(type\s+)?(\{[^}]+\}|\*(?:\s+as\s+\w+)?|[\w$]+(?:\s*,\s*\{[^}]+\})?)\s+from\s*["']([^"']+)["']/g,
+  )) {
+    const clause = match[2] ?? "";
+    const statement = `import "${match[3]}"`;
+    if (!importsOf(file, statement, (path) => read(path) !== undefined).includes(target)) continue;
+    if (/\*/.test(clause)) return exports.size > 0;
+    if (!clause.startsWith("{") && exports.has("default")) return true;
+    const named = clause.match(/\{([^}]+)\}/)?.[1];
+    if (
+      named?.split(",").some((item) =>
+        exports.has(
+          item
+            .trim()
+            .replace(/^type\s+/, "")
+            .split(/\s+as\s+/)[0] ?? "",
+        ),
+      )
+    )
+      return true;
+  }
+  return false;
+}
+
 function git(args: string[]): string {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
 }
@@ -242,17 +351,26 @@ export type Change = {
   sourceDiff: string;
   specs: readonly string[];
   read: (file: string) => string | undefined;
+  readBefore?: (file: string) => string | undefined;
 };
 
-export function select({ changed, sourceDiff, specs, read }: Change): Reasons {
+export function select({ changed, sourceDiff, specs, read, readBefore }: Change): Reasons {
   const changedSet = new Set(changed);
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
   const symbols = symbolsOfDiff(sourceDiff);
+  const helperExports = new Map<string, Set<string>>();
+  if (readBefore)
+    for (const file of changed)
+      if (!isSource(file) && /\.tsx?$/.test(file) && !file.endsWith(".spec.ts"))
+        helperExports.set(file, changedExports(readBefore(file) ?? "", read(file) ?? ""));
+  // A deleted helper still has importers, and its removed exports still matter.
+  const availableRead = (file: string) =>
+    read(file) ?? (helperExports.has(file) ? readBefore?.(file) : undefined);
   const importCache = new Map<string, string[]>();
   const reachOf = new Map<string, string[]>();
   const reachCount = new Map<string, number>();
   for (const spec of specs) {
-    const reach = closureOf(spec, read, importCache);
+    const reach = closureOf(spec, availableRead, importCache);
     reachOf.set(spec, reach);
     for (const file of reach) {
       if (file.startsWith(`${E2E}/`) && file !== spec)
@@ -289,14 +407,26 @@ export function select({ changed, sourceDiff, specs, read }: Change): Reasons {
     if (changedSet.has(spec)) add(spec, "the change edits this journey");
     const reach = reachOf.get(spec) ?? [];
     for (const file of reach)
-      if (file !== spec && changedSet.has(file) && !isSource(file))
+      if (
+        file !== spec &&
+        changedSet.has(file) &&
+        !isSource(file) &&
+        (!helperExports.has(file) ||
+          reach.some((importer) =>
+            importsChangedName(
+              importer,
+              availableRead(importer) ?? "",
+              file,
+              helperExports.get(file) ?? new Set(),
+              availableRead,
+            ),
+          ))
+      )
         add(spec, `imports ${file}, which the change edits`);
-    const narrow = reach.filter((file) => file.startsWith(`${E2E}/`) && (file === spec || !wide(file)));
+    const narrow = reach.filter(
+      (file) => file.startsWith(`${E2E}/`) && (file === spec || !wide(file)),
+    );
     const narrowText = narrow.map((file) => read(file) ?? "").join("\n");
-    const wideText = reach
-      .filter((file) => file.startsWith(`${E2E}/`))
-      .map((file) => read(file) ?? "")
-      .join("\n");
     for (const [file, changedSymbols] of symbols) {
       if (!reach.includes(file)) continue;
       for (const symbol of changedSymbols) {
@@ -306,7 +436,7 @@ export function select({ changed, sourceDiff, specs, read }: Change): Reasons {
       }
     }
     for (const hook of hooks)
-      if (holdsHook(wideText, hook)) add(spec, `reads ${hook}, which the change adds or removes`);
+      if (holdsHook(narrowText, hook)) add(spec, `reads ${hook}, which the change adds or removes`);
     for (const sentence of sentences)
       if (holdsPhrase(narrowText, sentence))
         add(spec, `holds "${sentence}", which the change adds or removes`);
@@ -345,7 +475,19 @@ export function affected(base: string, head: string): Reasons {
     }
     return files.get(file);
   };
-  return select({ changed, sourceDiff, specs, read });
+  const before = git(["merge-base", base, head]).trim();
+  const beforeFiles = new Map<string, string | undefined>();
+  const readBefore = (file: string) => {
+    if (!beforeFiles.has(file)) {
+      try {
+        beforeFiles.set(file, git(["show", `${before}:${file}`]));
+      } catch {
+        beforeFiles.set(file, undefined);
+      }
+    }
+    return beforeFiles.get(file);
+  };
+  return select({ changed, sourceDiff, specs, read, readBefore });
 }
 
 function main(): void {

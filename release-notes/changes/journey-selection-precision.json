@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-selection-precision",
+      "reason": "Internal CI selection: ignore shared stand-in hooks, unchanged tokens and undeclared names, and select helper importers by changed exports. No shipped behavior changes."
+    }
+  ]
+}

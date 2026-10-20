@@ -14,23 +14,34 @@ on:
         required: false
         type: string
         default: ubuntu-24.04
+      artifact-suffix:
+        type: string
+        default: source
+      files:
+        description: Space-separated affected journey files
+        type: string
+        default: ""
+      lane:
+        description: Lane of affected files (parallel or desktop)
+        type: string
+        default: parallel
       suite:
-        description: starter, a pull request's journeys; or full, every journey in shards
+        description: starter (two lanes), affected (files in one lane), or full (eight shards)
         required: false
         type: string
         default: starter
 
 jobs:
   source-desktop:
-    # A pull request's check keeps its name. The full suite is the parallel
+    # Starters split by lane. Affected files keep their lane; the full suite is the parallel
     # lanes and the serial desktop lane, each split four ways, one job a
     # share, so a failure names its own part of the suite; the desktop lane
     # still runs alone on its machine (tests/e2e/lanes.ts).
-    name: ${{ inputs.suite == 'full' && format('journeys ({0} {1}/4)', matrix.lane, matrix.shard) || 'source-desktop' }}
+    name: ${{ inputs.suite == 'full' && format('journeys ({0} {1}/4)', matrix.lane, matrix.shard) || format('source-desktop ({0})', matrix.lane) }}
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.suite == 'full' && '["parallel", "desktop"]' || '["starter"]') }}
+        lane: ${{ fromJSON(inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane)) }}
         shard: ${{ fromJSON(inputs.suite == 'full' && '[1, 2, 3, 4]' || '[1]') }}
     runs-on: ${{ inputs.runner }}
     defaults:
@@ -117,12 +128,24 @@ jobs:
                 *) echo "The pointer is not on the last pixel at $x,$y: $at" >&2; exit 1 ;;
               esac' on-screen "$@"
           }
-          if [ "$RUNNER_OS" = Linux ] && [ "$LANE" = parallel ]; then
+          if [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = affected ]; then
+            test -n "$FILES"
+            if [ "$LANE" = desktop ]; then
+              on_screen pnpm exec playwright test --no-deps --project=desktop $FILES
+            else
+              on_screen pnpm exec playwright test --no-deps --project=renderer --project=application $FILES
+            fi
+          elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
             on_screen pnpm exec playwright test --no-deps --project=styles --project=renderer --project=application --shard="$SHARD/4"
-          elif [ "$RUNNER_OS" = Linux ] && [ "$LANE" = desktop ]; then
+          elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
             on_screen pnpm exec playwright test --no-deps --project=desktop --shard="$SHARD/4"
           elif [ "$RUNNER_OS" = Linux ]; then
-            on_screen pnpm exec playwright test --no-deps tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts tests/e2e/keyboard-routing.spec.ts tests/e2e/keyboard-regions.spec.ts tests/e2e/task-browser.spec.ts tests/e2e/task-browser-actions.spec.ts tests/e2e/task-browser-diagnostics.spec.ts tests/e2e/task-browser-booking.spec.ts tests/e2e/phase6-voice.spec.ts tests/e2e/voice-prompt-focus.spec.ts tests/e2e/repro-voice-press.spec.ts tests/e2e/devices.spec.ts
+            if [ "$LANE" = desktop ]; then
+              projects="--project=desktop"
+            else
+              projects="--project=renderer --project=application"
+            fi
+            on_screen pnpm exec playwright test --no-deps $projects tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts tests/e2e/keyboard-routing.spec.ts tests/e2e/keyboard-regions.spec.ts tests/e2e/task-browser.spec.ts tests/e2e/task-browser-actions.spec.ts tests/e2e/task-browser-diagnostics.spec.ts tests/e2e/task-browser-booking.spec.ts tests/e2e/phase6-voice.spec.ts tests/e2e/voice-prompt-focus.spec.ts tests/e2e/repro-voice-press.spec.ts tests/e2e/devices.spec.ts
           else
             callers="$(cat "$RUNNER_TEMP/resize-callers.txt")"
             pnpm exec playwright test --no-deps tests/e2e/source-start.spec.ts tests/e2e/phase0-guardrails.spec.ts tests/e2e/answer-delivery.spec.ts tests/e2e/claude-crew-turn.spec.ts $callers
@@ -130,6 +153,8 @@ jobs:
         env:
           INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
+          SUITE: ${{ inputs.suite }}
+          FILES: ${{ inputs.files }}
           LANE: ${{ matrix.lane }}
           SHARD: ${{ matrix.shard }}
           SCREEN: 2560x1600x24
@@ -137,7 +162,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: source-desktop-${{ runner.os }}${{ inputs.suite == 'full' && format('-{0}-{1}', matrix.lane, matrix.shard) || '' }}
+          name: source-desktop-${{ runner.os }}${{ inputs.suite == 'full' && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
           path: |
             ${{ runner.temp }}/source-desktop-evidence/
             Application Support/firstmate/playwright-report/source-results.json

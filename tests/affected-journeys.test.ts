@@ -427,3 +427,78 @@ describe("hooks a changed screen file draws (INF-625)", () => {
     expect([...(deleted.get("src/renderer/src/Gone.tsx") ?? [])]).toEqual(["data-gone"]);
   });
 });
+
+// INF-658's accepted screen-rule choice, on PR #153's actual source and diff.
+describe("edited screen regions (INF-658)", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/affected-journeys/screen-regions.json", import.meta.url),
+      "utf8",
+    ),
+  ) as {
+    before: Record<string, string>;
+    after: Record<string, string>;
+    sourceDiff: string;
+  };
+  const original = JSON.parse(
+    readFileSync(new URL("./fixtures/affected-journeys/39296951860.json", import.meta.url), "utf8"),
+  ) as {
+    changed: string[];
+    journeys: Record<string, string>;
+    helpers: Record<string, string>;
+    specs: string[];
+    missed: string[];
+    unchosen: string;
+  };
+  it("still selects every journey PR #153 broke with the precise real diff", () => {
+    const reasons = select({
+      changed: original.changed,
+      sourceDiff: fixture.sourceDiff,
+      specs: original.specs,
+      read: (file) =>
+        fixture.after[file] ??
+        original.journeys[file] ??
+        original.helpers[file] ??
+        (original.specs.includes(file) ? "" : undefined),
+      readBefore: (file) => fixture.before[file],
+    });
+    for (const file of original.missed) expect(reasons.has(file), file).toBe(true);
+    expect(reasons.has(original.unchosen)).toBe(false);
+  });
+  it("does not select unrelated parts of HomeScreen for its CardLayer edit", () => {
+    const file = "src/renderer/src/app/HomeScreen.tsx";
+    const hooks = ownedHooks(
+      [file],
+      (path) => fixture.after[path],
+      (path) => fixture.before[path],
+      fixture.sourceDiff,
+    ).get(file);
+    expect(hooks?.has("data-stage-entry")).toBe(true);
+    expect(hooks?.has("data-prompt-dock")).toBe(false);
+    expect(hooks?.has("data-character-frame")).toBe(false);
+  });
+});
+
+it("INF-658: a JSX hook-value edit does not select a sibling screen region", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/affected-journeys/screen-regions.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { before: Record<string, string> };
+  const file = "src/renderer/src/app/HomeScreen.tsx";
+  const before = fixture.before[file] ?? "";
+  const line = before.split("\n").findIndex((line) => line.includes('data-prompt-dock=""')) + 1;
+  expect(line).toBeGreaterThan(0);
+  const after = before.replace('data-prompt-dock=""', 'data-prompt-dock="main"');
+  const diff = `diff --git a/${file} b/${file}\n@@ -${line} +${line} @@\n-data-prompt-dock=""\n+data-prompt-dock="main"`;
+  const hooks = ownedHooks(
+    [file],
+    () => after,
+    () => before,
+    diff,
+  ).get(file);
+  expect(hooks?.has("data-prompt-dock")).toBe(true);
+  expect(hooks?.has("data-character-frame")).toBe(false);
+  expect(hooks?.has("data-stage-entry")).toBe(false);
+});

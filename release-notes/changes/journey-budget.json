@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-budget",
+      "reason": "Internal CI selection and placement: six measured minutes on Mac, hosted Linux overflow, two Linux starter lanes and edited screen regions. No app surface changes."
+    }
+  ]
+}

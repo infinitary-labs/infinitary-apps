@@ -1,0 +1,66 @@
+{
+  "suites": [
+    {
+      "file": "activity-updates.spec.ts",
+      "specs": [
+        {
+          "file": "activity-updates.spec.ts",
+          "tests": [
+            {
+              "results": [
+                {
+                  "duration": 9851,
+                  "status": "passed"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "crew-orbit.spec.ts",
+      "specs": [
+        {
+          "file": "crew-orbit.spec.ts",
+          "tests": [
+            {
+              "results": [
+                {
+                  "duration": 8736,
+                  "status": "passed"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "crew-orbit.spec.ts",
+          "tests": [
+            {
+              "results": [
+                {
+                  "duration": 10195,
+                  "status": "passed"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "crew-orbit.spec.ts",
+          "tests": [
+            {
+              "results": [
+                {
+                  "duration": 8686,
+                  "status": "passed"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

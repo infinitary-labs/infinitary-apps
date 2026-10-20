@@ -3197,3 +3197,84 @@ describe("the Linux packages", () => {
     ]);
   });
 });
+
+// INF-658's approved plan: execute the actual Linux journey command, not a
+// source-text pin. Disposable command stand-ins record the selected interface.
+describe("budgeted pull-request journey workflow (INF-658)", () => {
+  type Job = {
+    strategy: { matrix: { lane: string; shard: string } };
+    steps: { name?: string; run?: string }[];
+  };
+  const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
+    jobs: Record<string, Job>;
+  };
+  const job = source.jobs["source-desktop"];
+  it("splits starters into disjoint lane projects and leaves the full alpha at eight machines", () => {
+    const lanes = (suite: string, lane = "parallel") =>
+      workflowValue(job?.strategy.matrix.lane ?? "", { inputs: { suite, lane } });
+    const shards = (suite: string) =>
+      workflowValue(job?.strategy.matrix.shard ?? "", { inputs: { suite } });
+    expect(lanes("starter")).toEqual(["parallel", "desktop"]);
+    expect(shards("starter")).toEqual([1]);
+    expect(lanes("full")).toEqual(["parallel", "desktop"]);
+    expect(shards("full")).toEqual([1, 2, 3, 4]);
+    expect(lanes("affected", "desktop")).toEqual(["desktop"]);
+  });
+  it.each(["parallel", "desktop"])(
+    "runs the %s starter and overflow files through their lane",
+    (lane) => {
+      const dir = scratchDir("infinitary-journey-placement-");
+      const bin = join(dir, "bin");
+      mkdirSync(bin);
+      const commands: Record<string, string> = {
+        "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
+        xdotool:
+          '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
+        pnpm: '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n',
+      };
+      for (const [name, body] of Object.entries(commands)) {
+        const path = join(bin, name);
+        writeFileSync(path, body);
+        chmodSync(path, 0o755);
+      }
+      const command = job?.steps.find((step) =>
+        step.name?.startsWith("Run the journeys with"),
+      )?.run;
+      expect(command).toBeDefined();
+      for (const suite of ["starter", "affected"]) {
+        const log = join(dir, `${suite}.log`);
+        const files =
+          lane === "desktop"
+            ? "tests/e2e/keyboard-routing.spec.ts"
+            : "tests/e2e/task-browser.spec.ts";
+        const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command ?? ""], {
+          env: {
+            ...process.env,
+            PATH: `${bin}:${process.env.PATH}`,
+            COMMAND_LOG: log,
+            RUNNER_OS: "Linux",
+            SUITE: suite,
+            LANE: lane,
+            FILES: files,
+            SCREEN: "2560x1600x24",
+            SHARD: "1",
+          },
+          encoding: "utf8",
+        });
+        expect(result.status, result.stderr).toBe(0);
+        const call = readFileSync(log, "utf8");
+        expect(call).toContain("exec playwright test --no-deps");
+        expect(call.includes("--project=desktop")).toBe(lane === "desktop");
+        expect(call.includes("--project=application")).toBe(lane === "parallel");
+        if (suite === "affected")
+          expect(call.trim()).toBe(
+            `exec playwright test --no-deps ${lane === "desktop" ? "--project=desktop" : "--project=renderer --project=application"} ${files}`,
+          );
+        else {
+          expect(call).toContain("tests/e2e/devices.spec.ts");
+          expect(call).toContain("tests/e2e/source-start.spec.ts");
+        }
+      }
+    },
+  );
+});

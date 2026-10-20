@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { editedScreenText, screenRanges } from "./screen-journeys.ts";
 
 /**
  * The journey files a change can break (docs/testing.md, "Journeys on the
@@ -28,8 +29,8 @@ import { fileURLToPath } from "node:url";
  *    more words as its own quoted string, one the change adds or removes in
  *    a string of `src/`; or
  * 6. it, or a helper most journeys do not import, names a hook that a
- *    changed file under `src/renderer/` draws, even when the change adds or
- *    removes none: the file owns what that hook shows; or
+ *    edited region under `src/renderer/` draws, even when the change adds or
+ *    removes none: the region owns what that hook shows; or
  * 7. its changed path matches a targeted fallback row below, even when no
  *    hook, symbol or sentence changed.
  *
@@ -170,20 +171,27 @@ export function holdsHook(text: string, hook: string): boolean {
   return new RegExp(`(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])`).test(text);
 }
 
-/** Every `data-*` hook a renderer file draws, before or after the change. */
+/** Every `data-*` hook an edited screen region draws, before or after the change. */
 export function ownedHooks(
   changed: readonly string[],
   read: (file: string) => string | undefined,
   readBefore?: (file: string) => string | undefined,
+  sourceDiff = "",
 ): Map<string, Set<string>> {
   const owned = new Map<string, Set<string>>();
   for (const file of changed) {
     // A unit test beside the screen draws nothing a person sees.
     if (!file.startsWith("src/renderer/") || /\.(?:test|spec)\.[^/]+$/.test(file)) continue;
     const hooks = new Set<string>();
-    for (const text of [read(file), readBefore?.(file)])
-      for (const [hook] of (text ?? "").matchAll(/(?<![A-Za-z0-9-])data-[a-z][a-z0-9-]*/g))
+    for (const side of ["before", "after"] as const) {
+      const text = (side === "before" ? readBefore?.(file) : read(file)) ?? "";
+      const ranges = screenRanges(sourceDiff, file, side);
+      // With no hunk/source (including callers supplying only paths), retain
+      // whole-file coverage. A deleted owner still contributes its old hooks.
+      const region = ranges.length ? editedScreenText(file, text, ranges) : text;
+      for (const [hook] of region.matchAll(/(?<![A-Za-z0-9-])data-[a-z][a-z0-9-]*/g))
         hooks.add(hook);
+    }
     if (hooks.size > 0) owned.set(file, hooks);
   }
   return owned;
@@ -379,7 +387,7 @@ export type Change = {
 export function select({ changed, sourceDiff, specs, read, readBefore }: Change): Reasons {
   const changedSet = new Set(changed);
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
-  const owned = ownedHooks(changed, read, readBefore);
+  const owned = ownedHooks(changed, read, readBefore, sourceDiff);
   const symbols = symbolsOfDiff(sourceDiff);
   const helperExports = new Map<string, Set<string>>();
   if (readBefore)

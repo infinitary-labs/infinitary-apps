@@ -128,8 +128,19 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 
 ## Journeys on the pull request
 
-A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which selects the journey files without installing packages and writes the reasons in its summary.
-Its count and file list pass to `affected-journeys`, on the Mac mini (the `MAC_RUNNER` label): only the journey files the change can break, never the whole suite.
+A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
+The chooser downloads `e2e-results` from the newest successful `verify.yml` run and sums each journey file's measured Mac durations.
+A missing or expired result fails the chooser rather than silently dropping journeys; run full verification to supply fresh timings.
+`scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path and screen readers, with filename ties.
+It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.
+A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
+Its Mac count and file list pass to `affected-journeys`, on the Mac mini (the `MAC_RUNNER` label).
+The remainder passes to `linux-overflow`, hosted machines running concurrently with Mac, packed into six-minute groups separately for parallel and desktop files.
+Linux estimates use the plan's observed rates: one Mac minute of parallel work per Linux minute and 0.6 Mac minutes of desktop work.
+A file stays intact, so an indivisible slow file may exceed six minutes; setup, runner waits and shared-machine slowdown are not part of this estimate.
+Every selected file runs exactly once in this placement; the independent Linux starter coverage still runs too.
+The chooser keeps its selection and placement as the `journey-placement` artifact.
+The full Mac suite remains part of every alpha's `verify.yml`; a Mac-only break in Linux overflow may first surface there.
 When the chooser passes with no files, the Mac job skips by its own condition without taking a runner; when the chooser fails, its failed check holds the merge.
 Both success and a job-condition skip satisfy the app's green rule.
 If GitHub branch rules ever require `affected-journeys`, they must require `choose-journeys` too: a job skipped because its prerequisite failed does not itself hold a merge.
@@ -144,7 +155,9 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
-6. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that a changed file under `src/renderer/` draws before or after the change, even when the change adds or removes no hook: the file owns what that hook shows;
+6. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the edited part of a file under `src/renderer/` draws before or after the change, even when the change adds or removes no hook.
+   The parser uses the smallest enclosing JSX subtree plus ancestor container hooks, or the enclosing top-level declaration for non-JSX edits, following local declaration consumers.
+   Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
 7. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:
@@ -475,7 +488,7 @@ Set `INFINITARY_VOICE_HOLD_MS=60000` to check release after a minute of real cap
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on hosted Ubuntu 24.04 x64, under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-source` on every pull request with the starter journeys: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with the stand-in model and a stand-in graphics card; the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
+`journeys.yml` calls it as `linux-source` on every pull request with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with the stand-in model and a stand-in graphics card; the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs.
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `journeys (desktop 2/4)`.
 A stable promotion inherits them with the other lanes ("Full alpha checks, inherited stable checks" in `docs/alpha.md`).

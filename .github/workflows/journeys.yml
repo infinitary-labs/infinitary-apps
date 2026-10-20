@@ -1,31 +1,16 @@
 name: journeys
 
-# The journeys a pull request can break, on the Mac mini, before the change
-# merges (captain, 2026-10-08, FI3-1305/FI3-1306: "on each pull request, only
-# the affected journey files, on the Mac mini"). It reverses decision B of
-# 2026-09-15 for pull requests in part. That decision moved the whole Mac
-# suite to the alpha because a hosted Mac cost ~$200/month; the Mac mini
-# (the MAC_RUNNER variable's label) costs nothing per run, and what the
-# decision left behind was the loop it made: a change merged with green
-# checks, the alpha's full Mac run found its one to three broken journeys
-# hours later, and every pull request waited on the fix.
-#
-# scripts/affected-journeys.ts picks the files: the specs the change edits,
-# the specs whose helpers import a changed helper, the specs that name what
-# a changed shared module adds or removes, and the specs that hold a whole
-# hook or a whole quoted sentence the change adds or removes in src/, and
-# the specs that read a hook a changed file under src/renderer/ draws. A
-# fragment in the stand-in does not select every journey. Three targeted
-# fallback rows also cover cards/home, frame focus/recovery, and devices,
-# even when their diff changes no hook, symbol, or sentence. The full suite
-# stays verify.yml's, inside every alpha and on demand. The run-alone pass
-# is not repeated here (docs/testing.md, "Journeys on the pull request").
+# INF-658: keep the closest six measured minutes on Mac; run overflow on
+# hosted Linux in parallel. Every alpha still runs the full Mac suite.
 
 on:
   pull_request:
 
-# A newer push to the same pull request replaces the older run: the Mac mini
-# is one machine.
+permissions:
+  contents: read
+  actions: read
+
+# A newer push replaces the older run.
 concurrency:
   group: journeys-${{ github.ref }}
   cancel-in-progress: true
@@ -41,8 +26,10 @@ jobs:
     outputs:
       count: ${{ steps.select.outputs.count }}
       files: ${{ steps.select.outputs.files }}
+      linux-count: ${{ steps.select.outputs.linux-count }}
+      linux: ${{ steps.select.outputs.linux }}
     steps:
-      # Pick from the merge diff without installing packages or taking the Mac.
+      # Pick from the merge diff without taking a Mac runner.
       - uses: actions/checkout@v4
         with:
           path: Application Support/firstmate
@@ -50,20 +37,53 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Application Support/firstmate/package.json
+      - run: pnpm install --frozen-lockfile
+      - id: timing-run
+        name: Find the newest passing full verification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'verify.yml', status: 'success', per_page: 1
+            });
+            const run = data.workflow_runs[0];
+            if (!run) throw new Error('No passing verify run supplies journey times');
+            core.setOutput('id', run.id);
+            await core.summary.addRaw(`Journey times: [passing verify run ${run.id}](${run.html_url})\n`).write();
+      - uses: actions/download-artifact@v4
+        with:
+          name: e2e-results
+          run-id: ${{ steps.timing-run.outputs.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/journey-times
       - id: select
-        name: Choose the journeys
+        name: Choose and place the journeys
         run: |
           node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
-          node -e '
-            const fs = require("node:fs");
-            const picked = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/affected.json", "utf8"));
-            const files = Object.keys(picked).sort();
-            const lines = ["### Journeys this change can break", ""];
-            if (files.length === 0) lines.push("None: no journey file reaches what the change edits.");
-            for (const file of files) lines.push("- `" + file + "` - " + picked[file].join("; "));
-            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, "count=" + files.length + "\nfiles=" + files.join(" ") + "\n");
-          '
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --changed "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/placement.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: journey-placement
+          path: |
+            ${{ runner.temp }}/affected.json
+            ${{ runner.temp }}/placement.json
+          retention-days: 14
+  linux-overflow:
+    needs: choose-journeys
+    if: needs.choose-journeys.outputs.linux-count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.choose-journeys.outputs.linux) }}
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      artifact-suffix: overflow-${{ strategy.job-index }}
+      suite: affected
+      lane: ${{ matrix.lane }}
+      files: ${{ matrix.files }}
   affected-journeys:
     needs: choose-journeys
     # The implicit success() skips on chooser failure; zero skips by this

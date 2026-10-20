@@ -3,7 +3,7 @@ import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
-import { E2E_PROJECTS } from "./tests/e2e/lanes";
+import { E2E_MAX_WORKERS, E2E_PROJECTS } from "./tests/e2e/lanes";
 import { runDir } from "./tests/e2e/runEvidence";
 
 // Only the CLI runner has the selection arguments; workers reload this config.
@@ -77,7 +77,7 @@ export default defineConfig({
   globalSetup: "./tests/e2e/globalSetup.ts",
   outputDir: run,
   // Bound parallel app processes to the host allowance; native work stays serial.
-  workers: Math.min(10, availableParallelism()),
+  workers: Math.min(E2E_MAX_WORKERS, availableParallelism()),
   projects: E2E_PROJECTS,
   reporter: [
     // The console reporter Playwright picks on its own: dots on CI, a line per test here.

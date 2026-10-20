@@ -134,6 +134,9 @@ export const APPLICATION_SUITES = [
   "workspace-inference.spec.ts",
 ].map((file) => `**/${file}`);
 
+/** Shared by execution and INF-658's measured Mac placement. */
+export const E2E_MAX_WORKERS = 10;
+
 export const E2E_PROJECTS = [
   // Focused stylesheet composition, outside user-journey specs.
   { name: "styles", testDir: "tests/renderer", teardown: "desktop" },

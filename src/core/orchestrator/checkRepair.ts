@@ -25,6 +25,13 @@ function dependencyWords(tasks: TaskService, dependency: TaskRecord): string {
 }
 
 const empty = (): CheckRepairLedger => ({ failures: [], diagnoses: [], repairs: [] });
+
+/** The declared own repair whose result no reading has settled yet: at most one is open. */
+export function outstandingRepair(
+  ledger: CheckRepairLedger | null | undefined,
+): CheckRepairLedger["repairs"][number] | undefined {
+  return ledger?.repairs.find((r) => r.outcome === undefined);
+}
 const same = (a: { headSha: string; check: string }, b: { headSha: string; check: string }) =>
   a.headSha === b.headSha && a.check === b.check;
 const text = (s: string | undefined) => Boolean(s?.trim());
@@ -150,10 +157,11 @@ export function declareCheckAction(
         read: false,
         text: "Repair refused: first diagnose the source head/check as your own regression with evidence.",
       };
-    if (ledger.repairs.some((r) => r.outcome === undefined))
+    const outstanding = outstandingRepair(ledger);
+    if (outstanding)
       return {
         read: false,
-        text: "Repair refused: read the outstanding attempt before starting another.",
+        text: `Repair refused: attempt ${outstanding.id} at ${outstanding.headSha} has no result yet; read its checks with check_change once they finish, before starting another.`,
       };
     ledger.repairs.push(repair);
   }
@@ -193,7 +201,12 @@ export function declareCheckAction(
   };
 }
 
-/** Raw history and budget-qualified results stay separate, on the durable delivery record. */
+/**
+ * Raw history and budget-qualified results stay separate, on the durable delivery record.
+ * `headSha` is the version `checks` were read at: the change's current head, or an
+ * earlier repair's own version the change has moved past (INF-685). Either way only
+ * an attempt declared at that exact version settles, and only from these checks.
+ */
 export function observeCheckRepair(
   delivery: TaskDelivery | null | undefined,
   headSha: string,

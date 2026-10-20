@@ -327,6 +327,10 @@ Only an unsuccessful declared own repair result adds to `ciRounds`; a repaired c
 Foreground reads and check watches use the same ledger.
 Repeated ids/target heads/results and revisiting historical heads add nothing; the delivery JSON persists across restarts.
 Pending checks cannot settle a repair; terminal neutral results are unsuccessful and still block completion; skipped results are accepted and spend no repair attempt.
+A repair declared at a version the pull request has since moved past is read at that exact version (INF-685): every foreground reading, and `check_change`'s repair declaration before it decides, reads that version's checks and settles the attempt from them alone, never from the newer head's.
+That read writes only the repair ledger - the failures seen there, the attempt's result and any attempt it spends - so the change's own reading, its version and its check watch stay at the current head.
+A version still running, one that never ran the repaired check, or one the host cannot read is no result: the attempt stays outstanding and the next repair is refused with the reason.
+A repaired check cancelled at its own version, by a time limit or a newer push, is unsuccessful like any other cancellation.
 
 The third unsuccessful repair stamps `ciCapAt` and sends one cap wake; completion stays held pending the captain's answer and relaying steer.
 That steer reopens the counters and flake allowance alongside the existing caps, retaining raw history, evidence and completed repair ids/results so an old observation still cannot become a new attempt.

@@ -44,7 +44,12 @@ import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
-import { checkRepairWords, declareCheckAction, observeCheckRepair } from "./checkRepair";
+import {
+  checkRepairWords,
+  declareCheckAction,
+  observeCheckRepair,
+  outstandingRepair,
+} from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import {
   candidateHead,
@@ -379,13 +384,17 @@ export class PrCiService {
     if (checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
       const located = this.locate(taskId);
       if ("said" in located) return located.said;
+      // A new repair waits on the outstanding one, so one the change moved
+      // past is read at its own version first (INF-685).
+      const earlier = checkInput.repair ? await this.settleBeforeRepair(located) : undefined;
       const declaration = declareCheckAction(
         this.options.tasks,
         located.record.id,
         checkInput,
         this.now(),
       );
-      if (!declaration.read) return declaration.text;
+      if (!declaration.read) return [earlier, declaration.text].filter(Boolean).join("\n");
+      declared = [declared, earlier].filter(Boolean).join("\n");
     }
     const run = await this.run(taskId, "crewmate");
     const reading = run.signIn ? crewSignInText(run.signIn) : run.text;
@@ -1695,6 +1704,7 @@ export class PrCiService {
         };
       }
       const checks = await forge.checks(change);
+      const earlier = await this.settleEarlierRepair(record.id, forge, change);
       const stillRunning = running(checks.items);
       this.record(
         record.id,
@@ -1720,6 +1730,7 @@ export class PrCiService {
           `${changeWords(forge, change)} head ${change.headSha}`,
           `overall: ${checks.overall}`,
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
+          ...(earlier ? [earlier] : []),
           ...cap,
           ...diagnosis,
           ...watchWords(forge, audience, watched && cap.length === 0, earlyOwed),
@@ -2191,6 +2202,79 @@ export class PrCiService {
     if (round.ciCapAt !== undefined && change) {
       this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: change.headSha });
     }
+  }
+
+  /**
+   * An own repair declared at a version the change is no longer at
+   * (INF-685): no reading of the newer head can settle it, and while it is
+   * outstanding no further repair may be declared. Read that exact
+   * version's checks and settle the attempt from them alone, never from the
+   * newer head's. Only the repair ledger is written - the failures seen
+   * there, the attempt's result and any attempt it spends - so the change's
+   * own reading stays at its current head. A version that cannot be read,
+   * is still running or never ran the check is no result: the attempt stays
+   * outstanding. Answers one line for the reading, or nothing when no such
+   * attempt is open.
+   */
+  private async settleEarlierRepair(
+    taskId: string,
+    forge: Forge,
+    change: ForgeChange,
+  ): Promise<string | undefined> {
+    const delivery = this.options.tasks.get(taskId)?.delivery;
+    const attempt = outstandingRepair(delivery?.ciRepair);
+    if (!attempt || attempt.headSha === change.headSha) return undefined;
+    const name = `Repair ${attempt.id} at ${attempt.headSha} (the change is now at ${change.headSha})`;
+    let checks: ForgeCheck[];
+    try {
+      checks = (await forge.checks({ ...change, headSha: attempt.headSha })).items;
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return `${name}: its checks could not be read there (${message}), so it has no result yet.`;
+    }
+    const round = observeCheckRepair(delivery, attempt.headSha, checks, this.now());
+    const outcome = round.ciRepair?.repairs.find((r) => r.id === attempt.id)?.outcome;
+    const rounds =
+      round.ciRounds === undefined
+        ? ""
+        : ` - round ${round.ciRounds} of ${CI_ROUND_CAP}${round.ciCapAt !== undefined ? ", the CI cap" : ""}`;
+    this.options.tasks.recordDelivery(
+      taskId,
+      round,
+      outcome
+        ? {
+            kind: "ci",
+            text: `Repair ${attempt.id} ${outcome} at earlier head ${attempt.headSha}${rounds}`,
+            feed: round.ciCapAt !== undefined,
+          }
+        : undefined,
+    );
+    if (round.ciCapAt !== undefined) {
+      this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: attempt.headSha });
+    }
+    const target = checks.find((check) => check.name === attempt.check);
+    if (outcome && target) {
+      const read = `${name}: ${attempt.check} ${describeCheckState(target.state)} there`;
+      return outcome === "passed"
+        ? `${read}, so it passed and spent no attempt.`
+        : `${read}, so it is an unsuccessful own repair (${round.ciRounds ?? 0}/${CI_ROUND_CAP}).`;
+    }
+    return checks.some((check) => check.state === "pending")
+      ? `${name}: that version's checks are still running, so it has no result yet.`
+      : `${name}: no check named ${attempt.check} reported there, so it has no result.`;
+  }
+
+  /** Before a repair is declared: the open change, then any earlier attempt's own version. */
+  private async settleBeforeRepair(located: {
+    record: { id: string };
+    branch: string;
+    forge: Forge;
+  }): Promise<string | undefined> {
+    if (!outstandingRepair(this.options.tasks.get(located.record.id)?.delivery?.ciRepair)) {
+      return undefined;
+    }
+    const change = await located.forge.changeFor(located.branch).catch(() => null);
+    return change ? this.settleEarlierRepair(located.record.id, located.forge, change) : undefined;
   }
 
   /**

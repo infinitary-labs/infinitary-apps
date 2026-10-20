@@ -88,6 +88,8 @@ class FakeForge implements Forge {
   };
   /** Fail `changeFor` only this many more times. */
   failChangeForTimes = 0;
+  /** The checks GitHub holds at named versions, or its refusal there; other versions read `states`. */
+  atHead: Record<string, { name: string; state: ForgeCheckState }[] | Error> = {};
   readonly calls: string[] = [];
 
   constructor(where: { kind?: Forge["kind"]; place?: string | null } = {}) {
@@ -132,11 +134,15 @@ class FakeForge implements Forge {
   async checks(change: ForgeChange) {
     this.calls.push(`checks ${change.headSha}`);
     if (this.fail.checks) throw this.fail.checks;
-    const items = this.states.map((state, index) => ({
-      name: this.names?.[index] ?? (index === 0 ? "linux-checks" : `check-${index}`),
-      state,
-      ...this.times?.[index],
-    }));
+    const held = this.atHead[change.headSha];
+    if (held instanceof Error) throw held;
+    const items =
+      held ??
+      this.states.map((state, index) => ({
+        name: this.names?.[index] ?? (index === 0 ? "linux-checks" : `check-${index}`),
+        state,
+        ...this.times?.[index],
+      }));
     return { overall: overallOfChecks(items), items };
   }
   async putIn(change: ForgeChange, headSha: string) {
@@ -612,6 +618,65 @@ describe("PrCiService", () => {
   });
 });
 
+/**
+ * GitHub's own reading of PR #203 (INF-643) at two of its versions, read on
+ * 2026-10-20: the signing repair's version, where the verify run's build of
+ * signed copies passed while its two installed-update jobs ran out of time and
+ * a newer push cancelled the rest, and the version the pull request then moved
+ * to (its eight package checks and twelve journey shards, all passed, left out).
+ * The INF-685 tests read a repair at the version it was declared at.
+ */
+const PR203 = {
+  /** Verify run 17's version, where the signing build failed. */
+  source: "68c8b8eaeb4323faa8d5fea1c119390a171c08b6",
+  /** Verify run 18's version: the repair's own. */
+  repaired: "4b7fe8c8c76a2627a632a141dc7c3c00d80c1b95",
+  current: "831702bf451322a10b9a2d0cf62313ac58754fe1",
+  build: "Verify signed installer and updater / Build signed verification copies",
+  atRepaired: (
+    [
+      ["Verify signed installer and updater / Apple silicon", "cancelled"],
+      ["Verify signed installer and updater / Intel", "cancelled"],
+      [
+        "check (${{ matrix.system }}${{ ((matrix.image && format(' {0}', matrix.image)) || '') }})",
+        "cancelled",
+      ],
+      ["affected-journeys", "cancelled"],
+      ["linux-source / source-desktop", "cancelled"],
+      ["choose-journeys", "success"],
+      ["build", "cancelled"],
+      ["native-phone", "cancelled"],
+      ["integration-tests (2/2)", "success"],
+      ["integration-tests (1/2)", "success"],
+      ["probe-tests", "failure"],
+      ["typecheck-lint-build", "success"],
+      ["unit-tests", "failure"],
+      ["matrix.lane", "skipped"],
+      ["linux-e2e", "skipped"],
+      ["choose-phone", "success"],
+      ["cancel-replaced", "success"],
+      ["Verify signed installer and updater / Build signed verification copies", "success"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+  atCurrent: (
+    [
+      ["affected-journeys", "success"],
+      ["native-phone", "pending"],
+      ["linux-source / source-desktop (parallel)", "success"],
+      ["linux-source / source-desktop (desktop)", "success"],
+      ["choose-journeys", "success"],
+      ["integration-tests (1/2)", "success"],
+      ["integration-tests (2/2)", "success"],
+      ["typecheck-lint-build", "success"],
+      ["probe-tests", "success"],
+      ["unit-tests", "success"],
+      ["cancel-replaced", "success"],
+      ["build", "success"],
+      ["choose-phone", "success"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+};
+
 describe("the CI round counter (delivery rigor phase 3)", () => {
   /** A forge whose change head and check state the test moves between calls. */
   function movingForge() {
@@ -947,6 +1012,171 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
       expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
     },
   );
+
+  // INF-685: a repair declared at a version the pull request has moved past is
+  // read at that version, so the next repair is not refused forever.
+  describe("a repair the change moved past", () => {
+    /** Move the change to `head`, where GitHub holds `checks`. */
+    function at(forge: FakeForge, head: string, checks?: FakeForge["atHead"][string]) {
+      forge.change = { ...(forge.change as ForgeChange), headSha: head };
+      if (checks) forge.atHead[head] = checks;
+    }
+    const signingRepair = {
+      id: "installer-signing-preferences-home",
+      sourceHead: PR203.source,
+      headSha: PR203.repaired,
+      check: PR203.build,
+      evidence: "Create the scratch keychain preferences before signing",
+    };
+    const quarantineRepair = {
+      id: "cask-quarantine-behavior",
+      sourceHead: PR203.repaired,
+      headSha: PR203.current,
+      check: "unit-tests",
+      evidence: "Replaced the source-text xattr assertion with a behavioral quarantine check",
+    };
+    /** INF-643's history: the signing repair declared, then unit-tests failing at its version. */
+    async function declareSigningRepair(service: PrCiService, forge: FakeForge) {
+      at(forge, PR203.source, [{ name: PR203.build, state: "failure" }]);
+      await service.checkForCrew("ab12cd34");
+      await service.checkForCrew("ab12cd34", {
+        diagnosis: {
+          headSha: PR203.source,
+          check: PR203.build,
+          classification: "own-regression",
+          evidence: "Verify run 17: the scratch keychain had no preferences file",
+        },
+      });
+      // Its version's checks are still running when it is declared.
+      at(
+        forge,
+        PR203.repaired,
+        PR203.atRepaired.map((check) =>
+          check.state === "failure" ? check : { ...check, state: "pending" as const },
+        ),
+      );
+      await service.checkForCrew("ab12cd34", { repair: signingRepair });
+      await service.checkForCrew("ab12cd34", {
+        diagnosis: {
+          headSha: PR203.repaired,
+          check: "unit-tests",
+          classification: "own-regression",
+          evidence: "tapPublication.test.ts:125 rejects the intentional ownership writer",
+        },
+      });
+    }
+
+    it("settles it from that version's own checks and keeps the reading at the newer head", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      await declareSigningRepair(service, forge);
+      // The pull request moves on; the repair's version finishes afterwards.
+      forge.atHead[PR203.repaired] = PR203.atRepaired;
+      at(forge, PR203.current, PR203.atCurrent);
+      forge.calls.length = 0;
+      const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
+      expect(forge.calls).toContain(`checks ${PR203.repaired}`);
+      expect(answer).toContain(`${PR203.build} completed / success there, so it passed`);
+      const delivery = tasks.get("ab12cd34")?.delivery;
+      expect(delivery).toMatchObject({ headSha: PR203.current, ci: "pending" });
+      expect(delivery?.ciRounds).toBeUndefined();
+      expect(delivery?.ciRepair?.repairs.map((repair) => [repair.id, repair.outcome])).toEqual([
+        [signingRepair.id, "passed"],
+        [quarantineRepair.id, undefined],
+      ]);
+      // The cancelled verification jobs stay failures of that version, beside its earlier ones.
+      expect(delivery?.ciRepair?.failures).toEqual([
+        { headSha: PR203.source, checks: [PR203.build] },
+        {
+          headSha: PR203.repaired,
+          checks: expect.arrayContaining([
+            "unit-tests",
+            "probe-tests",
+            "Verify signed installer and updater / Apple silicon",
+            "Verify signed installer and updater / Intel",
+          ]),
+        },
+      ]);
+      expect(delivery?.ciRepair?.diagnoses).toHaveLength(2);
+    });
+
+    it("counts it unsuccessful from its own version even when the newer head passes, holding there at the cap", async () => {
+      const onCap = vi.fn();
+      const { tasks, repos, service, forge } = setup({ onCap, now: () => 7000 });
+      await insertDirectPrTask(tasks, repos);
+      const failing = [{ name: PR203.build, state: "failure" as const }];
+      at(forge, PR203.source, failing);
+      await service.checkForCrew("ab12cd34");
+      let sourceHead = PR203.source;
+      for (const [i, headSha] of ["second-try", "third-try", PR203.repaired].entries()) {
+        await service.checkForCrew("ab12cd34", {
+          diagnosis: {
+            headSha: sourceHead,
+            check: PR203.build,
+            classification: "own-regression",
+            evidence: "The signing step's log names the missing keychain preferences",
+          },
+        });
+        at(forge, headSha, [{ name: PR203.build, state: "pending" }]);
+        await service.checkForCrew("ab12cd34", {
+          repair: { ...signingRepair, id: `attempt-${i}`, sourceHead, headSha },
+        });
+        forge.atHead[headSha] = failing;
+        if (headSha !== PR203.repaired) await service.checkForCrew("ab12cd34");
+        sourceHead = headSha;
+      }
+      // The last attempt's version fails only after the change moved on to a passing head.
+      at(forge, PR203.current, [{ name: PR203.build, state: "success" }]);
+      expect(await service.checkForCrew("ab12cd34")).toContain(
+        `${PR203.build} completed / failure there, so it is an unsuccessful own repair (3/3)`,
+      );
+      expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+        headSha: PR203.current,
+        ci: "green",
+        ciRounds: 3,
+        ciRedHead: PR203.repaired,
+        ciCapAt: 7000,
+      });
+      expect(onCap).toHaveBeenCalledTimes(1);
+      expect(onCap).toHaveBeenCalledWith("ab12cd34", { rounds: 3, headSha: PR203.repaired });
+    });
+
+    it.each([
+      {
+        version: "is still running",
+        held: () => PR203.atRepaired.map((check) => ({ ...check, state: "pending" as const })),
+        says: "that version's checks are still running, so it has no result yet",
+      },
+      {
+        version: "never ran the repaired check",
+        held: () => PR203.atRepaired.filter((check) => check.name !== PR203.build),
+        says: `no check named ${PR203.build} reported there, so it has no result`,
+      },
+      {
+        version: "cannot be read",
+        held: () => new ForgeError("transient", "GitHub answered 502"),
+        says: "its checks could not be read there (GitHub answered 502), so it has no result yet",
+      },
+    ])(
+      "leaves it outstanding while its version $version, refusing the next repair",
+      async (entry) => {
+        const { tasks, repos, service, forge } = setup();
+        await insertDirectPrTask(tasks, repos);
+        await declareSigningRepair(service, forge);
+        forge.atHead[PR203.repaired] = entry.held();
+        at(forge, PR203.current, PR203.atCurrent);
+        const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
+        expect(answer).toContain(entry.says);
+        expect(answer).toContain(
+          `Repair refused: attempt ${signingRepair.id} at ${PR203.repaired} has no result yet`,
+        );
+        expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toEqual([signingRepair]);
+        // A plain reading still reads the newer head and says the same.
+        expect(await service.checkForCrew("ab12cd34")).toContain(entry.says);
+        expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ headSha: PR203.current });
+      },
+    );
+  });
 
   it("does not open the change again for a task whose number was recorded before the label", async () => {
     // A record written before the forge seam carries `prNumber` alone.

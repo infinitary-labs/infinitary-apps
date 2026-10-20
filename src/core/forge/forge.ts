@@ -260,7 +260,10 @@ export interface Forge {
   branchHead?(branch: string): Promise<string>;
   /** The open proposed change for a branch, or null when there is none. */
   changeFor(branch: string): Promise<ForgeChange | null>;
-  /** The checks on the change's head version, read by the one green rule. */
+  /**
+   * The checks on `change.headSha`: the change's head version, read by the one
+   * green rule, or an earlier version of it an open repair was declared at (INF-685).
+   */
   checks(change: ForgeChange): Promise<ForgeChecks>;
   /**
    * Put the change in, only while its head is still `headSha`. A host that

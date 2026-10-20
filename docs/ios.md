@@ -136,6 +136,8 @@ Portrait or narrow multitasking returns to tabs; layout measurement excludes the
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
 It exposes the full local timestamp to accessibility.
 `PhoneSymbol` supplies native outline template images for the system's tinted chrome.
+`PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` puts a sheet on the panel color with a hairline at its edge.
+Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
 
 `PhoneCharacter` draws the tesseract, eyes and listening hexagons in a native Canvas, with idle, listening and working states only.
 Its timeline is capped at 30 frames per second, paused when hidden or backgrounded, and still under Reduce Motion.
@@ -376,6 +378,7 @@ They run in the existing Linux PR cohorts; no secret or signing access is needed
 Set `INFINITARY_PHONE_RELEASE_EVIDENCE` to a folder outside the project to retain their non-secret command transcripts; the stand-in uploader's success is never proof of a real Apple upload.
 
 `node scripts/generate-phone-theme.ts` copies light/dark values, spacing and radii from the design skill into adaptive native colors and lengths.
+It also writes the void into the `LaunchBackground` color asset that `Info.plist`'s launch screen names, because the system draws that screen before any Swift runs.
 The native TTF fonts are format-only conversions of the skill's Latin Space Grotesk and JetBrains Mono WOFF2 assets, retaining their original names and outlines.
 To regenerate them with FontTools and Brotli installed in a disposable Python environment, load each WOFF2 with `fontTools.ttLib.TTFont`, set `flavor = None`, and save it to the matching file under `InfinitaryApp/Fonts/`.
 The app includes their SIL Open Font License notice and the Apple packages' license and notice files.

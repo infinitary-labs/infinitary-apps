@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-brand-surfaces",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A more finished look on iPhone and iPad",
+      "body": "Infinitary opens straight onto its own colors instead of a white or black flash, and every title uses its own typeface. Sheets and text fields look like the Mac app's. Joining or leaving a computer asks in an alert that keeps both choices in view.",
+      "picture": {
+        "dark": "phone-brand-surfaces-dark.png",
+        "light": "phone-brand-surfaces-light.png",
+        "alt": "Infinitary on iPhone shows the Paste its link sheet on its own panel color, its title in the app's typeface above an outlined, rounded link field."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

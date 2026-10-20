@@ -64,7 +64,10 @@ import XCTest
         app.buttons["read-link"].tap()
         // iOS 26 exposes a dialog's native button and its SwiftUI label as nested buttons.
         let confirm = app.buttons["confirm-join"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10)); confirm.tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        // INF-589 item 4: the cancel choice stays in view beside Join, where a popover would hide it.
+        XCTAssertTrue(app.alerts.buttons["Cancel"].firstMatch.isHittable, app.debugDescription)
+        confirm.tap()
     }
 
     private func join() async throws {
@@ -238,7 +241,11 @@ import XCTest
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", replayed)).count, 1)
 
         computerDetails()
-        app.buttons["leave"].tap(); app.buttons["confirm-leave"].firstMatch.tap()
+        app.buttons["leave"].tap()
+        // INF-589 item 4: Keep it stays in view beside Leave.
+        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.isHittable, app.debugDescription)
+        app.buttons["confirm-leave"].firstMatch.tap()
         XCTAssertTrue(app.buttons["paste-link"].waitForExistence(timeout: 20), app.debugDescription)
         let afterLeave = try await home("state", method: "GET")
         XCTAssertEqual((afterLeave["devices"] as? [Any])?.count, 0)
@@ -248,6 +255,8 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Out of reach"].waitForExistence(timeout: 20))
         computerDetails()
         app.buttons["forget-mac"].tap()
+        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.isHittable, app.debugDescription)
         picture("forget-confirmation")
         app.buttons["confirm-forget"].firstMatch.tap()
         XCTAssertTrue(app.buttons["paste-link"].waitForExistence(timeout: 10))

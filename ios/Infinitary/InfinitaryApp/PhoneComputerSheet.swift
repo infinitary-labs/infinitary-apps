@@ -57,23 +57,24 @@ struct PhoneComputerSheet: View {
             }
             .safeAreaInset(edge: .bottom) {
                 exitControls.padding(PhoneTheme.space4).background(PhoneTheme.panel)
+                    .overlay(alignment: .top) { Rectangle().fill(PhoneTheme.line).frame(height: 1) }
             }
-            .background(PhoneTheme.background)
-            .navigationTitle("Your computer").navigationBarTitleDisplayMode(.inline)
+            .phoneTitle("Your computer")
             .toolbar { ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }.accessibilityIdentifier("close-computer-details")
             } }
-            .confirmationDialog("Leave \(session.mac.name)?", isPresented: $leaving, titleVisibility: .visible) {
+            // Alerts keep the cancel choice in view; a popover from the foot would hide it.
+            .alert("Leave \(session.mac.name)?", isPresented: $leaving) {
                 Button("Leave this computer", role: .destructive) { dismiss(); leave() }.accessibilityIdentifier("confirm-leave")
                 Button("Keep it", role: .cancel) {}
             } message: { Text("This device forgets the computer. To come back, use a new link.") }
-            .confirmationDialog("Forget this computer?", isPresented: $forgetting, titleVisibility: .visible) {
+            .alert("Forget this computer?", isPresented: $forgetting) {
                 Button("Forget this computer", role: .destructive) { dismiss(); forget() }.accessibilityIdentifier("confirm-forget")
                 Button("Keep it", role: .cancel) {}
             } message: { Text("You’ll need a new link to join again. Your computer may still list this device.") }
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .presentationDetents([.large]).presentationDragIndicator(.visible)
+        .presentationDetents([.large]).presentationDragIndicator(.visible).phoneSheetSurface()
     }
 
     // Close the sheet on confirmation so any failure remains visible in the root's problem notice.

@@ -25,7 +25,7 @@ struct PhoneTasks: View {
 
     var body: some View {
         VStack(spacing: PhoneTheme.space3) {
-            TextField("Search tasks", text: $query).textFieldStyle(.roundedBorder)
+            TextField("Search tasks", text: $query).textFieldStyle(.phone)
                 .accessibilityIdentifier("task-search")
             if let problem { Text(problem).foregroundStyle(PhoneTheme.warning) }
             ScrollView {
@@ -118,8 +118,9 @@ struct PhoneTaskRecord: View {
         VStack(spacing: PhoneTheme.space3) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PhoneTheme.space4) {
-                    Text(task.title).font(PhoneFont.title).accessibilityIdentifier("task-record-title")
-                    Text("\(task.state) · \(session.mac.name)").font(PhoneFont.mono)
+                    // The record's title is the task's own; its key stays in mono on the line below for whoever looks for it.
+                    Text(task.title).font(PhoneFont.title).accessibilityAddTraits(.isHeader).accessibilityIdentifier("task-record-title")
+                    Text("\(task.key) · \(task.state) · \(session.mac.name)").font(PhoneFont.mono)
                     if let place = task.place { Text(place.where).foregroundStyle(PhoneTheme.secondary) }
                     if let words = session.changeRefusal { Text(words).foregroundStyle(PhoneTheme.warning) }
                     if let readProblem { Text(readProblem).foregroundStyle(PhoneTheme.warning) }
@@ -134,7 +135,7 @@ struct PhoneTaskRecord: View {
             }
             if let problem { Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning).padding(.horizontal).accessibilityIdentifier("task-problem") }
             if task.status == "open" || task.status == "active" { actions.padding() }
-        }.background(PhoneTheme.background).navigationTitle(task.key).navigationBarTitleDisplayMode(.inline)
+        }.background(PhoneTheme.background).navigationBarTitleDisplayMode(.inline)
             .task(id: "\(session.contact)|\(showingCrew)") {
                 guard session.contact == "in-reach" else { return }
                 // Only the open record polls; the board follows pushes. Transcript writes may follow their event.
@@ -195,7 +196,7 @@ struct PhoneTaskRecord: View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if showingCrew && task.canSteer {
                 TextField("Message to the crewmate", text: $draft, axis: .vertical).lineLimit(1...4)
-                    .textFieldStyle(.roundedBorder).disabled(busy).accessibilityIdentifier("steer-box")
+                    .textFieldStyle(.phone).disabled(busy).accessibilityIdentifier("steer-box")
                 HStack {
                     Button("Steer") { change(.steer, args: [task.id, draft], clearDraft: true) }
                         .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

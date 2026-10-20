@@ -65,6 +65,9 @@ struct PhoneView: View {
                             .accessibilityIdentifier("dismiss-phone-keyboard")
                     }
                 }
+                if model.connection == nil || model.removed {
+                    ToolbarItem(placement: .principal) { Text("Infinitary").font(PhoneFont.headline).accessibilityAddTraits(.isHeader) }
+                }
                 if let session = model.connection, !model.removed {
                     ToolbarItem(placement: .principal) {
                         VStack(spacing: 2) {
@@ -104,30 +107,37 @@ struct PhoneView: View {
                 NavigationStack {
                     CodeScanner(scanned: { value in scanning = false; model.propose(value) },
                                 failed: { words in scanning = false; model.problem = words })
-                        .navigationTitle("Scan your computer’s code")
+                        .phoneTitle("Scan the code")
                         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { scanning = false } } }
                 }
             }
             .sheet(isPresented: $pasting) {
                 NavigationStack {
-                    Form {
-                        Text("On your computer, open Settings → Devices → A phone, then copy its link.")
-                        TextField("Your computer’s link", text: $linkText, axis: .vertical)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                            .privacySensitive().accessibilityIdentifier("join-link")
-                        PasteButton(payloadType: String.self) { strings in linkText = strings.first ?? "" }
-                        Button("Continue") {
-                            let text = linkText; linkText = ""; pasting = false; model.propose(text)
-                        }.disabled(linkText.isEmpty).accessibilityIdentifier("read-link")
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: PhoneTheme.space4) {
+                            Text("On your computer, open Settings → Devices → A phone, then copy its link.")
+                                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                            TextField("Your computer’s link", text: $linkText, axis: .vertical)
+                                .textFieldStyle(.phone)
+                                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                                .privacySensitive().accessibilityIdentifier("join-link")
+                            PasteButton(payloadType: String.self) { strings in linkText = strings.first ?? "" }
+                            Button {
+                                let text = linkText; linkText = ""; pasting = false; model.propose(text)
+                            } label: { Text("Continue").foregroundStyle(linkText.isEmpty ? PhoneTheme.muted : PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
+                                .buttonStyle(.borderedProminent).controlSize(.large)
+                                .disabled(linkText.isEmpty).accessibilityIdentifier("read-link")
+                        }.padding(PhoneTheme.space5).frame(maxWidth: 468).frame(maxWidth: .infinity)
                     }
-                    .navigationTitle("Paste its link")
+                    .phoneTitle("Paste its link")
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { linkText = ""; pasting = false } } }
-                }
+                }.phoneSheetSurface()
             }
-            .confirmationDialog("Join \(model.proposal?.computer ?? "your computer")?", isPresented: Binding(
+            // An alert keeps Cancel beside Join; the link may come from a scan, a paste or another app, with no button to anchor to.
+            .alert("Join \(model.proposal?.computer ?? "your computer")?", isPresented: Binding(
                 get: { model.proposal != nil && !model.busy },
                 set: { if !$0 && !model.busy { model.proposal = nil } }
-            ), titleVisibility: .visible) {
+            )) {
                 Button("Join \(model.proposal?.computer ?? "your computer")") { model.join() }.accessibilityIdentifier("confirm-join")
                 Button("Cancel", role: .cancel) { model.proposal = nil }
             } message: {

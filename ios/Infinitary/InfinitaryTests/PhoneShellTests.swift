@@ -25,6 +25,24 @@ import XCTest
                        "Idle, listening and working must draw differently in each appearance")
     }
 
+    /// INF-589 item 1: the system draws the launch screen before any Swift runs, so its color must be the void the app opens onto.
+    func testLaunchScreenIsTheVoidInEachAppearance() throws {
+        let launch = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "UILaunchScreen") as? [String: Any])
+        let name = try XCTUnwrap(launch["UIColorName"] as? String, "An empty launch screen is pure white or black")
+        let color = try XCTUnwrap(UIColor(named: name, in: .main, compatibleWith: nil))
+        for (style, scheme) in [(UIUserInterfaceStyle.light, ColorScheme.light), (.dark, .dark)] {
+            var environment = EnvironmentValues()
+            environment.colorScheme = scheme
+            let void = PhoneTheme.background.resolve(in: environment)
+            var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+            XCTAssertTrue(color.resolvedColor(with: UITraitCollection(userInterfaceStyle: style)).getRed(&red, green: &green, blue: &blue, alpha: &alpha))
+            XCTAssertEqual(Float(red), void.red, accuracy: 0.002)
+            XCTAssertEqual(Float(green), void.green, accuracy: 0.002)
+            XCTAssertEqual(Float(blue), void.blue, accuracy: 0.002)
+            XCTAssertEqual(Float(alpha), void.opacity, accuracy: 0.002)
+        }
+    }
+
     /// INF-499 #3: only the shown card, past card or open task supplies the message hint.
     func testMessageContextFollowsTheShownEntry() {
         let context = PhoneMessageContext()

@@ -55,7 +55,7 @@ struct CardMediaView: View {
                     }
                 }
             }.background(PhoneTheme.background)
-                .navigationTitle(presentation["type"].text == "demo" ? "Card recording" : "Card picture").navigationBarTitleDisplayMode(.inline)
+                .phoneTitle(presentation["type"].text == "demo" ? "Card recording" : "Card picture")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }.onAppear { index = Int(presentation["index"].numeric ?? 0); playGif = presentation["play"].flag }
             .task { if presentation["type"].text == "demo" { await loadRecording() } }

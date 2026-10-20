@@ -239,7 +239,7 @@ private struct PhoneCardPane: View {
                 if card.takesReplies && !card.isPast {
                     HStack(alignment: .bottom, spacing: PhoneTheme.space2) {
                         TextField("Reply to this card", text: $reply, axis: .vertical).lineLimit(1...5)
-                            .textFieldStyle(.roundedBorder).focused($replyFocused).accessibilityIdentifier("card-reply")
+                            .textFieldStyle(.phone).focused($replyFocused).accessibilityIdentifier("card-reply")
                         Button {
                             perform {
                                 let text = reply

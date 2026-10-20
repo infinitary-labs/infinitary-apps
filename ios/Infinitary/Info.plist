@@ -12,7 +12,8 @@
 <!-- swift-certificates builds the phone's sign-in certificate and brings BoringSSL as a dependency; connections use iOS TLS. -->
 <key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>com.getinfinitary.infinitary.join</string><key>CFBundleURLSchemes</key><array><string>infinitary</string></array></dict></array>
-<key>UILaunchScreen</key><dict/>
+<!-- The void background in each appearance, generated from the design skill by scripts/generate-phone-theme.ts. -->
+<key>UILaunchScreen</key><dict><key>UIColorName</key><string>LaunchBackground</string></dict>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>

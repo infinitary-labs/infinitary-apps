@@ -19,6 +19,7 @@ import { promptInput } from "./prompt";
 import { expandDock, hideRecord, nowFrame, pressRow, recordCard } from "./rails";
 import {
   cardReply,
+  cardSurface,
   closeQuestion,
   expectNoCard,
   pagerAt,
@@ -26,6 +27,7 @@ import {
   shownCard,
   shownCardFrame,
   shownEntry,
+  stagePrepared,
 } from "./stack";
 import { typeInto } from "./windowKeys";
 
@@ -427,6 +429,60 @@ for (const held of ["record", "past"] as const) {
     }
   });
 }
+
+// INF-624: the card after the next one is prepared once the next card's
+// height easing has finished (docs/renderer.md). On a MacBook the easing's
+// animation clock started 1.85 ms ahead of the page clock its deadline was
+// read on, so it finished 1.2 ms before that deadline, the card never
+// settled and nothing was prepared. Here the easing starts 100 ms ahead, so
+// its finish comes before the deadline whatever the display's frame rate.
+const EASING_LEAD_MS = 100;
+const SHORT_NOTE = "A short harbour note";
+const TALL_NOTE = "A tall harbour note";
+const LATER_NOTE = "A later harbour note";
+
+test("the card after next is prepared when the height easing finishes ahead of the page clock", async () => {
+  const berths = Array.from(
+    { length: 8 },
+    (_, index) => `<p>Berth ${index + 1} is free at high tide.</p>`,
+  ).join("");
+  const app = await launchWithCards([
+    seededCard("short", SHORT_NOTE, "<p>Close me.</p>", 0),
+    seededCard("tall", TALL_NOTE, berths, 1),
+    seededCard("later", LATER_NOTE, "<p>Waiting its turn.</p>", 2),
+  ]);
+  try {
+    const { page } = app;
+    await expect(shownCard(page, SHORT_NOTE)).toBeVisible();
+    await expect(warmElement(page)).toHaveAttribute("title", `${TALL_NOTE} body`);
+    await stagePrepared(page);
+    await page.evaluate((lead) => {
+      const easings: string[] = [];
+      (window as unknown as { easings: string[] }).easings = easings;
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (keyframes, options) {
+        const animation = animate.call(this, keyframes, options);
+        if (this.hasAttribute("data-card-presentation")) {
+          animation.startTime = Number(document.timeline.currentTime) - lead;
+          easings.push("started");
+          animation.addEventListener("finish", () => easings.push("finished"));
+        }
+        return animation;
+      };
+    }, EASING_LEAD_MS);
+    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+    await expect(shownCard(page, TALL_NOTE)).toBeVisible();
+    // The close eased the card's height, and the easing finished.
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { easings: string[] }).easings))
+      .toContain("finished");
+    await expect(cardSurface(page)).not.toHaveAttribute("data-card-geometry", "animating");
+    await expect(warmElement(page)).toHaveAttribute("title", `${LATER_NOTE} body`);
+    await stagePrepared(page);
+  } finally {
+    await app.close();
+  }
+});
 
 // FI3-871: the next card is prepared even when its body has a script. Its
 // page loads while the captain reads, and nothing of its own runs until it

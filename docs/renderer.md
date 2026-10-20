@@ -134,6 +134,7 @@ Settings and the first-launch gate do not recover to an absent or disabled promp
 Initial thread history resolves before a body is born, so a card/pair is not born at a provisional width.
 Stage widths and folded rails resolve without easing; widths never tween.
 The shell stays at the previous height, bounded by current chrome and the stage envelope, until the shown entry is ready, then eases height only over the shared 360ms with the glide (`--ease-out`) and a fixed centre.
+The easing ends when its animation finishes, even before the deadline the shell read from the page's clock: the animation's clock can start a frame earlier, and the shown card settles then, so the next successor is prepared (INF-624).
 A press on the card holds it still until the release, so the control under the pointer stays under it, then settles at once.
 That holds while the height eases and when it would jump with no easing, as a task record's does when its live facts change after it appears.
 The pager stays below the maximum-height envelope; its cap reserves a separate lane for the last turn above the input, so neither intercepts the other's controls.

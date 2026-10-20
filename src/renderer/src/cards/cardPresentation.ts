@@ -219,8 +219,15 @@ export function useCardPresentation(
         easing: getComputedStyle(shell).getPropertyValue("--ease-out").trim(),
       });
       held.animation = animation;
+      // The easing's own finish ends it. Its clock can start a frame ahead
+      // of the deadline read above, so the deadline may not have passed yet
+      // when it finishes: kept, it would hold the card as easing with
+      // nothing left to settle it (INF-624).
       animation.onfinish = () => {
-        if (state.current.animation === animation) scheduleRef.current();
+        if (state.current.animation !== animation) return;
+        state.current.animation = null;
+        state.current.deadline = 0;
+        scheduleRef.current();
       };
       shell.dataset.cardGeometry = "animating";
     } else {

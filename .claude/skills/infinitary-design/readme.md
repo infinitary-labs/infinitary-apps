@@ -79,6 +79,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
 - **Side rails** - two dock columns, left and right, framing the stage (character, cards, input) on the home view.
   Empty by default and invisible when empty: zero width, no border, no header, no affordance, so a window with nothing docked is pixel-identical to one without rails.
   A rail is a vertical stack of host-framed panels at one fixed width (`--rail-width`, never resizable); the host owns each panel's title, attribution, and collapse, and a panel styles only its body region.
+  A rail holds any number of panels, and its expanded panels share its height and scroll their bodies.
   The stage insets and is never covered.
   Nothing on a rail is drawn under the message box: where the window-centred box reaches into a rail's columns on a narrow page, a rail with an expanded panel ends above the box and its last-turn lane, and the box stands on a collapsed header at a rail's foot.
   A feed that gets shorter there keeps its newest line in sight.

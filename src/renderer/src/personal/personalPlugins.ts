@@ -30,9 +30,9 @@ import { PersonalPanelBody, type PersonalPanelContent } from "./PersonalPanelBod
  * size) re-registers, and the two data-driven bits ride sources - the
  * panel's content (`null` while its presence rule is unsatisfied or it has
  * no compiled panel, so the rail shows no chrome) and `running` (the busy
- * dot). A rail already holding its three panels refuses the next one with
- * a `ContributionError`; that refusal is logged here and becomes a
- * decision in Step 4, never a crash.
+ * dot). A rail holds every panel registered to it; a panel the host
+ * refuses for a real error (an id another plugin holds, a grant it does
+ * not serve) is logged here, never a crash.
  *
  * One snapshot carries both sources (one plugin vehicle, Phase A item 5):
  * the captain's own panels register as `personal-<id>` and read "yours",

@@ -1,7 +1,7 @@
 import { type PluginManifestInput, parsePluginManifest } from "@shared/plugins/manifest";
 import { describe, expect, it } from "vitest";
 import { type PluginBindings, type SidePanelContribution, sidePanelBinding } from "./contributions";
-import { PluginCapabilityError, PluginHost, placeSidePanels, RAIL_MOUNT_CAP } from "./host";
+import { PluginCapabilityError, PluginHost, placeSidePanels } from "./host";
 import { createPanelSource } from "./panelSource";
 import { ContributionError } from "./registry";
 
@@ -170,37 +170,6 @@ describe("PluginHost.registerPlugin", () => {
     expect(() => host.registerPlugin(clashing)).toThrow(ContributionError);
     expect(host.cardKinds.get("fresh")).toBeUndefined();
     expect(host.cardKinds.get("shared")?.pluginId).toBe("first");
-  });
-});
-
-describe("the side-panel mount cap (D5 rule 6)", () => {
-  it(`holds ${RAIL_MOUNT_CAP} panels per rail and refuses the next one loudly`, () => {
-    const host = new PluginHost();
-    const fill = manifestWithPanels(
-      "fill",
-      Array.from({ length: RAIL_MOUNT_CAP }, (_, i) => ({
-        id: `left-${i}`,
-        side: "left" as const,
-      })),
-    );
-    host.registerPlugin(parsePluginManifest(fill), bindingsFor(fill));
-    const overflow = manifestWithPanels("more", [{ id: "one-too-many", side: "left" }]);
-    expect(() => host.registerPlugin(parsePluginManifest(overflow), bindingsFor(overflow))).toThrow(
-      `side-panel: the left rail already holds ${RAIL_MOUNT_CAP} panels (left-0, left-1, left-2); "one-too-many" from "more" was refused`,
-    );
-    expect(host.sidePanels.list()).toHaveLength(RAIL_MOUNT_CAP);
-  });
-
-  it("caps each rail independently", () => {
-    const host = new PluginHost();
-    const left = manifestWithPanels(
-      "left",
-      Array.from({ length: RAIL_MOUNT_CAP }, (_, i) => ({ id: `l-${i}`, side: "left" as const })),
-    );
-    host.registerPlugin(parsePluginManifest(left), bindingsFor(left));
-    const right = manifestWithPanels("right", [{ id: "r-0", side: "right" }]);
-    expect(() => host.registerPlugin(parsePluginManifest(right), bindingsFor(right))).not.toThrow();
-    expect(placeSidePanels(host.sidePanels.list()).right.map((panel) => panel.id)).toEqual(["r-0"]);
   });
 });
 

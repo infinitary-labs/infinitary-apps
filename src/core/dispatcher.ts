@@ -43,7 +43,7 @@ import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import type { RepoPolicyPatch, RepoSetupResult } from "@shared/repos";
 import { type RepoView, repoConfiguredEvent, repoRemovalRefusal } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
-import { type AppPanelGates, RAIL_MOUNT_CAP } from "@shared/surfaces";
+import type { AppPanelGates } from "@shared/surfaces";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
@@ -1418,28 +1418,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
             `No surface "${key}". Your surfaces: ${surfaces.map((s) => s.id).join(", ")}. The captain's panels switch is in Settings.`,
           );
         // The slot is the app's own chrome, not a panel: it is hidden or
-        // shown, never moved, and it takes none of a rail's panels.
+        // shown, never moved.
         if (key === CREATE_PANEL_SLOT_ID) {
           if (!isDeepStrictEqual(surface.placement, nextSurface.placement))
             throw new Error(
               `${CREATE_PANEL_SLOT_ID} always sits at the top of the left rail; it can only be hidden or shown.`,
-            );
-          continue;
-        }
-        if (
-          !nextSurface.hidden &&
-          (surface.hidden || surface.placement.x !== nextSurface.placement.x)
-        ) {
-          const occupied = nextSurfaces.filter(
-            (s) =>
-              s.id !== key &&
-              s.id !== CREATE_PANEL_SLOT_ID &&
-              !s.hidden &&
-              s.placement.x === nextSurface.placement.x,
-          );
-          if (occupied.length >= RAIL_MOUNT_CAP)
-            throw new Error(
-              `The ${nextSurface.placement.x} rail already holds ${RAIL_MOUNT_CAP} panels; hide or move one first.`,
             );
         }
       }

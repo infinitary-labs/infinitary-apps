@@ -2,11 +2,9 @@ import type { ContributionSlot } from "@shared/plugins/manifest";
 
 /**
  * One registry per contribution slot (docs/ui-plugins.md). A registry is a
- * keyed set with three properties the host leans on:
+ * keyed set with two properties the host leans on:
  *
  * - ids are unique, and a duplicate is refused loudly with the owner named;
- * - an admission hook can refuse a candidate before it lands (the side-panel
- *   mount cap lives there);
  * - `list()` is a frozen snapshot whose identity changes only on a change,
  *   so React can subscribe with `useSyncExternalStore` and nothing else in
  *   the app has to know when a contribution arrives.
@@ -28,18 +26,12 @@ export class ContributionError extends Error {
   }
 }
 
-/** Throws a ContributionError to refuse the candidate. */
-export type Admission<T extends Contribution> = (candidate: T, existing: readonly T[]) => void;
-
 export class ContributionRegistry<T extends Contribution> {
   private readonly items = new Map<string, T>();
   private snapshot: readonly T[] = Object.freeze([]);
   private readonly listeners = new Set<() => void>();
 
-  constructor(
-    readonly slot: ContributionSlot,
-    private readonly admit?: Admission<T>,
-  ) {}
+  constructor(readonly slot: ContributionSlot) {}
 
   /** Registers one contribution; the returned function removes it again. */
   register(item: T): () => void {
@@ -50,7 +42,6 @@ export class ContributionRegistry<T extends Contribution> {
         `"${item.id}" from "${item.pluginId}" is already registered by "${existing.pluginId}"`,
       );
     }
-    this.admit?.(item, this.snapshot);
     this.items.set(item.id, item);
     this.publish();
     return () => {

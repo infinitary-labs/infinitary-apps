@@ -114,7 +114,7 @@ Each row shows a rule's state, name and next run; a draft reads Draft where a ru
 A click or Enter opens that rule's sheet in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in the sheet; nothing runs, pauses or changes.
 Expanded, its header shows Open Automation, the app's open button, as Knowledge's header does; it names no card, so it is pressed into the panel, which opens Settings → Automation at the full list through `point.openSettings("automation")` (docs/ui-plugins.md, "A panel's cards").
 Hiding or collapsing the panel changes nothing about delivery.
-A rail already holding three panels refuses it, which is logged, so the captain's own panels keep their places.
+It takes its place on that rail however many panels the rail already holds.
 
 ## Where it shows
 

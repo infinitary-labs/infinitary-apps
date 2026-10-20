@@ -1,6 +1,13 @@
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
+import { READ_NAMES } from "@shared/reads";
 import { describe, expect, it } from "vitest";
+import crewReports from "../../../../tests/fixtures/personal-skills/crew-reports/manifest.json";
+import openPrs from "../../../../tests/fixtures/personal-skills/open-prs/manifest.json";
+import quotaGlance from "../../../../tests/fixtures/personal-skills/quota-glance/manifest.json";
+import tokenWatch from "../../../../tests/fixtures/personal-skills/token-watch/manifest.json";
+import tokyoClock from "../../../../tests/fixtures/personal-skills/tokyo-clock/manifest.json";
 import { useShellStore } from "../app/store";
+import { registerBuiltinPlugin } from "../plugins/builtin";
 import { PluginHost, placeSidePanels } from "../plugins/host";
 import { panelDrafts } from "./PanelDrafts";
 import { PersonalPlugins, startPersonalPlugins } from "./personalPlugins";
@@ -9,8 +16,17 @@ import { PersonalPlugins, startPersonalPlugins } from "./personalPlugins";
  * The reconciler mounts the core's snapshot through the host's one door:
  * presence is the panel's content source (null hides it with no chrome),
  * running is the busy dot's source, a manifest change re-registers, a
- * removal unregisters, and a full rail is a logged refusal, not a crash.
+ * removal unregisters, and a rail holds every panel registered to it.
  */
+/** The tests' personal workspace (tests/fixtures/personal-skills), by folder. */
+const FIXTURE_MANIFESTS = {
+  "crew-reports": crewReports,
+  "open-prs": openPrs,
+  "quota-glance": quotaGlance,
+  "token-watch": tokenWatch,
+  "tokyo-clock": tokyoClock,
+};
+
 function view(overrides: Partial<PersonalExtensionView> & { id: string }): PersonalExtensionView {
   return {
     source: "yours",
@@ -127,21 +143,35 @@ describe("PersonalPlugins", () => {
     expect(panelDrafts.get()).toEqual([]);
   });
 
-  it("logs a refused mount when a rail is full and keeps the rest", () => {
-    const host = new PluginHost();
+  // INF-609, the captain: "we need to allow more panels, placeable both in
+  // the left and right ... not refusing it." The app's own panels and the
+  // five panels of the tests' personal workspace put four on the right rail,
+  // which used to refuse the fourth.
+  it("docks every panel on its rail, in placement order, with nothing refused", () => {
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    registerBuiltinPlugin(host);
     const warnings: string[] = [];
     const plugins = new PersonalPlugins(host, (message) => warnings.push(message));
     plugins.apply({
-      extensions: ["a", "b", "c", "d"].map((id) => view({ id: `${id}-panel` })),
+      extensions: Object.entries(FIXTURE_MANIFESTS).map(([id, manifest]) =>
+        view({
+          id,
+          title: manifest.title,
+          placement: manifest.placement as PersonalExtensionView["placement"],
+          order: manifest.order,
+        }),
+      ),
     });
-    expect(host.sidePanels.list().map((p) => p.id)).toEqual(["a-panel", "b-panel", "c-panel"]);
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('personal panel "d-panel" was not mounted');
-    expect(warnings[0]).toContain("already holds 3 panels");
-    plugins.apply({ extensions: [view({ id: "d-panel" })] });
-    expect(host.sidePanels.list().map((p) => p.id)).toEqual(["d-panel"]);
+    expect(warnings).toEqual([]);
+    const placed = placeSidePanels(host.sidePanels.list());
+    expect(placed.left.map((panel) => panel.id)).toEqual(["open-prs", "quota-glance", "activity"]);
+    expect(placed.right.map((panel) => panel.id)).toEqual([
+      "crew-reports",
+      "tokyo-clock",
+      "now",
+      "token-watch",
+    ]);
     plugins.clear();
-    expect(host.sidePanels.list()).toEqual([]);
   });
 
   it("applies the boot snapshot and every push until stopped", async () => {

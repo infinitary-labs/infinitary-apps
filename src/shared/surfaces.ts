@@ -104,9 +104,6 @@ export function builtinSurfacesFor(gates: AppPanelGates): SidePanelEntry[] {
   return appPanelFoldersFor(gates).map(surfaceOf);
 }
 
-/** Panels a rail will hold before refusing the next one (D5 rule 6). */
-export const RAIL_MOUNT_CAP = 3;
-
 export function builtinSurface(id: string): SidePanelEntry | undefined {
   return BUILTIN_SURFACES.find((surface) => surface.id === id);
 }

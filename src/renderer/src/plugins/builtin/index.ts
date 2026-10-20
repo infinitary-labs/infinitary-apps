@@ -199,9 +199,8 @@ function registerGate(host: PluginHost, gate: AppPanelGate): () => void {
 /**
  * Holds one gate's panels registered while it is open: registers them when
  * `set(true)` first comes, takes them away - their cards and their place on
- * the rail with them - on `set(false)`. A rail already holding its three
- * panels refuses them, which is logged, so the captain's own panels keep
- * their places.
+ * the rail with them - on `set(false)`. They take their places on their
+ * rail however many panels it already holds.
  */
 function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
   let unregister: (() => void) | null = null;

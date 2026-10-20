@@ -18,8 +18,9 @@ import { pressKey } from "./windowKeys";
  * since task-system P4 the right rail carries Tasks. Activity is present in
  * the default layout, while Tasks opens with its first board row. The tests
  * prove host-owned chrome and collapse,
- * lack of resize affordances, and home-only rendering. The mount cap is
- * unit-tested (src/renderer/src/plugins/host.test.ts).
+ * lack of resize affordances, and home-only rendering. That a rail holds
+ * every panel placed on it is unit-tested
+ * (src/renderer/src/personal/personalPlugins.test.ts).
  *
  * Each test starts from a fresh app and arranges the home it needs: the
  * docked cases commission their own task, so a failed case never leaves a

@@ -14,7 +14,6 @@ import {
 } from "@shared/preferences";
 import { READ_NAMES, type ReadGrant } from "@shared/reads";
 import { SQL_VIEWS } from "@shared/sql";
-import { RAIL_MOUNT_CAP } from "@shared/surfaces";
 import { useSyncExternalStore } from "react";
 import type {
   CardKindContribution,
@@ -38,9 +37,6 @@ import { type Contribution, ContributionError, ContributionRegistry } from "./re
  * controller enforces them per mount.
  */
 
-/** The cap is shared with the core, which refuses a `personalize` move past it. */
-export { RAIL_MOUNT_CAP };
-
 export class PluginCapabilityError extends Error {
   constructor(
     readonly pluginId: string,
@@ -48,23 +44,6 @@ export class PluginCapabilityError extends Error {
   ) {
     super(`plugin "${pluginId}" asks for ${refused.join(", ")}, which this host does not serve`);
     this.name = "PluginCapabilityError";
-  }
-}
-
-function admitSidePanel(
-  candidate: SidePanelContribution,
-  existing: readonly SidePanelContribution[],
-): void {
-  const onSide = existing.filter(
-    (panel) => panel.preferredPlacement.x === candidate.preferredPlacement.x,
-  );
-  if (onSide.length >= RAIL_MOUNT_CAP) {
-    throw new ContributionError(
-      "side-panel",
-      `the ${candidate.preferredPlacement.x} rail already holds ${RAIL_MOUNT_CAP} panels ` +
-        `(${onSide.map((panel) => panel.id).join(", ")}); ` +
-        `"${candidate.id}" from "${candidate.pluginId}" was refused`,
-    );
   }
 }
 
@@ -95,10 +74,7 @@ export class PluginHost {
   readonly settingsSections = new ContributionRegistry<SettingsSectionContribution>(
     "settings-section",
   );
-  readonly sidePanels = new ContributionRegistry<SidePanelContribution>(
-    "side-panel",
-    admitSidePanel,
-  );
+  readonly sidePanels = new ContributionRegistry<SidePanelContribution>("side-panel");
 
   /** Grants this host can honour: the read catalog, and nothing else yet. */
   readonly support: HostCapabilitySupport;

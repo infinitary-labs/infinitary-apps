@@ -1709,7 +1709,7 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
-  it("keeps panel defaults and the full-rail refusal on the shared write path", async () => {
+  it("keeps panel defaults on the shared write path and docks a fourth panel on a rail", async () => {
     const old = await core.dispatch("inf:settings:layout:get", []);
     const snapshot = vi.spyOn(core.services.personal, "snapshot").mockReturnValue({
       extensions: ["clock", "quota"].map((id) => ({
@@ -1746,12 +1746,21 @@ describe("the core, driven with no Electron in the process", () => {
       await core.dispatch("inf:settings:layout:set", [
         { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
       ]);
-      const full = await change.run({
+      // INF-609, the captain: "allow more panels ... not refusing it." Tasks,
+      // clock and quota hold the right rail; Activity joins them as a fourth.
+      await change.run({
         action: "panel",
         value: { surface: "activity", rail: "right" },
         evidence: "move activity right",
       });
-      expect(full.text).toContain("already holds 3 panels");
+      expect((await core.dispatch("inf:settings:layout:get", [])).placements).toEqual({
+        activity: { x: "right", y: "bottom" },
+      });
+      await change.run({
+        action: "panel",
+        value: { surface: "activity", rail: "left" },
+        evidence: "put activity back",
+      });
       expect((await core.dispatch("inf:settings:layout:get", [])).placements).toEqual({});
       await change.run({
         action: "panel",
@@ -1775,7 +1784,7 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
-  it("hides and shows the create-your-own-panel slot by its id, never moves it, and counts it on no rail", async () => {
+  it("hides and shows the create-your-own-panel slot by its id and never moves it", async () => {
     const old = await core.dispatch("inf:settings:layout:get", []);
     const snapshot = vi.spyOn(core.services.personal, "snapshot").mockReturnValue({
       extensions: ["clock", "quota"].map((id) => ({
@@ -1851,7 +1860,7 @@ describe("the core, driven with no Electron in the process", () => {
       await core.dispatch("inf:settings:layout:set", [
         { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
       ]);
-      // Activity and two panels fill the left rail; the slot takes none of it.
+      // Two panels move to the left rail beside Activity and the slot.
       for (const surface of ["clock", "quota"])
         await change.run({
           action: "panel",

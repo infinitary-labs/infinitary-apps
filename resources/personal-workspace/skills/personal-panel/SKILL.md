@@ -172,8 +172,8 @@ starts off its rail, running out of sight, until it says `show(true)`; off it,
 `rail.show(false, "Nothing to read yet")` (at most 60 characters) is what command search says
 beside a command that would open it. With neither, the panel shows whenever it compiles.
 
-The panel title, the collapse control, the attribution mark, the rail width, placement, and
-the three-panel cap per rail are the host's. A panel styles only its own body, from the
+The panel title, the collapse control, the attribution mark, the rail width and placement
+are the host's; a rail holds any number of panels. A panel styles only its own body, from the
 design tokens (`var(--fg-1)`, `var(--space-2)`, ...) and `@infinitary/ui`.
 
 ## What a panel is

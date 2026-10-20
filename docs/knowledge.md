@@ -188,7 +188,7 @@ The Knowledge panel is an ordinary app panel folder, `src/panels/knowledge/` (`d
 It waits on the `knowledge` gate (`AppPanelFolder.gate`, `src/shared/surfaces.ts`), which is open while this build keeps knowledge and has some to show: an entry in a collection the window reads, or an active direction, or a collection that cannot be read (`KnowledgeService.held`).
 The window asks `inf:knowledge:enabled` once the captain's own panels have their places, and again after each `knowledge_changed`, each project that comes or goes, and registers the panel, its card and its command while the gate is open (`startGatedPanels`, `src/renderer/src/plugins/builtin/index.ts`).
 A view of another Mac, which is refused the question, and a profile with nothing recorded have none of them, and the first entry the crew records brings them; a purge takes them away again.
-A rail already holding its three panels refuses it, and the window logs that: the captain's own panels keep their places.
+It takes its place on that rail however many panels the rail already holds.
 The core lists the panel among the first mate's surfaces on the same gate (`listSurfaces`).
 The panel lists up to four active directions in their own words, captain instructions before advice and each group newest first, with project names as quiet tags.
 Cut words appear whole in the app’s rest label for pointer and keyboard alike.

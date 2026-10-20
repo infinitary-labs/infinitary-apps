@@ -32,8 +32,7 @@ test.describe("the fixture extensions the data skills teach", () => {
     const workspace = join(userDataDir, "fleet", "personal");
     mkdirSync(workspace, { recursive: true });
     // The `usage` skill's token-watch has a spec of its own
-    // (token-dashboard.spec.ts): with it, both rails here would pass their
-    // three-panel cap.
+    // (token-dashboard.spec.ts).
     cpSync(join(process.cwd(), "tests", "fixtures", "personal-skills"), workspace, {
       recursive: true,
       filter: (source) => !source.includes("token-watch"),

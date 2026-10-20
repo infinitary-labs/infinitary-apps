@@ -413,6 +413,20 @@ Each part checks itself as the image is built, and the image is renamed into pla
 `scripts/virtual-mac/run.sh <files>` runs journeys in a fresh clone of the image the way `journeys.yml` runs them on the Mac mini, on the working copy's committed version, keeps the run's log and `test-results/runs/` in `test-results/virtual-mac/`, and deletes the clone.
 `scripts/virtual-mac/phone.sh` runs the phone check's device gates in a clone of the same image when `PHONE_VIRTUAL_MAC` is set (`docs/ios.md`, "The phone check in a virtual Mac").
 
+### One image for every project
+
+The Mac mini's placement service (`dotfiles-private`) runs every project's Mac jobs in fresh clones of this one image, two at a time, and deletes each clone after its job.
+It brings its own GitHub runner into each clone, so the image holds none.
+`provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, an Xcode 26 and an available iOS simulator runtime.
+It also fails when the image holds any code-signing identity, so nothing that signs as the captain is ever in a clone.
+
+### The real Mac's place
+
+A job that signs with the captain's Apple certificates asks for the real Mac through the repository variable `REAL_MAC_RUNNER`: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
+Each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
+Every other Mac job reads `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
+`tests/release-contract.test.ts` holds which jobs ask for the real Mac.
+
 ### The runner's microphone access
 
 The journeys open Chromium's fake microphone, but coreaudiod still asks macOS for microphone access on behalf of the responsible process, which in a virtual Mac is the lane's guest agent, not the app.

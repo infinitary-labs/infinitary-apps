@@ -56,7 +56,10 @@ jobs:
     needs: resolve
     if: needs.resolve.outputs.mode == 'release'
     environment: ios-release
-    runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    # INF-603: Xcode signs the upload with the captain's certificates on
+    # the real Mac, so it asks for the real Mac, never a virtual one, once
+    # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
+    runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # Share the existing phone queue, not the desktop jobs' queues.
     concurrency:
       group: mac-mini-phone

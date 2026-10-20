@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "real-mac-runner-label",
+      "reason": "Internal: the release's signing job and the TestFlight upload can be sent to the real Mac by one repository variable, and the virtual Mac image checks it serves every project's Mac jobs and holds no signing identity."
+    }
+  ]
+}

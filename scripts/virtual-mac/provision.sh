@@ -53,6 +53,21 @@ sqlite3 "$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, 
 test "$(sqlite3 "$TCC_DB" "SELECT auth_value FROM access WHERE service = 'kTCCServiceMicrophone' AND client = '$AGENT'")" = 2
 killall -u "$(whoami)" tccd || true
 
+# What every project's Mac jobs find in a virtual place (INF-603): one image
+# serves them all (docs/testing.md, "One image for every project"). These are
+# the tools their workflows name: sshhip's simulator suite checks node,
+# python3, perl, gh, git, xcodebuild and swift, and picks an Xcode 26; the
+# phone check and the suite boot an iOS simulator.
+for tool in git gh python3 perl swift xcodebuild xcrun; do
+  command -v "$tool"
+done
+xcodebuild -version | grep '^Xcode 26' > /dev/null
+xcrun simctl list runtimes available | grep '^iOS ' > /dev/null
+
+# Nothing that signs as the captain: a job that signs with his Apple
+# certificates asks for the real Mac, and the image holds no identity.
+security find-identity -v -p codesigning | grep '^ *0 valid identities found' > /dev/null
+
 # A warm pnpm store and Playwright's window recorder, from the working copy
 # image.sh bundled, so each job's install only links.
 WARM="$HOME/warm/Application Support/infinitary"

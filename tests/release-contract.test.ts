@@ -3,6 +3,7 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   realpathSync,
@@ -2650,6 +2651,46 @@ function generatorEnv(fields: Record<string, string>): NodeJS.ProcessEnv {
  * when a change to what they are written from reaches main or on demand;
  * a dry run pushes nothing. Read through GitHub's own expression evaluator.
  */
+/**
+ * The captain's INF-603 answer to question 7: every job that signs with his
+ * Apple certificates (the TestFlight upload and the release) runs on the real
+ * Mac, never in a virtual one, through one label the switch sets; every other
+ * Mac job may use any place. Until REAL_MAC_RUNNER is set, nothing moves.
+ */
+describe("the jobs that ask for the real Mac", () => {
+  type Job = { "runs-on"?: string };
+  const workflows = readdirSync(join(root, ".github/workflows")).filter((name) =>
+    name.endsWith(".yml"),
+  );
+  const runsOn = (file: string, id: string) => {
+    const jobs = (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> }).jobs;
+    return jobs[id]?.["runs-on"] ?? "";
+  };
+
+  it("is exactly the release's signing job and the TestFlight upload", () => {
+    const asking = workflows.flatMap((file) =>
+      Object.entries(
+        (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> }).jobs,
+      ).flatMap(([id, job]) =>
+        (job["runs-on"] ?? "").includes("REAL_MAC_RUNNER") ? [`${file}:${id}`] : [],
+      ),
+    );
+    expect(asking.sort()).toEqual(["ios-release.yml:testflight", "release.yml:release"]);
+  });
+
+  it.each([
+    ["release.yml", "release", "macos-15"],
+    ["ios-release.yml", "testflight", "mini-mac"],
+  ])("%s's %s job runs where it did until the switch sets the label", (file, id, fallback) => {
+    const runner = (vars: Record<string, string>) => workflowValue(runsOn(file, id), { vars });
+    expect(runner({})).toBe(fallback);
+    expect(runner({ MAC_RUNNER: "mini-mac" })).toBe("mini-mac");
+    expect(runner({ MAC_RUNNER: "mini-mac-any", REAL_MAC_RUNNER: "mini-mac-real" })).toBe(
+      "mini-mac-real",
+    );
+  });
+});
+
 describe("the cask republication workflow", () => {
   type Step = {
     id?: string;

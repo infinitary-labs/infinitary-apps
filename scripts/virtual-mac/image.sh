@@ -1,8 +1,11 @@
 #!/bin/bash
-# image.sh - build the virtual Mac lane's image (docs/testing.md, "A virtual
-# Mac as a runner"): a clone of Cirrus Labs' Xcode image with Node and pnpm,
-# a warm pnpm store, the Claude Code this Mac's own journeys find, and
-# microphone access for the guest agent (provision.sh does the inside).
+# image.sh - build the one virtual Mac image every project's Mac jobs run in
+# (docs/testing.md, "A virtual Mac as a runner"): a clone of Cirrus Labs'
+# Xcode image with Node and pnpm, a warm pnpm store, the Claude Code this
+# Mac's own journeys find, microphone access for the guest agent, and a check
+# that every project's jobs find their tools and no signing identity
+# (provision.sh does the inside). The placement service clones it for each
+# job and brings its own GitHub runner, so the image holds none.
 #
 # usage: scripts/virtual-mac/image.sh [name]       (default: infinitary-lane)
 #

@@ -315,7 +315,10 @@ jobs:
     name: Build, sign, notarize, and publish (a dry run publishes nothing)
     needs: [resolve, notes, verify, linux]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped')) }}
-    runs-on: ${{ vars.MAC_RUNNER || 'macos-15' }}
+    # INF-603: it signs with the captain's Developer ID certificate, so it
+    # asks for the real Mac, never a virtual one, once the switch sets
+    # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
+    runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 90
     env:
       CHANNEL: ${{ needs.resolve.outputs.channel }}

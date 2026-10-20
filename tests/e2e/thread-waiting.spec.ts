@@ -41,6 +41,9 @@ function heldLine(page: Page) {
 }
 
 test("a reply kept behind a refused sign-in says so in its thread, across a restart, until the crewmate answers", async () => {
+  // Three launches of one app: each keeps the minute it would have as a
+  // test of its own.
+  test.setTimeout(3 * 60_000);
   const homeDir = scratchDir("infinitary-home-");
   const mockProvider: MockProviderServer = await startMockProvider();
   const taskPrompt = (page: Page) => page.getByRole("textbox", { name: "Task prompt" });

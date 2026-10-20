@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "thread-waiting-three-starts-budget",
+      "reason": "Gives the thread-waiting journey a minute for each of its three app starts, so it stops timing out at the 60 s limit on the hosted Linux lane. No shipped behavior changed."
+    }
+  ]
+}

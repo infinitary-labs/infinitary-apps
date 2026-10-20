@@ -86,7 +86,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Once three of the captain's crewmates have finished their tasks and the captain has no panel of their own, the left rail opens with the create-your-own-panel slot, an empty dashed outline that invites one (`components/panel/Panel.prompt.md`); a panel of the captain's that names no place lands there.
   A panel declares its size: `content` hugs what it shows, `fill` takes the rail height its siblings leave.
   The app never attributes its own panels; a third party's panel carries its name in the header.
-- **Subscriptions** - users add AI subscriptions (Claude, Codex, Grok, Kimi Code) and connect OpenRouter with a browser sign-in or API key.
+- **Subscriptions** - users add AI subscriptions (Claude, Codex, Grok, Kimi Code, Copilot) and connect OpenRouter with a browser sign-in or API key.
   The app discovers each subscription's models; you place them in four slots - premium, high, medium, low - and a starter placement is filled in when a subscription connects; it routes tasks by slot and remaining quota.
   Users can override model choice.
 - **Where your projects live** - an optional section at the top of Settings -> Projects (`components/projects/ForgeRow`): the app's own sign-in to the place projects live (GitHub and GitLab), a chip row and a browser-code aside like the subscriptions', one quiet line when nothing is signed in.

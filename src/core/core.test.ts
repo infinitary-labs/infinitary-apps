@@ -1147,7 +1147,7 @@ describe("the core, driven with no Electron in the process", () => {
     ).rejects.toThrow("outbound consent");
     const refusal = await change.run({
       action: "firstmate-model",
-      value: { model: { provider: "github-copilot", id: "missing" } },
+      value: { model: { provider: "cursor", id: "missing" } },
       evidence: "asked",
     });
     expect(refusal.text).toMatch(/cannot run|not connected/);

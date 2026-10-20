@@ -6867,7 +6867,7 @@ export class CrewSupervisor {
 
   /**
    * The provider a task was last routed to, when this build no longer
-   * offers it (Copilot, Cursor). Its resume token belongs to that
+   * offers it (Cursor). Its resume token belongs to that
    * provider's own client, so no backend here can reopen the session.
    */
   private retiredProviderOf(taskId: string): string | undefined {

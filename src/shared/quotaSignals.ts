@@ -320,7 +320,7 @@ export function classifyProviderWindows(
       addScoped("code_review", window);
       continue;
     }
-    if (quotaId === "grok" && id.startsWith("product:")) {
+    if ((quotaId === "grok" || quotaId === "copilot") && id.startsWith("product:")) {
       addScoped(id, window);
       continue;
     }

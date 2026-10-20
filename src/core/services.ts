@@ -996,6 +996,9 @@ export async function createServices(
                 ...(settingFrom(process.env, "KIMI_USAGE_URL")?.trim()
                   ? { kimiUsageUrl: settingFrom(process.env, "KIMI_USAGE_URL")?.trim() }
                   : {}),
+                ...(settingFrom(process.env, "COPILOT_USAGE_URL")?.trim()
+                  ? { copilotUsageUrl: settingFrom(process.env, "COPILOT_USAGE_URL")?.trim() }
+                  : {}),
               },
             }),
         models: () => quotaCatalogModels(),

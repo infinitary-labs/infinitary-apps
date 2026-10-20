@@ -1,3 +1,4 @@
+import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
 import type {
   ModelsCatalogView,
   QuotaProviderView,
@@ -17,6 +18,7 @@ import { type QuotaHttp, QuotaTransportError } from "./http";
 import { CREDENTIAL_UNAVAILABLE, type ProviderOutcome } from "./outcome";
 import { fetchClaudeQuota } from "./providers/claude";
 import { fetchCodexQuota } from "./providers/codex";
+import { fetchCopilotQuota } from "./providers/copilot";
 import { fetchGrokQuota } from "./providers/grok";
 import { fetchKimiQuota } from "./providers/kimi";
 
@@ -55,7 +57,12 @@ export type QuotaFetcherOptions = {
    * Dev and e2e only: the composition root refuses to read them in a packaged
    * app, the same gate the fixture seam already has.
    */
-  endpoints?: { claudeUsageUrl?: string; grokUsageUrl?: string; kimiUsageUrl?: string };
+  endpoints?: {
+    claudeUsageUrl?: string;
+    grokUsageUrl?: string;
+    kimiUsageUrl?: string;
+    copilotUsageUrl?: string;
+  };
   /**
    * The vendor just accepted this account's credential: a fresh allowance
    * reading came back ok. A cached answer is not a fresh acceptance, so a
@@ -179,6 +186,8 @@ async function fetchOneAccount(
   };
   const first = await attempt(account, options, managed, now);
   if (first.status !== "auth_required") return answered(first);
+  // A lapsed refresh token is already the proof: no renewal can replace it.
+  if (first.reason === REFRESH_TOKEN_LAPSED) return answered(first);
   if (!auth.renew) return answered(first);
 
   let renewal: QuotaRenewal;
@@ -243,5 +252,7 @@ async function dispatch(
       return fetchClaudeQuota(http, auth, now, options.endpoints?.claudeUsageUrl);
     case "kimi":
       return fetchKimiQuota(http, auth, now, options.endpoints?.kimiUsageUrl);
+    case "copilot":
+      return fetchCopilotQuota(http, auth, now, options.endpoints?.copilotUsageUrl);
   }
 }

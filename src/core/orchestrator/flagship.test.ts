@@ -258,7 +258,7 @@ describe("Flagship", () => {
         { id: "acct_codex", providerId: "openai-codex", label: "Personal", enabled: true },
         { id: "acct_grok", providerId: "xai", label: "Personal", enabled: true },
         // A retired provider can still sit in an old vault. It is not a rung.
-        { id: "acct_copilot", providerId: "github-copilot", label: "Personal", enabled: true },
+        { id: "acct_cursor", providerId: "cursor", label: "Personal", enabled: true },
       ]),
       settings: settingsOf(null),
       quota: {
@@ -275,9 +275,9 @@ describe("Flagship", () => {
               windows: [{ id: "weekly", label: "weekly", percentRemaining: 61 }],
             },
             {
-              provider: "copilot",
-              label: "Copilot",
-              accountId: "acct_copilot",
+              provider: "cursor",
+              label: "Cursor",
+              accountId: "acct_cursor",
               status: "ok" as const,
               stale: false,
               windows: [{ id: "weekly", label: "weekly", percentRemaining: 90 }],
@@ -539,7 +539,7 @@ describe("a Claude account seats the Firstmate on the machine's login (W1 S12)",
     expect(flagshipOver([codex]).flagship.servesFirstmate("anthropic-claude")).toBe(false);
     expect(flagshipOver([codex]).flagship.servesFirstmate("fm-mock")).toBe(true);
     // A retired provider serves no role at all.
-    expect(flagshipOver([codex]).flagship.servesFirstmate("github-copilot")).toBe(false);
+    expect(flagshipOver([codex]).flagship.servesFirstmate("cursor")).toBe(false);
   });
 
   it("stands on a login a typed cut-off pauses, not one with no client or never signed in", () => {

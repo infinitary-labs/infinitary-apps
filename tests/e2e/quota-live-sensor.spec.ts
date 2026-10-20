@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { claudeWindowLabel } from "../../src/core/quota/providers/claude";
+import { COPILOT_PLAN, COPILOT_PREMIUM_LABEL } from "../../src/core/quota/providers/copilot";
 import {
   GROK_CREDITS_LABEL,
   GROK_NO_WINDOW_DETAIL,
@@ -16,6 +17,7 @@ import {
   EMPTY_QUOTA_TEXT,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
+import { catalogEntry, providerSignInNote } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -316,6 +318,110 @@ function seedKimiAccount(userDataDir: string, accessToken: string, expires: numb
   );
 }
 
+const COPILOT_LIVE = "acct_copilot_live";
+const COPILOT_LAPSED = "acct_copilot_lapsed";
+
+type StubCopilot = { server: Server; url: string; seen: string[] };
+
+/**
+ * A stand-in for GitHub's `copilot_internal/user`: it answers a paid seat's
+ * reading (premium requests metered, chat and completions unlimited, the
+ * shape CodexBar's reader decodes) for the one GitHub sign-in it knows, and
+ * GitHub's 401 for any other.
+ */
+async function startStubCopilot(accept: string): Promise<StubCopilot> {
+  const stub: StubCopilot = { server: createServer(), url: "", seen: [] };
+  stub.server.on("request", (request, response) => {
+    const bearer = (request.headers.authorization ?? "").replace(/^Bearer /, "");
+    stub.seen.push(bearer);
+    if (bearer !== accept) {
+      response.writeHead(401, { "content-type": "application/json" });
+      response.end(JSON.stringify({ message: "Bad credentials" }));
+      return;
+    }
+    const reset = new Date();
+    reset.setUTCMonth(reset.getUTCMonth() + 1, 1);
+    const unlimited = (quota_id: string) => ({
+      entitlement: 0,
+      overage_count: 0,
+      overage_permitted: false,
+      percent_remaining: 100,
+      quota_id,
+      quota_remaining: 0,
+      remaining: 0,
+      unlimited: true,
+    });
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(
+      JSON.stringify({
+        access_type_sku: "monthly_subscriber_quota",
+        chat_enabled: true,
+        copilot_plan: "individual",
+        quota_reset_date: reset.toISOString().slice(0, 10),
+        quota_snapshots: {
+          chat: unlimited("chat"),
+          completions: unlimited("completions"),
+          premium_interactions: {
+            entitlement: 300,
+            overage_count: 0,
+            overage_permitted: false,
+            percent_remaining: 62,
+            quota_id: "premium_interactions",
+            quota_remaining: 186,
+            remaining: 186,
+            unlimited: false,
+          },
+        },
+      }),
+    );
+  });
+  await new Promise<void>((resolve) => stub.server.listen(0, "127.0.0.1", resolve));
+  const { port } = stub.server.address() as AddressInfo;
+  stub.url = `http://127.0.0.1:${port}/copilot_internal/user`;
+  return stub;
+}
+
+/**
+ * Two Copilot accounts the way Pi stored them before Copilot left the
+ * catalog: Pi's own auth file holding the GitHub sign-in (`refresh`) and an
+ * unexpired Copilot token, so nothing reaches GitHub to renew it.
+ */
+function seedCopilotAccounts(userDataDir: string, signIns: Record<string, string>) {
+  const accountsDir = join(userDataDir, "accounts");
+  for (const [id, githubToken] of Object.entries(signIns)) {
+    const dir = join(accountsDir, "github-copilot", id);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    writeFileSync(
+      join(dir, "auth.json"),
+      JSON.stringify({
+        "github-copilot": {
+          type: "oauth",
+          refresh: githubToken,
+          access: "tid=stub;exp=4000000000;proxy-ep=proxy.individual.githubcopilot.com",
+          expires: Date.now() + 30 * 24 * 3600 * 1000,
+        },
+      }),
+      { mode: 0o600 },
+    );
+  }
+  writeFileSync(
+    join(accountsDir, "registry.json"),
+    JSON.stringify({
+      version: 1,
+      accounts: Object.keys(signIns).map((id, index) => ({
+        id,
+        providerId: "github-copilot",
+        kind: "subscription_oauth",
+        label: index === 0 ? "Personal" : "Old work",
+        enabled: true,
+        createdAt: Date.parse("2026-08-01T00:00:00Z") + index,
+      })),
+      pins: {},
+    }),
+    { mode: 0o600 },
+  );
+}
+
 function seedAccounts(userDataDir: string) {
   const accountsDir = join(userDataDir, "accounts");
   mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
@@ -392,18 +498,20 @@ test.describe("the real quota sensor, end to end", () => {
   let stub: StubUsage | undefined;
   let meter: StubMeter | undefined;
   let kimi: StubKimi | undefined;
+  let copilot: StubCopilot | undefined;
 
   test.afterEach(async () => {
     await app?.close();
     app = undefined;
     // Only a started server can report its close; awaiting an absent one
     // would wait forever.
-    for (const server of [stub?.server, meter?.server, kimi?.server]) {
+    for (const server of [stub?.server, meter?.server, kimi?.server, copilot?.server]) {
       if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
     }
     stub = undefined;
     meter = undefined;
     kimi = undefined;
+    copilot = undefined;
   });
 
   test("resolves the account's own store, reads the vendor, and renders real meters", async () => {
@@ -661,5 +769,40 @@ process.exit(run.status ?? 0);
       status: "auth_required",
       reason: "refresh_token_lapsed",
     });
+  });
+
+  test("Copilot accounts from before load: one reads premium requests, a lapsed one asks to sign in again", async () => {
+    // INF-560, the captain's answers: Copilot comes back through Pi, its chip
+    // says it connects through Pi, and accounts stored before load again,
+    // their row saying to sign in again once the token has lapsed.
+    const userDataDir = scratchDir("infinitary-e2e-");
+    copilot = await startStubCopilot("gho_live");
+    seedCopilotAccounts(userDataDir, {
+      [COPILOT_LIVE]: "gho_live",
+      [COPILOT_LAPSED]: "gho_lapsed",
+    });
+    app = await launchApp({ userDataDir, env: { INFINITARY_COPILOT_USAGE_URL: copilot.url } });
+    await openSubscriptions(app);
+
+    const live = accountRow(app, COPILOT_LIVE);
+    await expect(live.getByText(COPILOT_PREMIUM_LABEL, { exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(live.getByText(COPILOT_PLAN, { exact: false })).toBeVisible();
+    await expect(live.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toHaveCount(0);
+
+    const lapsed = accountRow(app, COPILOT_LAPSED);
+    await expect(lapsed.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toBeVisible({ timeout: 20_000 });
+    await expect(lapsed.getByRole("button", { name: "Sign in" })).toBeVisible();
+    // The meter asked with each account's stored GitHub sign-in, never the
+    // Copilot token Pi resolves for requests.
+    expect(new Set(copilot.seen)).toEqual(new Set(["gho_live", "gho_lapsed"]));
+
+    // The chip to add another account says it connects through Pi.
+    const chip = app.page.locator('[data-connect-provider="github-copilot"]');
+    await expect(chip).toContainText(catalogEntry("github-copilot")?.name as string);
+    await expect(chip).toContainText(
+      providerSignInNote({ id: "github-copilot", tier: "subscription" }) as string,
+    );
   });
 });

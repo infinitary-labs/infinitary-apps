@@ -43,7 +43,10 @@ const fakes = vi.hoisted(() => ({
   failNextLogin: { value: false },
 }));
 
-vi.mock("@earendil-works/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
+  // Pi's own read of a stored credential, as the Copilot meter uses it.
+  readStoredCredential: (await importOriginal<typeof import("@earendil-works/pi-coding-agent")>())
+    .readStoredCredential,
   ModelRuntime: {
     create: vi.fn(async (options: { authPath: string; modelsPath: string }) => {
       if (fakes.failNextCreate.value) {
@@ -513,21 +516,18 @@ describe("AccountVault", () => {
     await expect(vault.add("anthropic", "oauth", bridge())).rejects.toThrow(
       /not available to connect/,
     );
-    await expect(vault.add("github-copilot", "oauth", bridge())).rejects.toThrow(
-      /not available to connect/,
-    );
     await expect(vault.add("cursor", "oauth", bridge())).rejects.toThrow(
       /not available to connect/,
     );
   });
 
-  it("loads a stored Copilot account without a row and without deleting it", async () => {
+  it("loads a stored Cursor account without a row and without deleting it", async () => {
     const paths = freshPaths();
     mkdirSync(paths.accountsDir, { recursive: true });
     const retired = [
       {
-        id: "acct_copilot",
-        providerId: "github-copilot",
+        id: "acct_cursor_old",
+        providerId: "cursor",
         kind: "subscription_oauth",
         label: "Work",
         enabled: true,
@@ -536,18 +536,18 @@ describe("AccountVault", () => {
     ];
     writeFileSync(
       join(paths.accountsDir, "registry.json"),
-      JSON.stringify({ version: 1, accounts: retired, pins: { "github-copilot": "acct_copilot" } }),
+      JSON.stringify({ version: 1, accounts: retired, pins: { cursor: "acct_cursor_old" } }),
     );
     const vault = AccountVault.create(paths);
     expect(vault.list()).toEqual([]);
-    expect(vault.list("github-copilot")).toEqual([]);
+    expect(vault.list("cursor")).toEqual([]);
     expect(await vault.views()).toEqual([]);
     expect(vault.availableModels()).toEqual([]);
     expect(await vault.sweepLiveness()).toEqual([]);
     const stored = JSON.parse(readFileSync(join(paths.accountsDir, "registry.json"), "utf8")) as {
       accounts: { id: string }[];
     };
-    expect(stored.accounts.map((account) => account.id)).toEqual(["acct_copilot"]);
+    expect(stored.accounts.map((account) => account.id)).toEqual(["acct_cursor_old"]);
   });
 
   it("loads a Kimi Code account stored before Kimi Code came back, with its pin", async () => {
@@ -577,6 +577,57 @@ describe("AccountVault", () => {
     expect((await vault.views()).map((view) => [view.id, view.providerId, view.pinned])).toEqual([
       ["acct_kimi", "kimi-coding", true],
     ]);
+  });
+
+  it("loads a Copilot account stored before, and reads its allowance with its GitHub sign-in", async () => {
+    // The captain's answer on INF-560: accounts stored under Copilot's id
+    // before it came back load again. Its allowance is read with the
+    // GitHub sign-in Pi stored, never the short-lived Copilot token.
+    const paths = freshPaths();
+    const store = join(paths.accountsDir, "github-copilot", "acct_copilot");
+    mkdirSync(store, { recursive: true, mode: 0o700 });
+    writeFileSync(
+      join(store, "auth.json"),
+      JSON.stringify({
+        "github-copilot": {
+          type: "oauth",
+          refresh: "gho_stored-sign-in",
+          access: "tid=stub;exp=1;proxy-ep=proxy.individual.githubcopilot.com",
+          expires: 1,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    writeFileSync(
+      join(paths.accountsDir, "registry.json"),
+      JSON.stringify({
+        version: 1,
+        accounts: [
+          {
+            id: "acct_copilot",
+            providerId: "github-copilot",
+            kind: "subscription_oauth",
+            label: "Work",
+            enabled: true,
+            createdAt: 2,
+          },
+        ],
+        pins: {},
+      }),
+    );
+    const vault = AccountVault.create(paths);
+    expect(vault.list().map((account) => [account.id, account.providerId])).toEqual([
+      ["acct_copilot", "github-copilot"],
+    ]);
+    expect(await vault.resolveForQuota("acct_copilot")).toEqual({
+      apiKey: "gho_stored-sign-in",
+      baseUrl: "https://api.github.com",
+      usingOAuth: true,
+    });
+    // The store is read, never rewritten: the expired Copilot token stays.
+    expect(
+      JSON.parse(readFileSync(join(store, "auth.json"), "utf8"))["github-copilot"].expires,
+    ).toBe(1);
   });
 
   it("skips a stored Cursor account everywhere, keeping its store on disk", async () => {

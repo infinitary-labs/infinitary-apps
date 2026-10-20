@@ -23,7 +23,13 @@ import { createModelRuntime } from "./modelRuntime";
  * provider: the overlay is an unauthenticated GET to pi.dev.
  */
 
-const PI_PROVIDERS = ["openai-codex", "xai", "kimi-coding", "openrouter"] as const;
+const PI_PROVIDERS = [
+  "openai-codex",
+  "xai",
+  "kimi-coding",
+  "github-copilot",
+  "openrouter",
+] as const;
 
 const live = process.platform === "darwin" && process.env.PI_OFFLINE === undefined;
 
@@ -53,6 +59,12 @@ describe.runIf(live)("the live Pi catalog (pi.dev overlay, live catalog probe)",
         openrouter: { type: "api_key", key: "probe" },
         "kimi-coding": { type: "api_key", key: "probe" },
         "openai-codex": {
+          type: "oauth",
+          access: "probe",
+          refresh: "probe",
+          expires: 4_000_000_000_000,
+        },
+        "github-copilot": {
           type: "oauth",
           access: "probe",
           refresh: "probe",

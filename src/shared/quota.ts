@@ -68,7 +68,7 @@ export const quotaWindowViewSchema = z.object({
 export type QuotaWindowView = z.infer<typeof quotaWindowViewSchema>;
 
 export const quotaProviderViewSchema = z.object({
-  /** Quota provider id: codex, grok, claude. */
+  /** Quota provider id: codex, grok, claude, copilot. */
   provider: z.string(),
   label: z.string(),
   /**
@@ -279,12 +279,13 @@ export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
   grok: "xai",
   claude: "anthropic-claude",
   kimi: "kimi-coding",
+  copilot: "github-copilot",
 };
 
 /**
  * The provider id a served model carries for one the allowance catalog or a
  * pin names (`claude` is `anthropic-claude`, `codex` is `openai-codex`,
- * `grok` is `xai`); any other id, a served one included, is its own. A place
+ * `grok` is `xai`, `copilot` is `github-copilot`); any other id, a served one included, is its own. A place
  * that forgets this drops every Claude, Codex and Grok model without a word
  * (FI3-1783), so the translation lives here alone.
  */
@@ -292,7 +293,7 @@ export function servedProviderOf(provider: string): string {
   return isAllowanceProvider(provider) ? (QUOTA_TO_PI_PROVIDER[provider] ?? provider) : provider;
 }
 
-/** Whether the allowance catalog names a provider by this id (`claude`, `codex`, `grok`). */
+/** Whether the allowance catalog names a provider by this id (`claude`, `codex`, `grok`, `copilot`). */
 export function isAllowanceProvider(provider: string): boolean {
   return Object.hasOwn(QUOTA_TO_PI_PROVIDER, provider);
 }
@@ -317,7 +318,7 @@ export function servedModelKey(model: { provider: string; id: string }): `${stri
 
 /**
  * Whether Infinitary reads an allowance for this provider id. Sensed providers
- * (Codex, Grok, Claude, Kimi Code) get a pending "reading…" row until the first
+ * (Codex, Grok, Claude, Kimi Code, Copilot) get a pending "reading…" row until the first
  * sensor pass lands; everyone else (OpenRouter today) keeps the no-reader
  * sentence. Matches the sensor's own catalog (`QUOTA_PROVIDERS` in core).
  */

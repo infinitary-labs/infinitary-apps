@@ -422,6 +422,7 @@ describe("buildModelsCatalog across accounts", () => {
       { provider: "openai-codex", id: "gpt-6.1-sol", name: "GPT-6.1 Sol" },
       { provider: "xai", id: "grok-4.7", name: "Grok 4.7" },
       { provider: "kimi-coding", id: "k3", name: "Kimi K3" },
+      { provider: "github-copilot", id: "claude-opus-5.5", name: "Claude Opus 5.5" },
     ];
     const catalog = buildModelsCatalog(served, [], "2026-10-15T12:00:00Z");
     expect(catalog.models.map((row) => row.provider).sort()).toEqual(
@@ -833,6 +834,40 @@ describe("delegated renewal (routine expiry recovers without a sign-in)", () => 
     );
     expect(row).toMatchObject({ status: "auth_required", reason: "refresh_token_lapsed" });
     expect(http).not.toHaveBeenCalled();
+  });
+
+  it("a GitHub sign-in GitHub refuses is a lapsed one, with no renewal tried (INF-560)", async () => {
+    // The captain's answer on INF-560: an old Copilot account loads, and its
+    // row says to sign in again once its token has lapsed. Copilot's meter
+    // reads with the GitHub sign-in itself, which no renewal replaces.
+    const renew = vi.fn(async () => ({
+      outcome: "renewed" as const,
+      auth: { apiKey: "never-used", usingOAuth: true },
+    }));
+    const http = vi.fn(async () => ({ status: 401, json: { message: "Bad credentials" } }));
+    const row = await rowOf(
+      {
+        accounts: () => [
+          {
+            accountId: "acct_copilot",
+            accountLabel: "Old work",
+            quotaId: "copilot",
+            piId: "github-copilot",
+            providerLabel: "Copilot",
+          },
+        ],
+        resolve: async () => ({
+          apiKey: "gho_revoked",
+          baseUrl: "https://api.github.com",
+          usingOAuth: true,
+        }),
+        renew,
+      },
+      http,
+    );
+    expect(row).toMatchObject({ status: "auth_required", reason: "refresh_token_lapsed" });
+    expect(http).toHaveBeenCalledTimes(1);
+    expect(renew).not.toHaveBeenCalled();
   });
 
   it("a Keychain miss stays retryable even when a renew hook exists", async () => {

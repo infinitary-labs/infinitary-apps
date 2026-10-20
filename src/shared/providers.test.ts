@@ -7,6 +7,7 @@ import {
   isRetiredProvider,
   PROVIDER_CATALOG,
   providerServesRole,
+  providerSignInNote,
 } from "./providers";
 import { isSensedProvider, QUOTA_TO_PI_PROVIDER, quotaSnapshotViewSchema } from "./quota";
 
@@ -17,6 +18,7 @@ describe("PROVIDER_CATALOG", () => {
       "xai",
       CLAUDE_PROVIDER_ID,
       "kimi-coding",
+      "github-copilot",
       "openrouter",
     ]);
     // INF-560: the chip's name is "Kimi Code", after Claude.
@@ -25,6 +27,7 @@ describe("PROVIDER_CATALOG", () => {
       "Grok",
       "Claude",
       "Kimi Code",
+      "Copilot",
       "OpenRouter",
     ]);
     expect(PROVIDER_CATALOG.find((entry) => entry.id === "kimi-coding")?.tier).toBe("subscription");
@@ -43,10 +46,12 @@ describe("PROVIDER_CATALOG", () => {
     expect(PROVIDER_CATALOG.filter((entry) => entry.backend !== "pi").map((e) => e.id)).toEqual([
       CLAUDE_PROVIDER_ID,
     ]);
-    // Cursor left with Copilot: not offered, and a stored account for it is
-    // retired rather than read as a Pi provider. Kimi Code came back (INF-560).
+    // Cursor left: not offered, and a stored account for it is
+    // retired rather than read as a Pi provider. Kimi Code and Copilot came back (INF-560).
     expect(isRetiredProvider("kimi-coding")).toBe(false);
     expect(isPiProvider("kimi-coding")).toBe(true);
+    expect(isRetiredProvider("github-copilot")).toBe(false);
+    expect(isPiProvider("github-copilot")).toBe(true);
     expect(isOfferedProvider("cursor")).toBe(false);
     expect(isRetiredProvider("cursor")).toBe(true);
     expect(isPiProvider("cursor")).toBe(false);
@@ -61,6 +66,17 @@ describe("PROVIDER_CATALOG", () => {
     // An unknown id defaults to Pi but is not offered anywhere.
     expect(backendForProvider("mystery")).toBe("pi");
     expect(isPiProvider("mystery")).toBe(false);
+  });
+
+  it("says on the Copilot chip that it connects through Pi, the captain's words (INF-560)", () => {
+    expect(isPiProvider("github-copilot")).toBe(true);
+    expect(isRetiredProvider("github-copilot")).toBe(false);
+    expect(providerSignInNote({ id: "github-copilot", tier: "subscription" })).toBe(
+      "connects through Pi",
+    );
+    // Every other subscription chip carries no note; a key carries "API key".
+    expect(providerSignInNote({ id: "xai", tier: "subscription" })).toBeUndefined();
+    expect(providerSignInNote({ id: "openrouter", tier: "key" })).toBe("API key");
   });
 
   it("lets every offered provider run the Firstmate and crew, Claude included (W1)", () => {
@@ -84,7 +100,7 @@ describe("quota mapping", () => {
     expect(QUOTA_TO_PI_PROVIDER.codex).toBe("openai-codex");
     expect(QUOTA_TO_PI_PROVIDER.grok).toBe("xai");
     expect(QUOTA_TO_PI_PROVIDER.cursor).toBeUndefined();
-    expect(QUOTA_TO_PI_PROVIDER.copilot).toBeUndefined();
+    expect(QUOTA_TO_PI_PROVIDER.copilot).toBe("github-copilot");
     expect(QUOTA_TO_PI_PROVIDER.kimi).toBe("kimi-coding");
   });
 
@@ -93,6 +109,7 @@ describe("quota mapping", () => {
     expect(isSensedProvider("xai")).toBe(true);
     expect(isSensedProvider(CLAUDE_PROVIDER_ID)).toBe(true);
     expect(isSensedProvider("kimi-coding")).toBe(true);
+    expect(isSensedProvider("github-copilot")).toBe(true);
     expect(isSensedProvider("cursor")).toBe(false);
     expect(isSensedProvider("openrouter")).toBe(false);
     expect(isSensedProvider("mystery")).toBe(false);

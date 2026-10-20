@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "copilot-through-pi",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Add your GitHub Copilot plan as a subscription",
+      "body": "Settings → Intelligence offers Copilot beside Codex, Grok and Claude, and says it connects through Pi. Sign in with the code GitHub shows you, and your crew can use Copilot's Fable 5.1, Opus 5.5 and Sonnet 5.5. The row shows how many of the month's premium requests are left. A Copilot account you added before loads again, and its row asks you to sign in again if that sign-in has lapsed.",
+      "picture": {
+        "dark": "copilot-through-pi-dark.webp",
+        "light": "copilot-through-pi-light.webp",
+        "alt": "Settings, Intelligence: a Copilot account named Personal on the GitHub Copilot plan with 62% of premium requests left, an Old work Copilot account asking to sign in again, and an Add account chip reading Copilot connects through Pi"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

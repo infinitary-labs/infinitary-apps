@@ -238,8 +238,8 @@ export function ProviderChips({
         {plusIcon}
         <span>{busy ? "Connecting..." : provider.name}</span>
         {note && <span className="fm-connect-chip-note">{note}</span>}
-        {providerSignInNote(provider.tier) && (
-          <span className="fm-connect-chip-note">{providerSignInNote(provider.tier)}</span>
+        {providerSignInNote(provider) && (
+          <span className="fm-connect-chip-note">{providerSignInNote(provider)}</span>
         )}
       </ProviderChip>
     );

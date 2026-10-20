@@ -30,7 +30,7 @@ If nothing listed is available either, routing falls back to the whole pool rath
 Families are data, beside `STARTER_SLOTS` in `src/shared/modelSlots.ts`:
 
 - **`TRACKED_FAMILIES`**
-  - Claude, Codex and Grok track `"every"` family.
+  - Claude, Codex, Grok and Copilot track `"every"` family.
     They serve a handful of families, and a new one there is news.
   - Kimi Code lists `k3` and `kimi-for-coding` only, its two starters (captain, 2026-10-19: "k3 high, kimi-for-coding medium only"); `k3-256k` and the highspeed row stay reachable by name.
   - OpenRouter's rows are its own `~vendor/family-latest` aliases for Infinitary's families.
@@ -50,9 +50,11 @@ So the listed rows are the head of each family group, a newcomer lands at the to
 | Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
 | Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
+| Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |
 | OpenRouter | Pi's catalog | - |
 
 Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.1 premium.
+Copilot's starters are the same Claude rows as Copilot serves them - Fable 5.1 premium, Opus 5.5 high, Sonnet 5.5 medium - with no low row: the captain left out Haiku 4.5 (INF-560).
 Reconciliation seeds only unseen models, preserving saved Sonnet or Haiku 4.5 placements and leaving an already-seen, turned-off Haiku 5.5 off.
 A pre-2.1.293 client can run the explicit Haiku 5.5 id while omitting it from a successful picker catalog.
 `claudeCatalogIsOutdated` treats that specific omission as an unavailable read, so the existing fallback keeps the new default routable; it never inserts an account-specific row.

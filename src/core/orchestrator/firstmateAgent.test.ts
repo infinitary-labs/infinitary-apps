@@ -1640,14 +1640,14 @@ describe("FirstmateAgent", () => {
     });
   });
 
-  it("skips a leftover Copilot pin and derives a new default", async () => {
+  it("skips a leftover Cursor pin and derives a new default", async () => {
     const { agent, settings, specs } = setup({
       availableModels: () => [
-        { provider: "github-copilot", id: "gpt-5.6-sol" },
+        { provider: "cursor", id: "composer-2" },
         { provider: "fm-mock", id: "mock-1" },
       ],
     });
-    settings.setFirstmateModel({ provider: "github-copilot", id: "gpt-5.6-sol" });
+    settings.setFirstmateModel({ provider: "cursor", id: "composer-2" });
     await agent.converse("hello");
     expect(settings.getFirstmateModel()).toEqual({ provider: "fm-mock", id: "mock-1" });
     expect(specs[0]?.model).toEqual({ provider: "fm-mock", id: "mock-1" });
@@ -1779,7 +1779,7 @@ describe("FirstmateAgent", () => {
     // A provider the app does not list: the ones that can serve Firstmate,
     // never the provider's own reply.
     expect(card.body).toBe(
-      "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key.",
+      "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code or Copilot, or OpenRouter with an API key.",
     );
   });
 
@@ -1886,7 +1886,9 @@ describe("FirstmateAgent", () => {
     const card = cards.find((entry) => entry.actions.length > 0) as Card;
     expect(card.title).toBe("A provider needs sign in");
     // The body names the five that can serve Firstmate, in product words.
-    expect(card.body).toContain("Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key");
+    expect(card.body).toContain(
+      "Codex, Grok, Claude, Kimi Code or Copilot, or OpenRouter with an API key",
+    );
     expect(card.actions[0]?.effect).toEqual({ kind: "open", target: "subscriptions" });
     // The ask the turn opened is not stranded until the next boot: it ends
     // now, failed, as its own question task (task-system P1).

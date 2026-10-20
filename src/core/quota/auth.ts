@@ -90,12 +90,16 @@ export const QUOTA_PROVIDERS = (
     { quotaId: "grok", label: "Grok", sensed: true },
     { quotaId: "claude", label: "Claude", sensed: true },
     { quotaId: "kimi", label: "Kimi Code", sensed: true },
+    { quotaId: "copilot", label: "Copilot", sensed: true },
   ] as const
 ).map((entry) => ({ ...entry, piId: servedProviderOf(entry.quotaId) }));
 
 export type QuotaProviderId = (typeof QUOTA_PROVIDERS)[number]["quotaId"];
 /** Quota ids the HTTP sensor can actually fetch. */
-export type SensedQuotaProviderId = Extract<QuotaProviderId, "codex" | "grok" | "claude" | "kimi">;
+export type SensedQuotaProviderId = Extract<
+  QuotaProviderId,
+  "codex" | "grok" | "claude" | "kimi" | "copilot"
+>;
 
 /** The quota mapping for a provider id, when that provider has quota at all. */
 export function quotaEntryForPiProvider(

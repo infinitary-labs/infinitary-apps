@@ -44,7 +44,8 @@ import {
   servesModels,
 } from "../accounts/credentialHealth";
 import type { AppPaths } from "../paths";
-import { enforceAuthFileMode, PiAccountBackend } from "./piAccountBackend";
+import { COPILOT_PROVIDER_ID, copilotMeterAuth } from "./copilotMeter";
+import { authPathIn, enforceAuthFileMode, PiAccountBackend } from "./piAccountBackend";
 import type { AuthInteractionBridge, ResolvedProviderAuth } from "./piAuth";
 import { piReasoningCapabilities } from "./reasoning";
 
@@ -821,6 +822,11 @@ export class AccountVault {
       backendForProvider(account.providerId) !== "pi"
     )
       return undefined;
+    // Copilot's allowance is read with the GitHub sign-in itself, not the
+    // Copilot token Pi resolves for requests (copilotMeter.ts).
+    if (account.providerId === COPILOT_PROVIDER_ID) {
+      return copilotMeterAuth(authPathIn(this.storeDir(account.providerId, accountId)));
+    }
     try {
       const runtime = await this.runtimeFor(accountId);
       const result = await runtime.getAuth(account.providerId);

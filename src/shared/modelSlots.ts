@@ -136,6 +136,14 @@ export const STARTER_SLOTS: Readonly<Record<string, Readonly<Record<string, read
     k3: ["high"],
     "kimi-for-coding": ["medium"],
   },
+  // Claude's rows as Copilot serves them, without a low row: the captain
+  // took the plan's mirror of Claude but left out Haiku 4.5 (INF-560,
+  // 2026-10-19). Pi lists only what the account may use.
+  "github-copilot": {
+    "claude-fable-5.1": ["premium"],
+    "claude-opus-5.5": ["high"],
+    "claude-sonnet-5.5": ["medium"],
+  },
 };
 
 /**
@@ -157,6 +165,9 @@ export const TRACKED_FAMILIES: Readonly<
   // Kimi Code lists only its two starter rows; k3-256k and the highspeed
   // row stay reachable by name.
   "kimi-coding": { ids: ["k3", "kimi-for-coding"] },
+  // Copilot serves several makers' families, filtered to what the account
+  // may use; each family's newest generation is its row, as elsewhere.
+  "github-copilot": "every",
   // OpenRouter lists 388 ids from 47 vendors. Its own `~…-latest` aliases
   // already follow each family's newest generation, so the rows are those
   // aliases for the families Infinitary itself serves.

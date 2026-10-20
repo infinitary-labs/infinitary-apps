@@ -16,7 +16,13 @@ import { catalogRefreshesSettled, createModelRuntime } from "./modelRuntime";
  * The live half, against pi.dev's overlay, is piCatalogProbe.test.ts.
  */
 
-const PI_PROVIDERS = ["openai-codex", "xai", "kimi-coding", "openrouter"] as const;
+const PI_PROVIDERS = [
+  "openai-codex",
+  "xai",
+  "kimi-coding",
+  "github-copilot",
+  "openrouter",
+] as const;
 
 let previousOffline: string | undefined;
 

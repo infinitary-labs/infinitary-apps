@@ -513,9 +513,6 @@ describe("AccountVault", () => {
     await expect(vault.add("anthropic", "oauth", bridge())).rejects.toThrow(
       /not available to connect/,
     );
-    await expect(vault.add("kimi-coding", "api_key", bridge())).rejects.toThrow(
-      /not available to connect/,
-    );
     await expect(vault.add("github-copilot", "oauth", bridge())).rejects.toThrow(
       /not available to connect/,
     );
@@ -524,18 +521,10 @@ describe("AccountVault", () => {
     );
   });
 
-  it("loads a stored Kimi or Copilot account without a row and without deleting it", async () => {
+  it("loads a stored Copilot account without a row and without deleting it", async () => {
     const paths = freshPaths();
     mkdirSync(paths.accountsDir, { recursive: true });
     const retired = [
-      {
-        id: "acct_kimi",
-        providerId: "kimi-coding",
-        kind: "api_key",
-        label: "Personal",
-        enabled: true,
-        createdAt: 1,
-      },
       {
         id: "acct_copilot",
         providerId: "github-copilot",
@@ -547,18 +536,47 @@ describe("AccountVault", () => {
     ];
     writeFileSync(
       join(paths.accountsDir, "registry.json"),
-      JSON.stringify({ version: 1, accounts: retired, pins: { "kimi-coding": "acct_kimi" } }),
+      JSON.stringify({ version: 1, accounts: retired, pins: { "github-copilot": "acct_copilot" } }),
     );
     const vault = AccountVault.create(paths);
     expect(vault.list()).toEqual([]);
-    expect(vault.list("kimi-coding")).toEqual([]);
+    expect(vault.list("github-copilot")).toEqual([]);
     expect(await vault.views()).toEqual([]);
     expect(vault.availableModels()).toEqual([]);
     expect(await vault.sweepLiveness()).toEqual([]);
     const stored = JSON.parse(readFileSync(join(paths.accountsDir, "registry.json"), "utf8")) as {
       accounts: { id: string }[];
     };
-    expect(stored.accounts.map((account) => account.id)).toEqual(["acct_kimi", "acct_copilot"]);
+    expect(stored.accounts.map((account) => account.id)).toEqual(["acct_copilot"]);
+  });
+
+  it("loads a Kimi Code account stored before Kimi Code came back, with its pin", async () => {
+    // INF-560, the captain's answer: "Load them, and let the row say sign in
+    // again when the token has lapsed".
+    const paths = freshPaths();
+    mkdirSync(paths.accountsDir, { recursive: true });
+    writeFileSync(
+      join(paths.accountsDir, "registry.json"),
+      JSON.stringify({
+        version: 1,
+        accounts: [
+          {
+            id: "acct_kimi",
+            providerId: "kimi-coding",
+            kind: "api_key",
+            label: "Personal",
+            enabled: true,
+            createdAt: 1,
+          },
+        ],
+        pins: { "kimi-coding": "acct_kimi" },
+      }),
+    );
+    const vault = AccountVault.create(paths);
+    expect(vault.list("kimi-coding").map((account) => account.id)).toEqual(["acct_kimi"]);
+    expect((await vault.views()).map((view) => [view.id, view.providerId, view.pinned])).toEqual([
+      ["acct_kimi", "kimi-coding", true],
+    ]);
   });
 
   it("skips a stored Cursor account everywhere, keeping its store on disk", async () => {

@@ -77,6 +77,28 @@ export function isAuthFailureMessage(message: string): boolean {
 }
 
 /**
+ * A refresh the provider's sign-in server answered 401 or `invalid_grant`,
+ * where Pi's refresh errors put them: "(401)", "status 401". A 403 is not
+ * here, since a network policy refuses with it too (docs/quota.md).
+ */
+const REFRESH_REFUSED_PATTERNS: readonly RegExp[] = [
+  /\(401\)/,
+  /\bstatus(?:\s+code)?\s*[:=]?\s*401\b/i,
+  /\binvalid_grant\b/,
+];
+
+/**
+ * Whether a Pi credential read failed because the provider refused the
+ * stored refresh token: the lapsed-refresh-token proof that may say "sign
+ * in again" (src/shared/credentialHealth.ts). `code` is the Pi failure's own
+ * typed kind, and only its OAuth kind is a refresh at all; a timeout, a
+ * network failure or a 5xx is never this.
+ */
+export function isLapsedRefresh(code: unknown, message: string): boolean {
+  return code === "oauth" && REFRESH_REFUSED_PATTERNS.some((pattern) => pattern.test(message));
+}
+
+/**
  * Why a provider stopped serving an account, by class (the cut-off contract,
  * docs/quota.md "Typed cut-offs"). The names are product-neutral, so no
  * provider's own vocabulary crosses the event seam:

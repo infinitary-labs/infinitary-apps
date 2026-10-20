@@ -3,7 +3,12 @@ import { chmodSync, mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } 
 import { join } from "node:path";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AccountView, CredentialKind } from "@shared/accounts";
-import { CUT_OFF_CLASSES, type CutOff, type CutOffClass } from "@shared/authFailure";
+import {
+  CUT_OFF_CLASSES,
+  type CutOff,
+  type CutOffClass,
+  isLapsedRefresh,
+} from "@shared/authFailure";
 import { isClientIssueReason } from "@shared/claudeClient";
 import {
   CUSTOM_API_PROVIDER_PREFIX,
@@ -184,6 +189,8 @@ export class AccountVault {
   private readonly lastHealth = new Map<string, CredentialHealth>();
   private readonly healthReadAt = new Map<string, number>();
   private readonly healthInFlight = new Map<string, Promise<CredentialHealth>>();
+  /** Pi accounts whose last credential read the provider refused the refresh token for. */
+  private readonly lapsedRefresh = new Set<string>();
 
   private readonly pi: PiAccountBackend;
   private readonly now: () => number;
@@ -818,6 +825,7 @@ export class AccountVault {
       const runtime = await this.runtimeFor(accountId);
       const result = await runtime.getAuth(account.providerId);
       if (!result) return undefined;
+      this.lapsedRefresh.delete(accountId);
       enforceAuthFileMode(this.storeDir(account.providerId, accountId));
       const headers = result.auth.headers
         ? Object.fromEntries(
@@ -832,9 +840,24 @@ export class AccountVault {
         ...(typeof result.auth.baseUrl === "string" ? { baseUrl: result.auth.baseUrl } : {}),
         usingOAuth: runtime.isUsingOAuth(account.providerId),
       };
-    } catch {
+    } catch (caught) {
+      // Only the provider refusing the refresh token is proof; any other
+      // failure leaves what the last read established.
+      if (
+        caught instanceof Error &&
+        isLapsedRefresh((caught as { code?: unknown }).code, caught.message)
+      )
+        this.lapsedRefresh.add(accountId);
       return undefined;
     }
+  }
+
+  /**
+   * Whether this Pi account's last credential read was refused at its
+   * refresh token: the lapsed-sign-in proof, until a read succeeds again.
+   */
+  refreshLapsed(accountId: string): boolean {
+    return this.lapsedRefresh.has(accountId);
   }
 
   /**

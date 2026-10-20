@@ -11,19 +11,23 @@ import {
 import { isSensedProvider, QUOTA_TO_PI_PROVIDER, quotaSnapshotViewSchema } from "./quota";
 
 describe("PROVIDER_CATALOG", () => {
-  it("offers the four managed providers, Claude the one outside Pi", () => {
+  it("offers the five managed providers, Claude the one outside Pi", () => {
     expect(PROVIDER_CATALOG.map((entry) => entry.id)).toEqual([
       "openai-codex",
       "xai",
       CLAUDE_PROVIDER_ID,
+      "kimi-coding",
       "openrouter",
     ]);
+    // INF-560: the chip's name is "Kimi Code", after Claude.
     expect(PROVIDER_CATALOG.map((entry) => entry.name)).toEqual([
       "Codex",
       "Grok",
       "Claude",
+      "Kimi Code",
       "OpenRouter",
     ]);
+    expect(PROVIDER_CATALOG.find((entry) => entry.id === "kimi-coding")?.tier).toBe("subscription");
     expect(PROVIDER_CATALOG.find((entry) => entry.id === "openrouter")?.tier).toBe("key");
     // The bare "anthropic" Pi provider is still not offered: a Claude
     // subscription is reachable only through Claude's own client, never
@@ -39,8 +43,10 @@ describe("PROVIDER_CATALOG", () => {
     expect(PROVIDER_CATALOG.filter((entry) => entry.backend !== "pi").map((e) => e.id)).toEqual([
       CLAUDE_PROVIDER_ID,
     ]);
-    // Cursor left with Kimi and Copilot: not offered, and a stored account
-    // for it is retired rather than read as a Pi provider.
+    // Cursor left with Copilot: not offered, and a stored account for it is
+    // retired rather than read as a Pi provider. Kimi Code came back (INF-560).
+    expect(isRetiredProvider("kimi-coding")).toBe(false);
+    expect(isPiProvider("kimi-coding")).toBe(true);
     expect(isOfferedProvider("cursor")).toBe(false);
     expect(isRetiredProvider("cursor")).toBe(true);
     expect(isPiProvider("cursor")).toBe(false);
@@ -79,13 +85,14 @@ describe("quota mapping", () => {
     expect(QUOTA_TO_PI_PROVIDER.grok).toBe("xai");
     expect(QUOTA_TO_PI_PROVIDER.cursor).toBeUndefined();
     expect(QUOTA_TO_PI_PROVIDER.copilot).toBeUndefined();
-    expect(QUOTA_TO_PI_PROVIDER.kimi).toBeUndefined();
+    expect(QUOTA_TO_PI_PROVIDER.kimi).toBe("kimi-coding");
   });
 
   it("marks only sensed providers as having an allowance reader", () => {
     expect(isSensedProvider("openai-codex")).toBe(true);
     expect(isSensedProvider("xai")).toBe(true);
     expect(isSensedProvider(CLAUDE_PROVIDER_ID)).toBe(true);
+    expect(isSensedProvider("kimi-coding")).toBe(true);
     expect(isSensedProvider("cursor")).toBe(false);
     expect(isSensedProvider("openrouter")).toBe(false);
     expect(isSensedProvider("mystery")).toBe(false);

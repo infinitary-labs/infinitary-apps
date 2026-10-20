@@ -278,6 +278,7 @@ export const QUOTA_TO_PI_PROVIDER: Readonly<Record<string, string>> = {
   codex: "openai-codex",
   grok: "xai",
   claude: "anthropic-claude",
+  kimi: "kimi-coding",
 };
 
 /**
@@ -316,7 +317,7 @@ export function servedModelKey(model: { provider: string; id: string }): `${stri
 
 /**
  * Whether Infinitary reads an allowance for this provider id. Sensed providers
- * (Codex, Grok, Claude) get a pending "reading…" row until the first
+ * (Codex, Grok, Claude, Kimi Code) get a pending "reading…" row until the first
  * sensor pass lands; everyone else (OpenRouter today) keeps the no-reader
  * sentence. Matches the sensor's own catalog (`QUOTA_PROVIDERS` in core).
  */

@@ -4,7 +4,11 @@ import { join } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
 import { CONNECTION_PORT } from "@shared/connection";
-import { accountIdFromNeedsReauthCard, needsReauthCopy } from "@shared/credentialHealth";
+import {
+  accountIdFromNeedsReauthCard,
+  needsReauthCopy,
+  REFRESH_TOKEN_LAPSED,
+} from "@shared/credentialHealth";
 import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE } from "@shared/deviceNames";
@@ -953,7 +957,13 @@ export async function createServices(
               ];
             }),
           resolve: resolveQuotaAuth,
-          unresolved: (accountId) => quotaUnresolved.get(accountId),
+          // A Pi account whose refresh token the provider refused is the
+          // lapsed-sign-in proof: the row says sign in again.
+          unresolved: (accountId) =>
+            quotaUnresolved.get(accountId) ??
+            (vault.refreshLapsed(accountId)
+              ? { status: "auth_required", windows: [], reason: REFRESH_TOKEN_LAPSED }
+              : undefined),
           /**
            * One caller of AccountBackend.renew (spec §11.2.5): the reactive
            * 401 path. Proactive renew at expiresAt-lead rides the supervisor
@@ -982,6 +992,9 @@ export async function createServices(
                   : {}),
                 ...(settingFrom(process.env, "GROK_USAGE_URL")?.trim()
                   ? { grokUsageUrl: settingFrom(process.env, "GROK_USAGE_URL")?.trim() }
+                  : {}),
+                ...(settingFrom(process.env, "KIMI_USAGE_URL")?.trim()
+                  ? { kimiUsageUrl: settingFrom(process.env, "KIMI_USAGE_URL")?.trim() }
                   : {}),
               },
             }),

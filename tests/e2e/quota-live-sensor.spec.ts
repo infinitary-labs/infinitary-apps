@@ -10,6 +10,7 @@ import {
   GROK_NO_WINDOW_DETAIL,
   GROK_PRODUCT_LABELS,
 } from "../../src/core/quota/providers/grok";
+import { KIMI_NO_WINDOW_DETAIL } from "../../src/core/quota/providers/kimi";
 import {
   CLAUDE_FIRST_RUN_TEXT,
   EMPTY_QUOTA_TEXT,
@@ -39,6 +40,7 @@ import { claudeDefaultStore, writeMockClaudeClient } from "./mockClaudeClient";
 
 const CLAUDE_PERSONAL = "acct_claude_live";
 const GROK_PERSONAL = "acct_grok_live";
+const KIMI_PERSONAL = "acct_kimi_live";
 /** An unreleased vendor codename the usage stub answers with beside its real windows. */
 const UNRELEASED_WINDOW = "nimbus_quill";
 /** The Grok product whose own window the credits stub reports. */
@@ -213,6 +215,107 @@ function seedGrokAccount(userDataDir: string, accessToken: string) {
   );
 }
 
+type StubKimi = {
+  server: Server;
+  /** The usages meter's address. */
+  url: string;
+  /** The sign-in server's address, for Pi's own refresh. */
+  oauthHost: string;
+  /** Bearer tokens the meter answers with a reading. */
+  accept: Set<string>;
+  meterSeen: string[];
+  refreshSeen: number;
+};
+
+/**
+ * A stand-in for Kimi Code's two hosts: the usages meter, answering an
+ * accepted bearer with the ratio-pool shape CodexBar 0.78.1 records for it,
+ * and the sign-in server, refusing every refresh the way it refuses a
+ * lapsed refresh token (401, `invalid_grant`).
+ */
+async function startStubKimi(accept: string[]): Promise<StubKimi> {
+  const stub: StubKimi = {
+    server: createServer(),
+    url: "",
+    oauthHost: "",
+    accept: new Set(accept),
+    meterSeen: [],
+    refreshSeen: 0,
+  };
+  stub.server.on("request", (request, response) => {
+    request.resume();
+    request.on("end", () => {
+      if (request.url === "/api/oauth/token") {
+        stub.refreshSeen += 1;
+        response.writeHead(401, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: "invalid_grant" }));
+        return;
+      }
+      const bearer = (request.headers.authorization ?? "").replace(/^Bearer /, "");
+      stub.meterSeen.push(bearer);
+      if (!stub.accept.has(bearer)) {
+        response.writeHead(401, { "content-type": "application/json" });
+        response.end("{}");
+        return;
+      }
+      const at = (hours: number) => new Date(Date.now() + hours * 3600_000).toISOString();
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          usages: {
+            limit_5h: { used_ratio: 0.3, reset_time: at(3) },
+            limit_7d: { used_ratio: 0.1, reset_time: at(5 * 24) },
+            limit_month_total: { used_ratio: 0.05, reset_time: at(20 * 24) },
+          },
+          user: { membership: { level: "LEVEL_INTERMEDIATE" } },
+          version: "GOODS_VERSION_V1",
+        }),
+      );
+    });
+  });
+  await new Promise<void>((resolve) => stub.server.listen(0, "127.0.0.1", resolve));
+  const { port } = stub.server.address() as AddressInfo;
+  stub.url = `http://127.0.0.1:${port}/coding/v1/usages`;
+  stub.oauthHost = `http://127.0.0.1:${port}`;
+  return stub;
+}
+
+/**
+ * A Kimi Code account the way the vault stores one: Pi's own auth file in
+ * the account's store, holding Pi's device-code credential. `expires` in the
+ * past is an account stored before Kimi Code came back, its token long lapsed.
+ */
+function seedKimiAccount(userDataDir: string, accessToken: string, expires: number) {
+  const accountsDir = join(userDataDir, "accounts");
+  const dir = join(accountsDir, "kimi-coding", KIMI_PERSONAL);
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(dir, "auth.json"),
+    JSON.stringify({
+      "kimi-coding": { type: "oauth", access: accessToken, refresh: "stub-refresh", expires },
+    }),
+    { mode: 0o600 },
+  );
+  writeFileSync(
+    join(accountsDir, "registry.json"),
+    JSON.stringify({
+      version: 1,
+      accounts: [
+        {
+          id: KIMI_PERSONAL,
+          providerId: "kimi-coding",
+          kind: "subscription_oauth",
+          label: "Personal",
+          enabled: true,
+          createdAt: Date.parse("2026-08-01T00:00:00Z"),
+        },
+      ],
+      pins: {},
+    }),
+    { mode: 0o600 },
+  );
+}
+
 function seedAccounts(userDataDir: string) {
   const accountsDir = join(userDataDir, "accounts");
   mkdirSync(join(accountsDir, "anthropic-claude", CLAUDE_PERSONAL), {
@@ -288,17 +391,19 @@ test.describe("the real quota sensor, end to end", () => {
   let app: LaunchedApp | undefined;
   let stub: StubUsage | undefined;
   let meter: StubMeter | undefined;
+  let kimi: StubKimi | undefined;
 
   test.afterEach(async () => {
     await app?.close();
     app = undefined;
     // Only a started server can report its close; awaiting an absent one
     // would wait forever.
-    for (const server of [stub?.server, meter?.server]) {
+    for (const server of [stub?.server, meter?.server, kimi?.server]) {
       if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
     }
     stub = undefined;
     meter = undefined;
+    kimi = undefined;
   });
 
   test("resolves the account's own store, reads the vendor, and renders real meters", async () => {
@@ -504,5 +609,57 @@ process.exit(run.status ?? 0);
     });
     const grokRow = readNewestSnapshotRow(userDataDir, "grok");
     expect(grokRow).toMatchObject({ status: "ok" });
+  });
+
+  test("a Kimi Code sign-in reads its usages meter with its own token and names the plan", async () => {
+    // INF-560: Kimi Code is a subscription with an allowance meter. The
+    // vault resolves the account's own Pi store, the sensor asks the usages
+    // endpoint with that bearer, and the row shows its windows and plan.
+    const userDataDir = scratchDir("infinitary-e2e-");
+    kimi = await startStubKimi(["kimi-live-token"]);
+    seedKimiAccount(userDataDir, "kimi-live-token", Date.now() + 30 * 24 * 3600 * 1000);
+    app = await launchApp({ userDataDir, env: { INFINITARY_KIMI_USAGE_URL: kimi.url } });
+    await openSubscriptions(app);
+    const row = accountRow(app, KIMI_PERSONAL);
+
+    for (const label of ["session", "weekly", "monthly"]) {
+      await expect(row.getByText(label, { exact: true })).toBeVisible({ timeout: 20_000 });
+    }
+    await expect(row.getByText("Allegretto")).toBeVisible();
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.notYet)).toHaveCount(0);
+    await expect(row.getByText(KIMI_NO_WINDOW_DETAIL)).toHaveCount(0);
+    expect(kimi.meterSeen[0]).toBe("kimi-live-token");
+    expect(readNewestSnapshotRow(userDataDir, "kimi")).toMatchObject({ status: "ok" });
+  });
+
+  test("a Kimi Code account stored before Kimi Code came back loads and asks to sign in again", async () => {
+    // INF-560, the captain's answer: "Load them, and let the row say sign
+    // in again when the token has lapsed". Pi's own refresh asks the sign-in
+    // server, which refuses the lapsed refresh token; the meter is never asked.
+    const userDataDir = scratchDir("infinitary-e2e-");
+    kimi = await startStubKimi([]);
+    seedKimiAccount(userDataDir, "kimi-old-token", Date.parse("2026-08-02T00:00:00Z"));
+    app = await launchApp({
+      userDataDir,
+      env: { INFINITARY_KIMI_USAGE_URL: kimi.url, KIMI_CODE_OAUTH_HOST: kimi.oauthHost },
+    });
+
+    await expect
+      .poll(async () =>
+        app?.page.evaluate(async () =>
+          (await window.infinitary.cards.list()).map((card) => card.title),
+        ),
+      )
+      .toContain(needsReauthCopy("Kimi Code", "Personal"));
+    await openSubscriptions(app);
+    const row = accountRow(app, KIMI_PERSONAL);
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.signInAgain)).toBeVisible({ timeout: 20_000 });
+    await expect(row.getByRole("button", { name: "Sign in" })).toBeVisible();
+    expect(kimi.refreshSeen).toBeGreaterThan(0);
+    expect(kimi.meterSeen).toEqual([]);
+    expect(readNewestSnapshotRow(userDataDir, "kimi")).toMatchObject({
+      status: "auth_required",
+      reason: "refresh_token_lapsed",
+    });
   });
 });

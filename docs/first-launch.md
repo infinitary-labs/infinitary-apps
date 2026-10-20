@@ -25,7 +25,7 @@ Before the window's first read of the gate settles, nobody knows yet whether it 
 Words sent in that moment would reach a first mate that cannot answer and skip the welcome.
 The held input keeps full strength and its usual hint, so a launch that is ready never fades in; a fresh one dims when the gate's caption arrives.
 A first read that fails still settles it, and the input opens as it did before any read rather than waiting for a read that may not come.
-An account connected while the gate is up - one that cannot answer yet - shows in place of its chip, with a hollow dot and why when the app knows ("install Claude Code first" when the Mac has no Claude Code, "not signed in" for a login not signed in yet), and the caption restates the one remaining need: "Your first mate still needs a subscription that answers - Codex, Grok, Claude, or OpenRouter, signed in with a browser or API key."
+An account connected while the gate is up - one that cannot answer yet - shows in place of its chip, with a hollow dot and why when the app knows ("install Claude Code first" when the Mac has no Claude Code, "not signed in" for a login not signed in yet), and the caption restates the one remaining need: "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, or OpenRouter with an API key."
 
 When the gate is up only because the custom connection the first mate was chosen on needs one fresh check, the caption asks for that check instead of a subscription.
 That happens after an upgrade whose check profile is new, which makes every saved check an earlier version's (`docs/custom-api.md`, "Protocol and storage profile").
@@ -40,7 +40,7 @@ A person with only Claude on this Mac completes the first launch on it: the Clau
 `tests/e2e/first-launch.spec.ts` runs it against the mock provider through the SDK's own client, as a user the Keychain holds no Claude login for, so the sign-in never reaches the person's own (`tests/e2e/claudeSeat.ts`).
 
 The gate is **derived, never flagged**: `FirstRunService` (`src/core/ firstRun.ts`) reads it as "no routable model can answer the first mate" - its provider's role and an account the seat can stand on (`Flagship.servesFirstmate`), the exact pre-flight `FirstmateAgent.resolveModel` performs before a session can be built.
-It is true on a fresh install, false the moment an account that can serve the first mate signs in - Codex, Grok, Claude, or OpenRouter signed in with a browser or API key (or a custom provider in the app's `models.json` exists, which is how dev and every other e2e run, or the dev-only local seat of `docs/local-orchestrator.md` is set) - and true again if the last such account is ever removed or cannot run (a Claude login with no Claude Code, which the stage names).
+It is true on a fresh install, false the moment an account that can serve the first mate signs in - Codex, Grok, Claude, Kimi Code, or OpenRouter signed in with a browser or API key (or a custom provider in the app's `models.json` exists, which is how dev and every other e2e run, or the dev-only local seat of `docs/local-orchestrator.md` is set) - and true again if the last such account is ever removed or cannot run (a Claude login with no Claude Code, which the stage names).
 A seat that is only paused - its account refused, signed out or out of allowance by a typed cut-off the vault holds (`Flagship.standsOnCutOff`) - keeps the gate down: the pause card speaks for it, the input stays open, and the captain's words wait on the inbox (`docs/architecture.md` §16.8).
 The renderer reads it over `inf:app:first-run` (a core channel on the frozen `app` namespace; `window.infinitary.app.firstRun`), at boot, on every quota push (one follows each account change), on every model change, and after the gate's own sign-in or fresh check; `FirstRunGate` (`src/renderer/src/app/FirstRunGate.tsx`) draws it and dissolves over `--dur-slow` when it closes.
 
@@ -216,7 +216,7 @@ The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12:
 
 - The auth card ("A provider needs sign in") opens the Intelligence tab (effect target `subscriptions`), not General one click short of it.
   Its body names the provider the first mate could not reach and says to sign in again, or names a custom connection and says to press Edit and then Save in Settings → Intelligence to check it again (`FirstmateAgent.signInCardBody`).
-  With no provider to name, it lists the ones that can serve the first mate: Codex, Grok or Claude, or OpenRouter with an API key.
+  With no provider to name, it lists the ones that can serve the first mate: Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key.
   It never quotes the failure: Pi's own text names its terminal sign-in and paths into the app's files, so the raw text stays on the turn's records.
 - A failed session create (no model, a broken store) ends the ask the turn opened, as a failed question task, instead of stranding it until the next boot files it.
 - The Intelligence tab's "as of · Refresh" header meta renders only once a quota snapshot has providers; an empty tab says nothing about when.

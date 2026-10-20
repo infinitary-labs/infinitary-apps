@@ -2031,7 +2031,7 @@ export class FirstmateAgent {
     const chosen = this.options.settings.getFirstmateModel();
     // Leftover Anthropic sessions stay on disk; they are not offered until
     // API-key support lands, so pick a new default rather than crashing.
-    // A pin onto a provider this build no longer offers (Kimi, Copilot) is
+    // A pin onto a provider this build no longer offers (Copilot, Cursor) is
     // the same as a leftover Anthropic pin: derive a default instead of
     // opening a session that cannot run.
     if (chosen && chosen.provider !== "anthropic" && !isRetiredProvider(chosen.provider)) {
@@ -4295,7 +4295,7 @@ export class FirstmateAgent {
     const name = PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name;
     return name
       ? `Your first mate could not reach ${name}, which needs you to sign in again.`
-      : "Your first mate needs a signed-in subscription to answer - Codex, Grok or Claude, or OpenRouter with an API key.";
+      : "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key.";
   }
 
   private raiseTurnFailureCard(message: string): void {

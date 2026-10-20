@@ -229,10 +229,11 @@ A Pi-served session - the seat, a crewmate or a question - is a Pi `AgentSession
 - **Auth (decision D-5, generalized by rev-7)**: **app-scoped auth stores under `userData`, using Pi's own `login()` flows** via `ModelRuntime.create({ authPath })` - Pi implements the OAuth dance (external browser + loopback callback) per provider; auto-refresh is Pi's.
   We hand-roll nothing.
   Since the account broker (§16) there is one store *per account* under `userData/accounts/`, each with its own `ModelRuntime`; the base `userData/auth/` runtime serves custom providers (models.json) and account-less sessions.
-- **Provider set (current offering)**: **Codex and xAI** are Pi subscriptions; **Claude** is the one subscription on its own client, and serves the first mate as well as crew (rev-9); **OpenRouter** connects either by signing in with a browser or with an API key (labeled "API key", the same words as every other API-key sign-in).
+- **Provider set (current offering)**: **Codex, xAI and Kimi Code** are Pi subscriptions; **Claude** is the one subscription on its own client, and serves the first mate as well as crew (rev-9); **OpenRouter** connects either by signing in with a browser or with an API key (labeled "API key", the same words as every other API-key sign-in).
   Browser sign-in opens `openrouter.ai/auth`, exchanges the returned authorization with `POST openrouter.ai/api/v1/auth/keys`, and listens on a local loopback callback while sign-in is underway.
   The standing rule (captain, 2026-09-24): supported subscriptions are only those that run through Pi; Claude is the sole exception.
-  Kimi, GitHub Copilot and Cursor were removed; a stored account for any of them is skipped on load (`isRetiredProvider`) and its files stay on disk.
+  GitHub Copilot and Cursor were removed; a stored account for either is skipped on load (`isRetiredProvider`) and its files stay on disk.
+  Kimi Code was removed with them and came back on 2026-10-19 (INF-560): an account stored under `kimi-coding` before then loads again, and once its sign-in has lapsed its row says sign in again.
   Stored Anthropic auth must not crash the app; the bare `anthropic` Pi provider is not listed.
   **API-key providers are allowed** (decision D-6) - same auth file, same catalog - with UI emphasis staying on subscriptions.
 - **Claude billing (decision D-18)**: dormant while Anthropic is not offered.
@@ -848,7 +849,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   User-turn images ride Pi's `PromptOptions.images` / `steer(text, images)` as flat `{ type, data, mimeType }` parts, never as a content array in the text position - Pi's `prompt()` does string work on `text` and crashes on an array (`firstmateSession.realSession.test.ts` pins the shape).
 - A provider is served by the backend its `PROVIDER_CATALOG` entry names (`src/shared/providers.ts`), and may only serve the `roles` it lists.
   Claude Max rides its own first-party client because Pi's Anthropic OAuth is refused for third-party clients, serves both roles since rev-9 (it was `crewmate`-only before), and uses the machine's default `claude login` as its one credential (CD-1=B: one Claude account ever, `binding()` is `{ via: "default-login" }`, `CLAUDE_CONFIG_DIR` left unset so the client uses the bare Keychain item, unbind does not run `claude auth logout` but for a login the first mate made on a computer that runs work); the bare `anthropic` Pi provider is still not offered, and leftover Anthropic auth/sessions must not crash the app.
-  Cursor, Kimi and GitHub Copilot were removed (Cursor on 2026-09-24, under the 2026-09-24 standing product principle in `docs/principles.md`): a stored account for a retired id is skipped on load (`isRetiredProvider`), its files stay, and a task that ran on Cursor is never resumed into another transport (`CrewSupervisor.retiredProviderOf`).
+  Cursor and GitHub Copilot were removed (Cursor on 2026-09-24, under the 2026-09-24 standing product principle in `docs/principles.md`): a stored account for a retired id is skipped on load (`isRetiredProvider`), its files stay, and a task that ran on Cursor is never resumed into another transport (`CrewSupervisor.retiredProviderOf`).
   A backend is a catalog entry plus a registration in `src/core/services.ts` - see `docs/architecture.md` section 16.1.
 - Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.
   The first mate's turns are steer-only (`inf:converse` steers when busy; no `inf:firstmate:abort`).

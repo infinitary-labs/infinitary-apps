@@ -3,7 +3,7 @@ The provider chip row and its sign-in aside: how an account joins, wherever the 
 <ConnectChips providers={PROVIDERS} accounts={[]} variant="stage" onConnect={connect}/>
 <ConnectChips providers={PROVIDERS} accounts={ACCOUNTS} busyProviderId="openai-codex" variant="foot" onConnect={connect}/>
 ```
-One wrapping row in catalog order: the providers whose accounts can serve the first mate itself - today every one of them (Codex, Grok, Claude, then OpenRouter with a mono `browser sign-in or API key` note; Claude serves the first mate since 2026-09-26).
+One wrapping row in catalog order: the providers whose accounts can serve the first mate itself - today every one of them (Codex, Grok, Claude, Kimi Code, then OpenRouter with a mono `browser sign-in or API key` note; Claude serves the first mate since 2026-09-26).
 A provider whose accounts could only run crew would follow a hairline apart, under the micro label `CREW ONLY` at `--fg-3`; the grouping is the guidance, it is derived from the catalog's roles, and the current catalog has no such provider, so the row is one group.
 On the `stage` only, a second group follows the provider row a hairline apart under the micro label `YOUR FIRST MATE IS ON ANOTHER COMPUTER`: one chip, "+ Paste its link", which opens the aside that joins the first mate on another computer (`components/devices/JoinAnotherMac.prompt.md`).
 It is not a provider and never appears on the `foot`.

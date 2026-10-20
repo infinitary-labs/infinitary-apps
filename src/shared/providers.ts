@@ -1,12 +1,15 @@
 import { z } from "zod";
 
 /**
- * The offered provider catalog: Codex, xAI and Claude are subscriptions;
- * OpenRouter connects with an API key. API-key providers are allowed (D-6)
- * with UI emphasis on subscriptions. A supported subscription is one that
- * runs through Pi; Claude is the sole exception (captain, 2026-09-24). Kimi,
- * GitHub Copilot and Cursor were removed; stored accounts for those ids are
- * ignored on load (`isRetiredProvider`), not deleted.
+ * The offered provider catalog: Codex, xAI, Claude and Kimi Code are
+ * subscriptions; OpenRouter connects with an API key. API-key providers are
+ * allowed (D-6) with UI emphasis on subscriptions. A supported subscription
+ * is one that runs through Pi; Claude is the sole exception (captain,
+ * 2026-09-24). GitHub Copilot and Cursor were removed; stored accounts for
+ * those ids are ignored on load (`isRetiredProvider`), not deleted. Kimi Code
+ * came back on 2026-10-19 (INF-560): an account stored under its id before
+ * then loads again, and a sign-in that lapsed meanwhile asks to sign in
+ * again from the quota rules' own proof.
  *
  * Every entry names the backend that serves it and the roles it may serve.
  * Claude rides its own first-party client because Anthropic refuses
@@ -124,6 +127,14 @@ export const PROVIDER_CATALOG: ReadonlyArray<ProviderCatalogEntry> = [
     roles: ["firstmate", "crewmate"],
   },
   {
+    // Pi's device code, or a pasted Kimi Code key: Pi offers both.
+    id: "kimi-coding",
+    name: "Kimi Code",
+    tier: "subscription",
+    backend: "pi",
+    roles: ["firstmate", "crewmate"],
+  },
+  {
     id: "openrouter",
     name: "OpenRouter",
     tier: "key",
@@ -140,7 +151,7 @@ export const API_KEY_LABEL = "API key";
  * registry rows stay on disk (nothing is deleted), and every live read
  * skips them so an old sign-in is neither a row nor a routing candidate.
  */
-export const RETIRED_PROVIDER_IDS = ["github-copilot", "kimi-coding", "cursor"] as const;
+export const RETIRED_PROVIDER_IDS = ["github-copilot", "cursor"] as const;
 
 export function isRetiredProvider(id: string): boolean {
   return (RETIRED_PROVIDER_IDS as readonly string[]).includes(id);

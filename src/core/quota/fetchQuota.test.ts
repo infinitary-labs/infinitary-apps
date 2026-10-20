@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { clearKeychainLock, resolveClaudeQuotaAuthResult } from "../claude/claudeQuota";
 import type { HostKeychain } from "../host";
-import type { QuotaAuth, QuotaProviderId } from "./auth";
+import { QUOTA_PROVIDERS, type QuotaAuth, type QuotaProviderId } from "./auth";
 import { buildModelsCatalog } from "./catalog";
 import { managedFromClaudeAuthResult } from "./claudeAuthResolve";
 import { createQuotaFetcher } from "./fetchQuota";
@@ -294,18 +294,14 @@ describe("pace and reset text", () => {
 
 describe("createQuotaFetcher (per-account sensor)", () => {
   const account = (accountId: string, quotaId: QuotaProviderId, accountLabel = "Personal") => {
-    const piIds = {
-      codex: "openai-codex",
-      grok: "xai",
-      claude: "anthropic-claude",
-    } as const;
-    const labels = { codex: "Codex", grok: "Grok", claude: "Claude" } as const;
+    const entry = QUOTA_PROVIDERS.find((provider) => provider.quotaId === quotaId);
+    if (!entry) throw new Error(`no quota provider ${quotaId}`);
     return {
       accountId,
       accountLabel,
       quotaId,
-      piId: piIds[quotaId],
-      providerLabel: labels[quotaId],
+      piId: entry.piId,
+      providerLabel: entry.label,
     };
   };
 
@@ -425,6 +421,7 @@ describe("buildModelsCatalog across accounts", () => {
       { provider: "anthropic-claude", id: "claude-opus-5-5", name: "Claude Opus 5.5" },
       { provider: "openai-codex", id: "gpt-6.1-sol", name: "GPT-6.1 Sol" },
       { provider: "xai", id: "grok-4.7", name: "Grok 4.7" },
+      { provider: "kimi-coding", id: "k3", name: "Kimi K3" },
     ];
     const catalog = buildModelsCatalog(served, [], "2026-10-15T12:00:00Z");
     expect(catalog.models.map((row) => row.provider).sort()).toEqual(

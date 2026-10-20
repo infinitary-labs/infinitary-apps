@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { classifyClaudeSignal, isAuthFailureMessage, isOutOfCreditsRefusal } from "./authFailure";
+import {
+  classifyClaudeSignal,
+  isAuthFailureMessage,
+  isLapsedRefresh,
+  isOutOfCreditsRefusal,
+} from "./authFailure";
 
 describe("isAuthFailureMessage", () => {
   it("flags a provider-reported 401/403 in Pi's error shapes", () => {
@@ -301,5 +306,44 @@ describe("isOutOfCreditsRefusal", () => {
     expect(isOutOfCreditsRefusal("xai", "xai API error (429): too many requests")).toBe(false);
     // The words alone are not the status.
     expect(isOutOfCreditsRefusal("xai", "Error: a 402 appeared in a tool's output")).toBe(false);
+  });
+});
+
+// INF-560: an old Kimi Code account's row says sign in again once its
+// refresh token has lapsed. The messages are Pi 1.1.0's own, as its
+// ModelsError wraps each provider's refresh failure.
+describe("isLapsedRefresh", () => {
+  it("reads a refresh the provider's sign-in server refused", () => {
+    expect(
+      isLapsedRefresh(
+        "oauth",
+        "OAuth refresh failed for kimi-coding: Kimi Code token refresh unauthorized (status 401): The refresh token is invalid or expired",
+      ),
+    ).toBe(true);
+    expect(
+      isLapsedRefresh(
+        "oauth",
+        'OAuth refresh failed for openai-codex: OpenAI Codex token refresh failed (401): {"error":"invalid_grant"}',
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves a busy server, a 403 and any other kind of failure unproven", () => {
+    expect(
+      isLapsedRefresh(
+        "oauth",
+        "OAuth refresh failed for kimi-coding: Kimi Code token refresh failed with status 503",
+      ),
+    ).toBe(false);
+    expect(
+      isLapsedRefresh(
+        "oauth",
+        "OAuth refresh failed for kimi-coding: Kimi Code token refresh unauthorized (status 403)",
+      ),
+    ).toBe(false);
+    expect(
+      isLapsedRefresh("auth", "Credential store modify failed for kimi-coding: status 401"),
+    ).toBe(false);
+    expect(isLapsedRefresh(undefined, "fetch failed")).toBe(false);
   });
 });

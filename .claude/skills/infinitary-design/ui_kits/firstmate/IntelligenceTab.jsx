@@ -20,6 +20,7 @@ const PROVIDERS=[
   {id:"openai-codex",name:"Codex",authTypes:["oauth"],tier:"subscription",servesFirstmate:true},
   {id:"xai",name:"Grok",authTypes:["oauth"],tier:"subscription",servesFirstmate:true},
   {id:"anthropic-claude",name:"Claude",authTypes:["oauth"],tier:"subscription",servesFirstmate:true},
+  {id:"kimi-coding",name:"Kimi Code",authTypes:["oauth","api_key"],tier:"subscription",servesFirstmate:true},
   {id:"openrouter",name:"OpenRouter",authTypes:["oauth","api_key"],tier:"api_key",servesFirstmate:true}
 ];
 const providerOf=(name)=>PROVIDERS.find(p=>p.name===name);

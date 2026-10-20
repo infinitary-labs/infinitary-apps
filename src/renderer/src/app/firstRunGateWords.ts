@@ -34,7 +34,7 @@ export function gateIntro(): string {
 
 /** The remaining-need line when a connected subscription still cannot answer. */
 export const GATE_STILL_NEEDS =
-  "Your first mate still needs a subscription that answers - Codex, Grok, Claude, or OpenRouter with an API key.";
+  "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, or OpenRouter with an API key.";
 
 /** The always-on line that stays with that remaining-need message. */
 export function gateStaysOn(): string {

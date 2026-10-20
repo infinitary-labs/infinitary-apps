@@ -32,6 +32,7 @@ Families are data, beside `STARTER_SLOTS` in `src/shared/modelSlots.ts`:
 - **`TRACKED_FAMILIES`**
   - Claude, Codex and Grok track `"every"` family.
     They serve a handful of families, and a new one there is news.
+  - Kimi Code lists `k3` and `kimi-for-coding` only, its two starters (captain, 2026-10-19: "k3 high, kimi-for-coding medium only"); `k3-256k` and the highspeed row stay reachable by name.
   - OpenRouter's rows are its own `~vendor/family-latest` aliases for Infinitary's families.
   - A provider outside the table - the person's own `models.json` providers - lists everything.
 - **"Newest"** is the version rule `newerId` routes by (the line is the id's prefix and suffix around the version).
@@ -48,6 +49,7 @@ So the listed rows are the head of each family group, a newcomer lands at the to
 | --- | --- | --- |
 | Claude | the installed client's `supportedModels()` (`readClaudeModelCatalog`), checked for known-incomplete older metadata, a one-shot under `claudeStoreLease` that **defers** while a crewmate session holds the store | `CLAUDE_MODELS` |
 | Codex, Grok | Pi's catalog (bundled plus the pi.dev overlay), filtered by the account's **own list**: `chatgpt.com/backend-api/codex/models?client_version=…` and `api.x.ai/v1/models`, read with the account's auth the way quota reads it, through the same bounded transport with a wider 8 MiB reply limit (a meter's is 64 KB; a list describing every model may run past that) | Pi's catalog, unfiltered |
+| Kimi Code | Pi's catalog (Kimi serves no list of its own) | - |
 | OpenRouter | Pi's catalog | - |
 
 Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.1 premium.

@@ -130,6 +130,12 @@ export const STARTER_SLOTS: Readonly<Record<string, Readonly<Record<string, read
     "claude-sonnet-5-5": ["medium"],
     "claude-haiku-5-5": ["low"],
   },
+  // Kimi Code starts with these two only (captain, 2026-10-19): "k3 high,
+  // kimi-for-coding medium only".
+  "kimi-coding": {
+    k3: ["high"],
+    "kimi-for-coding": ["medium"],
+  },
 };
 
 /**
@@ -148,6 +154,9 @@ export const TRACKED_FAMILIES: Readonly<
   "anthropic-claude": "every",
   "openai-codex": "every",
   xai: "every",
+  // Kimi Code lists only its two starter rows; k3-256k and the highspeed
+  // row stay reachable by name.
+  "kimi-coding": { ids: ["k3", "kimi-for-coding"] },
   // OpenRouter lists 388 ids from 47 vendors. Its own `~…-latest` aliases
   // already follow each family's newest generation, so the rows are those
   // aliases for the families Infinitary itself serves.

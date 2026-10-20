@@ -1640,10 +1640,9 @@ describe("FirstmateAgent", () => {
     });
   });
 
-  it("skips a leftover Kimi or Copilot pin and derives a new default", async () => {
+  it("skips a leftover Copilot pin and derives a new default", async () => {
     const { agent, settings, specs } = setup({
       availableModels: () => [
-        { provider: "kimi-coding", id: "k3" },
         { provider: "github-copilot", id: "gpt-5.6-sol" },
         { provider: "fm-mock", id: "mock-1" },
       ],
@@ -1780,7 +1779,7 @@ describe("FirstmateAgent", () => {
     // A provider the app does not list: the ones that can serve Firstmate,
     // never the provider's own reply.
     expect(card.body).toBe(
-      "Your first mate needs a signed-in subscription to answer - Codex, Grok or Claude, or OpenRouter with an API key.",
+      "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key.",
     );
   });
 
@@ -1887,7 +1886,7 @@ describe("FirstmateAgent", () => {
     const card = cards.find((entry) => entry.actions.length > 0) as Card;
     expect(card.title).toBe("A provider needs sign in");
     // The body names the five that can serve Firstmate, in product words.
-    expect(card.body).toContain("Codex, Grok or Claude, or OpenRouter with an API key");
+    expect(card.body).toContain("Codex, Grok, Claude or Kimi Code, or OpenRouter with an API key");
     expect(card.actions[0]?.effect).toEqual({ kind: "open", target: "subscriptions" });
     // The ask the turn opened is not stranded until the next boot: it ends
     // now, failed, as its own question task (task-system P1).

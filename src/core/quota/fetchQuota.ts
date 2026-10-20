@@ -18,6 +18,7 @@ import { CREDENTIAL_UNAVAILABLE, type ProviderOutcome } from "./outcome";
 import { fetchClaudeQuota } from "./providers/claude";
 import { fetchCodexQuota } from "./providers/codex";
 import { fetchGrokQuota } from "./providers/grok";
+import { fetchKimiQuota } from "./providers/kimi";
 
 /** Anthropic's usage service is asked at most this often per account. */
 export const CLAUDE_ASK_INTERVAL_MS = 5 * 60 * 1000;
@@ -54,7 +55,7 @@ export type QuotaFetcherOptions = {
    * Dev and e2e only: the composition root refuses to read them in a packaged
    * app, the same gate the fixture seam already has.
    */
-  endpoints?: { claudeUsageUrl?: string; grokUsageUrl?: string };
+  endpoints?: { claudeUsageUrl?: string; grokUsageUrl?: string; kimiUsageUrl?: string };
   /**
    * The vendor just accepted this account's credential: a fresh allowance
    * reading came back ok. A cached answer is not a fresh acceptance, so a
@@ -240,5 +241,7 @@ async function dispatch(
       return fetchGrokQuota(http, auth, now, options.endpoints?.grokUsageUrl);
     case "claude":
       return fetchClaudeQuota(http, auth, now, options.endpoints?.claudeUsageUrl);
+    case "kimi":
+      return fetchKimiQuota(http, auth, now, options.endpoints?.kimiUsageUrl);
   }
 }

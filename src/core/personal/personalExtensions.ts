@@ -29,6 +29,7 @@ import {
   personalManifestSchema,
   presenceSatisfied,
 } from "@shared/personal/manifest";
+import { mountKindOf, type PanelMount, type PanelMountKind } from "@shared/personal/mounts";
 import {
   canonicalCapabilities,
   type PluginCapabilities,
@@ -62,8 +63,10 @@ import {
   extensionSources,
   readStamp,
   stampOrigin,
+  workingTree,
   writeCommittedTree,
 } from "./liveWorkspace";
+import { mountLine, mountOf, type PanelMountsHolder } from "./panelMounts";
 import type { PersonalStore } from "./personalStore";
 import { errorText, loadServerHost, type ServerHost } from "./serverHost";
 import { seedPersonalWorkspace } from "./workspace";
@@ -173,6 +176,14 @@ export type PersonalExtensionsOptions = {
   capture?: HostPanelCapture;
   /** Where a task's captures are written: `crewmates/<taskId>/captures`. */
   captureDirFor?: (taskId: string) => string;
+  /**
+   * What the window did with each panel, as it last said; `place_panel`
+   * waits on it and `capture_panel` explains a missing panel with it.
+   * Absent, both say the window has not answered.
+   */
+  mounts?: PanelMountsHolder;
+  /** How long `place` waits for the window's answer; `PLACE_WAIT_MS` unless a test shortens it. */
+  placeWaitMs?: number;
   /** The `sql` read's engine, for `ServerContext.sql`; absent, a server's query fails. */
   sql?: (request: SqlRequest) => Promise<SqlAnswer>;
   /** The second root: the plugins the captain added (Phase A item 2); absent, none. */
@@ -217,8 +228,35 @@ export type PanelCaptureImage = {
 };
 
 export type PanelCaptureResult =
-  | { ok: true; id: string; images: PanelCaptureImage[] }
+  | {
+      ok: true;
+      id: string;
+      images: PanelCaptureImage[];
+      /** Which version it photographed: the docked panel, or the draft drawn out of sight. */
+      photographed: "docked" | "draft";
+      /** The window's answer for the docked panel it photographed. */
+      window?: PanelMount;
+    }
   | { ok: false; id: string; reason: string };
+
+/** One panel `place_panel` asked about: whether its files went on the rails, and the window's answer. */
+export type PlacedPanel = {
+  id: string;
+  title: string;
+  /** Its working files are on the rails now; false for one it only looked at. */
+  placed: boolean;
+  /** The window's answer for this version; null when none came in time. */
+  mount: PanelMount | null;
+  /** The window's last answer about it, for any version, when this one never came. */
+  last: PanelMount | null;
+};
+
+export type PanelPlaceResult =
+  | { ok: true; panels: PlacedPanel[]; waitedMs: number }
+  | { ok: false; reason: string };
+
+/** How long `place_panel` waits for the window to import and draw what it placed: a physical limit. */
+export const PLACE_WAIT_MS = 10_000;
 
 type Loaded = {
   id: string;
@@ -249,6 +287,8 @@ const DEBOUNCE_MS = 150;
 const POLL_MS = 500;
 /** Where the last commit of an extension being built is copied: under the cache, one directory per tree. */
 const COMMITTED_CACHE = ".committed";
+/** The scratch index `workingTree` stages through, under the cache, one per call. */
+const PLACE_INDEX = ".place-index";
 /** A draft's store slice is its extension's id and this; `#` is outside every extension id. */
 const DRAFT_SLICE_SUFFIX = "#draft";
 
@@ -281,6 +321,14 @@ export class PersonalExtensions {
   private readonly log: (message: string) => void;
   /** The live tasks whose edits every reconcile stamps (Step 4); usually one. */
   private readonly liveTasks = new Set<string>();
+  /**
+   * The working trees a crewmate put on the rails with `place_panel`
+   * ("Placed on the rail"), by extension: the rails take each from here
+   * instead of its last commit until the report's commit, the task's end,
+   * or its removal.
+   */
+  private readonly placed = new Map<string, { tree: string; taskId: string }>();
+  private placeIndexes = 0;
   /** The host-owned switch (Step 5); off means nothing personal runs at all. */
   private enabled: boolean;
 
@@ -402,8 +450,20 @@ export class PersonalExtensions {
    * ("Built apart"): one more pass says so.
    */
   endLiveTask(taskId: string): void {
-    if (!this.liveTasks.delete(taskId)) return;
+    const unplaced = this.unplace(taskId);
+    if (!this.liveTasks.delete(taskId) && !unplaced) return;
     void this.refresh();
+  }
+
+  /** Takes a task's placed versions off the rails; true when it had any. */
+  private unplace(taskId: string): boolean {
+    let any = false;
+    for (const [id, placed] of this.placed) {
+      if (placed.taskId !== taskId) continue;
+      this.placed.delete(id);
+      any = true;
+    }
+    return any;
   }
 
   /** The extensions with uncommitted changes right now. */
@@ -432,6 +492,9 @@ export class PersonalExtensions {
       const commit = await commitWorkspace(this.options.workspaceDir, message);
       return { touched, findings, commit };
     });
+    // The last commit holds the working files now, placed or newer: the
+    // rails take it from there.
+    this.unplace(taskId);
     await this.refresh();
     return {
       committed: commit.committed,
@@ -487,10 +550,11 @@ export class PersonalExtensions {
   }
 
   /**
-   * `capture_panel`: the panel as the captain will see it, in both token
-   * themes, at rail width - while it is being built, its draft, which the
+   * `capture_panel`: the panel in both token themes, at rail width - while
+   * its working files differ from what the rails hold, its draft, which the
    * window draws out of sight under `personalDraftPanelId` ("Built apart");
-   * otherwise the docked panel. The host takes the picture
+   * otherwise the docked panel, as the captain sees it, which is what a
+   * build photographs once `place` put it there. The host takes the picture
    * (`HostPanelCapture`); the files land under the task's own directory so
    * a crewmate that cannot see an image can still open the file, and the
    * base64 rides the tool result for one that can.
@@ -527,6 +591,12 @@ export class PersonalExtensions {
         reason: `"${id}" is not on a rail right now: its presence rule is unsatisfied (no data in the store key it names), so there is nothing to capture yet`,
       };
     }
+    const kind = mountKindOf(view.source);
+    // A panel the window refused is on no rail, and what is there under its
+    // id is another panel's, never a picture of this one.
+    if (!draft && this.options.mounts?.of(id, kind)?.state === "refused") {
+      return { ok: false, id, reason: this.notDocked(id, kind) };
+    }
     const dir = this.options.captureDirFor?.(taskId);
     const images: PanelCaptureImage[] = [];
     for (const theme of ["dark", "light"] as const) {
@@ -540,7 +610,7 @@ export class PersonalExtensions {
           id,
           reason: draft
             ? `"${id}" is not drawn yet: the window has not drawn the version you are building, or its own code has it off its rail; capture again in a moment`
-            : `"${id}" is not on screen: the window has no panel with that id docked`,
+            : this.notDocked(id, kind),
         };
       }
       let path = "";
@@ -558,7 +628,103 @@ export class PersonalExtensions {
         mimeType: "image/png",
       });
     }
-    return { ok: true, id, images };
+    const mount = draft ? undefined : this.options.mounts?.of(id, kind);
+    return {
+      ok: true,
+      id,
+      images,
+      photographed: draft ? "draft" : "docked",
+      ...(mount ? { window: mount } : {}),
+    };
+  }
+
+  /** Why the window has no docked picture of a panel, in its own answer's words. */
+  private notDocked(id: string, kind: PanelMountKind): string {
+    const mount = this.options.mounts?.of(id, kind);
+    if (!mount) {
+      return `"${id}" is not on screen, and the window has not said what it did with it`;
+    }
+    return `"${id}" is not on screen: ${mountLine(mount)}`;
+  }
+
+  /**
+   * `place_panel` (docs/personal-panels.md, "Placed on the rail"): the
+   * working files of one extension - or of every one with uncommitted
+   * changes when `id` is omitted - go on the captain's rails now, in place
+   * of their last commit, and the answer is the window's own: drawn, or not
+   * and why. An id with nothing uncommitted is only looked at. A placed
+   * version stays until the report's commit, the task's end or a removal;
+   * a save after it runs as a draft again until it is placed too.
+   */
+  async place(taskId: string, id?: string): Promise<PanelPlaceResult> {
+    if (!this.enabled) {
+      return {
+        ok: false,
+        reason:
+          "the captain's panels are turned off right now, so no rail takes one; they go back on from Settings",
+      };
+    }
+    // A place usually follows a save by a moment: read what is on disk now.
+    await this.refresh();
+    const touched = await this.touched();
+    const asked = id ? [id] : touched;
+    if (asked.length === 0) {
+      return {
+        ok: false,
+        reason: "nothing to place: no extension has uncommitted changes. Pass id to look at one",
+      };
+    }
+    if (id && !touched.includes(id) && !this.loaded.has(id)) {
+      return { ok: false, reason: `"${id}" is not in the personal workspace` };
+    }
+    const placing = new Set<string>();
+    for (const extensionId of asked) {
+      if (!touched.includes(extensionId)) continue;
+      if (!(await isExtensionDir(join(this.options.workspaceDir, extensionId)))) continue;
+      const tree = await workingTree(this.options.workspaceDir, extensionId, this.placeIndex());
+      if (!tree) continue;
+      this.placed.set(extensionId, { tree, taskId });
+      placing.add(extensionId);
+    }
+    await this.refresh();
+    // The version the window should answer for: what the rails hold now.
+    // Undefined when nothing loaded there, which leaves nothing to wait on.
+    const versionOf = (extensionId: string): string | null | undefined => {
+      const entry = this.loaded.get(extensionId);
+      return entry ? (entry.panel?.hash ?? entry.frameVersion ?? null) : undefined;
+    };
+    const answered = (mount: PanelMount | undefined, extensionId: string): boolean => {
+      const version = versionOf(extensionId);
+      if (version === undefined) return true;
+      return mount !== undefined && mount.version === version && mount.state !== "loading";
+    };
+    const started = Date.now();
+    const mounts = this.options.mounts;
+    if (mounts) {
+      await mounts.until(
+        (answer) =>
+          asked.every((extensionId) =>
+            answered(mountOf(answer, extensionId, "personal"), extensionId),
+          ),
+        this.options.placeWaitMs ?? PLACE_WAIT_MS,
+      );
+    }
+    const waitedMs = Date.now() - started;
+    return {
+      ok: true,
+      waitedMs,
+      panels: asked.map((extensionId) => {
+        const mount = mounts?.of(extensionId, "personal") ?? null;
+        const current = mount !== null && mount.version === versionOf(extensionId);
+        return {
+          id: extensionId,
+          title: this.loaded.get(extensionId)?.manifest.title ?? extensionId,
+          placed: placing.has(extensionId),
+          mount: current ? mount : null,
+          last: current ? null : mount,
+        };
+      }),
+    };
   }
 
   async invoke(
@@ -696,6 +862,7 @@ export class PersonalExtensions {
     const dir = join(this.options.workspaceDir, id);
     entry.server?.dispose();
     this.loaded.delete(id);
+    this.placed.delete(id);
     this.dropDraft(id);
     const committed = await this.serialWrite(async () => {
       if (!(await isGitRepo(this.options.workspaceDir))) {
@@ -756,6 +923,7 @@ export class PersonalExtensions {
   private unloadAll(): void {
     for (const entry of this.loaded.values()) entry.server?.dispose();
     this.loaded.clear();
+    this.placed.clear();
     for (const id of [...this.drafts.keys()]) this.dropDraft(id);
   }
 
@@ -848,22 +1016,34 @@ export class PersonalExtensions {
     // session is live they take every panel from there, so a save landing
     // mid-scan can never reach them.
     const building = await this.building(touched);
-    const apart = this.liveTasks.size > 0 || building.size > 0;
-    const committed = apart ? await committedTrees(this.options.workspaceDir) : new Map();
+    const apart = this.liveTasks.size > 0 || building.size > 0 || this.placed.size > 0;
+    const trees = apart ? await committedTrees(this.options.workspaceDir) : new Map();
+    // Placed on the rail: the tree a crewmate put there stands in for the
+    // last commit until the report's commit holds it.
+    for (const [id, placed] of this.placed) trees.set(id, placed.tree);
     const live = new Map<string, string>();
     if (this.liveTasks.size === 0) {
       for (const id of ids) {
-        if (!building.has(id)) live.set(id, join(this.options.workspaceDir, id));
+        if (!building.has(id) && !this.placed.has(id)) {
+          live.set(id, join(this.options.workspaceDir, id));
+        }
       }
     }
-    for (const [id, tree] of committed) {
-      if (live.has(id) || (this.liveTasks.size === 0 && !building.has(id))) continue;
+    for (const [id, tree] of trees) {
+      if (live.has(id)) continue;
+      if (this.liveTasks.size === 0 && !building.has(id) && !this.placed.has(id)) continue;
       const dir = await this.committedCopy(id, tree);
       if (dir && (await isExtensionDir(dir))) live.set(id, dir);
     }
     // A draft runs while a crewmate's session does: its capture is the
-    // draft's one reader.
-    const drafted = this.liveTasks.size > 0 ? ids.filter((id) => building.has(id)) : [];
+    // draft's one reader. One whose files are on the rails as they are now
+    // (placed) needs none: the capture photographs the rail.
+    const drafted: string[] = [];
+    if (this.liveTasks.size > 0) {
+      for (const id of ids) {
+        if (building.has(id) && !(await this.placedAsIs(id))) drafted.push(id);
+      }
+    }
     if (!this.enabled || generation !== this.generation) return;
     for (const [id, entry] of this.loaded) {
       if (entry.source === "yours" && !live.has(id)) {
@@ -965,6 +1145,19 @@ export class PersonalExtensions {
       }
     }
     return dir;
+  }
+
+  /** The rails hold this extension's working files exactly as they are now (`place`). */
+  private async placedAsIs(id: string): Promise<boolean> {
+    const placed = this.placed.get(id);
+    if (!placed) return false;
+    return (await workingTree(this.options.workspaceDir, id, this.placeIndex())) === placed.tree;
+  }
+
+  /** A scratch index of its own for one `workingTree`, under the cache. */
+  private placeIndex(): string {
+    this.placeIndexes += 1;
+    return join(this.options.cacheRoot, `${PLACE_INDEX}-${process.pid}-${this.placeIndexes}`);
   }
 
   /** The panel on the rails: the working files, or the last commit of one being built. */

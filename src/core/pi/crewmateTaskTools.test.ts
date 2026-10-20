@@ -118,6 +118,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
     callback: "knowledge.record",
   },
   lint_panel: { params: { id: "weather" }, callback: "onLintPanel" },
+  place_panel: { params: { id: "weather" }, callback: "onPlacePanel" },
   capture_panel: { params: { id: "weather" }, callback: "onCapturePanel" },
   read_workflow: { params: { runId: 10, jobId: 20, offset: 5 }, callback: "onReadWorkflow" },
   download_artifact: { params: { runId: 10, artifactId: 30 }, callback: "onDownloadArtifact" },

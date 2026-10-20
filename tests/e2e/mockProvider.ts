@@ -3105,10 +3105,12 @@ export const ESCALATION_REFUSAL_PHRASE = NOTHING_SPAWNED;
  * <id>: <ask>" spawns a personal_ui change naming the surface; "remove my
  * panel <id>" is the Tier A `personalize remove`. The mock crewmate, on a
  * brief whose delivery is live, writes the extension with Pi's own write
- * tool, runs lint_panel and capture_panel, and reports after a short delay
- * so the running dot is observable; on the change brief it rewrites the
- * panel with smaller rows, captures it, and reports after the same delay,
- * so a spec can watch the rails while the change is underway.
+ * tool, runs lint_panel and capture_panel on the draft, places its version
+ * on the rail with place_panel, photographs it there with capture_panel
+ * again, and reports after a short delay so the running dot is observable;
+ * on the change brief it rewrites the panel with smaller rows, captures,
+ * places and captures it again, and reports after the same delay, so a
+ * spec can watch the rails while the change is underway.
  */
 export const PERSONAL_PANEL_PROMPT_MARKER = "make me a panel:";
 export const PERSONAL_CHANGE_PROMPT_MARKER = "change my panel ";
@@ -3235,14 +3237,24 @@ function servedToolName(body: string, name: string): string {
 
 /** Whether the conversation so far carries a CALL of the named tool (not its definition). */
 function calledTool(body: string, name: string): boolean {
-  return [name, `${CLAUDE_TOOL_PREFIX}${name}`].some(
-    (served) =>
-      body.includes(`"name":"${served}","arguments"`) ||
-      body.includes(`"name": "${served}", "arguments"`) ||
+  return toolCallCount(body, name) > 0;
+}
+
+/** How many CALLs of the named tool the conversation so far carries (not its definition). */
+function toolCallCount(body: string, name: string): number {
+  let count = 0;
+  for (const served of [name, `${CLAUDE_TOOL_PREFIX}${name}`]) {
+    for (const call of [
+      `"name":"${served}","arguments"`,
+      `"name": "${served}", "arguments"`,
       // Anthropic messages calls carry `input`; definitions carry `input_schema`.
-      body.includes(`"name":"${served}","input":`) ||
-      body.includes(`"name": "${served}", "input":`),
-  );
+      `"name":"${served}","input":`,
+      `"name": "${served}", "input":`,
+    ]) {
+      count += body.split(call).length - 1;
+    }
+  }
+  return count;
 }
 
 /**
@@ -6816,8 +6828,12 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           return;
         }
         // The mock live-build crewmate (Step 4): write the extension with
-        // Pi's own write tool, check it, then report after a pause so the
-        // running dot is observable; a change brief rewrites and reports.
+        // Pi's own write tool, lint it and photograph its draft, place it on
+        // the rail and photograph it there (docs/personal-panels.md, "Placed
+        // on the rail"), then report after a pause so the running dot is
+        // observable; a change brief rewrites, photographs, places,
+        // photographs and reports. Each capture is its own turn, so the
+        // first reads the draft and the second the rail the place left.
         // Match the task brief across the whole conversation. Tool-result
         // follow-ups can be serialized as a newer user message, so limiting
         // this session marker to `latestUserTail` makes the second leg fall
@@ -6836,6 +6852,14 @@ export async function startMockProvider(): Promise<MockProviderServer> {
               return;
             }
             if (!calledTool(body, "capture_panel")) {
+              streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
+              return;
+            }
+            if (!calledTool(body, "place_panel")) {
+              streamToolCalls([{ name: "place_panel", args: { id: MOCK_PANEL_ID } }]);
+              return;
+            }
+            if (toolCallCount(body, "capture_panel") < 2) {
               streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
               return;
             }
@@ -6867,6 +6891,14 @@ export async function startMockProvider(): Promise<MockProviderServer> {
               { name: "lint_panel", args: {} },
               { name: "capture_panel", args: { id: MOCK_PANEL_ID } },
             ]);
+            return;
+          }
+          if (!calledTool(body, "place_panel")) {
+            streamToolCalls([{ name: "place_panel", args: { id: MOCK_PANEL_ID } }]);
+            return;
+          }
+          if (toolCallCount(body, "capture_panel") < 2) {
+            streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
             return;
           }
           if (!calledTool(body, "report")) {

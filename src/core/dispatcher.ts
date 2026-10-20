@@ -1160,6 +1160,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:sql:query": (request) => services.sql.query(request),
     // Personal extensions (talk-to-personalize Step 2).
     "inf:plugins:personal:list": () => services.personal.snapshot(),
+    "inf:plugins:personal:mounts": (mounts) => {
+      services.panelMounts.note(mounts);
+      return { ok: true };
+    },
     "inf:plugins:invoke": (extensionId, action, input, options) =>
       services.personal.invoke(extensionId, action, input, options),
     "inf:plugins:db": (request) => services.personal.storeRequest(request),

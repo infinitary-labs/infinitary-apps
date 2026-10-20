@@ -214,11 +214,17 @@ describe("personalize", () => {
 
 describe("the your-surfaces section", () => {
   it("lists the app panels, the personal panels up to the cap, and the instruction count", () => {
+    // The second of the captain's panels is named after the app's Activity,
+    // so the window refused it while the app's own Activity is drawn.
     const many: PersonalSnapshot = {
       extensions: Array.from({ length: SURFACES_CONTEXT_LIMIT + 2 }, (_, index) =>
-        extension(`panel-${index}`, `Panel ${index}`),
+        index === 1
+          ? extension("activity", "My activity")
+          : extension(`panel-${index}`, `Panel ${index}`),
       ),
     };
+    const clash =
+      'side-panel: "activity" from "personal-activity" is already registered by "firstmate"';
     const lines = renderSurfacesSection(
       {
         appearance: { theme: "light" },
@@ -232,14 +238,57 @@ describe("the your-surfaces section", () => {
       many,
       3,
       STABLE,
+      {
+        panels: [
+          {
+            id: "activity",
+            kind: "app",
+            version: null,
+            state: "collapsed",
+            rail: "left",
+            why: null,
+          },
+          {
+            id: "create-panel",
+            kind: "app",
+            version: null,
+            state: "drawn",
+            rail: "left",
+            why: null,
+          },
+          {
+            id: "panel-0",
+            kind: "personal",
+            version: "v0",
+            state: "drawn",
+            rail: "left",
+            why: null,
+          },
+          {
+            id: "activity",
+            kind: "personal",
+            version: "v1",
+            state: "refused",
+            rail: "right",
+            why: clash,
+          },
+        ],
+      },
     );
     expect(lines[0]).toBe(
       "your surfaces (app_change panel and personalize remove act on these ids; theme: light):",
     );
-    expect(lines).toContain('- activity "Activity": left rail, bottom; shown, collapsed');
+    // Each state is the window's word (INF-607); the layout's hidden stands without one.
+    expect(lines).toContain('- activity "Activity": left rail, bottom; drawn, collapsed');
     expect(lines).toContain('- now "Tasks": right rail, bottom; hidden');
-    expect(lines).toContain('- create-panel "Create your own panel": left rail, top; shown');
-    expect(lines).toContain('- panel-0 "Panel 0" (yours): left rail, bottom; shown');
+    expect(lines).toContain('- create-panel "Create your own panel": left rail, top; drawn');
+    expect(lines).toContain('- panel-0 "Panel 0" (yours): left rail, bottom; drawn');
+    expect(lines).toContain(
+      `- activity "My activity" (yours): right rail, top; refused by the window: ${clash}`,
+    );
+    expect(lines).toContain(
+      '- panel-2 "Panel 2" (yours): right rail, top; no word from the window',
+    );
     expect(lines).toContain("- and 2 more personal panels");
     expect(lines.at(-1)).toBe("standing instructions in the captain skill: 3");
     expect(lines).toHaveLength(1 + 3 + SURFACES_CONTEXT_LIMIT + 1 + 1);
@@ -276,7 +325,7 @@ describe("the your-surfaces section", () => {
         gates,
       );
     expect(section({ knowledge: true })).toContain(
-      '- knowledge "Knowledge": right rail, bottom; shown',
+      '- knowledge "Knowledge": right rail, bottom; no word from the window',
     );
     expect(section(STABLE).some((line) => line.includes("nowledge"))).toBe(false);
   });
@@ -301,7 +350,7 @@ describe("the your-surfaces section", () => {
     expect(off).toContain("the app closed twice just after starting");
     expect(off).toContain("Only the switch in Settings turns them on");
     expect(off).toContain("you have no tool for it");
-    expect(lines).toContain('- activity "Activity": left rail, bottom; shown');
+    expect(lines).toContain('- activity "Activity": left rail, bottom; no word from the window');
 
     const byHand = renderSurfacesSection(
       {

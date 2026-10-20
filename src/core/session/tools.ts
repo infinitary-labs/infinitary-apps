@@ -14,7 +14,7 @@ import type {
   ReadWorkflowInput,
 } from "../forge";
 import type { RecordInput } from "../knowledge/knowledgeService";
-import type { PanelCaptureResult } from "../personal/personalExtensions";
+import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";
 import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
@@ -335,9 +335,11 @@ export type CrewmateToolDelegate = {
   /**
    * The live-build checks (talk-to-personalize Step 4), handed only to a
    * crewmate on the personal workspace: the adherence lint over the extension's
-   * files, and a screenshot of the docked panel in both themes.
+   * files, the version being built put on the captain's rail with the
+   * window's answer, and a screenshot of the panel in both themes.
    */
   onLintPanel?: (input: { id?: string }) => Promise<string>;
+  onPlacePanel?: (input: { id?: string }) => Promise<PanelPlaceResult>;
   onCapturePanel?: (input: { id: string }) => Promise<PanelCaptureResult>;
   /**
    * The pair where the project lives (git integration PR 1.2), handed to a

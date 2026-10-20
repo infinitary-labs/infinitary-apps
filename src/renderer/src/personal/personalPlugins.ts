@@ -5,13 +5,16 @@ import {
   type PersonalExtensionView,
   type PersonalSnapshot,
 } from "@shared/personal/manifest";
+import { mountKindOf, type PanelMountKind } from "@shared/personal/mounts";
 import { parsePluginManifest } from "@shared/plugins/manifest";
 import { useShellStore } from "../app/store";
 import { sidePanelBinding } from "../plugins/contributions";
 import { createPanelSlot } from "../plugins/createPanelSlotStore";
 import type { PluginHost } from "../plugins/host";
+import { noteMountSnapshot } from "../plugins/panelMounts";
 import { panelRail } from "../plugins/panelRail";
 import { createPanelSource } from "../plugins/panelSource";
+import { railRefusals, refusalWords } from "../plugins/railRefusals";
 import { FramedPanelBody, type FramedPanelContent, framedCardBody } from "./FramedPanelBody";
 import { panelDrafts } from "./PanelDrafts";
 import { personalCardBody } from "./PersonalCardBody";
@@ -32,7 +35,9 @@ import { PersonalPanelBody, type PersonalPanelContent } from "./PersonalPanelBod
  * no compiled panel, so the rail shows no chrome) and `running` (the busy
  * dot). A rail holds every panel registered to it; a panel the host
  * refuses for a real error (an id another plugin holds, a grant it does
- * not serve) is logged here, never a crash.
+ * not serve) is logged here and kept with its words
+ * (../plugins/railRefusals.ts), which is what the window's answer about its
+ * panels reads (docs/personal-panels.md, "Placed on the rail"), never a crash.
  *
  * One snapshot carries both sources (one plugin vehicle, Phase A item 5):
  * the captain's own panels register as `personal-<id>` and read "yours",
@@ -128,6 +133,8 @@ function keyOf(view: PersonalExtensionView): string {
 
 export class PersonalPlugins {
   private readonly mounted = new Map<string, Mounted>();
+  /** The panels the host refused, by id with their kind, until they mount or leave the snapshot. */
+  private readonly refused = new Map<string, PanelMountKind>();
 
   constructor(
     private readonly host: PluginHost,
@@ -146,6 +153,11 @@ export class PersonalPlugins {
       // Gone, not re-registered: its cards go with it.
       if (!view) this.closeCards(id);
     }
+    for (const [id, kind] of [...this.refused]) {
+      if (next.has(id)) continue;
+      this.refused.delete(id);
+      railRefusals.clear(kind, id);
+    }
     for (const view of snapshot.extensions) {
       const entry = this.mounted.get(view.id) ?? this.mount(view);
       if (!entry) continue;
@@ -162,6 +174,8 @@ export class PersonalPlugins {
       this.closeCards(id);
     }
     this.mounted.clear();
+    for (const [id, kind] of this.refused) railRefusals.clear(kind, id);
+    this.refused.clear();
     panelDrafts.set([]);
   }
 
@@ -222,8 +236,13 @@ export class PersonalPlugins {
       });
     } catch (error) {
       this.warn(`personal panel "${view.id}" was not mounted: ${String(error)}`);
+      const kind = mountKindOf(view.source);
+      this.refused.set(view.id, kind);
+      railRefusals.refuse(kind, view.id, refusalWords(error));
       return null;
     }
+    const kind = this.refused.get(view.id);
+    if (kind && this.refused.delete(view.id)) railRefusals.clear(kind, view.id);
     const entry: Mounted = {
       key: keyOf(view),
       unregister,
@@ -270,6 +289,7 @@ export function startPersonalPlugins(
     if (stopped) return;
     plugins.apply(snapshot);
     createPanelSlot.noteSnapshot(snapshot);
+    noteMountSnapshot(snapshot);
     boot();
   };
   const off = api.onSnapshot(apply);
@@ -284,5 +304,6 @@ export function startPersonalPlugins(
     stopped = true;
     off();
     plugins.clear();
+    noteMountSnapshot({ extensions: [] });
   };
 }

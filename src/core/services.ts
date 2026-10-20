@@ -143,6 +143,7 @@ import {
   crewmateSessionsDir,
 } from "./paths";
 import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
+import { PanelMountsHolder } from "./personal/panelMounts";
 import { PersonalExtensions } from "./personal/personalExtensions";
 import { PersonalStore } from "./personal/personalStore";
 import { LaunchWatch } from "./personal/safeMode";
@@ -282,6 +283,8 @@ export type CoreServices = {
   sql: SqlService;
   /** Personal extensions (talk-to-personalize Step 2): the seeded workspace, compiled and served. */
   personal: PersonalExtensions;
+  /** What the window did with each panel, as it last said (`inf:plugins:personal:mounts`). */
+  panelMounts: PanelMountsHolder;
   /**
    * Each task's own browser (docs/task-browser.md): this Mac's, and a task's
    * on another computer as the captain reads and drives it from here.
@@ -1688,6 +1691,7 @@ export async function createServices(
   // its second root only what this record says he consented to.
   const pluginRecords = new PluginRecords(db);
   const personalStore = new PersonalStore(db);
+  const panelMounts = new PanelMountsHolder();
   const personal = await PersonalExtensions.start({
     workspaceDir: paths.personalWorkspaceDir,
     // The app's own design skill and the authoring skills are seeded from
@@ -1703,6 +1707,7 @@ export async function createServices(
     log: (message) => console.warn(`[infinitary] ${message}`),
     ...(host.capture ? { capture: host.capture } : {}),
     captureDirFor: (taskId) => join(paths.crewmatesDir, taskId, "captures"),
+    mounts: panelMounts,
     sql: (request) => sql.query(request),
     installed: {
       dir: paths.pluginsDir,
@@ -1752,6 +1757,7 @@ export async function createServices(
     endLiveTask: (taskId) => personal.endLiveTask(taskId),
     commitTurn: (taskId, message) => personal.commitTurn(taskId, message),
     lint: (input) => personal.lint(input.id),
+    place: (input) => personal.place(input.taskId, input.id),
     capture: (input) => personal.capture(input.id, input.taskId),
   };
   const credentialHealth = new CredentialHealthService({
@@ -2495,6 +2501,7 @@ export async function createServices(
         knowledge: knowledge?.held() ?? false,
         automation: scheduler.rules().length > 0,
       }),
+      mounts: () => panelMounts.current(),
     },
     installPlugin: (request) => pluginInstaller.install(request),
     proposeProject: (value) => projectSetups.propose(value),
@@ -2892,6 +2899,7 @@ export async function createServices(
     pluginFetch: createMediatedFetch({ grants: noNetGrants }),
     sql,
     personal,
+    panelMounts,
     ...(browsers ? { browsers } : {}),
     ...(taskCommands ? { taskCommands } : {}),
     launchWatch,

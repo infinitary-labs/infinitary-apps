@@ -8,6 +8,7 @@ import { startPersonalPlugins } from "./personal/personalPlugins";
 import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
 import { pluginHost } from "./plugins/host";
 import { startPanelCommands } from "./plugins/panelCommands";
+import { startPanelMounts } from "./plugins/panelMounts";
 import "./design/styles.css";
 
 const container = document.getElementById("root");
@@ -27,6 +28,8 @@ startPersonalPlugins(pluginHost, undefined, () => startGatedPanels(pluginHost));
 // Every panel's commands join the window's keys and command search
 // (docs/keyboard.md, "A panel's commands"), as the panels come and go.
 startPanelCommands(pluginHost);
+// What the window did with each panel, for the core (docs/personal-panels.md, "Placed on the rail").
+startPanelMounts(pluginHost);
 // Off unless this window's own localStorage asks for it (design/fixtures):
 // the library gallery for the coherence check. No product path writes that key.
 registerDesignFixtures(pluginHost);

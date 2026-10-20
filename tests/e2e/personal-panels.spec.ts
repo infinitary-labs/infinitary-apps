@@ -5,8 +5,10 @@ import { expect, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import Database from "better-sqlite3";
 import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
+import { mountLine } from "../../src/core/personal/panelMounts";
 import { MANAGED_FILES } from "../../src/core/personal/workspace";
 import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundaryWords";
+import { DEFAULT_PERSONAL_PLACEMENT } from "../../src/shared/personal/manifest";
 import { AUTONOMY_SWITCH_NAME, AUTONOMY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -427,7 +429,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
     let panelTaskId = "";
     /** The first build's capture, of its regular rows, for the follow-up's to compare with. */
     let regularCaptureHeight = 0;
-    await test.step("an ask builds the panel out of sight, the report puts it on the rail, the workspace commits, and the task closes done", async () => {
+    await test.step("an ask builds the panel out of sight, the crewmate places it on the rail and photographs it there, the report commits it, and the task closes done", async () => {
       const { page } = live;
       const before = savePointCount(workspace);
       await watchPageBackground(page);
@@ -437,7 +439,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       // lifecycle pushes are rendered before their assertions begin.
       await expandDock(page, "activity");
 
-      // The report puts the panel on its rail, on the app's own components.
+      // The panel is on its rail, on the app's own components.
       const key = await taskKey(page, MOCK_PANEL_TITLE);
       await expect(
         reportLine(page, key).filter({ hasText: reportSummary(MOCK_PANEL_REPORT) }),
@@ -448,14 +450,32 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await expect(panel().locator("header")).toContainText(MOCK_PANEL_TITLE);
       await expect(panel().locator("[data-side-panel-attribution]")).toHaveText("yours");
       await expect(panel().locator("[data-mock-rows='regular']")).toHaveCount(1);
-      // It was built apart: drawn out of sight while the rail had nothing of
-      // it, and on the rail only once it was a draft no more.
+      // It was built apart, then placed (docs/personal-panels.md, "Placed on
+      // the rail"): drawn out of sight while the rail had nothing of it, then
+      // on the captain's own rail with the running dot before the report, a
+      // draft no more.
       const states = await buildStates(page);
       expect(states, states.join("\n")).toContain("rail none | draft rows=regular");
+      expect(states, states.join("\n")).toContain("rail rows=regular running | draft none");
       expect(
         states.findIndex((state) => !state.startsWith("rail none")),
         states.join("\n"),
       ).toBeGreaterThan(lastDrafted(states));
+      // The window's answer reached the crewmate: its place_panel heard the
+      // panel drawn on its rail, in the words the core composes from it.
+      const drawn = mountLine({
+        id: MOCK_PANEL_ID,
+        kind: "personal",
+        version: null,
+        state: "drawn",
+        rail: DEFAULT_PERSONAL_PLACEMENT.x,
+        why: null,
+      });
+      expect(
+        mockProvider
+          .requestBodies()
+          .some((body) => body.includes(`The window says it is ${drawn}.`)),
+      ).toBe(true);
       // The declared `feed.recent` read reaches the panel: the feed already
       // holds the spawn line, so the count is a real number, never a blank.
       await expect(panel().getByText("Activity")).toBeVisible();
@@ -501,9 +521,10 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       expect(manifest.reads).toEqual(["feed.recent"]);
       expect(manifest.origin?.taskId).toBe(task.id);
 
-      // The capture wrote both themes under the task's own directory; the
-      // words the lint and the capture answer with are pluginLint.test.ts's
-      // and personalExtensions.test.ts's.
+      // The last capture, of the panel placed on the rail, wrote both themes
+      // under the task's own directory; the words the lint, the place and
+      // the capture answer with are pluginLint.test.ts's and
+      // personalExtensions.test.ts's.
       const paints: Record<string, { lum: number; contrast: number }> = {};
       for (const theme of ["dark", "light"]) {
         const file = join(
@@ -589,7 +610,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe("dark");
     });
 
-    await test.step("a follow-up ask resolves to the same surface, is built apart, and is a second commit the rail takes at its report", async () => {
+    await test.step("a follow-up ask resolves to the same surface, is built apart, is placed on the rail, and is a second commit at its report", async () => {
       const { page } = live;
       const before = savePointCount(workspace);
       await watchBuild(page, MOCK_PANEL_ID);
@@ -602,9 +623,11 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       expect(await awaitTurnCommit(userDataDir, key)).toEqual({ commit: expect.any(String) });
       await expect(panel().locator("[data-mock-rows='small']")).toHaveCount(1, { timeout: 30_000 });
       // While the change was built the rail kept the panel as it was, with
-      // the running dot, and drew the smaller rows only once they were committed.
+      // the running dot, and drew the smaller rows once the crewmate placed
+      // them, before the report, a draft no more.
       const states = await buildStates(page);
       expect(states, states.join("\n")).toContain("rail rows=regular running | draft rows=small");
+      expect(states, states.join("\n")).toContain("rail rows=small running | draft none");
       expect(
         states.findIndex((state) => state.startsWith("rail rows=small")),
         states.join("\n"),
@@ -612,8 +635,8 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       // The close follows the commit.
       await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
       const revisedTask = readTasks(userDataDir).find((task) => task.key === key) as TaskRow;
-      // Its capture photographed the version it was building, never the
-      // rail's: smaller rows make a shorter picture than the first build's.
+      // Its last capture photographed the version it placed on the rail:
+      // smaller rows make a shorter picture than the first build's.
       const changed = pngSize(
         join(userDataDir, "crewmates", revisedTask.id, "captures", `${MOCK_PANEL_ID}-dark.png`),
       );

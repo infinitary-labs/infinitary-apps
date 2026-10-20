@@ -253,6 +253,7 @@ export async function approvalHost(
         endLiveTask: () => {},
         commitTurn: async () => ({ committed: false, touched: [], findings: [] }),
         lint: async () => "Evaluation has no panels to check",
+        place: async () => ({ ok: false, reason: "Evaluation has no rails to place a panel on" }),
         capture: async (input) => ({
           ok: false,
           id: input.id,

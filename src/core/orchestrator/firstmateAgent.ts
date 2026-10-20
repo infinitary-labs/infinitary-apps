@@ -79,6 +79,7 @@ import {
   type PersonalizeDelegate,
   panelsOffLine,
   SURFACES_CONTEXT_LIMIT,
+  surfaceState,
 } from "../pi/personalizeTool";
 import {
   FIRSTMATE_CONTRACT_VERSION,
@@ -399,7 +400,7 @@ export type FirstmateTurnOutcome =
 
 export type PersonalizeOptions = Pick<
   PersonalizeDelegate,
-  "personal" | "removePersonal" | "uninstallPlugin" | "personalWorkspaceDir" | "gates"
+  "personal" | "removePersonal" | "uninstallPlugin" | "personalWorkspaceDir" | "gates" | "mounts"
 > & { preferences: ShellPreferencesService };
 
 export type TurnPayload =
@@ -3391,6 +3392,7 @@ export class FirstmateAgent {
     const preferences = personalize.preferences.get();
     const personal = personalize.personal();
     const all = listSurfaces(preferences.layout, personal, personalize.gates());
+    const mounts = personalize.mounts?.() ?? null;
     const personalSurfaces = all.filter((surface) => surface.kind === "personal");
     const shown = [
       ...all.filter((surface) => surface.kind === "app"),
@@ -3408,7 +3410,8 @@ export class FirstmateAgent {
         owner: surface.kind === "personal" ? "captain" : "app",
         rail: surface.placement.x,
         position: surface.placement.y,
-        state: surface.hidden ? "hidden" : surface.collapsed ? "shown, collapsed" : "shown",
+        // The window's own word on it (docs/personal-panels.md, "Placed on the rail").
+        state: surfaceState(surface, mounts),
       })),
       ...(omitted > 0 ? { personal_panels_omitted: omitted } : {}),
       ...(panelsOff ? { panels_off: panelsOff } : {}),

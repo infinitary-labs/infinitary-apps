@@ -73,6 +73,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:plugins:fetch": "Panel internal operation",
   "inf:plugins:invoke": "Panel internal operation",
   "inf:plugins:db": "Panel internal operation",
+  "inf:plugins:personal:mounts":
+    "The window's own answer about which panels it drew, sent whenever it changes; nothing is set",
   "inf:work:card": WORK_REQUEST,
   "inf:work:card-refused": WORK_REQUEST,
   "inf:work:close-card": WORK_REQUEST,

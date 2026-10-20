@@ -518,6 +518,7 @@ const api: FirstmateApi = {
     personal: {
       list: () => invoke("inf:plugins:personal:list"),
       onSnapshot: (listener) => subscribe("inf:plugins:personal", listener),
+      reportMounts: (mounts) => invoke("inf:plugins:personal:mounts", mounts),
     },
     invoke: (extensionId, action, input, options) =>
       invoke("inf:plugins:invoke", extensionId, action, input, options),

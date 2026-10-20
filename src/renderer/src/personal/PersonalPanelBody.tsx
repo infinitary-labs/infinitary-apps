@@ -24,6 +24,7 @@ import { railProp } from "../plugins/panelRail";
 import { panelTasks } from "../plugins/panelTasks";
 import { usePanelCollapsed } from "../plugins/railStore";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
+import { panelBodies, stoppedWhy } from "./panelBodies";
 import { PanelBoundary, PanelStoppedLine } from "./panelBoundary";
 
 /**
@@ -36,7 +37,8 @@ import { PanelBoundary, PanelStoppedLine } from "./panelBoundary";
  * that stopped answering, and the panel's chrome stays; the boundary
  * resets when the version changes (the crewmate saved a fix), never on a
  * timer. Until a new version has loaded the previous one keeps drawing,
- * so a hot reload never blanks the rail.
+ * so a hot reload never blanks the rail. The panel on the rail says how
+ * its body fared (./panelBodies.ts): drawn, or stopped and why.
  */
 export type PersonalPanelContent = {
   id: string;
@@ -67,7 +69,7 @@ const importForReal: ModuleImporter = (url) => import(/* @vite-ignore */ url);
 
 export type LoadState =
   | { version: string; Component: ComponentType<PanelProps> }
-  | { version: string; failed: true };
+  | { version: string; failed: true; why: string };
 
 export function PersonalPanelBody({
   content,
@@ -78,14 +80,45 @@ export function PersonalPanelBody({
 }) {
   const props = usePanelProps(content);
   const loaded = useLoadedModule(content.url, content.version, importModule);
+  // A draft is out of sight: only the panel on the rail answers for it.
+  const onRail = content.draft !== true;
   if (loaded === null) return null;
-  if ("failed" in loaded) return <PanelStoppedLine />;
+  if ("failed" in loaded) {
+    return (
+      <>
+        <PanelStoppedLine />
+        {onRail && <BodySaid id={content.id} version={loaded.version} why={loaded.why} />}
+      </>
+    );
+  }
   const { Component } = loaded;
+  const stopped = (error: unknown) =>
+    panelBodies.note(content.id, {
+      version: loaded.version,
+      state: "stopped",
+      why: stoppedWhy(error),
+    });
   return (
-    <PanelBoundary key={loaded.version}>
+    <PanelBoundary key={loaded.version} {...(onRail ? { onStop: stopped } : {})}>
       <Component {...props} />
+      {onRail && <BodySaid id={content.id} version={loaded.version} why={null} />}
     </PanelBoundary>
   );
+}
+
+/**
+ * Says how the body fared once it committed: drawn when it sits after the
+ * panel's component inside the boundary (a throw replaces both before
+ * either commits), or stopped with the import's own words.
+ */
+function BodySaid({ id, version, why }: { id: string; version: string; why: string | null }) {
+  useEffect(() => {
+    panelBodies.note(
+      id,
+      why === null ? { version, state: "drawn" } : { version, state: "stopped", why },
+    );
+  }, [id, version, why]);
+  return null;
 }
 
 /** The captain's own click or key holds the window now (`windowGesture`). */
@@ -206,13 +239,19 @@ export function useLoadedModule(
         if (cancelled) return;
         const candidate = (module as { default?: unknown } | null)?.default;
         if (typeof candidate !== "function") {
-          setLoaded({ version, failed: true });
+          setLoaded({ version, failed: true, why: "its module has no default export to draw" });
           return;
         }
         setLoaded({ version, Component: candidate as ComponentType<PanelProps> });
       })
-      .catch(() => {
-        if (!cancelled) setLoaded({ version, failed: true });
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setLoaded({
+            version,
+            failed: true,
+            why: `its module would not import: ${stoppedWhy(error)}`,
+          });
+        }
       });
     return () => {
       cancelled = true;

@@ -9,6 +9,7 @@ import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
+import type { PanelMounts } from "@shared/personal/mounts";
 import { AUTOMATIC_WORD } from "@shared/placement";
 import { plainProblem } from "@shared/plainProblem";
 import { type DecisionRecord, decisionRecordSchema } from "@shared/provenance";
@@ -313,6 +314,8 @@ function setup(
     now?: () => number;
     /** The personal panels the core serves (Step 2's snapshot), for "your surfaces". */
     personal?: PersonalSnapshot;
+    /** What the window said it did with each panel, for "your surfaces" (INF-607). */
+    mounts?: PanelMounts;
     /** Where projects live and the app's sign-ins there (git integration PR 1.2/1.3). */
     forges?: ConstructorParameters<typeof FirstmateAgent>[0]["forges"];
     /** The flagship binding over this setup's settings; absent = the base runtime. */
@@ -421,6 +424,7 @@ function setup(
         uninstallPlugin: async () => ({ removed: false }),
         personalWorkspaceDir,
         gates: () => ({ knowledge: false }),
+        mounts: () => options.mounts ?? null,
       },
       modelRuntime: {} as ModelRuntime,
       availableModels: options.availableModels ?? (() => [{ provider: "fm-mock", id: "mock-1" }]),
@@ -2415,6 +2419,26 @@ describe("FirstmateAgent", () => {
           },
         ],
       },
+      mounts: {
+        panels: [
+          {
+            id: "activity",
+            kind: "app",
+            version: null,
+            state: "collapsed",
+            rail: "left",
+            why: null,
+          },
+          {
+            id: "open-prs",
+            kind: "personal",
+            version: "abc",
+            state: "stopped",
+            rail: "right",
+            why: "TypeError: Cannot read properties of undefined (reading 'map')",
+          },
+        ],
+      },
     });
     await agent.converse("switch to light");
     const context = decodeContext(agent.buildContextBlock());
@@ -2431,6 +2455,16 @@ describe("FirstmateAgent", () => {
         expect.objectContaining({ id: "open-prs", title: "Open PRs", owner: "captain" }),
       ]),
     );
+    // INF-607: each state is the window's own word, never read off the
+    // layout, so a panel whose body stopped is never "shown".
+    const state = (id: string) =>
+      (context.surfaces.panels as { id: string; state: string }[]).find((panel) => panel.id === id)
+        ?.state;
+    expect(state("open-prs")).toBe(
+      "stopped drawing: TypeError: Cannot read properties of undefined (reading 'map')",
+    );
+    expect(state("activity")).toBe("drawn, collapsed");
+    expect(state("now")).toBe("no word from the window");
 
     const personalize = toolsOf(specs).get("personalize");
     const instruction = await personalize?.execute("p4", {

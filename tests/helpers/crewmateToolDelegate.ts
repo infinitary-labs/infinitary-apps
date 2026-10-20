@@ -43,11 +43,16 @@ export function crewmateToolDelegate(): Required<
       return { rows: [], total: 0 };
     },
     onLintPanel: async (input) => answer("onLintPanel", "lint clean")(input),
+    onPlacePanel: async (input) => {
+      calls.push({ callback: "onPlacePanel", input });
+      return { ok: true as const, waitedMs: 0, panels: [] };
+    },
     onCapturePanel: async (input) => {
       calls.push({ callback: "onCapturePanel", input });
       return {
         ok: true as const,
         id: input.id,
+        photographed: "docked" as const,
         images: [
           {
             theme: "dark" as const,

@@ -990,9 +990,11 @@ describe("the Claude crewmate's coding session", () => {
       onQueryTasks: () => ({ rows: [], total: 0 }),
       // The live-build checks (Step 4) ride the same server on a live task.
       onLintPanel: async () => "clock: No findings.",
+      onPlacePanel: async () => ({ ok: true, waitedMs: 0, panels: [] }),
       onCapturePanel: async ({ id }) => ({
         ok: true,
         id,
+        photographed: "docked",
         images: [
           { theme: "dark", path: "", width: 1, height: 1, data: "AA==", mimeType: "image/png" },
         ],

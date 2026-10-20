@@ -15414,6 +15414,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     const commits: { taskId: string; message: string }[] = [];
     const lints: { id?: string }[] = [];
     const captures: { id: string; taskId: string }[] = [];
+    const places: { id?: string; taskId: string }[] = [];
     const live = { begun: [] as string[], ended: [] as string[] };
     const personal = {
       workspaceDir,
@@ -15432,6 +15433,29 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       lint: vi.fn(async (input: { id?: string }) => {
         lints.push(input);
         return "tokyo-clock: No findings.";
+      }),
+      place: vi.fn(async (input: { id?: string; taskId: string }) => {
+        places.push(input);
+        return {
+          ok: true as const,
+          waitedMs: 0,
+          panels: [
+            {
+              id: "tokyo-clock",
+              title: "Tokyo clock",
+              placed: true,
+              mount: {
+                id: "tokyo-clock",
+                kind: "personal" as const,
+                version: "v1",
+                state: "stopped" as const,
+                rail: "left" as const,
+                why: "TypeError: Cannot read properties of undefined (reading 'map')",
+              },
+              last: null,
+            },
+          ],
+        };
       }),
       capture: vi.fn(async (input: { id: string; taskId: string }) => {
         captures.push(input);
@@ -15460,7 +15484,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       notifyOp: (wake) => base.ops.push(served(wake)),
       retryConverse: vi.fn(),
     });
-    return { ...base, supervisor, personal, workspaceDir, commits, lints, captures, live };
+    return { ...base, supervisor, personal, workspaceDir, commits, lints, captures, places, live };
   }
 
   it("binds a personal-ui commission to the personal workspace with no worktree, the checks, and a brief that names no delivery", async () => {
@@ -15498,6 +15522,18 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(await spec?.onLintPanel?.({})).toBe("tokyo-clock: No findings.");
     await spec?.onCapturePanel?.({ id: "tokyo-clock" });
     expect(h.captures).toEqual([{ id: "tokyo-clock", taskId }]);
+    // INF-607: the version goes on the captain's rail, and the window's
+    // answer is the crewmate's and the timeline's, never the feed's.
+    const placed = await spec?.onPlacePanel?.({ id: "tokyo-clock" });
+    expect(h.places).toEqual([{ id: "tokyo-clock", taskId }]);
+    expect(placed).toMatchObject({ ok: true, panels: [{ mount: { state: "stopped" } }] });
+    const placing = h.tasks
+      .timeline(taskId)
+      .find((event) => event.kind === "note" && event.data?.placed !== undefined);
+    expect(placing?.feed).toBe(false);
+    expect(placing?.text).toContain(
+      "its body stopped drawing: TypeError: Cannot read properties of undefined (reading 'map')",
+    );
     expect(h.live.begun).toEqual([taskId]);
     const brief = crewmate.promptCalls[0] ?? "";
     // A workspace kind, not a posture: the brief writes no Delivery line

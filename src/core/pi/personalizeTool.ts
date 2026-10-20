@@ -5,6 +5,7 @@ import {
 } from "@shared/createPanelSlot";
 import type { FmEvent } from "@shared/events";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
+import type { PanelMounts } from "@shared/personal/mounts";
 import type { SidePanelPlacement } from "@shared/plugins/manifest";
 import {
   effectivePlacement,
@@ -22,6 +23,7 @@ import {
   personalPanelRemovedLine,
   standingInstructionLine,
 } from "../personal/panelLines";
+import { mountOf } from "../personal/panelMounts";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
 import { boundTool, stringEnum } from "../session/tools";
 
@@ -80,6 +82,11 @@ export type PersonalizeDelegate = {
   broadcastEvent: (event: FmEvent) => void;
   /** The gates open now: a gated app panel is a surface only while its gate is. */
   gates: () => AppPanelGates;
+  /**
+   * What the window did with each panel, as it last said
+   * (docs/personal-panels.md, "Placed on the rail"); null before it has.
+   */
+  mounts?: () => PanelMounts | null;
 };
 
 /**
@@ -140,6 +147,35 @@ function surfaceView(
 }
 
 /**
+ * A surface's state as the window last answered for it
+ * (docs/personal-panels.md, "Placed on the rail"), never read off the
+ * layout: a panel the layout places can still be refused, off its rail or
+ * stopped. With no answer for it, the layout's hidden is still a fact; a
+ * shown one is not, so it says the window has not answered.
+ */
+export function surfaceState(surface: SurfaceView, mounts: PanelMounts | null): string {
+  const mount = mounts ? mountOf(mounts, surface.id, surface.kind) : undefined;
+  if (!mount) return surface.hidden ? "hidden" : "no word from the window";
+  const why = mount.why ? `: ${mount.why}` : "";
+  switch (mount.state) {
+    case "drawn":
+      return "drawn";
+    case "collapsed":
+      return "drawn, collapsed";
+    case "loading":
+      return "loading";
+    case "stopped":
+      return `stopped drawing${why}`;
+    case "off":
+      return `off its rail${why}`;
+    case "hidden":
+      return "hidden";
+    case "refused":
+      return `refused by the window${why}`;
+  }
+}
+
+/**
  * What the app says about the captain's own panels being off (Step 5), in
  * the Firstmate's context and in a refusal alike. The switch is host-owned:
  * there is no tool action for it, so the honest answer is to say where it
@@ -156,7 +192,8 @@ export function panelsOffLine(panels: PersonalPanels): string | null {
 
 /**
  * The bounded "your surfaces" section of the Firstmate's context block:
- * the theme, every app panel, the personal panels up to a cap, whether the
+ * the theme, every app panel, the personal panels up to a cap, each with
+ * the window's word on it (`surfaceState`), whether the
  * captain's own panels are on at all, and how many standing instructions
  * the captain skill holds. Each row carries the id `personalize` takes.
  */
@@ -165,6 +202,7 @@ export function renderSurfacesSection(
   personal: PersonalSnapshot,
   instructions: number,
   gates: AppPanelGates,
+  mounts: PanelMounts | null = null,
 ): string[] {
   const surfaces = listSurfaces(preferences.layout, personal, gates);
   const yours = surfaces.filter((surface) => surface.kind !== "app");
@@ -178,7 +216,7 @@ export function renderSurfacesSection(
     `your surfaces (app_change panel and personalize remove act on these ids; theme: ${preferences.appearance.theme}):`,
     ...shown.map((surface) => {
       const where = `${surface.placement.x} rail, ${surface.placement.y}`;
-      const state = surface.hidden ? "hidden" : surface.collapsed ? "shown, collapsed" : "shown";
+      const state = surfaceState(surface, mounts);
       const mark =
         surface.kind === "personal"
           ? " (yours)"

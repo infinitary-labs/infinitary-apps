@@ -194,6 +194,7 @@ import {
   personalStoreRequestSchema,
   personalStoreResponseSchema,
 } from "./personal/manifest";
+import { type PanelMounts, panelMountsSchema } from "./personal/mounts";
 import {
   type MediatedFetchCall,
   type MediatedFetchResult,
@@ -2545,6 +2546,15 @@ export const invokeContract = {
     request: z.tuple([]),
     response: personalSnapshotSchema,
   },
+  // What the window did with each panel (docs/personal-panels.md, "Placed
+  // on the rail"): drawn, refused and why, sent whenever it changes.
+  "inf:plugins:personal:mounts": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([panelMountsSchema]),
+    response: okSchema,
+  },
   "inf:plugins:invoke": {
     effect: "change",
     surface: "core",
@@ -3398,6 +3408,8 @@ export type FirstmateApi = {
     personal: {
       list: () => Promise<PersonalSnapshot>;
       onSnapshot: (listener: (snapshot: PersonalSnapshot) => void) => () => void;
+      /** What the window did with each panel, for `place_panel` and the surfaces list. */
+      reportMounts: (mounts: PanelMounts) => Promise<{ ok: true }>;
     };
     invoke: (
       extensionId: string,

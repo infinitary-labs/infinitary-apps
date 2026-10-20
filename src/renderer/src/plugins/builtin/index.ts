@@ -24,6 +24,7 @@ import { UsageTab } from "../../settings/UsageTab";
 import { type PanelSource, type PluginBindings, sidePanelBinding } from "../contributions";
 import type { PluginHost } from "../host";
 import { panelRail } from "../panelRail";
+import { railRefusals, refusalWords } from "../railRefusals";
 import { appReadExecutor } from "../reads/appExecutor";
 import {
   BUILTIN_PLUGIN_ID,
@@ -200,7 +201,9 @@ function registerGate(host: PluginHost, gate: AppPanelGate): () => void {
  * Holds one gate's panels registered while it is open: registers them when
  * `set(true)` first comes, takes them away - their cards and their place on
  * the rail with them - on `set(false)`. They take their places on their
- * rail however many panels it already holds.
+ * rail however many panels it already holds; a real error in registering
+ * them, such as a panel of the captain's holding the same id, is kept with
+ * its words (../railRefusals.ts).
  */
 function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
   let unregister: (() => void) | null = null;
@@ -209,6 +212,7 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
     unregister?.();
     unregister = null;
     for (const folder of folders) {
+      railRefusals.clear("app", folder.id);
       useShellStore.getState().closePanelCards(folder.id);
       panelRail.forget(folder.id);
     }
@@ -218,8 +222,12 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
       if (open && !unregister) {
         try {
           unregister = registerGate(host, gate);
+          for (const folder of folders) railRefusals.clear("app", folder.id);
         } catch (error) {
           console.warn(`[infinitary] the ${title} panel was not mounted: ${String(error)}`);
+          for (const folder of folders) {
+            railRefusals.refuse("app", folder.id, refusalWords(error));
+          }
         }
       } else if (!open && unregister) {
         take();

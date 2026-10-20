@@ -5,9 +5,11 @@ import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/perso
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CoreEventSink } from "../events";
+import { renderCaptureText, renderPlaceText } from "../pi/panelTools";
 import { openInMemoryDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { PanelMountsHolder } from "./panelMounts";
 import { PersonalExtensions } from "./personalExtensions";
 import { PersonalStore } from "./personalStore";
 
@@ -701,6 +703,218 @@ describe("PersonalExtensions builds apart from the rails", () => {
       await service.refresh();
       expect(service.snapshot().extensions[0]).toMatchObject({ id: "clock", running: false });
       expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed.clock);
+    } finally {
+      service.dispose();
+    }
+  });
+});
+
+/**
+ * A build placed on the captain's own rail (INF-607, docs/personal-panels.md
+ * "Placed on the rail"): the crewmate's `place_panel` puts its working
+ * files where its last commit was, the answer is the window's own word,
+ * and the capture photographs the docked panel. The window here is a stand-in
+ * that answers every snapshot it is pushed the way the real one does
+ * (src/renderer/src/plugins/panelMounts.ts): the app's own Activity drawn,
+ * and each panel of the captain's with the state the test gives.
+ */
+describe("PersonalExtensions places a build on the rail", () => {
+  type WindowWord = { state: "drawn" | "refused"; why: string | null };
+  const APP_ACTIVITY = {
+    id: "activity",
+    kind: "app",
+    version: null,
+    state: "drawn",
+    rail: "left",
+    why: null,
+  } as const;
+  function windowFor(word: (id: string) => WindowWord | null) {
+    const mounts = new PanelMountsHolder();
+    const answer = (snapshot: PersonalSnapshot) =>
+      queueMicrotask(() =>
+        mounts.note({
+          panels: [
+            APP_ACTIVITY,
+            ...snapshot.extensions.flatMap((view) => {
+              const said = word(view.id);
+              return said
+                ? [
+                    {
+                      id: view.id,
+                      kind: "personal" as const,
+                      version: view.panel?.version ?? null,
+                      rail: view.placement.x,
+                      ...said,
+                    },
+                  ]
+                : [];
+            }),
+          ],
+        }),
+      );
+    return { mounts, answer };
+  }
+
+  it("puts a new panel's working files on the rail, answers with the window's word, and photographs it docked", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-new", title: "Build a clock", status: "running" });
+    const window = windowFor(() => ({ state: "drawn", why: null }));
+    const captureCalls: string[] = [];
+    const png = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      mounts: window.mounts,
+      emit: (channel, payload) => {
+        h.emit(channel, payload);
+        if (channel === "inf:plugins:personal") window.answer(payload as PersonalSnapshot);
+      },
+      capture: {
+        capturePanel: async (input) => {
+          captureCalls.push(input.panelId);
+          return { png, width: 300, height: 120 };
+        },
+      },
+    });
+    try {
+      service.beginLiveTask("t-new");
+      h.write("fresh/panel.tsx", PANEL);
+      await service.refresh();
+      expect(service.snapshot().extensions).toEqual([]);
+      const draftVersion = service.snapshot().drafts?.[0]?.panel?.version;
+      const before = await service.capture("fresh", "t-new");
+      expect(before).toMatchObject({ ok: true, photographed: "draft" });
+      expect(renderCaptureText(before)).toContain("the captain's rail does not show it yet");
+
+      const placed = await service.place("t-new");
+      expect(placed).toMatchObject({
+        ok: true,
+        panels: [
+          {
+            id: "fresh",
+            placed: true,
+            mount: { state: "drawn", version: draftVersion, rail: "left" },
+            last: null,
+          },
+        ],
+      });
+      expect(renderPlaceText(placed)).toContain("The window says it is drawn on the left rail.");
+      // On the rail as the working files have it, with the running dot; no draft runs beside it.
+      expect(service.snapshot().extensions).toMatchObject([
+        { id: "fresh", running: true, panel: { version: draftVersion } },
+      ]);
+      expect(service.snapshot().drafts).toBeUndefined();
+      // Nothing was committed: the report still makes the one save point.
+      expect(
+        execFileSync("git", ["-C", h.workspaceDir, "status", "--porcelain"], { encoding: "utf8" }),
+      ).toContain("fresh/");
+      captureCalls.length = 0;
+      const docked = await service.capture("fresh", "t-new");
+      expect(docked).toMatchObject({ ok: true, photographed: "docked" });
+      expect(captureCalls).toEqual(["fresh", "fresh"]);
+
+      // A save after placing runs apart again; the rail keeps what was placed.
+      h.write("fresh/panel.tsx", `${PANEL}\n// smaller rows`);
+      await service.refresh();
+      expect(service.snapshot().extensions[0]?.panel?.version).toBe(draftVersion);
+      const newer = service.snapshot().drafts?.[0]?.panel?.version;
+      expect(newer).not.toBe(draftVersion);
+      expect(await service.place("t-new", "fresh")).toMatchObject({
+        ok: true,
+        panels: [{ id: "fresh", placed: true, mount: { state: "drawn", version: newer } }],
+      });
+      expect(service.snapshot().drafts).toBeUndefined();
+
+      // The report's commit holds it: the rail keeps the same version.
+      await service.commitTurn("t-new", "A clock panel.");
+      expect(service.snapshot().extensions[0]?.panel?.version).toBe(newer);
+      expect(service.snapshot().drafts).toBeUndefined();
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("answers the window's refusal, never photographs the app's panel holding its id, and takes the placed version back at the task's end", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-live", title: "Change my activity panel", status: "running" });
+    // The captain's own panel named after the app's Activity: the one
+    // refusal a rail still makes (PR #187), in the window's words.
+    const why =
+      'side-panel: "activity" from "personal-activity" is already registered by "firstmate"';
+    const window = windowFor(() => ({ state: "refused", why }));
+    const captureCalls: string[] = [];
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      mounts: window.mounts,
+      emit: (channel, payload) => {
+        h.emit(channel, payload);
+        if (channel === "inf:plugins:personal") window.answer(payload as PersonalSnapshot);
+      },
+      // The rail holds the app's Activity under that id, which the window
+      // would photograph if it were asked.
+      capture: {
+        capturePanel: async (input) => {
+          captureCalls.push(input.panelId);
+          return { png: Buffer.from("89504e47", "hex"), width: 300, height: 120 };
+        },
+      },
+    });
+    try {
+      h.write("activity/panel.tsx", PANEL);
+      commitAll(h.workspaceDir);
+      await service.refresh();
+      const committed = service.snapshot().extensions[0]?.panel?.version;
+      service.beginLiveTask("t-live");
+      h.write("activity/panel.tsx", `${PANEL}\n// smaller rows`);
+      const placed = await service.place("t-live", "activity");
+      expect(placed).toMatchObject({
+        ok: true,
+        panels: [
+          { id: "activity", placed: true, mount: { kind: "personal", state: "refused", why } },
+        ],
+      });
+      expect(renderPlaceText(placed)).toContain(`The window says it is refused: ${why}.`);
+      const capture = await service.capture("activity", "t-live");
+      expect(capture).toEqual({
+        ok: false,
+        id: "activity",
+        reason: `"activity" is not on screen: refused: ${why}`,
+      });
+      expect(captureCalls).toEqual([]);
+      expect(service.snapshot().extensions[0]?.panel?.version).not.toBe(committed);
+
+      // The task ended with no report: the rail goes back to the last commit.
+      service.endLiveTask("t-live");
+      await service.refresh();
+      expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("says the window did not answer, and refuses with nothing to place", async () => {
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-quiet", title: "Build a clock", status: "running" });
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      mounts: new PanelMountsHolder(),
+      placeWaitMs: 20,
+    });
+    try {
+      service.beginLiveTask("t-quiet");
+      expect(await service.place("t-quiet")).toEqual({
+        ok: false,
+        reason: "nothing to place: no extension has uncommitted changes. Pass id to look at one",
+      });
+      h.write("fresh/panel.tsx", PANEL);
+      const placed = await service.place("t-quiet");
+      expect(placed).toMatchObject({
+        ok: true,
+        panels: [{ id: "fresh", placed: true, mount: null, last: null }],
+      });
+      expect(renderPlaceText(placed)).toContain("The window did not answer for it");
     } finally {
       service.dispose();
     }

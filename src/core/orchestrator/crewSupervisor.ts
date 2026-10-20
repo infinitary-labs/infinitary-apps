@@ -220,13 +220,18 @@ import {
   crewmateSourceCardsDir,
   crewmateTempDir,
 } from "../paths";
-import type { LiveTurnCommit, PanelCaptureResult } from "../personal/personalExtensions";
+import type {
+  LiveTurnCommit,
+  PanelCaptureResult,
+  PanelPlaceResult,
+} from "../personal/personalExtensions";
 import { planStepAttached, teachStepAttached } from "../personal/sequencesSkill";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { lintCrewmateCard } from "../pi/cardLint";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { type CrewStatusEntry, NOTHING_SPAWNED } from "../pi/crewTools";
+import { renderPlaceText } from "../pi/panelTools";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
@@ -780,7 +785,7 @@ export type CrewSupervisorOptions = {
  * (registered on first need), the surfaces that already exist (for the
  * brief), the stamp window (`beginLiveTask`/`endLiveTask`, so the running
  * dot follows the crewmate's saves), the commit at the end of each turn,
- * and the two checks the crewmate's tools call. Implemented by
+ * and the three checks the crewmate's tools call. Implemented by
  * `PersonalExtensions` plus the repo registry, wired in services.ts.
  */
 export type PersonalLiveDelegate = {
@@ -791,6 +796,7 @@ export type PersonalLiveDelegate = {
   endLiveTask: (taskId: string) => void;
   commitTurn: (taskId: string, message: string) => Promise<LiveTurnCommit>;
   lint: (input: { id?: string }) => Promise<string>;
+  place: (input: { id?: string; taskId: string }) => Promise<PanelPlaceResult>;
   capture: (input: { id: string; taskId: string }) => Promise<PanelCaptureResult>;
 };
 
@@ -5474,12 +5480,34 @@ export class CrewSupervisor {
   private panelToolHooks(
     task: TaskRuntime,
     personal: PersonalLiveDelegate | undefined,
-  ): Pick<CrewmateSpec, "onLintPanel" | "onCapturePanel"> {
+  ): Pick<CrewmateSpec, "onLintPanel" | "onPlacePanel" | "onCapturePanel"> {
     if (!personal) return {};
     return {
       onLintPanel: (input) => personal.lint(input),
+      onPlacePanel: (input) => this.placePanel(task, personal, input.id),
       onCapturePanel: (input) => personal.capture({ id: input.id, taskId: task.id }),
     };
+  }
+
+  /**
+   * `place_panel` for a crewmate on the personal workspace: its version goes
+   * on the captain's rail, and the window's answer lands on the task's
+   * timeline (never the feed) beside going back to the crewmate, so the
+   * record shows what the captain's rail held before the report.
+   */
+  private async placePanel(
+    task: TaskRuntime,
+    personal: PersonalLiveDelegate,
+    id: string | undefined,
+  ): Promise<PanelPlaceResult> {
+    const result = await personal.place({ taskId: task.id, ...(id ? { id } : {}) });
+    if (result.ok && this.options.tasks.get(task.id)) {
+      this.options.tasks.note(task.id, `placed on the rail: ${renderPlaceText(result)}`, {
+        news: false,
+        data: { placed: result.panels },
+      });
+    }
+    return result;
   }
 
   /**

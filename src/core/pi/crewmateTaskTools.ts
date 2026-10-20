@@ -11,7 +11,7 @@ import {
   PREPARE_CHANGE_TOOL,
   READ_WORKFLOW_TOOL,
 } from "./forgeTools";
-import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL } from "./panelTools";
+import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL, PLACE_PANEL_TOOL } from "./panelTools";
 import { TASKS_QUERY_TOOL } from "./taskTools";
 
 /**
@@ -292,6 +292,7 @@ export const CREWMATE_TOOLS = [
   KNOWLEDGE_TOOL,
   RECORD_KNOWLEDGE_TOOL,
   LINT_PANEL_TOOL,
+  PLACE_PANEL_TOOL,
   CAPTURE_PANEL_TOOL,
   PREPARE_CHANGE_TOOL,
   OPEN_CHANGE_TOOL,

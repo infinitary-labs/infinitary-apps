@@ -1,6 +1,6 @@
 ---
 name: personal-panel
-description: How a personal panel should look and read - the component library, the design rules it inherits, the shapes that keep it calm, and the two checks to run before reporting. Read this before writing or changing a panel in this workspace.
+description: How a personal panel should look and read - the component library, the design rules it inherits, the shapes that keep it calm, and the checks to run before reporting. Read this before writing or changing a panel in this workspace.
 ---
 
 # Authoring a personal panel
@@ -11,7 +11,7 @@ it. Everything below exists to make that automatic.
 
 This file is the one copy of how a panel is built: its shape, what the compiler
 admits, the store, actions, cards, presence, what it should look like, and the
-two checks. Look up a type you use in `infinitary-env.d.ts` beside the workspace
+checks before you report. Look up a type you use in `infinitary-env.d.ts` beside the workspace
 instructions (the `@infinitary/contracts` module). Do not read that file from
 top to bottom.
 
@@ -333,12 +333,23 @@ Two places, and the skill for the data source you need (`github-prs`, `quota`,
 - `lint_panel` reads your files and answers with findings. A **refusal** is
   not mountable - fix it. A **warning** names the nearest token - take it. A
   **note** is a shape worth a second thought.
-- `capture_panel` screenshots the panel you are building at rail width, dark
-  and light, as the captain will see it once you report - until then his rail
+- `capture_panel` screenshots the panel at rail width, dark and light. While
+  you work it photographs your draft, drawn out of sight; the captain's rail
   keeps the version he had. Look at both. A panel that reads well in dark and
   turns to mud in light is not done; that is almost always a raw color.
+- `place_panel` puts your version on the captain's own rail and answers with
+  what his window did with it: drawn, or why not - another panel already holds
+  its id, its module would not import, its body threw, its presence rule finds
+  nothing to show, his layout hides it. Then `capture_panel` again photographs
+  it docked, as he sees it. Place it and look at it before every report, the
+  first build and every change.
 
-Then report in one line what the panel does.
+If the window drew it, report in one line what the panel does. If it did not
+and the reason is in your files, fix them and place again; an id another panel
+holds is a folder to rename. If the reason is outside your files - his layout,
+his panels switched off - never move, hide or remove his other panels. Report
+in plain words that the panel is built but not on his rail, and why, with
+`waiting_on_captain`, so the task waits for him instead of closing as done.
 
 ## What is refused
 
@@ -352,6 +363,6 @@ Then report in one line what the panel does.
 ## Fixing forward
 
 There is no keep, no discard and no undo. The captain asks, you change the
-files, and his panel takes the change when you report. "Make the rows smaller"
+files, place them on his rail to look, and your report keeps the change. "Make the rows smaller"
 is a change to the panel you already wrote; "put it back" is another. Every
 turn is a commit, so the history is the record.

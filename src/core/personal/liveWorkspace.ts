@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { PERSONAL_ID_PATTERN } from "@shared/personal/manifest";
 import type { PanelSourceFile } from "../plugins/pluginLint";
@@ -26,7 +26,8 @@ import { APP_GIT_IDENTITY, git } from "../workspace/git";
  *   nothing leaves no empty commit;
  * - the extensions as the last commit holds them (`committedTrees`,
  *   `writeCommittedTree`), which is what the rails draw while a crewmate
- *   builds (docs/personal-panels.md, "Built apart");
+ *   builds (docs/personal-panels.md, "Built apart"), and the tree its
+ *   working files make (`workingTree`), which `place_panel` puts there;
  * A removal is Step 1's `PersonalExtensions.remove`: one commit, so "put it
  * back" is a revert, never a rewrite.
  *
@@ -181,6 +182,32 @@ export async function writeCommittedTree(
     const target = join(targetDir, path);
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, await git(workspaceDir, ["cat-file", "blob", blob], { trim: false }));
+  }
+}
+
+/**
+ * The tree one extension's working files make now (docs/personal-panels.md,
+ * "Placed on the rail"): staged through a scratch index, so the workspace's
+ * own index and its next commit are untouched, and written to the
+ * workspace's objects, so `writeCommittedTree` copies it as it would a
+ * committed one. The same files committed later make the same hash. Null
+ * when the extension has no files to stage.
+ */
+export async function workingTree(
+  workspaceDir: string,
+  extensionId: string,
+  scratchIndex: string,
+): Promise<string | null> {
+  const env = { GIT_INDEX_FILE: scratchIndex };
+  try {
+    await mkdir(dirname(scratchIndex), { recursive: true });
+    await git(workspaceDir, ["add", "-A", "--", extensionId], { env });
+    const tree = await git(workspaceDir, ["write-tree", `--prefix=${extensionId}/`], { env });
+    return /^[0-9a-f]{40,64}$/.test(tree) ? tree : null;
+  } catch {
+    return null;
+  } finally {
+    await rm(scratchIndex, { force: true });
   }
 }
 

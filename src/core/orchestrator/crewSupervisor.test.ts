@@ -35,7 +35,7 @@ import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { RiskDeclaration } from "@shared/risk";
-import type { WorkShape } from "@shared/routingPolicy";
+import { isFolderRepair, type WorkShape } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
@@ -22203,6 +22203,62 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
       `${repair.key} "Bring the folder up to date" is already bringing it back.`,
     );
     expect(h.repairs()).toHaveLength(1);
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-584: the plan assumed folder work (INF-567's in_folder) is refused
+  // the same way, rather than starting its crewmate in a folder that is gone.
+  it("refuses folder work starting while its folder is missing, with the same words, and files the one repair", async () => {
+    const h = await project();
+    const folderRepairs = () =>
+      h.tasks
+        .list()
+        .filter((row) => row.repoId === h.repo.id && isFolderRepair(row.shape?.in_place));
+    const intent = {
+      goal: "Bring the shop folder up to date with main.",
+      userWords: "bring the shop folder up to date",
+      constraints: [],
+    };
+    const queued = h.supervisor.plan({
+      title: "Tidy the shop folder",
+      intent,
+      repoId: h.repo.id,
+      shape: { in_folder: true },
+    });
+    rmSync(h.folder, { recursive: true, force: true });
+
+    await expect(
+      h.supervisor.commission({
+        title: "Update the shop folder",
+        intent,
+        repoId: h.repo.id,
+        shape: { in_folder: true },
+      }),
+    ).rejects.toThrow(
+      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started `,
+    );
+    const [repair] = folderRepairs();
+    if (!repair) throw new Error("no repair task was filed");
+    expect(repair).toMatchObject({ title: "Bring the folder up to date" });
+    expect(repair.shape?.in_place).toMatchObject({ cause: "missing", noticed: "start" });
+
+    // The repair itself still starts, in the folder above the missing one.
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.sessionSpecs.at(-1)?.cwd).toBe(dirname(h.folder));
+    expect(h.crewmate.promptCalls[0]).toContain(
+      `Goal: bring back the folder of shop at ${h.folder}`,
+    );
+
+    // Queued folder work waits behind the same words, naming the standing repair.
+    await h.supervisor.dispatchQueuedTask(queued.id);
+    const waiting = h.tasks.get(queued.id);
+    expect(waiting?.status).toBe("open");
+    expect(waiting?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
+    expect(waiting?.gate?.reason).toContain(
+      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. ${repair.key} "Bring the folder up to date" is already bringing it back.`,
+    );
+    expect(folderRepairs()).toHaveLength(1);
+    expect(h.sessionSpecs.map((spec) => spec.cwd)).not.toContain(h.folder);
     await h.supervisor.disposeAll();
   });
 

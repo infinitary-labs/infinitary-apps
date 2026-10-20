@@ -28,6 +28,7 @@ Removing a working copy never touches a directory that is the repository itself,
 A folder that is gone is `missing`, and one git cannot read is `unreadable`; neither reads as having no address (INF-572).
 Work that needs the folder notices it then, never earlier: a merge's update says it is missing, and a task starting on this computer, a branch coming home from a computer that runs work (`PlacedCopies.bringBranchHome`), and a merge into the folder itself (`SettleService`) are refused with words naming the folder and its repair (`CrewSupervisor.folderMissing`, `folderMissingText`).
 Each files or names the same "Bring the folder up to date" task, with `in_place.noticed` saying what found it; a folder found missing again while its repair knows it tells nobody anything new.
+Of the tasks that work in the folder, only that repair starts while the folder is missing: folder work and "Close the pull request" are refused at their start with the same words (INF-584).
 A refused start waits on the captain like any start that failed.
 A task bound for a computer that runs work still starts: the start's read of the folder's address skips a missing folder (`ProjectChanges.inspect`), and that computer clones from the project's saved address.
 A missing folder's repair works in the folder that held it, or the nearest folder above that exists, recorded as `in_place.started_in` so a resume opens there again (`nearestFolderAbove`).
@@ -50,6 +51,7 @@ Work on a project's folder itself is the first mate's to declare, by its own jud
 Such a task runs on this Mac, which keeps the folder, whatever the project's Runs on says, and works in the folder with no working copy, branch, delivery, rigor or completion decision, as the folder repair does.
 Its brief is the first mate's intent with no Delivery line, closed by a paragraph naming the folder and that the captain's edits there are his (`renderIntentBrief`'s folder facts).
 It needs a project other than the personal workspace, and refuses `runs_on_ask`, `delivery_ask` and `review_of` beside it; nothing spawns.
+While the folder is missing it is refused at its start, as any task starting on this computer is, and the folder's repair is filed or named (INF-584).
 It closes as any task does: the host's folder-reading close never reads it.
 
 ## Derived, never stored: the basis and the review join

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "folder-work-missing-folder",
+      "kind": "fix",
+      "title": "Work in a deleted project folder is told the folder is missing",
+      "body": "When the first mate starts work inside your project's folder and that folder has been deleted, Infinitary now says the folder is missing and starts Bring the folder up to date, instead of the task failing with an error, as it already did for the project's other tasks.",
+      "area": "projects",
+      "noPicture": "It shows only in what the first mate is told and an ordinary task in Tasks, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

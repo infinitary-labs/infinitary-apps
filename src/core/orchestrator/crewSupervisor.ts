@@ -4730,6 +4730,16 @@ export class CrewSupervisor {
         // The personal workspace (Step 4), or a folder repair: the crewmate
         // works in the repository itself. No worktree, no branch; the record's
         // workspace columns stay empty so no close ever tries to remove one.
+        // Other work in the folder is refused while it is missing, as a task
+        // needing it is below; only the repair bringing it back starts (INF-584).
+        if (
+          inPlace &&
+          spec.repoId &&
+          !isFolderRepair(record?.shape?.in_place) &&
+          !existsSync(repoDir)
+        ) {
+          throw new Error(this.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)));
+        }
         const cwd = inPlace ? this.inPlaceDir(taskId, repoDir) : repoDir;
         task.workspace = { taskId, cwd, branch: "", repoDir };
       } else {

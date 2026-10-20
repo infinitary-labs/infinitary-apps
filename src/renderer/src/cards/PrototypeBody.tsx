@@ -20,6 +20,7 @@ import type {
 import { GESTURE_FOCUS_FRAMES, whenFrameHoldsFocus } from "../plugins/frames/frameFocus";
 import { describeFocus, openFrameLink } from "../plugins/frames/frameLink";
 import { CARD_BODY_WORDS } from "./cardBodyWords";
+import { DrawnAtWidth } from "./drawnAtWidth";
 import {
   type KnowledgeLinks,
   knowledgeReferenceGesture,
@@ -303,10 +304,37 @@ export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
   );
 }
 
+/**
+ * The frame's drawing reports, held to its width (./drawnAtWidth). A new
+ * document starts over, and so does a frame that goes.
+ */
+function useDrawnAtWidth(
+  frameRef: React.RefObject<HTMLIFrameElement | null>,
+  documentKey: string | undefined,
+): DrawnAtWidth {
+  const [drawing] = useState(
+    () =>
+      new DrawnAtWidth({
+        read: () => frameRef.current?.clientWidth,
+        watch: (changed) => {
+          const frame = frameRef.current;
+          if (!frame) return () => {};
+          const observer = new ResizeObserver(changed);
+          observer.observe(frame);
+          return () => observer.disconnect();
+        },
+      }),
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: documentKey is the trigger
+  useLayoutEffect(() => () => drawing.forget(), [drawing, documentKey]);
+  return drawing;
+}
+
 function cardFrameSpec(
   props: SrcdocProps,
   frameRef: React.RefObject<HTMLIFrameElement | null>,
   setHeight: (height: number) => void,
+  drawing: DrawnAtWidth,
   onUnresponsive?: () => void,
   onDrawn?: (held: boolean) => void,
 ): FrameMountSpec {
@@ -335,14 +363,15 @@ function cardFrameSpec(
     onInteraction: interaction,
     onLiveChange: interaction,
     onResize: (reported) => setHeight(cardBodyHeight(reported, props.floor)),
+    // A drawing counts at the frame's own width, once the frame is back at
+    // it (./drawnAtWidth).
     onDrawn: (_height, width, held) => {
-      // The frame's layout width: a card still growing into place (the
-      // stage's arrival, a card coming forward) is scaled on screen, and
-      // its drawing is at its width all the same.
-      const actual = frameRef.current?.clientWidth;
-      if (actual !== undefined && Math.abs(actual - width) <= 1) onDrawn?.(held);
+      if (onDrawn) drawing.report(width, () => onDrawn(held));
     },
-    ...(props.onBorn ? { onBorn: props.onBorn } : {}),
+    onBorn: () => {
+      drawing.forget();
+      props.onBorn?.();
+    },
     // A link takes the captain out of the app, into the browser: only the
     // captain's own click or Enter on it. Each step that stops it says why
     // on the console (../plugins/frames/frameLink).
@@ -594,10 +623,11 @@ function SrcdocCardBody(props: SrcdocProps) {
   const drawn = drawnDocument === shown;
   const fade = reveal && fadeDocument === shown;
 
+  const drawing = useDrawnAtWidth(frameRef, shown);
   const controllerRef = useFrameController(
     frameRef,
     {
-      ...cardFrameSpec(props, frameRef, setHeight, undefined, () => {
+      ...cardFrameSpec(props, frameRef, setHeight, drawing, undefined, () => {
         setDrawnDocument(shown);
         // A first document drawn while the body has already moved on is not
         // the body the card is presenting; one refreshed in place is.
@@ -717,12 +747,15 @@ function ScriptedCardBody(props: SrcdocProps) {
     };
   }, [title, template, attempt]);
 
+  const documentKey = state.phase === "mounted" ? state.mount.url : undefined;
+  const drawing = useDrawnAtWidth(frameRef, documentKey);
   const controllerRef = useFrameController(
     frameRef,
     cardFrameSpec(
       props,
       frameRef,
       setHeight,
+      drawing,
       () => {
         // Removing the iframe detaches the wedged document; the browser reaps
         // its dedicated process. The served document goes with it.
@@ -743,7 +776,7 @@ function ScriptedCardBody(props: SrcdocProps) {
       },
     ),
     theme,
-    state.phase === "mounted" ? state.mount.url : undefined,
+    documentKey,
   );
   useCollect(props.collectRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);

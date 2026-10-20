@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "keychain-test-large-app",
+      "reason": "Internal test fixture: the Claude keychain integration test builds and ad-hoc signs its own large app instead of trusting an installed Adobe app, so it runs on a fresh Mac. No app view or behavior changes."
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync, truncateSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { clearClaudeCredentialCache, resolveClaudeQuotaAuthResult } from "@core/claude/claudeQuota";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { readClaudeThroughTrustedTool } from "./claudeKeychainTool";
 import { createDarwinKeychain, openDarwinKeychainApiForTest } from "./darwinKeychain";
@@ -13,20 +13,71 @@ import { createDarwinKeychain, openDarwinKeychainApiForTest } from "./darwinKeyc
  * directory. Every security command names that keychain file. Nothing is
  * added to a search list, and the login keychain is never named.
  *
- * Six extra items trust a large app. Listing every saved password to check
- * signatures runs past the old 15 second limit; reading this one item does not.
+ * Six extra items trust a large app. Listing every saved password checks that
+ * app's signature once per item, which runs past this test's own time limit;
+ * reading this one item checks none.
+ *
+ * The large app is built in the scratch directory, so no Mac needs one
+ * installed (INF-650): an ad-hoc signed bundle whose seal covers a sparse
+ * file of zeros. Checking its signature hashes every byte, and APFS keeps the
+ * file without writing them.
  */
-const PREMIERE = "/Applications/Adobe Premiere Pro 2026/Adobe Premiere Pro 2026.app";
+const LARGE_APP_BYTES = 3 * 1024 ** 3;
+/** Signing hashes those bytes once; docs/test-cohorts.md keeps its measured time. */
+const LARGE_APP_BUILD_MS = 15_000;
 const FILLERS = 6;
 const SERVICE = "Claude Code-credentials";
 const ACCOUNT = "scratch";
 const TOKEN = "not-a-real-credential";
 const PASSWORD = "throwaway-scratch-password";
 
-describe("Claude's item is read without listing the other saved passwords", () => {
-  it.runIf(process.platform === "darwin")(
-    "returns the sign-in when other items trust a large app",
-    async () => {
+/** A signed app whose signature takes as long to check as it has bytes to hash. */
+function buildLargeApp(dir: string, env: NodeJS.ProcessEnv): string {
+  const app = join(dir, "Large.app");
+  const contents = join(app, "Contents");
+  mkdirSync(join(contents, "MacOS"), { recursive: true });
+  mkdirSync(join(contents, "Resources"), { recursive: true });
+  const executable = join(contents, "MacOS", "Large");
+  copyFileSync("/usr/bin/true", executable);
+  chmodSync(executable, 0o755);
+  writeFileSync(
+    join(contents, "Info.plist"),
+    `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>Large</string>
+<key>CFBundleIdentifier</key><string>dev.infinitary.test.large-app</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+</dict></plist>
+`,
+  );
+  const payload = join(contents, "Resources", "payload");
+  writeFileSync(payload, "");
+  truncateSync(payload, LARGE_APP_BYTES);
+  // Ad-hoc: no signing identity, so no keychain is opened.
+  execFileSync("/usr/bin/codesign", ["--force", "--sign", "-", app], {
+    env,
+    stdio: ["ignore", "ignore", "pipe"],
+    timeout: LARGE_APP_BUILD_MS,
+  });
+  return app;
+}
+
+describe.runIf(process.platform === "darwin")(
+  "Claude's item is read without listing the other saved passwords",
+  () => {
+    let largeApp = "";
+    beforeAll(() => {
+      const dir = scratchDir("infinitary-large-app-");
+      largeApp = buildLargeApp(dir, {
+        ...process.env,
+        HOME: dir,
+        CFFIXED_USER_HOME: dir,
+        INFINITARY_LOCAL_CODESIGN_DIR: join(dir, "signing"),
+      });
+    }, LARGE_APP_BUILD_MS);
+
+    it("returns the sign-in when other items trust a large app", async () => {
       const dir = scratchDir("infinitary-claude-item-");
       const home = join(dir, "home");
       const signing = join(dir, "signing");
@@ -78,7 +129,7 @@ describe("Claude's item is read without listing the other saved passwords", () =
         run(
           "add-generic-password",
           "-T",
-          PREMIERE,
+          largeApp,
           "-a",
           `filler${index}`,
           "-s",
@@ -171,6 +222,6 @@ describe("Claude's item is read without listing the other saved passwords", () =
           /* the throwaway file is removed with the scratch directory */
         }
       }
-    },
-  );
-});
+    });
+  },
+);

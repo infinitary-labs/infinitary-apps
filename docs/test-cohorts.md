@@ -132,6 +132,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/claudeProjectResources.integration.test.ts` | the SDK's own client, boxed, with a working copy's instructions, skills and settings and the folders above it planted around a crewmate, against a local stub API | 20 s (Linux staging case's fastest is 3.523 s) |
 | `src/core/claude/claudeSession.contract.integration.test.ts` | the SDK's own client, boxed, against a local stub API, under the session contract's suite | 15 s |
 | `src/core/claude/claudeSession.integration.test.ts` | the SDK's own client, boxed, against a local stub API, running a background shell sleep; and under a real supervisor, a foreground sleep that a close or a quit cuts | 15 s |
+| `src/core/claude/interruptWedge.integration.test.ts` | the SDK's own client, boxed, under the work computer's `SessionHost`, against a local stub API that never answers; the client frozen with SIGSTOP and stopped by the session | 30 s (each case waits out the SDK's 5 s SIGTERM-to-SIGKILL grace; Mac about 3.5 s per case) |
 | `tests/bench-attempt.test.ts` | the benchmark attempt CLI: the whole core, real git, the e2e mock provider | 95 s |
 | `src/core/claude/claudeFirstmateSeat.live.test.ts` | the installed Claude client on the machine's own login (opt-in, `INFINITARY_CLAUDE_SEAT_LIVE=1`) | 180 s opt-in |
 | `src/core/core.test.ts` | the whole core: git at the run's own priority, the login shell | 60 to 120 s on its boots |

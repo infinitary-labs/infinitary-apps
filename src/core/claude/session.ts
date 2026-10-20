@@ -898,6 +898,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   private failed = false;
   /** The failure an `abort(failure)` asked the cut turn to report, and when it asked. */
   private cut: { message: string; at: number } | undefined;
+  /** When the client was first asked to interrupt the running turn, until that turn answers. */
+  private interruptedAt: number | undefined;
   /** Run once the open prompt settles: a dispose or a detach waiting for it. */
   private afterSettle: (() => void)[] = [];
   private disposing = false;
@@ -980,6 +982,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.ran = false;
     this.failed = false;
     this.cut = undefined;
+    this.interruptedAt = undefined;
     this.served = undefined;
     return new Promise<void>((resolve, reject) => {
       this.turn = { resolve, reject };
@@ -1150,8 +1153,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
 
   /**
    * Interrupt the running turn. With a failure (a watched bound's, say), the
-   * cut turn reports it as a failed turn - and a client that does not answer
-   * the interrupt within a tick is stopped and the turn fails anyway.
+   * cut turn reports it as a failed turn. A client that does not answer the
+   * interrupt within a tick is stopped, and the turn ends anyway.
    */
   async abort(failure?: string): Promise<void> {
     if (failure !== undefined && (this.promptOpen || this.continuing) && !this.cut) {
@@ -1165,6 +1168,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     const connection = this.connection;
     if (!this.accepting || !connection || connection.closing) return;
     this.interrupting = true;
+    this.interruptedAt ??= this.config.clock.now();
     try {
       await connection.query.interrupt();
     } catch (caught) {
@@ -1247,7 +1251,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   /**
    * A client that has not done what it was asked a tick later is stopped:
    * one still running after its input ended, and one that never answered
-   * the interrupt a failing abort sent it - that turn fails anyway.
+   * an interrupt - that turn ends anyway, failed when a failing abort cut it.
    */
   checkClient(now: number): void {
     const connection = this.connection;
@@ -1260,7 +1264,13 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       this.close(connection, true);
     }
     // The interrupt never landed within a tick: the client is wedged.
-    if (this.promptOpen && this.cut && now - this.cut.at >= TICK_PERIOD_MS) this.abandon();
+    const asked = this.cut?.at ?? this.interruptedAt;
+    if (
+      (this.promptOpen || this.continuing) &&
+      asked !== undefined &&
+      now - asked >= TICK_PERIOD_MS
+    )
+      this.abandon();
   }
 
   /** Write the spec's contract stamp when it differs from the session's newest one. */
@@ -1615,6 +1625,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       this.cut = undefined;
       this.failed = false;
     }
+    // The client answered: it is not wedged.
+    this.interruptedAt = undefined;
     // A client that never reports its state settles on the result that
     // follows the last acknowledged message.
     if (!this.statesSeen && (!this.acksSeen || this.pushed.every((entry) => entry.acked))) {
@@ -1622,13 +1634,20 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     }
   }
 
-  /** The client did not answer its interrupt: end it, and the turn with it. */
+  /**
+   * The client did not answer its interrupt: end it, and the turn with it -
+   * failed when a failing abort cut it, quietly as a plain interrupt ends
+   * otherwise. A continuation ends once the stopped client's stream does.
+   */
   private abandon(): void {
     const cut = this.cut;
-    if (!cut) return;
-    if (!this.failed) {
-      this.failed = true;
-      this.emit({ type: "turn_failed", taskId: this.taskId, error: cut.message });
+    this.cut = undefined;
+    this.interruptedAt = undefined;
+    if (this.promptOpen && !this.failed) {
+      if (cut) {
+        this.failed = true;
+        this.emit({ type: "turn_failed", taskId: this.taskId, error: cut.message });
+      }
       this.emit({ type: "turn_end", taskId: this.taskId });
       this.emit({ type: "turn_closed" });
     }
@@ -1643,6 +1662,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.promptOpen = false;
     this.accepting = false;
     this.interrupting = false;
+    this.interruptedAt = undefined;
     this.holdUnacknowledgedSteers();
     for (const steer of this.early.splice(0)) this.held.push(steer.text);
     this.mirror();
@@ -1692,6 +1712,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.pushed = [];
     this.failed = false;
     this.cut = undefined;
+    this.interruptedAt = undefined;
     this.emit({ type: "continuation_started" });
   }
 
@@ -1706,6 +1727,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     this.accepting = false;
     this.interrupting = false;
     this.cut = undefined;
+    this.interruptedAt = undefined;
     this.holdUnacknowledgedSteers();
     this.mirror();
     this.emit({ type: "continuation_ended", ...(error !== undefined ? { error } : {}) });

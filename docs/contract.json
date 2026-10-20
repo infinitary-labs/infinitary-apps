@@ -22134,6 +22134,12 @@
                         "ciAt": {
                           "type": "number"
                         },
+                        "ciStartedAt": {
+                          "type": "number"
+                        },
+                        "ciFinishedAt": {
+                          "type": "number"
+                        },
                         "landedMode": {
                           "type": "string",
                           "enum": [
@@ -23397,6 +23403,12 @@
                     ]
                   },
                   "ciAt": {
+                    "type": "number"
+                  },
+                  "ciStartedAt": {
+                    "type": "number"
+                  },
+                  "ciFinishedAt": {
                     "type": "number"
                   },
                   "landedMode": {
@@ -26883,6 +26895,12 @@
                       ]
                     },
                     "ciAt": {
+                      "type": "number"
+                    },
+                    "ciStartedAt": {
+                      "type": "number"
+                    },
+                    "ciFinishedAt": {
                       "type": "number"
                     },
                     "landedMode": {
@@ -46566,6 +46584,12 @@
                         "ciAt": {
                           "type": "number"
                         },
+                        "ciStartedAt": {
+                          "type": "number"
+                        },
+                        "ciFinishedAt": {
+                          "type": "number"
+                        },
                         "landedMode": {
                           "type": "string",
                           "enum": [
@@ -47829,6 +47853,12 @@
                           ]
                         },
                         "ciAt": {
+                          "type": "number"
+                        },
+                        "ciStartedAt": {
+                          "type": "number"
+                        },
+                        "ciFinishedAt": {
                           "type": "number"
                         },
                         "landedMode": {

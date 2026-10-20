@@ -6,6 +6,8 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
+import { checksRestWords, checksSpanOf, checksSpanWords } from "../../src/shared/checksSpan";
+import { CHECK_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
@@ -17,13 +19,13 @@ import { focusOn } from "./windowKeys";
 
 /**
  * A merge card's fact strip refreshes while it is up (FI3-1093): the host
- * rewrites its facts whenever the task's record changes - the checks
- * reading's age, a new reading - and the stage hands the strip the new
+ * rewrites its facts whenever the task's record changes - a new checks
+ * reading - and the stage hands the strip the new
  * facts. A press the captain has started on the strip's pull request link
  * when that happens still opens the pull request when he lets go.
  *
  * The host's refresh is the card list it pushes, with the strip's checks
- * reading a minute older; the press is Chromium's own pointer, held down
+ * read a minute later; the press is Chromium's own pointer, held down
  * while the refresh lands and let go after it (`holdPointer`).
  */
 
@@ -57,6 +59,16 @@ function mergeCard(): Card {
 
 test("a press on the fact strip's pull request link opens it though the strip refreshes under it", async () => {
   const userDataDir = scratchDir("infinitary-card-facts-link-");
+  // Checks that ran for 14 minutes, read 93 s ago (INF-587).
+  const delivery = {
+    mode: "direct-pr" as const,
+    prNumber: 58,
+    prUrl: PR,
+    ci: "green" as const,
+    ciAt: Date.now() - 93_000,
+    ciStartedAt: Date.now() - 20 * 60_000,
+    ciFinishedAt: Date.now() - 6 * 60_000,
+  };
   const db = openDatabase(userDataDir);
   try {
     const tasks = new TaskService({ db });
@@ -76,15 +88,9 @@ test("a press on the fact strip's pull request link opens it though the strip re
       worktreeDir,
       model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
-    // Read 93 s ago: the strip says "read 2 min ago" for the next minute, so
-    // the host's own refreshes leave it as it is while the test runs.
-    tasks.recordDelivery(TASK, {
-      mode: "direct-pr",
-      prNumber: 58,
-      prUrl: PR,
-      ci: "green",
-      ciAt: Date.now() - 93_000,
-    });
+    // The strip names when they started and when they were read, which the
+    // host's own refreshes leave as they are while the test runs.
+    tasks.recordDelivery(TASK, delivery);
     new CardStore(db).upsert(mergeCard());
   } finally {
     db.close();
@@ -107,7 +113,16 @@ test("a press on the fact strip's pull request link opens it though the strip re
     const facts = factsStrip(cardBody(page, TITLE));
     const link = facts.change.locator(`a[href="${PR}"]`);
     await expect(link).toBeVisible();
-    await expect(facts.cell("checks")).toHaveAttribute("title", "read 2 min ago");
+    const span = checksSpanOf(delivery);
+    if (!span) throw new Error("The seeded checks have a start and a finish");
+    await expect(facts.cell("checks")).toContainText(
+      checksSpanWords(CHECK_WORDS.green, span, Date.now()),
+    );
+    const title = await facts.cell("checks").getAttribute("title");
+    expect(title).toMatch(/^Started .+ · read .+$/);
+    // The host's next reading, a minute later.
+    const later = checksRestWords(span, delivery.ciAt + 60_000);
+    expect(later).not.toBe(title);
 
     // INF-92: the captain asked to repair repeated completion facts without
     // changing the rigor-standard journey. Replay this real document with
@@ -157,7 +172,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
     // button going down, the refresh reaching its checks cell and the click
     // the release makes.
     await focusOn(promptInput(page));
-    await link.evaluate((anchor) => {
+    await link.evaluate((anchor, later) => {
       const strip = anchor.ownerDocument;
       const seen: string[] = [];
       (strip.defaultView as unknown as { __fmPress: string[] }).__fmPress = seen;
@@ -165,10 +180,10 @@ test("a press on the fact strip's pull request link opens it though the strip re
       strip.addEventListener("click", () => seen.push("click"), true);
       new MutationObserver(() => {
         const checks = strip.querySelector('[data-fact="checks"]');
-        if (checks?.getAttribute("title") === "read 3 min ago" && !seen.includes("refreshed"))
+        if (checks?.getAttribute("title") === later && !seen.includes("refreshed"))
           seen.push("refreshed");
       }).observe(strip.body, { subtree: true, childList: true, attributes: true });
-    });
+    }, later);
     const noted = () =>
       link.evaluate(
         (anchor) =>
@@ -179,7 +194,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
     const cards = await page.evaluate(() => window.infinitary.cards.list());
     const refreshed = cards.map((card) =>
       card.id === "card-meter-fix"
-        ? { ...card, body: card.body.replace('title="read 2 min ago"', 'title="read 3 min ago"') }
+        ? { ...card, body: card.body.replace(`title="${title}"`, `title="${later}"`) }
         : card,
     );
     expect(refreshed).not.toEqual(cards);
@@ -189,7 +204,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
     await app.evaluate(({ BrowserWindow }, refreshed) => {
       BrowserWindow.getAllWindows()[0]?.webContents.send("inf:cards", refreshed);
     }, refreshed);
-    await expect(facts.cell("checks")).toHaveAttribute("title", "read 3 min ago");
+    await expect(facts.cell("checks")).toHaveAttribute("title", later);
     await letGo();
     await expect.poll(opened).toEqual([PR, PR]);
     // The strip refreshed while the button was down: after it went down and

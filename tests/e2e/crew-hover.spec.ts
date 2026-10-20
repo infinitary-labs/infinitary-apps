@@ -60,8 +60,8 @@ const ROUTING: CrewRouting = {
   served: "medium",
 };
 
-/** The second crewmate has opened a pull request whose checks are running. */
-const CHANGE = { prNumber: 612, ci: "pending" } as const;
+/** The second crewmate has opened a pull request whose checks have run for 15 minutes. */
+const CHANGE = { prNumber: 612, ci: "pending", startedAgo: 15 * 60_000 } as const;
 
 /** The second crewmate's plan, sent with its note (FI3-734): two done, one current, one next. */
 const PLAN: PlanItem[] = [
@@ -181,9 +181,10 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
         model: modelDisplayName(fixture.models[1]),
         ...readout,
       });
-      // Its pull request and checks in the fact strip, as the merge card says them (FI3-1159).
+      // Its pull request and checks in the fact strip, as the merge card says them (FI3-1159),
+      // with how long they have run by the host's own start (INF-587).
       expect(summary.change).toBe("#612");
-      expect(summary.checks).toMatch(/^running(now|\d+[mhd])$/);
+      expect(summary.checks).toMatch(/^running for 1[56]m$/);
       expect(summary.checksDot).toBe("running");
       // Its plan (FI3-734): the count and the current item, and one dot per item.
       expect(summary.dots).toEqual(["done", "done", "current", "next"]);

@@ -69,6 +69,8 @@ class FakeForge implements Forge {
   };
   states: ForgeCheckState[] = ["success"];
   names?: string[];
+  /** Each check's start and finish as the host gives them, by position. */
+  times?: { startedAt?: number; finishedAt?: number }[];
   fail: Partial<
     Record<
       "changeFor" | "checks" | "putIn" | "close" | "openChange" | "updateChangeBody",
@@ -133,6 +135,7 @@ class FakeForge implements Forge {
     const items = this.states.map((state, index) => ({
       name: this.names?.[index] ?? (index === 0 ? "linux-checks" : `check-${index}`),
       state,
+      ...this.times?.[index],
     }));
     return { overall: overallOfChecks(items), items };
   }
@@ -1359,6 +1362,53 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
       head: "feed0002",
       since: 1_030_000,
     });
+  });
+
+  // The captain's ask (INF-587): the checks cell says how long the checks
+  // have run, counted from the host's own start, not the app's last reading.
+  // The times are main's own checks on a0cf68a2, as GitHub gave them.
+  it("records when the version's checks started and finished, by the host's own times", async () => {
+    const at = (time: string) => Date.parse(`2026-10-20T${time}Z`);
+    const forge = new FakeForge();
+    forge.names = ["unit-tests", "integration-tests (2/2)", "probe-tests"];
+    forge.states = ["success", "pending", "success"];
+    forge.times = [
+      { startedAt: at("03:30:47"), finishedAt: at("03:33:21") },
+      { startedAt: at("03:30:48") },
+      { startedAt: at("03:30:47"), finishedAt: at("03:31:28") },
+    ];
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    await service.checkForCrew("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "pending",
+      ciStartedAt: at("03:30:47"),
+    });
+    expect(tasks.get("ab12cd34")?.delivery?.ciFinishedAt).toBeUndefined();
+    // Passed: the last check's finish.
+    forge.states = ["success", "success", "success"];
+    forge.times[1] = { startedAt: at("03:30:48"), finishedAt: at("03:34:25") };
+    await service.readWatched("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "green",
+      ciStartedAt: at("03:30:47"),
+      ciFinishedAt: at("03:34:25"),
+    });
+    // Failed: the first failure's finish, though another check ran on.
+    forge.states = ["failure", "failure", "success"];
+    await service.checkOverall("ab12cd34");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "red",
+      ciFinishedAt: at("03:33:21"),
+    });
+    // A new version whose checks have not started yet has no time at all.
+    forge.change = { ...(forge.change as ForgeChange), headSha: "feed0002" };
+    forge.states = ["pending"];
+    forge.times = [];
+    await service.checkForCrew("ab12cd34");
+    const fresh = tasks.get("ab12cd34")?.delivery;
+    expect(fresh?.ciStartedAt).toBeUndefined();
+    expect(fresh?.ciFinishedAt).toBeUndefined();
   });
 
   it("ends on the crewmate's own finished reading, and stands through the host's own", async () => {

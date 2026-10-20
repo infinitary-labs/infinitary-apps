@@ -3,6 +3,7 @@ import type { ForgeProject } from "@shared/forges";
 import { requireConventional } from "../../../workspace/conventional";
 import type { ForgeApi } from "../../api";
 import {
+  checkTimes,
   type Forge,
   type ForgeChange,
   type ForgeCheck,
@@ -73,7 +74,14 @@ type MergeRequestJson = {
 
 type PipelineJson = { id: number; sha: string; ref: string; status: string; source?: string };
 
-type JobJson = { id: number; name: string; status: string; allow_failure?: boolean };
+type JobJson = {
+  id: number;
+  name: string;
+  status: string;
+  allow_failure?: boolean;
+  started_at?: string | null;
+  finished_at?: string | null;
+};
 
 /** The most job pages one pipeline's reading follows (100 per page). */
 const MAX_JOB_PAGES = 5;
@@ -404,7 +412,7 @@ export class GitLabForge implements Forge {
       );
       if (!Array.isArray(jobs)) throw unreadable(this.place, `pipeline #${pipeline.id}'s jobs`);
       for (const job of jobs as JobJson[]) {
-        const check = jobCheck(job);
+        const check = { ...jobCheck(job), ...checkTimes(job.started_at, job.finished_at) };
         items.push(several ? { ...check, name: `${check.name} [${what}]` } : check);
       }
       if (jobs.length < 100) return items;

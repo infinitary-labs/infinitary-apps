@@ -22,6 +22,7 @@ import {
   describeCheckState,
   type Forge,
   type ForgeChange,
+  type ForgeCheck,
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
@@ -1257,7 +1258,10 @@ export class PrCiService {
           this.record(record.id, checks.overall, { change, forge }, "watch", true, checks.items);
         } else {
           // An unchanged result is still a fresh reading, not a new status event.
-          this.options.tasks.recordDelivery(record.id, { ciAt: this.now() });
+          this.options.tasks.recordDelivery(record.id, {
+            ciAt: this.now(),
+            ...checksSpan(checks.overall, checks.items),
+          });
         }
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
         return {
@@ -2134,7 +2138,7 @@ export class PrCiService {
     checked?: CheckedChange,
     audience: Audience = "firstmate",
     stillRunning = false,
-    checks: { name: string; state: ForgeCheckState }[] = [],
+    checks: ForgeCheck[] = [],
   ): void {
     const at = this.now();
     const task = this.options.tasks.get(taskId);
@@ -2173,6 +2177,7 @@ export class PrCiService {
       {
         ci: overall,
         ciAt: at,
+        ...checksSpan(overall, checks),
         ...(change ? { headSha: change.headSha } : {}),
         ...round,
         ...watch,
@@ -2223,6 +2228,37 @@ export class PrCiService {
   private now(): number {
     return this.options.now?.() ?? Date.now();
   }
+}
+
+/**
+ * When this version's checks started and finished, by the host's own times
+ * (INF-587): the first check's start; once green the last check's finish,
+ * once red the first failure's. Both keys are always written, so a reading
+ * without them clears an earlier version's times.
+ */
+function checksSpan(
+  overall: PrCiOverall,
+  items: readonly Pick<ForgeCheck, "state" | "startedAt" | "finishedAt">[],
+): { ciStartedAt: number | undefined; ciFinishedAt: number | undefined } {
+  const starts = items.flatMap((item) => (item.startedAt === undefined ? [] : [item.startedAt]));
+  if (starts.length === 0) return { ciStartedAt: undefined, ciFinishedAt: undefined };
+  const ends = (from: typeof items) =>
+    from.flatMap((item) => (item.finishedAt === undefined ? [] : [item.finishedAt]));
+  const finished =
+    overall === "green"
+      ? ends(items)
+      : overall === "red"
+        ? ends(items.filter((item) => isRedCheckState(item.state)))
+        : [];
+  return {
+    ciStartedAt: Math.min(...starts),
+    ciFinishedAt:
+      finished.length === 0
+        ? undefined
+        : overall === "green"
+          ? Math.max(...finished)
+          : Math.min(...finished),
+  };
 }
 
 /** Some check is still queued or running: the only reading a watch waits on. */

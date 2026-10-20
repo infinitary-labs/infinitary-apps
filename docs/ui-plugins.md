@@ -170,7 +170,7 @@ The bridge keeps the element that last had focus in its document and a text fiel
 The host counts a gesture that opens something over the window or in the browser, or moves the captain's focus (`image`, a task's `open`, a card body's `link`, `escape`), only from a frame that holds the window's focus (`whenFrameHoldsFocus`).
 That moved the hash again.
 A document's MARKUP can be refreshed in place (FI3-1093): the host's `markup` message carries it anew (`FrameMountSpec.markup`, pushed after every `ready` and on every change), and the bridge rewrites only what differs - an attribute, a text, an element that is not the one in its place - so every node the refresh leaves alone is the same node afterwards.
-Only a card's fact strip asks for it (`CardFactsFrame`): the host rewrites its facts every minute while the checks reading ages, and a new document under a press on its pull request link ended that press in another document, so no click came.
+Only a card's fact strip asks for it (`CardFactsFrame`): the host rewrites its facts every minute while the checks' running time grows, and a new document under a press on its pull request link ended that press in another document, so no click came.
 While the original document is loading, the bridge keeps only the latest refresh and applies it after `DOMContentLoaded`, including a refresh received before the body exists.
 Morphing before that point would let the original parser append the same facts again; `tests/e2e/card-facts-link.spec.ts` holds that parser order before exercising the retained press.
 The markup is parsed inert, so nothing in it runs; a card body is still a new document per revision.

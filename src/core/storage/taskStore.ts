@@ -252,6 +252,10 @@ export type TaskDelivery = {
   headSha?: string;
   ci?: "green" | "red" | "pending" | "no-pr" | "merged";
   ciAt?: number;
+  /** When the host says the first check on that head started (INF-587). */
+  ciStartedAt?: number;
+  /** When the checks finished: the last finish when green, the first failure's when red. */
+  ciFinishedAt?: number;
   landedMode?: "fast-forward" | "merge" | "pr";
   landedAt?: number;
   /**

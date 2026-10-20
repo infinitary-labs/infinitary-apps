@@ -1,7 +1,8 @@
+import { checksFinishedAgo, checksRestWords, checksSpanWords } from "@shared/checksSpan";
 import { FACT_DOT, type FactDotState } from "@shared/factDot";
 import { feedRelativeAge } from "@shared/feed";
 import { reasoningWord } from "@shared/reasoning";
-import type { TaskFacts } from "@shared/taskFacts";
+import type { TaskChecks, TaskFacts } from "@shared/taskFacts";
 import {
   clipPlanLine,
   foldPlan,
@@ -33,9 +34,20 @@ function useMinute(): number {
  * keyboard's focus, which makes the age a Tab stop of its own; its
  * accessible name carries both (docs/keyboard.md, "Facts shown on rest").
  */
-function Age({ at, now, focusable }: { at: number; now: number; focusable: boolean }) {
+function Age({
+  at,
+  now,
+  focusable,
+  ago = false,
+}: {
+  at: number;
+  now: number;
+  focusable: boolean;
+  /** Say it as a time past, `5m ago`, after the checks' duration. */
+  ago?: boolean;
+}) {
   const exact = new Date(at).toLocaleString();
-  const short = feedRelativeAge(at, Math.max(now, at));
+  const short = ago ? checksFinishedAgo(at, now) : feedRelativeAge(at, Math.max(now, at));
   const rest = useRestLabel(exact, { fact: true });
   return (
     <time
@@ -49,6 +61,39 @@ function Age({ at, now, focusable }: { at: number; now: number; focusable: boole
     >
       {short}
     </time>
+  );
+}
+
+/**
+ * The checks' state word with how long they have run or took, by the
+ * host's own times (INF-587): `running for 15m`, `passed in 14m`. When the
+ * first check started and when the app last read them show on rest, as an
+ * age's exact time does.
+ */
+function ChecksWords({
+  checks,
+  now,
+  focusable,
+}: {
+  checks: TaskChecks;
+  now: number;
+  focusable: boolean;
+}) {
+  const words = checks.span ? checksSpanWords(checks.words, checks.span, now) : checks.words;
+  const exact = checksRestWords(checks.span, checks.at);
+  const rest = useRestLabel(exact, { fact: true });
+  if (!exact) return <span data-task-fact-checks="">{words}</span>;
+  return (
+    <span
+      className="checks"
+      data-task-fact-checks=""
+      role="img"
+      aria-label={`${words} · ${exact}`}
+      tabIndex={focusable ? 0 : undefined}
+      {...rest}
+    >
+      {words}
+    </span>
   );
 }
 
@@ -327,8 +372,8 @@ export function hasFactStrip(facts: TaskFacts): boolean {
  * card's own shape: one cell per fact, each an uppercase micro label over a
  * one-line value, the cells wrapping whole - the model, its intelligence
  * level and its reasoning (FI3-439), then the change (a link where the
- * host has a page and the surface takes clicks), its checks with the
- * reading's age, and a review's verdict - then the footnote saying why
+ * host has a page and the surface takes clicks), its checks with how long
+ * they have run or took, and a review's verdict - then the footnote saying why
  * that model. The crew summary draws it last, under a hairline; the task
  * record draws it just above its action bar.
  */
@@ -388,8 +433,10 @@ export function TaskFactStrip({
         {checks && (
           <Cell label="Checks" fact="checks" data-dot={checks.dot}>
             <FactDot state={checks.dot} />
-            {checks.words}
-            {checks.at != null && <Age at={checks.at} now={now} focusable={focusable} />}
+            <ChecksWords checks={checks} now={now} focusable={focusable} />
+            {checks.span?.finishedAt != null && (
+              <Age at={checks.span.finishedAt} now={now} focusable={focusable} ago />
+            )}
           </Cell>
         )}
         {review && (

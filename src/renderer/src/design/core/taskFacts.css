@@ -34,6 +34,10 @@
   /* The record's ages are Tab stops: the ring follows a rounded box. */
   border-radius: var(--radius-s);
 }
+/* The checks' words are a Tab stop on the record, showing their start and reading. */
+.fm-task-facts .checks {
+  border-radius: var(--radius-s);
+}
 /* The age keeps the line's right edge, whatever the note's length. */
 .fm-task-facts .now .age,
 .fm-task-facts .plan .age {

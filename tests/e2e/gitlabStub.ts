@@ -63,6 +63,9 @@ export type GitLabStubJob = {
   name: string;
   status: string;
   allow_failure?: boolean;
+  /** When it started and finished, as GitLab writes them (`2026-10-09T12:01:03.512Z`). */
+  started_at?: string;
+  finished_at?: string;
   /** The job's log as GitLab keeps it, colour codes and section markers included. */
   trace?: string;
   /** Its artifacts archive: the ZIP's bytes, or the date GitLab removed it. */
@@ -326,6 +329,9 @@ export async function startGitLabStub(host: string) {
       stage: "test",
       status: retry ? "pending" : job.status,
       allow_failure: job.allow_failure === true,
+      // A retried attempt has not started yet.
+      started_at: retry ? null : (job.started_at ?? null),
+      finished_at: retry ? null : (job.finished_at ?? null),
       ref: pipeline.ref,
       web_url: `https://${host}/${GITLAB_STUB_PROJECT}/-/jobs/${id}`,
       commit: { id: pipeline.sha },

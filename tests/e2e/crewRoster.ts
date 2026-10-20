@@ -41,7 +41,14 @@ export type CrewRosterOptions = {
    * A pull request the crewmate opened and its checks, recorded the way the
    * forge's reads record them, before its own note.
    */
-  change?: (index: number) => { prNumber: number; ci: "green" | "red" | "pending" } | undefined;
+  change?: (index: number) =>
+    | {
+        prNumber: number;
+        ci: "green" | "red" | "pending";
+        /** How long ago, in ms, the host says its first check started. */
+        startedAgo?: number;
+      }
+    | undefined;
   /** The plan a crewmate's note carries (FI3-734), sent with its note. */
   plan?: (index: number) => PlanItem[] | undefined;
 };
@@ -190,7 +197,13 @@ export async function crewRoster(count: number, options: CrewRosterOptions = {})
       );
       tasks.recordDelivery(
         `${idPrefix}-${i}`,
-        { ci: change.ci, ciAt: Date.now() },
+        {
+          ci: change.ci,
+          ciAt: Date.now(),
+          ...(change.startedAgo !== undefined
+            ? { ciStartedAt: Date.now() - change.startedAgo }
+            : {}),
+        },
         { kind: "ci", text: `checks ${change.ci}` },
       );
     }

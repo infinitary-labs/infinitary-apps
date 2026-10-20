@@ -48,6 +48,12 @@ import {
   isRepairAssessment,
   REPAIR_ASSESSMENT_SOURCE,
 } from "@shared/checkRepair";
+import {
+  checksFinishedAgo,
+  checksRestWords,
+  checksSpanOf,
+  checksSpanWords,
+} from "@shared/checksSpan";
 import { isClientIssueReason } from "@shared/claudeClient";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import type { CrewSendResult } from "@shared/crewTranscript";
@@ -8650,7 +8656,12 @@ export class CrewSupervisor {
     const ci = record.delivery?.ci;
     const ciAt = record.delivery?.ciAt;
     if (ci && ciAt !== undefined) {
-      const minutes = Math.max(0, Math.round((this.now() - ciAt) / 60_000));
+      // How long the checks ran or took and how long ago they finished, in
+      // the open; when they started and when the app last read them, on
+      // rest (INF-587). The host rewrites the strip on every tick, so both
+      // ages stay current while the card is up.
+      const span = record.delivery ? checksSpanOf(record.delivery) : null;
+      const words = CHECK_WORDS[ci] ?? ci;
       const dot =
         ci === "green" || ci === "merged"
           ? "ok"
@@ -8662,8 +8673,8 @@ export class CrewSupervisor {
       cell(
         "checks",
         "Checks",
-        `${statusDot(dot)}${CHECK_WORDS[ci] ?? ci}`,
-        `read ${minutes === 0 ? "just now" : `${minutes} min ago`}`,
+        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}`,
+        checksRestWords(span, ciAt),
       );
     } else if (delivery === "direct-pr") {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);

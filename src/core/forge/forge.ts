@@ -80,7 +80,29 @@ export type ForgeCheckState =
   | "neutral"
   | "pending";
 
-export type ForgeCheck = { name: string; state: ForgeCheckState };
+/**
+ * One check, with when the host says it started and finished (epoch ms),
+ * where it says so: the checks cell counts from them (INF-587).
+ */
+export type ForgeCheck = {
+  name: string;
+  state: ForgeCheckState;
+  startedAt?: number;
+  finishedAt?: number;
+};
+
+/** A check's start and finish from the host's ISO times, leaving out any it lacks or garbles. */
+export function checkTimes(
+  started: string | null | undefined,
+  finished: string | null | undefined,
+): { startedAt?: number; finishedAt?: number } {
+  const startedAt = started ? Date.parse(started) : Number.NaN;
+  const finishedAt = finished ? Date.parse(finished) : Number.NaN;
+  return {
+    ...(Number.isFinite(startedAt) ? { startedAt } : {}),
+    ...(Number.isFinite(finishedAt) ? { finishedAt } : {}),
+  };
+}
 
 export type ForgeOverall = "green" | "red" | "pending";
 

@@ -1,3 +1,4 @@
+import { type ChecksSpan, checksSpanOf } from "./checksSpan";
 import type { FactDotState } from "./factDot";
 import { type ModelReason, modelFootnote } from "./modelReason";
 import type { Slot } from "./modelSlots";
@@ -70,8 +71,16 @@ export type TaskBrowserLine = {
   driver?: TaskBrowserDriver;
 };
 
-/** The checks' newest reading: its dot, its word (`failed`) and when it was read. */
-export type TaskChecks = { dot: FactDotState; words: string; at: number | null };
+/**
+ * The checks' newest reading: its dot, its word (`failed`), when it was
+ * read, and how long they have run or took by the host's own times (INF-587).
+ */
+export type TaskChecks = {
+  dot: FactDotState;
+  words: string;
+  at: number | null;
+  span: ChecksSpan | null;
+};
 
 /** An independent review's verdict, with its risk (`findings · risk high`). */
 export type TaskReview = { dot: FactDotState; words: string };
@@ -244,6 +253,7 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
           dot: CHECKS_DOT[ci],
           words: ci === "no-pr" ? CHECKS_NOT_READ_WORDS : CHECK_WORDS[ci],
           at: facts.ciAt ?? null,
+          span: checksSpanOf(facts),
         }
       : null;
   const review = facts.reviewVerdict

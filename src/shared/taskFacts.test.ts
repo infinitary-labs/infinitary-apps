@@ -93,6 +93,7 @@ describe("the shared task facts", () => {
           prUrl: "https://github.com/demo/repo/pull/612",
           ci: "pending",
           ciAt: now - 60_000,
+          ciStartedAt: now - 15 * 60_000,
         },
       }),
       names,
@@ -115,7 +116,13 @@ describe("the shared task facts", () => {
           url: "https://github.com/demo/repo/pull/612",
         },
         // The merge card's words and dot for the same reading.
-        checks: { dot: "running", words: "running", at: now - 60_000 },
+        // How long they have run counts from the host's start, not the reading (INF-587).
+        checks: {
+          dot: "running",
+          words: "running",
+          at: now - 60_000,
+          span: { startedAt: now - 15 * 60_000, finishedAt: null, joint: "for" },
+        },
         review: null,
       },
       browser: null,
@@ -273,17 +280,21 @@ describe("the shared task facts", () => {
       ).delivery,
     ).toEqual({
       change: { noun: "Branch", label: "fm/task-ab12", url: null },
-      checks: { dot: "ok", words: "passed", at: null },
+      checks: { dot: "ok", words: "passed", at: null, span: null },
       review: null,
     });
     expect(
       taskFactsOf(detail({ delivery: { mode: "direct-pr", ci: "red", ciAt: now } }), names)
         .delivery,
-    ).toEqual({ change: null, checks: { dot: "failed", words: "failed", at: now }, review: null });
+    ).toEqual({
+      change: null,
+      checks: { dot: "failed", words: "failed", at: now, span: null },
+      review: null,
+    });
     // A change no reading has reached yet.
     expect(
       taskFactsOf(detail({ delivery: { mode: "direct-pr", prNumber: 7 } }), names).delivery?.checks,
-    ).toEqual({ dot: "idle", words: "not read yet", at: null });
+    ).toEqual({ dot: "idle", words: "not read yet", at: null, span: null });
     // Nothing proposed and nothing read: no line at all.
     expect(taskFactsOf(detail({ delivery: { mode: "local-only" } }), names).delivery).toBeNull();
     expect(
@@ -301,7 +312,7 @@ describe("the shared task facts", () => {
     };
     expect(taskFactsOf(detail({ delivery }), names).delivery).toEqual({
       change: { noun: "Pull request", label: "#84", url: null },
-      checks: { dot: "failed", words: "failed", at: null },
+      checks: { dot: "failed", words: "failed", at: null, span: null },
       review: { dot: "warn", words: "findings · risk high" },
     });
     // A closed task names its change once, on its closing line.

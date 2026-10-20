@@ -180,6 +180,69 @@ describe("GitHubForge", () => {
     expect(seen.every((request) => request.method === "GET")).toBe(true);
   });
 
+  // The captain's ask (INF-587): the checks cell counts from GitHub's own
+  // start and finish. The check runs are main's own on a0cf68a2, as GitHub gave them.
+  it("keeps each check's start and finish as GitHub gives them", async () => {
+    const { forge } = await stub({
+      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+        json: {
+          total_count: 2,
+          check_runs: [
+            {
+              name: "integration-tests (2/2)",
+              status: "in_progress",
+              conclusion: null,
+              started_at: "2026-10-20T03:30:48Z",
+              completed_at: null,
+              check_suite: { id: 106671664368 },
+            },
+            {
+              name: "probe-tests",
+              status: "completed",
+              conclusion: "success",
+              started_at: "2026-10-20T03:30:47Z",
+              completed_at: "2026-10-20T03:31:28Z",
+              check_suite: { id: 106671664368 },
+            },
+          ],
+        },
+      }),
+      // A commit status starts when it was first posted, and a settled one ends at its last change.
+      "GET /repos/octo/meter/commits/feedbeef/status": () => ({
+        json: {
+          statuses: [
+            {
+              context: "deploy/preview",
+              state: "success",
+              created_at: "2026-10-20T03:30:50Z",
+              updated_at: "2026-10-20T03:32:10Z",
+            },
+          ],
+        },
+      }),
+    });
+    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
+    expect((await forge.checks(change)).items).toEqual([
+      {
+        name: "integration-tests (2/2)",
+        state: "pending",
+        startedAt: Date.parse("2026-10-20T03:30:48Z"),
+      },
+      {
+        name: "probe-tests",
+        state: "success",
+        startedAt: Date.parse("2026-10-20T03:30:47Z"),
+        finishedAt: Date.parse("2026-10-20T03:31:28Z"),
+      },
+      {
+        name: "deploy/preview",
+        state: "success",
+        startedAt: Date.parse("2026-10-20T03:30:50Z"),
+        finishedAt: Date.parse("2026-10-20T03:32:10Z"),
+      },
+    ]);
+  });
+
   it("sets aside a cancelled check only when a later run of the same workflow and event decides it", async () => {
     type Run = { id: number; workflow: number; event: string; status: string };
     type Check = { name: string; status: string; conclusion: string | null; suite?: number };

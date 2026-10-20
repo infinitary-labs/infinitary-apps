@@ -121,6 +121,16 @@ export const taskDeliveryViewSchema = z.object({
   headSha: z.string().optional(),
   ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
   ciAt: z.number().optional(),
+  /**
+   * When the host says the first check on that head started (INF-587):
+   * the checks cell counts from it. Absent until a check has started.
+   */
+  ciStartedAt: z.number().optional(),
+  /**
+   * When finished checks finished: the last check's finish when they
+   * passed, the first failure's when they failed. Absent while running.
+   */
+  ciFinishedAt: z.number().optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
   landedAt: z.number().optional(),
   /** The independent review's latest verdict on a reviewed task (delivery rigor phase 2). */

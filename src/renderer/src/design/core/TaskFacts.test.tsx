@@ -74,6 +74,8 @@ const task = {
     prUrl: "https://github.com/demo/repo/pull/57",
     ci: "pending",
     ciAt: now - 60_000,
+    // The first check started 15 minutes ago, by GitHub's own time (INF-587).
+    ciStartedAt: now - 15 * 60_000,
     reviewVerdict: "pass",
     reviewRisk: "low",
   },
@@ -152,7 +154,7 @@ describe("one task's facts on the crew summary and the task record", () => {
       reasoning: "Extra high",
       reason: "Building from the plan in SCR-1. Reasoning one step lower for Quick care.",
       change: "#57",
-      checks: "running1m",
+      checks: "running for 15m",
       review: "passed · risk low",
     });
     // Every strip cell has its micro label over its value, as the merge card's do.

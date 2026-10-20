@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "checks-running-time",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Checks show how long they have been running",
+      "body": "Wherever a task shows its checks - the summary that opens on a crewmate, the task record and the merge card - it now says how long they have been running, such as running for 15m, counted from when GitHub or GitLab started the first check. Finished checks say how long they took and when they finished, such as passed in 14m · 5m ago. Resting on the checks shows when they started and when the app last read them.",
+      "picture": {
+        "dark": "checks-running-time-dark.webp",
+        "light": "checks-running-time-light.webp",
+        "alt": "A crewmate's summary for Speed up the export, with pull request #612 and its checks reading passed in 14m · 5m ago."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

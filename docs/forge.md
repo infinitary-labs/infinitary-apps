@@ -508,7 +508,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   A reading at the head already watched keeps its start.
   `failureSeen` means the early wake for that head already went, or the crewmate already read a red check, so that wake is not sent again.
 - **Read** on the shared 60 s tick (`CrewSupervisor.pollCheckWatches`, through `PrCiService.readWatched`): every minute for 10 minutes, then every 2, up to the two-hour bound.
-  Every successful reading updates the saved reading time, even when running checks keep the same status and head, so the displayed checks age stays current.
+  Every successful reading updates the saved reading time, even when running checks keep the same status and head, so the reading time shown on rest stays current.
   Running readings record a `ci` event when the status or head changes; settled readings record a `ci` event, raw failure history and, only for an unsuccessful declared own repair, an attempt and its cap.
 - **Quiet refresh** continues every five minutes (`CHECK_REFRESH_MS`) for live tasks with a recorded open pull request, even after a watch ends, using the same reading and delivery facts.
   It runs on the shared tick after a restart too, backs off unreadable checks and stops on task close or a reading that finds the pull request gone or merged.
@@ -525,6 +525,16 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   The early wake spends no repair round and does not change how a pull request goes green.
 - **The idle ladder** reads a standing watch as the task moving (`Witnesses.checksWatched`, `docs/report-sort.md`): the crewmate that ends its turn to wait is neither nudged nor reported stuck, and its report wakes nobody until the checks finish.
   The early wake does not clear the watch, so the task still reads Waiting for checks.
+
+## The checks cell's time
+
+Wherever the app shows a task's checks - the fact strip on the crew summary and the task record, and the merge card's Checks cell - it says how long they have been running, or how long they took, counted by the host's own times (INF-587).
+`checks()` keeps each check's start and finish where the host gives them (`ForgeCheck.startedAt`, `finishedAt`): a GitHub check run's `started_at` and `completed_at`, a commit status's `created_at` and, once settled, its `updated_at`, a workflow run not yet listed as a check by its `run_started_at`, and a GitLab job's `started_at` and `finished_at`.
+Every reading writes `ciStartedAt` and `ciFinishedAt` on the task's delivery facts (`checksSpan` in `src/core/orchestrator/prCi.ts`): the first check's start; once green the last check's finish; once red the first failure's finish.
+A reading with no start clears both, so a new version starts the count again, and a rerun that the host lists as the newer check counts from its own start.
+The cell reads `running for 15m`, `passed in 14m · 5m ago` or `failed after 9m · 5m ago`, in whole minutes redrawn each minute (`src/shared/checksSpan.ts`); on rest it shows when the first check started and when the app last read them.
+Checks that have not started, not read yet or merged outside the app show no time.
+The first mate's own facts keep the reading's age (`ciFact.ts`), because it judges a reading's freshness by it; Activity and the Now line keep each reading's own time.
 
 ## The run watch
 

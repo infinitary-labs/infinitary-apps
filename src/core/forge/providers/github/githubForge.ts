@@ -13,6 +13,7 @@ import {
   type ReleaseUpload,
 } from "../../api";
 import {
+  checkTimes,
   type Forge,
   type ForgeChange,
   type ForgeCheck,
@@ -169,7 +170,12 @@ type CheckRunJson = {
   status: string;
   conclusion: string | null;
   check_suite?: { id: number } | null;
+  started_at?: string | null;
+  completed_at?: string | null;
 };
+
+/** A commit status: posted at `created_at`, last changed at `updated_at`. */
+type StatusJson = { context: string; state: string; created_at?: string; updated_at?: string };
 
 /** The workflow run a check suite belongs to, as far as superseding needs it. */
 type SuiteRunJson = {
@@ -179,6 +185,7 @@ type SuiteRunJson = {
   event: string;
   run_number: number;
   status: string;
+  run_started_at?: string | null;
 };
 
 export class GitHubForge implements Forge {
@@ -404,9 +411,9 @@ export class GitHubForge implements Forge {
       `${this.repoPath()}/commits/${sha}/check-runs`,
       (page) => (page as { check_runs?: CheckRunJson[] }).check_runs ?? [],
     );
-    const statuses = await this.pages<{ context: string; state: string }>(
+    const statuses = await this.pages<StatusJson>(
       `${this.repoPath()}/commits/${sha}/status`,
-      (page) => (page as { statuses?: { context: string; state: string }[] }).statuses ?? [],
+      (page) => (page as { statuses?: StatusJson[] }).statuses ?? [],
     );
     // Waiting jobs can have no check yet. Read the workflow runs once for
     // both that gap and superseded cancellations. An unreadable side list
@@ -428,14 +435,23 @@ export class GitHubForge implements Forge {
     const workflows = workflowRuns?.workflow_runs ?? [];
     const items: ForgeCheck[] = [
       ...this.withoutSupersededCancellations(runs.items, workflows),
-      ...statuses.items.map((status) => ({
-        name: status.context,
-        state: STATUS_STATES[status.state] ?? ("pending" as const),
-      })),
+      ...statuses.items.map((status) => {
+        const state = STATUS_STATES[status.state] ?? ("pending" as const);
+        // A status starts when it was first posted; a settled one finished at its last change.
+        return {
+          name: status.context,
+          state,
+          ...checkTimes(status.created_at, state === "pending" ? null : status.updated_at),
+        };
+      }),
     ];
     for (const run of workflows) {
       if (run.status !== "completed") {
-        items.push({ name: `${run.name ?? "workflow"} (run ${run.run_number})`, state: "pending" });
+        items.push({
+          name: `${run.name ?? "workflow"} (run ${run.run_number})`,
+          state: "pending",
+          ...checkTimes(run.run_started_at, null),
+        });
       }
     }
     if (workflows.length === 100 && (workflowRuns?.total_count ?? 0) > workflows.length) {
@@ -501,7 +517,14 @@ export class GitHubForge implements Forge {
     runs: CheckRunJson[],
     workflowRuns: SuiteRunJson[],
   ): ForgeCheck[] {
-    const read = runs.map((run) => ({ run, check: { name: run.name, state: runState(run) } }));
+    const read = runs.map((run) => ({
+      run,
+      check: {
+        name: run.name,
+        state: runState(run),
+        ...checkTimes(run.started_at, run.completed_at),
+      },
+    }));
     if (!read.some(({ check }) => check.state === "cancelled")) {
       return read.map(({ check }) => check);
     }

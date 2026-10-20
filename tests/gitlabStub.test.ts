@@ -204,6 +204,35 @@ describe("pipelines read as checks on the merge request's head", () => {
     expect(states(failed.items)).toEqual(["pipeline #101 (branch): failure", "test: failure"]);
   });
 
+  // The captain's ask (INF-587): the checks cell counts from GitLab's own start and finish.
+  it("keeps each job's start and finish as GitLab gives them", async () => {
+    const checks = await readingOf([
+      {
+        status: "running",
+        jobs: [
+          {
+            name: "lint",
+            status: "success",
+            started_at: "2026-10-09T12:01:03.512Z",
+            finished_at: "2026-10-09T12:02:41.090Z",
+          },
+          { name: "test", status: "running", started_at: "2026-10-09T12:01:04.117Z" },
+          { name: "deploy", status: "created" },
+        ],
+      },
+    ]);
+    expect(checks.items.slice(1)).toEqual([
+      {
+        name: "lint",
+        state: "success",
+        startedAt: Date.parse("2026-10-09T12:01:03.512Z"),
+        finishedAt: Date.parse("2026-10-09T12:02:41.090Z"),
+      },
+      { name: "test", state: "pending", startedAt: Date.parse("2026-10-09T12:01:04.117Z") },
+      { name: "deploy", state: "pending" },
+    ]);
+  });
+
   it("never reads a manual job someone must start as passed, but lets an optional one and an allowed failure pass", async () => {
     const blocked = await readingOf([
       {

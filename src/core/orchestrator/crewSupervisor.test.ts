@@ -13763,15 +13763,18 @@ describe("the task graph (task-system P2)", () => {
         prNumber: 55,
         ci: "green",
         ciAt: Date.now() - 3 * 60_000,
+        ciStartedAt: Date.now() - 20 * 60_000,
+        ciFinishedAt: Date.now() - 6 * 60_000,
       });
       // A revision under the same id re-renders the facts from the record:
-      // the PR is its number, never the raw URL, and the CI reading's age
-      // rides the cell's title.
+      // the PR is its number, never the raw URL; how long the checks took
+      // shows in the open (INF-587), and their start and the reading ride
+      // the cell's title.
       emit();
       await tick();
       expect(body()).toContain('<a href="https://github.com/o/r/pull/55">#55</a>');
-      expect(body()).toContain("</svg>passed</span>");
-      expect(body()).toContain('title="read 3 min ago"');
+      expect(body()).toContain("</svg>passed in 14m · 6m ago</span>");
+      expect(body()).toMatch(/title="Started [^"]+ · read [^"]+"/);
       expect(body()).not.toContain("not read yet");
       expect(cards().filter((card) => card.title === "The smoke test is fixed")).toHaveLength(1);
       // The holds the host placed ride the same strip (contract v3.6,

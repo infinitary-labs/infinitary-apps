@@ -313,7 +313,7 @@ Once the record's read answers, the whole projection is that read's, the same on
 | MODEL (strip) | the full model display name; absent before assignment | the one model-name lookup (`modelNames`, `src/shared/modelDisplayName.ts`) the labels, the record and the core's `ModelSlots.nameOf` use |
 | INTELLIGENCE (strip) | the level the crewmate is served on, as the `SlotBadge` Settings → Models draws it; absent before routing | `tasks.board` `tier`, the level the crewmate's solid shows |
 | REASONING (strip) | the reasoning its session opened at ("Extra high", "Model's own"); absent when the record cannot say | `tasks.detail` `reasoning` through `reasoningWord` (`docs/routing.md` "Reasoning effort") |
-| PULL REQUEST, CHECKS, REVIEW (strip) | the pull request (or branch) by its label as plain text, its checks as the merge card's dot and word with the reading's short age, and a review's verdict; absent until the task has a change or a checks reading | `tasks.board` `delivery` |
+| PULL REQUEST, CHECKS, REVIEW (strip) | the pull request (or branch) by its label as plain text, its checks as the merge card's dot and word with how long they have run or took (`running for 15m`, `passed in 14m · 5m ago`), and a review's verdict; absent until the task has a change or a checks reading | `tasks.board` `delivery` |
 | footnote | why that model was chosen, then why the reasoning is lower than its level asks, in plain words; absent when the record can say neither | `tasks.detail` `modelReason` and `reasoning` through `modelFootnote` (`docs/routing.md` "Why this model") |
 
 The status, the task title and the project wrap in full.

@@ -14,6 +14,12 @@ export type WorkflowRun = {
   status: string;
   conclusion: string | null;
   url: string;
+  /**
+   * When the host says the run (its latest attempt) started, and when a
+   * finished run finished, epoch ms; absent where the host gives none.
+   */
+  startedAt?: number;
+  finishedAt?: number;
 };
 
 export type WorkflowJob = {

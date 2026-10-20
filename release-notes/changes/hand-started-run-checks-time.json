@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "hand-started-run-checks-time",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Checks show their time for a run a crewmate started by hand",
+      "body": "When a crewmate starts a GitHub or GitLab run that is not part of a pull request, such as a release, and waits for it, the summary that opens on that crewmate and its task record now show the run as its checks: how long it has been running, such as running for 42m, and once it ends how long it took.",
+      "picture": {
+        "dark": "hand-started-run-checks-time-dark.webp",
+        "light": "hand-started-run-checks-time-light.webp",
+        "alt": "A crewmate's summary for Cut the next Infinitary alpha, waiting for checks, with its checks reading running for 42m."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

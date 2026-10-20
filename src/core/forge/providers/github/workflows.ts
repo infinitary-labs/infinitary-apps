@@ -1,4 +1,4 @@
-import { ForgeError } from "../../forge";
+import { checkTimes, ForgeError } from "../../forge";
 import {
   type ForgeWorkflows,
   WORKFLOW_ARTIFACT_MAX_BYTES,
@@ -21,6 +21,11 @@ type RunJson = {
   status: string;
   conclusion: string | null;
   html_url: string;
+  created_at?: string | null;
+  /** The latest attempt's start; a rerun moves it. */
+  run_started_at?: string | null;
+  /** A run has no completed_at: once it is completed, its last update is its end. */
+  updated_at?: string | null;
 };
 type JobJson = {
   id: number;
@@ -114,6 +119,10 @@ function runOf(run: RunJson): WorkflowRun {
     status: run.status,
     conclusion: run.conclusion,
     url: run.html_url,
+    ...checkTimes(
+      run.run_started_at ?? run.created_at,
+      run.status === "completed" ? run.updated_at : null,
+    ),
   };
 }
 const FAILED_JOB = new Set(["failure", "timed_out", "startup_failure", "action_required"]);

@@ -1,6 +1,6 @@
 import type { RepoDelivery } from "./repos";
 import type { Rigor } from "./rigor";
-import type { TaskDeliveryView } from "./tasks";
+import type { RunChecks, TaskDeliveryView } from "./tasks";
 
 /**
  * The words the app says for the facts it stores (roadmap 1.5, the
@@ -97,6 +97,14 @@ export const CHECK_WORDS: Words<NonNullable<TaskDeliveryView["ci"]>> = {
   pending: "running",
   "no-pr": "no pull request yet",
   merged: "merged outside the app",
+};
+
+/** What the checks say of a run started by hand, by its state (INF-594). */
+export const RUN_CHECK_WORDS: Words<RunChecks["state"]> = {
+  running: CHECK_WORDS.pending,
+  passed: CHECK_WORDS.green,
+  failed: CHECK_WORDS.red,
+  cancelled: "cancelled",
 };
 
 /** What the checks say of a change no reading has reached yet. */

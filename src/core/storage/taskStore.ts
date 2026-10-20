@@ -10,7 +10,7 @@ import type { ReviewRisk, ReviewVerdict } from "@shared/rigor";
 import type { RiskAssessment } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
-import type { TaskDeliveryMode } from "@shared/tasks";
+import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
 import type { WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type { AppDatabase } from "./db";
@@ -256,6 +256,8 @@ export type TaskDelivery = {
   ciStartedAt?: number;
   /** When the checks finished: the last finish when green, the first failure's when red. */
   ciFinishedAt?: number;
+  /** The newest watched run's state and host times, kept after its watch ends (INF-594). */
+  runChecks?: RunChecks;
   landedMode?: "fast-forward" | "merge" | "pr";
   landedAt?: number;
   /**

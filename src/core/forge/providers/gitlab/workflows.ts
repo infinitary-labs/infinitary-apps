@@ -1,4 +1,4 @@
-import { ForgeError } from "../../forge";
+import { checkTimes, ForgeError } from "../../forge";
 import {
   type ForgeWorkflows,
   WORKFLOW_ARTIFACT_MAX_BYTES,
@@ -29,6 +29,8 @@ type PipelineJson = {
   status: string;
   name?: string | null;
   web_url?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
 };
 
 type JobJson = {
@@ -71,6 +73,10 @@ export class GitLabWorkflows implements ForgeWorkflows {
       status: pipeline.status,
       conclusion: FINISHED.has(pipeline.status) ? pipeline.status : null,
       url: pipeline.web_url ?? "",
+      ...checkTimes(
+        pipeline.started_at,
+        FINISHED.has(pipeline.status) ? pipeline.finished_at : null,
+      ),
     };
   }
 

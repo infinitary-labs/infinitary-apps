@@ -109,6 +109,23 @@ export type TaskEventKind = z.infer<typeof taskEventKindSchema>;
 export const taskDeliveryModeSchema = z.enum([...repoDeliverySchema.options, "in-place"]);
 export type TaskDeliveryMode = z.infer<typeof taskDeliveryModeSchema>;
 
+/**
+ * The newest watched workflow run a task started outside a pull request
+ * (INF-594), as the app last read it: its state, and when the host says it
+ * started and finished. It outlives the run's watch, so a finished run
+ * still says how long it took.
+ */
+export const runChecksSchema = z.object({
+  runId: z.number(),
+  name: z.string(),
+  state: z.enum(["running", "passed", "failed", "cancelled"]),
+  startedAt: z.number().optional(),
+  finishedAt: z.number().optional(),
+  /** When the app read it. */
+  at: z.number(),
+});
+export type RunChecks = z.infer<typeof runChecksSchema>;
+
 /** Delivery facts as they become known (check_pr_ci, land, merge-pr, review). */
 export const taskDeliveryViewSchema = z.object({
   captainAction: captainActionSchema.optional(),
@@ -131,6 +148,8 @@ export const taskDeliveryViewSchema = z.object({
    * passed, the first failure's when they failed. Absent while running.
    */
   ciFinishedAt: z.number().optional(),
+  /** A hand-started run's checks; the checks cell shows them while the task has no change. */
+  runChecks: runChecksSchema.optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
   landedAt: z.number().optional(),
   /** The independent review's latest verdict on a reviewed task (delivery rigor phase 2). */

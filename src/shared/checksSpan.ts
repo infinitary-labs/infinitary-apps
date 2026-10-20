@@ -1,5 +1,5 @@
 import { feedRelativeAge } from "./relativeAge";
-import type { TaskDeliveryView } from "./tasks";
+import type { RunChecks, TaskDeliveryView } from "./tasks";
 
 /**
  * How long a version's checks have run, or took (INF-587): from the host's
@@ -27,6 +27,15 @@ export function checksSpanOf(
   if (ci === "green") return { startedAt, finishedAt, joint: "in" };
   if (ci === "red") return { startedAt, finishedAt, joint: "after" };
   return null;
+}
+
+/** A hand-started run's span (INF-594): from the host's start, to its end once it ended. */
+export function runChecksSpanOf(run: RunChecks): ChecksSpan | null {
+  const { startedAt, finishedAt } = run;
+  if (startedAt === undefined) return null;
+  if (run.state === "running") return { startedAt, finishedAt: null, joint: "for" };
+  if (finishedAt === undefined) return null;
+  return { startedAt, finishedAt, joint: run.state === "passed" ? "in" : "after" };
 }
 
 /** Whole minutes, as the checks cell counts: `under 1m`, `15m`, `1h 05m`. */

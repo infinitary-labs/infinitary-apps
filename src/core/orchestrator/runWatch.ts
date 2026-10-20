@@ -1,3 +1,4 @@
+import type { RunChecks } from "@shared/tasks";
 import { ForgeError, type WorkflowJobLine, type WorkflowJobList, type WorkflowRun } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
 import type { RunWatch } from "../storage/taskStore";
@@ -23,6 +24,45 @@ export function failedRunJobs(list: WorkflowJobList): WorkflowJobLine[] {
         job.conclusion ?? "",
       ),
   );
+}
+
+/** A run's state for the checks cell: running until it ends, then by its conclusion. */
+function runChecksState(run: WorkflowRun): RunChecks["state"] {
+  if (!runFinished(run)) return "running";
+  const conclusion = run.conclusion ?? run.status;
+  if (conclusion === "success" || conclusion === "skipped") return "passed";
+  if (conclusion === "cancelled" || conclusion === "canceled") return "cancelled";
+  return "failed";
+}
+
+/**
+ * Keeps a watched run's reading on the task for the checks cell (INF-594):
+ * the same run's newer reading replaces it, and so does a run the host
+ * started at or after it; an older run leaves the newer one shown.
+ */
+export function recordRunChecks(
+  tasks: Pick<TaskService, "get" | "recordDelivery">,
+  taskId: string,
+  run: WorkflowRun,
+  at: number,
+): void {
+  const shown = tasks.get(taskId)?.delivery?.runChecks;
+  if (
+    shown &&
+    shown.runId !== run.id &&
+    (run.startedAt === undefined || (shown.startedAt ?? 0) > run.startedAt)
+  )
+    return;
+  tasks.recordDelivery(taskId, {
+    runChecks: {
+      runId: run.id,
+      name: run.name,
+      state: runChecksState(run),
+      ...(run.startedAt !== undefined ? { startedAt: run.startedAt } : {}),
+      ...(run.finishedAt !== undefined ? { finishedAt: run.finishedAt } : {}),
+      at,
+    },
+  });
 }
 
 export function runWatchOnce(watch: RunWatch, event: "failure" | "end"): string {
@@ -88,6 +128,7 @@ export class RunWatcher {
       }
       // A close or a crewmate read during this request owns the newer facts.
       if (!this.current(taskId, watch)) return;
+      recordRunChecks(this.host.tasks, taskId, read.run, now);
       const current = { ...watch, attempt: read.run.attempt, name: read.run.name };
       const failed = failedRunJobs(read.list);
       const facts = {

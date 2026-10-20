@@ -536,6 +536,13 @@ The cell reads `running for 15m`, `passed in 14m · 5m ago` or `failed after 9m 
 Checks that have not started, not read yet or merged outside the app show no time.
 The first mate's own facts keep the reading's age (`ciFact.ts`), because it judges a reading's freshness by it; Activity and the Now line keep each reading's own time.
 
+A task with no change yet shows the run it started by hand instead, when the app watches one (INF-594, "The run watch" below).
+The run reader keeps the host's times (`WorkflowRun.startedAt`, `finishedAt`): a GitHub run's `run_started_at`, the latest attempt's start, and once completed its `updated_at`, because a run has no `completed_at`; a GitLab pipeline's `started_at` and `finished_at`.
+Every reading of a watched run - the crewmate's short read and the minute reader's - writes `runChecks` on the delivery facts (`recordRunChecks` in `src/core/orchestrator/runWatch.ts`): the run, its state (running, passed, failed or cancelled), its times and the reading's time.
+It stays after the watch ends, so a finished run says `passed in 3h 26m · 5m ago`.
+A reading of another run replaces it only when that run started at or after it, so the newest run shows.
+The run is read by its number, never by its commit, which may carry other checks; a task with a change shows the change's checks.
+
 ## The run watch
 
 A crewmate's short `read_workflow({ runId })` of a run still going saves a watch in the task's `runWatches` delivery facts (`WorkflowEvidenceService`, `RunWatcher`).
@@ -560,6 +567,7 @@ A closed task receives no wake; an overlapping crewmate read or close supersedes
 A crewmate's own short read of failures suppresses the early wake it already knows, and its short read of an ended run clears the watch without a wake.
 Starting and ending a watch each writes one task timeline line.
 While a watch stands, `checksWatched` keeps the idle ladder from nudging or reporting the task stuck, and its existing posture reads Waiting for checks.
+Each reading also keeps the run's state and host times for the checks cell ("The checks cell's time").
 
 The run watch never writes pull request check readings, diagnoses, repair counts or merge permission.
 `check_change` remains the pull request green gate; `github_read`, job log reads and downloads keep their existing contracts.

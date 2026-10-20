@@ -1,4 +1,4 @@
-import { type ChecksSpan, checksSpanOf } from "./checksSpan";
+import { type ChecksSpan, checksSpanOf, runChecksSpanOf } from "./checksSpan";
 import type { FactDotState } from "./factDot";
 import { type ModelReason, modelFootnote } from "./modelReason";
 import type { Slot } from "./modelSlots";
@@ -13,6 +13,7 @@ import {
 import type { TaskPlan } from "./taskPlan";
 import { type TaskStatusInput, type TaskStatusReading, taskStatusOf } from "./taskPresentation";
 import type {
+  RunChecks,
   TaskActionLine,
   TaskActivityLine,
   TaskActivityRow,
@@ -20,7 +21,7 @@ import type {
   TaskEventKind,
   TaskView,
 } from "./tasks";
-import { CHECK_WORDS, CHECKS_NOT_READ_WORDS, REVIEW_WORDS } from "./vocabulary";
+import { CHECK_WORDS, CHECKS_NOT_READ_WORDS, REVIEW_WORDS, RUN_CHECK_WORDS } from "./vocabulary";
 
 /**
  * The facts every view of a task reads, in the order the crew summary
@@ -214,6 +215,14 @@ const CHECKS_DOT: Record<NonNullable<TaskDeliveryView["ci"]>, FactDotState> = {
   "no-pr": "idle",
 };
 
+/** A hand-started run's dot by its state. */
+const RUN_CHECKS_DOT: Record<RunChecks["state"], FactDotState> = {
+  running: "running",
+  passed: "ok",
+  failed: "failed",
+  cancelled: "idle",
+};
+
 const REVIEW_DOT: Record<NonNullable<TaskDeliveryView["reviewVerdict"]>, FactDotState> = {
   pass: "ok",
   findings: "warn",
@@ -240,6 +249,8 @@ export function taskChangeOf(facts: NonNullable<TaskView["delivery"]>): TaskChan
  * once, on its closing line (the record's A10), and keeps only a review's
  * verdict. Null when there is nothing to say. The words are the merge
  * card's (`CHECK_WORDS`), a change no reading reached yet `not read yet`.
+ * With no change, the checks are the newest run the task started by hand
+ * and the app watched (INF-594), when it has one.
  */
 function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery | null {
   const facts = task.delivery;
@@ -255,7 +266,14 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
           at: facts.ciAt ?? null,
           span: checksSpanOf(facts),
         }
-      : null;
+      : live && facts.runChecks
+        ? {
+            dot: RUN_CHECKS_DOT[facts.runChecks.state],
+            words: RUN_CHECK_WORDS[facts.runChecks.state],
+            at: facts.runChecks.at,
+            span: runChecksSpanOf(facts.runChecks),
+          }
+        : null;
   const review = facts.reviewVerdict
     ? {
         dot: REVIEW_DOT[facts.reviewVerdict],

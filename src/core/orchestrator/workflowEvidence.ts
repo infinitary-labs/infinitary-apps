@@ -18,6 +18,7 @@ import {
   RUN_WATCH_LIMIT,
   RUN_WATCH_TICK_MS,
   type RunReading,
+  recordRunChecks,
   runFinished,
 } from "./runWatch";
 
@@ -134,8 +135,10 @@ export class WorkflowEvidenceService {
     if (!task || TaskService.isClosed(task)) return "The task is closed; no watch was started.";
     const watches = task.delivery?.runWatches ?? [];
     const existing = watches.find((w) => w.runId === run.id);
+    const now = (this.options.now ?? Date.now)();
     if (runFinished(run)) {
       if (existing) {
+        recordRunChecks(this.options.tasks, taskId, run, now);
         this.options.tasks.recordDelivery(taskId, {
           runWatches: watches.filter((w) => w.runId !== run.id),
         });
@@ -150,7 +153,7 @@ export class WorkflowEvidenceService {
     if (!existing && watches.length >= RUN_WATCH_LIMIT) {
       return "The task already watches 5 runs; this run is not watched. No wake will come for it until a slot is free and you read it again.";
     }
-    const now = (this.options.now ?? Date.now)();
+    recordRunChecks(this.options.tasks, taskId, run, now);
     const watch = {
       ...(existing ?? { since: now }),
       runId: run.id,

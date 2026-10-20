@@ -22140,6 +22140,41 @@
                         "ciFinishedAt": {
                           "type": "number"
                         },
+                        "runChecks": {
+                          "type": "object",
+                          "properties": {
+                            "runId": {
+                              "type": "number"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "passed",
+                                "failed",
+                                "cancelled"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "number"
+                            },
+                            "finishedAt": {
+                              "type": "number"
+                            },
+                            "at": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "name",
+                            "state",
+                            "at"
+                          ]
+                        },
                         "landedMode": {
                           "type": "string",
                           "enum": [
@@ -23410,6 +23445,41 @@
                   },
                   "ciFinishedAt": {
                     "type": "number"
+                  },
+                  "runChecks": {
+                    "type": "object",
+                    "properties": {
+                      "runId": {
+                        "type": "number"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "running",
+                          "passed",
+                          "failed",
+                          "cancelled"
+                        ]
+                      },
+                      "startedAt": {
+                        "type": "number"
+                      },
+                      "finishedAt": {
+                        "type": "number"
+                      },
+                      "at": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "runId",
+                      "name",
+                      "state",
+                      "at"
+                    ]
                   },
                   "landedMode": {
                     "type": "string",
@@ -26902,6 +26972,41 @@
                     },
                     "ciFinishedAt": {
                       "type": "number"
+                    },
+                    "runChecks": {
+                      "type": "object",
+                      "properties": {
+                        "runId": {
+                          "type": "number"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "passed",
+                            "failed",
+                            "cancelled"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "type": "number"
+                        },
+                        "at": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "runId",
+                        "name",
+                        "state",
+                        "at"
+                      ]
                     },
                     "landedMode": {
                       "type": "string",
@@ -46590,6 +46695,41 @@
                         "ciFinishedAt": {
                           "type": "number"
                         },
+                        "runChecks": {
+                          "type": "object",
+                          "properties": {
+                            "runId": {
+                              "type": "number"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "passed",
+                                "failed",
+                                "cancelled"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "number"
+                            },
+                            "finishedAt": {
+                              "type": "number"
+                            },
+                            "at": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "name",
+                            "state",
+                            "at"
+                          ]
+                        },
                         "landedMode": {
                           "type": "string",
                           "enum": [
@@ -47860,6 +48000,41 @@
                         },
                         "ciFinishedAt": {
                           "type": "number"
+                        },
+                        "runChecks": {
+                          "type": "object",
+                          "properties": {
+                            "runId": {
+                              "type": "number"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "passed",
+                                "failed",
+                                "cancelled"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "number"
+                            },
+                            "finishedAt": {
+                              "type": "number"
+                            },
+                            "at": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "runId",
+                            "name",
+                            "state",
+                            "at"
+                          ]
                         },
                         "landedMode": {
                           "type": "string",

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "hosted-fixture-default-branch",
+      "reason": "Test only: the end-to-end fixture for a project cloned from GitHub now records origin's default branch, as a real clone does. Without it every merge in those journeys could not bring the project's folder up to date and started a repair task the journeys never asked for, which on the Claude crewmate journey raised a sign-in card. No shipped behavior changed."
+    }
+  ]
+}

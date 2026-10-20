@@ -13,7 +13,8 @@ name: journeys
 # scripts/affected-journeys.ts picks the files: the specs the change edits,
 # the specs whose helpers import a changed helper, the specs that name what
 # a changed shared module adds or removes, and the specs that hold a whole
-# hook or a whole quoted sentence the change adds or removes in src/. A
+# hook or a whole quoted sentence the change adds or removes in src/, and
+# the specs that read a hook a changed file under src/renderer/ draws. A
 # fragment in the stand-in does not select every journey. Three targeted
 # fallback rows also cover cards/home, frame focus/recovery, and devices,
 # even when their diff changes no hook, symbol, or sentence. The full suite

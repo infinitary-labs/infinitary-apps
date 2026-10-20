@@ -27,7 +27,10 @@ import { fileURLToPath } from "node:url";
  * 5. it, or a helper most journeys do not import, holds a sentence of two or
  *    more words as its own quoted string, one the change adds or removes in
  *    a string of `src/`; or
- * 6. its changed path matches a targeted fallback row below, even when no
+ * 6. it, or a helper most journeys do not import, names a hook that a
+ *    changed file under `src/renderer/` draws, even when the change adds or
+ *    removes none: the file owns what that hook shows; or
+ * 7. its changed path matches a targeted fallback row below, even when no
  *    hook, symbol or sentence changed.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
@@ -165,6 +168,25 @@ export function holdsPhrase(text: string, phrase: string): boolean {
 export function holdsHook(text: string, hook: string): boolean {
   const escaped = hook.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])`).test(text);
+}
+
+/** Every `data-*` hook a renderer file draws, before or after the change. */
+export function ownedHooks(
+  changed: readonly string[],
+  read: (file: string) => string | undefined,
+  readBefore?: (file: string) => string | undefined,
+): Map<string, Set<string>> {
+  const owned = new Map<string, Set<string>>();
+  for (const file of changed) {
+    // A unit test beside the screen draws nothing a person sees.
+    if (!file.startsWith("src/renderer/") || /\.(?:test|spec)\.[^/]+$/.test(file)) continue;
+    const hooks = new Set<string>();
+    for (const text of [read(file), readBefore?.(file)])
+      for (const [hook] of (text ?? "").matchAll(/(?<![A-Za-z0-9-])data-[a-z][a-z0-9-]*/g))
+        hooks.add(hook);
+    if (hooks.size > 0) owned.set(file, hooks);
+  }
+  return owned;
 }
 
 const NOT_A_SYMBOL = new Set([
@@ -357,6 +379,7 @@ export type Change = {
 export function select({ changed, sourceDiff, specs, read, readBefore }: Change): Reasons {
   const changedSet = new Set(changed);
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
+  const owned = ownedHooks(changed, read, readBefore);
   const symbols = symbolsOfDiff(sourceDiff);
   const helperExports = new Map<string, Set<string>>();
   if (readBefore)
@@ -440,6 +463,11 @@ export function select({ changed, sourceDiff, specs, read, readBefore }: Change)
     for (const sentence of sentences)
       if (holdsPhrase(narrowText, sentence))
         add(spec, `holds "${sentence}", which the change adds or removes`);
+    for (const [file, drawn] of owned) {
+      // Only a hook the journey's own text mentions can be one it reads.
+      const reads = [...drawn].find((hook) => narrowText.includes(hook) && holdsHook(narrowText, hook));
+      if (reads) add(spec, `reads ${reads}, which ${file} draws`);
+    }
   }
   const available = new Set(specs);
   for (const row of FALLBACKS) {

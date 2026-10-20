@@ -5,6 +5,7 @@ import {
   holdsHook,
   holdsPhrase,
   importsOf,
+  ownedHooks,
   select,
   symbolsOfDiff,
   tokensOfDiff,
@@ -369,5 +370,60 @@ describe("removed helper exports (INF-625)", () => {
       readBefore: (file) => fixture.helpers[file]?.before,
     });
     expect([...chosen.keys()]).toEqual([spec]);
+  });
+});
+
+// INF-625's owned-hooks fix. PR #153 (run 39296951860) changed how the task
+// record draws without adding or removing a hook, chose three files, and
+// skipped the three journeys that then failed on main. The fixture keeps the
+// real changed paths, the lines of each changed screen file that name a hook,
+// and the import and hook lines of each journey and its own helpers.
+describe("hooks a changed screen file draws (INF-625)", () => {
+  const fixture = JSON.parse(
+    readFileSync(new URL("./fixtures/affected-journeys/39296951860.json", import.meta.url), "utf8"),
+  ) as {
+    changed: string[];
+    drawn: Record<string, string>;
+    journeys: Record<string, string>;
+    helpers: Record<string, string>;
+    missed: string[];
+    unchosen: string;
+    specs: string[];
+  };
+  const read = (file: string) =>
+    fixture.drawn[file] ??
+    fixture.journeys[file] ??
+    fixture.helpers[file] ??
+    (fixture.specs.includes(file) ? "" : undefined);
+
+  it("selects the journeys PR #153 broke, and not one that reads none of its hooks", () => {
+    const reasons = select({
+      changed: fixture.changed,
+      sourceDiff: "",
+      specs: fixture.specs,
+      read,
+    });
+    for (const journey of fixture.missed)
+      expect(
+        reasons.get(journey)?.some((why) => / which src\/renderer\/\S+ draws$/.test(why)),
+      ).toBe(true);
+    expect(reasons.has(fixture.unchosen)).toBe(false);
+  });
+
+  it("reads only screen files, not a unit test beside them or a module outside the renderer", () => {
+    const files = new Map([
+      ["src/renderer/src/cards/stageSlots.test.ts", 'const x = "[data-stage-entry]";'],
+      ["src/core/tasks/record.ts", 'const y = "data-stage-entry";'],
+      ["src/renderer/src/cards/RecordCard.tsx", '<div data-record-body="x">'],
+    ]);
+    const owned = ownedHooks([...files.keys()], (file) => files.get(file));
+    expect([...owned.keys()]).toEqual(["src/renderer/src/cards/RecordCard.tsx"]);
+    // A deleted screen file still owns the hooks it drew.
+    const deleted = ownedHooks(
+      ["src/renderer/src/Gone.tsx"],
+      () => undefined,
+      () => "<p data-gone>",
+    );
+    expect([...(deleted.get("src/renderer/src/Gone.tsx") ?? [])]).toEqual(["data-gone"]);
   });
 });

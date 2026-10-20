@@ -132,11 +132,12 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 5 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 6 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
-6. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence.
+6. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that a changed file under `src/renderer/` draws before or after the change, even when the change adds or removes no hook: the file owns what that hook shows;
+7. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:
 
@@ -158,12 +159,13 @@ A change to imports or setup before the declarations can affect every export.
 Importing a shared module is not enough, and an ordinary word most specs already contain does not count.
 A hook name inside a longer token, such as a document path, does not count.
 A fragment inside a longer quote does not count, and a sentence held only by the stand-in does not select every journey that reaches it.
-The hook and sentence rules ignore app unit tests and cancel a token present on both sides of a file's change.
+The hook and sentence rules ignore app unit tests and cancel a token present on both sides of a file's change; the drawn-hook rule reads the whole changed screen file, not only its diff, and ignores a unit test beside it.
 They read only the journey and its own helpers, not helpers most journeys import.
-They read the diff, not the product's meaning.
+They read the text, not the product's meaning.
 They match the whole hook and the whole quoted sentence, so a fragment in the shared stand-in does not select every journey.
 A change no journey or helper it imports reaches runs nothing and the chooser reports so in its summary.
 A change to an export every journey imports still runs them all, because that is the break this check exists to catch.
+A changed screen file that draws a hook most journeys read, such as `HomeScreen.tsx` with `data-stage-entry`, likewise runs most journeys.
 The Mac job refuses an empty file list, builds once, then runs exactly the chosen files with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
 It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.

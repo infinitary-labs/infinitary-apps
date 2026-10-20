@@ -8302,6 +8302,33 @@ describe("background job results (R2)", () => {
     expect(tasks.get(taskId)?.activity).toBe("idle");
   });
 
+  // INF-683: the captain saw keystrokes lag in the message box while crewmates
+  // started and were messaged. Each crew event re-reads every live row's
+  // posture, and recompiling those reads each time stalled the main process.
+  it("re-reads an idle crewmate's posture without compiling its reads again", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, db } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Inspect",
+      intent: intentOf("inspect the code and report findings"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
+    crewmate.finishPrompt();
+    await tick();
+    const record = tasks.get(taskId);
+    if (!record) throw new Error("missing task");
+    const first = supervisor.workPosture(record);
+    expect(first.state).not.toBe("active");
+    const compile = vi.spyOn(db, "prepare");
+    try {
+      expect(supervisor.workPosture(record)).toEqual(first);
+      expect(compile.mock.calls.map(([sql]) => sql)).toEqual([]);
+    } finally {
+      compile.mockRestore();
+    }
+  });
+
   // INF-405: a Claude client that ends while Infinitary runs on takes the
   // background tasks it still ran with it, and the crewmate must never wait
   // on them.

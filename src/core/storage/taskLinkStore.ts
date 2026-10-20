@@ -1,4 +1,5 @@
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 import type { TaskEventActor } from "./taskEventStore";
 
 /**
@@ -79,10 +80,13 @@ export class TaskLinkStore {
   listTo(toId: string, type?: TaskLinkType): TaskLink[] {
     const rows = (
       type
-        ? this.db
-            .prepare("SELECT * FROM task_links WHERE to_id = ? AND type = ? ORDER BY created_at")
-            .all(toId, type)
-        : this.db.prepare("SELECT * FROM task_links WHERE to_id = ? ORDER BY created_at").all(toId)
+        ? prepared(
+            this.db,
+            "SELECT * FROM task_links WHERE to_id = ? AND type = ? ORDER BY created_at",
+          ).all(toId, type)
+        : prepared(this.db, "SELECT * FROM task_links WHERE to_id = ? ORDER BY created_at").all(
+            toId,
+          )
     ) as Row[];
     return rows.map(fromRow);
   }

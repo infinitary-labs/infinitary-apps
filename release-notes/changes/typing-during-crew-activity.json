@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "typing-during-crew-activity",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Typing stays smooth while crewmates start and get messages",
+      "body": "Typing in the message box could pause for a moment while several crewmates started or were messaged at once. Your keys now appear without that delay.",
+      "noPicture": "The fix removes a short delay between a key and its letter, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

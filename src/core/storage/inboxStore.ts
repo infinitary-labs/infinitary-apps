@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { SERVED_ORIGINS, type ServedOrigin, type ServedWakeOrigin } from "@shared/servedFrame";
 import type { TypedWake, WakeBody, WakeEnvelope } from "../orchestrator/wakes";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * The durable inbox (migration 12): fm_inbox generalized to every recipient.
@@ -604,13 +605,12 @@ export class InboxStore {
    */
   hasDeliverable(recipient: string, maxAttempts: number): boolean {
     return (
-      this.db
-        .prepare(
-          `SELECT 1 FROM inbox
-           WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND attempts < ?
-           LIMIT 1`,
-        )
-        .get(recipient, maxAttempts) !== undefined
+      prepared(
+        this.db,
+        `SELECT 1 FROM inbox
+         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND attempts < ?
+         LIMIT 1`,
+      ).get(recipient, maxAttempts) !== undefined
     );
   }
 

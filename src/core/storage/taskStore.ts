@@ -14,6 +14,7 @@ import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
 import type { WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
 
 /**
  * The task record's row layer (task-system design section 4.1). A task is
@@ -890,7 +891,7 @@ export class TaskStore {
   }
 
   get(id: string): TaskRecord | undefined {
-    const row = this.db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as Row | undefined;
+    const row = prepared(this.db, "SELECT * FROM tasks WHERE id = ?").get(id) as Row | undefined;
     return row ? fromRow(row) : undefined;
   }
 

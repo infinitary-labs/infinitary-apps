@@ -11,9 +11,12 @@ export function customApiCaFixture(dir: string) {
       env: { ...hostEnv(), HOME: dir, INFINITARY_LOCAL_CODESIGN_DIR: join(dir, "signing") },
       stdio: "pipe",
     });
+  // Both CAs share a subject, so the key identifiers are named explicitly:
+  // OpenSSL 4 and LibreSSL add none of their own, and without them a verifier
+  // picks the sibling CA by name and reports a signature failure instead.
   writeFileSync(
     join(dir, "root.cnf"),
-    "[req]\ndistinguished_name=dn\nx509_extensions=ca\nprompt=no\n[dn]\nCN=Firstmate synthetic CA\n[ca]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,cRLSign\n",
+    "[req]\ndistinguished_name=dn\nx509_extensions=ca\nprompt=no\n[dn]\nCN=Firstmate synthetic CA\n[ca]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,cRLSign\nsubjectKeyIdentifier=hash\n",
     { mode: 0o600 },
   );
   run([
@@ -61,7 +64,7 @@ export function customApiCaFixture(dir: string) {
   ]);
   writeFileSync(
     join(dir, "leaf.ext"),
-    "basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:gateway.example.test\n",
+    "basicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:gateway.example.test\nauthorityKeyIdentifier=keyid\n",
     { mode: 0o600 },
   );
   run([
@@ -89,7 +92,7 @@ export function customApiCaFixture(dir: string) {
   writeFileSync(join(dir, "serial"), "03\n", { mode: 0o600 });
   writeFileSync(
     join(dir, "expired.cnf"),
-    "[ca]\ndefault_ca=local\n[local]\ndatabase=index\nserial=serial\nnew_certs_dir=issued\nprivate_key=ca.key\ncertificate=ca.pem\ndefault_md=sha256\npolicy=policy\nx509_extensions=ext\n[policy]\ncommonName=supplied\n[ext]\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:gateway.example.test\n",
+    "[ca]\ndefault_ca=local\n[local]\ndatabase=index\nserial=serial\nnew_certs_dir=issued\nprivate_key=ca.key\ncertificate=ca.pem\ndefault_md=sha256\npolicy=policy\nx509_extensions=ext\n[policy]\ncommonName=supplied\n[ext]\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\nsubjectAltName=DNS:gateway.example.test\nauthorityKeyIdentifier=keyid\n",
     { mode: 0o600 },
   );
   run([

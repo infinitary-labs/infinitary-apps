@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "custom-api-ca-key-identifiers",
+      "reason": "Internal test fixture: the custom API certificate fixture names its key identifiers so its certificates are the same under OpenSSL 4, OpenSSL 3 and LibreSSL. No app view or behavior changes."
+    }
+  ]
+}

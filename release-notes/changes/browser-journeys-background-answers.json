@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "browser-journeys-background-answers",
+      "reason": "Fixes the browser journeys' scripted provider: a shell's background-job receipt is not a completed browser answer, and its matching exit wake supplies the result. No product behavior or shell wait changes."
+    }
+  ]
+}

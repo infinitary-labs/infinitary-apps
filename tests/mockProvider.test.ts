@@ -1,7 +1,9 @@
 import { frameServedInput, type ServedSegmentInput } from "@shared/servedFrame";
 import { encode } from "@toon-format/toon";
 import { afterEach, describe, expect, it } from "vitest";
+import { BROWSER_COMMAND } from "../src/core/browser/commandWords";
 import { renderWake } from "../src/core/orchestrator/wakes";
+import { createEventBashTool } from "../src/core/pi/bashTool";
 import {
   EMIT_CARDS_PROMPT_MARKER,
   FM_SYSTEM_MARKER,
@@ -10,6 +12,7 @@ import {
   type MockProviderServer,
   type ScriptedCall,
   startMockProvider,
+  TASK_BROWSER_HANDOFF_MARKER,
 } from "./e2e/mockProvider";
 import { captainCardChoice, latestContext, latestServedTurn } from "./e2e/providerRequest";
 
@@ -195,14 +198,14 @@ function cardChoice(
 }
 
 /** One Firstmate request in the chat-completions dialect: the calls it answered with, or its text. */
-async function firstmateAnswer(messages: unknown[]) {
+async function firstmateAnswer(messages: unknown[], system = FM_SYSTEM_MARKER) {
   if (!server) throw new Error("start the mock provider first");
   const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       stream: true,
-      messages: [{ role: "system", content: FM_SYSTEM_MARKER }, ...messages],
+      messages: [{ role: "system", content: system }, ...messages],
     }),
   });
   expect(response.ok).toBe(true);
@@ -476,4 +479,85 @@ describe("the served turn reads the same in every dialect the mock serves", () =
     });
     expect(latestServedTurn(body)).toBeUndefined();
   });
+});
+
+describe("browser journeys consume background shell answers", () => {
+  it.each(["", "page: Partial output"])(
+    "waits for a matching job exit, ignoring receipt tail %j",
+    async (tail) => {
+      // INF-634: task-browser:833 reported the shell receipt as the browser's
+      // refusal under load, after INF-181 and INF-531. Use the product's words.
+      server = await startMockProvider();
+      const command = `${BROWSER_COMMAND} open http://127.0.0.1:5555/`;
+      const jobId = "34a0ca8f";
+      const tool = createEventBashTool(async () => ({ kind: "job", jobId, tail }));
+      const receipt = await tool.execute(
+        "open",
+        { command },
+        undefined,
+        undefined,
+        {} as Parameters<typeof tool.execute>[4],
+      );
+      const messages = [
+        { role: "user", content: `${TASK_BROWSER_HANDOFF_MARKER}http://127.0.0.1:5555/` },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "open",
+              type: "function",
+              function: { name: "bash", arguments: JSON.stringify({ command }) },
+            },
+          ],
+        },
+        { role: "tool", tool_call_id: "open", content: receipt.content },
+      ];
+      const answer = () => firstmateAnswer(messages, "You are a crewmate.");
+      expect((await answer()).calls).toEqual([]);
+      const wake = (id: string, tail: string) =>
+        frameServedInput([
+          {
+            kind: "wake",
+            origin: "agent",
+            body: renderWake({
+              facts: {
+                kind: "job-exit",
+                to: "crewmate",
+                jobId: id,
+                command,
+                exitCode: 0,
+                durationMs: 3400,
+                tail,
+              },
+            }),
+          },
+        ]).text;
+      // An unrelated exit is not the answer; even a partial browser tail in
+      // the receipt must not be used before this shell finishes.
+      messages.push({ role: "user", content: wake("other-job", "page: Wrong browser") });
+      expect((await answer()).calls).toEqual([]);
+      const page =
+        'page: Sign in\noutline: lines 1-2 of 2\nheading "Sign in" (level 1)\nbutton "Sign in" [g1:e1]';
+      messages.push({ role: "user", content: wake(jobId, page) });
+      expect((await answer()).calls.map((call) => call.name)).toEqual(["emit_card"]);
+      // A repeated wake is not a second browser answer.
+      messages.push({ role: "user", content: wake(jobId, page) });
+      expect((await answer()).calls.map((call) => call.name)).toEqual(["emit_card"]);
+      // The command can itself park an operation. Read it once via the bare
+      // command, rather than repeating open when its shell job ends.
+      messages.splice(-2, 2, { role: "user", content: wake(jobId, "running: open") });
+      expect((await answer()).calls).toEqual([
+        {
+          name: "bash",
+          args: { command: BROWSER_COMMAND, description: "Use this task's browser" },
+        },
+      ]);
+      messages.push({
+        role: "tool",
+        content: `exit 0\nearlier: Your earlier open finished\n${page}`,
+      });
+      expect((await answer()).calls.map((call) => call.name)).toEqual(["emit_card"]);
+    },
+  );
 });

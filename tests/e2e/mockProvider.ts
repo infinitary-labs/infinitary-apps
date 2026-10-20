@@ -7,7 +7,7 @@ import {
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
 import type { ChangePresentationDraft } from "@shared/changePresentation";
-import type { ServedSegment } from "@shared/servedFrame";
+import { parseServedInput, type ServedSegment } from "@shared/servedFrame";
 import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
 import { HIDDEN_VALUE_WORDS, REF_PATTERN } from "../../src/core/browser/outline";
 import { GIF_LOOP_WORDS } from "../../src/core/gifFormat";
@@ -1162,6 +1162,39 @@ function stillRunning(text: string): boolean {
 }
 
 /**
+ * INF-634: the shell may legitimately become a job before the launcher
+ * reaches the app, or after its bounded grace. Its receipt is not browser
+ * output. Resume from that job's exit wake, never by sending the action again.
+ * Keep message positions so handoff scripts can still slice at their wake.
+ */
+function browserShellMessages(messages: ReturnType<typeof providerMessages>) {
+  const pending = new Set<string>();
+  const readings = messages.map((message) => {
+    const job =
+      message.role === "tool" ? /^Still running as background job (\S+);/.exec(message.text) : null;
+    if (job) {
+      pending.add(job[1] as string);
+      return { role: "assistant" as const, text: "" };
+    }
+    if (message.role !== "user") return message;
+    const wakes = parseServedInput(message.text)
+      ?.filter((part) => part.kind === "wake")
+      .map((part) => part.body) ?? [message.text];
+    for (const wake of wakes) {
+      const exit = /^\[job\] background job (\S+) finished:/.exec(wake);
+      if (!exit || !pending.delete(exit[1] as string)) continue;
+      const output = wake.indexOf(". Output tail:\n");
+      return {
+        role: "tool" as const,
+        text: output < 0 ? wake : wake.slice(output + ". Output tail:\n".length),
+      };
+    }
+    return message;
+  });
+  return { readings, pending: pending.size > 0 };
+}
+
+/**
  * The tool answers after a place in the conversation, oldest first, each
  * browser command once in the browser's own words: one that ran past a
  * Pi shell's limit answered `running`, and its answer came with the next
@@ -1170,7 +1203,7 @@ function stillRunning(text: string): boolean {
 function toolAnswers(messages: ReturnType<typeof providerMessages>, from = 0): string[] {
   const answers: string[] = [];
   let waiting = false;
-  for (const message of messages.slice(from)) {
+  for (const message of browserShellMessages(messages).readings.slice(from)) {
     if (message.role !== "tool") continue;
     if (!isBrowserAnswer(message.text)) {
       answers.push(message.text);
@@ -1207,7 +1240,9 @@ function lookingAgain(
   body: string,
   step: (body: string) => ScriptedCall[] | undefined,
 ): ScriptedCall[] | undefined {
-  const last = providerMessages(body).at(-1);
+  const { readings, pending } = browserShellMessages(providerMessages(body));
+  if (pending) return undefined;
+  const last = readings.at(-1);
   if (last?.role === "tool" && isBrowserAnswer(last.text) && stillRunning(last.text)) {
     return [browser()];
   }

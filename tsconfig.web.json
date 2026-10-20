@@ -17,18 +17,17 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "types": ["vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
+      "@shared/*": ["./src/shared/*"],
       // The app's panels and the e2e fixture panels (tests/fixtures/personal)
       // type-check against the real contracts and the real design library -
       // the `@infinitary/ui` boundary is src/renderer/src/design/index.ts
       // (hostModules.ts). A fixture written before the Infinitary rename
       // names them `@firstmate/`, which the compiler reads as the same.
-      "@infinitary/contracts": ["src/shared/personal/contracts.ts"],
-      "@infinitary/ui": ["src/renderer/src/design/index.ts"],
-      "@firstmate/contracts": ["src/shared/personal/contracts.ts"],
-      "@firstmate/ui": ["src/renderer/src/design/index.ts"]
+      "@infinitary/contracts": ["./src/shared/personal/contracts.ts"],
+      "@infinitary/ui": ["./src/renderer/src/design/index.ts"],
+      "@firstmate/contracts": ["./src/shared/personal/contracts.ts"],
+      "@firstmate/ui": ["./src/renderer/src/design/index.ts"]
     }
   },
   "include": [

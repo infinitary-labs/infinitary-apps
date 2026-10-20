@@ -15,9 +15,8 @@
     "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "types": [],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["./src/shared/*"]
     }
   },
   // Frame scripts run inside sandboxed plugin frames, not in the renderer

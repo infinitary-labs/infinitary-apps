@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "tsrs-typecheck",
+      "reason": "Internal development tooling: replace the required project checker with pinned native or portable tsrs, retaining TypeScript as a library. No app view or behavior changes."
+    }
+  ]
+}

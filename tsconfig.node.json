@@ -16,15 +16,14 @@
     // on their relative imports.
     "allowImportingTsExtensions": true,
     "types": ["node"],
-    "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@shared/*": ["src/shared/*"],
+      "@core/*": ["./src/core/*"],
+      "@shared/*": ["./src/shared/*"],
       // The personal fixtures' server halves are extension code: they import
       // the authoring types by the specifier the workspace serves, under
       // either name.
-      "@infinitary/contracts": ["src/shared/personal/contracts.ts"],
-      "@firstmate/contracts": ["src/shared/personal/contracts.ts"]
+      "@infinitary/contracts": ["./src/shared/personal/contracts.ts"],
+      "@firstmate/contracts": ["./src/shared/personal/contracts.ts"]
     }
   },
   "include": [

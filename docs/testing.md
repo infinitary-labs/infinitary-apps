@@ -28,12 +28,20 @@ Its regression tests cover corruption at the beginning, piece boundary and end, 
 
 Vitest blanks every `.css?raw` import unless the config sets `css: true`.
 
-## The typecheck's heap
+## The required typecheck
 
-`pnpm typecheck` runs `tsc -b` with a 4 GB heap ceiling (`--max-old-space-size=4096` in the `package.json` script), so the PR checks, `verify.yml`, `release.yml` and a local run all get the same ceiling.
-A clean check of `tsconfig.node.json` alone needs about 2 GB, and Node's default ceiling on the hosted Linux runner is about 2 GB, so without the flag an ordinary pull request can run out of memory there.
-The web and frames projects need far less, so running the three projects as separate processes does not lower that need.
-If the typecheck runs out of memory again, measure a clean `tsconfig.node.json` check with `--extendedDiagnostics` and raise the ceiling within the runner's memory.
+`pnpm typecheck` runs the pinned tsrs checker in build mode through `scripts/typecheck.ts`, visiting the node, web and checked-JavaScript frame projects in `tsconfig.json`.
+Local, pull-request, main and release verification use this one command; there is no second project check or tsc fallback.
+The selector reads the pinned package's published platform list: native on Apple silicon and Linux x64/ARM64 (the native launcher selects GNU or musl), portable `@tsrs/wasm` elsewhere, including Intel macOS.
+Selection never depends on whether a binary is installed or a check passed: a missing native binary, diagnostic or crash fails the gate without retrying another engine.
+Both engines are exact development-dependency pins; the portable checker runs single-threaded with its own 4 GiB linear-memory limit, not the old Node heap flag.
+TypeScript remains a runtime library for panel compilation, generated types and lint/test consumers, not a backup project-check command.
+
+The three configurations keep their source lists and checking options; aliases use explicit relative targets without `baseUrl`.
+The compiler owns its incremental `.tsbuildinfo` results and invalidates results from the previous compiler version on the first run; subsequent checks reuse the new results.
+For an explicit fresh check, run `pnpm typecheck --force`; to remove saved results, run `node scripts/typecheck.ts --clean`.
+A rollback restores the old command and removes the three root `tsconfig.*.tsbuildinfo` files before checking; it changes no app data or panel output.
+This command is a batch check, not an editor, language-server or watch-mode migration.
 
 ## E2E scheduling and launch diagnostics
 

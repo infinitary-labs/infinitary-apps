@@ -406,6 +406,7 @@
         "!tests/e2e-contract-lint.test.ts",
         "!tests/e2e-lanes.test.ts",
         "!tests/ensure-electron-installed.test.ts",
+        "!tests/typecheck.test.ts",
         "!tests/export-tasks.test.ts",
         "!tests/generate-self-source.test.ts",
         "!tests/install-clones.test.ts",

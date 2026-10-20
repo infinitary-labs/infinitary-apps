@@ -544,8 +544,18 @@ export class GithubGatewayService {
  */
 const CREDENTIAL_QUERY = new Set(["token", "access_token"]);
 
+/**
+ * Field names GitHub uses for a credential in an answer's body. A private
+ * repository's answer carries `temp_clone_token`, which clones it (INF-652).
+ * An empty one, as a public repository's answer has, holds nothing and stays.
+ */
+const CREDENTIAL_FIELDS = new Set(["temp_clone_token"]);
+
 /** What the crewmate is told when a download token was removed from a link. */
 export const DOWNLOAD_TOKEN_NOTE = "Download tokens were removed from links.";
+
+/** What the crewmate is told when a repository's clone token was left out. */
+export const CLONE_TOKEN_NOTE = "Temporary clone tokens were removed.";
 
 /** Status, ids and the bounded answer; a next page only as a path a read may reach. */
 function render(response: ForgeApiResponse, api: ForgeApi): string {
@@ -557,13 +567,15 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
       body = response.body;
     }
   } else body = null;
-  const cleaned = stripCredentialLinks(body);
+  const removed = { links: false, fields: false };
+  const cleaned = stripCredentials(body, removed);
   const notes = [
     response.status === 404 ? "404 can also mean the sign-in cannot see the route." : undefined,
     response.status === 403 && response.rateLimit?.remaining === 0
       ? "The hourly allowance is spent; retry after the reset time."
       : undefined,
-    cleaned.stripped ? DOWNLOAD_TOKEN_NOTE : undefined,
+    removed.links ? DOWNLOAD_TOKEN_NOTE : undefined,
+    removed.fields ? CLONE_TOKEN_NOTE : undefined,
   ].filter((note) => note !== undefined);
   return JSON.stringify(
     {
@@ -574,7 +586,7 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
       ...(response.retryAfterSeconds ? { retryAfterSeconds: response.retryAfterSeconds } : {}),
       nextPath: api.nextPath(response.link),
       ...(notes.length > 0 ? { note: notes.join(" ") } : {}),
-      body: cleaned.value,
+      body: cleaned,
     },
     null,
     2,
@@ -582,35 +594,32 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
 }
 
 /**
- * Remove credential query parameters from every link in a parsed answer.
- * A value is a link only when the whole string is one, so file content that
- * mentions a token is left as GitHub returned it.
+ * Remove credentials from a parsed answer: credential query parameters from
+ * every link, and every nonempty credential field at any depth. A value is a
+ * link only when the whole string is one, so file content that mentions a
+ * token is left as GitHub returned it.
  */
-function stripCredentialLinks(value: unknown): { value: unknown; stripped: boolean } {
+function stripCredentials(value: unknown, removed: { links: boolean; fields: boolean }): unknown {
   if (typeof value === "string") {
     const stripped = stripCredentialQuery(value);
-    return stripped === null ? { value, stripped: false } : { value: stripped, stripped: true };
+    if (stripped === null) return value;
+    removed.links = true;
+    return stripped;
   }
-  if (Array.isArray(value)) {
-    let stripped = false;
-    const next = value.map((item) => {
-      const result = stripCredentialLinks(item);
-      stripped ||= result.stripped;
-      return result.value;
-    });
-    return { value: stripped ? next : value, stripped };
-  }
+  if (Array.isArray(value)) return value.map((item) => stripCredentials(item, removed));
   if (value !== null && typeof value === "object") {
-    let stripped = false;
-    const next: Record<string, unknown> = {};
-    for (const [key, item] of Object.entries(value)) {
-      const result = stripCredentialLinks(item);
-      stripped ||= result.stripped;
-      next[key] = result.value;
-    }
-    return { value: stripped ? next : value, stripped };
+    // fromEntries defines each key as its own field, so an answer's "__proto__" stays a field.
+    return Object.fromEntries(
+      Object.entries(value).flatMap(([key, item]) => {
+        if (CREDENTIAL_FIELDS.has(key) && typeof item === "string" && item !== "") {
+          removed.fields = true;
+          return [];
+        }
+        return [[key, stripCredentials(item, removed)]];
+      }),
+    );
   }
-  return { value, stripped: false };
+  return value;
 }
 
 /** An absolute link without credential query parameters, or null when it had none. */

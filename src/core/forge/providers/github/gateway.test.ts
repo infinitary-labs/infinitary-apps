@@ -4,7 +4,11 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
-import { DOWNLOAD_TOKEN_NOTE, GithubGatewayService } from "../../../orchestrator/githubGateway";
+import {
+  CLONE_TOKEN_NOTE,
+  DOWNLOAD_TOKEN_NOTE,
+  GithubGatewayService,
+} from "../../../orchestrator/githubGateway";
 import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
 import { bindTool } from "../../../session/tools";
@@ -40,6 +44,41 @@ function privateFile(path: string) {
       git: "https://api.github.com/repos/octo/meter/git/blobs/3d21ec53a331a6f037a91c368710b99387d012c1",
       html: `https://github.com/octo/meter/blob/main/${path}`,
     },
+  };
+}
+
+/** Invented. GitHub's answer for a private repository the sign-in can push to carries one. */
+const INVENTED_CLONE_TOKEN = "INVENTEDCLONETOKEN7OC2876QJ2O";
+
+/**
+ * GitHub's repository answer, trimmed from a real reading of a public
+ * repository with pull-only permissions, where `temp_clone_token` was empty.
+ * The private one is the same shape with push permissions and a token.
+ */
+function repository(name: string, visibility: "private" | "public") {
+  const full = `octo/${name}`;
+  return {
+    id: 1296269,
+    node_id: "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+    name,
+    full_name: full,
+    private: visibility === "private",
+    owner: { login: "octo", id: 583231, type: "User", site_admin: false },
+    html_url: `https://github.com/${full}`,
+    fork: false,
+    url: `https://api.github.com/repos/${full}`,
+    git_url: `git://github.com/${full}.git`,
+    ssh_url: `git@github.com:${full}.git`,
+    clone_url: `https://github.com/${full}.git`,
+    visibility,
+    default_branch: "main",
+    permissions:
+      visibility === "private"
+        ? { admin: true, maintain: true, push: true, triage: true, pull: true }
+        : { admin: false, maintain: false, push: false, triage: false, pull: true },
+    temp_clone_token: visibility === "private" ? INVENTED_CLONE_TOKEN : "",
+    network_count: 0,
+    subscribers_count: 1,
   };
 }
 
@@ -111,7 +150,9 @@ async function fixture(
         res.end();
       }
     } else if (url.pathname === "/repos/octo/meter" && req.method === "GET") {
-      json({ default_branch: "main" });
+      json(repository("meter", "private"));
+    } else if (url.pathname === "/repos/octo/lamp" && req.method === "GET") {
+      json(repository("lamp", "public"));
     } else if (
       [
         "/repos/octo/meter/actions/runs/9/cancel",
@@ -550,6 +591,22 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       }),
     ]);
     expect(JSON.stringify(listing)).not.toContain(INVENTED_DOWNLOAD_TOKEN);
+  });
+
+  it("reads a private repository without its temporary clone token", async () => {
+    // Intent: a GitHub read leaves out the private repository's clone
+    // credential before a crewmate or a saved transcript sees it (INF-652).
+    const { read } = await fixture();
+    const answer = JSON.parse((await read.run({ path: "/repos/octo/meter" })).text);
+    const { temp_clone_token: _token, ...rest } = repository("meter", "private");
+    expect(answer).toMatchObject({ status: 200, ok: true, note: CLONE_TOKEN_NOTE });
+    expect(answer.body).toEqual(rest);
+    expect(JSON.stringify(answer)).not.toContain(INVENTED_CLONE_TOKEN);
+
+    // A public repository's empty field holds no credential, so its answer is GitHub's own.
+    const open = JSON.parse((await read.run({ path: "/repos/octo/lamp" })).text);
+    expect(open.note).toBeUndefined();
+    expect(open.body).toEqual(repository("lamp", "public"));
   });
 
   it("refuses an answer over 256 KiB and a redirect, and never echoes the token", async () => {

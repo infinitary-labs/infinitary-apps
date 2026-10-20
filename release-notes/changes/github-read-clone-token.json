@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "github-read-clone-token",
+      "reason": "A crewmate's read of a private repository no longer passes on or saves GitHub's temporary clone token. Nothing on screen changes. Tokens already saved are left alone."
+    }
+  ]
+}

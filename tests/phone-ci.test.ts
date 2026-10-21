@@ -10,7 +10,9 @@ const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
 const workflow = yaml.load(readFileSync(".github/workflows/phone.yml", "utf8"));
 
-function eligible(run: boolean): string {
+// The native job's actual condition, for the chooser's reading on a pull request, or for a run
+// started on request, whose chooser reads nothing.
+function eligible(run: boolean | "", event = "pull_request"): string {
   const needs = new data.Dictionary({
     key: "choose-phone",
     value: new data.Dictionary({
@@ -18,9 +20,17 @@ function eligible(run: boolean): string {
       value: new data.Dictionary({ key: "run", value: new data.StringData(String(run)) }),
     }),
   });
+  const github = new data.Dictionary({ key: "event_name", value: new data.StringData(event) });
   const expression = workflow.jobs["native-phone"].if;
-  const ast = new Parser(new Lexer(expression).lex().tokens, ["needs"], []).parse();
-  return new Evaluator(ast, new data.Dictionary({ key: "needs", value: needs }))
+  const ast = new Parser(
+    new Lexer(`!!(${expression})`).lex().tokens,
+    ["needs", "github"],
+    [],
+  ).parse();
+  return new Evaluator(
+    ast,
+    new data.Dictionary({ key: "needs", value: needs }, { key: "github", value: github }),
+  )
     .evaluate()
     .coerceString();
 }
@@ -147,6 +157,8 @@ describe("the native pull-request gate", () => {
     "scripts/affected-phone.ts",
     "scripts/with-mac-check.py",
     "scripts/replaced-phone-runs.ts",
+    // INF-663: the gate's checks before its simulator tests.
+    "scripts/phone-checks.ts",
     // INF-524: the virtual Mac path the switch turns on.
     "scripts/virtual-mac/phone.sh",
     "scripts/virtual-mac/phone-job.sh",
@@ -264,7 +276,7 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(IPAD, "skipped", "")).toBe("false");
   });
   it("receives every pull request and selects the Mac mini without a paid fallback", () => {
-    expect(workflow.on).toEqual({ pull_request: null });
+    expect(workflow.on).toEqual({ pull_request: null, workflow_dispatch: null });
     const expression = workflow.jobs["native-phone"]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
     const ast = new Parser(new Lexer(expression).lex().tokens, ["vars"], []).parse();
     for (const configured of ["mini-mac", ""]) {
@@ -383,5 +395,27 @@ describe("the native pull-request gate", () => {
           "node scripts/replaced-phone-runs.ts stop-if-replaced",
         );
     }
+  });
+});
+
+// INF-663 (captain: "add a nightly phone check" on main): a run started on request checks
+// both devices whatever changed, and every gate's failure reaches the run.
+describe("the phone check on request", () => {
+  const ON_REQUEST = "workflow_dispatch";
+  it("runs the native job whatever changed, while a pull request still asks the chooser", () => {
+    const select = workflow.jobs["choose-phone"].steps.find(
+      (step: Step) => step.id === "select",
+    ) as Step;
+    expect(holds(condition(select), { github: { event_name: ON_REQUEST } })).toBe(false);
+    expect(holds(condition(select), { github: { event_name: "pull_request" } })).toBe(true);
+    // The skipped chooser leaves its reading empty.
+    expect(eligible("", ON_REQUEST)).toBe("true");
+    expect(eligible(false, "pull_request")).toBe("false");
+  });
+  it("starts both device gates and the iPad gate after a failed iPhone gate", () => {
+    // The replacement script answers replaced=false with no pull request (replaced-phone-runs.test.ts).
+    for (const virtualMac of [OFF, IN_TURN])
+      expect(names(stepsThatRun(virtualMac, "false").filter(isGate))).toEqual([IPHONE, IPAD]);
+    expect(gateStarts(IPAD, "failure", "false")).toBe("true");
   });
 });

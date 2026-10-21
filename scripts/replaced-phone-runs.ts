@@ -59,13 +59,21 @@ export async function stopIfReplaced(api: Api, current: PhoneRun): Promise<{ rep
   return { replaced: true, line: `A newer push (${head.sha.slice(0, 8)}) replaced this version, so this run stops before its next device gate.` };
 }
 
-function fromEnvironment(): { api: Api; current: PhoneRun } {
-  const env = (name: string) => process.env[name] || (() => { throw new Error(`${name} is not set`); })();
-  const event = JSON.parse(readFileSync(env("GITHUB_EVENT_PATH"), "utf8")) as {
-    pull_request: { number: number; head: { ref: string; sha: string } };
-  };
+/** This run as a pull request's phone run, or undefined when no pull request started it (an on-request run). */
+export function pullRequestRun(event: { pull_request?: { number: number; head: { ref: string; sha: string } }; [field: string]: unknown },
+  env: (name: string) => string): PhoneRun | undefined {
+  if (!event.pull_request) return undefined;
   const workflow = /\.github\/workflows\/([^@/]+)@/.exec(env("GITHUB_WORKFLOW_REF"))?.[1];
   if (!workflow) throw new Error("GITHUB_WORKFLOW_REF names no workflow file");
+  return {
+    repository: env("GITHUB_REPOSITORY"), workflow, runId: Number(env("GITHUB_RUN_ID")), runNumber: Number(env("GITHUB_RUN_NUMBER")),
+    pull: event.pull_request.number, branch: event.pull_request.head.ref, headSha: event.pull_request.head.sha,
+  };
+}
+
+function fromEnvironment(): { api: Api; current: PhoneRun | undefined } {
+  const env = (name: string) => process.env[name] || (() => { throw new Error(`${name} is not set`); })();
+  const event = JSON.parse(readFileSync(env("GITHUB_EVENT_PATH"), "utf8")) as Parameters<typeof pullRequestRun>[0];
   const headers = {
     Accept: "application/vnd.github+json", Authorization: `Bearer ${env("GITHUB_TOKEN")}`, "X-GitHub-Api-Version": "2022-11-28",
   };
@@ -79,16 +87,18 @@ function fromEnvironment(): { api: Api; current: PhoneRun } {
       },
       post: async (path) => (await fetch(base + path, { method: "POST", headers })).status,
     },
-    current: {
-      repository: env("GITHUB_REPOSITORY"), workflow, runId: Number(env("GITHUB_RUN_ID")), runNumber: Number(env("GITHUB_RUN_NUMBER")),
-      pull: event.pull_request.number, branch: event.pull_request.head.ref, headSha: event.pull_request.head.sha,
-    },
+    current: pullRequestRun(event, env),
   };
 }
 
 async function main(mode: string | undefined): Promise<void> {
   const { api, current } = fromEnvironment();
-  if (mode === "cancel-older") {
+  // A run started on request, such as the nightly check of main, has no pull request to replace it.
+  if (!current) {
+    if (mode !== "cancel-older" && mode !== "stop-if-replaced") throw new Error("Pass cancel-older or stop-if-replaced");
+    console.log("No pull request started this run, so no newer push replaces it.");
+    if (mode === "stop-if-replaced" && process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, "replaced=false\n");
+  } else if (mode === "cancel-older") {
     const lines = await cancelOlderRuns(api, current);
     for (const line of lines) console.log(line);
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,

@@ -2,8 +2,11 @@ name: phone
 
 # INF-79 / INF-136: the captain's Mac mini checks native changes and their shared contract.
 # Keep an explicit skipped job on unrelated PRs instead of a path-filtered missing check.
+# INF-663 (captain: "add a nightly phone check"): a request on a branch, such as the
+# nightly check of main, runs both device gates whatever changed, with no release step.
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -55,12 +58,13 @@ jobs:
           node-version: 24
       - id: select
         name: Check the phone gate's inputs
+        if: github.event_name == 'pull_request'
         run: node scripts/affected-phone.ts --base "$BASE_REF" --head HEAD >> "$GITHUB_OUTPUT"
         env:
           BASE_REF: origin/${{ github.base_ref }}
   native-phone:
     needs: choose-phone
-    if: needs.choose-phone.outputs.run == 'true'
+    if: github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true'
     # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
     # INF-524: the repository variable PHONE_VIRTUAL_MAC moves the device gates into
     # a fresh virtual Mac, through the phone check's own runner, which takes no

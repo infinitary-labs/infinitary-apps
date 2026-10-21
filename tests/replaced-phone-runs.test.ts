@@ -5,6 +5,7 @@ import {
   cancelOlderRuns,
   type Job,
   type PhoneRun,
+  pullRequestRun,
   replacedRunVerdict,
   stopIfReplaced,
 } from "../scripts/replaced-phone-runs";
@@ -151,5 +152,31 @@ describe("a replaced phone run", () => {
     expect(api.cancelled).toEqual(["39208139891"]);
     expect(await stopIfReplaced(api, run154)).toMatchObject({ replaced: false });
     expect(api.cancelled).toEqual(["39208139891"]);
+  });
+});
+
+// INF-663 (captain: "add a nightly phone check" on main): a run started on request has no
+// pull request, so nothing replaces it and its device gates run.
+describe("a phone run started on request", () => {
+  const env = (name: string) =>
+    ({
+      GITHUB_WORKFLOW_REF: "infinitary-labs/infinitary/.github/workflows/phone.yml@refs/heads/main",
+      GITHUB_REPOSITORY: "infinitary-labs/infinitary",
+      GITHUB_RUN_ID: "39202032038",
+      GITHUB_RUN_NUMBER: "147",
+    })[name] ?? "";
+  it("is no pull request's run", () => {
+    const dispatch = {
+      inputs: {},
+      ref: "refs/heads/main",
+      workflow: ".github/workflows/phone.yml",
+    };
+    expect(pullRequestRun(dispatch, env)).toBeUndefined();
+  });
+  it("still reads a pull request's run from its event", () => {
+    const event = {
+      pull_request: { number: 135, head: { ref: run147.branch, sha: run147.headSha } },
+    };
+    expect(pullRequestRun(event, env)).toEqual(run147);
   });
 });

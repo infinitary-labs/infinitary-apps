@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
+import { runEveryCheck } from "./phone-checks.ts";
 
 const { values } = parseArgs({ options: {
   evidence: { type: "string" },
@@ -124,10 +125,14 @@ const recording = {
 };
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 try {
-  await run("node", ["scripts/generate-phone-contract.ts", "--check"]);
-  await run("node", ["scripts/generate-phone-theme.ts", "--check"]);
-  await run("node", ["scripts/generate-phone-cards.ts", "--check"]);
-  await run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]);
+  // A failed check here is reported, and the simulator tests still run (INF-663).
+  const failures = await runEveryCheck([
+    () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),
+    () => run("node", ["scripts/generate-phone-theme.ts", "--check"]),
+    () => run("node", ["scripts/generate-phone-cards.ts", "--check"]),
+    () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]),
+  ], () => interrupted);
+  for (const failure of failures) console.log(`::error::${failure}`);
   // Do not borrow or erase a developer's simulator. Own exactly one, from create to delete.
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
@@ -153,6 +158,7 @@ try {
     await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
     await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, `${name}.mp4`), "-frames:v", "1", join(evidence, `${name}-poster.png`)]);
   }
+  if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
   console.log("The phone joined its disposable Mac, read its cards and Activity, reconnected, left and was removed.");
 } finally {
   cleaningUp = true;

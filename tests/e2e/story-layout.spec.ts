@@ -11,8 +11,8 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { MOCK_GITHUB_STORY } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
 import { showCard, shownCard } from "./stack";
 
 const TITLE = "fix(cards): compare each view in one place";

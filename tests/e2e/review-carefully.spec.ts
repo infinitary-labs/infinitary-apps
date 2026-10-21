@@ -16,19 +16,18 @@ import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  MOCK_CAREFUL_BUILDER_REPORT,
-  MOCK_CAREFUL_CARD_TITLE,
-  MOCK_CAREFUL_REVIEWED_CARD_TITLE,
-  MOCK_REVIEWED_CHANGE,
-  REVIEW_BRIEF_MARKER,
-  REVIEW_CAREFULLY_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { REVIEW_CAREFULLY_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine } from "./rails";
+import {
+  MOCK_CAREFUL_BUILDER_REPORT,
+  MOCK_CAREFUL_CARD_TITLE,
+  MOCK_CAREFUL_REVIEWED_CARD_TITLE,
+  reviewCarefully,
+} from "./scenarios/reviewCarefully";
+import { MOCK_REVIEWED_CHANGE, REVIEW_BRIEF_MARKER, reviewedTier } from "./scenarios/reviewedTier";
 import { expectNoCard, factsStrip, shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressWindowKey, untilWindowCommands } from "./windowKeys";
@@ -74,7 +73,12 @@ test.beforeEach(async () => {
   ).run("repo-meterlab", repo.repoDir, REPO_NAME, Date.now(), "https://github.com/o/meterlab.git");
   seedHostedOrigins(db, userDataDir);
   db.close();
-  launched = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [reviewCarefully, reviewedTier],
+    userDataDir,
+    env: github.env,
+  });
 });
 
 test.afterEach(async () => {

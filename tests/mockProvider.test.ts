@@ -15,6 +15,7 @@ import {
   TASK_BROWSER_HANDOFF_MARKER,
 } from "./e2e/mockProvider";
 import { captainCardChoice, latestContext, latestServedTurn } from "./e2e/providerRequest";
+import { CONTEXT_OVERFLOW_PROMPT_MARKER, contextOverflow } from "./e2e/scenarios/contextOverflow";
 
 let server: MockProviderServer | undefined;
 afterEach(async () => server?.close());
@@ -560,4 +561,42 @@ describe("browser journeys consume background shell answers", () => {
       expect((await answer()).calls.map((call) => call.name)).toEqual(["emit_card"]);
     },
   );
+});
+
+/** One Firstmate request carrying the captain's served words: the status and what came back. */
+async function captainSays(provider: MockProviderServer, ask: string) {
+  const response = await fetch(`http://127.0.0.1:${provider.port}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      stream: true,
+      messages: [
+        { role: "system", content: FM_SYSTEM_MARKER },
+        { role: "user", content: turn([alpha], ask) },
+      ],
+    }),
+  });
+  return { status: response.status, text: await response.text() };
+}
+
+// INF-518: a journey names the scenarios it needs when it launches the app,
+// and only those answer it (docs/testing.md, "A journey's own scenarios").
+describe("a journey's own scenarios", () => {
+  const ask = `hello ${CONTEXT_OVERFLOW_PROMPT_MARKER}`;
+
+  it("answer only on the stand-in started with them", async () => {
+    server = await startMockProvider();
+    expect((await captainSays(server, ask)).status).toBe(200);
+  });
+
+  it("are asked before the shared answers, and each start keeps its own state", async () => {
+    server = await startMockProvider({ scenarios: [contextOverflow] });
+    const refused = await captainSays(server, ask);
+    expect(refused.status).toBe(400);
+    expect(JSON.parse(refused.text).error.message).toMatch(/^prompt is too long/);
+    expect((await captainSays(server, ask)).status).toBe(200);
+    await server.close();
+    server = await startMockProvider({ scenarios: [contextOverflow] });
+    expect((await captainSays(server, ask)).status).toBe(400);
+  });
 });

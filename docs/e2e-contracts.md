@@ -66,6 +66,7 @@ History, a same-titled card on another task, and a wake that carries the captain
 The outcome is the spec's checkpoint (`armed`, `answered`, `closed`), and a miss prints the inputs the first mate was served instead.
 A rewording of the wake needs no test edit.
 The reviewed tier's cap-card retry (`rigor-reviewed.spec.ts`) is the first user; the mock's other branches still match `latestUserTail`.
+A behavior a few journeys share across many turns is a scenario the journey names at launch instead (`docs/testing.md`, "A journey's own scenarios").
 
 
 ## Frame and rail helpers

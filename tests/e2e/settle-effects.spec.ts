@@ -17,6 +17,11 @@ import {
   startGitHubStub,
 } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { regionShot } from "./pictures";
+import { seedHostedOrigins } from "./projectSeed";
+import { promptInput } from "./prompt";
+import { dockRegion, expandDock, notesNaming, putInLine, taskKey } from "./rails";
 import {
   GUIDED_MERGE_ANSWER,
   GUIDED_MERGE_ASK,
@@ -24,16 +29,15 @@ import {
   GUIDED_MERGE_MARKER,
   GUIDED_MERGE_QUESTION,
   GUIDED_MERGE_TITLE,
+  guidedMerge,
+} from "./scenarios/guidedMerge";
+import {
   KEPT_MERGE_CARD,
   KEPT_MERGE_MARKER,
   KEPT_MERGE_ON_CLAUDE,
   KEPT_MERGE_TITLE,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
-import { promptInput } from "./prompt";
-import { dockRegion, expandDock, notesNaming, putInLine, taskKey } from "./rails";
+  keptMerge,
+} from "./scenarios/keptMerge";
 import { cardReply, completionAction, expectNoCard, showCard, shownCard } from "./stack";
 
 /**
@@ -437,13 +441,16 @@ test("closing a settle card is the keep: nothing lands, nothing goes, the crewma
   }
 });
 
+/** The stand-in's scripted moves for both merge journeys below. */
+const MERGE_SCENARIOS = [keptMerge, guidedMerge];
+
 /**
  * FI3-304's journey: the captain clicks merge once, GitHub refuses it for a
  * conflict with newer work (a 405), and the change still merges exactly
  * once - after its crewmate brought it up to date and declared the repair -
  * with no second card and no second click. The app, its forge, its tools,
  * its card and its settle are real; the model's moves are scripted
- * (`keptMergeMove`) and GitHub is the local stand-in. It runs on both
+ * (`scenarios/keptMerge.ts`) and GitHub is the local stand-in. It runs on both
  * backends a crewmate works on (FI3-664): Pi, and Claude's own client
  * against the mock provider (`./claudeCrew.ts`), whose tools - check_change's
  * conflictRepair among them - cross that client's tool protocol.
@@ -458,13 +465,15 @@ const CREW_BACKENDS: {
     crew: "a Pi crewmate",
     words: KEPT_MERGE_MARKER,
     claude: false,
-    launch: (userDataDir, env) => launchApp({ withMockProvider: true, userDataDir, env }),
+    launch: (userDataDir, env) =>
+      launchApp({ withMockProvider: true, scenarios: MERGE_SCENARIOS, userDataDir, env }),
   },
   {
     crew: "a Claude crewmate",
     words: `${KEPT_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`,
     claude: true,
-    launch: (userDataDir, env) => launchClaudeCrew({ userDataDir, env }),
+    launch: (userDataDir, env) =>
+      launchClaudeCrew({ scenarios: MERGE_SCENARIOS, userDataDir, env }),
   },
 ];
 

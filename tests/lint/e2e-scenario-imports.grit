@@ -1,0 +1,20 @@
+// A journey's own stand-in scenarios (docs/testing.md, "A journey's own
+// scenarios") are imported only by the journeys that name them and by
+// other scenarios. The shared stand-in (mockProvider.ts) and every other
+// shared helper stay out: one import there puts the scenario in the import
+// closure of nearly every journey, so an edit to it picks them all again
+// (scripts/affected-journeys.ts). Runs inside `pnpm check` through
+// biome.json's plugins.
+
+language js
+
+or {
+  JsModuleSource() as $source,
+  `import($source)`
+} where {
+  $source <: r"[\"'`](?:\./|(?:\.\./)+)(?:e2e/)?scenarios/[^\"'`]*[\"'`]",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*\.spec\.ts",
+  not $filename <: r".*tests/e2e/scenarios/.*",
+  register_diagnostic(span=$source, message="A scenario file is imported only by a journey that names it or by another scenario: a shared helper that imports one puts it under every journey, so an edit to it runs them all. Import it in the spec and pass it to launchApp({ scenarios }) or startMockProvider({ scenarios }) (docs/testing.md, A journey's own scenarios).", severity="error")
+}

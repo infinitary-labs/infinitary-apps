@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-stand-in-scenarios",
+      "reason": "Internal: test-only. The end-to-end journeys name the stand-in model scenarios they need, and the context overflow, change story and reviewer scenarios move into their own files; the app is unchanged."
+    }
+  ]
+}

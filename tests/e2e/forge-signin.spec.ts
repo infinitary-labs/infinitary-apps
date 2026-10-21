@@ -45,17 +45,7 @@ import {
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, within } from "./layout";
 import {
-  CONTINUE_CHANGE_CARD_TITLE,
-  CONTINUE_CHANGE_PROMPT_MARKER,
-  CONTINUE_CHANGE_TITLE,
-  GITHUB_CHANGE_PROMPT_MARKER,
   LOCATE_PROJECTS_PROMPT_MARKER,
-  MOCK_CONTINUE_CHANGE,
-  MOCK_CONTINUE_STORY,
-  MOCK_GITHUB_CHANGE,
-  MOCK_GITHUB_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_STORY,
   MOCK_LOCATED_CARD_TITLE,
   MOCK_PROJECT_LIVES_CARD_TITLE,
   PROJECT_LIVES_PROMPT_MARKER,
@@ -67,6 +57,22 @@ import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
 import { readSavedData } from "./savedData";
+import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
+import {
+  CONTINUE_CHANGE_CARD_TITLE,
+  CONTINUE_CHANGE_PROMPT_MARKER,
+  CONTINUE_CHANGE_TITLE,
+  continueChange,
+  MOCK_CONTINUE_CHANGE,
+  MOCK_CONTINUE_STORY,
+} from "./scenarios/continueChange";
+import {
+  GITHUB_CHANGE_PROMPT_MARKER,
+  githubChange,
+  MOCK_GITHUB_CHANGE,
+  MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
+} from "./scenarios/githubChange";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
@@ -197,7 +203,12 @@ async function arrange({
     { fullName: "octo/website", updatedAt: "2026-09-01T10:00:00Z" },
   ]);
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
-  launched = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [githubChange, continueChange],
+    userDataDir,
+    env: github.env,
+  });
   // `launched` is read when the test ends, so a relaunch is the one stopped.
   stop = async () => {
     await launched.close();

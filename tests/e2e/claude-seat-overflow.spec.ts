@@ -8,12 +8,12 @@ import { atRest } from "./layout";
 import { claudeDefaultStore } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
-  CONTEXT_OVERFLOW_PROMPT_MARKER,
   MOCK_ANSWER_TEXT,
   MOCK_ANSWER_TITLE,
   startMockProvider,
 } from "./mockProvider";
 import { windowShot } from "./pictures";
+import { CONTEXT_OVERFLOW_PROMPT_MARKER, contextOverflow } from "./scenarios/contextOverflow";
 import { closeOpenCards, shownCard } from "./stack";
 
 /** INF-447: hello must answer after a service length refusal, even with the person's compaction switches off.
@@ -22,7 +22,7 @@ import { closeOpenCards, shownCard } from "./stack";
  * Prerequisites: Electron and the SDK's client on macOS/Linux; no shared resources or real sign-in.
  */
 test("Claude answers after a context refusal without asking the captain to Retry", async () => {
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [contextOverflow] });
   let launched: LaunchedApp | undefined;
   try {
     launched = await launchClaudeSeat({

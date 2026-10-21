@@ -145,7 +145,13 @@ export function signedInAs(account: string): (homeDir: string) => void {
 export async function launchClaudeCrew(
   options: Pick<
     LaunchOptions,
-    "userDataDir" | "homeDir" | "reuseMockProvider" | "prepareHome" | "claudeTurns" | "env"
+    | "userDataDir"
+    | "homeDir"
+    | "reuseMockProvider"
+    | "scenarios"
+    | "prepareHome"
+    | "claudeTurns"
+    | "env"
   > = {},
 ): Promise<LaunchedApp> {
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
@@ -155,6 +161,7 @@ export async function launchClaudeCrew(
     ...(options.reuseMockProvider
       ? { reuseMockProvider: options.reuseMockProvider }
       : { withMockProvider: true }),
+    scenarios: options.scenarios,
     modelsJson: mockProviderOverrideModelsJson,
     claudeTurns: options.claudeTurns ?? true,
     userDataDir,

@@ -63,7 +63,8 @@
         "./tests/lint/e2e-firstmate-pose.grit",
         "./tests/lint/e2e-frame-door.grit",
         "./tests/lint/e2e-bare-focus.grit",
-        "./tests/lint/e2e-text-lookup.grit"
+        "./tests/lint/e2e-text-lookup.grit",
+        "./tests/lint/e2e-scenario-imports.grit"
       ]
     },
     {

@@ -272,6 +272,60 @@ describe("the e2e assertion contract's lint", () => {
       expect(rulesIn(`tests/e2e/${file}`)).toContain("typedKeys");
     }
   });
+
+  // INF-518: an edit to a scenario picks only the journeys that import it,
+  // which holds only while the shared stand-in and the other shared helpers
+  // import none (docs/testing.md, "A journey's own scenarios").
+  it("refuses a scenario import in the shared stand-in and every shared helper, and keeps it in journeys and scenarios", () => {
+    const root = scratchDir("infinitary-e2e-scenario-lint-");
+    mkdirSync(join(root, "tests/e2e/scenarios"), { recursive: true });
+    mkdirSync(join(root, "tests/e2e/phone"), { recursive: true });
+    const imports = [
+      'import { contextOverflow } from "./scenarios/contextOverflow";',
+      'import type { Scenario } from "./scenarios/reviewedTier";',
+      'export { keptMerge } from "./scenarios/keptMerge";',
+      'const { guidedMerge } = await import("./scenarios/guidedMerge");',
+      'import { launchApp } from "./launch";',
+    ].join("\n");
+    writeFileSync(join(root, "tests/e2e/mockProvider.ts"), imports);
+    writeFileSync(join(root, "tests/e2e/launch.ts"), imports);
+    writeFileSync(
+      join(root, "tests/e2e/phone/pairing.ts"),
+      'import { githubChange } from "../scenarios/githubChange";',
+    );
+    writeFileSync(join(root, "tests/e2e/settle-effects.spec.ts"), imports);
+    writeFileSync(
+      join(root, "tests/e2e/scenarios/githubChange.ts"),
+      [
+        'import { calledTool } from "../mockProvider";',
+        'import { prepareMockStory } from "./changeStory";',
+      ].join("\n"),
+    );
+
+    const diagnostics = lint(root, [
+      "tests/e2e/mockProvider.ts",
+      "tests/e2e/launch.ts",
+      "tests/e2e/phone/pairing.ts",
+      "tests/e2e/settle-effects.spec.ts",
+      "tests/e2e/scenarios/githubChange.ts",
+    ]);
+
+    const refused = diagnostics
+      .filter((d) => d.message.startsWith("A scenario file is imported only by"))
+      .map((d) => `${d.location.path}:${d.location.start.line}:${d.severity}`)
+      .toSorted();
+    expect(refused).toEqual([
+      "tests/e2e/launch.ts:1:error",
+      "tests/e2e/launch.ts:2:error",
+      "tests/e2e/launch.ts:3:error",
+      "tests/e2e/launch.ts:4:error",
+      "tests/e2e/mockProvider.ts:1:error",
+      "tests/e2e/mockProvider.ts:2:error",
+      "tests/e2e/mockProvider.ts:3:error",
+      "tests/e2e/mockProvider.ts:4:error",
+      "tests/e2e/phone/pairing.ts:1:error",
+    ]);
+  });
 });
 
 // Frame provenance crosses aliases and helper calls, so this rule uses

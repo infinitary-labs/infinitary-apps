@@ -22,20 +22,20 @@ import {
 } from "./gitlabStub";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  GITHUB_CHANGE_PROMPT_MARKER,
-  GITLAB_EVIDENCE_MARKER,
-  MOCK_GITHUB_CHANGE,
-  MOCK_GITHUB_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
-  MOCK_GITHUB_STORY,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { GITLAB_EVIDENCE_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, notesNaming, putInLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
+import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
+import {
+  GITHUB_CHANGE_PROMPT_MARKER,
+  githubChange,
+  MOCK_GITHUB_CHANGE,
+  MOCK_GITHUB_CHANGE_CARD_TITLE,
+  MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
+} from "./scenarios/githubChange";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -167,7 +167,12 @@ for (const host of HOSTS) {
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
     gitlab.headOf(headIn(bare));
-    const launched = await launchApp({ withMockProvider: true, userDataDir, env: gitlab.env });
+    const launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [githubChange],
+      userDataDir,
+      env: gitlab.env,
+    });
     const pictures = process.env.INFINITARY_GITLAB_PICTURES;
     try {
       const { page } = launched;

@@ -1,0 +1,49 @@
+import type { ChangePresentationDraft } from "@shared/changePresentation";
+import { MOCK_RISK, type ScriptedCall } from "../mockProvider";
+
+/**
+ * INF-132: a scripted github.com or gitlab.com author prepares the same typed
+ * story as a real crewmate. The change scenarios share it, and each reads
+ * back the revision the app saved (`preparedRevision`).
+ */
+export const MOCK_GITHUB_STORY: Omit<
+  ChangePresentationDraft,
+  "title" | "base" | "head" | "publishable"
+> & { projectText: string } = {
+  why: ["The meter should read on time."],
+  whatChanged: ["The meter reads on time."],
+  before: ["The meter reading lagged."],
+  after: ["The meter reads on time."],
+  checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
+  verification: ["Checked the committed meter change."],
+  views: [],
+  noPicture: "This disposable git change has no visible interface.",
+  risk: MOCK_RISK,
+  requiredActions: [],
+  unfinished: [],
+  projectText: "",
+};
+
+export function prepareMockStory(
+  title: string,
+  gitReading: string | undefined,
+  content = MOCK_GITHUB_STORY,
+): ScriptedCall {
+  const versions = gitReading?.match(/\b[0-9a-f]{40}\b/g) ?? [];
+  return {
+    name: "prepare_change",
+    args: {
+      story: {
+        ...content,
+        title,
+        base: versions.at(-2) ?? "",
+        head: versions.at(-1) ?? "",
+        publishable: true,
+      },
+    },
+  };
+}
+
+export function preparedRevision(reading: string): number {
+  return Number([...reading.matchAll(/Prepared presentation (\d+) for/g)].at(-1)?.[1] ?? 0);
+}

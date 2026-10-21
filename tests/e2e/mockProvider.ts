@@ -6,22 +6,17 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
-import type { ChangePresentationDraft } from "@shared/changePresentation";
 import { parseServedInput, type ServedSegment } from "@shared/servedFrame";
 import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
 import { HIDDEN_VALUE_WORDS, REF_PATTERN } from "../../src/core/browser/outline";
 import { GIF_LOOP_WORDS } from "../../src/core/gifFormat";
-import {
-  BUILD_IN_PLACE_OPENING,
-  REVIEW_BRIEF_OPENING,
-} from "../../src/core/orchestrator/intentBrief";
+import { BUILD_IN_PLACE_OPENING } from "../../src/core/orchestrator/intentBrief";
 import {
   ANSWER_MISSING_OPENING,
   BROWSER_GONE_OPENING,
   BROWSER_RETURNED_OPENING,
   CARD_CLOSED_STEER_PREFIX,
   FINISHED_REPORT_WORDS,
-  GUIDANCE_MARK_WORDS,
   RESTART_REPLAY_NOTE,
   SETUP_CARD_FAILED_WORDS,
   WELCOME_WAKE_WORDS,
@@ -40,7 +35,6 @@ import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../src/core/prompts/cardCo
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import { CREATE_PANEL_DRAFT } from "../../src/shared/createPanelSlot";
 import { HERE } from "../../src/shared/deviceNames";
-import { REVIEW_CAREFULLY_WORDS } from "../../src/shared/vocabulary";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -2555,14 +2549,6 @@ export const MOCK_GIT_REPORT_PREFIX = "The working copy's git answers";
 export const SEND_UP_PROMPT_MARKER = "send the meter fix up to its host";
 export const MOCK_SENT_UP_CARD_TITLE = "The meter fix is ready to go in";
 
-/**
- * A project on GitHub with the app's own sign-in (git integration PR 1.2,
- * forge-signin e2e): a brief carrying this marker saves a point, sends its
- * branch up with its own shell (git answers GitHub through the app's
- * helper), prepares a typed story and opens it with `open_change`, reads
- * its checks with `check_change`, and on green declares the completion card and
- * reports.
- */
 export const WORKFLOW_DISPATCH_MARKER = "request the project verification workflow";
 export const WORKFLOW_EVIDENCE_MARKER = "inspect the hosted measurement evidence";
 /**
@@ -2573,70 +2559,6 @@ export const WORKFLOW_EVIDENCE_MARKER = "inspect the hosted measurement evidence
  * another project, and reports what each answered.
  */
 export const GITLAB_EVIDENCE_MARKER = "inspect the GitLab pipeline evidence";
-export const GITHUB_CHANGE_PROMPT_MARKER = "open the meter fix as a proposed change";
-export const CONTINUE_CHANGE_PROMPT_MARKER = "open the staged meter fix then carry on";
-export const CONTINUE_CHANGE_TITLE = "Continue: check the landed meter";
-/** The proposed change each of those two crewmates opens: its title and body. */
-export const MOCK_GITHUB_CHANGE = {
-  title: "fix!: the meter reads on time",
-  body: "## Intent\nThe meter reads on time.",
-};
-export const MOCK_CONTINUE_CHANGE = {
-  title: "fix: stage the meter",
-  body: "## Intent\nStage the meter.",
-};
-export const MOCK_GITHUB_CHANGE_CARD_TITLE = MOCK_GITHUB_CHANGE.title;
-export const MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE = "The meter fix is open as a proposed change";
-export const CONTINUE_CHANGE_CARD_TITLE = MOCK_CONTINUE_CHANGE.title;
-
-/** INF-132: a scripted github.com or gitlab.com author prepares the same typed story as a real crewmate. */
-export const MOCK_GITHUB_STORY: Omit<
-  ChangePresentationDraft,
-  "title" | "base" | "head" | "publishable"
-> & { projectText: string } = {
-  why: ["The meter should read on time."],
-  whatChanged: ["The meter reads on time."],
-  before: ["The meter reading lagged."],
-  after: ["The meter reads on time."],
-  checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
-  verification: ["Checked the committed meter change."],
-  views: [],
-  noPicture: "This disposable git change has no visible interface.",
-  risk: MOCK_RISK,
-  requiredActions: [],
-  unfinished: [],
-  projectText: "",
-};
-export const MOCK_CONTINUE_STORY = {
-  ...MOCK_GITHUB_STORY,
-  whatChanged: ["Stage the meter."],
-  unfinished: [`${CONTINUE_CHANGE_TITLE} starts once it is merged.`],
-};
-
-function prepareMockStory(
-  title: string,
-  gitReading: string | undefined,
-  content = MOCK_GITHUB_STORY,
-): ScriptedCall {
-  const versions = gitReading?.match(/\b[0-9a-f]{40}\b/g) ?? [];
-  return {
-    name: "prepare_change",
-    args: {
-      story: {
-        ...content,
-        title,
-        base: versions.at(-2) ?? "",
-        head: versions.at(-1) ?? "",
-        publishable: true,
-      },
-    },
-  };
-}
-
-function preparedRevision(reading: string): number {
-  return Number([...reading.matchAll(/Prepared presentation (\d+) for/g)].at(-1)?.[1] ?? 0);
-}
-
 /**
  * locate_project's listing from the app's own sign-in (PR 1.2): a Firstmate
  * turn carrying this marker calls locate_project with the name that
@@ -2727,14 +2649,14 @@ export const STANDARD_TIER_HOST_BUTTONS_MARKER = "ship at the standard tier with
 export const MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE = "The meter test is steady, drawn";
 /** The label the crewmate invents; the captain must never see it. */
 export const MOCK_STANDARD_INVENTED_LABEL = "Ship it";
-const MOCK_STANDARD_DRAWN_BODY = completionCardBody(
+export const MOCK_STANDARD_DRAWN_BODY = completionCardBody(
   "<p>The meter test sometimes read before the pending write finished.</p>",
   `<p>${MOCK_STANDARD_SECTIONS["What changed"]}</p>`,
   "<p>The test could read the old meter value while a write was still queued.</p>",
   `<p>${MOCK_STANDARD_AFTER}</p>` +
     '<figure aria-label="Ten runs, all passed"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Ten consecutive runs passed</text></svg></figure>',
 );
-const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
+export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
   {
     id: "ship",
     label: MOCK_STANDARD_INVENTED_LABEL,
@@ -2758,89 +2680,15 @@ export const MOCK_AUTONOMY_REPORT =
   "Intent: the meter reads on the first paint. What changed: the panel awaits the snapshot. Verified: pnpm test on the final commit; the PR is green. Risk: low. Not done: nothing.";
 
 /**
- * Review carefully (INF-562). Briefed with this marker on a direct-pr
- * repository at Default care, the mock crewmate saves its change and emits
- * its completion card. The captain's Review carefully reaches it as a
- * choice, and it reports without pushing, in the words the mock Firstmate
- * answers with a review. The mock reviewer passes a brief that names the
- * card the captain read; told the review passed, the crewmate emits its
- * completion card again.
+ * Review carefully (INF-562). A spawn whose title carries this asks for the
+ * standard tier; the careful builder and its review are
+ * `scenarios/reviewCarefully.ts`.
  */
 export const REVIEW_CAREFULLY_MARKER = "ship at default care, then review carefully";
-export const MOCK_CAREFUL_CARD_TITLE = "The meter reads on time, ready to merge";
-export const MOCK_CAREFUL_REVIEWED_CARD_TITLE = "The meter reads on time, reviewed";
-
+/** A spawn whose title carries this asks for the reviewed tier; the reviewer itself is `scenarios/reviewedTier.ts`. */
 export const REVIEWED_TIER_PROMPT_MARKER = "ship at the reviewed tier";
-/** The reviewed builder's change: its first save point's subject, and the pull request's title. */
-export const MOCK_REVIEWED_CHANGE = {
-  title: "fix: make the meter read on time",
-  body: "The meter reads on the first paint.",
-};
-/** The host's review brief, recognised by its fixed opening instruction. */
-export const REVIEW_BRIEF_MARKER = REVIEW_BRIEF_OPENING;
-export const MOCK_REVIEWED_BUILDER_REPORT =
-  "Intent: the meter test passes ten runs in a row. What changed: the test awaits the job queue flush before it reads the meter. Verified: pnpm test and pnpm test:e2e on the final commit; the PR is green on its head. Risk: low, one test file changed. Not done: nothing.";
-const REVIEWED_BUILDER_NEEDLE = "the PR is green on its head";
-/** The careful builder's report after Review carefully: committed, nothing pushed. */
-export const MOCK_CAREFUL_BUILDER_REPORT =
-  "Intent: the meter reads on the first paint. What changed: nothing since the merge card; the work is committed and nothing was pushed. Verified: pnpm test on the final commit; the PR is green on its head. Risk: low. Not done: the review.";
-export const MOCK_REVIEW_AUTOFIX_FINDING =
-  "F1 error tests/meter.test.ts:12 the flush is awaited after the read, so the race stands - auto-fix";
-export const MOCK_REVIEW_ASK_FINDING =
-  "F2 warning src/meter.ts:40 the empty-state copy says Later, which the captain retired - ask-user";
-export const MOCK_REVIEW_FINDINGS_REPORT = [
-  "verdict: findings",
-  MOCK_REVIEW_AUTOFIX_FINDING,
-  MOCK_REVIEW_ASK_FINDING,
-  "risk: medium - one production line moves.",
-].join("\n");
-export const MOCK_REVIEW_PASS_REPORT =
-  "verdict: pass\nNo findings; the flush is awaited before the read now.\nrisk: low - one test file changed.";
-export const MOCK_REVIEWED_FIX_REPORT =
-  "Fixed F1: the flush is awaited before the read; pushed a new head and the checks passed again.";
-export const MOCK_REVIEW_ASK_CARD_TITLE = "Keep the Later copy?";
-export const MOCK_REVIEWED_CARD_TITLE = "The meter test is steady, reviewed";
-/** "ask the reviewer to look again": the captain's word for the re-review. */
-export const REREVIEW_PROMPT_MARKER = "ask the reviewer to look again";
-// e2e-typed-words: the mock Firstmate's own steer, which its reviewer answers; it only shares a phrase with the product's hint
-export const MOCK_REREVIEW_STEER = "re-review at the new head";
-/**
- * The review cap (delivery rigor phase 3). The mock reviewer answers its
- * brief and its first two re-reviews with findings - the third findings is
- * one past the cap, so the host's wake asks for a decision - and the third
- * re-review with a pass. The mock Firstmate turns the cap wake into ONE
- * decision card on the builder's task, a later re-finding into a plain
- * steer, and the captain's answer on the cap card into the steer that
- * reopens the rounds; the builder reports the retry.
- */
-export const MOCK_REVIEW_REFINDING =
-  "F1 error tests/meter.test.ts:12 the flush is still awaited after the read - auto-fix";
-export const MOCK_REVIEW_REFINDINGS_REPORT = [
-  "verdict: findings",
-  MOCK_REVIEW_REFINDING,
-  "risk: medium - one production line moves.",
-].join("\n");
-export const MOCK_REVIEW_REFIX_STEER = "F1 still stands: move the await before the read.";
-export const MOCK_REVIEWED_REFIX_REPORT =
-  "Fixed F1 again: the await is before the read now; pushed a new head.";
-export const MOCK_REVIEW_CAP_CARD_TITLE = "Three findings rounds on the meter fix";
-export const MOCK_REVIEW_CAP_RETRY_LABEL = "Retry with the findings";
-export const MOCK_CAP_RETRY_STEER =
-  "The captain says retry: fix F1 for good and push, then the reviewer reads it again.";
-export const MOCK_REVIEWED_RETRY_REPORT =
-  "Retried after the cap: F1 is fixed for good; pushed a new head.";
 /** "merge the task <title>" -> settle_task merge-pr, so a held merge is observable. */
 export const MERGE_PROMPT_MARKER = "merge the task ";
-export const MOCK_REVIEW_PASSED_STEER = "The review passed: emit your completion card now.";
-const MOCK_REVIEWED_CARD_ACTIONS: ScriptedCardAction[] = [
-  {
-    id: "merge",
-    label: "Merge the pull request",
-    default: true,
-    effect: { kind: "settle", mode: "merge" },
-  },
-  { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
-];
 export const MOCK_FOLLOWUP_TITLE = "Flaky meter test";
 export const MOCK_FOLLOWUP_GOAL = "The meter test passes ten runs in a row.";
 export const MOCK_FOLLOWUP_WHY = "It failed twice while I ran the suite.";
@@ -3071,8 +2919,6 @@ export const FORGET_PROMPT_MARKER = "forget the squash-merge note";
  * turn ends with Pi's stopReason "error" path (report REPRO A). */
 export const FAIL_AUTH_PROMPT_MARKER = "fail this turn with a 401";
 export const FAIL_PROVIDER_PROMPT_MARKER = "fail this turn with a provider error";
-/** INF-447: a service refusal the client must compact or renew out of, once per isolated provider. */
-export const CONTEXT_OVERFLOW_PROMPT_MARKER = "recover this overlong conversation";
 export const LAND_PROMPT_MARKER = "land the task ";
 /** Steer marker: "steer the task <title>: <guidance>" -> steer_crewmate on that task. */
 export const STEER_PROMPT_MARKER = "steer the task ";
@@ -3271,7 +3117,7 @@ function servedToolName(body: string, name: string): string {
 }
 
 /** Whether the conversation so far carries a CALL of the named tool (not its definition). */
-function calledTool(body: string, name: string): boolean {
+export function calledTool(body: string, name: string): boolean {
   return toolCallCount(body, name) > 0;
 }
 
@@ -3649,9 +3495,9 @@ const SEQ_ASKS: SeqAsk[] = [
   },
 ];
 
-type ChatRequest = { messages?: { role: string; content?: unknown }[] };
+export type ChatRequest = { messages?: { role: string; content?: unknown }[] };
 
-function messageText(content: unknown): string {
+export function messageText(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
   return content
@@ -3667,7 +3513,7 @@ function messageText(content: unknown): string {
  * A message's tool results, in order: a `tool` message's text, or the
  * `tool_result` blocks the Anthropic dialect carries in a user message.
  */
-function toolResults(message: { role: string; content?: unknown }): string[] {
+export function toolResults(message: { role: string; content?: unknown }): string[] {
   if (message.role === "tool") return [messageText(message.content)];
   if (message.role !== "user" || !Array.isArray(message.content)) return [];
   return message.content
@@ -3691,7 +3537,7 @@ function saidIn(content: unknown): string {
  * order. A user message that carries tool results and nobody's words (the
  * Anthropic dialect's) is a step of that turn, not a new one.
  */
-function sinceLastUser(body: string): { user: string; results: string[]; tail: string } {
+export function sinceLastUser(body: string): { user: string; results: string[]; tail: string } {
   if (!body.trimStart().startsWith("{")) return { user: "", results: [], tail: "" };
   const messages = (JSON.parse(body) as ChatRequest).messages ?? [];
   let at = -1;
@@ -3730,7 +3576,7 @@ function servedInstructions(body: string): string {
 }
 
 /** A task's id off the current context block's task index, by its exact title. */
-function indexTaskId(body: string, title: string): string | undefined {
+export function indexTaskId(body: string, title: string): string | undefined {
   for (const line of latestContext(body)?.task_index ?? []) {
     if (!line.includes(`"${title}"`)) continue;
     const id = line.match(/\(task_id: ([\w-]+)\)/)?.[1];
@@ -4062,367 +3908,6 @@ function checkRepairMove(
     };
   }
   return { text: "Reported." };
-}
-
-/**
- * Hermetic replay for FI3-304, not a claim that a live model obeys: one
- * captain click survives GitHub's conflict refusal. The crewmate commits,
- * opens its pull request, reads its checks and puts up its completion
- * card; after the refusal the Firstmate steers it to bring the branch up
- * to date, and it rebases, declares the repair with check_change
- * conflictRepair from the heads git printed, and reports - the host merges.
- * The same script drives a Pi crewmate and a Claude one: words carrying
- * KEPT_MERGE_ON_CLAUDE pin the spawn to CLAUDE_CREW_MODEL (FI3-664).
- */
-export const KEPT_MERGE_MARKER = "exercise a kept merge";
-export const KEPT_MERGE_ON_CLAUDE = "on Claude";
-export const KEPT_MERGE_TITLE = "feat: keep the merge click";
-export const KEPT_MERGE_CARD = KEPT_MERGE_TITLE;
-// e2e-typed-words: the mock's own steer to the kept-merge crewmate; it only shares a phrase with the product's
-const KEPT_MERGE_REPAIR = `${KEPT_MERGE_MARKER} bring it up to date`;
-
-function keptMergeMove(
-  body: string,
-  firstmate: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes(KEPT_MERGE_MARKER)) return undefined;
-  const onClaude = user.includes(`${KEPT_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`);
-  const title = `meterlab ${KEPT_MERGE_MARKER}${onClaude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;
-  const taskId = indexTaskId(body, title) ?? findCrewTaskId(body, KEPT_MERGE_MARKER) ?? "missing";
-  if (firstmate) {
-    if (user.includes(SPAWN_PROMPT_MARKER))
-      return results.length
-        ? { text: "Opened." }
-        : {
-            calls: [
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title,
-                  goal: "Exercise a kept merge",
-                  user_words: KEPT_MERGE_MARKER,
-                  repo_id: contextRepos(body).find(([name]) => name === "meterlab")?.[1],
-                  shape: {
-                    rigor_ask: "quick",
-                    skipped_plan_because: "Kept-merge reproduction; implementation fixture",
-                    ...(onClaude ? { override_model_id: CLAUDE_CREW_MODEL } : {}),
-                  },
-                },
-              },
-            ],
-          };
-    // The settle wake says the click is kept: steer the repair, ask nothing.
-    if (user.includes("do not ask the captain to merge again")) {
-      return results.length
-        ? { text: "The repair is steered; the captain's click stands." }
-        : {
-            calls: [
-              { name: "steer_crewmate", args: { task_id: taskId, message: KEPT_MERGE_REPAIR } },
-            ],
-          };
-    }
-    return { text: "Noted; nothing for the captain." };
-  }
-  if (user.includes(KEPT_MERGE_REPAIR)) {
-    if (!results.length)
-      return {
-        calls: [
-          {
-            name: "bash",
-            args: {
-              command:
-                "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
-            },
-          },
-        ],
-      };
-    if (results.length === 1) {
-      const [fromHead, newBase, toHead] = (results[0]?.match(/\b[0-9a-f]{40}\b/g) ?? []) as (
-        | string
-        | undefined
-      )[];
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              conflictRepair: {
-                fromHead: fromHead ?? "missing",
-                toHead: toHead ?? "missing",
-                newBase: newBase ?? "missing",
-                impact: "conflict-only",
-                changedPaths: [],
-                evidence:
-                  "git range-diff shows the one approved commit unchanged on the newer main",
-                validation: "the change's own check at the rebased head",
-              },
-            },
-          },
-        ],
-      };
-    }
-    if (results.length === 2)
-      return {
-        calls: [
-          {
-            name: "report",
-            args: {
-              text: `${KEPT_MERGE_MARKER}: brought up to date with main and declared conflict-only; the host merges on the captain's kept click.`,
-            },
-          },
-        ],
-      };
-    return { text: "Brought up to date." };
-  }
-  const steps: ScriptedCall[] = [
-    {
-      name: "bash",
-      args: {
-        command: `printf 'kept\\n' > kept.txt && git add kept.txt && git commit -m "${KEPT_MERGE_TITLE}" && git rev-parse main HEAD`,
-      },
-    },
-    prepareMockStory(KEPT_MERGE_CARD, results[0], {
-      ...MOCK_GITHUB_STORY,
-      why: ["A merge click should survive a conflict refusal."],
-      whatChanged: ["Added the kept file."],
-      before: ["The click bought one attempt."],
-    }),
-    {
-      name: "open_change",
-      args: { title: KEPT_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
-    },
-    { name: "check_change", args: {} },
-    {
-      name: "emit_card",
-      args: {
-        title: KEPT_MERGE_CARD,
-        presentation: preparedRevision(results.join("\n")),
-        actions: [
-          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
-        ],
-      },
-    },
-    {
-      name: "report",
-      args: { text: `${KEPT_MERGE_MARKER}: the change is ready and its completion card is up.` },
-    },
-  ];
-  const next = steps[results.length];
-  return next ? { calls: [next] } : { text: "Ready." };
-}
-
-/**
- * Hermetic replay for FI3-662, not a claim that a live model obeys: the
- * captain's guidance holds his kept merge until the crewmate declares its
- * impact. After the click is kept on a conflict, the captain asks through
- * the Firstmate, whose steer in his turn is his guidance; the crewmate
- * brings the change up to date, declares the repair and asks him back on a
- * card without declaring the guidance, so the merge waits. His reply under
- * that card is guidance too: the crewmate declares the newest mark it read
- * as none, and the host merges. Words carrying KEPT_MERGE_ON_CLAUDE pin the
- * spawn to CLAUDE_CREW_MODEL.
- */
-export const GUIDED_MERGE_MARKER = "hold a kept merge for guidance";
-export const GUIDED_MERGE_TITLE = "feat: hold the merge for guidance";
-export const GUIDED_MERGE_CARD = GUIDED_MERGE_TITLE;
-export const GUIDED_MERGE_QUESTION = "Rename the guided file?";
-/** The captain's ask in the main input: the Firstmate steers it to the crewmate in his turn. */
-export const GUIDED_MERGE_ASK = `${GUIDED_MERGE_MARKER}: ask whether to rename the file`;
-/** The captain's reply under the crewmate's question card. */
-export const GUIDED_MERGE_ANSWER = `${GUIDED_MERGE_MARKER}: keep its name`;
-// e2e-typed-words: the mock Firstmate's own steer, relaying the captain's ask
-const GUIDED_MERGE_STEER = `${GUIDED_MERGE_MARKER} - the captain asks whether the file should be renamed`;
-
-function guidedMergeMove(
-  body: string,
-  firstmate: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes(GUIDED_MERGE_MARKER)) return undefined;
-  const onClaude = user.includes(`${GUIDED_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`);
-  const title = `meterlab ${GUIDED_MERGE_MARKER}${onClaude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;
-  const taskId =
-    indexTaskId(body, title) ??
-    indexTaskId(body, `meterlab ${GUIDED_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`) ??
-    findCrewTaskId(body, GUIDED_MERGE_MARKER) ??
-    "missing";
-  if (firstmate) {
-    if (user.includes(SPAWN_PROMPT_MARKER))
-      return results.length
-        ? { text: "Opened." }
-        : {
-            calls: [
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title,
-                  goal: "Hold a kept merge for the captain's guidance",
-                  user_words: GUIDED_MERGE_MARKER,
-                  repo_id: contextRepos(body).find(([name]) => name === "meterlab")?.[1],
-                  shape: {
-                    rigor_ask: "quick",
-                    skipped_plan_because: "Guided kept-merge reproduction; implementation fixture",
-                    ...(onClaude ? { override_model_id: CLAUDE_CREW_MODEL } : {}),
-                  },
-                },
-              },
-            ],
-          };
-    // The captain's own words: relayed to the crewmate in his turn.
-    if (user.includes(GUIDED_MERGE_ASK))
-      return results.length
-        ? { text: "Asked the crewmate." }
-        : {
-            calls: [
-              { name: "steer_crewmate", args: { task_id: taskId, message: GUIDED_MERGE_STEER } },
-            ],
-          };
-    // The kept click's settle wake and the crewmate's reports: nothing to steer.
-    return { text: "Noted; nothing for the captain." };
-  }
-  if (user.includes(GUIDED_MERGE_ANSWER)) {
-    // The newest mark the steer named, read after the words the app wrote it with.
-    const mark = Number(
-      user
-        .split(GUIDANCE_MARK_WORDS)
-        .at(-1)
-        ?.match(/^ (\d+)/)?.[1] ?? 0,
-    );
-    if (!results.length)
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              captainGuidance: {
-                mark,
-                impact: "none",
-                evidence:
-                  "The captain kept the file's name, so the change stays as he approved it.",
-              },
-            },
-          },
-        ],
-      };
-    if (results.length === 1)
-      return {
-        calls: [
-          {
-            name: "report",
-            args: {
-              text: `${GUIDED_MERGE_MARKER}: the captain kept the name; declared that his guidance leaves the approved change as it was.`,
-            },
-          },
-        ],
-      };
-    return { text: "Declared." };
-  }
-  if (user.includes(GUIDED_MERGE_STEER)) {
-    if (!results.length)
-      return {
-        calls: [
-          {
-            name: "bash",
-            args: {
-              command:
-                "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
-            },
-          },
-        ],
-      };
-    if (results.length === 1) {
-      const [fromHead, newBase, toHead] = (results[0]?.match(/\b[0-9a-f]{40}\b/g) ?? []) as (
-        | string
-        | undefined
-      )[];
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              conflictRepair: {
-                fromHead: fromHead ?? "missing",
-                toHead: toHead ?? "missing",
-                newBase: newBase ?? "missing",
-                impact: "conflict-only",
-                changedPaths: [],
-                evidence:
-                  "git range-diff shows the one approved commit unchanged on the newer main",
-                validation: "the change's own check at the rebased head",
-              },
-            },
-          },
-        ],
-      };
-    }
-    // It asks the captain back rather than deciding: his question stays open.
-    if (results.length === 2)
-      return {
-        calls: [
-          {
-            name: "emit_card",
-            args: {
-              title: GUIDED_MERGE_QUESTION,
-              body: "<p>Should the guided file get a new name?</p><p>I brought the change up to date and kept the name you approved.</p>",
-              asking: true,
-              actions: [
-                { id: "keep", label: "Keep the name", default: true },
-                { id: "rename", label: "Rename it" },
-              ],
-            },
-          },
-        ],
-      };
-    if (results.length === 3)
-      return {
-        calls: [
-          {
-            name: "report",
-            args: {
-              text: `${GUIDED_MERGE_MARKER}: brought up to date; the captain decides whether the file gets a new name.`,
-              waiting_on_captain: { reason: "Whether the guided file gets a new name" },
-            },
-          },
-        ],
-      };
-    return { text: "Asked." };
-  }
-  const steps: ScriptedCall[] = [
-    {
-      name: "bash",
-      args: {
-        command: `printf 'guided\\n' > guided.txt && git add guided.txt && git commit -m "${GUIDED_MERGE_TITLE}" && git rev-parse main HEAD`,
-      },
-    },
-    prepareMockStory(GUIDED_MERGE_CARD, results[0], {
-      ...MOCK_GITHUB_STORY,
-      why: ["A kept merge should wait for the captain's newest words."],
-      whatChanged: ["Added the guided file."],
-      before: ["A reply did not hold the merge."],
-    }),
-    {
-      name: "open_change",
-      args: { title: GUIDED_MERGE_TITLE, presentation: preparedRevision(results.join("\n")) },
-    },
-    { name: "check_change", args: {} },
-    {
-      name: "emit_card",
-      args: {
-        title: GUIDED_MERGE_CARD,
-        presentation: preparedRevision(results.join("\n")),
-        actions: [
-          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
-        ],
-      },
-    },
-    {
-      name: "report",
-      args: { text: `${GUIDED_MERGE_MARKER}: the change is ready and its completion card is up.` },
-    },
-  ];
-  const next = steps[results.length];
-  return next ? { calls: [next] } : { text: "Ready." };
 }
 
 /**
@@ -5036,6 +4521,28 @@ function servedSummary(turn: ServedTurn | undefined): string {
   return clipped(parts.join(" | ") || "(context only)");
 }
 
+/** What a journey's scenario reads of one request. */
+export type ScenarioRequest = {
+  body: string;
+  isFirstmate: boolean;
+  wantsStream: boolean;
+  latestUserTail: string;
+  hasToolResults: boolean;
+};
+/** A scenario's answer: tool calls, text, or a refusal the way the service sends one. */
+export type ScenarioAnswer =
+  | { calls: ScriptedCall[] }
+  | { text: string }
+  | { refusal: { status: number; error: { type: string; message: string } } };
+/**
+ * A journey's own stand-in behavior, in its own file under
+ * `tests/e2e/scenarios/` (`docs/testing.md`, "A journey's own scenarios").
+ * The stand-in starts each named scenario once, so its state lives as long
+ * as that stand-in, and asks the answerers in the order named; an
+ * answerer returns undefined to pass the request on.
+ */
+export type Scenario = () => (request: ScenarioRequest) => ScenarioAnswer | undefined;
+
 export type MockProviderServer = {
   port: number;
   requests: () => number;
@@ -5082,11 +4589,11 @@ function contextCrew(body: string) {
   return latestContext(body)?.crew ?? [];
 }
 
-function contextRepos(body: string): Array<[name: string, id: string]> {
+export function contextRepos(body: string): Array<[name: string, id: string]> {
   return (latestContext(body)?.repos ?? []).map((repo) => [repo.name, repo.repo_id]);
 }
 
-function findCrewTaskId(body: string, titleNeedle: string): string | undefined {
+export function findCrewTaskId(body: string, titleNeedle: string): string | undefined {
   const needle = titleNeedle.trim();
   return needle
     ? contextCrew(body).find((entry) => entry.title.includes(needle))?.task_id
@@ -5098,10 +4605,12 @@ function settleNeedle(haystack: string, marker: string): string {
   return after.split(/["\\]/)[0]?.trim() ?? "";
 }
 
-export async function startMockProvider(): Promise<MockProviderServer> {
+export async function startMockProvider(
+  options: { scenarios?: readonly Scenario[] } = {},
+): Promise<MockProviderServer> {
+  const scenarios = (options.scenarios ?? []).map((start) => start());
   let requestCount = 0;
   let failFirstmate = false;
-  let overflowedFirstmate = false;
   let cardFetchProbeHits = 0;
   const requestBodies: string[] = [];
   const requestHeaders: IncomingHttpHeaders[] = [];
@@ -5343,19 +4852,6 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           res.on("close", () => held.delete(res));
         };
 
-        if (
-          isFirstmate &&
-          !overflowedFirstmate &&
-          latestUserTail.includes(CONTEXT_OVERFLOW_PROMPT_MARKER)
-        ) {
-          overflowedFirstmate = true;
-          writeAnthropicError(res, 400, {
-            type: "invalid_request_error",
-            message: "prompt is too long: 321193 tokens > 300000 maximum",
-          });
-          return;
-        }
-
         if (isFirstmate && failFirstmate) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(
@@ -5564,46 +5060,24 @@ export async function startMockProvider(): Promise<MockProviderServer> {
               }
             }
           }
-          // A report with a continuation: the model makes the two existing
-          // task-graph calls in this turn, rather than inventing a runner.
-          if (
-            latestUserTail.includes("Filed this turn:") &&
-            latestUserTail.includes(CONTINUE_CHANGE_TITLE)
-          ) {
-            const origin = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            const filing = latestUserTail.match(/Filed this turn: ([A-Z0-9-]+)/)?.[1] ?? "missing";
-            if (!calledTool(latestUserTail, "link_tasks")) {
-              streamToolCalls([
-                { name: "link_tasks", args: { from: origin, to: filing, type: "blocks" } },
-              ]);
-            } else if (!calledTool(latestUserTail, "update_task")) {
-              streamToolCalls([
-                {
-                  name: "update_task",
-                  args: { task: filing, start_policy: "when-ready", blocked_by: [origin] },
-                },
-              ]);
-            } else if (!calledTool(latestUserTail, "steer_crewmate")) {
-              streamToolCalls([
-                {
-                  name: "steer_crewmate",
-                  args: {
-                    task_id: origin,
-                    message:
-                      "Now emit the completion decision, naming the continuation in its body.",
-                  },
-                },
-              ]);
-            } else {
-              streamText("The continuation waits on the first change.");
-            }
-            return;
-          }
+        }
+        // A journey's own scenarios (`docs/testing.md`, "A journey's own
+        // scenarios"): asked in the order the journey named them, after the
+        // first mate's answer-missing retry and scripted turns and before
+        // every shared answer below. The first to answer wins.
+        const scenarioRequest = { body, isFirstmate, wantsStream, latestUserTail, hasToolResults };
+        for (const scenario of scenarios) {
+          const answer = scenario(scenarioRequest);
+          if (!answer) continue;
+          if ("calls" in answer) streamToolCalls(answer.calls);
+          else if ("text" in answer) streamText(answer.text);
+          else writeAnthropicError(res, answer.refusal.status, answer.refusal.error);
+          return;
+        }
+        if (isFirstmate && wantsStream) {
           const checkMove =
             staleChecksMove(body, true) ??
             checkRepairMove(body, true) ??
-            keptMergeMove(body, true) ??
-            guidedMergeMove(body, true) ??
             dependencyWaitMove(body, true);
           if (checkMove) {
             if ("calls" in checkMove) streamToolCalls(checkMove.calls);
@@ -5638,152 +5112,6 @@ export async function startMockProvider(): Promise<MockProviderServer> {
               findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
             return { name: "settle_task", args: { task_id: taskId, mode } };
           };
-          // The reviewed tier (delivery rigor phase 2), in the contract's
-          // order. A reviewed builder's green report: its recorded checks
-          // on the wake, then spawn_crewmate with review_of.
-          const reviewedReport =
-            latestUserTail.includes("reported on task") &&
-            latestUserTail.includes(REVIEWED_BUILDER_NEEDLE) &&
-            !latestUserTail.includes("with verdict");
-          // The wake carries the app's recorded checks (the builder's own
-          // reading); the Firstmate acts on them without a tool call.
-          if (
-            reviewedReport &&
-            latestUserTail.includes("recorded checks: green") &&
-            !latestUserTail.includes("Commissioned")
-          ) {
-            const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            const repo = contextRepos(body)[0];
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: "Review the meter fix",
-                  goal: "The pull request is reviewed.",
-                  user_words: `commission a crewmate: meterlab ${REVIEWED_TIER_PROMPT_MARKER}`,
-                  ...(repo ? { repo_id: repo[1] } : {}),
-                  shape: { review_of: taskId },
-                },
-              },
-            ]);
-            return;
-          }
-          // The review cap (phase 3): the host's wake is one decision card
-          // on the builder's task - retry, a stronger model, or discard.
-          if (!hasToolResults && latestUserTail.includes("past the review cap")) {
-            const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  task_id: builderId,
-                  title: MOCK_REVIEW_CAP_CARD_TITLE,
-                  body:
-                    "<p>The reviewer found the same race three times; the rounds are spent.</p>" +
-                    "<ul><li>Retry with the findings, a stronger model on your word, or discard.</li></ul>",
-                  actions: [
-                    { id: "retry", label: MOCK_REVIEW_CAP_RETRY_LABEL, default: true },
-                    {
-                      id: "discard",
-                      label: "Discard",
-                      danger: true,
-                      effect: { kind: "settle", mode: "discard" },
-                    },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          // The captain's answer on the cap card is no branch here: the
-          // spec scripts it (`scriptFirstmateTurn`) from the card it reads.
-          // The captain's word for the re-review, once the fix has landed. A
-          // captain turn carries the wakes pending before its [user] line, so
-          // one that also brought a re-finding steers the builder with it
-          // first, the way the contract's Firstmate would do both.
-          if (!hasToolResults && latestUserTail.includes(REREVIEW_PROMPT_MARKER)) {
-            const reviewId =
-              findCrewTaskId(latestUserTail, "Review: ") ??
-              findCrewTaskId(body, "Review: ") ??
-              "missing";
-            const refinding = latestUserTail.includes(MOCK_REVIEW_REFINDING)
-              ? latestUserTail.match(/the review of task ([\w-]+)/)?.[1]
-              : undefined;
-            // The head the round is counted at is the builder's own reading
-            // (its check_change after the push), already on the record.
-            streamToolCalls([
-              ...(refinding
-                ? [
-                    {
-                      name: "steer_crewmate",
-                      args: { task_id: refinding, message: MOCK_REVIEW_REFIX_STEER },
-                    } satisfies ScriptedCall,
-                  ]
-                : []),
-              {
-                name: "steer_crewmate",
-                args: { task_id: reviewId, message: MOCK_REREVIEW_STEER },
-              },
-            ]);
-            return;
-          }
-          // A re-review's findings: the same auto-fix, steered again, no card.
-          if (
-            !hasToolResults &&
-            latestUserTail.includes("with verdict findings") &&
-            latestUserTail.includes(MOCK_REVIEW_REFINDING)
-          ) {
-            const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([
-              {
-                name: "steer_crewmate",
-                args: { task_id: builderId, message: MOCK_REVIEW_REFIX_STEER },
-              },
-            ]);
-            return;
-          }
-          // The reviewer's findings: the auto-fix is a steer to the builder,
-          // the ask-user finding one decision card on the builder's task.
-          if (
-            !hasToolResults &&
-            latestUserTail.includes("with verdict findings") &&
-            latestUserTail.includes(MOCK_REVIEW_ASK_FINDING)
-          ) {
-            const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([
-              {
-                name: "steer_crewmate",
-                args: { task_id: builderId, message: MOCK_REVIEW_AUTOFIX_FINDING },
-              },
-              {
-                name: "emit_card",
-                args: {
-                  task_id: builderId,
-                  review_task_id: latestUserTail.match(/on review task ([\w-]+)/)?.[1] ?? "missing",
-                  title: MOCK_REVIEW_ASK_CARD_TITLE,
-                  body:
-                    `<p>${MOCK_REVIEW_ASK_FINDING}</p>` +
-                    "<ul><li>The reviewer challenges a deliberate choice; your words did not settle it.</li></ul>",
-                  actions: [
-                    { id: "keep-copy", label: "Keep the copy", default: true },
-                    { id: "change-copy", label: "Change it" },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          // The pass: autonomy is off, so the builder emits its card.
-          if (!hasToolResults && latestUserTail.includes("the hold is released")) {
-            const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([
-              {
-                name: "steer_crewmate",
-                args: { task_id: builderId, message: MOCK_REVIEW_PASSED_STEER },
-              },
-            ]);
-            return;
-          }
           // Cards as threads, phase 1: the crewmate closed its card and
           // handed the captain's words up. The Firstmate runs the settle it
           // would have run had he typed them in the main input.
@@ -7427,127 +6755,10 @@ export async function startMockProvider(): Promise<MockProviderServer> {
           }
           // The card is up: the turn ends with the plain-text report below.
         }
-        // The reviewer (delivery rigor phase 2, capped in phase 3): findings
-        // on its brief and on the first two re-review steers, a pass on the
-        // third - the whole history rides the body, so the count is read off
-        // it. Its final text is its report.
-        if (!isFirstmate && body.includes(REVIEW_BRIEF_MARKER) && wantsStream) {
-          // A review the captain asked for from his merge card passes once
-          // its brief names the card he read (INF-562).
-          if (body.includes(MOCK_CAREFUL_CARD_TITLE)) {
-            streamText(MOCK_REVIEW_PASS_REPORT);
-            return;
-          }
-          const rereviews = body.split(MOCK_REREVIEW_STEER).length - 1;
-          if (!latestUserTail.includes(MOCK_REREVIEW_STEER)) {
-            streamText(MOCK_REVIEW_FINDINGS_REPORT);
-          } else if (rereviews >= 3) {
-            streamText(MOCK_REVIEW_PASS_REPORT);
-          } else {
-            streamText(MOCK_REVIEW_REFINDINGS_REPORT);
-          }
-          return;
-        }
-        // The careful builder (INF-562): its change and completion card at
-        // Default care; after Review carefully a report with nothing pushed;
-        // after the pass its completion card again.
-        if (!isFirstmate && body.includes(REVIEW_CAREFULLY_MARKER) && wantsStream) {
-          const card = (title: string): ScriptedCall[] => [
-            {
-              name: "emit_card",
-              args: {
-                title,
-                body: MOCK_STANDARD_DRAWN_BODY,
-                actions: MOCK_STANDARD_MERGE_ONLY_ACTIONS,
-              },
-            },
-            { name: "report", args: { text: MOCK_STANDARD_REPORT } },
-          ];
-          if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
-            if (!hasToolResults) streamToolCalls(card(MOCK_CAREFUL_REVIEWED_CARD_TITLE));
-            else streamText("done");
-            return;
-          }
-          if (
-            latestUserTail.includes("the user chose") &&
-            latestUserTail.includes(REVIEW_CAREFULLY_WORDS)
-          ) {
-            streamText(MOCK_CAREFUL_BUILDER_REPORT);
-            return;
-          }
-          if (!calledTool(body, "bash")) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: { command: `git commit --allow-empty -m "${MOCK_REVIEWED_CHANGE.title}"` },
-              },
-            ]);
-            return;
-          }
-          if (!calledTool(body, "emit_card")) streamToolCalls(card(MOCK_CAREFUL_CARD_TITLE));
-          else streamText("done");
-          return;
-        }
-        // The reviewed builder: a green report and no card on its brief, the
-        // fix on the auto-fix steer, the completion card once told the
-        // review passed.
-        if (!isFirstmate && body.includes(REVIEWED_TIER_PROMPT_MARKER) && wantsStream) {
-          if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
-            if (!hasToolResults) {
-              streamToolCalls([
-                {
-                  name: "emit_card",
-                  args: {
-                    title: MOCK_REVIEWED_CARD_TITLE,
-                    body: MOCK_STANDARD_CARD_BODY,
-                    actions: MOCK_REVIEWED_CARD_ACTIONS,
-                  },
-                },
-                { name: "report", args: { text: MOCK_STANDARD_REPORT } },
-              ]);
-              return;
-            }
-            streamText("done");
-            return;
-          }
-          if (latestUserTail.includes(MOCK_REVIEW_AUTOFIX_FINDING)) {
-            streamText(MOCK_REVIEWED_FIX_REPORT);
-            return;
-          }
-          if (latestUserTail.includes(MOCK_REVIEW_REFIX_STEER)) {
-            streamText(MOCK_REVIEWED_REFIX_REPORT);
-            return;
-          }
-          if (latestUserTail.includes(MOCK_CAP_RETRY_STEER)) {
-            streamText(MOCK_REVIEWED_RETRY_REPORT);
-            return;
-          }
-          // Its own save point on its branch first - the head its change is
-          // checked, reviewed and put in at - then the green report on it.
-          if (!calledTool(body, "bash")) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: { command: `git commit --allow-empty -m "${MOCK_REVIEWED_CHANGE.title}"` },
-              },
-            ]);
-            return;
-          }
-          // Then its own check reading, as a real builder takes one before
-          // it reports: the app records it, and the Firstmate reads it.
-          if (!calledTool(body, "check_change")) {
-            streamToolCalls([{ name: "check_change", args: {} }]);
-            return;
-          }
-          streamText(MOCK_REVIEWED_BUILDER_REPORT);
-          return;
-        }
         const checkMove =
           !isFirstmate && wantsStream
             ? (staleChecksMove(body, false) ??
               checkRepairMove(body, false) ??
-              keptMergeMove(body, false) ??
-              guidedMergeMove(body, false) ??
               dependencyWaitMove(body, false))
             : undefined;
         if (checkMove) {
@@ -7625,102 +6836,6 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             else streamText(sequencesMove.text);
             return;
           }
-        }
-        if (
-          !isFirstmate &&
-          body.includes("Goal: Check the meter after the first fix is in.") &&
-          wantsStream
-        ) {
-          if (!calledTool(latestUserTail, "report")) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: { text: "Read the first fix and checked the landed meter." },
-              },
-            ]);
-          } else {
-            streamText("The continuation read its origin.");
-          }
-          return;
-        }
-        if (!isFirstmate && body.includes(CONTINUE_CHANGE_PROMPT_MARKER) && wantsStream) {
-          if (latestUserTail.includes("Now emit the completion decision")) {
-            if (!calledTool(latestUserTail, "emit_card")) {
-              streamToolCalls([
-                {
-                  name: "emit_card",
-                  args: {
-                    title: CONTINUE_CHANGE_CARD_TITLE,
-                    presentation: preparedRevision(body),
-                    actions: [
-                      {
-                        id: "put-in",
-                        label: "Put it in",
-                        default: true,
-                        effect: { kind: "settle", mode: "merge" },
-                      },
-                    ],
-                  },
-                },
-              ]);
-            } else {
-              streamText("The first change is ready.");
-            }
-            return;
-          }
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: {
-                  command:
-                    'git commit --allow-empty -m "fix: stage the meter" && git push origin HEAD && git rev-parse main HEAD',
-                },
-              },
-            ]);
-          } else if (calledTool(latestUserTail, "report")) {
-            streamText("The first change is ready.");
-          } else if (latestUserTail.includes("overall: green")) {
-            if (!calledTool(latestUserTail, "file_followup")) {
-              streamToolCalls([
-                {
-                  name: "file_followup",
-                  args: {
-                    title: CONTINUE_CHANGE_TITLE,
-                    goal: "Check the meter after the first fix is in.",
-                    why: "The first fix must be in before checking the landed meter.",
-                  },
-                },
-              ]);
-            } else {
-              streamToolCalls([
-                {
-                  name: "report",
-                  args: {
-                    text: `The first fix is ready; filed ${CONTINUE_CHANGE_TITLE} for after put-in.`,
-                  },
-                },
-              ]);
-            }
-          } else if (latestUserTail.includes("Read its checks with check_change")) {
-            streamToolCalls([{ name: "check_change", args: {} }]);
-          } else if (!calledTool(latestUserTail, "prepare_change")) {
-            streamToolCalls([
-              prepareMockStory(
-                CONTINUE_CHANGE_CARD_TITLE,
-                sinceLastUser(body).results[0],
-                MOCK_CONTINUE_STORY,
-              ),
-            ]);
-          } else {
-            streamToolCalls([
-              {
-                name: "open_change",
-                args: { title: MOCK_CONTINUE_CHANGE.title, presentation: preparedRevision(body) },
-              },
-            ]);
-          }
-          return;
         }
         if (!isFirstmate && latestUserTail.includes(READS_ANYWHERE_MARKER) && wantsStream) {
           // FI3-1571 piece 3: reads past the old read list, from a project
@@ -8115,85 +7230,6 @@ export async function startMockProvider(): Promise<MockProviderServer> {
             return;
           }
           streamText("Evidence returned.");
-          return;
-        }
-        if (!isFirstmate && body.includes(GITHUB_CHANGE_PROMPT_MARKER) && wantsStream) {
-          // INF-470: this publication journey must also work when git completes
-          // as a background job. Read its actual completion, never the job-start
-          // receipt as if it were the git output, and never repeat the command.
-          const messages = (JSON.parse(body) as ChatRequest).messages ?? [];
-          const results = messages.flatMap(toolResults);
-          const gitReading = [
-            ...results,
-            ...messages
-              .filter((message) => message.role === "user")
-              .map((message) => messageText(message.content)),
-          ].find((reading) =>
-            /https:\/\/(?:github|gitlab)[^\s]*\n[0-9a-f]{40}\n[0-9a-f]{40}/.test(reading),
-          );
-          // INF-132: github.com and gitlab.com take a saved story; a server's own host keeps its body.
-          const savedStory = /https:\/\/(?:github|gitlab)\.com\//.test(gitReading ?? "");
-          if (!calledTool(body, "bash")) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: {
-                  background: true,
-                  command: `git commit --allow-empty -m "${MOCK_GITHUB_CHANGE.title}" && git push origin HEAD && git config --get remote.origin.url && git rev-parse main HEAD`,
-                },
-              },
-            ]);
-            return;
-          }
-          if (!gitReading) {
-            streamText("Waiting for the committed change.");
-            return;
-          }
-          if (calledTool(body, "emit_card")) {
-            streamText("done");
-            return;
-          }
-          if (results.some((result) => result.includes("overall: green"))) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: savedStory
-                    ? MOCK_GITHUB_CHANGE_CARD_TITLE
-                    : MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
-                  ...(savedStory
-                    ? { presentation: preparedRevision(body) }
-                    : { body: MOCK_STANDARD_CARD_BODY }),
-                  actions: [
-                    {
-                      id: "put-in",
-                      label: "Put it in",
-                      default: true,
-                      effect: { kind: "settle", mode: "merge" },
-                    },
-                  ],
-                },
-              },
-              { name: "report", args: { text: "The meter fix is open and its checks passed." } },
-            ]);
-            return;
-          }
-          if (results.some((result) => result.includes("Read its checks with check_change"))) {
-            streamToolCalls([{ name: "check_change", args: {} }]);
-            return;
-          }
-          if (savedStory && !calledTool(body, "prepare_change")) {
-            streamToolCalls([prepareMockStory(MOCK_GITHUB_CHANGE_CARD_TITLE, gitReading)]);
-            return;
-          }
-          streamToolCalls([
-            {
-              name: "open_change",
-              args: savedStory
-                ? { title: MOCK_GITHUB_CHANGE.title, presentation: preparedRevision(body) }
-                : MOCK_GITHUB_CHANGE,
-            },
-          ]);
           return;
         }
         if (!isFirstmate && latestUserTail.includes(SEND_UP_PROMPT_MARKER) && wantsStream) {

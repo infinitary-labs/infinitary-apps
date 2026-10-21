@@ -208,10 +208,27 @@ They match the whole hook and the whole quoted sentence, so a fragment in the sh
 A change no journey or helper it imports reaches runs nothing and the chooser reports so in its summary.
 A change to an export every journey imports still runs them all, because that is the break this check exists to catch.
 A changed screen file that draws a hook most journeys read, such as `HomeScreen.tsx` with `data-stage-entry`, likewise runs most journeys.
+A model behavior only a few journeys need lives in its own scenario file instead ("A journey's own scenarios"), so an edit to it runs only those journeys.
 The Mac job refuses an empty file list, builds once, then runs exactly the chosen files with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
 It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
+
+## A journey's own scenarios
+
+The shared stand-in model (`tests/e2e/mockProvider.ts`) answers every journey, so nearly every journey imports it and an edit to it runs them all.
+A scripted model behavior that only one or a few journeys need is a scenario in its own file under `tests/e2e/scenarios/`, imported only by those journeys.
+A scenario is the stand-in's `Scenario` type: a start function that returns an answerer.
+The stand-in calls the start function once when it starts, so any state the scenario keeps lasts as long as that stand-in.
+The answerer reads one request (`ScenarioRequest`) and returns tool calls, text, or a refusal the way the service sends one, or `undefined` to pass the request on.
+A journey names its scenarios where its stand-in starts: `launchApp({ withMockProvider: true, scenarios: [reviewedTier] })`, `launchClaudeCrew({ scenarios })`, or `startMockProvider({ scenarios })` for a stand-in the spec keeps across launches.
+A relaunch with `reuseMockProvider` keeps the scenarios that stand-in started with, and `launchApp` refuses `scenarios` when it does not start the stand-in itself.
+The stand-in asks the named scenarios in the order named, after the first mate's answer-missing retry and a spec's scripted turns (`scriptFirstmateTurn`) and before every shared answer; the first answer wins.
+Words a journey and its scenario share, such as a marker or a card title, live in the scenario file, and the journey imports them from there.
+A shared helper the scenarios read, such as `calledTool` or `sinceLastUser`, stays in the stand-in, which exports it.
+Only a journey or another scenario imports a scenario file.
+`tests/lint/e2e-scenario-imports.grit` refuses the import anywhere else in `tests/e2e`, in `pnpm check`, because one import in a shared helper puts the scenario under every journey again.
+An edit to a scenario file then picks only the journeys that import it, by rule 2 of "Journeys on the pull request".
 
 ## Per-run e2e evidence
 

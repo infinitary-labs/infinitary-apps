@@ -21,6 +21,15 @@ import { resizeWindow } from "./layout";
 import {
   FM_SYSTEM_MARKER,
   MERGE_PROMPT_MARKER,
+  REVIEWED_TIER_PROMPT_MARKER,
+  SPAWN_PROMPT_MARKER,
+} from "./mockProvider";
+import { regionShot } from "./pictures";
+import { seedHostedOrigins } from "./projectSeed";
+import { promptInput } from "./prompt";
+import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
+import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
+import {
   MOCK_CAP_RETRY_STEER,
   MOCK_REVIEW_ASK_CARD_TITLE,
   MOCK_REVIEW_AUTOFIX_FINDING,
@@ -35,14 +44,8 @@ import {
   MOCK_REVIEWED_RETRY_REPORT,
   REREVIEW_PROMPT_MARKER,
   REVIEW_BRIEF_MARKER,
-  REVIEWED_TIER_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { regionShot } from "./pictures";
-import { seedHostedOrigins } from "./projectSeed";
-import { promptInput } from "./prompt";
-import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
-import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
+  reviewedTier,
+} from "./scenarios/reviewedTier";
 import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 
@@ -185,6 +188,7 @@ test.beforeAll(async () => {
   db.close();
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [reviewedTier],
     userDataDir,
     env: github.env,
   });

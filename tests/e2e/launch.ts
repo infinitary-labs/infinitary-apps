@@ -22,7 +22,12 @@ import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
 import { readInMain } from "./mainProcess";
 import { type MockClaudeTurns, writeMockClaudeClient } from "./mockClaudeClient";
-import { type MockProviderServer, mockModelsJson, startMockProvider } from "./mockProvider";
+import {
+  type MockProviderServer,
+  mockModelsJson,
+  type Scenario,
+  startMockProvider,
+} from "./mockProvider";
 import { writeVoiceHelperStandIn } from "./voiceHelperStandIn";
 import { untilWindowCommands } from "./windowKeys";
 import { stopWithWorker } from "./workerApps";
@@ -128,6 +133,13 @@ export type LaunchOptions = {
    * OpenAI-compatible server) so agent sessions run real Pi pipelines.
    */
   withMockProvider?: boolean;
+  /**
+   * The journey's own stand-in scenarios (`tests/e2e/scenarios/`), asked
+   * in this order before the stand-in's shared answers (`docs/testing.md`,
+   * "A journey's own scenarios"). A reused stand-in keeps the scenarios it
+   * was started with.
+   */
+  scenarios?: readonly Scenario[];
   /**
    * The app-scoped models.json to write instead of the default custom
    * provider, given the mock server's port. The first-launch spec uses it
@@ -369,9 +381,14 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
 
   let mockProvider: MockProviderServer | undefined = options.reuseMockProvider;
   const ownsMockProvider = !mockProvider && Boolean(options.withMockProvider);
+  if (options.scenarios && !ownsMockProvider) {
+    throw new Error(
+      "scenarios need the stand-in this launch starts (withMockProvider); a reused stand-in keeps the scenarios it started with.",
+    );
+  }
   if (mockProvider || options.withMockProvider) {
     if (!mockProvider) {
-      mockProvider = await startMockProvider();
+      mockProvider = await startMockProvider({ scenarios: options.scenarios });
     }
     mkdirSync(join(userDataDir, "auth"), { recursive: true });
     writeFileSync(

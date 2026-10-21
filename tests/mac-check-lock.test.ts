@@ -15,8 +15,9 @@ const require = createRequire(import.meta.url);
 const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml");
 const execute = promisify(execFile);
 const queued = (access: string) => `Mac checks: ${access} waiting for active checks`;
+const lined = (access: string) => `Mac checks: ${access} waiting for checks queued ahead`;
 type Work = {
-  wait(line: string): Promise<void>;
+  wait(line: string | RegExp): Promise<string>;
   release(): void;
   stop(): void;
   result: Promise<number | null>;
@@ -32,12 +33,28 @@ function fixture() {
 const { basename } = require('node:path');
 if (process.env.CHECK_FAIL) process.exit(7);
 if (basename(process.argv[1]) === 'pnpm' && process.argv[2] !== 'build') process.exit(0);
+console.log('process:' + process.env.CHECK_NAME + ':' + process.pid + ':' + process.ppid);
 console.log('started:' + process.env.CHECK_NAME);
+// Like a real build or gate, it runs until released or signalled, even if its input closes.
 process.stdin.once('data', () => process.exit(0));
+setInterval(() => {}, 60000);
 `;
   // tart stands in for the virtual Mac a switched-on phone gate runs in (INF-524).
-  for (const name of ["node", "pnpm", "tart"])
-    writeFileSync(join(bin, name), workload, { mode: 0o755 });
+  for (const name of ["pnpm", "tart"]) writeFileSync(join(bin, name), workload, { mode: 0o755 });
+  writeFileSync(join(root, "workload"), workload);
+  // INF-648: INF-599's script started node scripts/phone-test-home.ts in the background from
+  // a shell, and the helper outlived the run. The node stand-in can do the same.
+  writeFileSync(
+    join(bin, "node"),
+    `#!/bin/bash
+if [ -n "$CHECK_LEAVE" ]; then
+  ${JSON.stringify(process.execPath)} -e 'setInterval(() => {}, 60000)' </dev/null >/dev/null 2>&1 &
+  echo "left:$!"
+fi
+exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload"))} "$@"
+`,
+    { mode: 0o755 },
+  );
   const env = {
     ...hostEnv(),
     HOME: home,
@@ -53,14 +70,18 @@ process.stdin.once('data', () => process.exit(0));
   function launch(
     name: string,
     kind: "desktop" | "iphone" | "ipad" | "package" | "virtual-iphone" | "virtual-both",
-    fail = false,
-    args = "",
+    {
+      fail = false,
+      args = "",
+      extra = {},
+      limit,
+    }: { fail?: boolean; args?: string; extra?: Record<string, string>; limit?: string } = {},
   ): Work {
     // A virtual Mac gate is the same step with the repository switch set.
     const virtual =
       kind === "virtual-iphone" ? "in-turn" : kind === "virtual-both" ? "together" : "";
     const step = virtual ? (kind === "virtual-both" ? "both" : "iphone") : kind;
-    const command =
+    const written =
       kind === "package"
         ? `${JSON.parse(readFileSync("package.json", "utf8")).scripts["test:phone"]} ${args}`
         : yaml
@@ -75,6 +96,9 @@ process.stdin.once('data', () => process.exit(0));
             .jobs[kind === "desktop" ? "affected-journeys" : "native-phone"].steps.find(
               (item: { id?: string }) => item.id === (kind === "desktop" ? "e2e" : step),
             ).run;
+    // A short limit stands in for an hours-long one; the rest of the command is the real one.
+    const command = limit ? written.replace(/--max-hold \S+/, `--max-hold ${limit}`) : written;
+    if (limit && command === written) throw new Error(`${kind} names no --max-hold to shorten`);
     const child = spawn("bash", ["-e", "-c", command], {
       cwd: resolve("."),
       env: {
@@ -82,6 +106,7 @@ process.stdin.once('data', () => process.exit(0));
         CHECK_NAME: name,
         CHECK_FAIL: fail ? "yes" : "",
         PHONE_VIRTUAL_MAC: virtual,
+        ...extra,
       },
       detached: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -109,15 +134,18 @@ process.stdin.once('data', () => process.exit(0));
         done(code);
       });
     });
+    const matches = (line: string, wanted: string | RegExp) =>
+      typeof wanted === "string" ? line === wanted : wanted.test(line);
     const work = {
-      wait: (wanted: string) =>
-        new Promise<void>((done, reject) => {
-          if (lines.includes(wanted)) return done();
+      wait: (wanted: string | RegExp) =>
+        new Promise<string>((done, reject) => {
+          const seen = lines.find((line) => matches(line, wanted));
+          if (seen !== undefined) return done(seen);
           if (ended) return reject(new Error(`${name} exited before ${wanted}: ${errors}`));
           const hear = (line: string | null) => {
-            if (line !== wanted && line !== null) return;
+            if (line !== null && !matches(line, wanted)) return;
             waiting.delete(hear);
-            if (line === wanted) done();
+            if (line !== null) done(line);
             else reject(new Error(`${name} exited before ${wanted}: ${errors}`));
           };
           waiting.add(hear);
@@ -176,6 +204,21 @@ with open(sys.argv[1], 'rb') as f:
       await Promise.all(children.map((child) => child.result));
     },
   };
+}
+
+// The stand-in's own process and the process that started it, from its first line.
+async function processOf(work: Work, name: string) {
+  const [, , command, parent] = (await work.wait(new RegExp(`^process:${name}:`))).split(":");
+  return { command: Number(command), parent: Number(parent) };
+}
+function alive(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw error;
+  }
 }
 
 describe.skipIf(process.platform === "win32")("the Mac check command leases", () => {
@@ -239,10 +282,132 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
   it("preserves a command failure and leaves no lease behind", async () => {
     const f = fixture();
     try {
-      const phone = f.launch("failed-phone", "iphone", true);
+      const phone = f.launch("failed-phone", "iphone", { fail: true });
       expect(await phone.result).toBe(7);
       const desktop = f.launch("after-failure", "desktop");
       await desktop.wait("started:after-failure");
+      desktop.release();
+      expect(await desktop.result).toBe(0);
+    } finally {
+      await f.close();
+    }
+  });
+  // INF-648: two journeys jobs queued behind waiting phones printed nothing after their
+  // step header for 80 minutes, so they looked frozen rather than waiting.
+  it("prints that a check queued behind a waiting phone is waiting", async () => {
+    const f = fixture();
+    try {
+      const a = f.launch("desktop-a", "desktop");
+      await a.wait("started:desktop-a");
+      const phone = f.launch("phone-a", "iphone");
+      await phone.wait(queued("exclusive"));
+      const b = f.launch("desktop-b", "desktop");
+      await b.wait(lined("shared"));
+      // It waits for the line, not for the lease: a shared lease is still free.
+      expect(await f.probe("shared")).toBe("free");
+      a.release();
+      expect(await a.result).toBe(0);
+      await phone.wait("started:phone-a");
+      await b.wait(queued("shared"));
+      phone.release();
+      expect(await phone.result).toBe(0);
+      await b.wait("started:desktop-b");
+      b.release();
+      expect(await b.result).toBe(0);
+    } finally {
+      await f.close();
+    }
+  });
+  // INF-649, from INF-648: six node scripts/phone-test-home.ts helpers a finished phone run
+  // left behind kept its exclusive lease for hours, so two journeys jobs held both runner slots.
+  it("frees the lease when its command ends, though a process the command left keeps running", async () => {
+    const f = fixture();
+    let left = 0;
+    try {
+      const phone = f.launch("leaving-phone", "package", { extra: { CHECK_LEAVE: "yes" } });
+      left = Number((await phone.wait(/^left:\d+$/)).slice("left:".length));
+      await phone.wait("started:leaving-phone");
+      phone.release();
+      expect(await phone.result).toBe(0);
+      expect(alive(left)).toBe(true);
+      expect(await f.probe("exclusive")).toBe("free");
+      const desktop = f.launch("desktop-after", "desktop");
+      await desktop.wait("started:desktop-after");
+      desktop.release();
+      expect(await desktop.result).toBe(0);
+    } finally {
+      if (left && alive(left)) process.kill(left, "SIGKILL");
+      await f.close();
+    }
+  });
+  // The captain's ask on INF-649: a lease whose holder is gone is freed on the next attempt,
+  // with no human step, and the command it covered does not run on without it.
+  it("frees a killed holder's lease for the next check and stops the command it left", async () => {
+    const f = fixture();
+    try {
+      const phone = f.launch("killed-phone", "package");
+      const { command, parent: holder } = await processOf(phone, "killed-phone");
+      await phone.wait("started:killed-phone");
+      expect(holder).not.toBe(process.pid);
+      process.kill(holder, "SIGKILL");
+      const desktop = f.launch("desktop-next", "desktop");
+      await desktop.wait(/^Mac checks: stopping .+, whose holder pid \d+ is gone$/);
+      await desktop.wait("started:desktop-next");
+      expect(alive(command)).toBe(false);
+      expect(await phone.result).not.toBe(0);
+      desktop.release();
+      expect(await desktop.result).toBe(0);
+    } finally {
+      await f.close();
+    }
+  });
+  // The captain's ask on INF-649: a lease whose holder's command is gone is freed on the next attempt.
+  it("takes the lease back from a holder that outlived its command", async () => {
+    const f = fixture();
+    let holder = 0;
+    try {
+      const phone = f.launch("stopped-phone", "package");
+      const { parent } = await processOf(phone, "stopped-phone");
+      await phone.wait("started:stopped-phone");
+      expect(parent).not.toBe(process.pid);
+      holder = parent;
+      // A stopped holder cannot see its command end, so it keeps the lease.
+      process.kill(holder, "SIGSTOP");
+      phone.release();
+      const desktop = f.launch("desktop-next", "desktop");
+      await desktop.wait(
+        /^Mac checks: taking the lease back from pid \d+ .*: its command has ended$/,
+      );
+      await desktop.wait("started:desktop-next");
+      expect(alive(holder)).toBe(false);
+      desktop.release();
+      expect(await desktop.result).toBe(0);
+      expect(await phone.result).not.toBe(0);
+    } finally {
+      if (holder && alive(holder)) process.kill(holder, "SIGKILL");
+      await f.close();
+    }
+  });
+  // The captain's ask on INF-649: past its maximum hold, a waiting check takes the lease back
+  // and says why; the overdue command stops and its job fails rather than holding a slot.
+  it("lets a waiting check take back a lease held past its limit, saying why on both sides", async () => {
+    const f = fixture();
+    try {
+      const phone = f.launch("overdue-phone", "package", { limit: "1s" });
+      const { command } = await processOf(phone, "overdue-phone");
+      await phone.wait("started:overdue-phone");
+      const desktop = f.launch("desktop-next", "desktop");
+      await desktop.wait(queued("shared"));
+      await desktop.wait(
+        /^Mac checks: taking the lease back from pid \d+ .*: held \d+s, over its 1s limit$/,
+      );
+      await phone.wait(
+        /^Mac checks: a waiting check took this lease back: held \d+s, over its 1s limit$/,
+      );
+      expect(await phone.result).toBe(124);
+      await desktop.wait("started:desktop-next");
+      // The lease passed on only after the overdue command had stopped.
+      expect(alive(command)).toBe(false);
       desktop.release();
       expect(await desktop.result).toBe(0);
     } finally {
@@ -270,7 +435,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       expect(await both.result).toBe(0);
       expect(await desktop.result).toBe(0);
       expect(await next.result).toBe(0);
-      const failed = f.launch("failed-virtual-phone", "virtual-iphone", true);
+      const failed = f.launch("failed-virtual-phone", "virtual-iphone", { fail: true });
       expect(await failed.result).toBe(7);
     } finally {
       await f.close();
@@ -282,7 +447,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
     try {
       const desktop = f.launch("desktop-a", "desktop");
       await desktop.wait("started:desktop-a");
-      const local = f.launch("local-phone", "package", false, "--ipad --evidence /tmp/x");
+      const local = f.launch("local-phone", "package", { args: "--ipad --evidence /tmp/x" });
       await local.wait(queued("exclusive"));
       expect(await f.probe("shared")).toBe("free");
       desktop.release();

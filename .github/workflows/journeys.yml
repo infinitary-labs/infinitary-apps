@@ -133,8 +133,9 @@ jobs:
         # teardown project ignores the file filter (docs/testing.md).
         # Shared command leases allow journeys from different PRs to overlap.
         # An exclusive phone command waits for active journeys, then runs alone.
+        # 75m is twice the longest measured hold, a near-full selection beside another.
         run: |
-          python3 scripts/with-mac-check.py shared "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash --noprofile --norc -e -o pipefail -c '
+          python3 scripts/with-mac-check.py --max-hold 75m shared "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash --noprofile --norc -e -o pipefail -c '
             test -n "$FILES"
             pnpm build
             pnpm exec playwright test --no-deps $FILES

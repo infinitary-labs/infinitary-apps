@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-check-lease-reclaims",
+      "reason": "Internal CI: the Mac check lease now ends when its command exits even if the command left processes running, a waiting check prints that it waits, and a lease whose holder or command is gone, or that is past its maximum hold, is taken back by the next waiting check."
+    }
+  ]
+}

@@ -336,7 +336,8 @@ Desktop jobs from different pull requests have no common job-level concurrency g
 On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and each native device gate an exclusive one.
 The `test:phone` package script takes that lease around `scripts/test-phone.ts`, and the script never takes it, because CI already wraps the script and a nested exclusive lease waits forever; the script also swaps `HOME` for a scratch home before anything else runs.
 The runner slots and a crewmate's `pnpm test:phone` use the same account and `$HOME/Library/Caches/infinitary-ci/checks.lock`; active desktop commands finish before a phone enters, and a waiting phone prevents new desktops passing it.
-The helper replaces itself with the command and retains the lease descriptor, so command exit or cancellation releases it without stale markers or a daemon; lock files are never unlinked.
+The helper holds the lease as the command's parent and never passes it on, so it ends when the command exits, even if the command leaves background processes running; lock files are never unlinked.
+A waiting check prints that it waits and who holds the lease, and takes the lease back from a holder whose command ended, a dead holder's command or a command past its `--max-hold` limit (`docs/testing.md`, "Native phone checks on the pull request").
 Phone gates can yield to desktop work between iPhone and iPad.
 The native job's 165-minute limit allows 45 minutes for both device gates, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
 The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.

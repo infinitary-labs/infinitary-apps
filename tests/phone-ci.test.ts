@@ -288,7 +288,7 @@ describe("the native pull-request gate", () => {
     for (const step of stepsThatRun(OFF).filter(isGate)) {
       // The step's shell takes the Mac check lease unless the switch is set.
       expect(step.run).toMatch(
-        /^if \[ -n "\$PHONE_VIRTUAL_MAC" \]; then exec .*; fi\npython3 scripts\/with-mac-check\.py exclusive /,
+        /^if \[ -n "\$PHONE_VIRTUAL_MAC" \]; then exec .*; fi\npython3 scripts\/with-mac-check\.py --max-hold \d+[smh] exclusive /,
       );
     }
     // The gates' shell sees the switch as the repository sets it, empty when unset.

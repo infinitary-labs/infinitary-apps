@@ -9,8 +9,25 @@ import { renderWake } from "../orchestrator/wakes";
 import { initOverflowDir } from "../overflow";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
-import { atUtilityQos } from "../utilityQos";
 import { type JobExit, JobManager, jobExitWake } from "./jobManager";
+
+// A command JobManager runs below the UI carries the real utility clamp and
+// says so in its own environment, so the clamp test below can tell it apart
+// even where the run itself is held at utility and no priority shows it.
+const CLAMPED_ENV = vi.hoisted(() => "INFINITARY_TEST_CLAMPED");
+vi.mock("../utilityQos", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../utilityQos")>();
+  return {
+    ...real,
+    atUtilityQos: (file: string, args: readonly string[]) => {
+      const clamped = real.atUtilityQos(file, args);
+      return {
+        file: "/usr/bin/env",
+        args: [`${CLAMPED_ENV}=utility`, clamped.file, ...clamped.args],
+      };
+    },
+  };
+});
 
 // A job's live output spills to the overflow dir; the app wires userData's
 // at boot, so this file wires a scratch one.
@@ -128,26 +145,51 @@ describe("JobManager (R2: the exit is the wake)", () => {
   // behind that Mac's other work at utility priority, so its commands run at
   // the run's own priority there; the home's, and another user's work on the
   // home's own Mac, stay below the UI (captain on INF-255).
+  // INF-723: `ps` reads the scheduler's current priority, which sinks below
+  // its base under load, so two readings taken apart need not match. The
+  // clamp is read as the ceiling it is instead: a shell that asks for an
+  // app's priority (`taskpolicy -a`) stays at utility's or under it below
+  // the clamp, and rises past it wherever the run itself can. `ps` reads
+  // that shell while it waits, having spent next to no CPU to sink by. A
+  // run launchd starts with no ProcessType, as the virtual Mac's guest agent
+  // did, is itself held at utility, so nothing it starts rises and only the
+  // clamp's mark (above) tells the two apart there.
   it.runIf(process.platform === "darwin")(
     "runs a command below the UI, or at the run's own priority where there is none",
     async () => {
-      const PRIORITY = "ps -o pri= -p $$";
-      const read = (file: string, args: readonly string[]) =>
-        Number(execFileSync(file, args, { encoding: "utf8" }).trim());
-      const clamped = atUtilityQos("/bin/sh", ["-c", PRIORITY]);
-      const below = read(clamped.file, clamped.args);
-      const own = read("/bin/sh", ["-c", PRIORITY]);
+      // macOS's base priority for utility QoS (xnu's BASEPRI_UTILITY).
+      const UTILITY = 20;
+      const RISE = "/usr/sbin/taskpolicy -a /bin/sh -c 'ps -o pri= -p $$; :'";
+      const runRisesTo = Number(execFileSync("/bin/sh", ["-c", RISE], { encoding: "utf8" }));
       const ran = async (belowUi?: boolean) => {
-        const jobs = new JobManager({
-          onExit: () => {},
-          ...(belowUi === undefined ? {} : { belowUi }),
+        // In the background, so a loaded Mac's slow start never meets the
+        // command's cap; the exit carries what it printed.
+        const exit = await new Promise<JobExit>((resolve, reject) => {
+          const jobs = new JobManager({
+            onExit: resolve,
+            ...(belowUi === undefined ? {} : { belowUi }),
+          });
+          jobs
+            .run({
+              ownerId: "t1",
+              command: `printf "%s|" "$${CLAMPED_ENV}"; ${RISE}`,
+              cwd: "/tmp",
+              background: true,
+            })
+            .catch(reject);
         });
-        const outcome = await jobs.run({ ownerId: "t1", command: PRIORITY, cwd: "/tmp" });
-        if (outcome.kind !== "done") throw new Error("expected a finished command");
-        return Number(outcome.output.trim());
+        expect(exit.exitCode, exit.tail).toBe(0);
+        const [clamp, priority] = exit.tail.split("|");
+        return { clamp, risesTo: Number(priority) };
       };
-      expect(await ran()).toBe(below);
-      expect(await ran(false)).toBe(own);
+      const below = await ran();
+      expect(below.clamp).toBe("utility");
+      expect(below.risesTo).toBeLessThanOrEqual(UTILITY);
+      const own = await ran(false);
+      expect(own.clamp).toBe("");
+      expect(own.risesTo > UTILITY, `the run itself rises to ${runRisesTo}`).toBe(
+        runRisesTo > UTILITY,
+      );
     },
   );
 

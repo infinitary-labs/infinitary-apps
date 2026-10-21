@@ -11970,6 +11970,61 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
     });
 
+    // INF-731, from the captain's words "Send the 'crewmate finished' wake
+    // once per task, not once per reply" (INF-721 friction 5): INF-694's
+    // crewmate declared its answer finished after each of eleven replies
+    // under its note, and each report woke the first mate for a close the
+    // note still held.
+    it("a finished report with its own card still up wakes nobody, however often the captain replies; his close wakes the first mate once (INF-731)", async () => {
+      const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note } =
+        await withOutcomeNote();
+      const finishedWakes = () =>
+        ops.filter((line) => line.includes("It declared its work finished"));
+      const receipt = specs[0]?.onReport?.(
+        "Version 1.2 is released and the note says so.",
+        undefined,
+        { finished: true },
+      );
+      expect(receipt).toContain("finished does not wake the first mate while it is up");
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+
+      for (const [question, answer] of [
+        ["which page lists it?", "The release page lists it under 1.2."],
+        ["add the date", "I added October 20 to the note."],
+        ["make the version bold", "The version is bold now."],
+      ]) {
+        supervisor.replyToCard(note.id, question as string);
+        await tick();
+        specs[0]?.onReply?.({ cardId: note.id, text: answer as string });
+        specs[0]?.onReport?.(`${answer} The note is the final answer.`, undefined, {
+          finished: true,
+        });
+        await endTurn(crewmate, taskId);
+        expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
+      }
+      expect(finishedWakes()).toEqual([]);
+
+      // His close of the card is the next move: nothing nudges the crewmate
+      // and nothing wakes the first mate while the card stays up.
+      const prompts = crewmate.promptCalls.length;
+      const opsBefore = ops.length;
+      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20), minutes(90)]);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(ops.slice(opsBefore)).toEqual([]);
+
+      // His close reaches the crewmate; its finished report now wakes the
+      // first mate, once.
+      supervisor.close(note.id);
+      await tick();
+      specs[0]?.onReport?.("The captain read the release note and nothing is left.", undefined, {
+        finished: true,
+      });
+      await endTurn(crewmate, taskId);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
+      expect(finishedWakes()).toHaveLength(1);
+    });
+
     // INF-11, from the captain's words "make this missed escalation
     // structurally impossible" (2026-10-18): a wait on the captain with no
     // card on his screen is a question he cannot see, so the first mate owes

@@ -19,6 +19,7 @@ import {
 } from "../storage/taskStore";
 import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
 import { TaskService } from "../tasks/taskService";
+import { cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
 import { crewHoldWays, idleStallWays } from "./holds";
 import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
@@ -267,10 +268,14 @@ export class IdleLadder {
       (cardUp || gateCardUp || this.anyCardFor(taskId));
     // A browser in the captain's hands wakes its crewmate when he returns it.
     const browserWithCaptain = this.host.browserWithCaptain?.(taskId) === true;
+    // Work its crewmate declared finished waits on his close of its own card
+    // (INF-731): that close is its crewmate's next turn.
+    const finishedCardUp = record?.delivery?.finishedAt !== undefined && this.ownCardFor(taskId);
     return {
       threadAwaitingAuthor: this.host.threadAwaitingAuthor(taskId),
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
       captainWait,
+      finishedCardUp,
       browserWithCaptain,
       askedFirstmate: record ? this.unansweredAsk(record) !== undefined : false,
       captainGateOwed: gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait,
@@ -464,6 +469,14 @@ export class IdleLadder {
     return false;
   }
 
+  /** A card its crewmate emitted, a note included: the one whose close reaches that crewmate. */
+  private ownCardFor(taskId: string): boolean {
+    for (const card of this.host.openCards()) {
+      if (card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate") return true;
+    }
+    return false;
+  }
+
   private jobInBound(taskId: string, now: number): boolean {
     if (this.host.hasRunningJobs?.(taskId) !== true) return false;
     const job = this.host.oldestRunningJob?.(taskId);
@@ -541,7 +554,7 @@ export class IdleLadder {
     const held =
       idleTurn(witnesses) === "asked"
         ? (record.recoveryCount ?? 0) < 2
-        : witnesses.decisionCardOpen;
+        : witnesses.decisionCardOpen || witnesses.finishedCardUp === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;
     const count = record.recoveryCount ?? 0;
     return `stalled ${formatDurationShort(now - record.idleSince)} · ${count} wake${count === 1 ? "" : "s"}`;

@@ -10069,6 +10069,14 @@ export class CrewSupervisor {
           ? "The first mate is woken for it when this turn ends only if the captain's reply under your card has your answer by then: answer it in that thread or revise the card."
           : "The first mate is woken for it when this turn ends.",
       );
+    } else if (
+      declaration?.finished &&
+      this.openCardsFor(task.id).some((card) => cardEmitter(card.id, task.id) === "crewmate")
+    ) {
+      // Finished means the captain closed its card; the first mate hears it then (INF-731).
+      receipt.push(
+        "A card of yours is still on the captain's screen, so finished does not wake the first mate while it is up: his close comes back to you as a turn, and finished in that turn's report has the first mate close your task.",
+      );
     } else if (declaration?.finished) {
       receipt.push("The first mate hears it when this turn ends and closes your task.");
     } else if (!declaration?.wait && this.options.tasks.get(task.id)?.shape?.internal_step) {

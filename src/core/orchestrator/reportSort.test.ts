@@ -47,6 +47,7 @@ describe("sortReport", () => {
   it.each([
     ["threadAwaitingAuthor", "thread-unanswered"],
     ["decisionCardOpen", "captain-card"],
+    ["finishedCardUp", "captain-card"],
     ["jobsRunning", "still-moving"],
     ["deliverable", "still-moving"],
     ["pendingSettle", "still-moving"],
@@ -136,6 +137,15 @@ describe("sortReport", () => {
       // control"): his Return control is the crewmate's next wake.
       name: "1''. its browser is in the captain's hands: the captain's turn",
       facts: facts({ decisionCardOpen: true, browserWithCaptain: true, workObservable: true }),
+      rule: "captain-card",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // INF-731: finished means the captain closed its card, so while one of
+      // its own is up his close is the next move, and the report wakes no one.
+      name: "1'''. it declared its work finished with its own card still up: the captain's turn",
+      facts: facts({ finished: true, finishedCardUp: true, workObservable: true }),
       rule: "captain-card",
       verdict: "routine",
       wake: false,
@@ -307,6 +317,7 @@ describe("sortReport", () => {
   it("work held on the reporting task outranks every quiet row but the captain's unanswered reply", () => {
     for (const quiet of [
       "decisionCardOpen",
+      "finishedCardUp",
       "jobsRunning",
       "deliverable",
       "pendingSettle",
@@ -350,6 +361,7 @@ describe("sortReport", () => {
       "threadAwaitingAuthor",
       "decisionCardOpen",
       "captainWait",
+      "finishedCardUp",
       "browserWithCaptain",
       "captainGateOwed",
       "deliverable",
@@ -370,6 +382,7 @@ describe("sortReport", () => {
     const holds = (over: ReportSortFacts) =>
       over.threadAwaitingAuthor ||
       over.decisionCardOpen ||
+      over.finishedCardUp === true ||
       over.deliverable ||
       over.jobsRunning ||
       over.pendingSettle ||
@@ -428,6 +441,7 @@ describe("sortReport", () => {
     );
     for (const quiet of [
       "decisionCardOpen",
+      "finishedCardUp",
       "jobsRunning",
       "deliverable",
       "pendingSettle",
@@ -520,6 +534,7 @@ describe("idleTurn: the same witnesses, read the same way, for an idle crewmate"
     const shared: Array<[Partial<Witnesses>, ReportSortRule, IdleTurn]> = [
       [{ threadAwaitingAuthor: true }, "thread-unanswered", "thread"],
       [{ decisionCardOpen: true }, "captain-card", "captain"],
+      [{ finishedCardUp: true }, "captain-card", "captain"],
       [{ timedWait: true }, "still-moving", "moving"],
       [{ checksWatched: true }, "still-moving", "moving"],
       [{ accountHeld: true }, "still-moving", "moving"],

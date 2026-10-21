@@ -32,10 +32,15 @@
  *     counts - or a wait on the captain its crewmate declared in a report,
  *     which places the task's captain gate (FI3-435), while a card of the
  *     task is on his screen. A declared wait with none is step 4's: the
- *     Firstmate owes the card (INF-11).
+ *     Firstmate owes the card (INF-11). Work its crewmate declared finished
+ *     while a card of its own is still up holds the turn too (INF-731):
+ *     finished means he closed that card, so his close is the next move -
+ *     and an answer's close waits on it anyway.
  *  1a. The report declared the work finished - the captain has read its
  *     outcome and nothing is left (FI3-435): wake, so the Firstmate closes
  *     the task. The crewmate's declaration, never a reading of its words.
+ *     Below row 1, so it wakes once per task: at the report after his close,
+ *     never at each report his replies under its card bring.
  *  2. The report filed follow-ups this turn: wake, as before. The filings
  *     ride the report wake and are the Firstmate's to triage.
  *  2a. The task waits on work nobody has started (FI3-671): a task its
@@ -142,6 +147,16 @@ export type Witnesses = {
    * gate is `captainGateOwed` (INF-11).
    */
   captainWait?: boolean;
+  /**
+   * Its crewmate's last report declared its work finished while a card of
+   * its own, a note included, is still on the captain's screen (INF-731).
+   * Finished means he closed that card, and an answer's close waits on it
+   * (`closeAnswerUsedAsBasis`), so his close is the next move: it reaches
+   * the crewmate as its next turn, whose report declares finished again with
+   * the card gone. Read beside `decisionCardOpen`, never inside it, so a
+   * personal workspace's report still closes its task past a note.
+   */
+  finishedCardUp?: boolean;
   /**
    * Its crewmate's last report asked the Firstmate to act (`needs_firstmate`,
    * FI3-710), and the Firstmate has not acted on the task since
@@ -266,7 +281,7 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
         "started work waits on this task through the first mate's link; the first mate reads the report for it.",
     };
   }
-  if (facts.decisionCardOpen) {
+  if (facts.decisionCardOpen || facts.finishedCardUp) {
     return {
       rule: "captain-card",
       verdict: "routine",
@@ -275,7 +290,9 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
         ? "its crewmate declared that it waits on the captain; the next move is his."
         : facts.browserWithCaptain
           ? "its browser is in the captain's hands until he returns control; the next move is his."
-          : "a decision card for this task is on the captain's screen; the next move is his.",
+          : facts.finishedCardUp
+            ? "its crewmate declared its work finished while its own card is still on the captain's screen; his close of that card is the next move."
+            : "a decision card for this task is on the captain's screen; the next move is his.",
     };
   }
   if (facts.finished) {
@@ -397,7 +414,8 @@ function stillMoving(witnesses: Witnesses): boolean {
  *    unanswered (FI3-714) - the Firstmate's turn, whatever card is up or
  *    whatever still moves, as row 0a outranks them in the sort; after an
  *    unanswered captain reply, which the crewmate answers first.
- *  - `captain`: a card with actions is up - nothing fires.
+ *  - `captain`: a card with actions is up, or its crewmate declared its
+ *    work finished with a card of its own still up - nothing fires.
  *  - `moving`: it will move on its own - nothing fires.
  *  - `owed`: held for the captain with no card up - the Firstmate's turn,
  *    so the ladder's wakes and its card apply and its nudge never does.
@@ -420,7 +438,7 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
   // The crewmate answers a reply the captain wrote since its request first,
   // as row 0 holds row 0a; the reply on its lane is that answer coming.
   if (witnesses.askedFirstmate && !witnesses.threadAwaitingAuthor) return "asked";
-  if (witnesses.decisionCardOpen) return "captain";
+  if (witnesses.decisionCardOpen || witnesses.finishedCardUp) return "captain";
   if (stillMoving(witnesses)) return "moving";
   if (witnesses.captainGateOwed) return "owed";
   if (witnesses.accountHeld || witnesses.outOfReach) return "moving";

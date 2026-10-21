@@ -121,20 +121,44 @@ export function crewFormation(page: Page) {
   });
 }
 
+/** The task ids the visible orbit has placed on each plane: crewmates that
+ * have arrived and orbit there, not ones still flying out to it. */
+async function crewOnPlanes(page: Page): Promise<string[][]> {
+  const placed = await page
+    .locator('canvas[data-crew-layer="near"]')
+    .getAttribute("data-plane-crew");
+  return (placed ?? "").split("|").map((plane) => plane.split(" ").filter(Boolean));
+}
+
 /**
- * Point at a crewmate the way a person does: sweep the pointer along the
- * occupied orbits until it lands on one (on `wanted`, when a task id is
- * given). Works at every crew size, labels or not, and returns the task id
- * the pointer is on and where the pointer was left resting on it.
+ * Point at a crewmate the way a person does: once the orbit has placed it
+ * (`wanted`, when a task id is given, or any crewmate), sweep the pointer
+ * along the occupied orbits until it lands on it. A start the record already
+ * names can reach the orbit a moment later, so the sweep never begins on an
+ * orbit that has nobody to find (INF-745). Works at every crew size, labels
+ * or not, and returns the task id the pointer is on and where the pointer
+ * was left resting on it.
  */
 export async function pointAtCrewmate(
   page: Page,
   wanted?: string,
 ): Promise<{ id: string; x: number; y: number }> {
-  const counts = await crewPlaneCounts(page);
+  let placed: string[][] = [];
+  await expect
+    .poll(
+      async () => {
+        placed = await crewOnPlanes(page);
+        return placed.flat().some((id) => !wanted || id === wanted);
+      },
+      {
+        message: `Crewmate${wanted ? ` ${wanted}` : ""} is not placed on the orbit`,
+        timeout: 30_000,
+      },
+    )
+    .toBe(true);
   const { x, y, scale } = await crewFormation(page);
   for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-    if (!counts[plane]) continue;
+    if (!placed[plane]?.length) continue;
     for (let degrees = 0; degrees < 360; degrees += 2) {
       const at = projectPlane(plane, (degrees * Math.PI) / 180);
       const point = { x: x + at.x * scale, y: y + at.y * scale };

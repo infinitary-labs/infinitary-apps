@@ -802,13 +802,19 @@ export function CrewOrbit({
     }
     const blend = String(frame.planeBlend);
     if (near.canvas.dataset.planeBlend !== blend) near.canvas.dataset.planeBlend = blend;
+    // Every crewmate on the stage counts on its plane; one names it only once
+    // it has arrived and orbits there.
     const planeCounts = [0, 0, 0];
+    const planeCrew: string[][] = [[], [], []];
     for (const c of frame.crew) {
-      if (c.phase !== "leaving" && c.plane !== undefined)
-        planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;
+      if (c.phase === "leaving" || c.plane === undefined) continue;
+      planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;
+      if (c.phase === "orbiting") planeCrew[c.plane]?.push(c.id);
     }
     const counts = planeCounts.join(",");
     if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
+    const orbiting = planeCrew.map((ids) => ids.join(" ")).join("|");
+    if (near.canvas.dataset.planeCrew !== orbiting) near.canvas.dataset.planeCrew = orbiting;
     if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
       rootRef.current?.style.setProperty("--crew-plane-blend", blend);
     }

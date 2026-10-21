@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crew-pointer-waits-for-placement",
+      "reason": "Internal: the crew orbit names, on its canvas, the crewmates that have arrived on each plane, and the journeys' crew pointer waits for the crewmate it wants before it sweeps, so a start the record names before the orbit shows it no longer fails the filed-task journey. Nothing a person sees changed."
+    }
+  ]
+}

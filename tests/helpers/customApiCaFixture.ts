@@ -115,5 +115,11 @@ export function customApiCaFixture(dir: string) {
   const leaf = readFileSync(join(dir, "leaf.pem"), "utf8");
   const leafKey = readFileSync(join(dir, "leaf.key"), "utf8");
   const expired = readFileSync(join(dir, "expired.pem"), "utf8");
-  return { ca, otherCa, leaf, leafKey, expired };
+  // The same leaf with one bit of its signature flipped, in Node rather than
+  // OpenSSL so every OpenSSL version gives the same damaged certificate.
+  const der = Buffer.from(leaf.replace(/-----[A-Z ]+-----|\s/g, ""), "base64");
+  der.writeUInt8(der.readUInt8(der.length - 1) ^ 1, der.length - 1);
+  const lines = der.toString("base64").match(/.{1,64}/g) ?? [];
+  const badSignature = `-----BEGIN CERTIFICATE-----\n${lines.join("\n")}\n-----END CERTIFICATE-----\n`;
+  return { ca, otherCa, leaf, leafKey, expired, badSignature };
 }

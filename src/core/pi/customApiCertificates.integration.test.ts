@@ -11,7 +11,7 @@ import {
 import { type CustomConnectionCandidate, customModelFingerprint } from "./customApiCheck";
 import { type CustomApiTransport, createCustomApiTransport } from "./customApiTransport";
 
-const wire = vi.hoisted(() => ({ pinned: [] as string[] }));
+const wire = vi.hoisted(() => ({ pinned: [] as string[], codes: [] as (string | undefined)[] }));
 // Policy still validates/pins a private address. Only this test's socket
 // connector substitutes loopback so no fixture reaches an actual private host.
 // Host/SNI, TLS roots, hostname, chain and expiry verification are untouched.
@@ -31,11 +31,14 @@ vi.mock("node:https", async (importOriginal) => {
         if (address !== "10.23.4.5")
           throw new Error("Test connector received an unapproved address");
       });
-      return native.request(
+      const req = native.request(
         url,
         { ...options, lookup: (_host, _opts, done) => done(null, "127.0.0.1", 4) },
         callback,
       );
+      // The error Node itself raised, before the transport names its category.
+      req.on("error", (error: NodeJS.ErrnoException) => wire.codes.push(error.code));
+      return req;
     },
   };
 });
@@ -46,6 +49,7 @@ let otherCa: string;
 let leaf: string;
 let leafKey: string;
 let expired: string;
+let badSignature: string;
 const servers: Server[] = [];
 const transports: CustomApiTransport[] = [];
 
@@ -53,7 +57,7 @@ beforeAll(() => {
   dir = scratchDir("custom-ca-home-");
   vi.stubEnv("HOME", dir);
   vi.stubEnv("INFINITARY_LOCAL_CODESIGN_DIR", join(dir, "signing"));
-  ({ ca, otherCa, leaf, leafKey, expired } = customApiCaFixture(dir));
+  ({ ca, otherCa, leaf, leafKey, expired, badSignature } = customApiCaFixture(dir));
 }, 15_000);
 
 afterAll(async () => {
@@ -155,6 +159,18 @@ it("keeps actual TLS trust scoped with normal hostname, chain and expiry validat
       productionPinnedAddress: "10.23.4.5",
     }),
   );
+});
+
+// INF-674: Node rejects a certificate whose signature the approved CA does not
+// verify with CERT_SIGNATURE_FAILURE; the person is told the certificate could
+// not be verified, never that the server could not be reached.
+it("refuses a certificate the approved CA did not sign as a certificate failure", async () => {
+  const base = await fixture(badSignature);
+  const seen = wire.codes.length;
+  await expect(client(base, approval()).request("models")).rejects.toMatchObject({
+    category: "certificate",
+  });
+  expect(wire.codes.slice(seen)).toEqual(["CERT_SIGNATURE_FAILURE"]);
 });
 
 it("public material can restart under the same approval, removal/replacement changes proof and closing is terminal", async () => {

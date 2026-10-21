@@ -417,6 +417,9 @@ const certificateCodes = new Set([
   "SELF_SIGNED_CERT_IN_CHAIN",
   "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
   "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  // A certificate the approved CA did not sign, such as one from another CA
+  // with the same name, or one whose signature was damaged.
+  "CERT_SIGNATURE_FAILURE",
   "ERR_TLS_CERT_ALTNAME_INVALID",
   "CERT_REVOKED",
 ]);

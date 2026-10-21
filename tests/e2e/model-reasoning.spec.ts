@@ -81,7 +81,8 @@ function seedAccounts(userDataDir: string): void {
 }
 
 import { reasoningLabel } from "../../src/renderer/src/settings/reasoningWords";
-import { offeringKey } from "../../src/shared/modelSlots";
+import { offeringKey, type SlotModelView } from "../../src/shared/modelSlots";
+import { servedModelKey } from "../../src/shared/quota";
 import type { LaunchedApp } from "./launch";
 import { closeModelPanel, modelPill, openModelPanel, setLevelInPanel } from "./modelsBoard";
 import { refuseNext } from "./settings";
@@ -92,6 +93,33 @@ async function open(app: LaunchedApp) {
   await app.page.getByRole("button", { name: "Settings", exact: true }).click();
   await app.page.getByRole("tab", { name: "Intelligence", exact: true }).click();
   return openModelsBoard(app.page);
+}
+
+/**
+ * Opus as this launch's board names it, read once the launch's model catalog
+ * carries its row. Until a launch's first allowance read builds that catalog,
+ * or a catalog read rebuilds it over the saved reading, the board names a
+ * model by its raw id, and by the catalog's name after (`ModelSlots.view`):
+ * on hosted Linux the first launch named Opus "claude-opus-5-5" and the
+ * relaunch "Claude Opus 5.5", so a name read before the catalog missed the
+ * boxes (verify run 39474081020, INF-686). The wait is the launch's own work,
+ * for as long as the test allows.
+ */
+async function catalogedOpus(app: LaunchedApp): Promise<SlotModelView> {
+  const key = offeringKey({ provider: "anthropic-claude", id: claudeStarter("high").id });
+  await expect
+    .poll(
+      async () =>
+        (await app.page.evaluate(() => window.infinitary.quota.models()))?.models.some(
+          (row) => servedModelKey(row) === key,
+        ) ?? false,
+      { message: "This launch's model catalog names Opus", timeout: 0 },
+    )
+    .toBe(true);
+  const view = await app.page.evaluate(() => window.infinitary.models.slots());
+  const opus = view.models.find((model) => offeringKey(model) === key);
+  if (!opus) throw new Error("The isolated Claude account did not serve Opus");
+  return opus;
 }
 
 test("independent model reasoning persists, restores inherited defaults and recovers a refused save by keyboard", async () => {
@@ -110,13 +138,9 @@ test("independent model reasoning persists, restores inherited defaults and reco
     });
   let app = await launch();
   try {
-    const board = await open(app);
-    const view = await app.page.evaluate(() => window.infinitary.models.slots());
-    const opus = view.models.find(
-      (model) => model.provider === "anthropic-claude" && model.id === claudeStarter("high").id,
-    );
-    if (!opus) throw new Error("The isolated Claude account did not serve Opus");
+    const opus = await catalogedOpus(app);
     const key = offeringKey(opus);
+    const board = await open(app);
     const panel = await openModelPanel(app.page, levelLane(board, "high"), opus.label);
     await setLevelInPanel(panel, opus.label, "medium", true);
     await closeModelPanel(board);
@@ -167,18 +191,19 @@ test("independent model reasoning persists, restores inherited defaults and reco
     await expect(high).toHaveValue("high");
     await app.close();
     app = await launch();
+    const relaunched = await catalogedOpus(app);
     const reopened = await open(app);
     await expect(
-      reopened.getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true }),
+      reopened.getByRole("combobox", { name: reasoningLabel(relaunched, "high"), exact: true }),
     ).toHaveValue("high");
     await expect(
-      reopened.getByRole("combobox", { name: reasoningLabel(opus, "medium"), exact: true }),
+      reopened.getByRole("combobox", { name: reasoningLabel(relaunched, "medium"), exact: true }),
     ).toHaveValue("low");
     await reopened
-      .getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true })
+      .getByRole("combobox", { name: reasoningLabel(relaunched, "high"), exact: true })
       .selectOption("");
     await expect(
-      reopened.getByRole("combobox", { name: reasoningLabel(opus, "high"), exact: true }),
+      reopened.getByRole("combobox", { name: reasoningLabel(relaunched, "high"), exact: true }),
     ).toHaveValue("");
     expect(
       (await app.page.evaluate(() => window.infinitary.models.slots())).models.find(

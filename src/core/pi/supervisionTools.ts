@@ -77,8 +77,8 @@ function duplicateText(result: DuplicateResult): string {
  * The confirmed duplicate label (interaction P1 WI-14), modeled on
  * flag_missed_escalation: the one path from the captain's "this is the same
  * as the card before it" to a durable label the duplicate metric reads. No
- * card, no setting, no user surface; the host closes the duplicate and the
- * feed says so. Captain-turn only, by code: the label's value is that the
+ * card, no setting, no user surface; the host closes the duplicate, the
+ * feed says so, and a crewmate's card's author hears it (INF-759). Captain-turn only, by code: the label's value is that the
  * captain confirmed it.
  */
 export function createFlagDuplicateTool(delegate: DuplicateDelegate) {
@@ -90,7 +90,7 @@ export function createFlagDuplicateTool(delegate: DuplicateDelegate) {
       "Call it only when the user says a card duplicates another one; pass the duplicate's",
       "card id and the id of the earlier card it repeats, from the context block or the",
       "on-screen hint. Never call it on your own initiative or to tidy the stack - close_card",
-      "is for that. It writes a label and closes the duplicate: no card, no message.",
+      "is for that. It writes a label and closes the duplicate, with no card; a crewmate's card's author is told.",
     ].join(" "),
     parameters: Type.Object({
       card_id: Type.String({ description: "The duplicate card's id" }),

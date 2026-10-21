@@ -244,6 +244,8 @@ export type SettleServiceHost = {
    * undefined when there is none.
    */
   stopRuntime(taskId: string): Promise<void> | undefined;
+  /** Something reached the task's crewmate: the center's spark flies to it (INF-759). */
+  announceReach?: (taskId: string) => void;
   killJobs?: (taskId: string) => void;
   /**
    * A task whose working copy is on a computer that runs work
@@ -2313,6 +2315,9 @@ export class SettleService {
    * record closes before it goes.
    */
   async closeTask(taskId: string, close: TaskClose): Promise<void> {
+    // The close reaches its crewmate, which leaves once the spark lands; a
+    // superseded one hands over to its successor, whose start is its spark.
+    if (close.reason !== "superseded") this.host.announceReach?.(taskId);
     this.host.killJobs?.(taskId);
     this.host.endLiveTask(taskId);
     const stopping = this.host.stopRuntime(taskId);

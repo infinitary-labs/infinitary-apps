@@ -629,6 +629,8 @@ export type WakeFacts =
        */
       kind: "card-closed";
       card: { id: string; title: string };
+      /** The earlier card it repeats, when the captain closed it as a duplicate (INF-759). */
+      duplicateOf?: { id: string; title: string };
     }
   | {
       /**
@@ -1657,7 +1659,9 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ...(facts.earlier ? { earlier: facts.earlier } : {}),
       });
     case "card-closed":
-      return `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.`;
+      return facts.duplicateOf
+        ? `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) as a duplicate of "${facts.duplicateOf.title}" (${facts.duplicateOf.id}), without choosing.`
+        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.`;
     case "project-change":
       return `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`;
     case "project-setup":

@@ -12536,6 +12536,32 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(backWakes(ops)).toHaveLength(1);
     });
 
+    // INF-759: the spark flies when the crewmate reads the message, not when it is kept.
+    it("a message kept behind the hold sparks when it goes out, not when it is sent", async () => {
+      const login = claudeLogin();
+      const harness = await stopped(login.extras, claudeCrewmate());
+      const { supervisor, crewmate, taskId, events } = harness;
+      await supervisor.steerCrewmate(taskId, "use the other library");
+      await tick();
+      await cutOffTurn(crewmate, taskId, { class: "refused" });
+      const sparks = () =>
+        events.filter(
+          (event) => event.type === "task_event" && event.reached && event.taskId === taskId,
+        ).length;
+      const before = sparks();
+      const prompts = crewmate.promptCalls.length;
+      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      await tenTicks(supervisor);
+      expect(sparks()).toBe(before);
+      login.clear();
+      supervisor.reconcileCutOffs();
+      await tick();
+      expect(crewmate.promptCalls.slice(prompts)).toEqual([
+        "use the other library\n\nand the tests",
+      ]);
+      expect(sparks()).toBe(before + 1);
+    });
+
     it("a captain reply kept behind the hold reads as the held account on its thread, then as work once it goes out, then as the author's to answer", async () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
@@ -24156,5 +24182,140 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
       }),
     ).rejects.toThrow("omit runs_on_ask");
     await h.supervisor.disposeAll();
+  });
+});
+
+/**
+ * INF-759, the captain's plan: every action that reaches a crewmate is
+ * announced as it reaches it, and the center draws one spark then. Its own
+ * work - a job's result - is announced by nobody.
+ */
+describe("the spark when something reaches a crewmate (INF-759)", () => {
+  const sparks = (events: readonly FmEvent[], taskId: string) =>
+    events.filter(
+      (event) => event.type === "task_event" && event.reached === true && event.taskId === taskId,
+    ).length;
+
+  async function idleCrewmate(crewmate = fakeCrewmate()) {
+    const harness = setup(crewmate);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Job",
+      intent: intentOf("Start"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    return { ...harness, crewmate, taskId };
+  }
+
+  it("sparks a message steered into the running turn once, as it goes in", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    expect(sparks(events, taskId)).toBe(0);
+    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    expect(crewmate.steer).toHaveBeenCalledTimes(1);
+    expect(sparks(events, taskId)).toBe(1);
+  });
+
+  it("sparks a message queued behind the turn when the next turn takes it, not when it is sent", async () => {
+    const crewmate = fakeQueuedSteerCrewmate();
+    const { supervisor, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe(
+      "queued-next-turn",
+    );
+    expect(sparks(events, taskId)).toBe(0);
+    crewmate.finishPrompt();
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("use the other library");
+    expect(sparks(events, taskId)).toBe(1);
+  });
+
+  it("sparks a message to an idle crewmate as its turn starts", async () => {
+    const { supervisor, events, crewmate, taskId } = await idleCrewmate();
+    await supervisor.steerCrewmate(taskId, "and the docs");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe("and the docs");
+    expect(sparks(events, taskId)).toBe(1);
+  });
+
+  it("draws nothing for the crewmate's own job result", async () => {
+    const { supervisor, events, crewmate, taskId } = await idleCrewmate();
+    supervisor.deliverJobResult(taskId, {
+      facts: {
+        kind: "job-exit",
+        to: "crewmate",
+        jobId: "j1",
+        command: "make",
+        exitCode: 0,
+        durationMs: 1000,
+      },
+    });
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain("make");
+    expect(sparks(events, taskId)).toBe(0);
+  });
+
+  it("sparks the first mate's interrupt and the captain's Stop, each once", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events } = setup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    await tick();
+    await supervisor.interruptCrewmate(taskId, "interrupt");
+    expect(sparks(events, taskId)).toBe(1);
+    crewmate.failPrompt("The turn was interrupted.");
+    await tick();
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    const before = sparks(events, taskId);
+    expect(await supervisor.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
+    expect(sparks(events, taskId)).toBe(before + 1);
+  });
+
+  it("sparks a cancel once, before the task closes", async () => {
+    const { supervisor, events, tasks, taskId } = await idleCrewmate();
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("dropped");
+    expect(sparks(events, taskId)).toBe(1);
+  });
+
+  it("sparks a settle once, before the task closes", async () => {
+    const { supervisor, events, tasks, taskId } = await idleCrewmate();
+    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    expect(tasks.get(taskId)?.status).toBe("done");
+    expect(sparks(events, taskId)).toBe(1);
+  });
+
+  it("tells the crewmate its card closed as a duplicate, with a spark", async () => {
+    const { supervisor, events, crewmate, specs, cards, taskId } = await idleCrewmate();
+    specs[0]?.onCard?.({ title: "First note", body: "<p>Version 1.2 is out.</p>", actions: [] });
+    await tick();
+    specs[0]?.onCard?.({ title: "Second note", body: "<p>Version 1.2 is out.</p>", actions: [] });
+    await tick();
+    const first = cards().find((card) => card.title === "First note") as Card;
+    const second = cards().find((card) => card.title === "Second note") as Card;
+    const before = sparks(events, taskId);
+    expect(
+      supervisor.flagDuplicate({ cardId: second.id, duplicateOf: first.id, note: "same news" }),
+    ).toMatchObject({ status: "flagged" });
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      `The captain closed your card "Second note" (${second.id}) as a duplicate of "First note" (${first.id}), without choosing.`,
+    );
+    expect(sparks(events, taskId)).toBe(before + 1);
+  });
+
+  it("sparks a new wait on a crewed task, which its crewmate never hears", async () => {
+    const { supervisor, events, tasks, taskId } = await idleCrewmate();
+    const planned = seedTask(tasks, { id: "t-later", title: "Later", status: "queued" });
+    expect(supervisor.linkTasks(planned.id, taskId, "blocks")).toMatch(/^Recorded/);
+    expect(sparks(events, taskId)).toBe(1);
+    // Only a crewmate on the ring has a place for a spark.
+    expect(sparks(events, planned.id)).toBe(0);
   });
 });

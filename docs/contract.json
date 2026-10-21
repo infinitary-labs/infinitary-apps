@@ -42353,6 +42353,10 @@
                                 },
                                 "feed": {
                                   "type": "boolean"
+                                },
+                                "reached": {
+                                  "type": "boolean",
+                                  "const": true
                                 }
                               },
                               "required": [
@@ -45657,6 +45661,10 @@
               },
               "feed": {
                 "type": "boolean"
+              },
+              "reached": {
+                "type": "boolean",
+                "const": true
               }
             },
             "required": [

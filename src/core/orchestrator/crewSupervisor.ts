@@ -1161,6 +1161,9 @@ function worktreeText(acquired: WorktreeAcquisition, where?: string): string {
   }
 }
 
+/** Lane rows that are the crewmate's own work, sent by nobody: they draw no spark (INF-759). */
+const OWN_LANE_KINDS: ReadonlySet<string> = new Set(["job-exit", "conversation-restart"]);
+
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
 const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
   "idle-nudge",
@@ -1368,6 +1371,7 @@ export class CrewSupervisor {
       verifyValidationEvidence: (taskId) => this.verifyValidationEvidence(taskId),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
       stopRuntime: (taskId) => this.stopRuntime(taskId),
+      announceReach: (taskId) => this.announceReach(taskId),
       ...(options.killJobs ? { killJobs: options.killJobs } : {}),
       ...(options.machines ? { placed: options.machines } : {}),
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
@@ -2571,7 +2575,13 @@ export class CrewSupervisor {
   }
 
   flagDuplicate(input: { cardId: string; duplicateOf: string; note: string }): DuplicateResult {
-    return this.cards.flagDuplicate(input);
+    const card = this.cards.shown(input.cardId);
+    const result = this.cards.flagDuplicate(input);
+    // A crewmate's card closed as a duplicate is told to it, as the
+    // captain's own close is (INF-759).
+    if (result.status === "flagged" && card)
+      this.tellCardClosed(card, { id: result.original.id, title: result.original.title });
+    return result;
   }
 
   addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
@@ -6880,9 +6890,46 @@ export class CrewSupervisor {
         text: `Task ${task.title} guidance queued: it will be delivered when the task is free`,
       });
     }
-    const ids = rows.map((row) => row.id);
-    this.options.inbox.markDelivered(ids);
+    const ids = this.deliverRows(task.id, rows);
     void this.runTurn(task, laneTurnText(rows), ids, pictures.images);
+  }
+
+  /**
+   * Lane rows go out: marked in flight, and when one is a sent row going
+   * out for the first time the crewmate's center spark flies now, as it
+   * reaches it (INF-759). The crewmate's own rows - a job's result, a
+   * renewed conversation's reason - were sent by nobody and draw nothing;
+   * a row delivered again already drew its spark.
+   */
+  private deliverRows(taskId: string, rows: readonly InboxRow[]): number[] {
+    const ids = rows.map((row) => row.id);
+    const sent = rows.some(
+      (row) => row.lastAttemptAt === null && !OWN_LANE_KINDS.has(row.facts?.kind ?? ""),
+    );
+    this.options.inbox.markDelivered(ids);
+    if (sent) this.announceReach(taskId);
+    return ids;
+  }
+
+  /**
+   * Something sent reached a crewmate (INF-759): words entered its turn,
+   * its turn was stopped, its task closed under it or was edited. One push
+   * says so, and the center draws its spark out to the crewmate then. Only
+   * a crewmate on the ring has a place for it.
+   */
+  announceReach(taskId: string): void {
+    const record = this.options.tasks.get(taskId);
+    if (record?.kind !== "work" || record.status !== "active") return;
+    this.options.broadcastEvent({
+      type: "task_event",
+      taskId,
+      key: record.key,
+      kind: "reached",
+      text: "",
+      at: this.now(),
+      feed: false,
+      reached: true,
+    });
   }
 
   /**
@@ -6997,6 +7044,7 @@ export class CrewSupervisor {
         }
         const id = enqueue();
         this.options.inbox.markDelivered([id]);
+        this.announceReach(taskId);
         try {
           // Handled when the turn it landed in ends: ack rides turnComplete.
           await this.steerIntoTurn(task, task.session, message, [id], liveImages);
@@ -7260,6 +7308,8 @@ export class CrewSupervisor {
     source: InterruptSource = { actor: "firstmate", via: "tool", decision: null },
   ): Promise<void> {
     const task = this.tasks.get(taskId);
+    // A stop or a cancel reaches the crewmate: its spark flies first.
+    this.announceReach(taskId);
     if (!task) {
       const record = this.options.tasks.get(taskId);
       if (!record) throw new Error(`Unknown task "${taskId}".`);
@@ -7346,6 +7396,7 @@ export class CrewSupervisor {
       holds: true,
       feed: true,
     });
+    if (ended) this.announceReach(taskId);
     return ended
       ? {
           ok: true,
@@ -9389,8 +9440,7 @@ export class CrewSupervisor {
       if (task.session.controlProfile.steer !== "native") return;
       const pictures = this.rowPictures(taskId, due);
       if (pictures.blocked) return;
-      const ids = due.map((row) => row.id);
-      this.options.inbox.markDelivered(ids);
+      const ids = this.deliverRows(taskId, due);
       try {
         await this.steerIntoTurn(task, task.session, laneTurnText(due), ids, pictures.images);
       } catch {
@@ -9417,8 +9467,7 @@ export class CrewSupervisor {
     if (this.laneHeld(taskId)) return;
     const pictures = this.rowPictures(taskId, due);
     if (pictures.blocked) return;
-    const ids = due.map((row) => row.id);
-    this.options.inbox.markDelivered(ids);
+    const ids = this.deliverRows(taskId, due);
     try {
       const resumed = await this.resumeTask(taskId);
       void this.runTurn(resumed, laneTurnText(due), ids, pictures.images);
@@ -9709,6 +9758,9 @@ export class CrewSupervisor {
     }
     const phrase = linkPhrase(from, to, type);
     if (!created) return `${phrase} was already recorded.`;
+    // Its tasks changed, though neither crewmate hears it: each sparks.
+    this.announceReach(from.id);
+    this.announceReach(to.id);
     this.graphChanged();
     return `Recorded: ${phrase}.`;
   }
@@ -9724,6 +9776,8 @@ export class CrewSupervisor {
     const removed = this.options.tasks.unlink(from.id, to.id, type, "firstmate");
     const phrase = linkPhrase(from, to, type);
     if (!removed) return `No such link: ${phrase}.`;
+    this.announceReach(from.id);
+    this.announceReach(to.id);
     this.graphChanged();
     return `Removed: ${phrase}.`;
   }
@@ -12198,6 +12252,16 @@ export class CrewSupervisor {
           ? `You closed "${card.title}". It stays on ${home.key}'s record.`
           : `Captain dismissed the card "${card.title}".`,
     });
+    this.tellCardClosed(card);
+  }
+
+  /**
+   * A crewmate's own card on a live task closed without a choice: that
+   * crewmate hears it, on the path a click takes, and judges what the close
+   * meant. `duplicateOf` names the earlier card a duplicate close repeats.
+   */
+  private tellCardClosed(card: Card, duplicateOf?: { id: string; title: string }): void {
+    const cardId = card.id;
     const taskId = card.taskId;
     const record = taskId ? this.options.tasks.get(taskId) : undefined;
     if (!taskId || !record || TaskService.isClosed(record)) return;
@@ -12207,7 +12271,13 @@ export class CrewSupervisor {
     if (!this.tasks.has(taskId) && !record.sessionFile) return;
     void this.steerCrewmate(
       taskId,
-      { facts: { kind: "card-closed", card: { id: card.id, title: card.title } } },
+      {
+        facts: {
+          kind: "card-closed",
+          card: { id: card.id, title: card.title },
+          ...(duplicateOf ? { duplicateOf } : {}),
+        },
+      },
       "captain",
       { via: "card", cardId },
     ).catch((caught: unknown) => {

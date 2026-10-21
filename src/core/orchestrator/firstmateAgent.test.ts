@@ -7881,6 +7881,28 @@ describe("FirstmateAgent reply line", () => {
     expect(f.tasks.lastTurn()?.reply).toBeNull();
   });
 
+  // INF-759, the captain's answer "a spark anyway, because its task changed".
+  it("sparks to a crewmate whose task an edit changed, though it never hears the edit", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("start the panel");
+    const tools = toolsOf(f.specs);
+    await tools.get("spawn_crewmate")?.execute("spawn", {
+      title: "Panel build",
+      goal: "Build the panel",
+      user_words: "start the panel",
+    });
+    const build = f.tasks.list().find((row) => row.title === "Panel build");
+    expect(build?.status).toBe("active");
+    const sparks = () =>
+      f.events.filter(
+        (event) => event.type === "task_event" && event.reached && event.taskId === build?.id,
+      ).length;
+    const before = sparks();
+    await tools.get("update_task")?.execute("speed", { task: build?.key, crew_speed: "fast" });
+    expect(sparks()).toBe(before + 1);
+    await finish(f);
+  });
+
   it("describes a scheduled prompt and its cancellation only when they take effect", async () => {
     const store = new ScheduleStore(openInMemoryDatabase());
     const scheduler = new Scheduler({ store, notify: () => {}, broadcastEvent: () => {} });

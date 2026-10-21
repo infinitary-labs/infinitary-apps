@@ -191,9 +191,12 @@ describe("computer constellations", () => {
     expect(Math.hypot(report.x - crew.x, report.y - crew.y)).toBeLessThan(10);
     expect(Math.hypot(steer.x, steer.y)).toBeLessThan(10);
     expect(model.takeCues().some((c) => c.kind === "sendoff" && c.dx > 0)).toBe(true);
-    model.leave("a", "home", 16);
+    // A leave waits for a spark still on its way out (INF-759): let it land first.
+    let landed = 32;
+    while (model.update(landed).packets.length > 0) landed += 16;
+    model.leave("a", "home", landed);
     // The fall home takes longer the farther the cluster sits (REMOTE_TRIP).
-    for (let now = 32; now < 1600; now += 16) model.update(now);
+    for (let now = landed + 16; now < landed + 1600; now += 16) model.update(now);
     expect(model.has("a")).toBe(false);
     expect(model.takeCues()).toContainEqual({ kind: "receive" });
   });

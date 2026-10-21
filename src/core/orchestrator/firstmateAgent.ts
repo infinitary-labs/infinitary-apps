@@ -2853,8 +2853,12 @@ export class FirstmateAgent {
               Object.keys(input).some(
                 (key) => key !== "task" && key !== "policies" && key !== "direction",
               )
-            )
+            ) {
+              // An edit its crewmate never hears still sparks to it: its task
+              // changed (INF-759). A policy notice sparks as it lands.
+              supervisor.announceReach(record.id);
               supervisor.graphChanged();
+            }
             const now = tasks.get(record.id);
             return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}`;
           })();

@@ -25,6 +25,20 @@ function changed(patch: Partial<Changed>): Changed {
   };
 }
 
+/** The core's announcement that something sent reached a crewmate (INF-759). */
+function reached(taskId: string): FmEvent {
+  return {
+    type: "task_event",
+    taskId,
+    key: "SCR-1",
+    kind: "reached",
+    text: "",
+    at: 0,
+    feed: false,
+    reached: true,
+  };
+}
+
 function run(model: CrewOrbit, from: number, until: number): OrbitFrame {
   let frame = model.update(from);
   for (let t = from + 16; t <= until; t += 16) frame = model.update(t);
@@ -196,6 +210,8 @@ describe("crew orbit wiring", () => {
       2000,
     );
     expect(m.update(2100).packets.map((p) => p.direction)).toEqual(["report"]);
+    // INF-759: a message only recorded - held for its account, say - draws
+    // nothing; the spark flies when the core says it reached the crewmate.
     applyCrewEvent(
       m,
       {
@@ -205,10 +221,12 @@ describe("crew orbit wiring", () => {
         kind: "steered",
         text: "go",
         at: 0,
-        feed: false,
+        feed: true,
       },
       2100,
     );
+    expect(m.takeCues()).toEqual([]);
+    applyCrewEvent(m, reached("t1"), 2100);
     expect(m.takeCues().map((c) => c.kind)).toEqual(["sendoff"]);
     // A Firstmate-side failed turn is not a crewmate's.
     const v = m.version;
@@ -220,6 +238,42 @@ describe("crew orbit wiring", () => {
       2200,
     );
     expect(m.update(2300).crew[0]?.nudge ?? 0).toBeGreaterThan(0);
+  });
+
+  // INF-759, the captain's answer "After the spark lands": a close that
+  // reached the crewmate sparks first, and it leaves once the spark lands.
+  it("lets a closing crewmate's spark land before it leaves", () => {
+    const m = new CrewOrbit(0);
+    applyCrewEvent(m, changed({}), 0);
+    run(m, 0, 2000);
+    m.takeCues();
+    applyCrewEvent(m, reached("t1"), 2000);
+    applyCrewEvent(
+      m,
+      changed({ status: "done", from: "active", closedReason: "merged", activity: null }),
+      2000,
+    );
+    expect(m.takeCues().map((c) => c.kind)).toEqual(["sendoff"]);
+    const flying = run(m, 2016, 2000 + DEFAULT_ORBIT.packetMs - 20);
+    expect(flying.packets.map((p) => p.direction)).toEqual(["steer"]);
+    expect(flying.crew[0]?.phase).toBe("orbiting");
+    const landed = run(m, 2000 + DEFAULT_ORBIT.packetMs, 2000 + DEFAULT_ORBIT.packetMs + 40);
+    expect(landed.packets).toEqual([]);
+    expect(landed.crew[0]?.phase).toBe("leaving");
+    expect(landed.crew[0]?.leaveMode).toBe("home");
+  });
+
+  it("leaves at once under reduced motion, its spark landed with the frame", () => {
+    const m = new CrewOrbit(0);
+    applyCrewEvent(m, changed({}), 0);
+    m.update(16, true);
+    applyCrewEvent(m, reached("t1"), 100);
+    applyCrewEvent(
+      m,
+      changed({ status: "dropped", from: "active", closedReason: "cancelled", activity: null }),
+      100,
+    );
+    expect(m.update(116, true).crew).toEqual([]);
   });
 
   it("seeds the roster at boot settled on the ring, with no send-off", () => {

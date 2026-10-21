@@ -482,6 +482,14 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     text: z.string(),
     at: z.number(),
     feed: z.boolean(),
+    /**
+     * Something sent reached the crewmate: words entered its turn, its turn
+     * was stopped, its task closed under it or was edited (INF-759). The
+     * center draws one spark out to it then. An announcement of its own,
+     * never on a recorded event: `kind` is `reached`, `text` is empty and
+     * `feed` false. Absent on every timeline event.
+     */
+    reached: z.literal(true).optional(),
   }),
   /** The Firstmate agent's own busy state (drives the thinking phase). */
   z.object({ type: z.literal("firstmate_state"), busy: z.boolean() }),

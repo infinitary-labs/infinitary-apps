@@ -17,7 +17,7 @@ import type { CrewOrbit, CrewStatus, LeaveMode } from "./orbit";
 // crewmate is a `work` task while it is `active`, working while its host-derived posture
 // is active and idle otherwise (the split `crewCounts()` makes in
 // the core); its close says whether it folds home (done) or drifts away
-// (dropped). Reports and steers are packets on its line, a failed turn a
+// (dropped). Reports and what reaches it are packets on its line, a failed turn a
 // stutter, a completed request a flicker, and the slot it is served on
 // (`TaskView.tier`, and `task_changed`'s `tier`) its solid.
 
@@ -96,7 +96,10 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
       model.signal(event.taskId, "report", now);
       return;
     case "task_event":
-      if (event.kind === "steered") model.signal(event.taskId, "steer", now);
+      // Something sent reached the crewmate - words entering its turn, a
+      // stop, a close, an edit - as the core announces it (INF-759), never
+      // when a message is only recorded: a held one sparks when it lands.
+      if (event.reached) model.signal(event.taskId, "steer", now);
       return;
     case "turn_end": {
       // A completed request's usage lands as one flicker on the character

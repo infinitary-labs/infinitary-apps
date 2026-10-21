@@ -57,6 +57,16 @@ The fit remains responsive with reduced motion enabled.
 A move to a display of another density changes only the pixel ratio, so under reduced motion the ring paints its last settled frame again from its own inputs at the new sharpness, and the crew stay where they stood (`onPixelRatioChange` in `src/renderer/src/character/pixelRatio.ts`, shared with the first mate).
 The size control's zoom also changes the window's height in CSS pixels, which restarts the loop and paints the still afresh.
 
+## The spark out to a crewmate
+
+The spark out to a crewmate flies when something sent reaches it, never when a message is only recorded (INF-759).
+The core announces it as a `task_event` push with `reached: true` (`announceReach` in `crewSupervisor.ts`), and `applyCrewEvent` draws the spark from it.
+A message sparks when its lane row first goes out into a turn (`deliverRows`), so a message held for an account or a computer, or queued behind a turn, sparks when the crewmate takes it, and one delivered again sparks only once.
+An interrupt or cancel sparks as it is asked, the first mate's or the captain's Stop alike; a settle sparks before the task closes, except a superseded one, whose successor's start is its spark.
+An edit the crewmate never hears also sparks, because its task changed: an `update_task` field edit other than its policies, a withdrawn merge, and a wait added or removed by `link_tasks`; a policy change sparks as its notice lands.
+The crewmate's own lane rows, a job's result and a renewed conversation's reason, were sent by nobody and draw nothing.
+A crewmate whose task closes while its spark is still flying leaves on the frame after the spark lands (`leaveAfter` in `orbit.ts`); a settled frame lands it at once.
+
 ## Multiple work computers
 
 With more than one configured work computer, the home stage keeps the home formation as it is and seats every other computer's crew beside it (the captain's FI3-1519 plan, 2026-10-10, built on his FI3-1406 Home constellation).

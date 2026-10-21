@@ -313,6 +313,8 @@ type Crewmate = {
   status: CrewStatus;
   phase: CrewPhase;
   leaveMode: LeaveMode | null;
+  /** Its task closed while a spark was on its way to it: it leaves once the spark lands. */
+  leaveAfter?: LeaveMode;
   spawnAt: number;
   sendoffCued: boolean;
   leaveAt: number;
@@ -623,11 +625,23 @@ export class CrewOrbit {
    * The crewmate's task closes. Home is the finished crewmate folding back
    * into the Firstmate; away is a dropped one dimming off the ring. Either
    * vacates the slot at once, so the ring re-spaces while it goes. Leaving
-   * mid-spawn is fine: the spark simply turns.
+   * mid-spawn is fine: the spark simply turns. A spark still on its way out
+   * to it - the close reaching it (INF-759) - lands first, and the crewmate
+   * leaves on the frame after.
    */
   leave(id: string, mode: LeaveMode, now: number): void {
     const c = this.crew.get(id);
     if (!c || c.phase === "leaving") return;
+    if (c.packets.some((p) => p.direction === "steer")) {
+      c.leaveAfter = mode;
+      this.bump();
+      return;
+    }
+    this.depart(c, mode, now);
+  }
+
+  private depart(c: Crewmate, mode: LeaveMode, now: number): void {
+    delete c.leaveAfter;
     c.phase = "leaving";
     c.leaveMode = mode;
     c.leaveAt = now;
@@ -849,6 +863,12 @@ export class CrewOrbit {
   update(now: number, settled = false, rush = 0): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.last) / 1000, 0.05);
     this.last = now;
+    // A crewmate whose close waited on its spark leaves once the spark has
+    // landed; a settled frame lands every spark at once.
+    for (const c of this.crew.values()) {
+      if (c.leaveAfter && (settled || !c.packets.some((p) => p.direction === "steer")))
+        this.depart(c, c.leaveAfter, now);
+    }
     const tuning = this.tuning;
     const { ringR, glyphK } = this.layout();
     // The rush runs the crew's travel `travel` times faster: the extra is a

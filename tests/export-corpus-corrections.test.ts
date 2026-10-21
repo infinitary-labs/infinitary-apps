@@ -6,6 +6,7 @@ import { openDatabase } from "@core/storage/db";
 import { DecisionStore } from "@core/storage/decisionStore";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
+import type { HoldOverride, OverridableHold } from "@shared/holds";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { main } from "../scripts/export-corpus.ts";
 import { main as extractDispatchMain } from "../scripts/extract-dispatch-corpus.ts";
@@ -413,6 +414,48 @@ function buildFixture(dir: string): void {
       kind: "review",
       text: "review findings at abc1234, risk medium - findings round 1",
       data: { reviewTaskId: "t-review" },
+    },
+  );
+  // The captain's words passed two soft holds, he took them back, then his
+  // words passed one: the rows `update_task override` writes (INF-484 move
+  // 8 counts them per hold kind; the take-back is not an override).
+  const override = (holds: OverridableHold[], at: number): HoldOverride => ({
+    words: "Ship it as it is.",
+    holds,
+    until: "task",
+    at,
+  });
+  tasks.recordDelivery(
+    "t-build",
+    { override: override(["repairs", "rounds"], 20) },
+    {
+      kind: "note",
+      actor: "firstmate",
+      feed: true,
+      text: "Your words pass the repairs.",
+      data: { news: true },
+    },
+  );
+  tasks.recordDelivery(
+    "t-build",
+    { override: undefined },
+    {
+      kind: "note",
+      actor: "firstmate",
+      feed: true,
+      text: "You took back your words.",
+      data: { news: true, overrideWithdrawn: override(["repairs", "rounds"], 20) },
+    },
+  );
+  tasks.recordDelivery(
+    "t-build",
+    { override: override(["repairs"], 30) },
+    {
+      kind: "note",
+      actor: "firstmate",
+      feed: true,
+      text: "Your words pass the repairs.",
+      data: { news: true },
     },
   );
   seedTask(tasks, {
@@ -1324,6 +1367,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       by_risk: Record<string, number>;
       reviewed_changes: number;
       cap_hits: number;
+      overrides_by_hold: Record<string, number>;
       metrics: Record<string, number | null>;
     };
     exporter_contract_version: string;
@@ -2435,6 +2479,9 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     expect(rigor.by_risk).toEqual({ medium: 1 });
     expect(rigor.reviewed_changes).toBe(1);
     expect(rigor.cap_hits).toBe(0);
+    // Each override the captain's words declared, per hold kind it passed:
+    // two declared, one taken back between them (INF-484 move 8).
+    expect(rigor.overrides_by_hold).toEqual({ repairs: 2, rounds: 1 });
     // The numbers are the metric module's, not a second implementation: the
     // findings are counted off the reviewer's own report, and the CI rounds
     // are charged to the one direct-pr change that opened a pull request.
@@ -2449,6 +2496,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       findings_ask_user_rate: 0.5,
       ci_rounds_per_change: 2,
       rigor_cap_hits: 0,
+      hold_overrides: 2,
     });
     // No completion card settled anything here, so the evidence question
     // has nothing to answer - never a zero share.

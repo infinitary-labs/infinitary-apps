@@ -68,6 +68,7 @@ export type MetricId =
   | "review_verdict_share_blocked"
   | "ci_rounds_per_change"
   | "rigor_cap_hits"
+  | "hold_overrides"
   | "plain_language_share"
   | "clear_copy_share"
   | "pr_link_share"
@@ -592,6 +593,19 @@ export const METRICS: readonly MetricDef[] = [
     sep14: { value: null, text: "the caps did not exist" },
     target: null,
   },
+  // The captain's words passing a soft hold (docs/delivery-rigor.md, "The
+  // holds"; INF-484 move 8). Observational: a hold his words pass often is
+  // a sign it is a verdict and should drop a level, which the weekly audit
+  // judges from the count per kind (`overridesByHold`) - nobody grades it.
+  {
+    id: "hold_overrides",
+    label: "Overrides the captain's words declared on a task's soft holds",
+    group: "rigor",
+    direction: "either",
+    modes: [],
+    sep14: { value: null, text: "the override did not exist" },
+    target: null,
+  },
   // ------------------------------------------------------------------------
   // The plan-to-build handoff (docs/card-authoring.md "The handoff"). What a
   // captain's choice authorized is a judgment, so a person reads it and files
@@ -1047,6 +1061,12 @@ export type ObservedDispatch = {
    */
   capHits: number;
   /**
+   * Each override the captain's words declared on this task, as the soft
+   * holds it named (`overrideHoldsFrom`), oldest first. A taking-back is
+   * not one. Empty when none was declared.
+   */
+  overrides: string[][];
+  /**
    * Whether this change's REPORT carried the five evidence headings in
    * order (contract v3.6, captain lock 3: they left the completion card's
    * open body and stayed required in the report and the PR body, so the
@@ -1335,6 +1355,7 @@ export type RigorScores = Pick<
   | "review_verdict_share_blocked"
   | "ci_rounds_per_change"
   | "rigor_cap_hits"
+  | "hold_overrides"
 >;
 
 /**
@@ -1400,7 +1421,40 @@ export function scoreRigor(
       ciChanges.length,
     ),
     rigor_cap_hits: count(changes.reduce((sum, dispatch) => sum + dispatch.capHits, 0)),
+    hold_overrides: count(dispatches.reduce((sum, dispatch) => sum + dispatch.overrides.length, 0)),
   };
+}
+
+/**
+ * The soft holds an override row named, read off the `note` event's stored
+ * `data_json`: the delivery patch `update_task override` wrote with it
+ * carries the typed `HoldOverride` (src/shared/holds.ts). Null for any other
+ * note, a taking-back included, so the replay and the offline export agree
+ * on what an override is.
+ */
+export function overrideHoldsFrom(dataJson: string | null): string[] | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(dataJson ?? "null");
+  } catch {
+    return null;
+  }
+  const holds = (data as { override?: { holds?: unknown } } | null)?.override?.holds;
+  if (!Array.isArray(holds) || holds.length === 0) return null;
+  return holds.filter((hold): hold is string => typeof hold === "string");
+}
+
+/**
+ * How many overrides named each hold kind (INF-484 move 8): the count per
+ * kind the weekly audit reads as the sign that a hold is a verdict. One
+ * override naming two holds counts once for each.
+ */
+export function overridesByHold(dispatches: readonly ObservedDispatch[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const dispatch of dispatches)
+    for (const override of dispatch.overrides)
+      for (const hold of override) counts[hold] = (counts[hold] ?? 0) + 1;
+  return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
 // --------------------------------------------------------------------------

@@ -72,6 +72,7 @@ import {
   type ObservedDispatch,
   type ObservedReview,
   observedReviews,
+  overridesByHold,
   scoreRigor,
   scoreRouting,
 } from "./interaction-metrics.ts";
@@ -598,6 +599,7 @@ export function routingDispatches(tables: FleetTables): ObservedDispatch[] {
             ? 0
             : null,
       capHits: caps,
+      overrides: tables.overrides.get(taskId) ?? [],
       evidence:
         rigorRequiresEvidence(rigor as Rigor | undefined) && completion.has(taskId)
           ? carriesEvidenceHeadings(reportEvidenceHeadings(task.outcome))
@@ -650,6 +652,12 @@ export type RigorRollup = {
   /** Changes a reviewer read at least once, and changes a cap ever held. */
   reviewed_changes: number;
   cap_hits: number;
+  /**
+   * How many overrides named each soft hold (INF-484 move 8): the count per
+   * kind the weekly audit reads (docs/agents-reach.md). Its total is the
+   * `hold_overrides` metric.
+   */
+  overrides_by_hold: Record<string, number>;
   /** The phase-4 numbers, scored by the one home so the replay agrees with this. */
   metrics: Record<string, number | null>;
 };
@@ -667,6 +675,7 @@ export function rigorRollup(tables: FleetTables): RigorRollup {
     by_risk: tally(reviews.map((review) => review.risk)),
     reviewed_changes: new Set(reviews.map((review) => review.taskId)).size,
     cap_hits: dispatches.reduce((sum, dispatch) => sum + dispatch.capHits, 0),
+    overrides_by_hold: overridesByHold(dispatches),
     metrics: Object.fromEntries(
       Object.entries(scores).map(([id, value]) => [id, (value as MetricValue).value]),
     ),

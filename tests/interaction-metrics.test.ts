@@ -570,6 +570,7 @@ describe("declared plan skips", () => {
       hasPr: false,
       ciRounds: null,
       capHits: 0,
+      overrides: [],
       evidence: null,
     };
     const rows: ObservedDispatch[] = [
@@ -614,6 +615,7 @@ describe("routing observability (S5)", () => {
       hasPr: false,
       ciRounds: null,
       capHits: 0,
+      overrides: [],
       evidence: null,
       ...overrides,
     };
@@ -799,6 +801,7 @@ describe("delivery rigor observability (phase 4)", () => {
       hasPr: false,
       ciRounds: null,
       capHits: 0,
+      overrides: [],
       evidence: null,
       ...overrides,
     };

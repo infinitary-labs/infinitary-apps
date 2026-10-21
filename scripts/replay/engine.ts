@@ -125,6 +125,7 @@ import {
   approvalLabelKey,
   parseApprovalLabels,
   observedReviews,
+  overrideHoldsFrom,
   reviewEventFrom,
   scoreSession,
   cardLabelKey,
@@ -2514,6 +2515,17 @@ class Replay {
       .all() as { task_id: string; resets: number }[]) {
       resets.set(row.task_id, row.resets);
     }
+    // The captain's overrides this replay recorded (INF-484 move 8).
+    const overrides = new Map<string, string[][]>();
+    for (const row of this.db
+      .prepare(
+        `SELECT task_id, data_json FROM task_events
+           WHERE kind = 'note' AND data_json LIKE '%"override":%' ORDER BY at, id`,
+      )
+      .all() as { task_id: string; data_json: string | null }[]) {
+      const holds = overrideHoldsFrom(row.data_json);
+      if (holds) overrides.set(row.task_id, [...(overrides.get(row.task_id) ?? []), holds]);
+    }
     // Whether a change SETTLED at all still reads off its completion card -
     // the newest one that could, because a revision replaces the reading its
     // earlier version gave - but the evidence contract is now read on the
@@ -2550,6 +2562,7 @@ class Replay {
             (delivery?.ciCapAt !== undefined ? 1 : 0) +
             (delivery?.reviewCapAt !== undefined ? 1 : 0) +
             (resets.get(record.id) ?? 0),
+          overrides: overrides.get(record.id) ?? [],
           evidence:
             rigorRequiresEvidence(rigor as Rigor | undefined) && settled.has(record.id)
               ? carriesEvidenceHeadings(reportEvidenceHeadings(record.outcome))

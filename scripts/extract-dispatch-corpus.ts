@@ -42,7 +42,7 @@ import {
   userDataFoldersNewestFirst,
 } from "../src/shared/userDataFolders.ts";
 import { parseServedInput } from "../src/shared/servedFrame.ts";
-import { type ReviewEvent, reviewEventFrom } from "./interaction-metrics.ts";
+import { overrideHoldsFrom, type ReviewEvent, reviewEventFrom } from "./interaction-metrics.ts";
 
 // --------------------------------------------------------------------------
 // The contract this extractor reads (src/core/pi/piResources.ts,
@@ -971,6 +971,12 @@ export type FleetTables = {
    * two together are the holds the change earned.
    */
   capResets: Map<string, number>;
+  /**
+   * task id -> each override the captain's words declared on it, as the
+   * soft holds it named (INF-484 move 8; `overrideHoldsFrom`). Empty on a
+   * database older than the override.
+   */
+  overrides: Map<string, string[][]>;
 };
 
 export const EMPTY_TABLES: FleetTables = {
@@ -985,6 +991,7 @@ export const EMPTY_TABLES: FleetTables = {
   routing: new Map(),
   reviewEvents: [],
   capResets: new Map(),
+  overrides: new Map(),
 };
 
 /** Read-only snapshot of the three tables the dispatch dataset joins to. */
@@ -1187,13 +1194,23 @@ export function readFleetTables(dbPath: string): FleetTables {
     // and a database older than the tiers simply has neither.
     const reviewEvents: ReviewEvent[] = [];
     const capResets = new Map<string, number>();
+    // The captain's overrides (INF-484 move 8): a `note` row whose delivery
+    // patch carries the typed override.
+    const overrides = new Map<string, string[][]>();
     if (tables.has("task_events")) {
       for (const row of db
         .prepare(
           `SELECT task_id, at, kind, data_json FROM task_events
-             WHERE kind IN ('review', 'cap_reset') ORDER BY at, id`,
+             WHERE kind IN ('review', 'cap_reset')
+                OR (kind = 'note' AND data_json LIKE '%"override":%')
+             ORDER BY at, id`,
         )
         .all() as { task_id: string; at: number; kind: string; data_json: string | null }[]) {
+        if (row.kind === "note") {
+          const holds = overrideHoldsFrom(row.data_json);
+          if (holds) overrides.set(row.task_id, [...(overrides.get(row.task_id) ?? []), holds]);
+          continue;
+        }
         if (row.kind === "cap_reset") {
           capResets.set(row.task_id, (capResets.get(row.task_id) ?? 0) + 1);
           continue;
@@ -1213,6 +1230,7 @@ export function readFleetTables(dbPath: string): FleetTables {
       routing,
       reviewEvents,
       capResets,
+      overrides,
     };
   } finally {
     db.close();

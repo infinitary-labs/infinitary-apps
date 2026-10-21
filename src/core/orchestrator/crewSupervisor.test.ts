@@ -48,6 +48,7 @@ import {
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { overrideHoldsFrom } from "../../../scripts/interaction-metrics";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { completionCardBody } from "../../../tests/helpers/completionCard";
@@ -3919,6 +3920,16 @@ describe("CrewSupervisor", () => {
         h.forge.headSha = "fixed0004";
         await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual(["fixed0004"]);
+        // The metrics read each declaration off the row it wrote, and the
+        // take-back is none (INF-484 move 8 counts overrides per hold kind).
+        const declared = h.tasks.timeline(h.taskId).flatMap((event) => {
+          const holds = overrideHoldsFrom(event.data ? JSON.stringify(event.data) : null);
+          return holds ? [holds] : [];
+        });
+        expect(declared).toEqual([
+          ["review", "live-proof"],
+          ["review", "live-proof"],
+        ]);
       });
 
       it("merges his kept click held on failed checks once his words pass the checks, and his feed carries no hold sentence", async () => {

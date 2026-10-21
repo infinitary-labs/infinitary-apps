@@ -508,19 +508,19 @@ While the override stands the cap is not stamped again, and `standingCap` reads 
 **The first mate's own cards.**
 The `decisions` hold on a first mate merge counts a crewmate's question, a write request and a validation question, never a card of the first mate's own (INF-242's question 9).
 
-Not built: a refusal written with no kind at all, which the check cannot see; INF-494's ledger keeps the principle from there.
+A refusal written with no kind at all is beyond the check; the weekly audit reads each week's changes for one, beside the limits ledger and the override counts (`docs/agents-reach.md`).
 
 ## Numbers (phase 4)
 
 The rigor system is countable from records the app already writes, in the one home the routing numbers already have: `scoreRigor` in `scripts/interaction-metrics.ts`, beside `scoreRouting`.
 Both the replay gate (`docs/replay-harness.md`) and the offline corpus export (`docs/corpus-export.md`, manifest `rigor`) call it, so the two can never disagree about what a review round or a cap hit is.
-Nothing new is written for it: the numbers come off the work shape, the delivery facts, the `review` and `cap_reset` timeline events, and the completion cards themselves.
+Nothing new is written for it: the numbers come off the work shape, the delivery facts, the `review` and `cap_reset` timeline events, the override rows, and the completion cards themselves.
 
 An ANSWER task is out of every denominator here (Task B): a task that ships nothing cannot carry the evidence contract, spend a CI round or hit a cap, so counting it would dilute every share with work the tiers were never about.
 Its own share is reported instead, as an observational row nobody grades.
 
 Two row types feed it.
-`ObservedDispatch` gains the rigor facts - `rigor` (quick where a shaped row predates the tiers, the same reading the C5 join takes), the delivery posture, whether a PR is on record, `ciRounds`, the holds the caps placed, and whether the change's REPORT carried the five headings.
+`ObservedDispatch` gains the rigor facts - `rigor` (quick where a shaped row predates the tiers, the same reading the C5 join takes), the delivery posture, whether a PR is on record, `ciRounds`, the holds the caps placed, the overrides the captain's words declared, and whether the change's REPORT carried the five headings.
 A review task is shaped too and carries no rigor at all: it read a change rather than shipping one, so it stays out of the mix.
 `ObservedReview` is one row per verdict a reviewer returned, read off the builder's own `review` events; its findings are counted from the reviewer's report by the action each line asks for.
 
@@ -535,6 +535,7 @@ A review task is shaped too and carries no rigor at all: it read a change rather
 | `review_verdict_share_pass` / `_findings` / `_blocked` | either | the verdict mix |
 | `ci_rounds_per_change` | down | unsuccessful own repairs (legacy records: distinct red heads), per direct-pr change that opened a PR |
 | `rigor_cap_hits` | down | round caps the host placed: each cap standing now, plus each `cap_reset` |
+| `hold_overrides` | either | overrides the captain's words declared on a task's soft holds, one per `note` row that carries one; the corpus export counts them per hold kind (`docs/agents-reach.md`) |
 
 Three rules keep them honest, and they are the same rules the routing rows follow.
 A distribution has **no good direction**, so those rows are `direction: "either"` - written to the baseline, printed in the report, graded by nobody; only the evidence share, the two round counts and the cap hits are graded.

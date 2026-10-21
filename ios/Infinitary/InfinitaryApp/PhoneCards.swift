@@ -9,6 +9,7 @@ struct PhoneCards: View {
     @State private var drafts: [String: PhoneJSON] = [:]
     @State private var replies: [String: String] = [:]
     @State private var previousIDs: [String] = []
+    @State private var sent = 0
     private var card: PhoneCard? { past ?? session.cards.first(where: { $0.id == selected }) ?? session.cards.first }
 
     var body: some View {
@@ -21,6 +22,7 @@ struct PhoneCards: View {
                     onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
                     onPage: { page($0) },
+                    onSent: { sent += 1 },
                     showsNext: past == nil && index < session.cards.count - 1, visible: messageContext.cardsVisible,
                     replyLeaves: !card.value["holdsPlace"].flag && session.cards.count > 1)
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
@@ -30,38 +32,13 @@ struct PhoneCards: View {
                     Text("No cards to read yet.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
-            HStack(spacing: PhoneTheme.space2) {
-                Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
-                    .disabled(past != nil || index <= 0).accessibilityIdentifier("previous-card")
-                    .keyboardShortcut("[", modifiers: [.command, .shift])
-                Menu {
-                    ForEach(session.cards) { item in
-                        Button(item.title) { selected = item.id; past = nil }
-                    }
-                    if !session.pastCards.isEmpty {
-                        Section("Past cards") {
-                            ForEach(session.pastCards) { item in Button(item.title) { past = item } }
-                        }
-                    }
-                } label: {
-                    Text(past == nil ? "\(session.cards.isEmpty ? 0 : index + 1) of \(session.cards.count)" : "Past card")
-                        .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
-                        .frame(minWidth: 44, minHeight: 44)
-                }.accessibilityIdentifier("card-pager")
-                Button { page(1) } label: {
-                    Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                        .overlay(alignment: .topTrailing) {
-                            if session.cards.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
-                                Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
-                            }
-                        }
-                }
-                    .disabled(past != nil || index >= session.cards.count - 1).accessibilityIdentifier("next-card")
-                    .keyboardShortcut("]", modifiers: [.command, .shift])
-            }
+            // INF-589 item 11: with no card to page, the pager hides; Past cards stays reachable while there are any.
+            if !session.cards.isEmpty || !session.pastCards.isEmpty { pager }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: 560).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
+        // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
+        .sensoryFeedback(.phone, trigger: sent)
         .onChange(of: card.map { $0.isPast ? PhoneMessageContext.Card.past($0.id) : .current($0.id) }, initial: true) { _, shown in
             messageContext.card = shown
         }
@@ -79,6 +56,41 @@ struct PhoneCards: View {
             if session.cards.contains(where: { $0.id == id }) { selected = id; past = nil }
             else { past = session.pastCards.first { $0.id == id } }
             session.showCardID = nil
+        }
+    }
+    private var pager: some View {
+        HStack(spacing: PhoneTheme.space2) {
+            if !session.cards.isEmpty {
+                Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
+                    .disabled(past != nil || index <= 0).accessibilityIdentifier("previous-card")
+                    .keyboardShortcut("[", modifiers: [.command, .shift])
+            }
+            Menu {
+                ForEach(session.cards) { item in
+                    Button(item.title) { selected = item.id; past = nil }
+                }
+                if !session.pastCards.isEmpty {
+                    Section("Past cards") {
+                        ForEach(session.pastCards) { item in Button(item.title) { past = item } }
+                    }
+                }
+            } label: {
+                Text(past != nil ? "Past card" : session.cards.isEmpty ? "Past cards" : "\(index + 1) of \(session.cards.count)")
+                    .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
+                    .frame(minWidth: 44, minHeight: 44)
+            }.accessibilityIdentifier("card-pager")
+            if !session.cards.isEmpty {
+                Button { page(1) } label: {
+                    Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+                        .overlay(alignment: .topTrailing) {
+                            if session.cards.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
+                                Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
+                            }
+                        }
+                }
+                    .disabled(past != nil || index >= session.cards.count - 1).accessibilityIdentifier("next-card")
+                    .keyboardShortcut("]", modifiers: [.command, .shift])
+            }
         }
     }
     private var index: Int { session.cards.firstIndex { $0.id == (selected ?? session.cards.first?.id) } ?? 0 }
@@ -104,6 +116,7 @@ private struct PhoneCardPane: View {
     let onSeen: () -> Void
     let onHide: () -> Void
     let onPage: (Int) -> Void
+    let onSent: () -> Void
     let showsNext: Bool
     /// The stage is on screen: a card drawn behind another tab is not yet read.
     let visible: Bool
@@ -117,9 +130,9 @@ private struct PhoneCardPane: View {
     @FocusState private var replyFocused: Bool
 
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, reply: Binding<String>,
-         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool) {
+         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, onSent: @escaping () -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool) {
         self.card = card; self.session = session; _reply = reply
-        self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onPage = onPage
+        self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onPage = onPage; self.onSent = onSent
         self.showsNext = showsNext; self.visible = visible; self.replyLeaves = replyLeaves
         _host = State(initialValue: CardWebHost(card: card, session: session, fill: fill))
     }
@@ -203,6 +216,7 @@ private struct PhoneCardPane: View {
                                     let result = try await session.ask(.act, [.string(card.id), action["id"], .string("chrome"),
                                         .object(["answers": reading["answers"]]), card.submission(reading: reading, fresh: snapshot.fresh)])
                                     if let refusal = result["refusal"].text { throw PhoneRequestError(refusal) }
+                                    onSent()
                                 }
                             } label: {
                                 HStack { Text(action["label"].text ?? "Choose"); if card.isPast && card.value["ending"]["actionId"] == action["id"] { Image(systemName: "checkmark").accessibilityLabel("Chosen") } }
@@ -216,9 +230,6 @@ private struct PhoneCardPane: View {
                     }
                 }
                 if let problem { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
-                if !card.isPast, let refusal = session.changeRefusal {
-                    Text(refusal).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning)
-                }
                 if !messages.isEmpty {
                     DisclosureGroup("Thread", isExpanded: $threadOpen) {
                         VStack(alignment: .leading, spacing: PhoneTheme.space4) {
@@ -248,7 +259,7 @@ private struct PhoneCardPane: View {
                                 _ = try await session.ask(.reply, [.string(card.id), .object(["text": .string(text), "answers": reading["answers"]]),
                                     card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)])
                                 if reply == text { reply = "" }
-                                threadOpen = true; replyFocused = false
+                                threadOpen = true; replyFocused = false; onSent()
                             }
                         } label: {
                             Label("Send reply", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
@@ -257,6 +268,8 @@ private struct PhoneCardPane: View {
                         }.accessibilityIdentifier("send-reply")
                             .disabled(!canSendReply)
                     }.phoneInput()
+                        // INF-589 item 11: the line under the composer says why; the reply row only dims.
+                        .opacity(session.canChange ? 1 : 0.5)
                     if reply.utf16.count > PhoneLimits.reply { Text("Keep your reply within \(PhoneLimits.reply.formatted()) characters.").foregroundStyle(PhoneTheme.warning) }
                 }
             }

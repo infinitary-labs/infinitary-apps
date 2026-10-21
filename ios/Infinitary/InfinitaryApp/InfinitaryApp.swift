@@ -40,12 +40,12 @@ struct PhoneView: View {
         NavigationStack {
             Group {
                 if model.removed {
-                    ContentUnavailableView {
-                        Label("Removed from your computer", systemImage: "iphone.slash")
-                    } description: {
-                        Text("This device no longer shows your computer. Make a new link in Devices on your computer to join again.")
-                    } actions: {
-                        Button("Join again") { model.dismissRemoved() }.accessibilityIdentifier("join-again")
+                    // INF-589 item 11: Removed takes the first screen's shape, with one prominent Join again.
+                    firstScreen("Removed from your computer",
+                        "This device no longer shows your computer. Make a new link in Devices on your computer to join again.") {
+                        Button { model.dismissRemoved() } label: {
+                            Text("Join again").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44)
+                        }.buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("join-again")
                     }
                 } else if let session = model.connection {
                     connected(session)
@@ -147,64 +147,58 @@ struct PhoneView: View {
         }
     }
 
-    private var joinScreen: some View {
+    /// The first screen's shape, as the Mac's first launch: the first mate above a heading and the line under it, then its controls.
+    private func firstScreen(_ heading: String, _ line: String, @ViewBuilder controls: () -> some View) -> some View {
         ScrollView {
             VStack(spacing: PhoneTheme.space5) {
                 PhoneCharacter().frame(width: 150, height: 150)
                 VStack(spacing: PhoneTheme.space3) {
-                    Text("Infinitary is on another computer").font(PhoneFont.display)
-                        .foregroundStyle(PhoneTheme.text)
-                    Text("Your first mate, its tasks and conversation stay on your computer. Join it to read your cards and Activity here.")
-                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    Text(heading).font(PhoneFont.display).foregroundStyle(PhoneTheme.text)
+                    Text(line).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                 }.multilineTextAlignment(.center)
-                if model.busy { ProgressView("Joining your computer…").accessibilityIdentifier("joining") }
-                VStack(alignment: .leading, spacing: PhoneTheme.space3) {
-                    Text("NEARBY").font(PhoneFont.micro).tracking(1).foregroundStyle(PhoneTheme.muted)
-                    VStack(spacing: 0) {
-                        if model.nearby.macs.isEmpty {
-                            Text(model.nearby.problem ?? "Open A phone in Devices on your computer to find it here.")
-                                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading).padding(PhoneTheme.space4)
-                        }
-                        ForEach(model.nearby.macs) { mac in
-                            Button { scanning = true } label: {
-                                HStack(spacing: PhoneTheme.space3) {
-                                    Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6)
-                                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                                        Text(mac.name).foregroundStyle(PhoneTheme.text)
-                                        Text("Scan its code").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                                    }.frame(maxWidth: .infinity, alignment: .leading)
-                                    PhoneSymbol.scan.image
-                                }.padding(PhoneTheme.space4).frame(minHeight: 44)
-                            }.buttonStyle(.plain).accessibilityLabel("Scan the code on \(mac.name)")
-                        }
-                    }
-                    .background(PhoneTheme.panel, in: RoundedRectangle(cornerRadius: PhoneTheme.controlRadius))
-                    .overlay(RoundedRectangle(cornerRadius: PhoneTheme.controlRadius).stroke(PhoneTheme.line, lineWidth: 1))
-                }
-                VStack(spacing: PhoneTheme.space3) {
-                    Button { scanning = true } label: { Text("Scan the code").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
-                        .buttonStyle(.borderedProminent).accessibilityIdentifier("scan-code")
-                    Button { pasting = true } label: { Text("Paste its link").frame(maxWidth: .infinity, minHeight: 44) }
-                        .buttonStyle(.bordered).accessibilityIdentifier("paste-link")
-                }.controlSize(.large)
-            }.disabled(model.busy).padding(PhoneTheme.space5).frame(maxWidth: 468)
+                controls()
+            }.padding(PhoneTheme.space5).frame(maxWidth: 468)
                 .frame(maxWidth: .infinity)
         }
     }
 
-    private func connected(_ session: ReadOnlySession) -> some View {
-        VStack(spacing: 0) {
-            if session.contact != "in-reach" {
-                Text(session.contact == "reaching" ? "Waiting for \(session.mac.name)." : "\(session.mac.name) is out of reach. Changes are off until it is back.")
-                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                    .padding(PhoneTheme.space3).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(PhoneTheme.panel).accessibilityIdentifier("reach-notice")
-            }
-            PhoneWorkspace(session: session, stage: PhoneCards(session: session),
-                tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
-                .id(session.mac.deviceID)
+    // INF-589 item 13: a welcome, in the Mac's first-launch words, rather than a sentence that reads as a fault.
+    private var joinScreen: some View {
+        firstScreen("Welcome aboard Infinitary", "Your first mate lives on your Mac. Join it to read your cards and Activity here.") {
+            if model.busy { ProgressView("Joining your computer…").accessibilityIdentifier("joining") }
+            // Nearby is one plain line: the way to find a computer, or each computer announcing Infinitary.
+            VStack(spacing: 0) {
+                if model.nearby.macs.isEmpty {
+                    Text(model.nearby.problem ?? "Open A phone in Devices on your computer to find it here.")
+                        .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).multilineTextAlignment(.center)
+                }
+                ForEach(model.nearby.macs) { mac in
+                    Button { scanning = true } label: {
+                        HStack(spacing: PhoneTheme.space2) {
+                            Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6)
+                            Text(mac.name).foregroundStyle(PhoneTheme.text)
+                            Text("Scan its code").foregroundStyle(PhoneTheme.secondary)
+                        }.font(PhoneFont.callout).frame(minHeight: 44).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityLabel("Scan the code on \(mac.name)")
+                }
+            }.disabled(model.busy)
+            VStack(spacing: PhoneTheme.space3) {
+                Button { scanning = true } label: { Text("Scan the code").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
+                    .buttonStyle(.borderedProminent).accessibilityIdentifier("scan-code")
+                // A plain secondary, with no fill under it.
+                Button { pasting = true } label: { Text("Paste its link").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
+                    .buttonStyle(.borderless).accessibilityIdentifier("paste-link")
+            }.controlSize(.large).disabled(model.busy)
         }
+    }
+
+    // INF-589 item 11: out of reach is said once, by the reach line under the computer's name; no strip repeats it.
+    private func connected(_ session: ReadOnlySession) -> some View {
+        PhoneWorkspace(session: session, stage: PhoneCards(session: session),
+            tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
+            .id(session.mac.deviceID)
+            // INF-589 item 12: a soft tap when the computer comes back after it was lost.
+            .sensoryFeedback(.phone, trigger: session.returns)
     }
 
 }

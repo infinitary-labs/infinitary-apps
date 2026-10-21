@@ -182,6 +182,7 @@ struct PhoneTaskRecord: View {
     @State private var pressed: String?
     @State private var problem: String?
     @State private var readProblem: String?
+    @State private var sent = 0
     @ScaledMetric(relativeTo: .caption) private var markLift: CGFloat = 4
     private var task: PhoneTask { detail ?? initial }
     private var steerable: Bool { showingCrew && task.canSteer }
@@ -200,7 +201,8 @@ struct PhoneTaskRecord: View {
                     Text(task.title).font(PhoneFont.title).accessibilityAddTraits(.isHeader).accessibilityIdentifier("task-record-title")
                     Text("\(task.key) · \(task.state) · \(session.mac.name)").font(PhoneFont.mono)
                     if let place = task.place { Text(place.where).foregroundStyle(PhoneTheme.secondary) }
-                    if let words = session.changeRefusal { Text(words).foregroundStyle(PhoneTheme.warning) }
+                    // INF-589 item 11: the reach line says out of reach; this one says only that changes are off.
+                    if let words = session.changesOffLine { Text(words).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary) }
                     if let readProblem { Text(readProblem).foregroundStyle(PhoneTheme.warning) }
                     if task.startedAt != nil {
                         Picker("Record", selection: $showingCrew) {
@@ -213,6 +215,8 @@ struct PhoneTaskRecord: View {
             }
             if hasActions || problem != nil { foot }
         }.background(PhoneTheme.background).navigationBarTitleDisplayMode(.inline)
+            // INF-589 item 12: a soft tap once the computer accepts a start, continue, interrupt or steer.
+            .sensoryFeedback(.phone, trigger: sent)
             .task(id: "\(session.contact)|\(showingCrew)") {
                 guard session.contact == "in-reach" else { return }
                 // Only the open record polls; the board follows pushes. Transcript writes may follow their event.
@@ -372,6 +376,7 @@ struct PhoneTaskRecord: View {
             do {
                 let answer: PhoneAnswer = try await session.request(channel, args: args)
                 try answer.accepted()
+                sent += 1
                 if clearDraft { draft = "" }
                 await refresh()
             } catch { problem = error.localizedDescription }

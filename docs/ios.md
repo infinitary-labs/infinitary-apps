@@ -13,6 +13,7 @@ Settings → Devices → **A phone** on the Mac opens a locally generated QR cod
 Every build of the Mac app offers **A phone**, installed and development alike (`docs/devices.md`, "Settings -> Devices").
 The panel explains that the phone app comes from TestFlight for now, only to the people asked to test it, and is not in the App Store yet.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
+Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with Nearby as one plain line, Scan the code prominent and Paste its link a plain secondary.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
 The Mac announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works.
 Camera and Local Network permissions have separate explanations; a camera refusal offers pasting rather than reading the clipboard automatically.
@@ -60,6 +61,8 @@ A gap in numbering drops the cursor and reconnects rather than silently losing u
 Successful frames and pongs update the last-heard time; bounded handshake, welcome, read, Leave and heartbeat waits cut a stalled connection.
 The watchdog starts before sending hello and cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
 The app keeps only its in-memory view while out of reach and shows its last-heard time.
+Out of reach is said once, by the reach line under the computer's name; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
+`ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
 Background cancels the old connection generation, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.
 Nearby addresses may be tried with the original pin, and only an authenticated address is saved as preferred.
@@ -67,7 +70,7 @@ Nearby addresses may be tried with the original pin, and only an authenticated a
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
 Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
 Both choices live in the computer-details sheet, opened by the top-right computer button or Command-I; neither is an always-visible destructive toolbar action.
-A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link.
+A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
 
@@ -75,6 +78,7 @@ Neither reconnection nor discovery queues or retries a mutation.
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
 It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles and then a Past cards section.
+With no current card the chevrons and count hide, leaving a lone Past cards menu only while past cards exist.
 The session keeps which offers the stage drew while the person could see it, so the Cards tab's badge counts unread cards and the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
@@ -140,6 +144,7 @@ The task key sits inline before the words at micro size, as on the Mac's feed li
 It exposes the full local timestamp to accessibility.
 `PhoneSymbol` supplies native outline template images for the system's tinted chrome.
 `PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` puts a sheet on the panel color with a hairline at its edge.
+It also holds `SensoryFeedback.phone`, the one soft tap played when the computer accepts a message, a card's answer or reply, or a task's start, continue, interrupt or steer, and when `returns` counts the computer back; a page turn plays none.
 Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
 
 `PhoneCharacter` draws the Mac's character in a native Canvas with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.

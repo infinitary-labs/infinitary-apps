@@ -34,6 +34,11 @@ extension View {
     func phoneInput(floating: Bool = false) -> some View { modifier(PhoneInputSurface(floating: floating)) }
 }
 
+extension SensoryFeedback {
+    /// INF-589 item 12: the one soft tap when something is sent, a task starts or stops, or the computer comes back.
+    static let phone = SensoryFeedback.impact(flexibility: .soft)
+}
+
 extension View {
     /// A sheet's title, inline in the app's own type, drawn as the joined computer's name is.
     func phoneTitle(_ title: String) -> some View {

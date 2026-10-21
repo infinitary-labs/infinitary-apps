@@ -12,6 +12,7 @@ struct MessageComposer: View {
     @State private var loading = false
     @State private var sending = false
     @State private var problem: String?
+    @State private var sent = 0
     @FocusState private var focused: Bool
     @Environment(\.verticalSizeClass) private var verticalSize
 
@@ -81,11 +82,15 @@ struct MessageComposer: View {
                         .disabled(!canSend)
                         .accessibilityIdentifier("send-message")
                 }.phoneInput(floating: true)
+                    // INF-589 item 11: out of reach, the input dims; a draft stays typeable and is kept.
+                    .opacity(session.canChange ? 1 : 0.5)
             }
             if loading { ProgressView("Adding photos…") }
             if sending { ProgressView("Sending…") }
-            if let words = session.changeRefusal {
-                Text(words).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("connection-refusal")
+            if let words = session.changesOffLine {
+                Text(words).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    .frame(maxWidth: .infinity).multilineTextAlignment(.center)
+                    .accessibilityIdentifier("connection-refusal")
             }
             if let problem {
                 Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("message-problem")
@@ -93,6 +98,8 @@ struct MessageComposer: View {
         }.font(PhoneFont.callout).padding(.top, compact ? PhoneTheme.space2 : PhoneTheme.space3)
             .frame(maxWidth: 750).frame(maxWidth: .infinity)
             .task(id: selection) { await loadPhotos() }
+            // INF-589 item 12: a soft tap once the computer accepts the message.
+            .sensoryFeedback(.phone, trigger: sent)
     }
 
     /// Quotation marks in the faintest ink, so even a bare "Got it" reads as something said.
@@ -113,7 +120,7 @@ struct MessageComposer: View {
             do {
                 let result: PhoneAnswer = try await session.request(.converse, args: [payload])
                 try result.accepted()
-                text = ""; photos = []
+                text = ""; photos = []; sent += 1
             } catch { problem = error.localizedDescription }
         }
     }

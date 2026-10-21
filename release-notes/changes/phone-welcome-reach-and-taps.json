@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-welcome-reach-and-taps",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A warmer welcome on iPhone and iPad, and a calmer view when your Mac is away",
+      "body": "Before you join, your iPhone or iPad now greets you with \"Welcome aboard Infinitary\" under your first mate, then Scan the code and Paste its link. When your Mac is out of reach, the line under its name says so once, and the message box and reply boxes dim with one short line saying changes are off until your Mac is back. If your Mac removes the device, one Join again button takes you back. You feel a soft tap when a message, reply or answer is sent, when you start or interrupt a task, and when your Mac comes back.",
+      "picture": {
+        "dark": "phone-welcome-reach-and-taps-dark.png",
+        "light": "phone-welcome-reach-and-taps-light.png",
+        "alt": "Infinitary's first screen on iPad: the first mate above \"Welcome aboard Infinitary\", the line \"Your first mate lives on your Mac. Join it to read your cards and Activity here.\", a one-line hint to open A phone in Devices, a wide Scan the code button and a plain Paste its link."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

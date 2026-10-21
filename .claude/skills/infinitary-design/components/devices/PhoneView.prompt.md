@@ -3,7 +3,7 @@
 The native SwiftUI shell uses the shared dark and light colors, Space Grotesk for words and JetBrains Mono for data.
 Native controls keep Dynamic Type, VoiceOver, hardware-keyboard focus and platform-sized touch targets of at least 44 points.
 The screen is opaque, with the shared void background, raised cards, hairlines and one ice-cyan selection.
-Native colors, spacing and radii are generated from the shared tokens; cards use the card radius and Nearby buttons the control radius.
+Native colors, spacing and radii are generated from the shared tokens; cards use the card radius and fields the control radius.
 The launch screen is the shared void in each appearance, so the first frame is already the app's own surface, never pure white or black.
 Every sheet title is inline in Space Grotesk at the headline size, as the joined computer's name is, never the system's large bold title.
 The paste and computer sheets sit on the panel color with a hairline at their edge.
@@ -11,24 +11,28 @@ A plain field, such as the task search, a crewmate message or a computer's link,
 A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
 The app follows the device's appearance; it never presents message bubbles.
+One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
+Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.
 
 ## Joining and the computer
 
-At first launch, the native first mate sits above the centered caption “Infinitary is on another computer”.
-One sentence explains that tasks and conversation stay on the computer.
-Nearby is a bordered list of computers announcing Infinitary, with a status dot and scanner icon on each row; a press opens the scanner, never trusts the announcement.
-Scan the code is primary and Paste its link secondary, full-width controls below the list.
+At first launch, the native first mate greets once above the centered headline “Welcome aboard Infinitary”, in the words of the Mac's own first launch.
+One line follows: “Your first mate lives on your Mac.
+Join it to read your cards and Activity here.”
+Nearby is one plain line under it, with no box: the way to find a computer, or each computer announcing Infinitary as a status dot, its name and Scan its code; a press opens the scanner, never trusts the announcement.
+Scan the code is the one prominent full-width control, and Paste its link a plain secondary below it with no fill.
 An alert names the computer address reached through the link, with Cancel beside Join, before the phone starts showing it; the authenticated computer name is not known before joining.
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
 Once joined, the native navigation title is the computer's name, with its reach line below it.
-Out of reach shows the last-heard time, a quiet explanation above the content and only the current in-memory view; changes are unavailable until it returns.
+Out of reach is said once, by the reach line with its last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
+The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The top-right computer button opens a native sheet with the computer's name and reach, this device and its current capability, and the fact that appearance follows the device.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave sits at the foot under a hairline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.
 Out of reach, Forget this computer replaces Leave, asking in the same kind of alert before clearing only the local saved computer and explaining that the computer may still list this device.
-Removed clears the computer's data from this device and explains that a new link is needed.
+Removed clears the computer's data from this device and takes the first screen's shape: the first mate above “Removed from your computer”, a line saying a new link is needed, and one prominent Join again.
 A protected-data read failure explains why joining cannot proceed and offers another attempt after unlocking.
 A damaged saved connection clears only the saved computer, keeps this device's identity and explains that a fresh link can join again; it never asks the person to unlock for a decoding error.
 
@@ -44,6 +48,7 @@ The exact local date and time remains available to VoiceOver; an empty Activity 
 
 Cards shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
 The count opens a menu of the current titles, then Past cards; the next chevron carries a dot while an unread card lies ahead.
+With no card to page the chevrons and count hide; a lone Past cards menu stays while there are past cards, and nothing shows when there are none.
 The Cards tab carries the native badge with the count of cards not yet read.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
 Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
@@ -60,7 +65,7 @@ The thread opens below the card, with plain messages and their submitted answers
 Past cards show their last-seen body, submitted answers and chosen button, with Hide instead of Close and no reply field or working actions.
 A Settings or browser door says to do it on the named computer and keeps the card open.
 Using a saved sign-in is a normal choice sent to that computer, not a request to open its browser here.
-While out of reach, the shown body remains readable, actions and replies are unavailable, and no change waits to be sent later.
+While out of reach, the shown body remains readable, actions and the dimmed reply row are unavailable, and no change waits to be sent later.
 A stalled body leaves the native card controls usable and offers Retry in its place.
 An empty stage shows the native first mate; a crew count appears only when the connection supplies it.
 The native character moves as the Mac's does: idle drifts slowly with eyes that blink and wander, listening breathes as two counter-rotating hexagons, and working speeds up with the ember, shimmer and halo.
@@ -98,7 +103,7 @@ The message field, Photos and Send sit inside the one capsule, Send at its right
 The native multiline field takes the keyboard’s dictation; there is no second microphone or speech engine.
 Photos opens the system library picker, and selected photos appear as removable thumbnail chips above the field.
 Send submits words and photos once; a refusal keeps the draft and says why, and an unconfirmed send asks the person to check the Mac before sending again.
-Out of reach and a read-only connection retain the view but refuse every change, without sending it later.
+Out of reach and a read-only connection retain the view but refuse every change, without sending it later; the one line under the message box says which.
 The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
 Each group header is a micro uppercase tracked label with its count, as on the Mac.
 The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.

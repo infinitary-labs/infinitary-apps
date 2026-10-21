@@ -190,6 +190,13 @@ import XCTest
         _ = try await home("empty-cards")
         XCTAssertTrue(app.staticTexts["No cards to read yet."].waitForExistence(timeout: 10))
         XCTAssertTrue(app.otherElements["phone-character"].exists)
+        // INF-589 item 11: with no card to page, the chevrons and count hide; the cards just closed stay under Past cards.
+        for id in ["previous-card", "next-card"] {
+            XCTAssertFalse(app.buttons[id].exists, "\(id) shows on an empty stage")
+        }
+        let pastOnly = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        XCTAssertTrue(pastOnly.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(pastOnly.label, "Past cards")
         _ = try await home("capture-character-start")
         try await appearances("empty-stage")
         _ = try await home("capture-stop")
@@ -204,6 +211,10 @@ import XCTest
         _ = try await home("offline")
         XCTAssertTrue(app.staticTexts["Out of reach"].waitForExistence(timeout: 20))
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
+        // INF-589 item 11: out of reach is said once; under the composer, one line says only that changes are off.
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'out of reach' AND NOT (label ==[c] 'Out of reach')")).count, 0,
+            app.debugDescription)
+        XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Changes are off until Test Mac mini is back.")
         try await appearances("out-of-reach")
         computerDetails()
         XCTAssertTrue(app.buttons["forget-mac"].exists)
@@ -269,7 +280,7 @@ import XCTest
         try await join() // Fresh-link recovery reuses the identity still listed on this Mac.
         _ = try await home("remove")
         XCTAssertTrue(app.staticTexts["Removed from your computer"].waitForExistence(timeout: 20), app.debugDescription)
-        picture("removed")
+        try await appearances("removed")
         app.buttons["join-again"].tap()
         XCTAssertTrue(app.buttons["paste-link"].exists)
         // INF-136 #3: two genuine 401s separated by an unreachable address still prove removal.

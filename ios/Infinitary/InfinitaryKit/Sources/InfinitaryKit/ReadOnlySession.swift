@@ -44,6 +44,9 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var contact = "reaching"
     public private(set) var heardAt: Date?
     public private(set) var removed = false
+    /// How many times the computer came back in reach after an attempt to reach it failed (INF-589 item 12).
+    /// The ordinary reconnection when the app opens is not a return.
+    public private(set) var returns = 0
     public var onMacChanged: ((JoinedMac) -> Void)?
     public var onRemoved: (() -> Void)?
     /// The Mac's first mate reacted (a firstmate_emote), heard live; a replay on reconnect is not a reaction now.
@@ -69,6 +72,7 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var notified: [String: Bool] = [:]
     @ObservationIgnored private var awaited = Set<String>()
     @ObservationIgnored private var primed = false
+    @ObservationIgnored private var missed = false
     private let initialReads = [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
 
     /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
@@ -293,6 +297,7 @@ public struct PhoneNotice: Equatable, Sendable {
                             finishLeave(); onRemoved?()
                         } else {
                             contact = code == 1001 ? "closed" : "lost"
+                            missed = true
                             finishLeave(PhoneError.unavailable)
                         }
                     }
@@ -420,7 +425,9 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func markReady(_ channel: String) {
         ready.insert(channel)
-        if initialReads.allSatisfy({ ready.contains($0) }) { contact = "in-reach" }
+        guard initialReads.allSatisfy({ ready.contains($0) }) else { return }
+        contact = "in-reach"
+        if missed { missed = false; returns += 1 }
     }
 
     private func refresh(_ channel: String, on socket: URLSessionWebSocketTask) async throws {

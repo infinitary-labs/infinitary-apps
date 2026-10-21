@@ -18,6 +18,18 @@ struct PhoneReach: View {
     }
 }
 
+extension ReadOnlySession {
+    /// INF-589 item 11: the reach line says out of reach, so the one line where changes are made says only that
+    /// they are off, in the Mac's words (`changesOffWords`, src/renderer/src/devices/viewWords.ts). None while first reaching.
+    var changesOffLine: String? {
+        switch contact {
+        case "in-reach": changeRefusal
+        case "reaching": nil
+        default: "Changes are off until \(mac.name) is back."
+        }
+    }
+}
+
 struct PhoneComputerSheet: View {
     let session: ReadOnlySession
     let leave: () -> Void

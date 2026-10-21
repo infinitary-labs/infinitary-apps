@@ -5532,7 +5532,7 @@ export class CrewSupervisor {
       ...(githubRead
         ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
         : {}),
-      // A task that only answers writes too: every write it makes asks the captain (FI3-1571).
+      // A task that only answers writes too: all but a run start or rerun on its own project asks the captain (FI3-1571, INF-729).
       ...(githubWrite
         ? { onGithubWrite: (input: GithubWriteInput) => githubWrite(task.id, input) }
         : {}),

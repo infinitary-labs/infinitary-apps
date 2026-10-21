@@ -94,6 +94,16 @@ function directoryEntry(path: string, withToken = true) {
         download_url: `https://raw.githubusercontent.com/octo/meter/main/${path}`,
       };
 }
+/**
+ * GitHub's answer to a workflow dispatch that asked for `return_run_details`:
+ * INF-724's nightly full check, run 39631227000 on Oct 21.
+ */
+const DISPATCHED_RUN = {
+  workflow_run_id: 39631227000,
+  run_url: "https://api.github.com/repos/octo/meter/actions/runs/39631227000",
+  html_url: "https://github.com/octo/meter/actions/runs/39631227000",
+};
+
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
@@ -105,6 +115,7 @@ async function fixture(
     oversize?: boolean;
     signedOut?: boolean;
     dispatchStatus?: number;
+    watchRun?: (taskId: string, runId: number) => string;
     beforeValidationWrite?: (
       taskId: string,
       request: string,
@@ -156,6 +167,7 @@ async function fixture(
       )
     ) {
       if (options.dispatchStatus) json({ message: "Dispatch refused" }, options.dispatchStatus);
+      else if (JSON.parse(body || "{}").return_run_details) json(DISPATCHED_RUN);
       else {
         res.writeHead(204);
         res.end();
@@ -229,6 +241,22 @@ async function fixture(
     branch: "fm/task-1",
   });
   seedTask(tasks, { id: "task-2", title: "Find", status: "idle" });
+  // INF-724's shape: the nightly full check, a task that only answers, in its project.
+  seedTask(tasks, {
+    id: "task-3",
+    title: "Run the nightly full check",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-3",
+    shape: { kind: "research", deliverable: "answer" },
+  });
+  seedTask(tasks, {
+    id: "task-4",
+    title: "Answer with no project",
+    status: "idle",
+    shape: { kind: "research", deliverable: "answer" },
+  });
   // The check reading arms the watch only once the rerun reads as running.
   let readings = 0;
   const readChecks = vi.fn(async () => {
@@ -252,6 +280,7 @@ async function fixture(
       ),
     readChecks,
     beforeValidationWrite: options.beforeValidationWrite,
+    ...(options.watchRun ? { watchRun: options.watchRun } : {}),
     now: () => 1234,
     sleep: async () => {},
   });
@@ -263,8 +292,11 @@ async function fixture(
   const writeWithoutProject = bindTool(GITHUB_WRITE_TOOL, {
     onGithubWrite: (i) => service.write("task-2", i),
   });
+  const writeAs = (taskId: string) =>
+    bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write(taskId, i) });
   return {
     service,
+    writeAs,
     readWithoutProject,
     writeWithoutProject,
     seen,
@@ -750,6 +782,77 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     const late = (await second.write.run(rerun)).text;
     expect(second.readChecks).toHaveBeenCalledTimes(3);
     expect(late).toContain("did not read as running yet");
+  });
+
+  // INF-729 way D, the captain's choice: a nightly check task only answers, and its
+  // run request waited on his click from 4:01 AM to 9:03 AM.
+  it("sends a task that only answers' run start and rerun on its own project at once and watches the run, while every other write still asks", async () => {
+    const watchRun = vi.fn((_taskId: string, runId: number) => `The app watches run ${runId}.`);
+    const { writeAs, seen, readChecks } = await fixture({ watchRun });
+    const answerTask = writeAs("task-3");
+    const started = (
+      await answerTask.run({
+        method: "POST",
+        path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+        body: JSON.stringify({
+          ref: "main",
+          inputs: { profile: "alpha" },
+          return_run_details: true,
+        }),
+      })
+    ).text;
+    expect(started).toContain('"status": 200');
+    expect(started).toContain("The app watches run 39631227000.");
+    expect(watchRun).toHaveBeenCalledWith("task-3", 39631227000);
+    const rerun = (
+      await answerTask.run({
+        method: "POST",
+        path: "/repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+      })
+    ).text;
+    expect(rerun).toContain('"status": 201');
+    expect(watchRun).toHaveBeenCalledWith("task-3", 9);
+    expect(readChecks).not.toHaveBeenCalled();
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      "POST /repos/octo/meter/actions/workflows/verify.yml/dispatches",
+      "POST /repos/octo/meter/actions/runs/9/rerun-failed-jobs",
+    ]);
+
+    // Cancelling a run, any other write to its own project, and a start elsewhere still ask.
+    const asks = [
+      { method: "POST" as const, path: "/repos/octo/meter/actions/runs/9/cancel" },
+      { method: "POST" as const, path: "/repos/octo/meter/issues/1/comments", body: "{}" },
+      {
+        method: "PUT" as const,
+        path: "/repos/octo/meter/actions/workflows/verify.yml/disable",
+      },
+    ];
+    for (const ask of asks) {
+      expect((await answerTask.run(ask)).text).toContain(
+        "Not sent: this task only answers, so every write it makes but a run start or rerun on its own project asks the captain",
+      );
+    }
+    expect(
+      (
+        await answerTask.run({
+          method: "POST",
+          path: "/repos/acme/site/actions/workflows/verify.yml/dispatches",
+          body: '{"ref":"main"}',
+        })
+      ).text,
+    ).toContain("Not sent: this task only answers");
+
+    // Through the captain's github.com sign-in, a run start still asks.
+    expect(
+      (
+        await writeAs("task-4").run({
+          method: "POST",
+          path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+          body: '{"ref":"main"}',
+        })
+      ).text,
+    ).toContain("Not sent: this task has no project");
+    expect(seen).toHaveLength(2);
   });
 
   it("stops a task at its call budget", async () => {

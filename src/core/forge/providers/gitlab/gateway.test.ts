@@ -43,6 +43,7 @@ async function fixture(
     keyRefused?: boolean;
     /** What the package registry answers a release file. */
     registryStatus?: number;
+    watchRun?: (taskId: string, runId: number) => string;
   } = {},
 ) {
   const seen: Seen[] = [];
@@ -86,6 +87,14 @@ async function fixture(
     } else if (path === `${OWN}/merge_requests/1/notes` && req.method === "POST") {
       if (options.notesStatus) json({ message: "401 Unauthorized" }, options.notesStatus);
       else json({ id: 7 }, 201);
+    } else if (
+      (path === `${OWN}/pipeline` || path === `${OWN}/pipelines/31/retry`) &&
+      req.method === "POST"
+    ) {
+      // GitLab answers a pipeline start or retry with the pipeline, trimmed.
+      json({ id: 31, iid: 4, status: "created", ref: "main", sha: HEAD, source: "api" }, 201);
+    } else if (path === `${OWN}/pipelines/31/cancel` && req.method === "POST") {
+      json({ id: 31, status: "canceled" });
     } else if (path === `${OWN}/jobs/20/retry` && req.method === "POST") {
       json({ id: 21, status: "pending" }, 201);
     } else if (path === `${OWN}/releases/v1` && req.method === "GET") {
@@ -138,6 +147,16 @@ async function fixture(
     worktreeDir: dir,
     branch: "fm/task-1",
   });
+  // A task that only answers, in its project, like the nightly checks (INF-729).
+  seedTask(tasks, {
+    id: "task-3",
+    title: "Run the nightly check",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-3",
+    shape: { kind: "research", deliverable: "answer" },
+  });
   const readChecks = vi.fn(async () => {
     tasks.recordDelivery("task-1", { ciWatch: { head: HEAD, since: 1 } as never });
     return "checks pending";
@@ -147,15 +166,20 @@ async function fixture(
     repos: new RepoRegistry(db, join(dir, "fleet")),
     forgeFor: () => forge,
     readChecks,
+    ...(options.watchRun ? { watchRun: options.watchRun } : {}),
     now: () => 1234,
     sleep: async () => {},
   });
   const read = bindTool(GITHUB_READ_TOOL, { onGithubRead: (i) => service.read("task-1", i) });
   const write = bindTool(GITHUB_WRITE_TOOL, { onGithubWrite: (i) => service.write("task-1", i) });
+  const answerWrite = bindTool(GITHUB_WRITE_TOOL, {
+    onGithubWrite: (i) => service.write("task-3", i),
+  });
   return {
     dir,
     read,
     write,
+    answerWrite,
     seen,
     tasks,
     readChecks,
@@ -364,6 +388,42 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     expect(readChecks).toHaveBeenCalledTimes(1);
     expect(tasks.get("task-1")?.delivery?.ciWatch).toBeDefined();
     expect(tasks.get("task-1")?.delivery?.ciRepair?.rerun?.startedAt).toBe(1234);
+  });
+
+  // INF-729 way D: GitLab follows the same rule as GitHub.
+  it("sends a task that only answers' pipeline start and retries on its own project at once, while every other write still asks", async () => {
+    const watchRun = vi.fn(
+      (_taskId: string, runId: number) => `The app watches pipeline ${runId}.`,
+    );
+    const { answerWrite, seen } = await fixture({ watchRun });
+    const started = (
+      await answerWrite.run({ method: "POST", path: `${OWN}/pipeline`, body: '{"ref":"main"}' })
+    ).text;
+    expect(started).toContain('"status": 201');
+    expect(started).toContain("The app watches pipeline 31.");
+    expect(watchRun).toHaveBeenCalledWith("task-3", 31);
+    expect(
+      (await answerWrite.run({ method: "POST", path: `${OWN}/pipelines/31/retry` })).text,
+    ).toContain('"status": 201');
+    expect(
+      (await answerWrite.run({ method: "POST", path: `${OWN}/jobs/20/retry` })).text,
+    ).toContain('"status": 201');
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      `POST /api/v4${OWN}/pipeline`,
+      `POST /api/v4${OWN}/pipelines/31/retry`,
+      `POST /api/v4${OWN}/jobs/20/retry`,
+    ]);
+
+    for (const ask of [
+      { method: "POST" as const, path: `${OWN}/pipelines/31/cancel` },
+      { method: "POST" as const, path: `${OWN}/merge_requests/1/notes`, body: "{}" },
+      { method: "POST" as const, path: "/projects/acme%2Fsite/pipeline", body: '{"ref":"main"}' },
+    ]) {
+      expect((await answerWrite.run(ask)).text).toContain(
+        "Not sent: this task only answers, so every write it makes but a run start or rerun on its own project asks the captain",
+      );
+    }
+    expect(seen).toHaveLength(3);
   });
 
   it("refuses an answer over 256 KiB and a redirect, and names a self-hosted server in its refusals", async () => {

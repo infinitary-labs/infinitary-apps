@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "answer-task-run-starts",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate that only answers starts its project's checks without asking",
+      "body": "A crewmate that is only answering a question, such as a nightly check, now starts or reruns a run of its own project's checks on GitHub or GitLab at once, so the check no longer waits for your click. Every other change it makes, including cancelling a run, still asks you first.",
+      "noPicture": "Nothing new appears on screen; the request card no longer goes up for a run start.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

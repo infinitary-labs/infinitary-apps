@@ -304,13 +304,15 @@ Use this connection for the crewmate's own GitHub work.
 When the captain's own words ask a crewmate to run a program, that rule is in the crewmate prompt.
 Two entries of the runtime-neutral tool spec, both Pi and Claude, served by `GithubGatewayService` (`src/core/orchestrator/githubGateway.ts`) over the optional `Forge.api` (`src/core/forge/api.ts`): each host's raw call, its own policy (`route`) and its next page (`nextPath`).
 On a GitLab project the same two tools reach GitLab's API (below); they keep their names, because GitLab's paths are not GitHub's and a crewmate names the one where its project lives either way, and a renamed tool would break every crewmate session that already holds them.
-`github_read` (GET/HEAD) and `github_write` (POST/PATCH/PUT/DELETE) go to any non-personal task; every write of a task that only answers asks the captain (below).
+`github_read` (GET/HEAD) and `github_write` (POST/PATCH/PUT/DELETE) go to any non-personal task; a task that only answers starts or reruns a run on its own project at once, and every other write it makes asks the captain (below).
 
 - **Reads reach what the sign-in may read; writes go at once only to the task's project.**
   `path` is a relative path checked by `parseApiRequest`; the caller never names a host, token or header.
   A read that passes the shape checks is sent, and the host's own status and answer come back (FI3-1571 piece 3): there is no read list.
   That reaches the person's account, organizations, notifications and members as well as every repository the sign-in can see; the sign-in's own permissions decide.
   A write to `/repos/{owner}/{repo}/...` of the task's registered project, from a task that ships a change, is sent at once; the policy routes it as `own`.
+  From a task that only answers, only a start or rerun of a run on its own project is sent at once: a workflow dispatch or a run or job rerun on GitHub, a pipeline start, a pipeline or job retry or a manual job's play on GitLab (INF-729, the captain's way D, so a nightly check starts with no click).
+  Such a start may be a release workflow, as a building task's already may.
   Every other write is kept for the captain's click ("A write that asks", below).
   A task with no project, or whose project lives where the app has no JSON API - kept on this computer, or on a plain Git host - reads and asks through the github.com sign-in (`accountForge`).
   No GraphQL (`/graphql` is refused for reads and writes alike, and never becomes an ask).
@@ -376,8 +378,8 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
 
 ### A write that asks
 
-FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes; GitLab follows the same rule.
-`github_write` keeps, instead of sending, a write outside the task's own project, any write of a task that only answers, and any write through the github.com sign-in.
+FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes but a run start or rerun on its own project (INF-729 way D); GitLab follows the same rule.
+`github_write` keeps, instead of sending, a write outside the task's own project, any other write of a task that only answers - cancelling a run included - and any write through the github.com sign-in.
 The merge guard runs first: a merge or default-branch move on the task's own project is refused with its pointer to the merge card, asked or not, and so is deleting a GitLab project or a GraphQL call.
 The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path, the JSON body, and for a release file the path of that file in the working copy - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).
 A release file's bytes are read when the click sends it, not when the ask is kept.
@@ -395,6 +397,7 @@ The crewmate hears it once (`write-answered`), with the host's answer within the
 A task's close drops its asks that were never sent.
 A crewmate on another computer asks the same way: its write and its card reach the home, which keeps the ask and sends it (protocol 5.0, `docs/contract.md`).
 Evidence: `tests/e2e/forge-signin.spec.ts` - a write to another repository, a project kept on this computer creating its GitHub repository through the github.com sign-in, and a task that only answers writing to its own project - each shows the exact call on the card, nothing sent before the captain's key, one request after it, the crewmate hearing the answer, and the same ask on a revised card refused; `tests/e2e/gitlab-delivery.spec.ts` keeps a write to another GitLab project unsent.
+The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/forge/providers/gitlab/gateway.test.ts`) send a task that only answers' run start and rerun at once, watch the run, and keep its cancel, its other writes, a start elsewhere and a start through the github.com sign-in.
 
 ### On GitLab
 

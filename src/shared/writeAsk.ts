@@ -2,7 +2,8 @@
  * A write a crewmate asked to send where a project lives, kept on its task
  * until the captain's click sends it (FI3-1571 piece 4, `docs/forge.md`,
  * "A write that asks"): one outside the task's own project, any write of a
- * task that only answers, and any write through the github.com sign-in.
+ * task that only answers but a run start or rerun on its own project, and
+ * any write through the github.com sign-in.
  * The host stores the exact call; the card names it by `id` and never
  * carries the call itself, so only what was stored is ever sent.
  */

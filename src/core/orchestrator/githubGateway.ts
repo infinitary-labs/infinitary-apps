@@ -44,8 +44,9 @@ const REREAD_DELAY_MS = 2000;
  * API for. A read reaches whatever the sign-in may read, past the host
  * policy's shape checks (`ForgeApi.route`), and the host's answer decides.
  * A write to the task's own project from a task that ships a change goes
- * at once; every other write is kept on the task as an ask (FI3-1571 piece
- * 4), which only the captain's click on its card sends, once
+ * at once, and so does a start or rerun of a run there from a task that only
+ * answers (INF-729 way D); every other write is kept on the task as an ask
+ * (FI3-1571 piece 4), which only the captain's click on its card sends, once
  * (`sendAsk`). The host caps request, answer and calls, and never lets the
  * caller name a host, token or header. A rerun of a workflow run or job - a
  * pipeline or job retry on GitLab - records an existing reservation and
@@ -331,7 +332,8 @@ export class GithubGatewayService {
   /**
    * Why a write waits on the captain instead of going at once, or undefined
    * when it goes: it reaches past the task's own project, the task only
-   * answers, or it goes through the github.com sign-in.
+   * answers and the write is not a run start or rerun on its own project
+   * (INF-729 way D), or it goes through the github.com sign-in.
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
     if (target.via === "account") {
@@ -339,8 +341,11 @@ export class GithubGatewayService {
         ? "this task's project has no API where it lives, so its writes go through the captain's github.com sign-in, and each one asks the captain"
         : "this task has no project, so its writes go through the captain's github.com sign-in, and each one asks the captain";
     }
-    if (this.options.tasks.get(taskId)?.shape?.deliverable === "answer") {
-      return "this task only answers, so every write it makes asks the captain";
+    if (
+      this.options.tasks.get(taskId)?.shape?.deliverable === "answer" &&
+      !startsRun(target.forge, route)
+    ) {
+      return "this task only answers, so every write it makes but a run start or rerun on its own project asks the captain";
     }
     if (!route.own) return "it goes outside this task's own project, so it asks the captain";
     return undefined;
@@ -521,10 +526,9 @@ export class GithubGatewayService {
     if (response.status >= 300 || !route.own || target.via !== "project") return "";
     const notes: string[] = [];
     const rest = route.rest.split("/").map(decodeURIComponent).join("/");
-    const dispatch =
-      target.forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
-    const pipeline = target.forge.kind === "gitlab" && rest === "pipeline";
-    const started = route.method === "POST" && (dispatch || pipeline || route.rerun);
+    const dispatch = isDispatch(target.forge, rest);
+    const pipeline = isPipelineStart(target.forge, rest);
+    const started = startsRun(target.forge, route);
     // A reservation bound to a workflow run is dated only by that run's rerun (INF-688).
     const bound = route.rerun
       ? this.options.tasks.get(taskId)?.delivery?.ciRepair?.rerun?.runId
@@ -729,6 +733,28 @@ function stripCredentialQuery(text: string): string | null {
   if (drop.length === 0) return null;
   for (const key of drop) url.searchParams.delete(key);
   return url.toString();
+}
+
+/** A GitHub workflow dispatch, by its path under the project. */
+function isDispatch(forge: Forge, rest: string): boolean {
+  return forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
+}
+
+/** A GitLab pipeline start, by its path under the project. */
+function isPipelineStart(forge: Forge, rest: string): boolean {
+  return forge.kind === "gitlab" && rest === "pipeline";
+}
+
+/**
+ * A start or rerun of a run on the task's own project: a workflow dispatch
+ * or a run or job rerun on GitHub, a pipeline start, a pipeline or job
+ * retry or a manual job's play on GitLab. A task that only answers sends
+ * these at once (INF-729).
+ */
+function startsRun(forge: Forge, route: ApiRoute): boolean {
+  if (!route.own || route.method !== "POST") return false;
+  const rest = route.rest.split("/").map(decodeURIComponent).join("/");
+  return isDispatch(forge, rest) || isPipelineStart(forge, rest) || route.rerun;
 }
 
 function objectOf(value: unknown): Record<string, unknown> {

@@ -1,0 +1,217 @@
+/**
+ * Every hold the app places on work, in one list, each with its level
+ * (INF-242's plan, moves 2 and 3 of INF-484; docs/delivery-rigor.md, "The
+ * holds"). A hold is `fixed` only when no word of the captain's changes
+ * what it rests on - a physical limit or a fact outside the app. One that
+ * rests on a fact the app holds, on his own consent or on a number the app
+ * made up is `soft`: his words, relayed by the first mate as one recorded
+ * override (`HoldOverride`), pass it. Which level a hold takes is a
+ * judgment its author and reviewer make by the four questions, never a
+ * lint; `scripts/holds.ts` in `pnpm check` only keeps this list, its sites
+ * and the docs table in step.
+ *
+ * Each site cites its hold through `overridePasses`, `softHoldWords` or
+ * `fixedHoldWords`, so a refusal names its kind and every kind here has a
+ * site. A soft hold with `way` is passed by the captain's words another
+ * way, which the refusal already names; every other soft hold is passed by
+ * the override.
+ */
+export const HOLDS = {
+  "asks-first": {
+    level: "soft",
+    restsOn: "consent",
+    name: "asking first",
+  },
+  decisions: {
+    level: "soft",
+    restsOn: "record",
+    name: "the open decisions",
+  },
+  repairs: {
+    level: "soft",
+    restsOn: "made-up number",
+    name: "the repair limit",
+  },
+  rounds: {
+    level: "soft",
+    restsOn: "made-up number",
+    name: "the re-review limit",
+  },
+  review: {
+    level: "soft",
+    restsOn: "record",
+    name: "the review",
+  },
+  "live-proof": {
+    level: "soft",
+    restsOn: "record",
+    name: "live proof",
+  },
+  waits: {
+    level: "soft",
+    restsOn: "record",
+    name: "the waits",
+  },
+  parts: {
+    level: "soft",
+    restsOn: "record",
+    name: "the open parts",
+  },
+  checks: {
+    level: "soft",
+    restsOn: "record",
+    name: "the checks",
+  },
+  story: {
+    level: "soft",
+    restsOn: "consent",
+    name: "the saved story",
+  },
+  rerun: {
+    level: "soft",
+    restsOn: "made-up number",
+    name: "the rerun limit",
+  },
+  escalation: {
+    level: "soft",
+    restsOn: "made-up number",
+    name: "the stronger-model limit",
+    way: "the captain names the model",
+  },
+  "start-waits": {
+    level: "soft",
+    restsOn: "record",
+    name: "a start's waits",
+    way: "the first mate removes the wait on the captain's words",
+  },
+  "host-rules": {
+    level: "fixed",
+    restsOn: "outside fact",
+    name: "the rules where the project lives",
+  },
+  "nothing-to-merge": {
+    level: "fixed",
+    restsOn: "physical limit",
+    name: "nothing to merge",
+  },
+  "sign-in": {
+    level: "fixed",
+    restsOn: "outside fact",
+    name: "the sign-in",
+  },
+  "sent-once": {
+    level: "fixed",
+    restsOn: "outside fact",
+    name: "sending once",
+  },
+  "recorded-path": {
+    level: "fixed",
+    restsOn: "physical limit",
+    name: "the recorded path",
+  },
+} as const satisfies Record<
+  string,
+  {
+    level: "soft" | "fixed";
+    restsOn: "consent" | "record" | "made-up number" | "outside fact" | "physical limit";
+    name: string;
+    way?: string;
+  }
+>;
+
+export type HoldKind = keyof typeof HOLDS;
+
+/** A soft hold the recorded override passes: every soft hold without its own way. */
+export type OverridableHold = {
+  [K in HoldKind]: (typeof HOLDS)[K] extends { level: "soft"; way?: undefined } ? K : never;
+}[HoldKind];
+export type FixedHold = {
+  [K in HoldKind]: (typeof HOLDS)[K] extends { level: "fixed" } ? K : never;
+}[HoldKind];
+
+export const OVERRIDABLE_HOLDS = (Object.keys(HOLDS) as HoldKind[]).filter(
+  (kind) => HOLDS[kind].level === "soft" && !("way" in HOLDS[kind]),
+) as OverridableHold[];
+
+/**
+ * The captain's one recorded override on a task: his own words, the soft
+ * holds the first mate declared they pass, and how long - this version or
+ * the task's life, the first mate's reading of his words. The app keeps the
+ * words and never reads them; it checks only that each hold is soft and
+ * that the turn carried his words.
+ */
+export type HoldOverride = {
+  words: string;
+  holds: OverridableHold[];
+  until: "version" | "task";
+  /** The version it covers, when it lasts for one version. */
+  head?: string;
+  at: number;
+};
+
+/** Whether a standing override passes this hold at this version. */
+export function overridePasses(
+  delivery: { override?: HoldOverride } | null | undefined,
+  kind: OverridableHold,
+  head?: string,
+): boolean {
+  const override = delivery?.override;
+  if (!override?.holds.includes(kind)) return false;
+  return override.until === "task" || (head !== undefined && head === override.head);
+}
+
+/** The holds an override passes, in the captain's words: `the review and the checks`. */
+export function holdNames(kinds: readonly HoldKind[]): string {
+  const names = kinds.map((kind) => HOLDS[kind].name);
+  return names.length <= 1
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/** How long an override lasts, as its row says it: the version itself rides the record, never the words. */
+export function overrideSpan(override: Pick<HoldOverride, "until">): string {
+  return override.until === "task" ? "for the rest of this task" : "for this version";
+}
+
+/**
+ * The sentence a soft refusal ends with, naming the override for whoever
+ * reads it: the first mate declares one on the captain's words; a crewmate
+ * only passes his words on. A hold with its own way names that way.
+ */
+export function softHoldWords(
+  kind: Exclude<HoldKind, FixedHold>,
+  audience: "firstmate" | "crewmate",
+): string {
+  const hold = HOLDS[kind];
+  if ("way" in hold) return `Soft hold ${kind}: it passes when ${hold.way}.`;
+  return audience === "firstmate"
+    ? `Soft hold ${kind}: the captain's own words pass it; when his words in this turn do, declare it with update_task override.`
+    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if he gave them, report them.`;
+}
+
+/** The sentence a fixed limit's refusal ends with: no one's word passes it. */
+export function fixedHoldWords(kind: FixedHold): string {
+  return `This is the fixed limit ${kind}: no one's word passes it.`;
+}
+
+/**
+ * `text` with every hold sentence taken out, for a line the captain reads:
+ * the sentences speak to the agents who act on a refusal, and his own line
+ * says what happened in his words. Only the exact sentences above are taken.
+ */
+export function withoutHoldWords(text: string): string {
+  let out = text;
+  for (const kind of Object.keys(HOLDS) as HoldKind[]) {
+    const hold = HOLDS[kind];
+    const sentences =
+      hold.level === "fixed"
+        ? [fixedHoldWords(kind as FixedHold)]
+        : [
+            softHoldWords(kind as Exclude<HoldKind, FixedHold>, "firstmate"),
+            softHoldWords(kind as Exclude<HoldKind, FixedHold>, "crewmate"),
+          ];
+    for (const sentence of sentences)
+      out = out.split(` ${sentence}`).join("").split(sentence).join("");
+  }
+  return out;
+}

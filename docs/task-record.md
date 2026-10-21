@@ -234,7 +234,7 @@ Every event kind has one place: a `row` of its own, `folded` under the row it le
 | `replied` | row | A reply its crewmate or the first mate wrote under one of the task's cards reads as its first sentence under the card's title. |
 
 Each writer of a `note` declares what it is, through `TaskService.note`'s required `news`, stored as `data.news`.
-News is a row: a merge approval or refusal, a kept merge that ended, a working copy kept, a quiet crewmate, a failed install, what happened to the task's browser.
+News is a row: a merge approval or refusal, a kept merge that ended, the captain's override and its take-back (quoting his words, `docs/delivery-rigor.md` "The holds"), a working copy kept, a quiet crewmate, a failed install, what happened to the task's browser.
 Bookkeeping folds: where the working copy came from, dependencies installed, a working copy removed with its work saved, a closed task's leftover files removed, lint findings at a commit, a refused completion card.
 A note written before writers declared is news unless the host wrote it.
 

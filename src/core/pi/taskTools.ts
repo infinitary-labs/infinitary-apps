@@ -1,3 +1,4 @@
+import { OVERRIDABLE_HOLDS, type OverridableHold } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { WorkShapeAsk } from "@shared/routingPolicy";
@@ -61,6 +62,13 @@ export type TaskToolsDelegate = {
   drop(input: { task: string; reason: string; confirm?: boolean; replacedBy?: string }): string;
   /** Withdraw the captain's kept merge approval on his words; the work stays (FI3-304). */
   withdrawMerge(input: { task: string }): string;
+  /**
+   * Record the captain's override (docs/delivery-rigor.md, "The holds"):
+   * refused outside a turn that carries his words, which the host keeps.
+   */
+  override(input: { task: string; holds: OverridableHold[]; until: "version" | "task" }): string;
+  /** He takes his override back. */
+  withdrawOverride(input: { task: string }): string;
   /** A queued row starts now, past any reasoning re-ask (P0, WI-3). Refusals are text. */
   startNow(input: { task: string }): Promise<string>;
   startAgain(input: { task: string }): Promise<string>;
@@ -292,6 +300,18 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           description: "The captain takes back a merge he clicked; the work stays",
         }),
       ),
+      override: Type.Optional(
+        Type.Object(
+          {
+            holds: Type.Array(stringEnum(OVERRIDABLE_HOLDS)),
+            until: stringEnum(["version", "task"]),
+          },
+          {
+            description:
+              "Captain's words this turn pass soft holds refusals named, until as he means; empty holds takes it back.",
+          },
+        ),
+      ),
       reason: Type.Optional(
         Type.String({
           description:
@@ -334,6 +354,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         return { text: await delegate.startAgain({ task: params.task }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
+      if (params.override)
+        return {
+          text: params.override.holds.length
+            ? delegate.override({ task: params.task, ...params.override })
+            : delegate.withdrawOverride({ task: params.task }),
+        };
       if (params.drop) {
         const reason = params.reason?.trim();
         if (!reason) throw new Error("reason is required when dropping a task.");

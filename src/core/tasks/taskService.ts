@@ -10,6 +10,7 @@ import type {
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
+import { fixedHoldWords, overridePasses } from "@shared/holds";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
 import type { KeptValidationInput } from "@shared/liveValidation";
 import type { ReasoningChoice } from "@shared/modelSlots";
@@ -1438,7 +1439,21 @@ export class TaskService {
    * under way. Returns the refusal naming the blockers and the ways out.
    */
   blockerRefusal(id: string): SettleRefusal | undefined {
-    const holding = this.blockersHoldingClose(id);
+    // The captain's override passes a must-merge-first wait (`waits`), and
+    // the host's review edge with the review itself (`review`).
+    const delivery = this.store.get(id)?.delivery;
+    const holding = this.blockersHoldingClose(id).filter(
+      (blocker) =>
+        !overridePasses(
+          delivery,
+          blocker.parentId === id &&
+            TaskService.isDeliveryChild(blocker) &&
+            blocker.shape?.kind === "review"
+            ? "review"
+            : "waits",
+          delivery?.headSha,
+        ),
+    );
     if (holding.length === 0) return undefined;
     const task = settleRef(this.store.get(id), id);
     const blockers = holding.map((blocker) => settleRef(blocker, blocker.id));
@@ -1446,7 +1461,7 @@ export class TaskService {
     const them = holding.length === 1 ? "it" : "them";
     // No `proceed_with_open`: a blocks_me edge is the crewmate's own promise
     // that its task cannot land until this does. The ways out land the
-    // blocker, drop it, or retract the promise - never override it.
+    // blocker, drop it, retract the promise, or the captain's override.
     const ways: SettleWay[] = [];
     for (const blocker of blockers) {
       ways.push({
@@ -1773,7 +1788,7 @@ export class TaskService {
       if (patch.policies && Object.keys(patch.policies).length > 0) {
         if (TaskService.isClosed(record) || !this.policiesOf(record)) {
           throw new TaskGraphRefusal(
-            "Policies can only change on open work that ships a change; answers, reviews and the personal workspace have no merge policy.",
+            `Policies can only change on open work that ships a change; answers, reviews and the personal workspace have no merge policy. ${fixedHoldWords("nothing-to-merge")}`,
           );
         }
         const shape = update.shape ?? record.shape ?? { kind: "unclear" as const };
@@ -4769,7 +4784,7 @@ export class TaskService {
       const structural = this.blocksReaches(toId, fromId);
       if (structural) {
         throw new TaskGraphRefusal(
-          `Refused: ${to.key || toId} already blocks ${from.key || fromId} (directly or through other tasks); "${from.key || fromId} blocks ${to.key || toId}" would close a cycle and nothing could ever start. ${waitCycleWords(this, [toId, ...structural.toReversed()])}`,
+          `Refused: ${to.key || toId} already blocks ${from.key || fromId} (directly or through other tasks); "${from.key || fromId} blocks ${to.key || toId}" would close a cycle and nothing could ever start. ${waitCycleWords(this, [toId, ...structural.toReversed()])} ${fixedHoldWords("recorded-path")}`,
         );
       }
       const cycle = liveWaitCycle(this, toId, fromId, TaskService.blockerHoldsClose);

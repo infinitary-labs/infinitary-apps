@@ -5,6 +5,7 @@ import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
+import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
 import { acceptedValidation } from "@shared/liveValidation";
 import type { MergeRelationship } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
@@ -170,7 +171,8 @@ function settleFeedLine(
   mode: "merge-pr" | "land" | "discard",
   result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
 ): string {
-  if (!result.problem && !result.plain) return result.text;
+  // A hold's sentence tells an agent how it passes; his line leaves it out.
+  if (!result.problem && !result.plain) return withoutHoldWords(result.text);
   const plain = result.problem ? plainProblem(result.problem) : (result.plain as string);
   if (mode === "discard") {
     return result.ok
@@ -384,7 +386,7 @@ export class SettleService {
         return "its policies changed; recheck the current requirements before trying again";
       if (this.working(taskId)) return "its crewmate is still working";
       if (this.host.deliverableOf(record) === "answer" || record.shape?.kind === "review")
-        return "this work has no merge";
+        return `this work has no merge. ${fixedHoldWords("nothing-to-merge")}`;
       const destination = this.host.taskDelivery(taskId);
       if ((mode === "merge-pr") !== (destination === "direct-pr"))
         return "the requested destination does not match its current delivery policy";
@@ -392,34 +394,48 @@ export class SettleService {
       if (gate) return gate.text;
       const autonomy = this.autonomyRefusal(record, mode, actor);
       if (autonomy) return autonomy.text;
-      if (standingCap(record.delivery))
-        return "a repair allowance still needs the captain's answer";
-      if (actor === "firstmate") {
+      const cap = standingCap(record.delivery);
+      if (cap) {
+        const hold = cap.held === "ci-cap" ? "repairs" : "rounds";
+        return `a repair allowance still needs the captain's answer. ${softHoldWords(hold, "firstmate")}`;
+      }
+      // The version a version-long override is read at: the one being sent.
+      const at = head ?? record.delivery?.headSha;
+      if (actor === "firstmate" && !overridePasses(record.delivery, "decisions", at)) {
+        // The first mate's own cards never hold its own merge (INF-242's
+        // question 9): a crewmate's question, a write request or a
+        // validation question still does.
         const decisions = [...this.host.cards.values()].filter(
           (card) => card.taskId === taskId && card.actions.length,
         );
-        const routine = new Set(decisions.filter(isRoutineMergeCard).map((card) => card.id));
-        const gateIsRoutine =
-          record.gate?.kind === "captain" && record.gate.ref && routine.has(record.gate.ref);
+        const passed = new Set(
+          decisions
+            .filter((card) => isRoutineMergeCard(card) || card.author === "firstmate")
+            .map((card) => card.id),
+        );
+        const gateIsPassed =
+          record.gate?.kind === "captain" && record.gate.ref && passed.has(record.gate.ref);
         const wait = record.delivery?.captainWait;
-        const waitIsRoutine = wait?.cardId && routine.has(wait.cardId);
+        const waitIsPassed = wait?.cardId && passed.has(wait.cardId);
         if (
-          decisions.some((card) => !routine.has(card.id)) ||
-          (record.gate && !gateIsRoutine) ||
-          (wait && !waitIsRoutine)
+          decisions.some((card) => !passed.has(card.id)) ||
+          (record.gate && !gateIsPassed) ||
+          (wait && !waitIsPassed)
         )
-          return "another decision or hold still needs attention";
+          return `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`;
       }
+      const reviewed = this.policiesOf(record)?.rigor.value === "reviewed";
+      const proof = acceptedValidation(record.delivery?.liveValidation, head);
       if (
-        this.policiesOf(record)?.rigor.value === "reviewed" &&
-        !(
-          reviewCoversHead(record.delivery, head) &&
-          head &&
-          acceptedValidation(record.delivery?.liveValidation, head).ready
-        )
+        reviewed &&
+        !(reviewCoversHead(record.delivery, head) && head) &&
+        !overridePasses(record.delivery, "review", at)
       )
-        return `the current version needs an independent review: ${acceptedValidation(record.delivery?.liveValidation, head).reason}`;
-      if (this.policiesOf(record)?.rigor.value === "reviewed") {
+        return `the current version needs an independent review: ${proof.reason} ${softHoldWords("review", "firstmate")}`;
+      const proofPassed = overridePasses(record.delivery, "live-proof", at);
+      if (reviewed && !(head && proof.ready) && !proofPassed)
+        return `the current version needs an independent review: ${proof.reason} ${softHoldWords("live-proof", "firstmate")}`;
+      if (reviewed && !proofPassed) {
         if (
           !this.host.verifyValidationEvidence &&
           record.delivery?.liveValidation?.runs.at(-1)?.evidence.length
@@ -829,19 +845,30 @@ export class SettleService {
    * structured refusal whose ways the Firstmate turns into effect buttons. A
    * discard abandons the work rather than completing it, so a wait on other
    * work cannot forbid it - only containment can. `proceed_with_open` is the
-   * captain's leave to settle the task and keep its open children planned; a
-   * `blocks_me` promise has no override.
+   * captain's leave to settle the task and keep its open children planned,
+   * and so is his recorded override on the open parts; his override on the
+   * waits passes a `blocks_me` promise.
    */
   private closeGateRefusal(
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
     proceedWithOpen: boolean,
   ): SettleRefusal | undefined {
-    if (!proceedWithOpen) {
+    const delivery = this.host.tasks.get(taskId)?.delivery;
+    // The captain's override on the open parts is his leave to settle
+    // keeping them planned, the same as `proceed_with_open`.
+    if (!proceedWithOpen && !overridePasses(delivery, "parts", delivery?.headSha)) {
       const children = this.host.tasks.closeRefusal(taskId);
-      if (children) return this.withProceedWay(children, taskId, mode);
+      if (children) {
+        const refusal = this.withProceedWay(children, taskId, mode);
+        return { ...refusal, text: `${refusal.text} ${softHoldWords("parts", "firstmate")}` };
+      }
     }
-    return mode === "discard" ? undefined : this.host.tasks.blockerRefusal(taskId);
+    if (mode === "discard") return undefined;
+    const waits = this.host.tasks.blockerRefusal(taskId);
+    return waits
+      ? { ...waits, text: `${waits.text} ${softHoldWords("waits", "firstmate")}` }
+      : waits;
   }
 
   /**
@@ -919,7 +946,7 @@ export class SettleService {
       task: { id: record.id, key: record.key || record.id, title: record.title },
       tasks: [],
       ways: refusal.ways,
-      text: refusal.text,
+      text: `${refusal.text} ${fixedHoldWords("sign-in")}`,
     };
   }
 
@@ -949,6 +976,9 @@ export class SettleService {
     actor: "captain" | "firstmate",
   ): SettleRefusal | undefined {
     if (actor === "captain") return undefined;
+    // His own words to the first mate are his consent too: an override on
+    // asking first lets the first mate's merge through.
+    if (overridePasses(record.delivery, "asks-first", record.delivery?.headSha)) return undefined;
     // A withdrawn or outgrown merge approval holds the task for the captain
     // whatever the project's autonomy says (FI3-304): only his new click
     // merges it.
@@ -973,7 +1003,7 @@ export class SettleService {
       task,
       tasks: [],
       ways,
-      text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${pointer}`,
+      text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${pointer} ${softHoldWords("asks-first", "firstmate")}`,
     };
   }
 
@@ -1285,7 +1315,7 @@ export class SettleService {
         ok: false,
         text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Ask for the change you want instead${
           this.host.runtimeState(taskId) ? ", or interrupt it with mode cancel to stop it" : ""
-        }.`,
+        }. ${fixedHoldWords("nothing-to-merge")}`,
       };
     }
     // An answer task ships nothing (Task B): there is no branch to land and
@@ -1299,7 +1329,7 @@ export class SettleService {
       if (this.host.deliverableOf(record) === "answer") {
         return {
           ok: false,
-          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card; discard it if its worktree should go now.`,
+          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card; discard it if its worktree should go now. ${fixedHoldWords("nothing-to-merge")}`,
         };
       }
     }
@@ -1879,10 +1909,10 @@ export class SettleService {
     const head = candidateHead(authorization);
     if (
       this.policiesOf(record)?.rigor.value === "reviewed" &&
-      !(
-        reviewCoversHead(record.delivery, head) &&
-        acceptedValidation(record.delivery?.liveValidation, head).ready
-      )
+      ((!reviewCoversHead(record.delivery, head) &&
+        !overridePasses(record.delivery, "review", head)) ||
+        (!acceptedValidation(record.delivery?.liveValidation, head).ready &&
+          !overridePasses(record.delivery, "live-proof", head)))
     ) {
       return { wait: "review" };
     }

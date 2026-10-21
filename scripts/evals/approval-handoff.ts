@@ -39,6 +39,8 @@ try {
       update: unavailable,
       drop: unavailable,
       withdrawMerge: unavailable,
+      override: unavailable,
+      withdrawOverride: unavailable,
       startNow: unavailable,
       startAgain: unavailable,
       link: unavailable,

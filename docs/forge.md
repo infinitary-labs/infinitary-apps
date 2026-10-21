@@ -457,6 +457,8 @@ The version's workflow runs (`GET /actions/runs?head_sha=`) are read once per ch
 More runs than the list holds add a pending item rather than claiming the reading is complete.
 An unreadable run list leaves the existing check reading; a refused sign-in still fails the reading, as does a hiccup when cancellation handling needs the list.
 
+Checks that failed or are still running are a soft hold (`checks`): the captain's recorded override passes them, for the completion card and the merge, at the version it covers, and the rules where the project lives still decide whether it merges (`docs/delivery-rigor.md`, "The holds").
+
 ## A requested merge
 
 `request_merge` is the agent-facing request to merge one reviewed pull request (FI3-1543).
@@ -659,6 +661,7 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 A future github.com pull request or gitlab.com merge request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
+The saved story is a soft hold (`story`): when the captain's recorded override passes it, a new pull request takes `body` instead.
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The schema carries the captain’s selected item counts; the author owns sentence length and word targets, with no invented per-sentence character refusal.

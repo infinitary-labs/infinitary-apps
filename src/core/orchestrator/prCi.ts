@@ -4,6 +4,7 @@ import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePr
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { acceptedValidation } from "@shared/liveValidation";
 import {
   type AbsentChecksDeclaration,
@@ -527,7 +528,7 @@ export class PrCiService {
     if (review.skips) {
       // Marked sent before the send, so a merged one is sent too.
       if (review.sent) {
-        return `Card refused: that merge was already sent once and is ${NEVER_SENT_AGAIN}. Prepare a new review to ask again.`;
+        return `Card refused: that merge was already sent once and is ${NEVER_SENT_AGAIN}. Prepare a new review to ask again. ${fixedHoldWords("sent-once")}`;
       }
       const fresh = await this.readSkipTarget(taskId, review);
       return fresh.ok ? undefined : `Card refused: ${fresh.text}`;
@@ -908,8 +909,8 @@ export class PrCiService {
         relationship,
         text:
           review.sent.outcome === "failed"
-            ? `Cannot merge: that merge was sent once and GitHub did not merge it${review.sent.text ? ` (${review.sent.text})` : ""}. Nothing was sent again; prepare a new review to ask again.`
-            : `Cannot merge: that merge was already sent once and its outcome is unknown${review.sent.text ? ` (${review.sent.text})` : ""}. Nothing was sent again; read pull request ${label} to see whether it merged.`,
+            ? `Cannot merge: that merge was sent once and GitHub did not merge it${review.sent.text ? ` (${review.sent.text})` : ""}. Nothing was sent again; prepare a new review to ask again. ${fixedHoldWords("sent-once")}`
+            : `Cannot merge: that merge was already sent once and its outcome is unknown${review.sent.text ? ` (${review.sent.text})` : ""}. Nothing was sent again; read pull request ${label} to see whether it merged. ${fixedHoldWords("sent-once")}`,
         stop: "outcome",
       };
     }
@@ -1489,15 +1490,17 @@ export class PrCiService {
           early.request.publication.branch === branch
         )
           prerequisite = early.request.id;
-        if (
-          !prerequisite &&
-          !(
-            reviewCoversHead(covered?.delivery, head) &&
-            acceptedValidation(covered?.delivery?.liveValidation, head).ready
-          )
-        )
-          return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
-        if (!prerequisite) {
+        // The review and its live proof are soft holds the captain's
+        // override passes, each on its own.
+        const reviewHeld =
+          !reviewCoversHead(covered?.delivery, head) &&
+          !overridePasses(covered?.delivery, "review", head);
+        const proofPassed = overridePasses(covered?.delivery, "live-proof", head);
+        const proofHeld =
+          !acceptedValidation(covered?.delivery?.liveValidation, head).ready && !proofPassed;
+        if (!prerequisite && (reviewHeld || proofHeld))
+          return `Cannot open the change: the current version needs an independent review before the next push or pull request. ${softHoldWords(reviewHeld ? "review" : "live-proof", "crewmate")}`;
+        if (!prerequisite && !proofPassed) {
           if (
             !this.options.verifyValidationEvidence &&
             current.delivery?.liveValidation?.runs.at(-1)?.evidence.length
@@ -1511,10 +1514,23 @@ export class PrCiService {
         const merged = await this.mergedBeforeStories(current, forge);
         if (merged) return merged;
       }
+      // The captain's override on the saved story lets this task open its
+      // pull request with a body; the default stays as he chose.
+      const storyPassed =
+        input.presentation === undefined &&
+        current.delivery?.override?.holds.includes("story") === true &&
+        overridePasses(
+          current.delivery,
+          "story",
+          existing?.headSha ?? (await git(dir, ["rev-parse", branch])),
+        );
       const usesStory =
-        presentations && forge.attachments && (!existing || current.delivery?.presentation);
+        presentations &&
+        forge.attachments &&
+        (!existing || current.delivery?.presentation) &&
+        !storyPassed;
       if (usesStory && (input.presentation === undefined || input.body !== undefined))
-        return "Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. To change only the words around the story on its open pull request, pass around with that revision. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write.";
+        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Every planned attachment must be confirmed before opening or replacing the pull request. To change only the words around the story on its open pull request, pass around with that revision. If this tool is missing on a work computer, update that computer first; do not bypass it with a raw write. ${softHoldWords("story", "crewmate")}`;
       if (!usesStory && input.presentation !== undefined)
         return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
       if (!usesStory && input.around !== undefined)
@@ -1538,13 +1554,16 @@ export class PrCiService {
             "The publication changed; nothing was sent. Read its current version and permission.",
           );
         if (!prerequisite) {
+          const proofPassed = overridePasses(latest?.delivery, "live-proof", head);
           if (
-            !reviewCoversHead(latest?.delivery, head) ||
-            !acceptedValidation(latest?.delivery?.liveValidation, head).ready
+            (!reviewCoversHead(latest?.delivery, head) &&
+              !overridePasses(latest?.delivery, "review", head)) ||
+            (!acceptedValidation(latest?.delivery?.liveValidation, head).ready && !proofPassed)
           )
             throw new Error(
               "The current proof or review changed before publication; nothing was sent.",
             );
+          if (proofPassed) return;
           if (
             !this.options.verifyValidationEvidence &&
             latest?.delivery?.liveValidation?.runs.at(-1)?.evidence.length
@@ -2122,10 +2141,19 @@ export class PrCiService {
         };
       }
     }
-    if (!status.recorded || reading?.overall !== "green" || !checked) {
+    // Red or unfinished checks are a soft hold: the captain's override on
+    // the checks passes them at the version it covers. GitHub's own rules
+    // still decide whether it merges.
+    const unfinished = reading?.overall === "red" || reading?.overall === "pending";
+    const checksPassed =
+      unfinished &&
+      status.recorded &&
+      checked !== undefined &&
+      overridePasses(this.options.tasks.get(taskId)?.delivery, "checks", checked.change.headSha);
+    if (!checked || (!checksPassed && (!status.recorded || reading?.overall !== "green"))) {
       return {
         ok: false,
-        text: `Cannot merge yet - the checks have not all passed. ${status.text}`,
+        text: `Cannot merge yet - the checks have not all passed. ${status.text}${unfinished ? ` ${softHoldWords("checks", "firstmate")}` : ""}`,
         notGreen: true,
         ...(guard ? { stop: "checks" as const } : {}),
         plain:
@@ -2239,7 +2267,11 @@ export class PrCiService {
       const withdrawn =
         guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
       if (withdrawn) {
-        return { ok: false, text: `Cannot merge: ${withdrawn}.`, stop: "withdrawn" };
+        return {
+          ok: false,
+          text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
+          stop: "withdrawn",
+        };
       }
       dispatched = true;
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
@@ -2806,7 +2838,7 @@ function readinessStop(
   const { stop, plain } = readinessStops(place)[pull.readiness];
   return {
     ok: false,
-    text: `Cannot merge yet: ${place} reads ${label} as ${pull.readiness}.`,
+    text: `Cannot merge yet: ${place} reads ${label} as ${pull.readiness}. ${fixedHoldWords("host-rules")}`,
     plain,
     stop,
   };

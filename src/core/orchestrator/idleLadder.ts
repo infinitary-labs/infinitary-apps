@@ -1,6 +1,7 @@
 import type { CutOffClass } from "@shared/authFailure";
 import { type Card, cardWord } from "@shared/cards";
 import { reportSummary } from "@shared/feed";
+import { holdNames, type OverridableHold } from "@shared/holds";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { formatDurationShort } from "@shared/quotaSignals";
@@ -12,6 +13,7 @@ import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../stor
 import {
   type FirstmateAsk,
   standingCap,
+  type TaskDelivery,
   type TaskGate,
   type TaskRecord,
 } from "../storage/taskStore";
@@ -1346,6 +1348,56 @@ export class IdleLadder {
         kind: "cap_reset",
         text: `rounds reopened by ${actor === "captain" ? "the captain" : "the first mate"}'s steer after the captain's answer - ${held} reset`,
         actor,
+        feed: false,
+      },
+    );
+    this.syncCaptainGate(taskId, this.host.now());
+  }
+
+  /**
+   * The captain's override on the repair, re-review or rerun limit reopens
+   * it at once (docs/delivery-rigor.md, "The holds"): the counters it names
+   * clear as an answered steer clears them, with one `cap_reset` row, and
+   * the captain gate goes with the cap. While the override lasts, the caps
+   * it names do not place again (`standingCap`, `observeCheckRepair`).
+   */
+  reopenForOverride(taskId: string, kinds: readonly OverridableHold[]): void {
+    const delivery = this.host.tasks.get(taskId)?.delivery;
+    if (!delivery) return;
+    const patch: Partial<TaskDelivery> = {};
+    const reopened: OverridableHold[] = [];
+    if (
+      kinds.includes("repairs") &&
+      (delivery.ciRounds !== undefined || delivery.ciCapAt !== undefined)
+    ) {
+      Object.assign(patch, { ciRounds: undefined, ciRedHead: undefined, ciCapAt: undefined });
+      reopened.push("repairs");
+    }
+    if (
+      kinds.includes("rounds") &&
+      (delivery.reviewRounds !== undefined || delivery.reviewCapAt !== undefined)
+    ) {
+      Object.assign(patch, {
+        reviewRounds: undefined,
+        reviewRoundSha: undefined,
+        reviewRoundPairs: undefined,
+        reviewCapAt: undefined,
+        reviewCapOwner: undefined,
+      });
+      reopened.push("rounds");
+    }
+    if (kinds.includes("rerun") && delivery.ciRepair?.rerun) {
+      patch.ciRepair = { ...delivery.ciRepair, rerun: undefined };
+      reopened.push("rerun");
+    }
+    if (reopened.length === 0) return;
+    this.host.tasks.recordDelivery(
+      taskId,
+      { ...patch, capAnsweredAt: undefined },
+      {
+        kind: "cap_reset",
+        text: `the captain's override reopened ${holdNames(reopened)}`,
+        actor: "firstmate",
         feed: false,
       },
     );

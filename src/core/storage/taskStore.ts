@@ -3,6 +3,7 @@ import type {
   MergeRepairDeclaration,
   MergeRepairImpact,
 } from "@shared/checkRepair";
+import { type HoldOverride, overridePasses } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
 import type { CommittedPlacement } from "@shared/placement";
@@ -335,6 +336,13 @@ export type TaskDelivery = {
   reviewCapOwner?: "firstmate" | "captain";
   capAnsweredAt?: number;
   /**
+   * The captain's one recorded override (docs/delivery-rigor.md, "The
+   * holds"): his words, the soft holds the first mate declared they pass,
+   * and for how long. Only update_task override writes it, in a turn that
+   * carries his words; `override` with empty `holds` clears it.
+   */
+  override?: HoldOverride;
+  /**
    * The host's watch on the change's checks (docs/forge.md, "The check
    * watch"): present while a reading found them running and the host reads
    * them for the crewmate, absent otherwise.
@@ -453,8 +461,15 @@ export type CiWatch = {
 export type StandingCap = { held: "ci-cap" | "review-cap"; reason: string; head?: string };
 
 export function standingCap(delivery: TaskDelivery | null | undefined): StandingCap | undefined {
-  const ciAt = delivery?.ciCapAt;
-  const reviewAt = delivery?.reviewCapOwner === "firstmate" ? undefined : delivery?.reviewCapAt;
+  // The captain's override on the repair or re-review limit lifts that cap.
+  const ciAt = overridePasses(delivery, "repairs", delivery?.headSha)
+    ? undefined
+    : delivery?.ciCapAt;
+  const reviewAt =
+    delivery?.reviewCapOwner === "firstmate" ||
+    overridePasses(delivery, "rounds", delivery?.headSha)
+      ? undefined
+      : delivery?.reviewCapAt;
   if (!delivery || (ciAt === undefined && reviewAt === undefined)) return undefined;
   const capAt = Math.max(ciAt ?? 0, reviewAt ?? 0);
   if (delivery.capAnsweredAt !== undefined && delivery.capAnsweredAt >= capAt) return undefined;

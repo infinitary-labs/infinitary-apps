@@ -24,6 +24,7 @@ import type { ChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import type { FmEvent } from "@shared/events";
+import { fixedHoldWords, softHoldWords } from "@shared/holds";
 import {
   AUTOMATIC_COMPUTER,
   type PlacementWait,
@@ -106,7 +107,7 @@ import {
   InboxStore,
 } from "../storage/inboxStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import { standingCap, type TaskRecord } from "../storage/taskStore";
 import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
@@ -3849,6 +3850,178 @@ describe("CrewSupervisor", () => {
       });
       await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
+    });
+
+    /**
+     * INF-242's saved plan, as the captain answered it (INF-473): his words,
+     * declared once by the first mate, pass the soft holds it names, for one
+     * version or the task's life, and his own merge click reads the same
+     * record. The first two replay INF-140: a review passed at an older
+     * version, a fix pushed after it, and his "the review covered it".
+     */
+    describe("the captain's override (INF-473)", () => {
+      const words = "The review covered it; merge it.";
+      const reviewedAtOlder = async () => {
+        const h = await approved();
+        editPolicies(h, { autonomy: true, rigor: "reviewed" });
+        h.tasks.recordDelivery(h.taskId, { reviewVerdict: "pass", reviewSha: "older" });
+        return h;
+      };
+
+      it("passes the review and live proof at the version his words cover, and a newer version brings them back", async () => {
+        const h = await reviewedAtOlder();
+        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+          softHoldWords("review", "firstmate"),
+        );
+        expect(
+          h.supervisor.declareOverride(h.taskId, {
+            words,
+            holds: ["review", "live-proof"],
+            until: "version",
+          }).ok,
+        ).toBe(true);
+        expect(h.tasks.get(h.taskId)?.delivery?.override).toMatchObject({
+          words,
+          holds: ["review", "live-proof"],
+          until: "version",
+          head: APPROVED,
+        });
+        const row = h.tasks.timeline(h.taskId).find((event) => event.text.includes(words));
+        expect(row).toMatchObject({ kind: "note", actor: "firstmate" });
+        // A fix pushed after his words is a version they did not cover.
+        h.forge.headSha = "fixed0004";
+        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+          "independent review",
+        );
+        expect(h.forge.merges).toEqual([]);
+        h.forge.headSha = APPROVED;
+        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        expect(h.forge.merges).toEqual([APPROVED]);
+      });
+
+      it("passes them at every later version when his words cover the task's life, until he takes them back", async () => {
+        const h = await reviewedAtOlder();
+        h.supervisor.declareOverride(h.taskId, {
+          words,
+          holds: ["review", "live-proof"],
+          until: "task",
+        });
+        h.supervisor.withdrawOverride(h.taskId);
+        expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
+        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+          "independent review",
+        );
+        h.supervisor.declareOverride(h.taskId, {
+          words,
+          holds: ["review", "live-proof"],
+          until: "task",
+        });
+        h.forge.headSha = "fixed0004";
+        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        expect(h.forge.merges).toEqual(["fixed0004"]);
+      });
+
+      it("merges his kept click held on failed checks once his words pass the checks, and his feed carries no hold sentence", async () => {
+        const h = await approved();
+        h.forge.states = ["failure"];
+        h.supervisor.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+        expect(h.forge.merges).toEqual([]);
+        h.supervisor.declareOverride(h.taskId, {
+          words: "The failing check is the flaky one; merge it anyway.",
+          holds: ["checks"],
+          until: "version",
+        });
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        const feed = h.events.flatMap((event) =>
+          event.type === "firstmate_note" ? [event.text] : [],
+        );
+        expect(feed.some((line) => line.includes("Soft hold"))).toBe(false);
+      });
+
+      it("never holds the first mate's merge on its own card, while a crewmate's question holds it until his words pass it", async () => {
+        const h = await approved();
+        editPolicies(h, { autonomy: true });
+        const question = {
+          title: "Which unit first?",
+          body: "<p>Gallons or liters first?</p><p>Gallons is what the meter shows today.</p>",
+          actions: [
+            { id: "gallons", label: "Gallons", default: true },
+            { id: "liters", label: "Liters" },
+          ],
+        };
+        await h.specs[0]?.onCard?.({ ...question, id: "unit" });
+        await tick();
+        h.supervisor.addFirstmateCard({ ...question, title: "Merge it now?", taskId: h.taskId });
+        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+          softHoldWords("decisions", "firstmate"),
+        );
+        h.supervisor.closeCard(
+          `card-${h.taskId}-unit`,
+          { kind: "crewmate", taskId: h.taskId },
+          "the unit is settled",
+        );
+        await tick();
+        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        expect(h.forge.merges).toEqual([APPROVED]);
+      });
+
+      it("reopens a counted limit at once: the repair limit's counters, its cap and the captain gate clear", async () => {
+        const h = await approved();
+        h.tasks.recordDelivery(h.taskId, { ciRounds: 3, ciRedHead: APPROVED, ciCapAt: Date.now() });
+        expect(standingCap(h.tasks.get(h.taskId)?.delivery)).toBeDefined();
+        h.supervisor.declareOverride(h.taskId, {
+          words: "Keep fixing it; take as many tries as it needs.",
+          holds: ["repairs"],
+          until: "task",
+        });
+        const delivery = h.tasks.get(h.taskId)?.delivery;
+        expect(delivery?.ciRounds).toBeUndefined();
+        expect(delivery?.ciCapAt).toBeUndefined();
+        expect(standingCap(delivery)).toBeUndefined();
+        expect(h.tasks.get(h.taskId)?.gate?.reason).not.toBe("the CI cap");
+        expect(
+          h.tasks
+            .timeline(h.taskId)
+            .some((event) => event.kind === "cap_reset" && event.text.includes("the repair limit")),
+        ).toBe(true);
+      });
+
+      it("shows on the merge card what his words pass while they pass it, with his words on rest", async () => {
+        const h = await approved();
+        const strip = () =>
+          h
+            .cards()
+            .find((card) => card.id === h.card.id)
+            ?.body.match(
+              /<span class="inf-fact" data-fact="override"[\s\S]*?<\/span><\/span>/,
+            )?.[0];
+        expect(strip()).toBeUndefined();
+        h.supervisor.declareOverride(h.taskId, {
+          words: "Merge it without live proof; I tried it myself.",
+          holds: ["live-proof", "checks"],
+          until: "version",
+        });
+        await vi.waitFor(() => expect(strip()).toContain("without live proof · the checks"));
+        expect(strip()).toContain(
+          'title="Your words pass live proof and the checks for this version: &quot;Merge it without live proof; I tried it myself.&quot;. Proceeding without live proof."',
+        );
+        // A newer version is one his words did not cover.
+        h.tasks.recordDelivery(h.taskId, { headSha: "fixed0004" });
+        await vi.waitFor(() => expect(strip()).toBeUndefined());
+      });
+
+      it("refuses a version-long override before the task has a version", async () => {
+        const { supervisor, tasks } = setup(fakeCrewmate());
+        seedTask(tasks, { id: "no-head", title: "Ship the fix", status: "idle" });
+        const declared = supervisor.declareOverride("no-head", {
+          words,
+          holds: ["review"],
+          until: "version",
+        });
+        expect(declared.ok).toBe(false);
+        expect(tasks.get("no-head")?.delivery?.override).toBeUndefined();
+      });
     });
 
     it("self-merging preserves explicit withdrawal and unrelated decisions", async () => {
@@ -9121,7 +9294,7 @@ describe("the sign-in where a project lives", () => {
       "captain",
     );
     expect(result.text).toBe(
-      'Cannot merge: Not signed in to GitHub (github.com): merging "Ship the fix" needs the captain\'s GitHub sign-in, or the project kept on this computer.',
+      `Cannot merge: Not signed in to GitHub (github.com): merging "Ship the fix" needs the captain's GitHub sign-in, or the project kept on this computer. ${fixedHoldWords("sign-in")}`,
     );
     expect(result.refusal).toMatchObject({
       refused: "not-signed-in",
@@ -13579,7 +13752,7 @@ describe("the task graph (task-system P2)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.landTask(taskId, "captain")).toBe(
-      'Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove.',
+      `Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove. ${softHoldWords("waits", "firstmate")}`,
     );
     expect(tasks.get(taskId)?.status).toBe("active");
     // Dropping the blocker is one of the ways out the refusal names: work

@@ -1,9 +1,9 @@
+import { fixedHoldWords } from "@shared/holds";
 import type { ApiRoute } from "./api";
 import { ForgeError } from "./forge";
 
 /** Raw API writes never substitute for the version-pinned merge card. */
-export const MERGE_WRITE_REFUSAL =
-  "Merging or moving or deleting the default branch requires the merge card. Prepare a review with check_change pull, then ask with request_merge; github_write cannot send it.";
+export const MERGE_WRITE_REFUSAL = `Merging or moving or deleting the default branch requires the merge card. Prepare a review with check_change pull, then ask with request_merge; github_write cannot send it. ${fixedHoldWords("recorded-path")}`;
 
 /**
  * Recognize typed API operations, not the crewmate's words. Scope and path

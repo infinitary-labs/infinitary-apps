@@ -8306,3 +8306,65 @@ it("recovers the complete accepted plan through the answer-close wake's task rea
     db.close();
   }
 });
+
+/**
+ * INF-242's plan, as the captain answered it (INF-473): only the first mate
+ * records his override, in a turn that carries his own words, and the row
+ * keeps those words as its reason.
+ */
+describe("the captain's override", () => {
+  it("keeps his words from the turn that carries them, and refuses one in a turn without them", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        { id: "ab12", title: "Fix the meter", status: "idle", sessionFile: "/tmp/ab12.jsonl" },
+      ],
+    });
+    const finish = async () => {
+      f.session.emitTurnEnd("Noted.");
+      f.session.resolveNextPrompt();
+      await tick();
+    };
+    const declare = () =>
+      toolsOf(f.specs)
+        .get("update_task")
+        ?.execute("override", {
+          task: "ab12",
+          override: { holds: ["review", "live-proof"], until: "task" },
+        });
+    // An operational turn first: a wake, with no words of his.
+    f.agent.notifyOp(
+      {
+        facts: {
+          kind: "idle-stall",
+          task: { id: "ab12", title: "Fix the meter" },
+          crewmate: "crewmate 1",
+          key: "FI3-1",
+          idleMs: 20 * 60_000,
+          thread: false,
+          nudged: true,
+          wakes: 1,
+          last: { kind: "report", excerpt: "Done with step one." },
+        },
+        ways: idleStallWays("ab12"),
+      },
+      "agent",
+      "ab12",
+    );
+    await tick();
+    expect(JSON.stringify(await declare())).toContain("Override refused");
+    expect(f.tasks.get("ab12")?.delivery?.override).toBeUndefined();
+    await finish();
+    const words = "The review covered it; merge it.";
+    await f.agent.converse(words);
+    expect(JSON.stringify(await declare())).toContain("Recorded the captain's override");
+    expect(f.tasks.get("ab12")?.delivery?.override).toMatchObject({
+      words,
+      holds: ["review", "live-proof"],
+      until: "task",
+    });
+    await finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+});

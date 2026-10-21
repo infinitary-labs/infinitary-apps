@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ChangePresentation } from "@shared/changePresentation";
+import { fixedHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
@@ -2646,7 +2647,7 @@ describe("a merge request on GitLab", () => {
     expect(await service.merge("ab12cd34", guard)).toMatchObject({
       ok: false,
       stop: "protected",
-      text: "Cannot merge yet: GitLab reads !23 as blocked.",
+      text: `Cannot merge yet: GitLab reads !23 as blocked. ${fixedHoldWords("host-rules")}`,
       plain: "GitLab holds it for a required review or another rule on the main branch",
     });
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);

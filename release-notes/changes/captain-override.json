@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "captain-override",
+      "kind": "feature",
+      "title": "Your words can let held work go ahead",
+      "body": "When a review, failed checks or a retry limit holds your work and you tell Firstmate to go ahead anyway, Firstmate records your words and the work goes ahead, for this version or for the rest of the task. Your merge click reads the same words. The merge card shows an Override line naming what your words let through, and says so when the merge goes without live proof. A limit outside the app, such as your project's own rules or a missing sign-in, still holds.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "captain-override-dark.webp",
+        "light": "captain-override-light.webp",
+        "alt": "A merge card whose Override line says your words let it merge with the earlier review and without live proof"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

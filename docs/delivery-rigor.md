@@ -455,6 +455,61 @@ The decision is recorded with rule `R9` (`ruleIdSchema`), its reasons naming the
 Observe's crewmate header renders the rigor beside the tier, a builder's review verdict with its risk, and on a review task the builder it reads (`docs/dev-observe.md`); the dispatch corpus carries `rigor`, `review_of`, `review_verdict` and `review_risk` on every task join, null where the record carries none (`docs/dispatch-extractor.md`); a pre-phase-2 database exports exactly as before.
 `tests/e2e/rigor-reviewed.spec.ts` drives the review cap end to end (a third findings, the cap card, the refused re-review, the answer, the reopened pass) and `tests/e2e/rigor-standard.spec.ts` the card boundary (the four-heading completion outline, its corrective refusal and publication under the host's own buttons); `crewSupervisor.test.ts` covers both caps and the reset, `prCi.test.ts` the round counting, `routingEngine.test.ts` and `router.test.ts` the placement, `db.test.ts` migration 36 and `rigor.test.ts` the derivation.
 
+## The holds
+
+Every hold the app places on work is one entry of `HOLDS` in `src/shared/holds.ts` (INF-242's plan, INF-473), and each entry has a level.
+A hold is `fixed` only when no word of the captain's changes what it rests on: a physical limit, or a fact outside the app.
+A hold that rests on a fact the app holds, on his own consent or on a number the app made up is `soft`, and his words pass it.
+Which level a hold takes is a judgment by the four questions above, made by its author and its reviewer, never a lint.
+`scripts/holds.ts` in `pnpm check` only keeps the list, the sites that cite it and this table in step: a kind with no site, a hold sentence written outside the registry, or a row here that differs from the entry fails the check.
+
+| Kind | Level | Rests on | What it holds | What passes it |
+|---|---|---|---|---|
+| `asks-first` | soft | consent | a first mate merge while autonomy is off | his click on the completion card, or the override |
+| `decisions` | soft | record | a first mate merge while another decision on the task is open | the override |
+| `repairs` | soft | made-up number | completion and merge after three unsuccessful own repairs | his answer to the cap card, or the override |
+| `rounds` | soft | made-up number | a re-review past `REVIEW_ROUND_CAP` | his answer to the cap card, or the override |
+| `review` | soft | record | a Careful change's pull request and merge until a review passed at this version | the override |
+| `live-proof` | soft | record | a Careful change's pull request and merge until live proof was accepted at this version | the override |
+| `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
+| `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
+| `checks` | soft | record | a completion card or merge while the checks failed or are running | the override |
+| `story` | soft | consent | a GitHub or GitLab pull request opened without its saved story | the override |
+| `rerun` | soft | made-up number | a second flake rerun | the override |
+| `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
+| `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on his words |
+| `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
+| `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
+| `sign-in` | fixed | outside fact | work where the app is not signed in | no one |
+| `sent-once` | fixed | outside fact | a write or merge sent a second time | no one |
+| `recorded-path` | fixed | physical limit | a merge outside the merge card, and a wait that closes a cycle | no one |
+
+Every refusal ends with its hold's sentence.
+`softHoldWords(kind, audience)` names the override: to the first mate as the way he declares it, and to a crewmate as words only the captain gives, through the first mate.
+A soft hold with its own way (`escalation`, `start-waits`) names that way instead.
+`fixedHoldWords(kind)` says no one's word passes it.
+
+**The override.**
+The captain's words are one recorded override on the task (`delivery.override`, `HoldOverride`): his words, the soft holds the first mate declared they pass, and how long.
+How long is the first mate's reading of his words: `version`, the version it was declared at, or `task`, the rest of the task's life.
+The first mate declares it with `update_task override` (`holds`, `until`), only in a turn that carries the captain's own words, and the host keeps those words as its reason without reading them.
+The host refuses it in any other turn, and a crewmate never records one: its refusal tells it to report his words.
+Empty `holds` takes it back, and a new declaration replaces the old one.
+The row is a `note` event on the timeline with one feed line, quoting his words and naming the holds and how long; a new event kind would be a contract major.
+Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
+His merge click reads the same record, since the settle boundary is one function for his click and the first mate's merge.
+The completion card's fact strip shows an Override cell naming the holds his words pass, and says the merge goes without live proof when live proof is one of them.
+
+**The counted caps are soft.**
+The repair limit, the re-review limit and the rerun limit are numbers the app made up.
+An override that passes one reopens it at once (`IdleLadder.reopenForOverride`): its counters and cap clear, one `cap_reset` row records it, and the captain gate goes.
+While the override stands the cap is not stamped again, and `standingCap` reads it, so the merge boundary, a kept approval and the idle ladder all see the cap passed.
+
+**The first mate's own cards.**
+The `decisions` hold on a first mate merge counts a crewmate's question, a write request and a validation question, never a card of the first mate's own (INF-242's question 9).
+
+Not built: a refusal written with no kind at all, which the check cannot see; INF-494's ledger keeps the principle from there.
+
 ## Numbers (phase 4)
 
 The rigor system is countable from records the app already writes, in the one home the routing numbers already have: `scoreRigor` in `scripts/interaction-metrics.ts`, beside `scoreRouting`.

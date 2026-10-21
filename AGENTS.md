@@ -90,6 +90,7 @@ Commit subjects and pull request titles use `type(scope): summary` or `type: sum
 
 - Delivery direct-pr (captain rule): a crewmate that opens a PR babysits CI until every check on the head SHA is green before its final report; the first mate never presents a land/merge/accept decision while CI is red or running.
 - Rigor tiers quick / standard / reviewed; standard is every repository's default, and a task with no gate to land through takes no tier. Reports carry five headings in order: Intent, What changed, Verified, Risk, Not done. Future github.com pull requests, gitlab.com merge requests and their completion cards share one saved story with native attachments; existing PRs and other hosts retain the five-heading description (`docs/forge.md`, "Saved change stories"). Failed checks are diagnosed first; three unsuccessful own repairs exhaust the allowance, while evidenced baseline waits and one reserved flake rerun spend nothing (`docs/delivery-rigor.md`).
+- Every hold is one entry of `HOLDS` (`src/shared/holds.ts`), soft or fixed; a site cites its kind through `overridePasses`, `softHoldWords` or `fixedHoldWords`, the captain's words pass a soft hold as one recorded override the first mate declares, and `pnpm check` (`scripts/holds.ts`) refuses a hold outside the registry (`docs/delivery-rigor.md`, "The holds").
 
 ## Build, packaging and state
 

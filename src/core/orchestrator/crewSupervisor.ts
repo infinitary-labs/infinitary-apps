@@ -87,10 +87,22 @@ import {
 } from "@shared/folderRefresh";
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
+import {
+  fixedHoldWords,
+  HOLDS,
+  type HoldOverride,
+  holdNames,
+  OVERRIDABLE_HOLDS,
+  type OverridableHold,
+  overridePasses,
+  overrideSpan,
+  softHoldWords,
+} from "@shared/holds";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import {
   acceptedValidation,
   keptValidationInputSchema,
+  LIVE_VALIDATION_WORDS,
   validationAssignment,
   validationPair,
   validationRevision,
@@ -1078,7 +1090,7 @@ function startWaitRefusal(
   const plural = (list: TaskRecord[]) => (list.length === 1 ? "" : "s");
   const dead = blockers.filter((blocker) => blocker.status === "dropped");
   if (dead.length === 0) {
-    return `${waits} It can start once that work is done; to start it sooner, remove the blocks edge${plural(blockers)} with link_tasks remove. Dropping a blocker never clears its wait.`;
+    return `${waits} It can start once that work is done; to start it sooner, remove the blocks edge${plural(blockers)} with link_tasks remove. Dropping a blocker never clears its wait. ${softHoldWords("start-waits", "firstmate")}`;
   }
   const key = record.key || record.id;
   const edges = dead.map((blocker) => `blocks ${blocker.key || blocker.id} -> ${key}`).join(", ");
@@ -4139,7 +4151,7 @@ export class CrewSupervisor {
     const floor = escalationFloor(previous.difficulty ?? "medium", attempt);
     if ("refused" in floor) {
       throw new Error(
-        `Cannot escalate ${handle}: ${floor.refused}. Ask the captain which model to try instead and pass it as override_model_id.`,
+        `Cannot escalate ${handle}: ${floor.refused}. Ask the captain which model to try instead and pass it as override_model_id. ${softHoldWords("escalation", "firstmate")}`,
       );
     }
     // R1a outranks R1b: the captain's premium click still spends a bounded
@@ -6705,7 +6717,8 @@ export class CrewSupervisor {
       this.policiesOf(this.options.tasks.get(builder.id))?.rigor.value === "reviewed" &&
       rounds !== undefined &&
       reviewCapReached(rounds) &&
-      builder.delivery?.reviewCapAt === undefined;
+      builder.delivery?.reviewCapAt === undefined &&
+      !overridePasses(builder.delivery, "rounds", builder.delivery?.headSha);
     const verdict: ReviewVerdictFacts = {
       kind: "review-verdict",
       task: reviewTask,
@@ -6911,9 +6924,13 @@ export class CrewSupervisor {
     // builder's decision card is the way out, and a steer to the builder
     // reopens the rounds - nothing is lost, the guidance just has a door.
     const reviewBuilder = this.reviewBuilderOf(this.options.tasks.get(taskId));
-    if (reviewBuilder && reviewBuilder.delivery?.reviewCapAt !== undefined) {
+    if (
+      reviewBuilder &&
+      reviewBuilder.delivery?.reviewCapAt !== undefined &&
+      !overridePasses(reviewBuilder.delivery, "rounds", reviewBuilder.delivery.headSha)
+    ) {
       throw new Error(
-        `Task ${taskId} is the review of task ${reviewBuilder.id}, which hit its review cap (${reviewBuilder.delivery.reviewRounds ?? 0} findings rounds; the cap is ${REVIEW_ROUND_CAP} re-reviews): ${reviewBuilder.delivery.reviewCapOwner === "firstmate" ? `steer task ${reviewBuilder.id} with the fixes or your decision to reopen its rounds before re-reviewing` : `no re-review goes out until the captain answers the decision card on task ${reviewBuilder.id} and you steer task ${reviewBuilder.id} with the answer, which reopens the rounds.`}`,
+        `Task ${taskId} is the review of task ${reviewBuilder.id}, which hit its review cap (${reviewBuilder.delivery.reviewRounds ?? 0} findings rounds; the cap is ${REVIEW_ROUND_CAP} re-reviews): ${reviewBuilder.delivery.reviewCapOwner === "firstmate" ? `steer task ${reviewBuilder.id} with the fixes or your decision to reopen its rounds before re-reviewing` : `no re-review goes out until the captain answers the decision card on task ${reviewBuilder.id} and you steer task ${reviewBuilder.id} with the answer, which reopens the rounds.`} ${softHoldWords("rounds", "firstmate")}`,
       );
     }
     // The captain's close of a card is not his answer to a cap.
@@ -7316,6 +7333,87 @@ export class CrewSupervisor {
       : { ok: false, text: `${handle} has no kept merge approval to withdraw.` };
   }
 
+  /**
+   * update_task override (docs/delivery-rigor.md, "The holds"): the
+   * captain's words, which the first mate heard in this turn, pass the soft
+   * holds it declares, for this version or the task's life. The host keeps
+   * his words as the row's reason and never reads them; it checks only that
+   * the task is live and each hold is soft. One override stands at a time:
+   * a new one replaces it. Naming a counted limit reopens it now.
+   */
+  declareOverride(
+    taskId: string,
+    input: { words: string; holds: OverridableHold[]; until: "version" | "task" },
+  ): { ok: boolean; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = `${record.key || record.id} "${record.title}"`;
+    if (TaskService.isClosed(record))
+      return { ok: false, text: `${handle} is closed, so no hold is left to pass.` };
+    const holds = [...new Set(input.holds)].filter((kind) => OVERRIDABLE_HOLDS.includes(kind));
+    if (holds.length === 0)
+      return { ok: false, text: "Name at least one soft hold the captain's words pass." };
+    const head = record.delivery?.headSha;
+    if (input.until === "version" && !head)
+      return {
+        ok: false,
+        text: `${handle} has no version yet, so an override for this version has nothing to cover. Declare until task if his words mean the whole task.`,
+      };
+    const override: HoldOverride = {
+      words: input.words,
+      holds,
+      until: input.until,
+      ...(input.until === "version" && head ? { head } : {}),
+      at: this.now(),
+    };
+    this.options.tasks.recordDelivery(
+      taskId,
+      { override },
+      {
+        kind: "note",
+        actor: "firstmate",
+        feed: true,
+        text: `Your words pass ${holdNames(holds)} ${overrideSpan(override)}: "${input.words}"`,
+        data: { news: true },
+      },
+    );
+    this.ladder.reopenForOverride(taskId, holds);
+    // His kept merge click reads the same record: one waiting on a hold his
+    // words pass runs now (a no-op when none stands).
+    void this.settle.runMergeAuthorization(taskId).catch((caught: unknown) => {
+      console.warn("[crew] kept merge could not run:", caught);
+    });
+    return {
+      ok: true,
+      text: `Recorded the captain's override on ${handle}: his words pass ${holdNames(holds)} ${overrideSpan(override)}. Every soft hold named reads it, his merge click included; go on as his words asked. override with empty holds takes it back.`,
+    };
+  }
+
+  /** update_task override with empty holds: the captain takes his override back; a second row says so. */
+  withdrawOverride(taskId: string): { ok: boolean; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const override = record.delivery?.override;
+    if (!override) return { ok: false, text: `${handle} has no override to take back.` };
+    this.options.tasks.recordDelivery(
+      taskId,
+      { override: undefined },
+      {
+        kind: "note",
+        actor: "firstmate",
+        feed: true,
+        text: `You took back your words on ${holdNames(override.holds)}: they hold again.`,
+        data: { news: true, overrideWithdrawn: override },
+      },
+    );
+    this.ladder.syncCaptainGate(taskId, this.now());
+    return {
+      ok: true,
+      text: `Took back the captain's override on ${handle}: ${holdNames(override.holds)} hold again.`,
+    };
+  }
+
   /** The interrupt request or outcome's timeline event (R2 forward capture). */
   private recordInterrupt(
     taskId: string,
@@ -7712,16 +7810,25 @@ export class CrewSupervisor {
     if (input.requiredActions !== undefined)
       this.options.tasks.validateRequiredActions(task.id, input.requiredActions);
     const reviewHead = checkedHead ?? record?.delivery?.headSha ?? record?.delivery?.validationHead;
+    // The review and its live proof are two soft holds: the captain's
+    // override passes either, and the card follows the hold.
+    const reviewHeld =
+      record !== undefined &&
+      !reviewCoversHead(record.delivery, reviewHead) &&
+      !overridePasses(record.delivery, "review", reviewHead);
+    const proofHeld =
+      record !== undefined &&
+      !acceptedValidation(record.delivery?.liveValidation, reviewHead).ready &&
+      !overridePasses(record.delivery, "live-proof", reviewHead);
     if (
       record &&
       this.policiesOf(record)?.rigor.value === "reviewed" &&
-      (!reviewCoversHead(record.delivery, reviewHead) ||
-        !acceptedValidation(record.delivery?.liveValidation, reviewHead).ready) &&
+      (reviewHeld || proofHeld) &&
       (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge")
     ) {
       const review = this.reviewState(record) ?? "awaiting review";
       throw new CardRefusedError(
-        `Card refused: this task ships at the reviewed tier and its review has not passed yet (${review}). ${acceptedValidation(record.delivery?.liveValidation, reviewHead).reason} Report under the five headings with report instead; the first mate tells you when to emit the completion card.${this.options.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` This contract was missing from your brief: ${CAREFUL_LIVE_VALIDATION}`}`,
+        `Card refused: this task ships at the reviewed tier and its review has not passed yet (${review}). ${acceptedValidation(record.delivery?.liveValidation, reviewHead).reason} Report under the five headings with report instead; the first mate tells you when to emit the completion card.${this.options.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` This contract was missing from your brief: ${CAREFUL_LIVE_VALIDATION}`} ${softHoldWords(reviewHeld ? "review" : "live-proof", "crewmate")}`,
         "review",
         `its review has not passed yet (${review})`,
       );
@@ -7734,7 +7841,7 @@ export class CrewSupervisor {
       const waiting = this.options.tasks.blockerRefusal(task.id);
       if (waiting) {
         throw new Error(
-          `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the completion card.`,
+          `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the completion card. ${softHoldWords("waits", "crewmate")}`,
         );
       }
     }
@@ -7761,7 +7868,7 @@ export class CrewSupervisor {
       }
       if (ask.sentAt !== undefined) {
         throw new Error(
-          `Card refused: ask ${ask.id} was already sent once and is ${NEVER_SENT_AGAIN}. Make a new write with github_write to ask again.`,
+          `Card refused: ask ${ask.id} was already sent once and is ${NEVER_SENT_AGAIN}. Make a new write with github_write to ask again. ${fixedHoldWords("sent-once")}`,
         );
       }
     }
@@ -8379,9 +8486,13 @@ export class CrewSupervisor {
       // A pull request merged outside the app has nothing left to check:
       // the captain's click closes the task as merged (FI3-213).
       if (overall === "green" || overall === "merged") return;
+      // The captain's override on the checks lets the card go up at the
+      // version it covers; the merge reads the same record.
+      const delivery = this.options.tasks.get(taskId)?.delivery;
+      if (overall !== "no-pr" && overridePasses(delivery, "checks", delivery?.headSha)) return;
       const state = overall === "no-pr" ? "nothing - no open PR was found" : CHECK_WORDS[overall];
       throw new CardRefusedError(
-        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${this.waitingReplyNote(taskId)}`,
+        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${this.waitingReplyNote(taskId)}${overall === "no-pr" ? "" : ` ${softHoldWords("checks", "crewmate")}`}`,
         "checks",
         overall === "no-pr"
           ? "no open pull request was found for its branch"
@@ -8422,9 +8533,10 @@ export class CrewSupervisor {
   private ciCapRefusal(taskId: string): CardRefusedError | undefined {
     const delivery = this.options.tasks.get(taskId)?.delivery;
     if (delivery?.ciCapAt === undefined) return undefined;
+    if (overridePasses(delivery, "repairs", delivery.headSha)) return undefined;
     const rounds = delivery.ciRounds ?? CI_ROUND_CAP;
     return new CardRefusedError(
-      `Card refused: this task hit its CI cap - ${rounds} own repairs failed (the cap is ${CI_ROUND_CAP}) - so its completion card is held, even with CI green now, until the captain answers the decision card on it and the first mate steers you with the answer. Report where CI stands with report and wait for that steer.`,
+      `Card refused: this task hit its CI cap - ${rounds} own repairs failed (the cap is ${CI_ROUND_CAP}) - so its completion card is held, even with CI green now, until the captain answers the decision card on it and the first mate steers you with the answer. Report where CI stands with report and wait for that steer. ${softHoldWords("repairs", "crewmate")}`,
       "ci-cap",
       `it hit its CI cap (${rounds} own repairs failed), so the card is held until the captain answers`,
     );
@@ -8955,6 +9067,19 @@ export class CrewSupervisor {
       } else {
         cell("review", "Review", `${statusDot("idle")}awaiting`);
       }
+    }
+    // The captain's standing override (docs/delivery-rigor.md, "The
+    // holds"): what his words passed, with his words and how long on rest.
+    // A merge that went without the review or its live proof says so here.
+    // One for an earlier version passes nothing now, so it shows nothing.
+    const override = record.delivery?.override;
+    if (override && (override.until === "task" || override.head === record.delivery?.headSha)) {
+      cell(
+        "override",
+        "Override",
+        `${statusDot("warn")}${escapeCardText(override.holds.map((kind) => (kind === "live-proof" ? "without live proof" : HOLDS[kind].name)).join(" · "))}`,
+        `Your words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}"${override.holds.includes("live-proof") ? `. ${LIVE_VALIDATION_WORDS.exception}.` : ""}`,
+      );
     }
     return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
   }

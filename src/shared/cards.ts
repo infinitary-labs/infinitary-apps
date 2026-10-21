@@ -497,6 +497,7 @@ export const SETTLE_FACTS = [
   "check-rounds",
   "look-rounds",
   "review",
+  "override",
 ] as const;
 export type SettleFact = (typeof SETTLE_FACTS)[number];
 

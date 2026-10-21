@@ -2901,6 +2901,47 @@ export class FirstmateAgent {
           }
           return withdrawn.text;
         }),
+      override: (input) =>
+        asText(() => {
+          const record = resolve(input.task);
+          // Consent is the one fact the host checks: the turn carries the
+          // captain's own words, which the row keeps and nothing reads.
+          const words = this.turnOrigin === "captain-turn" ? this.turnAsked.join("\n").trim() : "";
+          if (!words)
+            return "Override refused: only a turn that carries the captain's own words declares one. Relay his words when he gives them.";
+          this.asks.attach(record.id, "update_task");
+          const declared = supervisor.declareOverride(record.id, {
+            words,
+            holds: input.holds,
+            until: input.until,
+          });
+          if (declared.ok) {
+            this.replyFacts.app = `Recorded your override on ${record.key}: ${record.title}`;
+            this.noteDelivery({
+              outcome: "action",
+              kind: "work",
+              tool: "update_task",
+              ref: record.id,
+            });
+          }
+          return declared.text;
+        }),
+      withdrawOverride: (input) =>
+        asText(() => {
+          const record = resolve(input.task);
+          this.asks.attach(record.id, "update_task");
+          const withdrawn = supervisor.withdrawOverride(record.id);
+          if (withdrawn.ok) {
+            this.replyFacts.app = `Took back your override on ${record.key}: ${record.title}`;
+            this.noteDelivery({
+              outcome: "action",
+              kind: "work",
+              tool: "update_task",
+              ref: record.id,
+            });
+          }
+          return withdrawn.text;
+        }),
       startAgain: async (input) => {
         const record = resolve(input.task);
         const result = supervisor.startAgain(record.id);

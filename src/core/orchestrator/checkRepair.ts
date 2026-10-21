@@ -1,4 +1,5 @@
 import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
+import { overridePasses, softHoldWords } from "@shared/holds";
 import { CI_ROUND_CAP, ciCapReached } from "@shared/rigor";
 import { type ForgeCheckState, isAcceptedCheckState } from "../forge";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
@@ -94,10 +95,13 @@ export function declareCheckAction(
       text: "Check declaration refused: send exactly one diagnosis, repair or rerun.",
     };
   }
-  if (task.delivery?.ciCapAt !== undefined)
+  if (
+    task.delivery?.ciCapAt !== undefined &&
+    !overridePasses(task.delivery, "repairs", task.delivery.headSha)
+  )
     return {
       read: false,
-      text: "Check declaration refused: the repair allowance is exhausted; report the three attempts and wait for the captain's answer.",
+      text: `Check declaration refused: the repair allowance is exhausted; report the three attempts and wait for the captain's answer. ${softHoldWords("repairs", "crewmate")}`,
     };
   const diagnosis = input.diagnosis;
   let waitsOn: TaskRecord | undefined;
@@ -210,10 +214,10 @@ export function declareCheckAction(
   const asked = input.rerun;
   let rerun: CheckRepairLedger["rerun"];
   if (asked) {
-    if (ledger.rerun)
+    if (ledger.rerun && !overridePasses(task.delivery, "rerun", task.delivery?.headSha))
       return {
         read: false,
-        text: "Rerun refused: this task already reserved its one failed-job rerun; do not rerun again. Report unresolved evidence to the first mate for diagnosis.",
+        text: `Rerun refused: this task already reserved its one failed-job rerun; do not rerun again. Report unresolved evidence to the first mate for diagnosis. ${softHoldWords("rerun", "crewmate")}`,
       };
     const source = ledger.diagnoses.find((d) => same(d, asked));
     if (source?.classification !== "suspected-flake" || !text(asked.evidence))
@@ -298,14 +302,19 @@ export function observeCheckRepair(
     ciRepair: ledger,
     ciRounds,
     ciRedHead: headSha,
-    ...(ciCapReached(ciRounds) && delivery?.ciCapAt === undefined ? { ciCapAt: at } : {}),
+    // A standing override on the repair limit keeps the cap from placing again.
+    ...(ciCapReached(ciRounds) &&
+    delivery?.ciCapAt === undefined &&
+    !overridePasses(delivery, "repairs", headSha)
+      ? { ciCapAt: at }
+      : {}),
   };
 }
 
 export function checkRepairWords(delivery: TaskDelivery | null | undefined): string[] {
-  if (delivery?.ciCapAt !== undefined)
+  if (delivery?.ciCapAt !== undefined && !overridePasses(delivery, "repairs", delivery.headSha))
     return [
-      `Three unsuccessful own repairs exhausted the allowance (${delivery.ciRounds ?? CI_ROUND_CAP}/${CI_ROUND_CAP}): stop and report the failing check and attempts. Completion stays held until the captain answers and the first mate relays it.`,
+      `Three unsuccessful own repairs exhausted the allowance (${delivery.ciRounds ?? CI_ROUND_CAP}/${CI_ROUND_CAP}): stop and report the failing check and attempts. Completion stays held until the captain answers and the first mate relays it. ${softHoldWords("repairs", "crewmate")}`,
     ];
   if (delivery?.ci === "green") return [];
   const ledger = delivery?.ciRepair;

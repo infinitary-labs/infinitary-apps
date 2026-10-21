@@ -99,7 +99,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
       name: "app_state",
       label: "App actions",
       description:
-        "Look at app actions, their permissions, value schemas and current values. captainAllowed and firstmateAllowed consistently flag who may act; asked means a captain request or captain-set schedule, own-words means a typed captain message. No changes.",
+        "Look at app actions, their permissions, value schemas and current values. captainAllowed and firstmateAllowed consistently flag who may act; asked means the captain asked in any form, own-words in his typed words, at any wake. No changes.",
       parameters: Type.Object({
         area: Type.Optional(
           stringEnum(["projects", "appearance", "general", "panels", "intelligence"]),
@@ -138,7 +138,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
     boundTool({
       name: "app_change",
       label: "Change app setting",
-      description: `Apply a catalog action (schema: app_state). Asked actions quote a captain message or captain-set schedule, never autonomous or legacy schedules; ${OWN_WORDS_ACTIONS.join(", ")} need the captain's typed message. For project-settings and project-runs-on, on_words true declares the exact patch his words named; omit it to propose with its source as evidence. The app’s exact-change card alone applies once, on Apply change. No other card permits a patch. Success records one feed line. Hands offer a card (project-setup at any wake); yours explain. Nothing outside the catalog.`,
+      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: his message, his choice on any card (a crewmate relays one) or a schedule he set, never your own; ${OWN_WORDS_ACTIONS.join(", ")} need his typed words. For project-settings and project-runs-on, on_words true declares the exact patch his words named; omit it to propose with its source as evidence. The app’s exact-change card alone applies once, on Apply change. No other card permits a patch. Success records one feed line. Hands offer a card (project-setup at any wake); yours explain. Nothing outside the catalog.`,
       parameters: Type.Object({
         action: stringEnum(ACTION_NAMES),
         value: Type.Object({}, { additionalProperties: true }),

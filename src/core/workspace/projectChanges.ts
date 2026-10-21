@@ -81,12 +81,13 @@ export class ProjectChanges {
     // A normal card choice is not authority for a different change. Only
     // the host button below applies the exact stored patch. A destination
     // discovered in git always needs that button, even on a captain turn.
+    // His words apply at any other wake, relayed or sent mid-turn (INF-751).
     const address =
       action === "project-settings" && (value.changes as RepoPolicyPatch).origin !== undefined;
     if (
       !address &&
       actor.kind === "firstmate" &&
-      (actor.wake === "captain" || actor.wake === "scheduled") &&
+      actor.wake !== "captain-choice" &&
       actor.projectWords === true &&
       actor.evidence?.trim()
     ) {

@@ -1040,8 +1040,8 @@ describe("the action catalog in a recording", () => {
     evidence: "Switch to light once it passes contrast.",
   };
 
-  /** What today's `app_change` answers on a stand-in app, for a wake of this origin. */
-  async function appChangeAnswer(wake: "captain" | "other"): Promise<string> {
+  /** What today's `app_change` answers on a stand-in app, on the report's wake. */
+  async function appChangeAnswer(change: typeof CHANGE): Promise<string> {
     let appearance: unknown = { theme: "dark" };
     const dispatch = async (channel: string, args: unknown) => {
       if (channel === "inf:settings:appearance:set") appearance = (args as unknown[])[0];
@@ -1049,10 +1049,10 @@ describe("the action catalog in a recording", () => {
     };
     const tool = createAppTools({
       dispatch: dispatch as CoreDispatch,
-      actor: () => ({ kind: "firstmate", wake }),
+      actor: () => ({ kind: "firstmate", wake: "other" }),
     }).find((candidate) => candidate.name === "app_change");
     if (!tool) throw new Error("app_change is missing from the app tools");
-    return (await tool.run(CHANGE)).text;
+    return (await tool.run(change)).text;
   }
 
   /**
@@ -1060,7 +1060,7 @@ describe("the action catalog in a recording", () => {
    * answered it by changing the theme; before it, a captain turn recorded
    * before the catalog changed a project through `configure_repo`.
    */
-  function escalationAnsweredWith(answer: string): string {
+  function escalationAnsweredWith(change: typeof CHANGE, answer: string): string {
     const wake = frameServedInput([
       { kind: "context", body: "[fm-op] context (not the user)\nrepos: []" },
       {
@@ -1085,7 +1085,7 @@ describe("the action catalog in a recording", () => {
             user(at(0, 10), wake),
             call(at(0, 11), "f2", "app_state", { area: "appearance" }),
             result(at(0, 12), "f2", "app_state", JSON.stringify([{ action: "theme" }])),
-            call(at(0, 13), "f3", "app_change", CHANGE),
+            call(at(0, 13), "f3", "app_change", change),
             result(at(0, 14), "f3", "app_change", answer),
             said(at(0, 15), "Answered the contrast report."),
           ],
@@ -1103,13 +1103,15 @@ describe("the action catalog in a recording", () => {
     );
   }
 
+  // INF-751: the captain's words quoted as evidence apply on a report's wake;
+  // a change with no ask behind it is refused.
   it.each([
-    { recorded: "an applied change", wake: "captain" as const, handled: true },
-    { recorded: "a refused change", wake: "other" as const, handled: false },
+    { recorded: "an applied change", change: CHANGE, handled: true },
+    { recorded: "a refused change", change: { ...CHANGE, evidence: "" }, handled: false },
   ])(
     "scores the escalation answered by $recorded as handled: $handled",
-    async ({ wake, handled }) => {
-      const root = escalationAnsweredWith(await appChangeAnswer(wake));
+    async ({ change, handled }) => {
+      const root = escalationAnsweredWith(change, await appChangeAnswer(change));
       try {
         const report = await replaySession(discoverSources({ name: "catalog", root }));
         expect(report.fidelity).toMatchObject({

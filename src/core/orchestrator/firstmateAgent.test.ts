@@ -1938,8 +1938,10 @@ describe("FirstmateAgent", () => {
     expect(readFileSync(join(paths.firstmateHomeDir, "keep.txt"), "utf8")).toBe("stay\n");
   });
 
+  // INF-751: whether the captain set a schedule is the first mate's evidence
+  // to judge, and the wake it stamps; the change is not refused on it.
   it.each([true, false, undefined])(
-    "grants asked-action authority only to proven captain schedules (%s)",
+    "stamps a schedule's wake as the captain's only when he set it (%s)",
     async (captainRequested) => {
       const store = new ScheduleStore(openInMemoryDatabase());
       const scheduler = new Scheduler({ store, notify: () => {}, broadcastEvent: () => {} });
@@ -1984,16 +1986,22 @@ describe("FirstmateAgent", () => {
       const state = JSON.parse((await tool("app_state").run({ area: "general" })).text);
       expect(
         state.find((line: { action: string }) => line.action === "notifications").allowedNow,
-      ).toBe(captainRequested === true);
+      ).toBe(true);
       calls.length = 0;
       const outcome = await tool("app_change").run({
         action: "notifications",
         value: { enabled: false },
-        evidence: "scheduled request",
+        evidence: "The captain's schedule: turn notifications off each morning.",
       });
       expect(
         calls.filter((entry) => (entry as unknown[])[0] === "inf:settings:notifications:set"),
-      ).toHaveLength(captainRequested === true ? 1 : 0);
+      ).toEqual([
+        [
+          "inf:settings:notifications:set",
+          [false],
+          expect.objectContaining({ wake: captainRequested === true ? "scheduled" : "other" }),
+        ],
+      ]);
       await tool("schedule_prompt").run({ prompt: "a reminder I chose", every_minutes: 45 });
       expect(store.list()[1]?.captainRequested).toBe(false);
       const evidenceDir = process.env.INFINITARY_ACTION_EVIDENCE_DIR;
@@ -3070,8 +3078,8 @@ describe("FirstmateAgent", () => {
   it("serves a Firstmate card click alone, without borrowing a pending operational wake", async () => {
     const { agent, session, supervisor, db, specs } = setup();
     const calls: unknown[] = [];
-    agent.bindAppDispatch(async (channel, args) => {
-      calls.push([channel, args]);
+    agent.bindAppDispatch(async (channel, args, actor) => {
+      calls.push([channel, args, actor]);
       return true as never;
     });
     const id = supervisor.addFirstmateCard({
@@ -3091,18 +3099,24 @@ describe("FirstmateAgent", () => {
     await tick();
     expect(session.thinkingLevels).toContain("medium");
     expect(session.prompts).toHaveLength(1);
-    const folderChange = specs[0]?.tools.find((tool) => tool.name === "app_change");
-    if (!folderChange) throw new Error("Missing app_change");
+    // A change made in the click's turn carries the click's own wake, never
+    // the pending schedule's.
+    const change = specs[0]?.tools.find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    await change.run({
+      action: "notifications",
+      value: { enabled: false },
+      evidence: 'The captain chose "Try a premium model".',
+    });
     expect(
-      (
-        await folderChange.run({
-          action: "projects-folder",
-          value: { path: "/tmp" },
-          evidence: "clicked",
-        })
-      ).text,
-    ).toContain("own words");
-    expect(calls).toEqual([]);
+      calls.filter((call) => (call as unknown[])[0] === "inf:settings:notifications:set"),
+    ).toEqual([
+      [
+        "inf:settings:notifications:set",
+        [false],
+        expect.objectContaining({ kind: "firstmate", wake: "captain-choice" }),
+      ],
+    ]);
     const choice = parseServedInput(session.prompts[0] as string) ?? [];
     expect(choice.some((part) => part.kind === "wake")).toBe(false);
     expect(choice).toEqual(
@@ -3397,6 +3411,53 @@ describe("FirstmateAgent", () => {
     expect(session.steers).toHaveLength(1);
     expect(session.thinkingLevels).toEqual(["low", "medium"]);
     session.emitTurnEnd("Answered.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  // INF-751, on the captain's ask to fix the rigidness: his message, sent
+  // while a crewmate's report is being read, asks for a setting in that very
+  // turn, and the first mate applies it with his words as its evidence.
+  it("applies a setting the captain asks for while a crewmate's report is being read", async () => {
+    const { agent, db, session, specs } = setup();
+    const calls: unknown[][] = [];
+    const appearance = { theme: "dark", size: 100, washStrength: 0, showCrewModelNames: true };
+    agent.bindAppDispatch(async (channel, args, actor) => {
+      calls.push([channel, args, actor]);
+      return (channel === "inf:settings:appearance:get" ? appearance : true) as never;
+    });
+    notifyProse(
+      db,
+      agent,
+      "[fm-op] crewmate 1 reported on task t1: the task board reads better in the light theme.",
+      "crewmate-report",
+      "t1",
+    );
+    await tick();
+    expect(session.prompts).toHaveLength(1);
+    await agent.converse("switch to the light theme");
+    expect(session.steers).toHaveLength(1);
+    const change = specs[0]?.tools.find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const outcome = await change.run({
+      action: "theme",
+      value: { theme: "light" },
+      evidence: "switch to the light theme",
+    });
+    expect(JSON.parse(outcome.text).action).toBe("theme");
+    expect(calls.filter(([channel]) => channel === "inf:settings:appearance:set")).toEqual([
+      [
+        "inf:settings:appearance:set",
+        [{ ...appearance, theme: "light" }],
+        expect.objectContaining({
+          kind: "firstmate",
+          wake: "other",
+          action: "theme",
+          evidence: "switch to the light theme",
+        }),
+      ],
+    ]);
+    session.emitTurnEnd("Switched to the light theme.");
     session.resolveNextPrompt();
     await tick();
   });

@@ -156,23 +156,19 @@ describe("action permissions and channel parity", () => {
     ).flatMap((name) => ACTIONS[name].fields ?? []);
     expect(uncoveredSettings(settingFields(request), claimed)).toEqual(["uncatalogued"]);
   });
-  it("allows messages and schedules, refuses reports, and reserves the folder for own words", () => {
+  // INF-751, on the captain's ask to fix the rigidness: his choice relayed in
+  // a crewmate's report, or his message sent while a turn runs, reaches the
+  // first mate at a wake his own words did not begin, and still applies.
+  it("takes asked and own-words lines at any wake with the captain's evidence, never the captain's own", () => {
     for (const name of ACTION_NAMES) {
       const line = ACTIONS[name];
       expect(actionRefusal(line, { kind: "captain" })).toBeNull();
-      expect(!!actionRefusal(line, { kind: "firstmate", wake: "captain", evidence: "asked" })).toBe(
-        line.tier === "hands" || line.tier === "yours",
-      );
-      expect(
-        actionRefusal(line, { kind: "firstmate", wake: "other", evidence: "asked" }),
-      ).toBeTruthy();
-      expect(
-        !!actionRefusal(line, { kind: "firstmate", wake: "scheduled", evidence: "asked" }),
-      ).toBe(line.tier !== "asked");
-      expect(
-        !!actionRefusal(line, { kind: "firstmate", wake: "captain-choice", evidence: "clicked" }),
-      ).toBe(line.tier !== "asked");
-      expect(actionRefusal(line, { kind: "firstmate", wake: "captain" })).toBeTruthy();
+      for (const wake of ["captain", "captain-choice", "scheduled", "other"] as const) {
+        expect(!!actionRefusal(line, { kind: "firstmate", wake, evidence: "asked" })).toBe(
+          line.tier === "hands" || line.tier === "yours",
+        );
+        expect(actionRefusal(line, { kind: "firstmate", wake })).toBeTruthy();
+      }
     }
   });
 });

@@ -37,7 +37,12 @@ import {
 } from "./repos";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 
-/** Stable permissions, independent of Settings tabs. Captain can run every line. */
+/**
+ * Stable permissions, independent of Settings tabs. Captain can run every
+ * line. `asked` and `own-words` are the first mate's at any wake, on its
+ * judgment that the captain asked - in any form for `asked`, in his typed
+ * words for `own-words` - with that evidence (INF-751).
+ */
 export type ActionTier = "asked" | "own-words" | "hands" | "yours";
 export type ActionLine = {
   alwaysTrail?: boolean;
@@ -1112,15 +1117,10 @@ export function actionRefusal(line: ActionLine, actor: ActionActor): string | nu
     return "Only the app’s exact-change card applies a project change from a click.";
   if (line.tier === "hands" || line.tier === "yours")
     return "This action stays with the captain in Settings.";
+  // Whatever began the turn: his choice relayed in a crewmate's report, or a
+  // message he sent while the turn ran, reaches the first mate there too.
   if (!actor.evidence?.trim())
-    return "Give the captain's words or schedule that asked for this change.";
-  if (
-    actor.wake !== "captain" &&
-    (line.tier === "own-words" || (actor.wake !== "scheduled" && actor.wake !== "captain-choice"))
-  )
-    return line.tier === "own-words"
-      ? "Only the captain's own words can request this change."
-      : "Only the captain's message or schedule can request this change.";
+    return "Give the captain's words, choice or schedule that asked for this change.";
   return null;
 }
 

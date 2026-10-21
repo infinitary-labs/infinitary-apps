@@ -265,9 +265,7 @@ describe("the core, driven with no Electron in the process", () => {
       dispatch: core.dispatch,
       actor: () => ({ kind: "firstmate", wake: "captain" }),
     }).find((tool) => tool.name === "app_change");
-    const ownWords = change?.description
-      .match(/; ([^;]+) need the captain's typed message/)?.[1]
-      ?.split(", ");
+    const ownWords = change?.description.match(/; ([^;]+) need his typed words/)?.[1]?.split(", ");
     expect(ownWords).toEqual([
       "project-remove",
       "panel-remove",
@@ -583,22 +581,27 @@ describe("the core, driven with no Electron in the process", () => {
       evidence: "same value",
     });
     expect(count()).toBe(before + 2);
+    // INF-751: his choice, relayed in a crewmate's report, applies on that
+    // report's wake and leaves the same trail.
     wake = "other";
-    expect(
-      (
-        await change.run({
-          action: "notifications",
-          value: { enabled: !initial },
-          evidence: "report says so",
-        })
-      ).text,
-    ).toMatch(/message or schedule/);
-    expect(await core.dispatch("inf:settings:notifications:get", [])).toBe(initial);
+    const relayed = await change.run({
+      action: "notifications",
+      value: { enabled: !initial },
+      evidence: 'The captain chose "Turn notifications off" on SCR-1\'s card.',
+    });
+    expect(JSON.parse(relayed.text).current.enabled).toBe(!initial);
+    expect(await core.dispatch("inf:settings:notifications:get", [])).toBe(!initial);
+    expect(count()).toBe(before + 3);
+    await core.dispatch("inf:settings:notifications:set", [initial]);
+    // His typed words in a schedule he set apply an own-words line.
     wake = "scheduled";
-    expect(
-      (await change.run({ action: "projects-folder", value: { path: null }, evidence: "schedule" }))
-        .text,
-    ).toMatch(/own words/);
+    const scheduledFolder = scratchDir("catalog-scheduled-");
+    await change.run({
+      action: "projects-folder",
+      value: { path: scheduledFolder },
+      evidence: "Each Monday, keep new projects in the scratch folder.",
+    });
+    expect((await core.dispatch("inf:repos:folder", [])).path).toBe(scheduledFolder);
     wake = "captain";
     const missing = join(scratchDir("catalog-folder-"), "missing");
     await expect(core.dispatch("inf:repos:folder:set", [missing])).rejects.toThrow(
@@ -691,17 +694,15 @@ describe("the core, driven with no Electron in the process", () => {
     });
     expect(JSON.parse(personal.text).current.enabled).toBe(!personalBefore);
     expect(await core.dispatch("inf:settings:personal-resources:get", [])).toBe(!personalBefore);
+    // INF-751: on a report's wake, the choice it relays applies.
     wake = "other";
-    expect(
-      (
-        await change.run({
-          action: "personal-resources",
-          value: { enabled: personalBefore },
-          evidence: "report asks to turn it off",
-        })
-      ).text,
-    ).toMatch(/message or schedule/);
-    expect(await core.dispatch("inf:settings:personal-resources:get", [])).toBe(!personalBefore);
+    const relayedPersonal = await change.run({
+      action: "personal-resources",
+      value: { enabled: personalBefore },
+      evidence: "The captain chose to stop using his instructions and skills on SCR-1's card.",
+    });
+    expect(JSON.parse(relayedPersonal.text).current.enabled).toBe(personalBefore);
+    expect(await core.dispatch("inf:settings:personal-resources:get", [])).toBe(personalBefore);
     await core.dispatch("inf:settings:personal-resources:set", [personalBefore]);
     await core.dispatch("inf:settings:appearance:set", [appearance]);
     await core.dispatch("inf:settings:layout:set", [
@@ -752,10 +753,14 @@ describe("the core, driven with no Electron in the process", () => {
         evidence: "asked",
       }),
     ).rejects.toThrow("Only the named presence");
+    // INF-751: on a report's wake, the choice it relays applies.
     wake = "other";
-    expect((await ask("start-at-login", { enabled: before.startAtLogin })).text).toContain(
-      "Only the captain",
-    );
+    expect(
+      JSON.parse((await ask("start-at-login", { enabled: before.startAtLogin })).text).current
+        .enabled,
+    ).toBe(before.startAtLogin);
+    expect(shell.loginItem()).toBe(before.startAtLogin);
+    expect(operationCount()).toBe(count + 3);
     wake = "captain";
     const sharing = await core.dispatch("inf:settings:sharing:get", []);
     for (const action of [
@@ -771,7 +776,7 @@ describe("the core, driven with no Electron in the process", () => {
     ])
       expect((await ask(action, {})).text).toContain("stays with the captain");
     expect(await core.dispatch("inf:settings:sharing:get", [])).toEqual(sharing);
-    expect(operationCount()).toBe(count + 2);
+    expect(operationCount()).toBe(count + 3);
     for (const action of [
       "forge-sign-in",
       "account-sign-in",
@@ -783,15 +788,19 @@ describe("the core, driven with no Electron in the process", () => {
     expect(handed).toHaveLength(5);
     expect(JSON.parse((await ask("voice-model", {})).text).current.ready).toBe(true);
     const forgeStore = new ForgeSignInStore(core.paths.forgesDir);
-    forgeStore.write("github.com", {
-      token: "disposable-forge-sign-in",
-      scopes: [],
-      login: "fixture",
-      createdAt: 1,
-    });
+    const signIn = () =>
+      forgeStore.write("github.com", {
+        token: "disposable-forge-sign-in",
+        scopes: [],
+        login: "fixture",
+        createdAt: 1,
+      });
+    signIn();
+    // INF-751: his typed words in a schedule he set sign out on its wake.
     wake = "scheduled";
-    expect((await ask("forge-sign-out", { host: "github.com" })).text).toContain("own words");
-    expect(forgeStore.read("github.com")).toBeDefined();
+    await ask("forge-sign-out", { host: "github.com" });
+    expect(forgeStore.read("github.com")).toBeUndefined();
+    signIn();
     wake = "captain";
     await ask("forge-sign-out", { host: "github.com" });
     expect(forgeStore.read("github.com")).toBeUndefined();
@@ -895,10 +904,10 @@ describe("the core, driven with no Electron in the process", () => {
         /No closed card/,
       );
       expect(shown()).toHaveLength(2);
-      // Firstmate acts only on the captain's request.
+      // INF-751: his request, relayed in a crewmate's report, takes the same door.
       wake = "other";
-      expect((await ask({ cardId: "card-show-past" })).text).toContain("Only the captain");
-      expect(shown()).toHaveLength(2);
+      expect(JSON.parse((await ask({ cardId: "card-show-past" })).text).action).toBe("show-card");
+      expect(shown()).toHaveLength(3);
       await expect(
         core.dispatch("inf:cards:show-past", ["card-show-past"], {
           kind: "firstmate",
@@ -1003,11 +1012,13 @@ describe("the core, driven with no Electron in the process", () => {
         [["showed the release note for 0.0.2", "firstmate"]],
       );
       expect(await stack()).toEqual(stackBefore);
-      // A version never shown is refused; so is Firstmate acting unasked.
+      // A version never shown is refused.
       expect((await ask({ version: "0.0.9" })).text).toContain("No release note for 0.0.9");
-      wake = "other";
-      expect((await ask({})).text).toContain("Only the captain");
       expect(shown()).toHaveLength(3);
+      // INF-751: his request, relayed in a crewmate's report, takes the same door.
+      wake = "other";
+      expect(JSON.parse((await ask({})).text).action).toBe("show-whats-new");
+      expect(shown()).toHaveLength(4);
     } finally {
       detach();
       settings.setReleaseTracking(saved);
@@ -1187,21 +1198,23 @@ describe("the core, driven with no Electron in the process", () => {
     expect(core.services.tasks.list().filter((t) => t.kind === "operation")).toHaveLength(
       priorRefresh + 2,
     );
+    // INF-751: his typed words in a schedule he set disconnect on its wake.
     const scheduled = createAppTools({
       dispatch: core.dispatch,
       actor: () => ({ kind: "firstmate", wake: "scheduled" }),
     }).find((t) => t.name === "app_change");
     if (!scheduled) throw new Error("Missing change tool");
     expect(
-      (
-        await scheduled.run({
-          action: "account-disconnect",
-          value: { accountId: account.id },
-          evidence: "schedule",
-        })
-      ).text,
-    ).toContain("own words");
-    await run("account-disconnect", { accountId: account.id });
+      JSON.parse(
+        (
+          await scheduled.run({
+            action: "account-disconnect",
+            value: { accountId: account.id },
+            evidence: "Disconnect the Work account on Friday evening.",
+          })
+        ).text,
+      ).action,
+    ).toBe("account-disconnect");
     expect(await core.dispatch("inf:accounts:list", [])).not.toContainEqual(
       expect.objectContaining({ id: account.id }),
     );
@@ -1488,7 +1501,7 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
-  it("removes a project through one catalog path: names busy tasks, leaves the folder, and only on the captain's own words", async () => {
+  it("removes a project through one catalog path: names busy tasks, leaves the folder, on the captain's own words wherever they reach the first mate", async () => {
     const events: FmEvent[] = [];
     const off = core.events.subscribe((channel, event) => {
       if (channel === "inf:event") events.push(event as FmEvent);
@@ -1506,16 +1519,6 @@ describe("the core, driven with no Electron in the process", () => {
         actor: () => ({ kind: "firstmate", wake: "other" }),
       }).find((t) => t.name === "app_change");
       if (!own || !reported) throw new Error("Missing app_change");
-      expect(
-        (
-          await reported.run({
-            action: "project-remove",
-            value: { repoId: repo.id },
-            evidence: "a crewmate said so",
-          })
-        ).text,
-      ).toContain("own words");
-      expect(core.services.repos.get(repo.id)).toBeDefined();
 
       const busy = seedTask(core.services.tasks, {
         id: "remove-busy",
@@ -1528,15 +1531,15 @@ describe("the core, driven with no Electron in the process", () => {
       });
       const refusal = `${repo.name} still has 1 task: ${busy.key} "Fix the sign-up form" (working). Finish or drop it, then remove it.`;
       await expect(core.dispatch("inf:repos:remove", [repo.id])).rejects.toThrow(refusal);
-      expect(
-        (
-          await own.run({
-            action: "project-remove",
-            value: { repoId: repo.id },
-            evidence: "remove it",
-          })
-        ).text,
-      ).toContain(refusal);
+      // His typed words in his own turn, and the same words a crewmate relays
+      // in its report (INF-751), meet the same check.
+      for (const [tool, evidence] of [
+        [own, "remove it"],
+        [reported, 'The captain replied under SCR-1\'s card: "remove it from the app".'],
+      ] as const)
+        expect(
+          (await tool.run({ action: "project-remove", value: { repoId: repo.id }, evidence })).text,
+        ).toContain(refusal);
       expect(core.services.repos.get(repo.id)).toBeDefined();
       expect(events.filter((e) => e.type === "repo_unregistered")).toHaveLength(0);
 
@@ -1634,13 +1637,17 @@ describe("the core, driven with no Electron in the process", () => {
         (await apply("project-settings", { repoId: created.repo.id, changes: {} })).text,
       ).toContain("pass delivery");
       expect(count()).toBe(initial + 1);
+      // INF-751: the captain's choices, relayed in a crewmate's report, apply
+      // on its wake, each with its trail.
       wake = "other";
-      for (const [action, value] of [
-        ["theme", { theme: "light" }],
-        ["panel", { surface: "now", visible: false }],
-        ["project-settings", { repoId: created.repo.id, changes: { autonomy: false } }],
-      ] as const)
-        expect((await apply(action, value)).text).toContain("message or schedule");
+      const beforeRelayed = count();
+      await apply("theme", { theme: "light" });
+      expect((await core.dispatch("inf:settings:appearance:get", [])).theme).toBe("light");
+      await apply("panel", { surface: "now", visible: false });
+      expect((await core.dispatch("inf:settings:layout:get", [])).hiddenPanels.now).toBe(true);
+      await apply("project-settings", { repoId: created.repo.id, changes: { autonomy: false } });
+      expect(core.services.repos.get(created.repo.id)?.autonomy).toBe(false);
+      expect(count()).toBe(beforeRelayed + 3);
       wake = "scheduled";
       const appearance = {
         theme: "dark" as const,
@@ -1698,9 +1705,10 @@ describe("the core, driven with no Electron in the process", () => {
         ),
       ).rejects.toThrow("named panel");
       const beforeCaptain = count();
-      await core.dispatch("inf:repos:configure", [created.repo.id, { autonomy: false }]);
+      await core.dispatch("inf:repos:configure", [created.repo.id, { autonomy: true }]);
       expect(count()).toBe(beforeCaptain + 1);
       expect(events.filter((e) => e.type === "repo_configured")).toMatchObject([
+        { actor: "firstmate" },
         { actor: "firstmate" },
         { actor: "captain" },
       ]);

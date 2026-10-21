@@ -32,14 +32,14 @@ A project already on the list is answered as it is, with the key it has.
 Settings and the first mate use the same action catalog and dispatcher for every project change.
 `project-settings` changes delivery, autonomy, rigor, display name, folder and approved hosting address; `project-runs-on` changes where its next task runs.
 The global `projects-folder` setting still changes where new projects go on typed captain words.
-The first mate applies an exact change the captain named in a message or captain-set schedule, quoting those words as evidence.
+The first mate applies an exact change the captain named in his words, quoting them as evidence, wherever they reach it: his message, one he sends while a turn runs, his reply a crewmate relays, or a schedule he set (INF-751).
 The first mate declares that judgment with `on_words: true`; an omitted declaration proposes instead.
 The exact-words judgment belongs to its tool guidance, not a host parser.
 Every other proposal, including an ordinary agent-card choice, reaches `ProjectChanges` (`src/core/workspace/projectChanges.ts`) and gets an app-written card showing the old and proposed values.
 Only that card's Apply change button applies the stored patch once; Not now or closing changes nothing.
 The host refuses a card if the saved project changed since the offer, and revalidates the folder, address and devices on applying.
 The first mate hears the outcome once through `project-change` and reads current values before starting work that needs it.
-Removal still needs a typed captain message, and adding still uses the setup card above.
+Removal still needs his typed words, and adding still uses the setup card above.
 The personal workspace remains locked.
 
 Name changes keep the project's id, key, sequence and task history, and update its fleet index without moving its files.

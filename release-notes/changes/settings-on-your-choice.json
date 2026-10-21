@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "settings-on-your-choice",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate applies a setting you chose on a crewmate's card",
+      "body": "When you choose a setting on a crewmate's card, or ask for one while your first mate is working, your first mate now applies it without you asking again. Each change still shows in Activity. Removing a project, disconnecting an account, changing the projects folder or signing out still waits for words you typed.",
+      "noPicture": "This changes when the first mate may apply a setting; Settings and the window look as they did.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

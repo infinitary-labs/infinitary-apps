@@ -5,16 +5,28 @@ import { ACTIONS } from "@shared/actions";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { THIS_DESKTOP } from "./desktop";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import {
   APP_CATALOG_PROMPT_MARKER,
   MOCK_MODEL_ID,
   MOCK_PROVIDER_ID,
   mockModelsJson,
+  SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
+import { windowShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { feedLine } from "./rails";
+import { feedLine, feedLineOf } from "./rails";
+import {
+  RELAYED_SETTING_CARD,
+  RELAYED_SETTING_CHOICE,
+  RELAYED_SETTING_MARKER,
+  type RelayedSettingSeen,
+  relayedSetting,
+} from "./scenarios/relayedSetting";
 import { boxLoginItems, settingRow } from "./settings";
+import { showCard, shownEntry } from "./stack";
+import { pressKey } from "./windowKeys";
 
 test("captain clicks and Firstmate catalog changes share persisted settings and trails without cards", async () => {
   const app = await launchApp({
@@ -323,6 +335,63 @@ test("presence requests reach Settings while sharing and purge stay yours and a 
       body: JSON.stringify(after, null, 2),
       contentType: "application/json",
     });
+  } finally {
+    await app.close();
+  }
+});
+
+/**
+ * INF-751, on the captain's ask to fix the rigidness: a setting he chose on
+ * a crewmate's card reaches the first mate in that crewmate's report, and
+ * the first mate applies it with his choice as its evidence. He presses the
+ * card's default by key and types nothing. Completion is the first mate's
+ * own tool result; the saved theme, the window and one Activity line are
+ * what he sees.
+ */
+test("a setting the captain chose on a crewmate's card applies without him typing it", async () => {
+  const seen: RelayedSettingSeen = { results: [] };
+  const app = await launchApp({ withMockProvider: true, scenarios: [relayedSetting(seen)] });
+  try {
+    const { page } = app;
+    const theme = () =>
+      page.evaluate(async () => (await window.infinitary.settings.getAppearance()).theme);
+    await waitForFirstmateIdle(page);
+    expect(await theme()).toBe("dark");
+    await askFirstmate(page, `${SPAWN_PROMPT_MARKER} ${RELAYED_SETTING_MARKER}`);
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => window.infinitary.cards.list())).some(
+            (card) => card.title === RELAYED_SETTING_CARD && !card.awaiting,
+          ),
+        { timeout: 45_000 },
+      )
+      .toBe(true);
+    await showCard(page, RELAYED_SETTING_CARD);
+    await windowShot(page, test.info().outputPath("relayed-setting-card.png"));
+    // His one act: the card's default, by key.
+    await pressKey(
+      shownEntry(page).getByRole("button", { name: RELAYED_SETTING_CHOICE.label, exact: true }),
+      "Enter",
+    );
+    // The crewmate relays the choice and the first mate acts on its report.
+    await expect.poll(() => seen.results.length, { timeout: 45_000 }).toBeGreaterThan(0);
+    await waitForFirstmateIdle(page);
+    writeFileSync(
+      test.info().outputPath("relayed-setting-result.txt"),
+      `${seen.results.join("\n")}\n`,
+    );
+    await windowShot(page, test.info().outputPath("relayed-setting-window.png"));
+    expect(await theme()).toBe("light");
+    await expect.poll(() => page.evaluate(() => document.body.dataset.theme ?? "")).toBe("light");
+    // One Activity line, the trail every catalog change writes, as the first mate's.
+    await expect(
+      feedLineOf(page, {
+        type: "personalized",
+        text: ACTIONS.theme.done({ theme: "light" }),
+        actor: "firstmate",
+      }),
+    ).toHaveCount(1);
   } finally {
     await app.close();
   }

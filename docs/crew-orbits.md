@@ -343,6 +343,7 @@ A task board tile rests the same way from the board's card, and its summary sits
 `placeRowSummary` (`crew/hover.ts`) puts it outside the Tasks panel on the stage's side, centred on the row, inside the window under the top bar and clear of the input and the other rail's panels (rising above what is in the way, then the other side), with the hairline from the panel's edge at the row's middle; there are no brackets.
 The host also lets it go when the pointer moves anywhere outside the frame, on Esc (which then goes no further, so a record open under the summary stays), a scroll that carries the frame, a resize or the window losing focus.
 A move the window receives aimed at the frame element itself is not outside it: Chromium sends one as the pointer crosses into the frame, often just after the frame has reported the row, and the frame never reports that row again.
+The pointer leaving the window lets it go too, heard as the window document's `pointerleave`: macOS hands Chromium's exit to the window's own page alone, so a frame under the pointer never hears it and never reports `null`.
 It never inspects a crewmate and never slows the stage; the lit task below puts brackets on that task's crewmate, and nothing else.
 
 **The lit task** (INF-237, "hover a task anywhere, highlight it everywhere").

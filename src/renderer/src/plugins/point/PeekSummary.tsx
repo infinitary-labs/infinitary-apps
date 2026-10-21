@@ -194,6 +194,10 @@ export function PeekSummary() {
       });
     }
     window.addEventListener("pointermove", onMove, { passive: true });
+    // The pointer leaving the window: macOS hands the exit to this page
+    // alone, never to a frame under the pointer, so a panel's row or key it
+    // left from never hears it go (INF-702).
+    document.addEventListener("pointerleave", letGo);
     window.addEventListener("keydown", onKey, { capture: true });
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
     window.addEventListener("resize", letGo);
@@ -202,6 +206,7 @@ export function PeekSummary() {
     return () => {
       frameWatch.disconnect();
       window.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerleave", letGo);
       window.removeEventListener("keydown", onKey, { capture: true });
       document.removeEventListener("scroll", onScroll, { capture: true });
       window.removeEventListener("resize", letGo);

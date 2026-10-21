@@ -7,7 +7,7 @@ import { BOARD_RECENT_MS } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodySelector } from "./frames";
 import { launchApp } from "./launch";
-import { expectClearOf, type Point, resizeWindow, slidePointer } from "./layout";
+import { expectClearOf, leaveWindow, type Point, resizeWindow, slidePointer } from "./layout";
 import {
   activityFrame,
   atRest,
@@ -680,6 +680,36 @@ test("a task key in Activity opens its summary beside the panel, by pointer and 
       await clickInBody(taskKeyLinks(line).nth(2));
       await expect(recordCard(page)).toHaveAttribute("data-task-record", work.format.id);
     });
+  } finally {
+    await launched.close();
+  }
+});
+
+/**
+ * INF-702, the captain's words: "every time i slide my mouse across the left
+ * edge and leave the infinitary window, it always seems to trigger a random
+ * task's hover preview to show up". Activity is on the left rail in a frame
+ * of its own, and the exit macOS hands the window never reaches that frame,
+ * so the key the pointer left from must not keep its summary open.
+ */
+test("leaving the window across its left edge from a task key in Activity closes its summary", async () => {
+  const userDataDir = scratchDir("infinitary-activity-key-leave-");
+  const work = seedNamedWork(userDataDir);
+  const launched = await launchApp({ userDataDir, gpuBenchmarking: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1440, height: 900 });
+    await expandDock(page, "activity");
+    const key = taskKeyLinks(reportLine(page, work.audit.key)).nth(1);
+    await expect(key).toHaveText(work.ledger.key);
+    await restOnTaskKey(page, key);
+    await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, work.ledger.id);
+    const box = await key.boundingBox();
+    if (!box) throw new Error("The task key is not on screen");
+    await leaveWindow(app, page, { x: -1, y: Math.round(box.y + box.height / 2) });
+    await expect(rowSummary(page)).toHaveCount(0);
+    await expect(key).not.toHaveAttribute("data-task-lit", "");
+    await page.screenshot({ path: test.info().outputPath("leave/left-edge.png") });
   } finally {
     await launched.close();
   }

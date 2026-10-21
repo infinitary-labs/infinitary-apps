@@ -280,6 +280,24 @@ export async function slidePointer(
   );
 }
 
+/**
+ * The pointer leaving the window at `at`, a point just past its edge, the
+ * way macOS hands Chromium the exit: one leave to the window's own page,
+ * which no frame under the pointer hears (`sendInputEvent` forwards it to the
+ * window's widget, as Chromium's Cocoa view does). Chromium's synthetic mouse
+ * routes a move past the edge to the frame instead, so it cannot show this.
+ */
+export async function leaveWindow(app: ElectronApplication, page: Page, at: Point): Promise<void> {
+  const appWindow = await readInMain(() => app.browserWindow(page));
+  // A second leave says nothing new, so a lost answer may send it again.
+  await readInMain(() =>
+    appWindow.evaluate(
+      (shown, point) => shown.webContents.sendInputEvent({ type: "mouseLeave", ...point }),
+      at,
+    ),
+  );
+}
+
 /** The window point at the centre of `target`, where a press on it goes. */
 async function pressPoint(target: Locator): Promise<Point> {
   const box = await target.boundingBox();

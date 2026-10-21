@@ -3,7 +3,6 @@ import {
   DEPENDENCY_VISUAL,
   focusWithRing,
   IconButton,
-  type ListEdge,
   listEdges,
   PanelExpandChevron,
   TaskStatusMark,
@@ -14,10 +13,12 @@ import {
 import {
   type CSSProperties,
   type FocusEvent,
+  memo,
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -109,7 +110,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
   const [lastStop, setLastStop] = useState<string | null>(null);
   // The row the pointer or the keyboard rests on. Edges light up; the stage does not slow.
   const [restedId, setRestedId] = useState<string | null>(null);
-  const [edges, setEdges] = useState<DrawnEdge[]>([]);
+  const [placed, setPlaced] = useState<ReadonlyMap<string, number>>(() => new Map());
   // The row the pointer rests on, and where it was when the app was told.
   const peeked = useRef<{ row: HTMLElement; box: string } | null>(null);
   const peek = useCallback(
@@ -163,19 +164,27 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     rail.summarize(summaryOf(board));
   }, [board, rail]);
 
-  const chips = board ? projectChipsOf(board) : [];
-  const singleProject = board ? hasSingleRegisteredRepoProject(board) : false;
+  const chips = useMemo(() => (board ? projectChipsOf(board) : []), [board]);
+  const singleProject = useMemo(
+    () => (board ? hasSingleRegisteredRepoProject(board) : false),
+    [board],
+  );
   // A project filter whose project left the list lets go of the list.
   const project = chips.some((chip) => chip.id === projectId) ? projectId : null;
-  const rows: Map<PanelGroup, NowRow[]> = board
-    ? rowsOf(board, { query, projectId: project })
-    : new Map();
   const typed = query.trim();
-  const earlier =
-    board && found.query === typed
-      ? earlierRowsOf(found.tasks, rows, { query, projectId: project })
-      : [];
-  if (earlier.length > 0) rows.set("earlier", earlier);
+  // Hover is view state, not new task data. Keep grouping, sorting and the
+  // row objects stable until the board or the captain's filter changes.
+  const rows = useMemo(() => {
+    const next: Map<PanelGroup, NowRow[]> = board
+      ? rowsOf(board, { query, projectId: project })
+      : new Map();
+    const earlier =
+      board && found.query === typed
+        ? earlierRowsOf(found.tasks, next, { query, projectId: project })
+        : [];
+    if (earlier.length > 0) next.set("earlier", earlier);
+    return next;
+  }, [board, query, project, found, typed]);
   if (board) performance.mark("now:render:start");
 
   // One paint of the groups, measured when it lands; the lag from the app's
@@ -195,39 +204,56 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     if (newest > newestSeen.current) newestSeen.current = newest;
   }, [board]);
 
-  // Margin edges use the rows that are actually on screen. A folded, filtered
-  // or clipped end gets no line; the summary names that key instead.
+  // Position and inspection have different lifetimes. Only a changed list
+  // or its layout measures rows; hovering reuses those positions, including
+  // when inspection exposes an overflow dependency lane.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rows and expanded describe the DOM whose positions the observer reads
   useLayoutEffect(() => {
     const root = groupsRef.current;
-    if (!root || !board) {
-      setEdges((current) => (current.length === 0 ? current : []));
-      return;
-    }
+    if (!root) return;
     const measure = () => {
-      const placed = new Map<string, number>();
+      const next = new Map<string, number>();
       const rootBox = root.getBoundingClientRect();
       for (const row of root.querySelectorAll<HTMLElement>("[data-now-row]")) {
         const id = row.dataset.nowRow;
         if (!id) continue;
         const box = row.getBoundingClientRect();
-        // Folded and filtered rows are absent from the document, so they get no line.
-        // A row that has not laid out yet waits for the resize observer.
+        // Folded and filtered rows are absent. A row not yet laid out
+        // waits for the resize observer, which stays attached across hovers.
         if (box.height < 1) continue;
-        placed.set(id, Math.round(box.top - rootBox.top + box.height / 2));
+        next.set(id, Math.round(box.top - rootBox.top + box.height / 2));
       }
-      const listed = [...rows.values()].flatMap((group) => group.map((row) => row.task));
-      const next = listEdges(listed, placed, restedId ?? view.litTaskId).flatMap((edge) => {
-        const fromY = placed.get(edge.fromId);
-        const toY = placed.get(edge.toId);
-        return fromY === undefined || toY === undefined ? [] : [{ ...edge, fromY, toY }];
-      });
-      setEdges((current) => (sameEdges(current, next) ? current : next));
+      setPlaced((current) =>
+        current.size === next.size && [...next].every(([id, y]) => current.get(id) === y)
+          ? current
+          : next,
+      );
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(root);
-    return () => observer.disconnect();
-  });
+    // A group's reveal translates its rows without resizing the root. Keep
+    // the settled positions, not the intermediate boxes read as it opens.
+    root.addEventListener("animationend", measure);
+    return () => {
+      observer.disconnect();
+      root.removeEventListener("animationend", measure);
+    };
+  }, [rows, expanded]);
+  const listed = useMemo(
+    () => [...rows.values()].flatMap((group) => group.map((row) => row.task)),
+    [rows],
+  );
+  const inspectedId = restedId ?? view.litTaskId;
+  const edges = useMemo(
+    () =>
+      listEdges(listed, placed, inspectedId).flatMap((edge) => {
+        const fromY = placed.get(edge.fromId);
+        const toY = placed.get(edge.toId);
+        return fromY === undefined || toY === undefined ? [] : [{ ...edge, fromY, toY }];
+      }),
+    [listed, placed, inspectedId],
+  );
 
   // Typed words ask the app for earlier closed work; clearing them lets go.
   useEffect(() => {
@@ -282,18 +308,23 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
       else next.add(group);
       return next;
     });
+  const openTask = useCallback((task: PanelTaskRow) => void point.openTask(task.id), [point]);
 
   // The groups as painted: typed words show every match, even in a group
   // the captain left collapsed.
-  const shownGroups = [...NOW_GROUPS, "earlier" as const]
-    .filter((group) => (rows.get(group) ?? []).length > 0)
-    .map((group) => ({
-      group,
-      open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
-      collapsible: !OPEN_BY_DEFAULT.has(group),
-      taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
-    }));
-  const navItems = nowNavItems(shownGroups);
+  const shownGroups = useMemo(
+    () =>
+      [...NOW_GROUPS, "earlier" as const]
+        .filter((group) => (rows.get(group) ?? []).length > 0)
+        .map((group) => ({
+          group,
+          open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
+          collapsible: !OPEN_BY_DEFAULT.has(group),
+          taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
+        })),
+    [rows, typed, expanded],
+  );
+  const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
   const stop = rovingKey(navItems, lastStop);
   // A stop F6 lands on shows the ring: the key was the app's, not this page's.
   const focusStop = (key: string | null, landing = false) => {
@@ -476,7 +507,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
                 stop={stop}
                 onStop={setLastStop}
                 onToggle={() => toggle(group)}
-                onOpen={(task) => void point.openTask(task.id)}
+                onOpen={openTask}
                 onPeek={peek}
                 onLeave={leave}
               />
@@ -575,102 +606,127 @@ export function Group({
           data-in-place-reveal={reveal ? "drift" : undefined}
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
-          {rows.map(({ task, depth }) => {
-            const word = wordOf(task);
-            const trailing = trailingOf(board, task, singleProject);
-            const place = task.place ? ` · ${task.place.where}` : "";
-            const waiting =
-              task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
-            const label = `${task.key} · ${task.title} · ${projectNameOf(board, task)}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
-            return (
-              <button
-                key={task.id}
-                type="button"
-                data-now-row={task.id}
-                data-now-key={task.key}
-                data-now-blockers={task.blockedBy.join(" ") || undefined}
-                data-now-status={task.status}
-                data-now-selected={selectedTaskIds.includes(task.id) ? "" : undefined}
-                data-now-lit={litTaskId === task.id ? "" : undefined}
-                data-now-trailing={trailing.name || trailing.place ? "" : undefined}
-                data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
-                data-now-connecting={trailing.connecting ? "" : undefined}
-                data-now-nav={rowNavKey(group, task.id)}
-                tabIndex={stop === rowNavKey(group, task.id) ? 0 : -1}
-                style={{ "--depth": String(depth) } as CSSProperties}
-                aria-label={label}
-                onClick={() => onOpen(task)}
-                onPointerEnter={(event) => onPeek?.(event.currentTarget, task)}
-                onPointerLeave={(event) => onLeave?.(event.currentTarget)}
-                onPointerDown={() => onPeek?.(null)}
-                // The keyboard rests on a row as the pointer does: its summary opens beside it.
-                onFocus={(event: FocusEvent<HTMLButtonElement>) => {
-                  onStop?.(rowNavKey(group, task.id));
-                  if (event.currentTarget.matches(":focus-visible"))
-                    onPeek?.(event.currentTarget, task);
-                }}
-                onBlur={(event) => onLeave?.(event.currentTarget)}
-              >
-                <span data-now-dot="">
-                  <TaskStatusMark reading={taskStatusOf(task)} nativeTitle={false} />
-                </span>
-                <span className="title" data-now-title="">
-                  <span className="title-key" data-now-title-key="">
-                    {`${task.key} `}
-                  </span>
-                  <span data-now-title-text="">{task.title}</span>
-                  {word && (
-                    <span className="word" data-now-word={word}>
-                      {` · ${word}`}
-                    </span>
-                  )}
-                </span>
-                {trailing.place ? (
-                  // Last first: what does not fit leaves whole, the project's
-                  // name before the place, never "out of reach".
-                  <span className="key" data-now-project="" data-now-place="">
-                    {trailing.outOfReach && (
-                      <span className="reach" data-now-reach="">
-                        {trailing.reach}
-                      </span>
-                    )}
-                    <span className="place">
-                      {trailing.outOfReach ? `${trailing.place} · ` : trailing.place}
-                    </span>
-                    {trailing.name && <span className="name">{`${trailing.name} · `}</span>}
-                  </span>
-                ) : (
-                  trailing.name && (
-                    <span className="key" data-now-project="">
-                      {trailing.name}
-                    </span>
-                  )
-                )}
-              </button>
-            );
-          })}
+          {rows.map(({ task, depth }) => (
+            <Row
+              key={task.id}
+              task={task}
+              depth={depth}
+              group={group}
+              board={board}
+              singleProject={singleProject}
+              selected={selectedTaskIds.includes(task.id)}
+              lit={litTaskId === task.id}
+              isStop={stop === rowNavKey(group, task.id)}
+              onStop={onStop}
+              onOpen={onOpen}
+              onPeek={onPeek}
+              onLeave={onLeave}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-type DrawnEdge = ListEdge & { fromY: number; toY: number };
-
-function sameEdges(current: readonly DrawnEdge[], next: readonly DrawnEdge[]): boolean {
-  if (current.length !== next.length) return false;
-  return current.every((edge, index) => {
-    const other = next[index];
-    return (
-      other !== undefined &&
-      edge.fromId === other.fromId &&
-      edge.toId === other.toId &&
-      edge.lane === other.lane &&
-      edge.fromY === other.fromY &&
-      edge.toY === other.toY
-    );
-  });
-}
+/** Only rows whose data, highlight, selection or Tab stop changed paint again. */
+const Row = memo(function Row({
+  task,
+  depth,
+  group,
+  board,
+  singleProject,
+  selected,
+  lit,
+  isStop,
+  onStop,
+  onOpen,
+  onPeek,
+  onLeave,
+}: {
+  task: PanelTaskRow;
+  depth: number;
+  group: PanelGroup;
+  board: PanelTaskBoard;
+  singleProject: boolean;
+  selected: boolean;
+  lit: boolean;
+  isStop: boolean;
+  onStop?: (key: string) => void;
+  onOpen: (task: PanelTaskRow) => void;
+  onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
+  onLeave?: (row: HTMLElement) => void;
+}) {
+  const word = wordOf(task);
+  const trailing = trailingOf(board, task, singleProject);
+  const place = task.place ? ` · ${task.place.where}` : "";
+  const waiting = task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
+  const label = `${task.key} · ${task.title} · ${projectNameOf(board, task)}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
+  return (
+    <button
+      type="button"
+      data-now-row={task.id}
+      data-now-key={task.key}
+      data-now-blockers={task.blockedBy.join(" ") || undefined}
+      data-now-status={task.status}
+      data-now-selected={selected ? "" : undefined}
+      data-now-lit={lit ? "" : undefined}
+      data-now-trailing={trailing.name || trailing.place ? "" : undefined}
+      data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
+      data-now-connecting={trailing.connecting ? "" : undefined}
+      data-now-nav={rowNavKey(group, task.id)}
+      tabIndex={isStop ? 0 : -1}
+      style={{ "--depth": String(depth) } as CSSProperties}
+      aria-label={label}
+      onClick={() => onOpen(task)}
+      onPointerEnter={(event) => onPeek?.(event.currentTarget, task)}
+      onPointerLeave={(event) => onLeave?.(event.currentTarget)}
+      onPointerDown={() => onPeek?.(null)}
+      // The keyboard rests on a row as the pointer does: its summary opens beside it.
+      onFocus={(event: FocusEvent<HTMLButtonElement>) => {
+        onStop?.(rowNavKey(group, task.id));
+        if (event.currentTarget.matches(":focus-visible")) onPeek?.(event.currentTarget, task);
+      }}
+      onBlur={(event) => onLeave?.(event.currentTarget)}
+    >
+      <span data-now-dot="">
+        <TaskStatusMark reading={taskStatusOf(task)} nativeTitle={false} />
+      </span>
+      <span className="title" data-now-title="">
+        <span className="title-key" data-now-title-key="">
+          {`${task.key} `}
+        </span>
+        <span data-now-title-text="">{task.title}</span>
+        {word && (
+          <span className="word" data-now-word={word}>
+            {` · ${word}`}
+          </span>
+        )}
+      </span>
+      {trailing.place ? (
+        // Last first: what does not fit leaves whole, the project's
+        // name before the place, never "out of reach".
+        <span className="key" data-now-project="" data-now-place="">
+          {trailing.outOfReach && (
+            <span className="reach" data-now-reach="">
+              {trailing.reach}
+            </span>
+          )}
+          <span className="place">
+            {trailing.outOfReach ? `${trailing.place} · ` : trailing.place}
+          </span>
+          {trailing.name && <span className="name">{`${trailing.name} · `}</span>}
+        </span>
+      ) : (
+        trailing.name && (
+          <span className="key" data-now-project="">
+            {trailing.name}
+          </span>
+        )
+      )}
+    </button>
+  );
+});
 
 /** A quiet path in the reserved gutter, arrow at the blocker. */
 function edgePath(fromY: number, toY: number, lane: number): string {

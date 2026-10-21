@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "check-readings-on-change",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task's record keeps its checks only when they change",
+      "body": "The app reads an open pull request's checks every five minutes, and each reading went into the task's record even when nothing had changed: one waiting pull request added 239 identical lines in a day. Now a reading is kept only when the checks change, and a task waiting on another task is not read until that work is done.",
+      "noPicture": "The record's checks line stops opening to hundreds of identical readings; there is no new view to show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

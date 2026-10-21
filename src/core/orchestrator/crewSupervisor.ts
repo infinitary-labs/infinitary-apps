@@ -1451,6 +1451,11 @@ export class CrewSupervisor {
           tasks: options.tasks,
           inbox: options.inbox,
           read: readCheckWatch,
+          // The posture the Tasks dot shows as "Blocked by another task".
+          idleBehindOtherWork: (record) => {
+            const posture = this.workPosture(record);
+            return posture.state === "idle" && posture.reason === "dependency";
+          },
           steer: (taskId, wake) =>
             this.steerInternal(taskId, wake, {
               actor: "supervisor",

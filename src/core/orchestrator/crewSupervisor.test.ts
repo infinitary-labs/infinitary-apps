@@ -21884,6 +21884,40 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     expect(checks()).toContain("passed");
   });
 
+  it("neither reads nor records the checks of a task idle behind another task until that work closes (INF-721 friction 6)", async () => {
+    // The captain's words: "Record a check poll only when its state
+    // changes, and not for an idle task". INF-595's shape: its pull
+    // request's checks failed, and it waited all day behind INF-621.
+    const { crewmate, forge, taskId, tasks, supervisor, at } = await waiting();
+    forge.states = ["success", "failure"];
+    await at(minutes(1));
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const owner = seedTask(tasks, {
+      id: "vm-proof",
+      title: "Prove every project's Mac jobs in a virtual Mac",
+      status: "running",
+    });
+    tasks.link(owner.id, taskId, "blocks", "firstmate");
+    const record = () => tasks.get(taskId) as TaskRecord;
+    expect(supervisor.workPosture(record())).toEqual({ state: "idle", reason: "dependency" });
+    const ciRows = () => tasks.timeline(taskId).filter((event) => event.kind === "ci").length;
+    const reads = forge.checkReads;
+    const rows = ciRows();
+    // A day on the shared tick, every five minutes.
+    for (let minute = 5; minute <= 24 * 60; minute += 5) await at(minutes(minute));
+    expect(forge.checkReads).toBe(reads);
+    expect(ciRows()).toBe(rows);
+    // That work closes: the ready sweep resumes the crewmate, and the
+    // refresh reads its checks again on the next tick.
+    tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
+    await at(minutes(24 * 60 + 1));
+    await at(minutes(24 * 60 + 2));
+    expect(supervisor.workPosture(record()).reason).not.toBe("dependency");
+    expect(forge.checkReads).toBeGreaterThan(reads);
+  });
+
   it("pending then red: one diagnosis wake naming the failing check, no repair spent", async () => {
     const { crewmate, forge, taskId, tasks, at } = await waiting();
     const prompts = crewmate.promptCalls.length;

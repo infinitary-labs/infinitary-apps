@@ -201,6 +201,7 @@ No playground controls or generated card bundle are imported into production.
 
 Tasks dots, home-view crew heat/spin, and the working/idle counts read one host-derived `workPosture` from the task board and `task_changed` events.
 It is presentation only: `activity`, turn control, the idle clock and the supervision witness order are unchanged.
+One reader beside the board: the quiet check refresh skips a task whose posture reads idle behind another task (`docs/forge.md`, "The check watch").
 The card-thread Working badge still reads turn activity.
 
 Active means a running turn, a live host/client job, watched checks, deliverable guidance (including retry backoff or a captured captain reply), captured settlement, or a finite automatic wait.

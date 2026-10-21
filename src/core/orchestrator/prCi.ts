@@ -39,7 +39,7 @@ import {
   PresentationAroundError,
   presentationLines,
 } from "../forge";
-import type { CiWatch } from "../storage/taskStore";
+import type { CiWatch, TaskDelivery } from "../storage/taskStore";
 import { earlyPublication } from "../tasks/liveValidation";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
@@ -2452,7 +2452,9 @@ export class PrCiService {
    * Record the reading on the task: the CI verdict and its time, plus the
    * change's facts when one exists - its label from the forge, and its
    * number and link where the host has them. A newly seen change is a
-   * `pr_opened` event; every read is a `ci` event on the timeline. A red on
+   * `pr_opened` event; a reading that changes the check state is a `ci`
+   * event on the timeline, and one that changes nothing only moves the
+   * reading's time (`changesCheckState`). A red on
    * a declared repair head is counted only on its unsuccessful result; the round that
    * reaches the cap stamps `ciCapAt`, is the one feed-worthy `ci` event,
    * and tells the host.
@@ -2507,11 +2509,13 @@ export class PrCiService {
         ...round,
         ...watch,
       },
-      {
-        kind: "ci",
-        text: `CI ${overall}${where}${roundText}`,
-        feed: round.ciCapAt !== undefined,
-      },
+      changesCheckState(task.delivery, overall, change?.headSha, round)
+        ? {
+            kind: "ci",
+            text: `CI ${overall}${where}${roundText}`,
+            feed: round.ciCapAt !== undefined,
+          }
+        : undefined,
     );
     if (round.ciCapAt !== undefined && change) {
       this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: change.headSha });
@@ -2657,6 +2661,29 @@ function checksSpan(
           ? Math.max(...finished)
           : Math.min(...finished),
   };
+}
+
+/**
+ * Whether a reading changes the check state the record already holds: its
+ * result, the head it read, or what it settles in the repair ledger (a
+ * failure first seen, an attempt's result, a round or the cap). The quiet
+ * refresh reads an open pull request every five minutes, and a reading
+ * that changes none of these writes no `ci` event (INF-721 friction 6:
+ * 239 identical rows a day for one idle pull request).
+ */
+function changesCheckState(
+  before: TaskDelivery | null | undefined,
+  overall: PrCiOverall,
+  headSha: string | undefined,
+  round: Partial<TaskDelivery>,
+): boolean {
+  if (before?.ci !== overall) return true;
+  if (headSha !== undefined && before.headSha !== headSha) return true;
+  return (
+    ("ciRounds" in round && round.ciRounds !== before.ciRounds) ||
+    ("ciCapAt" in round && round.ciCapAt !== before.ciCapAt) ||
+    ("ciRepair" in round && JSON.stringify(round.ciRepair) !== JSON.stringify(before.ciRepair))
+  );
 }
 
 /** Some check is still queued or running: the only reading a watch waits on. */

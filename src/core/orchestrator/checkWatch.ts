@@ -1,5 +1,5 @@
 import type { InboxStore } from "../storage/inboxStore";
-import type { CiWatch } from "../storage/taskStore";
+import type { CiWatch, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { TypedWake, WakeFacts } from "./wakes";
 
@@ -27,6 +27,7 @@ import type { TypedWake, WakeFacts } from "./wakes";
  *   and then every two, and stops at `CHECK_WATCH_BOUND_MS`.
  * - Finished checks on live pull requests refresh quietly every five minutes
  *   through the same reader. Only a running new head arms another watch.
+ *   A task idle behind another task is not refreshed while it waits.
  *
  * While a watch stands the crewmate is waiting on the host, so the idle
  * ladder reads the task as moving (`Witnesses.checksWatched`).
@@ -109,6 +110,12 @@ export type CheckWatcherHost = {
   inbox: Pick<InboxStore, "woken">;
   /** Read the watched change's checks where the project lives. */
   read(taskId: string): Promise<WatchedReading>;
+  /**
+   * The task stands idle behind another task, nothing else moving it or
+   * before the captain (`CrewSupervisor.workPosture`'s `dependency`): its
+   * finished checks are not refreshed while it waits. Absent = never.
+   */
+  idleBehindOtherWork?(record: TaskRecord): boolean;
   /** The supervisor's own steer on the task's durable lane. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;
 };
@@ -130,13 +137,16 @@ export class CheckWatcher {
       const delivery = record.delivery;
       if (delivery?.ciWatch) return delivery.ciWatch.nextAt <= now;
       // Finished checks remain live while the task owns an open pull request.
-      // This is display refresh only, not a new diagnosis turn.
+      // This is display refresh only, not a new diagnosis turn. A task idle
+      // behind another task is not read until that work moves it again
+      // (INF-721 friction 6): its crewmate reads them itself on resuming.
       return (
         delivery?.prNumber !== undefined &&
         delivery.ci !== "merged" &&
         delivery.ci !== "no-pr" &&
         now >=
-          Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0) + CHECK_REFRESH_MS
+          Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0) + CHECK_REFRESH_MS &&
+        this.host.idleBehindOtherWork?.(record) !== true
       );
     });
     await Promise.all(

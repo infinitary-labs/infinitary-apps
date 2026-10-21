@@ -2071,6 +2071,47 @@ ${said}`);
       expect(tasks.timeline("ab12cd34")).toHaveLength(recordedEvents);
     });
 
+    it("records a finished reading once until its result, head or failing checks change (INF-721 friction 6)", async () => {
+      // The captain's words: "Record a check poll only when its state
+      // changes". INF-550's pull request read red every five minutes all
+      // day and wrote 239 identical rows.
+      let clock = 1_000_000;
+      const forge = new FakeForge();
+      forge.states = ["success", "failure"];
+      forge.names = ["checks", "lint"];
+      const { tasks, repos, service } = setup({ forge, now: () => clock });
+      await insertDirectPrTask(tasks, repos);
+      const rows = () =>
+        tasks
+          .timeline("ab12cd34")
+          .filter((event) => event.kind === "ci")
+          .map((event) => event.text);
+      // An hour of quiet refreshes, then the crewmate's own reading: nothing changed.
+      for (let read = 0; read < 12; read++) {
+        clock += 5 * 60_000;
+        await service.readWatched("ab12cd34");
+      }
+      await service.checkForCrew("ab12cd34");
+      expect(rows()).toEqual(["CI red on PR #23 head feedbeef"]);
+      // Each reading still moves the reading time the task shows.
+      expect(tasks.get("ab12cd34")?.delivery?.ciAt).toBe(clock);
+      // A second check fails, a rerun passes, then a new push: three changes.
+      forge.states = ["failure", "failure"];
+      await service.readWatched("ab12cd34");
+      forge.states = ["success", "success"];
+      await service.readWatched("ab12cd34");
+      await service.readWatched("ab12cd34");
+      forge.change = { ...(forge.change as ForgeChange), headSha: "beadfeed" };
+      await service.readWatched("ab12cd34");
+      await service.readWatched("ab12cd34");
+      expect(rows()).toEqual([
+        "CI red on PR #23 head feedbeef",
+        "CI red on PR #23 head feedbeef",
+        "CI green on PR #23 head feedbeef",
+        "CI green on PR #23 head beadfeed",
+      ]);
+    });
+
     it("records a finished reading for diagnosis without spending a repair and names the red checks", async () => {
       const forge = new FakeForge();
       forge.states = ["success", "failure", "skipped"];

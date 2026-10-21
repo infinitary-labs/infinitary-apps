@@ -37,7 +37,8 @@ import {
   startMockProvider,
 } from "../../tests/e2e/mockProvider";
 import { captainCardChoice, holdsSegment, latestServedTurn } from "../../tests/e2e/providerRequest";
-import { connectClient, freePort, type ReceivedPush } from "../../tests/helpers/connectionClient";
+import { claimedPort } from "../../tests/helpers/claimedPort";
+import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
 import { recordNewerMigration } from "../../tests/helpers/database";
 import { projectFontBytes } from "../../tests/helpers/fontFixture";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -3126,7 +3127,7 @@ describe("the connection serves the core to paired devices", () => {
     userDataDir = scratchDir("infinitary-core-connection-");
     process.env.PI_OFFLINE = "1";
     core = await startCore(fakeHost(userDataDir).host);
-    at = `127.0.0.1:${await freePort()}`;
+    at = `127.0.0.1:${await claimedPort()}`;
     connection = startConnection({
       dispatch: core.dispatch,
       events: core.events,
@@ -3520,7 +3521,7 @@ describe("words typed on a paired Mac are the captain's own words", () => {
     mkdirSync(join(userDataDir, "auth"), { recursive: true, mode: 0o700 });
     writeFileSync(join(userDataDir, "auth", "models.json"), mockModelsJson(mock.port));
     core = await startCore(fakeHost(userDataDir).host);
-    at = `127.0.0.1:${await freePort()}`;
+    at = `127.0.0.1:${await claimedPort()}`;
     connection = startConnection({
       dispatch: core.dispatch,
       events: core.events,
@@ -3629,7 +3630,7 @@ describe("a development run keeps the connection to loopback at its own port", (
   });
 
   const boot = async (packaged: boolean) => {
-    const port = await freePort();
+    const port = await claimedPort();
     userDataDir = scratchDir("infinitary-core-loopback-");
     process.env.PI_OFFLINE = "1";
     process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
@@ -3714,7 +3715,7 @@ describe("a client that knows only the published contract", () => {
     }
     db.close();
     core = await startCore(fakeHost(userDataDir).host);
-    at = `127.0.0.1:${await freePort()}`;
+    at = `127.0.0.1:${await claimedPort()}`;
     connection = startConnection({
       dispatch: core.dispatch,
       events: core.events,
@@ -3812,7 +3813,7 @@ describe("a client that knows only the published contract", () => {
   it("lets an older or newer client read the cards and the feed, and refuses its answer", async () => {
     // No client is older than the window while this contract is on its first
     // majors, so the same core is also served as a home two majors on.
-    const laterAt = `127.0.0.1:${await freePort()}`;
+    const laterAt = `127.0.0.1:${await claimedPort()}`;
     const later = startConnection({
       dispatch: core.dispatch,
       events: core.events,

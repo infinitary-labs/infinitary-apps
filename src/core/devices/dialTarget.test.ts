@@ -3,7 +3,8 @@ import { PassThrough } from "node:stream";
 import { createServer as createTlsServer, type Server as TlsServer } from "node:tls";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
 import { afterEach, describe, expect, it } from "vitest";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../../../tests/helpers/socketForward";
 import { type HomeConnection, startConnection } from "../connection/connection";
@@ -66,7 +67,7 @@ async function home() {
     if (channel === "inf:work:progress") return { text: "Noted." };
     throw new Error(`Rejected ${channel}: malformed request`);
   }) as CoreDispatch;
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-target-home-"), "devices"),
     onProblem: () => {},
@@ -176,7 +177,7 @@ describe("a device's dial goes to an address or a private socket, with the same 
     const other = createKeyIdentity("Another computer");
     const impostor = createTlsServer({ key: other.key, cert: other.cert, minVersion: "TLSv1.3" });
     servers.push(impostor);
-    const impostorPort = await freePort();
+    const impostorPort = await claimedPort();
     await new Promise<void>((resolve) => impostor.listen(impostorPort, "127.0.0.1", resolve));
     const route = await forward(impostorPort);
     await expect(

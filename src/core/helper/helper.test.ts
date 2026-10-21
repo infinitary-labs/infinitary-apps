@@ -16,8 +16,8 @@ import {
   sshMessageLine,
 } from "@shared/sshConnection";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { claudeOnComputer } from "../../../tests/helpers/computerClaude";
-import { freePort } from "../../../tests/helpers/connectionClient";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../../../tests/helpers/socketForward";
 import {
@@ -89,7 +89,7 @@ async function home(
     joinsFromAnotherMac?: boolean;
   } = {},
 ) {
-  let port = await freePort();
+  let port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-helper-home-"), "devices"),
     onProblem: () => {},
@@ -130,7 +130,7 @@ async function home(
     /** The home's address changes: it stops answering where it was, and answers somewhere else. */
     move: async () => {
       await connection.close();
-      port = await freePort();
+      port = await claimedPort();
       connection = listen();
       await connection.settled();
     },
@@ -204,7 +204,7 @@ describe("joining a home as a computer that runs work", () => {
     const at = await home();
     const link = parsePairingLink(await at.link());
     const dataDir = scratchDir("infinitary-helper-");
-    const nobody = buildPairingLink({ ...link, at: `127.0.0.1:${await freePort()}` });
+    const nobody = buildPairingLink({ ...link, at: `127.0.0.1:${await claimedPort()}` });
     const impostor = buildPairingLink({ ...link, key: createKeyIdentity("x").pin });
     for (const [text, words] of [
       [nobody, helperWords.unreachable(thisMac)],
@@ -674,7 +674,9 @@ describe("finding the home again after its address changes", () => {
 
     // Nothing answers where the link says: nothing here stops.
     const link = parsePairingLink(await at.link());
-    const nowhere = await again(buildPairingLink({ ...link, at: `127.0.0.1:${await freePort()}` }));
+    const nowhere = await again(
+      buildPairingLink({ ...link, at: `127.0.0.1:${await claimedPort()}` }),
+    );
     expect(nowhere.outcome).toMatchObject({ ok: false, reason: "unreachable" });
     expect(nowhere.said).toEqual(helperWords.unreachable(thisMac));
     expect(steps).toEqual([]);
@@ -832,7 +834,7 @@ describe("leaving a home that is gone for a new one", () => {
 
     const link = parsePairingLink(await at.link());
     const nowhere = await tryJoin(
-      buildPairingLink({ ...link, at: `127.0.0.1:${await freePort()}` }),
+      buildPairingLink({ ...link, at: `127.0.0.1:${await claimedPort()}` }),
       "yes",
     );
     expect(nowhere.outcome).toMatchObject({ ok: false, reason: "unreachable" });

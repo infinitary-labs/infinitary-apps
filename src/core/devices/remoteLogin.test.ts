@@ -28,7 +28,8 @@ import {
   remoteLoginWords,
 } from "@shared/remoteLogin";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import {
@@ -163,7 +164,7 @@ async function home(options: {
   idleTimeoutMs?: number;
   sendTimeoutMs?: number;
 }) {
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     // Where the app keeps it has a space in it, as Application Support does.
     dir:
@@ -388,7 +389,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const sshd = await server();
     const record = join(scratchDir("infinitary-remote-record-"), "started");
     const bundle = standInBundle(record);
-    const closed = await freePort();
+    const closed = await claimedPort();
     const cases = [
       { ssh: sshd.ssh({ key: "locked" }), refusal: "key-locked" },
       // The app that holds the key asked, and was not approved.
@@ -1148,7 +1149,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)("a private socket the home's own SSH forwar
     // A forward the person's own SSH settings ask for, which the home's
     // connection must not open.
     const settings = ssh.args[1] ?? "";
-    const unasked = await freePort();
+    const unasked = await claimedPort();
     writeFileSync(
       settings,
       `${readFileSync(settings, "utf8")}  LocalForward 127.0.0.1:${unasked} 127.0.0.1:9\n`,

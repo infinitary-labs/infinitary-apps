@@ -27,9 +27,8 @@ import {
 } from "../e2e/mockProvider";
 
 import { encodePng } from "../e2e/pictureFixtures";
-
+import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
-import { freePort } from "./freePort";
 import type { PhoneChord, PhoneKeyWitness } from "./phoneKeyboard";
 import { startScriptedClient } from "./scriptedClient";
 
@@ -46,7 +45,7 @@ export async function startPhoneHome(
     keyboardReady?(chord: PhoneChord): Promise<PhoneKeyWitness>;
   },
 ) {
-  const port = await freePort();
+  const port = await claimedPort();
   process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
   process.env.INFINITARY_DNS_SD = standInDnsSd([]);
   const provider = await startMockProvider();

@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { APPIMAGE_LIBRARIES } from "../../src/core/devices/farSystems";
 import { shellWord } from "../../src/core/devices/joinCommand";
 import type { SshProgram } from "../../src/core/devices/ssh";
-import { freePort } from "./freePort";
+import { claimedPort } from "./claimedPort";
 import { scratchDir, socketScratchDir } from "./scratchDirs";
 
 /**
@@ -175,7 +175,7 @@ export async function startSshServer(
   keygen(join(dir, "refused"));
   const authorized = join(dir, "authorized_keys");
   writeFileSync(authorized, `${good}\n${locked}\n`, { mode: 0o600 });
-  const port = await freePort();
+  const port = await claimedPort();
   // A Linux computer's work needs Xvfb and FUSE there, the libraries the
   // AppImage needs, and a user namespace for Chromium's sandbox
   // (src/core/devices/farSystems.ts), none of which the stand-in Firstmate

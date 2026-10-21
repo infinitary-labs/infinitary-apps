@@ -7,7 +7,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { KEYCHAIN_VALUE_FAILURE_THERE, servedProviderOf } from "@shared/quota";
 import { type DeviceSignInEvent, returnsToLoopback, type SignInStep } from "@shared/signIns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { NO_BROWSER } from "../claude/claudeCli";
 import {
@@ -351,7 +351,7 @@ async function joined(
     if (channel === "inf:work:sign-ins") return signIns.changed(actor.deviceId, request);
     throw new Error(`Rejected ${channel}`);
   }) as CoreDispatch;
-  const port = await freePort();
+  const port = await claimedPort();
   const connection = startConnection({
     dispatch,
     events: new CoreEventBus(),

@@ -18,7 +18,7 @@ import {
 import { remoteLoginWords } from "@shared/remoteLogin";
 import type { UpdateDownload } from "@shared/work";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket } from "../../../tests/helpers/socketForward";
@@ -135,7 +135,7 @@ async function world(
   const tasks = new TaskService({ db, now: Date.now });
   const repos = new RepoRegistry(db, join(userData, "fleet"));
   const work = new WorkDevices();
-  const port = await freePort();
+  const port = await claimedPort();
   const homeApp = options.app === undefined ? bundle("the home's own copy") : options.app;
   const listen = () =>
     startConnection({
@@ -995,7 +995,7 @@ describe("a computer that reaches its home through the home's SSH connection", (
       onProblem: () => {},
       interfaces: () => ({}),
       ownUid: 501,
-      port: await freePort(),
+      port: await claimedPort(),
     });
     stops.push(() => pairing.dispose());
     const connection = startConnection({

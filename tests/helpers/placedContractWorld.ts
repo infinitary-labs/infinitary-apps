@@ -21,7 +21,7 @@ import {
   PROTOCOL_VERSION,
   parseInvokeRequest,
 } from "../../src/shared/ipc";
-import { freePort } from "./connectionClient";
+import { claimedPort } from "./claimedPort";
 import { freshDatabase } from "./database";
 import { scratchDir } from "./scratchDirs";
 import {
@@ -150,7 +150,7 @@ export async function placedContractWorld(
     const [request] = parseInvokeRequest(channel, rawArgs);
     return placed.answer(actor.deviceId, channel, request);
   }) as CoreDispatch;
-  const port = await freePort();
+  const port = await claimedPort();
   const connection = startConnection({
     dispatch,
     events: new CoreEventBus(),

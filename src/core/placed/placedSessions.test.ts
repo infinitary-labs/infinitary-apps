@@ -43,7 +43,7 @@ import {
   writeAnthropicText,
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
@@ -348,7 +348,7 @@ async function world(
     return pairing;
   };
   stops.push(() => pairing?.dispose());
-  const port = await freePort();
+  const port = await claimedPort();
   let home = startHome(userData, port, pairingNow, forgeFor, options);
   await home.listen();
   const { link } = pairingNow().invite(

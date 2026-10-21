@@ -2,11 +2,11 @@ import { randomInt } from "node:crypto";
 import { connect, createServer, type Server } from "node:net";
 
 /**
- * The ports a home in an e2e run may be given, from `first`, and above them
- * the ports that claim them. Both bands sit below every ephemeral range the
- * suite runs on (Linux's 32768-60999, macOS's 49152-65535), so the system
- * never hands either to a listener that asks for port 0 or to an outgoing
- * connection.
+ * The ports a home or other listener in a test run may be given, from
+ * `first`, and above them the ports that claim them. Both bands sit below
+ * every ephemeral range the suite runs on (Linux's 32768-60999, macOS's
+ * 49152-65535), so the system never hands either to a listener that asks for
+ * port 0 or to an outgoing connection.
  */
 export const CLAIMED_PORTS = { first: 20_000, count: 6_000 } as const;
 
@@ -17,9 +17,12 @@ export type PortClaims = {
 };
 
 /**
- * Hands out ports no other process in the run can be listening on (INF-267:
- * a home given a port that `freePort` had freed can find a port-0 listener
- * there, and the guardrail then reads that listener as the home).
+ * Hands out ports no other process in the run can be listening on. A port a
+ * port-0 listener found and closed again can go to any other port-0 listener
+ * in the run, and two workers can be handed the same one: an e2e guardrail
+ * then read another listener as its home (INF-267), and an integration
+ * test's join reached another worker's home and was refused as not that Mac
+ * (INF-698).
  * Each port it hands out stays claimed by a listener on the port `count`
  * above it, so no other claimer on this computer - another worker, or
  * another run - hands it out while this one holds it.
@@ -54,7 +57,7 @@ export function portClaims(start = randomInt(CLAIMED_PORTS.count)): PortClaims {
 
 const workerClaims = portClaims();
 
-/** A port only this worker's home listens on, claimed until the worker exits. */
+/** A loopback port only this worker listens on, claimed until the worker exits. */
 export function claimedPort(): Promise<number> {
   return workerClaims.claim();
 }

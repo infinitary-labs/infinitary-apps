@@ -4,7 +4,8 @@ import type { DeviceGrant, DeviceView } from "@shared/devices";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   type HomeConnection,
@@ -95,7 +96,7 @@ async function home(options: { speaks?: Spelling; changes?: readonly string[] } 
     onProblem: () => {},
     onLeft: (device) => left.push(device),
   });
-  const port = await freePort();
+  const port = await claimedPort();
   const at = `127.0.0.1:${port}`;
   let connection: HomeConnection | null = null;
   const listen = async () => {

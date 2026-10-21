@@ -5,7 +5,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { devicePlace } from "@shared/signIns";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startStubApi } from "../../../tests/helpers/anthropicDialect";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { manualClock } from "../../../tests/helpers/manualClock";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { homeWorkspace } from "../../../tests/helpers/placedHome";
@@ -441,7 +441,7 @@ async function world() {
     return pairing;
   };
   stops.push(() => pairing?.dispose());
-  const port = await freePort();
+  const port = await claimedPort();
   let home = startHome({ userData, port, pairing: pairingNow, clock, piRuntime });
   stops.push(() => home.quit());
   await home.listen();

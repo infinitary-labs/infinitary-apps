@@ -18,7 +18,7 @@ import { DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "@shared/keymap";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
-import { freePort } from "../../tests/helpers/connectionClient";
+import { claimedPort } from "../../tests/helpers/claimedPort";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { Shell, type ShellOptions } from "./shell";
 
@@ -83,7 +83,7 @@ async function otherMac(
     onProblem: () => {},
     ...pairingOptions,
   });
-  const port = await freePort();
+  const port = await claimedPort();
   const at = `127.0.0.1:${port}`;
   let connection: HomeConnection | null = startConnection({
     dispatch,

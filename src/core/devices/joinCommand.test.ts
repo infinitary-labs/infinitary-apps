@@ -13,7 +13,7 @@ import {
   parsePairingLink,
 } from "@shared/devices";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { macRelease } from "../../../tests/helpers/macRelease";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type HomeConnection, startConnection } from "../connection/connection";
@@ -89,7 +89,7 @@ async function home(options: { now?: () => number; bundle?: string | null } = {}
     ...(options.now ? { now: options.now } : {}),
   });
   pairings.push(pairing);
-  const port = await freePort();
+  const port = await claimedPort();
   const at = `127.0.0.1:${port}`;
   let fetched = 0;
   const connection = startConnection({
@@ -247,7 +247,7 @@ describe("the command that adds another Mac", () => {
     );
 
     const link = parsePairingLink(invite.link);
-    const nobody = buildPairingLink({ ...link, at: `127.0.0.1:${await freePort()}` });
+    const nobody = buildPairingLink({ ...link, at: `127.0.0.1:${await claimedPort()}` });
     const away = await run(command(nobody), "yes\n");
     expect(away.code).toBe(1);
     expect(away.out).toBe(

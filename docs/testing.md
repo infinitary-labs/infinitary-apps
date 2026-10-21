@@ -83,6 +83,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Each global setup also drops the variables of the session that started the run (`tests/helpers/runnerSession.ts`: `CLAUDECODE`, `AI_AGENT`, `CLAUDE_*` and `ANTHROPIC_*`), so a run from a Claude crewmate starts its workers, apps and boxed Claude clients the way CI does; a test that wants one names it in the environment it builds.
   Work that writes after a test returns must be awaited first (`catalogRefreshesSettled` for Pi catalog refreshes).
   The leaked 300k-entry temp dir of 2026-09 made every mkdtemp cost seconds.
+- Test ports: a test that gives a home, a stand-in server or any other listener a loopback port takes it from `claimedPort` (`tests/helpers/claimedPort.ts`), in vitest and Playwright alike.
+  A port found by listening on port 0 and closing again is free only for that moment: another worker can be handed the same one, and the home that listens second fails while its join reaches the other worker's home, refused as not that Mac (INF-698).
+  A claimed port lies below every ephemeral range and stays claimed by its worker until the worker exits, so no other worker, run or port-0 listener on the computer takes it, and a home that quits can open again where it was.
 
 ## Full e2e runs are CI-only
 

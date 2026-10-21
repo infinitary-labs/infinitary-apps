@@ -54,8 +54,6 @@ export type ConnectionClient = {
   close: () => Promise<number>;
 };
 
-export { freePort } from "./freePort";
-
 /**
  * The upgrade a refusal test sends instead of the device's own: the same
  * pinned TLS, with the path, the device's key or a browser's Origin

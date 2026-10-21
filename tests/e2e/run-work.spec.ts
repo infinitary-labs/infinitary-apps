@@ -41,7 +41,7 @@ import { git } from "../../src/core/workspace/git";
 import { keptRefFor } from "../../src/core/workspace/workspaceService";
 import { HERE } from "../../src/shared/deviceNames";
 import { deviceChipOf } from "../../src/shared/platform";
-import { freePort } from "../helpers/connectionClient";
+import { claimedPort } from "../helpers/claimedPort";
 import { macRelease } from "../helpers/macRelease";
 import { type PlacedHome, startPlacedHome } from "../helpers/placedHome";
 import { scratchDir, socketScratchDir } from "../helpers/scratchDirs";
@@ -123,7 +123,7 @@ async function home(
   /** This Mac's own network addresses as the home reads them; none unless a test gives some. */
   network: () => NodeJS.Dict<NetworkInterfaceInfo[]> = () => ({}),
 ) {
-  let port = await freePort();
+  let port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-run-work-home-"), "devices"),
     onProblem: () => {},
@@ -166,7 +166,7 @@ async function home(
     /** The home's address changes: it stops answering where it was, and answers somewhere else. */
     move: async () => {
       await connection.close();
-      port = await freePort();
+      port = await claimedPort();
       connection = listen();
       await connection.settled();
     },
@@ -481,7 +481,7 @@ async function sshHome(options: {
       "PI_OFFLINE",
     ].map((name) => [name, them.env[name] ?? ""]),
   );
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir,
     onProblem: () => {},
@@ -1489,7 +1489,7 @@ test("a crewmate's turn runs on the app as a computer that runs work: the home h
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(userData, "devices"),
     onProblem: () => {},
@@ -1617,7 +1617,7 @@ test("a closed task with unreadable work history stays present and brings its wo
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(userData, "devices"),
     onProblem: () => {},
@@ -1709,7 +1709,7 @@ test("a task in a project works in a working copy the app that runs work cloned,
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(userData, "devices"),
     onProblem: () => {},
@@ -1806,7 +1806,7 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
   const { shell } = writeLoginShellStub(scratchDir("infinitary-login-shell-"), {});
   const env = { ...me.env, PATH: NO_GIT_PATH, SHELL: shell };
   const userData = scratchDir("infinitary-run-work-home-");
-  const port = await freePort();
+  const port = await claimedPort();
   const found: (FoundTools | undefined)[] = [];
   const pairing = new DevicePairing({
     dir: join(userData, "devices"),

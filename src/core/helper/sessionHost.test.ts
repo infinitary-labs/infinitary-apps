@@ -24,7 +24,7 @@ import {
   writeAnthropicText,
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { gif } from "../../../tests/helpers/gifFixture";
@@ -306,7 +306,7 @@ async function placed(
     ownUid: 501,
   });
   pairings.push(pairing);
-  const port = await freePort();
+  const port = await claimedPort();
   const listen = () => {
     const connection = startConnection({
       dispatch: home.dispatch,

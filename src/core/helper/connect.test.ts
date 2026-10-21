@@ -9,7 +9,7 @@ import {
   sshMessageLine,
 } from "@shared/sshConnection";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../../../tests/helpers/socketForward";
 import { type HomeConnection, startConnection } from "../connection/connection";
@@ -54,7 +54,7 @@ afterEach(async () => {
  * own SSH connection, as the join over that connection keeps it.
  */
 async function joined() {
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: `${scratchDir("infinitary-connect-home-")}/devices`,
     onProblem: () => {},

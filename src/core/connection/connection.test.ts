@@ -8,7 +8,8 @@ import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
 import { HOME_CAPABILITIES, PLACED_WORK_SINCE, PROTOCOL_VERSION } from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   claimLink,
@@ -122,7 +123,7 @@ async function home(
     ...pairingOptions,
   });
   pairings.push(pairing);
-  const port = options.port ?? (await freePort());
+  const port = options.port ?? (await claimedPort());
   const connection = startConnection({ ...core, ...connectionOptions, devices: pairing, port });
   open.push(connection);
   const at = `127.0.0.1:${port}`;

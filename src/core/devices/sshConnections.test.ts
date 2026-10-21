@@ -5,7 +5,8 @@ import { type DeviceSsh, deviceLabel } from "@shared/devices";
 import { type RemoteLoginAddOptions, remoteLoginWords } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import { forwardSocket } from "../../../tests/helpers/socketForward";
 import {
@@ -99,7 +100,7 @@ async function home(
     retryMs?: readonly number[];
   } = {},
 ) {
-  const port = await freePort();
+  const port = await claimedPort();
   const pairing = new DevicePairing({
     dir: join(scratchDir("infinitary-ssh-home-"), "devices"),
     onProblem: () => {},

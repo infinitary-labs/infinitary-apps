@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { createServer as createTlsServer, type Server } from "node:tls";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { connectClient, freePort } from "../../../tests/helpers/connectionClient";
+import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { connectClient } from "../../../tests/helpers/connectionClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { isLoopback } from "../connection/addresses";
 import { type HomeConnection, startConnection } from "../connection/connection";
@@ -56,7 +57,7 @@ async function home() {
     onProblem: () => {},
   });
   pairings.push(pairing);
-  const port = await freePort();
+  const port = await claimedPort();
   const connection = startConnection({
     dispatch,
     events: new CoreEventBus(),
@@ -178,7 +179,7 @@ describe("a device's dial carried by a relay", () => {
     it(`refuses through ${relay.name} when nothing answers, or another computer does`, async () => {
       const program = relay.program();
       const { pairing } = await home();
-      const silent = `127.0.0.1:${await freePort()}`;
+      const silent = `127.0.0.1:${await claimedPort()}`;
       const { link } = pairing.invite({ kind: "work", at: silent });
       const nothing = await claimLink(
         link,
@@ -192,7 +193,7 @@ describe("a device's dial carried by a relay", () => {
       const other = createKeyIdentity("Another computer");
       const server = createTlsServer({ key: other.key, cert: other.cert, minVersion: "TLSv1.3" });
       servers.push(server);
-      const port = await freePort();
+      const port = await claimedPort();
       await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
       const theHome = createKeyIdentity("The home");
       expect(other.pin).not.toBe(theHome.pin);

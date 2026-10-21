@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { HERE } from "@shared/deviceNames";
 import type { FolderRefreshCause, FolderRefreshRefusal } from "@shared/folderRefresh";
@@ -193,6 +193,12 @@ export function nearestFolderAbove(path: string): string {
   let dir = dirname(resolve(path));
   while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir);
   return dir;
+}
+
+/** True when `path` is `folder` itself or anywhere beneath it. */
+function holds(folder: string, path: string): boolean {
+  const rel = relative(resolve(folder), resolve(path));
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 /** What the check at each app start found in a project's folder (`refreshAtStart`). */
@@ -962,9 +968,10 @@ export class WorkspaceService {
    */
   async removeTaskWorktree(workspace: TaskWorkspace): Promise<void> {
     // A task that works in place (the personal workspace, a folder repair)
-    // has the repository itself as its directory: there is no worktree, and
-    // the fallback below would delete the folder.
-    if (!workspace.cwd || resolve(workspace.cwd) === resolve(workspace.repoDir)) return;
+    // has the repository itself, or the folder above a missing one, as its
+    // directory: there is no worktree, and the fallback below would delete
+    // that folder with everything in it (INF-585).
+    if (!workspace.cwd || holds(workspace.cwd, workspace.repoDir)) return;
     if (await this.parkInPool(workspace)) {
       try {
         await git(workspace.repoDir, ["branch", "-D", workspace.branch]);
@@ -983,7 +990,13 @@ export class WorkspaceService {
         await git(workspace.repoDir, ["worktree", "remove", "--force", workspace.cwd]);
       } catch {
         // The worktree dir may already be gone; prune bookkeeping either way.
-        await rm(workspace.cwd, { recursive: true, force: true });
+        // Only a tree under the worktrees area is deleted without git: any
+        // other directory git refused is not this repository's worktree,
+        // such as the folder a repair started in before its project's
+        // folder was named somewhere else (INF-585).
+        if (dirname(resolve(workspace.cwd)) === resolve(this.paths.worktreesDir)) {
+          await rm(workspace.cwd, { recursive: true, force: true });
+        }
         await git(workspace.repoDir, ["worktree", "prune"]);
       }
     }

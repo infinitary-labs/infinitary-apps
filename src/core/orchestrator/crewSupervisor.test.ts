@@ -1,6 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join } from "node:path";
@@ -23728,6 +23736,55 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
     expect(folderRepairs()).toHaveLength(1);
     expect(h.sessionSpecs.map((spec) => spec.cwd)).not.toContain(h.folder);
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-585: a repair that started above its missing folder and then failed
+  // to start handed that folder to the working copy's removal, which deleted
+  // it with every project beside it. Its goal: that folder stays untouched.
+  it("a repair that started above its missing folder and fails to start leaves that folder and the projects beside it as they were", async () => {
+    const h = await project();
+    const parent = dirname(h.folder);
+    const blog = join(parent, "blog");
+    mkdirSync(blog);
+    writeFileSync(join(blog, "post.md"), "# The captain's draft\n");
+    const untouched = () =>
+      expect(readFileSync(join(blog, "post.md"), "utf8")).toBe("# The captain's draft\n");
+    seedTask(h.tasks, {
+      id: "header01",
+      title: "Fix the header",
+      status: "queued",
+      repoId: h.repo.id,
+    });
+    // The captain moved the folder somewhere else.
+    const moved = join(scratchDir("infinitary-moved-"), "shop");
+    renameSync(h.folder, moved);
+    const unchecked = new Error("This custom connection needs its checked account.");
+    h.sessions.open.mockRejectedValueOnce(unchecked);
+
+    // The first start: the repair opens in the folder above, and its crewmate cannot open.
+    await h.supervisor.dispatchQueuedTask("header01");
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    await vi.waitFor(
+      () =>
+        expect(h.tasks.get(repair.id)?.gate).toMatchObject({
+          kind: "captain",
+          ref: "dispatch-failed",
+        }),
+      REAL_GIT_WAIT,
+    );
+    expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);
+    untouched();
+
+    // The captain names the folder's new place and presses Start; it fails again.
+    h.repos.configure(h.repo.id, { path: moved });
+    h.sessions.open.mockRejectedValueOnce(unchecked);
+    await h.supervisor.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
+    expect(h.sessions.open).toHaveBeenCalledTimes(2);
+    expect(h.tasks.get(repair.id)?.gate?.reason).toContain(unchecked.message);
+    untouched();
+    expect(await git(moved, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
     await h.supervisor.disposeAll();
   });
 

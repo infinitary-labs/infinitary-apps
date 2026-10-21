@@ -25,7 +25,8 @@ A later refusal on the same project while that task is open or active updates it
 Once a minute the host reads each such folder without changing it (`WorkspaceService.folderCurrent`), and a task whose folder is clean, on its default branch and at or past the merged version closes as finished with a line saying so, unless its crewmate is mid-turn or one of its cards is up (`CrewSupervisor.closeCurrentFolders`).
 A refusal for `no-origin` or `no-default-branch` read no default branch, so the minute's read takes it from the folder's own `origin/HEAD`, as the next merge's update does (INF-583).
 Its brief has the crewmate add origin at the project's address when the folder has none, and name origin's default branch with `git remote set-head origin --auto`, since a pull of one branch leaves `origin/HEAD` unset.
-Removing a working copy never touches a directory that is the repository itself, so a failed start of a task that works in place leaves the folder as it was.
+Removing a working copy never touches a directory that is the repository itself or holds it, so a failed start of a task that works in place leaves its folder, or the folder above a missing one with everything in it, as it was (INF-585).
+It deletes a directory git refused to remove only when it is in the worktrees area, so a repair whose project's folder was since named somewhere else leaves the folder it started in.
 
 A folder that is gone is `missing`, and one git cannot read is `unreadable`; neither reads as having no address (INF-572).
 Work that needs the folder notices it then, never earlier: a merge's update says it is missing, and a task starting on this computer, a branch coming home from a computer that runs work (`PlacedCopies.bringBranchHome`), and a merge into the folder itself (`SettleService`) are refused with words naming the folder and its repair (`CrewSupervisor.folderMissing`, `folderMissingText`).

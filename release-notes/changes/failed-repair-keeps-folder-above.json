@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "failed-repair-keeps-folder-above",
+      "kind": "fix",
+      "title": "A folder repair that cannot start leaves the folder above alone",
+      "body": "When Bring the folder up to date started for a missing project folder and then could not start, Infinitary could delete the folder that held the project, with every other project in it. It now leaves that folder and everything in it as it was.",
+      "area": "projects",
+      "noPicture": "It shows only as folders that stay where they were, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

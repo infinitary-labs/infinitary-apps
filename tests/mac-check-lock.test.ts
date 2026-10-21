@@ -34,6 +34,15 @@ const { basename } = require('node:path');
 if (process.env.CHECK_FAIL) process.exit(7);
 if (basename(process.argv[1]) === 'pnpm' && process.argv[2] !== 'build') process.exit(0);
 console.log('process:' + process.env.CHECK_NAME + ':' + process.pid + ':' + process.ppid);
+if (process.env.CHECK_RECORDS) {
+  // INF-692: the process groups the lease's records named as this command started.
+  const { readdirSync, readFileSync } = require('node:fs');
+  const folder = process.env.CHECK_RECORDS;
+  const groups = readdirSync(folder)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => JSON.parse(readFileSync(folder + '/' + name, 'utf8')).group);
+  console.log('records:' + process.env.CHECK_NAME + ':' + JSON.stringify(groups));
+}
 console.log('started:' + process.env.CHECK_NAME);
 // Like a real build or gate, it runs until released or signalled, even if its input closes.
 process.stdin.once('data', () => process.exit(0));
@@ -55,6 +64,16 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
 `,
     { mode: 0o755 },
   );
+  // INF-692: a ps that answers as slowly as on the loaded hosted runner, so a holder reads its
+  // processes well after its command could have started.
+  const slow = join(root, "slow");
+  mkdirSync(slow);
+  writeFileSync(
+    join(slow, "ps"),
+    `#!/bin/bash\nsleep 0.25\nPATH=${JSON.stringify(hostEnv().PATH)} exec ps "$@"\n`,
+    { mode: 0o755 },
+  );
+  const records = join(home, "Library/Caches/infinitary-ci/checks.lock.holders");
   const env = {
     ...hostEnv(),
     HOME: home,
@@ -75,7 +94,14 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
       args = "",
       extra = {},
       limit,
-    }: { fail?: boolean; args?: string; extra?: Record<string, string>; limit?: string } = {},
+      slowHolder = false,
+    }: {
+      fail?: boolean;
+      args?: string;
+      extra?: Record<string, string>;
+      limit?: string;
+      slowHolder?: boolean;
+    } = {},
   ): Work {
     // A virtual Mac gate is the same step with the repository switch set.
     const virtual =
@@ -106,6 +132,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
         CHECK_NAME: name,
         CHECK_FAIL: fail ? "yes" : "",
         PHONE_VIRTUAL_MAC: virtual,
+        ...(slowHolder ? { PATH: `${slow}:${env.PATH}`, CHECK_RECORDS: records } : {}),
         ...extra,
       },
       detached: true,
@@ -337,6 +364,21 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       expect(await desktop.result).toBe(0);
     } finally {
       if (left && alive(left)) process.kill(left, "SIGKILL");
+      await f.close();
+    }
+  });
+  // INF-692: on the loaded hosted runner a command started before its holder had recorded the
+  // lease, so a check that found that holder killed or stopped had no record to act on.
+  it("starts a command only once its lease is recorded, however slowly the holder reads its processes", async () => {
+    const f = fixture();
+    try {
+      const phone = f.launch("slow-holder", "package", { slowHolder: true });
+      const { command } = await processOf(phone, "slow-holder");
+      const named = await phone.wait(/^records:slow-holder:/);
+      expect(JSON.parse(named.slice("records:slow-holder:".length))).toContain(command);
+      phone.release();
+      expect(await phone.result).toBe(0);
+    } finally {
       await f.close();
     }
   });

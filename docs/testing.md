@@ -120,6 +120,7 @@ The helper holds the lease itself, as the command's parent, and starts the comma
 The helper passes interrupt, termination and hangup on to the command's process group and exits with the command's status.
 Every wait prints a line: `waiting for checks queued ahead` at the entry lock and `waiting for active checks` at the lease, then which recorded checks hold the lease, since when and their limits.
 Each admitted command leaves a record in `checks.lock.holders/` beside the lock: its holder, its command's process group, when it was admitted and its maximum hold, which `--max-hold` gives on every wrapped command.
+The command waits at a gate until its record is written, so a check that finds its holder gone or stopped always has a record to act on, and a holder that dies before writing it leaves no command running (INF-692).
 The kernel lock alone decides who holds the lease; a record never blocks anyone.
 A waiting check reads the records every second.
 It takes the lease back at once from a holder whose command has ended, and from a holder past its maximum hold by stopping its command with SIGTERM, then SIGKILL after 30 seconds.
@@ -134,7 +135,7 @@ The native job's 165-minute limit allows 45 minutes for both device gates, 105 a
 The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
 Desktop work may run between the two device gates.
 Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
-`tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure, cancellation, the waiting lines, a leftover background process, a killed holder, a holder that outlived its command and a lease held past its limit.
+`tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure, cancellation, the waiting lines, a leftover background process, a command that starts only once its lease is recorded, a killed holder, a holder that outlived its command and a lease held past its limit.
 With the repository variable `PHONE_VIRTUAL_MAC` set, both device gates run in a fresh virtual Mac on their own runner and take no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 

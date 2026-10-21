@@ -10,6 +10,7 @@ A record beside the lock says who holds the lease, since when and for how long
 at most. It never grants or blocks anything; a waiting check reads it to take
 the lease back from a holder whose command has ended, or one held past its
 limit, and to stop a command whose holder died. Waiting checks print why.
+The command starts only once its record is written (INF-692).
 """
 import argparse
 import fcntl
@@ -32,6 +33,24 @@ GRACE = 30
 # A command whose lease was taken back fails with timeout(1)'s status.
 TAKEN_BACK = 124
 FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+# The command's process first runs this: it waits until the holder has recorded it, then
+# becomes the command. A holder that ends first closes the gate, and the command never runs.
+GATE = """
+import os, signal, sys
+# Python ignores SIGPIPE and SIGXFSZ, and the command would inherit that; it gets the defaults.
+for number in (signal.SIGINT, signal.SIGPIPE, signal.SIGXFSZ):
+    signal.signal(number, signal.SIG_DFL)
+gate = int(sys.argv[1])
+if not os.read(gate, 1):
+    print("Mac checks: the lease's holder ended before its command started; not starting it", flush=True)
+    sys.exit(1)
+os.close(gate)
+try:
+    os.execvp(sys.argv[2], sys.argv[2:])
+except OSError as error:
+    print(f"Mac checks: could not start {sys.argv[2]}: {error}", file=sys.stderr, flush=True)
+    sys.exit(127)
+"""
 
 
 def lock_file(path):
@@ -276,7 +295,14 @@ def hold(access, max_hold, command, lease, folder):
     for number in FORWARDED:
         signal.signal(number, forward)
     # Its own session, so taking the lease back can stop everything the command started.
-    child = subprocess.Popen(command, start_new_session=True)
+    # It waits at the gate, so a check that finds this holder gone can always stop it.
+    gate, opener = os.pipe()
+    child = subprocess.Popen(
+        [sys.executable, "-I", "-c", GATE, str(gate), *command],
+        start_new_session=True,
+        pass_fds=(gate,),
+    )
+    os.close(gate)
     for number in pending:
         signal_group(child.pid, number)
     remove(note)
@@ -297,6 +323,12 @@ def hold(access, max_hold, command, lease, folder):
         )
     except OSError as error:
         print(f"Mac checks: could not record this lease, so no check can take it back: {error}", flush=True)
+    try:
+        os.write(opener, b"1")
+    except BrokenPipeError:
+        # A forwarded signal ended the command at the gate; its status says so below.
+        pass
+    os.close(opener)
     try:
         status = child.wait()
     finally:

@@ -4,7 +4,11 @@ import SwiftUI
 struct PhoneTasks: View {
     let session: ReadOnlySession
     @Environment(PhoneMessageContext.self) private var messageContext
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var query = ""
+    @State private var searchOpen = false
+    @State private var focusOnOpen = false
+    @FocusState private var searchFocused: Bool
     @State private var earlier: [PhoneTask] = []
     @State private var problem: String?
     @State private var selected: PhoneTask?
@@ -23,82 +27,147 @@ struct PhoneTasks: View {
         }
     }
 
+    // INF-589 item 9: search waits above the list until it is pulled down, as the Mac's sits behind its icon.
+    // VoiceOver cannot pull past the top of a list, so it always finds the field.
+    private var searchShown: Bool { searchOpen || !query.isEmpty || voiceOver }
+
     var body: some View {
-        VStack(spacing: PhoneTheme.space3) {
-            TextField("Search tasks", text: $query).textFieldStyle(.phone)
-                .accessibilityIdentifier("task-search")
-            if let problem { Text(problem).foregroundStyle(PhoneTheme.warning) }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PhoneTheme.space3) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+                if searchShown { search }
+                if let problem { Text(problem).foregroundStyle(PhoneTheme.warning) }
+                LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
                     if rows.isEmpty { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
                     if query.isEmpty {
                         let groups = session.board?.groups ?? [:]
                         ForEach(PhoneTaskGroup.allCases, id: \.rawValue) { group in
                             let members = rows.filter { groups[$0.id] == group }
                             VStack(spacing: 0) {
-                                Button {
-                                    if !expanded.insert(group).inserted { expanded.remove(group) }
-                                } label: {
-                                    HStack {
-                                        Text(group.title)
-                                        Text("\(members.count)")
-                                        Spacer()
-                                        Image(systemName: expanded.contains(group) ? "chevron.down" : "chevron.right").accessibilityHidden(true)
-                                    }.font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).frame(minHeight: 44)
-                                        .contentShape(Rectangle())
-                                }.buttonStyle(.plain).accessibilityIdentifier("group-\(group.rawValue)")
-                                    .accessibilityValue(expanded.contains(group) ? "Expanded" : "Collapsed")
+                                groupHeader(group, count: members.count)
                                 if expanded.contains(group) {
-                                    ForEach(members) { task in taskRow(task) }
+                                    ForEach(members) { task in taskRow(task, last: task.id == members.last?.id) }
                                 }
                             }
                         }
                     } else {
-                        ForEach(rows) { task in taskRow(task) }
+                        VStack(spacing: 0) {
+                            ForEach(rows) { task in taskRow(task, last: task.id == rows.last?.id) }
+                        }
                     }
                 }
-            }.accessibilityIdentifier("tasks-list")
-        }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity).background(PhoneTheme.background)
-            .task(id: "\(query)|\(session.contact)") {
-                earlier = []; problem = nil
-                let requested = query
-                guard !requested.isEmpty, session.contact == "in-reach" else { return }
-                guard requested.utf16.count <= 200 else { problem = "Use a shorter search."; return }
-                do {
-                    let found: [PhoneTask] = try await session.request(.search, args: [requested])
-                    guard !Task.isCancelled, query == requested else { return }
-                    earlier = found
-                } catch { if !Task.isCancelled { problem = error.localizedDescription } }
-            }
-            .sheet(item: $selected, onDismiss: { messageContext.taskID = nil }) { task in
-                NavigationStack {
-                    PhoneTaskRecord(session: session, initial: task)
-                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { selected = nil }.accessibilityIdentifier("close-record") } }
-                }.font(PhoneFont.body).tint(PhoneTheme.accent)
-            }
+            }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.always, axes: .vertical)
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y + geometry.contentInsets.top < -PhoneTheme.space5 * 2
+        } action: { _, pulled in
+            if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
+        }
+        .background { Button("Find a task") { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).hidden() }
+        .background(PhoneTheme.background)
+        .accessibilityIdentifier("tasks-list")
+        .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty { closeSearch() } }
+        .onDisappear { if query.isEmpty { searchOpen = false } }
+        .task(id: "\(query)|\(session.contact)") {
+            earlier = []; problem = nil
+            let requested = query
+            guard !requested.isEmpty, session.contact == "in-reach" else { return }
+            guard requested.utf16.count <= 200 else { problem = "Use a shorter search."; return }
+            do {
+                let found: [PhoneTask] = try await session.request(.search, args: [requested])
+                guard !Task.isCancelled, query == requested else { return }
+                earlier = found
+            } catch { if !Task.isCancelled { problem = error.localizedDescription } }
+        }
+        .sheet(item: $selected, onDismiss: { messageContext.taskID = nil }) { task in
+            NavigationStack {
+                PhoneTaskRecord(session: session, initial: task)
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { selected = nil }.accessibilityIdentifier("close-record") } }
+            }.font(PhoneFont.body).tint(PhoneTheme.accent)
+        }
     }
 
-    private func taskRow(_ task: PhoneTask) -> some View {
-        Button { messageContext.taskID = task.id; selected = task } label: {
-            HStack(alignment: .top, spacing: PhoneTheme.space3) {
+    private var search: some View {
+        HStack(spacing: PhoneTheme.space2) {
+            TextField("Search tasks", text: $query).textFieldStyle(.phone)
+                .focused($searchFocused).submitLabel(.search)
+                .onAppear {
+                    guard focusOnOpen else { return }
+                    focusOnOpen = false
+                    Task { @MainActor in searchFocused = true }
+                }
+                .onKeyPress(.escape) {
+                    if query.isEmpty { closeSearch() } else { query = "" }
+                    return .handled
+                }
+                .accessibilityIdentifier("task-search")
+            if !voiceOver {
+                Button { closeSearch() } label: {
+                    Image(systemName: "xmark").font(PhoneFont.callout).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).foregroundStyle(PhoneTheme.muted)
+                    .accessibilityLabel("Close search").accessibilityIdentifier("close-task-search")
+            }
+        }.transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    // Find a task (Shift-Command-F), the Mac's own key, opens the search with the caret in it.
+    private func openSearch() {
+        if searchShown { searchFocused = true; return }
+        focusOnOpen = true
+        withAnimation(.snappy) { searchOpen = true }
+    }
+
+    // Closing lets go of the words, so a closed search never narrows the list, as on the Mac.
+    private func closeSearch() {
+        query = ""; searchFocused = false
+        withAnimation(.snappy) { searchOpen = false }
+    }
+
+    // The Mac's micro label: uppercase, tracked, tertiary, with the count in mono.
+    private func groupHeader(_ group: PhoneTaskGroup, count: Int) -> some View {
+        Button {
+            if !expanded.insert(group).inserted { expanded.remove(group) }
+        } label: {
+            HStack(spacing: PhoneTheme.space2) {
+                Text(group.title).font(Self.label).textCase(.uppercase).tracking(Self.labelTracking)
+                Text("\(count)").font(PhoneFont.micro)
+                Spacer()
+                Image(systemName: expanded.contains(group) ? "chevron.down" : "chevron.right")
+                    .font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary).accessibilityHidden(true)
+            }.foregroundStyle(PhoneTheme.muted).frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityIdentifier("group-\(group.rawValue)")
+            .accessibilityLabel("\(group.title), \(count)")
+            .accessibilityValue(expanded.contains(group) ? "Expanded" : "Collapsed")
+    }
+
+    // One line, as the Mac's row: status mark, key in dim mono, the title, and the project in dim mono at the end.
+    private func taskRow(_ task: PhoneTask, last: Bool) -> some View {
+        let project = session.board?.projects.first(where: { $0.id == task.projectId })?.name
+        return Button { messageContext.taskID = task.id; selected = task } label: {
+            HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
                 Image(systemName: task.status == "open" && task.waitingCardId == nil ? "circle" : "circle.fill")
                     .font(.system(size: PhoneTheme.space2)).foregroundStyle(task.waitingCardId != nil ? PhoneTheme.accent : task.activity == "running" ? PhoneTheme.warning : PhoneTheme.secondary)
-                    .padding(.top, PhoneTheme.space2).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                        Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
-                        Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
-                    }
-                    if let project = session.board?.projects.first(where: { $0.id == task.projectId }) {
-                        Text(project.name).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: Self.markWidth).accessibilityHidden(true)
+                HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
+                    Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).fixedSize()
+                    Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
+                    Spacer(minLength: PhoneTheme.space2)
+                    if let project { Text(project).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
+                }
             }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("task-\(task.id)")
-            .accessibilityLabel("\(task.key), \(task.title), \(task.state)")
-        .overlay(alignment: .bottom) { Rectangle().fill(PhoneTheme.line).frame(height: 1) }
+            .accessibilityLabel([task.key, task.title, project, task.state].compactMap(\.self).joined(separator: ", "))
+        .overlay(alignment: .bottom) {
+            // Inset to the words, never under the mark, and none after a group's last row.
+            if !last { Rectangle().fill(PhoneTheme.line).frame(height: 1).padding(.leading, Self.markWidth + PhoneTheme.space3) }
+        }
     }
+
+    private static let markWidth: CGFloat = 12
+    private static let label = Font.custom("SpaceGrotesk-Light", size: 11, relativeTo: .caption2).weight(.medium)
+    private static let labelTracking: CGFloat = 1
 }
 
 struct PhoneTaskRecord: View {
@@ -110,12 +179,21 @@ struct PhoneTaskRecord: View {
     @State private var showingCrew = false
     @State private var draft = ""
     @State private var busy = false
+    @State private var pressed: String?
     @State private var problem: String?
     @State private var readProblem: String?
+    @ScaledMetric(relativeTo: .caption) private var markLift: CGFloat = 4
     private var task: PhoneTask { detail ?? initial }
+    private var steerable: Bool { showingCrew && task.canSteer }
+    private var canStart: Bool { task.moves?["start-task"]?.ok == true }
+    private var canContinue: Bool { task.moves?["continue-task"]?.ok == true }
+    private var canInterrupt: Bool { steerable && live?.since != nil }
+    private var hasActions: Bool {
+        (task.status == "open" || task.status == "active") && (steerable || canStart || canContinue)
+    }
 
     var body: some View {
-        VStack(spacing: PhoneTheme.space3) {
+        VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PhoneTheme.space4) {
                     // The record's title is the task's own; its key stays in mono on the line below for whoever looks for it.
@@ -133,8 +211,7 @@ struct PhoneTaskRecord: View {
                     if showingCrew { crewContent } else { infoContent }
                 }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity)
             }
-            if let problem { Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning).padding(.horizontal).accessibilityIdentifier("task-problem") }
-            if task.status == "open" || task.status == "active" { actions.padding() }
+            if hasActions || problem != nil { foot }
         }.background(PhoneTheme.background).navigationBarTitleDisplayMode(.inline)
             .task(id: "\(session.contact)|\(showingCrew)") {
                 guard session.contact == "in-reach" else { return }
@@ -161,15 +238,41 @@ struct PhoneTaskRecord: View {
             if !task.blockedBy.isEmpty { section("Waiting for", task.blockedBy.joined(separator: ", ")) }
             if let model = task.modelLabel { section("Crewmate", "\(task.assignee ?? "Crewmate") · \(model)") }
             Text("Timeline").font(PhoneFont.headline)
-            ForEach(task.events ?? []) { event in
-                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    Text(event.text).textSelection(.enabled)
-                    Text(Date(timeIntervalSince1970: event.at / 1000).formatted(date: .abbreviated, time: .shortened))
-                        .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
-                }.accessibilityIdentifier("task-event-\(event.kind)")
-                Divider()
+            timeline
+        }
+    }
+
+    // INF-589 item 14: each event on a hairline rail, its words at caption size and its time at the right.
+    private var timeline: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { clock in
+            VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+                ForEach(task.events ?? []) { event in
+                    let at = Date(timeIntervalSince1970: event.at / 1000)
+                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
+                        Circle().fill(PhoneTheme.muted).frame(width: Self.mark, height: Self.mark)
+                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + markLift }
+                            .accessibilityHidden(true)
+                        Text(event.text).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                            .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(Self.time(at, now: clock.date)).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
+                            .fixedSize().accessibilityLabel(at.formatted(date: .abbreviated, time: .shortened))
+                    }.accessibilityElement(children: .combine).accessibilityIdentifier("task-event-\(event.kind)")
+                }
+            }
+            .background(alignment: .leading) {
+                Rectangle().fill(PhoneTheme.line).frame(width: 1).padding(.leading, (Self.mark - 1) / 2)
+                    .padding(.vertical, PhoneTheme.space2).accessibilityHidden(true)
             }
         }
+    }
+
+    private static let mark: CGFloat = 5
+
+    /// Today's events show only their time; an earlier day adds its date, never the year of every line.
+    static func time(_ at: Date, now: Date) -> String {
+        Calendar.current.isDate(at, inSameDayAs: now)
+            ? at.formatted(date: .omitted, time: .shortened)
+            : at.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }
 
     private var crewContent: some View {
@@ -192,31 +295,54 @@ struct PhoneTaskRecord: View {
         }
     }
 
+    // INF-589 item 10: the record's foot reads as a card's footer, on the panel color under a hairline.
+    private var foot: some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+            if let problem { Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("task-problem") }
+            if hasActions { actions }
+        }.padding(PhoneTheme.space4).frame(maxWidth: 750).frame(maxWidth: .infinity)
+            .background(PhoneTheme.panel)
+            .overlay(alignment: .top) { Rectangle().fill(PhoneTheme.line).frame(height: 1) }
+    }
+
     @ViewBuilder private var actions: some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            if showingCrew && task.canSteer {
-                TextField("Message to the crewmate", text: $draft, axis: .vertical).lineLimit(1...4)
-                    .textFieldStyle(.phone).disabled(busy).accessibilityIdentifier("steer-box")
-                HStack {
-                    Button("Steer") { change(.steer, args: [task.id, draft], clearDraft: true) }
-                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("steer-task")
-                    if live?.since != nil {
-                        Button("Interrupt", role: .destructive) { change(.interrupt, args: [task.id]) }
-                            .accessibilityIdentifier("interrupt-task")
-                    }
-                }.buttonStyle(.bordered).controlSize(.large)
+        VStack(spacing: PhoneTheme.space3) {
+            if steerable { steerBox }
+            if canInterrupt || canStart || canContinue {
+                // The default is lit and last, as on a card; Interrupt is the bordered secondary beside it.
+                HStack(spacing: PhoneTheme.space2) {
+                    if canInterrupt { choice("Interrupt", id: "interrupt-task", primary: false) { change(.interrupt, args: [task.id], from: "interrupt-task") } }
+                    if canStart { choice("Start", id: "start-task", primary: true) { change(.run, args: [task.id, "start-task"], from: "start-task") } }
+                    if canContinue { choice("Continue", id: "continue-task", primary: true) { change(.run, args: [task.id, "continue-task"], from: "continue-task") } }
+                }
             }
-            HStack {
-                if task.moves?["start-task"]?.ok == true {
-                    Button("Start") { change(.run, args: [task.id, "start-task"]) }.accessibilityIdentifier("start-task")
-                }
-                if task.moves?["continue-task"]?.ok == true {
-                    Button("Continue") { change(.run, args: [task.id, "continue-task"]) }.accessibilityIdentifier("continue-task")
-                }
-                if busy { ProgressView() }
-            }.buttonStyle(.borderedProminent).controlSize(.large)
         }.disabled(busy || !session.canChange)
+    }
+
+    // The composer's capsule, with Steer as its send arrow, dimmed until there are words to send.
+    private var steerBox: some View {
+        HStack(alignment: .center, spacing: PhoneTheme.space2) {
+            TextField("Message to the crewmate", text: $draft, axis: .vertical).lineLimit(1...4)
+                .disabled(busy).accessibilityIdentifier("steer-box")
+            Button { change(.steer, args: [task.id, draft], clearDraft: true, from: "steer-task") } label: {
+                Group {
+                    if busy && pressed == "steer-task" { ProgressView() }
+                    else { Label("Steer", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly) }
+                }.frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+            }.disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("steer-task")
+        }.font(PhoneFont.callout)
+            .padding(.leading, PhoneTheme.space4).padding(.trailing, PhoneTheme.space2)
+            .background(PhoneTheme.surface, in: Capsule())
+            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+    }
+
+    private func choice(_ title: String, id: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).opacity(busy && pressed == id ? 0 : 1)
+                .overlay { if busy && pressed == id { ProgressView() } }
+                .frame(maxWidth: .infinity).padding(.vertical, PhoneTheme.space2)
+        }.modifier(PhoneRecordChoiceStyle(primary: primary)).accessibilityIdentifier(id)
     }
 
     private func section(_ title: String, _ text: String) -> some View {
@@ -237,10 +363,10 @@ struct PhoneTaskRecord: View {
         } catch { if !Task.isCancelled { readProblem = error.localizedDescription } }
     }
 
-    private func change(_ channel: PhoneRequest, args: [Any], clearDraft: Bool = false) {
+    private func change(_ channel: PhoneRequest, args: [Any], clearDraft: Bool = false, from control: String) {
         guard !busy, session.canChange else { return }
         if clearDraft && draft.utf16.count > PhoneLimits.steer { problem = "This message is too long. Shorten it before sending."; return }
-        busy = true; problem = nil
+        busy = true; pressed = control; problem = nil
         Task {
             defer { busy = false }
             do {
@@ -250,6 +376,15 @@ struct PhoneTaskRecord: View {
                 await refresh()
             } catch { problem = error.localizedDescription }
         }
+    }
+}
+
+/// A card's choices: the default prominent, with the void's ink on the accent in either appearance, the rest bordered.
+private struct PhoneRecordChoiceStyle: ViewModifier {
+    let primary: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if primary { content.buttonStyle(.borderedProminent).foregroundStyle(PhoneTheme.onAccent) }
+        else { content.buttonStyle(.bordered) }
     }
 }
 

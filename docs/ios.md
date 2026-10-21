@@ -136,6 +136,7 @@ The system tab accessory is fixed-height and cannot contain the composer’s tur
 The iPad's wide landscape workspace places collapsible Activity and Tasks panels beside the stage and puts the composer at the stage's foot.
 Portrait or narrow multitasking returns to tabs; layout measurement excludes the keyboard.
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
+The task key sits inline before the words at micro size, as on the Mac's feed line.
 It exposes the full local timestamp to accessibility.
 `PhoneSymbol` supplies native outline template images for the system's tinted chrome.
 `PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` puts a sheet on the panel color with a hairline at its edge.
@@ -167,12 +168,19 @@ Command-Return sends from either message field; native controls retain hardware-
 The Tasks tab combines a filter of the live board with the Mac’s earlier-task search.
 Its five groups and their labels come from `src/shared/nowPanel.ts`, generated as a finite native lookup so the phone does not own another grouping rule.
 The phone keeps active parent trees together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
+Each group's header is a micro uppercase label with its count, as on the Mac.
 Waiting on you, Working and Queued start expanded; Backlog and Done start collapsed, with counts and keyboard-reachable disclosure buttons.
-Each row shows its status mark, key, title and project, with the newest task first inside each group.
+Each row is one line: status mark, key, title and then the project, with the newest task first inside each group and dividers inset past the mark.
+The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
+Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
+VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.
 A record shows the goal, captain’s words, progress, latest report, model and timeline; its Crewmate section reads the redacted session and live words from their Mac owners.
+The timeline's events sit on a hairline rail in caption size, each time right-aligned.
 The open record refreshes once a second, as the desktop transcript does, and no hidden record polls.
 Start and Continue come only from the Mac’s `moves`; Steer and Interrupt use the existing captain-owned task channels, never a phone worker.
 Interrupt stops a running turn and keeps its task idle and steerable; Continue is offered only when the Mac marks a task Interrupted, such as after recovery.
+The record's actions sit at its foot like a card's footer: Start or Continue full width and lit, and Interrupt bordered beside it.
+The crewmate message box above them is a capsule whose arrow sends the steer.
 Tool results open on demand through their published read.
 Task cards, browser pages and rich transcript pictures remain outside this piece.
 
@@ -309,7 +317,7 @@ Native keyboard dictation exposes no listening signal: the phone never infers li
 Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
 
 Its talk-and-tasks section chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
-It searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
+It pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
 It also checks that the foreground notice opens its own card, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.

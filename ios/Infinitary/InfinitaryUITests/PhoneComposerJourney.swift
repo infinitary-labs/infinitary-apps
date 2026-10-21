@@ -23,7 +23,7 @@ import XCTest
     for name in ["Activity", "Tasks", "Cards"] {
         tab(name)
         let surface = name == "Activity" ? app.scrollViews["activity-list"]
-            : name == "Tasks" ? app.textFields["task-search"] : app.scrollViews["card-scroll"]
+            : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
         XCTAssertTrue(surface.waitForExistence(timeout: 10), "The requested tab actually opens")
         XCTAssertTrue(surface.isHittable)
         XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
@@ -43,9 +43,10 @@ import XCTest
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
             "The landscape composer belongs to the stage beside the sidebar")
         phoneActivityDisclosure(in: sidebar).tap()
-        let search = sidebar.textFields["task-search"]
-        XCTAssertTrue(search.waitForExistence(timeout: 10), "Collapsing Activity reveals Tasks in the landscape sidebar")
-        XCTAssertTrue(search.isHittable)
+        // The search waits above the list until it is pulled down (INF-589 item 9), so the first group stands for Tasks.
+        let tasks = sidebar.buttons["group-waiting"]
+        XCTAssertTrue(tasks.waitForExistence(timeout: 10), "Collapsing Activity reveals Tasks in the landscape sidebar")
+        XCTAssertTrue(tasks.isHittable)
     }
     XCTAssertEqual(input.value as? String, words, "Rotating keeps the unsent words")
     XCTAssertTrue(input.isHittable, "The composer remains visible at the stage's foot")

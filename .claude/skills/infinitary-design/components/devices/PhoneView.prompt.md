@@ -39,7 +39,7 @@ Tasks joins those tabs when the task reader is present, never as an inert placeh
 Landscape iPad uses two columns: collapsible Activity and, when present, Tasks panels in the sidebar, with the stage alongside at up to 560 points.
 Portrait and narrow multitasking return to one column with tabs; the tablet's width and height decide the layout, not its physical orientation alone.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.
-A row has a semantic kind dot, the computer-authored words, an optional task key in mono before them, and a relative mono age.
+A row has a semantic kind dot, the computer-authored words, an optional task key in micro mono inline before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
 Cards shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
@@ -82,7 +82,7 @@ Portrait and iPad retain the stacked layout; a landscape card must show its full
 Dictation is the keyboard's own.
 While the keyboard is open, a native Done button occupies the leading navigation slot and supports Shift-Command-K without sending or clearing the draft.
 Its command belongs to the persistent navigation bar, not the keyboard's transient accessory view.
-Tasks uses the desktop's five groups, search, status/key/title/project rows and records with their action bar.
+Tasks uses the desktop's five groups, search, status/key/title/project rows and records with their actions at the foot.
 
 ## On the computer
 
@@ -100,12 +100,16 @@ Photos opens the system library picker, and selected photos appear as removable 
 Send submits words and photos once; a refusal keeps the draft and says why, and an unconfirmed send asks the person to check the Mac before sending again.
 Out of reach and a read-only connection retain the view but refuse every change, without sending it later.
 The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
+Each group header is a micro uppercase tracked label with its count, as on the Mac.
 The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.
-A row has a status mark, mono key, title and project; active parent trees stay together.
+A row is one line: status mark, mono key, title, then the project in mono; dividers start past the mark, and active parent trees stay together.
+The search waits above the list until it is pulled down from the top; Shift-Command-F opens it, and VoiceOver always shows it.
 A task opens its record in the same column: goal, captain’s words, progress, outcome and timeline, plus a Crewmate section for the session and its direct message box.
+The timeline's events sit on a hairline rail in caption size, with each time right-aligned.
 The record's heading is the task's own title, with its key in mono at the start of the line below; the bar above it carries no key.
 Start and Continue follow the Mac’s own allowed moves; Steer sends to that crewmate, and Interrupt stops only its current turn.
-A closed task remains readable without a message box or action bar.
+The actions sit at the record's foot like a card's footer: Start or Continue full width with the accent fill, Interrupt bordered beside it, and above them a capsule message box whose arrow is Steer.
+A closed task remains readable without a message box or actions.
 New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
 The notice is a quiet pill under the title on every tab: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
 A tap opens the card on the Cards tab and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.

@@ -214,14 +214,15 @@ struct PhoneActivity: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { timeline in
-            LazyVStack(alignment: .leading, spacing: PhoneTheme.space4) {
+            LazyVStack(alignment: .leading, spacing: PhoneTheme.space3) {
                 if lines.isEmpty { Text("No activity yet").foregroundStyle(PhoneTheme.muted).font(PhoneFont.callout) }
                 ForEach(Array(lines.reversed().enumerated()), id: \.offset) { _, line in
                     HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                         Circle().fill(tone(line.kind)).frame(width: 6, height: 6).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                        // INF-589 item 14: the key sits inline before the words at micro size, as the Mac's feed line.
+                        HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                             if let key = line.taskKey {
-                                Text(key).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                                Text(key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
                             }
                             Text(line.text).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                                 .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("activity-text")

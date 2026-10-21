@@ -429,6 +429,14 @@ async function openRecordFromPanel(page: Page, taskId: string): Promise<void> {
   await expectRecordBody(page);
 }
 
+/**
+ * How long a card or a record whose body frame has not drawn stays unseen
+ * before it appears as it is: the stage's hold, the frame watchdog's budget
+ * (`HOLD_LIMIT_MS`, FRAME_WATCHDOG_INTERVAL_MS x FRAME_WATCHDOG_MISSES),
+ * plus slack.
+ */
+const HOLD_WINDOW_MS = 1_000 * 4 + 3_000;
+
 test("while a decision card waits the bar keeps Drop task, and Show the card brings it forward", async () => {
   const { page } = launched;
   // Page the stack away from the decision.
@@ -450,6 +458,12 @@ test("while a decision card waits the bar keeps Drop task, and Show the card bri
   await page.screenshot({ path: test.info().outputPath("record-waiting.png") });
   await next(page).click();
   await expect(shownCard(page, DECISION_TITLE)).toBeVisible();
+  // It appears once its body has drawn, and only then takes the window's
+  // focus (`focusCard`); until then the record it replaces stays in sight.
+  // The test ends once it has appeared: a card still to appear would take
+  // the focus the next test's row press gives the Tasks panel before its
+  // click counts, and no record would open (INF-697, as INF-532).
+  await expect(shownEntry(page)).toHaveCSS("opacity", "1", { timeout: HOLD_WINDOW_MS });
   // It pages and writes nothing: the record remains open but is not shown.
   await expect(pane(page)).toHaveCount(0);
   await expect(nowFrame(page).locator('[data-now-row="rc-decision"]')).toHaveAttribute(
@@ -461,14 +475,6 @@ test("while a decision card waits the bar keeps Drop task, and Show the card bri
     "card-rc-decision-1",
   );
 });
-
-/**
- * How long a record whose body frame has not drawn stays unseen before it
- * appears as it is: the stage's hold, the frame watchdog's budget
- * (`HOLD_LIMIT_MS`, FRAME_WATCHDOG_INTERVAL_MS x FRAME_WATCHDOG_MISSES),
- * plus slack.
- */
-const RECORD_HOLD_WINDOW_MS = 1_000 * 4 + 3_000;
 
 /**
  * Holds every mount of a record's body frame (`inf:frames:mount`) until the
@@ -526,7 +532,7 @@ test("a press on the bar that goes down before the record's body draws lands on 
     await expect(pane(page)).toHaveAttribute("data-task-record", "rc-press");
     // It appears, its body still pending, once its hold ends: until then the
     // card it replaces stays in sight and takes the press.
-    await expect(shownEntry(page)).toHaveCSS("opacity", "1", { timeout: RECORD_HOLD_WINDOW_MS });
+    await expect(shownEntry(page)).toHaveCSS("opacity", "1", { timeout: HOLD_WINDOW_MS });
     const body = pane(page).locator("[data-record-body]");
     await expect(body.locator("[data-frame-mount-pending]")).toBeVisible();
     await expect(end(page)).toHaveAccessibleName(DROP_TASK_LABEL);

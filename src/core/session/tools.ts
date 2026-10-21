@@ -98,6 +98,8 @@ export type EmittedCardInput = {
    * host pauses the browser before the card goes up, or refuses the card.
    */
   browserHandoff?: { site: string; reason: string; after: string };
+  /** Bind the shown ordinary action to a recorded validation request. */
+  validationDecision?: { request: string; action: string };
   /**
    * The HTML file in its task's project that a crewmate's browser button
    * opens (`browser_page`, docs/task-browser.md "A page from the project"):

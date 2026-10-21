@@ -1,10 +1,11 @@
+import type { LiveValidation } from "@shared/liveValidation";
 import type { CaptainAction } from "@shared/requiredActions";
 import { foldForSearch } from "@shared/searchText";
 import { taskChangeOf } from "@shared/taskFacts";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
-import type { TaskRecord, TaskStatus } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
 import { TaskService } from "./taskService";
 
 /**
@@ -120,6 +121,8 @@ export type TaskQueryRow = {
    * the app's own copy (`TaskService.pictures`). By-key only.
    */
   pictures?: { name: string; path: string }[];
+  live_validation?: LiveValidation;
+  validation_assignment?: TaskDelivery["validationAssignment"];
   updated_at: string;
 };
 
@@ -198,6 +201,20 @@ export function queryTasks(
       return {
         ...row,
         ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
+        ...(one && record.delivery?.liveValidation
+          ? {
+              live_validation: {
+                ...record.delivery.liveValidation,
+                runs: record.delivery.liveValidation.runs.map((run) => ({
+                  ...run,
+                  evidence: run.evidence.map(({ text: _text, ...item }) => item),
+                })),
+              },
+            }
+          : {}),
+        ...(one && record.delivery?.validationAssignment
+          ? { validation_assignment: record.delivery.validationAssignment }
+          : {}),
       };
     });
   return { rows, total: matched.length };

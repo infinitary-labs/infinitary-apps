@@ -432,17 +432,11 @@ export const TASKS_QUERY_TOOL_NAME = "tasks";
  * over Pi and over Claude's tool server alike.
  */
 export const TASKS_QUERY_TOOL_DESCRIPTION = [
-  "Query the task record: compact rows with key, task_id, kind, status, title, project,",
-  "parent, blockers, what it blocks, children, and whether it is ready or what it waits on.",
-  "Filter by project (key), status (open, active, done, dropped, live, closed),",
-  "key (one task), text (title or goal), or parent (its children). Fetch one task by key",
-  "to read its latest report, full chronological reports, last card, saved closing decisions,",
-  "persisted closing resolution (offer, action, submitted answers), and pinned dispatch brief.",
-  "Resolution carries facts; HANDOFF governs authorization. History is evidence,",
-  "not inferred approval; later reports do not erase earlier specifications. Lists carry no bodies.",
-  "The context block's tasks index is a bounded view of the same record; this is the full one.",
-  "A by-key read that does not fit one answer names each remaining field and its length.",
-  "Closing bodies equal to card are not repeated in resolution.",
+  "Lists beyond the context index: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
+  "Filters: project/status/key/id/title/goal/parent.",
+  "Key reads: ordered reports, last card, decisions, resolution offer/action/answers, brief, validation/review.",
+  "Resolution is facts; HANDOFF governs authorization. History grants none; later reports preserve prior specs.",
+  "Paging names remaining fields/lengths; identical card bodies appear once.",
 ].join(" ");
 
 /**

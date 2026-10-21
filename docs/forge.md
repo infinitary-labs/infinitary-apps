@@ -787,3 +787,24 @@ The completion card reads its local committed version and retained files once; m
 An accepted conflict-only repair republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
 The completion offer binds a content hash; only the host's exact conflict-only clone inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
+
+### Declared validation writes
+
+A Careful builder names `github_write.validationEffect` when the write is a shared validation effect, rather than ordinary delivery.
+The effect request's `forgeWrite` binds the host, method, path and SHA-256 digest of the exact JSON body bytes (absent only for a bodyless call).
+A validation effect cannot accompany a release `file`: JSON-bound permission does not authorize those file bytes, so the gateway refuses without sending or consuming it.
+The write gateway checks those facts at execution, also when sending a kept write, and marks its result unknown before sending so it cannot be repeated after a lost answer.
+A changed call needs fresh review and consent; a refused validation check sends nothing and returns its reason.
+A new request identity cannot repeat the same host, method, path and body while an earlier declared write on that task is started or unknown; the builder reconciles that outcome first.
+Code clearance and the captain's action-specific approval must both be current; ordinary forge permissions remain separate.
+An approved prerequisite publication names the task's own project and branch and uses a draft pull request or merge request where supported.
+On a saved-story host it uses the existing publisher and attachment barrier, carrying the draft flag through the same opening rather than bypassing the story.
+The publisher rechecks and consumes that authority after its preflight and before any upload; a failed preflight leaves the permission unused.
+Ordinary Careful publication likewise rechecks the current proof and code clearance after that asynchronous preflight.
+Once current proof and independent review pass, the host-owned `markReady` operation uses GitHub GraphQL or removes GitLab's `Draft: ` prefix; the agent-facing REST-only gateway never gains GraphQL access.
+The host persists an unknown readiness outcome before sending and reconciles a later ready reading without another write.
+A later still-draft reading settles that readiness attempt as not applied and permits another idempotent request, never concurrently with an outstanding attempt.
+Readiness failures remain on the task record and in tool feedback without preventing check readings.
+Once readiness is recorded as applied for a change number and head, a later return to draft is a person's hold: check, watch and open readings never mark that same version ready again.
+Later commits on the published branch require fresh proof and review, not another prerequisite-publication permission.
+These permissions do not satisfy final live proof or grant a merge (`docs/delivery-rigor.md`, "Careful live validation").

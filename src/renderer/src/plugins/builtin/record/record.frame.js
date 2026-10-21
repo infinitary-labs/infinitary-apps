@@ -876,10 +876,16 @@
     const tag = focused.tagName;
     const key = focused.getAttribute("data-inf-task");
     const text = focused.textContent;
+    const scenario = focused
+      .closest("[data-validation-scenario]")
+      ?.getAttribute("data-validation-scenario");
     const part = focused.closest("[data-record-section]") ?? root;
     const controls = () =>
-      [...part.querySelectorAll(tag)].filter(
-        (node) => node.getAttribute("data-inf-task") === key && node.textContent === text,
+      [...part.querySelectorAll(tag)].filter((node) =>
+        scenario
+          ? node.closest("[data-validation-scenario]")?.getAttribute("data-validation-scenario") ===
+            scenario
+          : node.getAttribute("data-inf-task") === key && node.textContent === text,
       );
     return { controls, turn: controls().indexOf(focused) };
   }
@@ -900,6 +906,83 @@
       const control = /** @type {HTMLElement | undefined} */ (place.controls()[place.turn]);
       control?.focus({ preventScroll: true });
     });
+  }
+
+  /** @type {Set<string>} */
+  const openProof = new Set();
+  let proofTask = "";
+  let paintedProof = "";
+  /** @param {Detail} current */
+  function paintValidation(current) {
+    if (proofTask !== current.id) {
+      openProof.clear();
+      proofTask = current.id;
+      paintedProof = "";
+    }
+    const validation = current.liveValidation;
+    section("validation", Boolean(validation));
+    if (!validation) return;
+    const serialized = JSON.stringify(validation);
+    if (serialized === paintedProof) return;
+    paintedProof = serialized;
+    must(document.querySelector("[data-validation-label]")).textContent = validation.label;
+    must(document.querySelector("[data-validation-reason]")).textContent = validation.reason;
+    const rows = must(document.querySelector("[data-validation-rows]"));
+    rows.replaceChildren(
+      ...validation.rows.map((row) => {
+        const detail = document.createElement("details");
+        detail.className = "row";
+        detail.setAttribute("data-validation-scenario", row.id);
+        detail.open = openProof.has(row.id);
+        detail.addEventListener("toggle", () => {
+          if (detail.open) openProof.add(row.id);
+          else openProof.delete(row.id);
+        });
+        const summary = document.createElement("summary");
+        const action = document.createElement("span");
+        action.textContent = row.action;
+        const result = document.createElement("span");
+        result.className = "count";
+        result.textContent = row.result;
+        summary.append(action, result);
+        const body = document.createElement("div");
+        body.className = "row-body";
+        body.setAttribute("data-validation-observation", row.id);
+        const reason = document.createElement("p");
+        reason.className = "words";
+        reason.textContent = row.reason;
+        body.append(reason);
+        for (const proof of row.evidence) {
+          const figure = document.createElement("figure");
+          const caption = document.createElement("figcaption");
+          caption.textContent = proof.description;
+          figure.append(caption);
+          if (proof.text !== undefined) {
+            const text = document.createElement("pre");
+            text.textContent = proof.text;
+            figure.append(text);
+          } else if (proof.media && proof.picture) {
+            // The shared bridge opens recordings in the host's viewer, never
+            // the opaque frame, where Chromium refuses their served URL.
+            figure.setAttribute("data-inf-demo", proof.media);
+            if (proof.durationMs)
+              figure.setAttribute("data-inf-demo-duration", String(proof.durationMs));
+            const image = document.createElement("img");
+            image.src = proof.picture;
+            image.alt = proof.description;
+            figure.append(image);
+          } else if (proof.picture) {
+            const image = document.createElement("img");
+            image.src = proof.picture;
+            image.alt = proof.description;
+            figure.append(image);
+          }
+          body.append(figure);
+        }
+        detail.append(summary, body);
+        return detail;
+      }),
+    );
   }
 
   function paint() {
@@ -958,6 +1041,7 @@
         asks.length > 0,
     );
 
+    paintValidation(current);
     paintCards(current.cards);
     paintUses();
 

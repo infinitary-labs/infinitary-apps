@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
 import { seedTask } from "./seedTask";
 import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
@@ -764,4 +766,145 @@ describe("the basis (primitives review P1)", () => {
     expect(verdicts().map((basis) => basis?.verified)).toEqual([true, true, false]);
     expect(tasks.basisOf(plan)).toBeNull();
   });
+});
+
+describe("INF-125 validation persistence", () => {
+  it("keeps proof and spent review pairs when the owner is reconstructed", () => {
+    const { db, tasks } = setup();
+    const head = "a".repeat(40);
+    tasks.create({
+      id: "proof-task",
+      title: "Review the static explanation",
+      prompt: "Review the static explanation",
+      repoId: "r1",
+    });
+    tasks.recordLiveValidation(
+      "proof-task",
+      {
+        kind: "plan",
+        previousRevision: 0,
+        reason: "The explanation has no runtime.",
+        scenarios: [],
+      },
+      { head },
+    );
+    tasks.recordLiveValidation(
+      "proof-task",
+      {
+        kind: "run",
+        id: "explanation",
+        head,
+        scenarioRevision: 1,
+        completion: "complete",
+        verdict: "no-surface",
+        reason: "Only explanatory prose changed.",
+        observations: [],
+        evidence: [],
+      },
+      { head },
+    );
+    tasks.recordDelivery("proof-task", {
+      reviewRounds: 2,
+      reviewRoundPairs: [`${head}:1`],
+      ciRounds: 2,
+    });
+    const restored = new TaskService({
+      db,
+      repos: { get: () => ({ delivery: "direct-pr" as const }) },
+      now: () => 2000,
+      strict: true,
+    });
+    expect(restored.get("proof-task")?.delivery).toEqual(tasks.get("proof-task")?.delivery);
+    expect(restored.get("proof-task")?.delivery?.liveValidation?.runs[0]).toMatchObject({
+      head,
+      revision: 1,
+      verdict: "no-surface",
+    });
+    expect(() =>
+      restored.recordLiveValidation(
+        "proof-task",
+        {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "A stale plan must not replace the current one.",
+          scenarios: [],
+        },
+        { head },
+      ),
+    ).toThrow("current scenario revision");
+    expect(restored.get("proof-task")?.delivery?.liveValidation?.scenarioRevision).toBe(1);
+  });
+});
+
+it("INF-203 F4: keeps transcript bytes out of delivery rewrites and validation timeline events", () => {
+  const { tasks, db } = setup();
+  seedTask(tasks, { id: "lean-proof", title: "Inspect the fixture", repoId: "r1", status: "idle" });
+  const head = "a".repeat(40);
+  const proof = noSurfaceProof(head);
+  const text = JSON.stringify(tasks.get("lean-proof"));
+  const digest = createHash("sha256").update(text).digest("hex");
+  const evidence = {
+    id: "record",
+    description: "The task service's actual fixture record.",
+    text,
+    digest,
+    bytes: Buffer.byteLength(text),
+    file: `lean-proof-${digest}.json`,
+  };
+  tasks.recordLiveValidation(
+    "lean-proof",
+    {
+      kind: "plan",
+      previousRevision: 0,
+      scenarios: [],
+      reason: "The task fixture has no running product.",
+    },
+    { head },
+  );
+  const { revision: _revision, at: _at, deviceId: _device, ...run } = proof.runs[0]!;
+  for (let index = 0; index < 12; index++) {
+    tasks.recordLiveValidation(
+      "lean-proof",
+      { ...run, id: `run-${index}`, evidence: [evidence] },
+      { head },
+    );
+    tasks.recordDelivery("lean-proof", { ci: "green", ciAt: index });
+  }
+  const delivery = tasks.get("lean-proof")!.delivery!;
+  expect(delivery.liveValidation?.runs).toHaveLength(12);
+  expect(delivery.liveValidation?.runs.every((run) => run.evidence[0]?.text === undefined)).toBe(
+    true,
+  );
+  expect(delivery.liveValidation?.runs[0]?.evidence[0]).toMatchObject({
+    digest,
+    bytes: evidence.bytes,
+    file: evidence.file,
+  });
+  const events = tasks
+    .timeline("lean-proof")
+    .filter((event) => event.text === "Live validation: run");
+  expect(events).toHaveLength(12);
+  for (const event of events) {
+    expect(event.data).not.toHaveProperty("liveValidation");
+    expect(event.data).toMatchObject({
+      validation: {
+        kind: "run",
+        evidence: [{ id: "record", digest, bytes: evidence.bytes, file: evidence.file }],
+      },
+    });
+    expect(
+      (event.data?.validation as { evidence: unknown[] } | undefined)?.evidence[0],
+    ).not.toHaveProperty("text");
+  }
+  const reopened = new TaskService({ db });
+  expect(reopened.get("lean-proof")?.delivery?.liveValidation).toEqual(delivery.liveValidation);
+  console.log(
+    "INF-203 lean validation record",
+    JSON.stringify({
+      runs: 12,
+      deliveryBytes: Buffer.byteLength(JSON.stringify(delivery)),
+      eventBytes: Buffer.byteLength(JSON.stringify(events)),
+      transcriptBytes: evidence.bytes,
+    }),
+  );
 });

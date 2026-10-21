@@ -58,6 +58,7 @@ import {
   fakeSession,
 } from "../../../tests/helpers/fakeSession";
 import { jpegImage, pngImage } from "../../../tests/helpers/images";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { attachmentPath, keepImages } from "../attachments";
 import { CLAUDE_CONTROL_PROFILE } from "../claude/session";
@@ -92,6 +93,7 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
+import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
@@ -115,6 +117,7 @@ import { git } from "../workspace/git";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import {
   WorkspaceService as RealWorkspaceService,
+  readChangeReading,
   type WorkspaceService,
 } from "../workspace/workspaceService";
 import { CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
@@ -127,6 +130,7 @@ import {
 } from "./crewSession";
 import {
   type AccountAttachment,
+  CardChoiceUnavailableError,
   CrewSupervisor,
   type CrewSupervisorOptions,
   type FirstmateHooks,
@@ -15826,6 +15830,652 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     "Intent: the meter test passes ten runs in a row. What changed: the test awaits the queue flush. Verified: pnpm test on the final commit; PR is green. Risk: low. Not done: nothing.";
   const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
+  it("INF-125: only the shown captain choice approves an exact shared effect, and execution never replays an unknown result", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs, db } = setup(builder, {
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Check the shared service",
+        intent: intentOf("Demonstrate creating a shared record without affecting real data."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      const report = specs[0]!.onReport!;
+      await report("Record the shared-service scenario before changing anything.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "The requested result crosses the shared-service boundary.",
+          scenarios: [
+            {
+              id: "shared-create",
+              source: "Demonstrate creating a shared record without affecting real data.",
+              importance: "required",
+              action: "Create one disposable record.",
+              expected: "The record appears once.",
+              adverse: "A lost response must not repeat the write.",
+              environment: "Disposable staging project",
+              signal: "The service confirms the record identity.",
+              boundary: "The actual shared service",
+            },
+          ],
+        },
+      });
+      const request = {
+        kind: "effect" as const,
+        id: "create-record",
+        head,
+        scenario: "shared-create",
+        action: "Create one disposable record",
+        destination: "The isolated staging project",
+        audience: "Project collaborators",
+        visibility: "others" as const,
+        persistent: true,
+        purpose: "Demonstrate the actual shared-service boundary",
+        lastingEffects: "One record and an audit entry",
+        cleanup: "Delete the disposable record; its audit entry remains",
+        access: "Disposable test account",
+        preChange: false,
+        prerequisitePublication: false,
+        forgeWrite: {
+          host: "github.com",
+          method: "POST" as const,
+          path: "/repos/octo/meter/issues/1/comments",
+          bodyDigest: createHash("sha256")
+            .update('{"body":"Disposable validation record"}')
+            .digest("hex"),
+        },
+      };
+      const edit = join(repo.dir, "unreviewed.ts");
+      const editedStatus = () => {
+        writeFileSync(edit, "export const changed = true;\n");
+        return {
+          dirty:
+            execFileSync("git", ["-C", repo.dir, "status", "--porcelain"], {
+              encoding: "utf8",
+              env: hostEnv(),
+            }).length > 0,
+          unlandedCommits: 0,
+        };
+      };
+      vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce(editedStatus());
+      await expect(
+        report("This is not an unchanged pre-change reproduction.", undefined, {
+          validation: { kind: "request", request: { ...request, preChange: true } },
+        }),
+      ).rejects.toThrow("Commit the current work");
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions).toHaveLength(0);
+      rmSync(edit);
+      // INF-203 F2: the first assignment precedes this effect request.
+      await reportTurn(
+        builder,
+        taskId,
+        "The scenario is ready for review before the effect is requested.",
+      );
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("Inspect the shared-write scenario."),
+        shape: { review_of: taskId },
+      });
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.validationAssignment?.effects).toEqual([]);
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: blocked\nThe effect has not been requested.\nrisk: medium",
+      );
+      await supervisor.steerCrewmate(taskId, "Record the exact effect request.");
+      await tick();
+      await report("The proposed write needs code review and the captain's approval.", undefined, {
+        validation: { kind: "request", request },
+      });
+      const offer = () =>
+        specs[0]!.onCard!({
+          id: "shared-validation",
+          title: "Approve one shared test record?",
+          body: "<p>The test creates one disposable record visible to collaborators.</p><p>The audit remains after cleanup, so this action needs your approval.</p>",
+          validationDecision: { request: request.id, action: "approve" },
+          actions: [
+            { id: "approve", label: "Approve this record", default: true },
+            { id: "hold", label: "Keep it held" },
+          ],
+        });
+      await expect(offer()).rejects.toThrow("reviewer must clear");
+      await reportTurn(
+        builder,
+        taskId,
+        "The code is ready for review before requesting the shared write.",
+      );
+      await supervisor.steerCrewmate(
+        reviewId,
+        "Re-review the newly requested effect at the same version and evidence revision.",
+      );
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.validationAssignment).toMatchObject({
+        head,
+        revision: 0,
+        effects: [request.id],
+      });
+      await specs[1]!.onReport!(
+        "verdict: blocked\nCode is clear; the required action awaits the captain and live proof.\nrisk: medium",
+        undefined,
+        {
+          validation: {
+            kind: "review",
+            head,
+            revision: 0,
+            code: "clear",
+            coverage: "complete",
+            coverageReason: "The shared effect and lost-response case cover the request.",
+            effects: [request.id],
+            omitted: [],
+            verdict: "inconclusive",
+            reason: "Code clearance is not approval or live proof.",
+          },
+        },
+      );
+      await reportTurn(
+        reviewer,
+        reviewId,
+        "verdict: blocked\nCode clearance only; required proof awaits approval.\nrisk: medium",
+      );
+      await supervisor.steerCrewmate(taskId, "Ask the captain about this exact cleared effect.");
+      await tick();
+      const cardId = String(await offer());
+      await reportTurn(builder, taskId, "The scoped validation question waits for the captain.");
+      expect(() => supervisor.act(cardId, "approve", "frame")).toThrow();
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
+      supervisor.act(cardId, "approve");
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("approved");
+      for (const changed of [
+        { host: "other.example" },
+        { method: "DELETE" as const },
+        { path: "/repos/octo/other/issues/1/comments" },
+        { bodyDigest: createHash("sha256").update('{"body":"Different contents"}').digest("hex") },
+      ]) {
+        await expect(
+          supervisor.consumeValidationEffect(taskId, request.id, {
+            ...request.forgeWrite,
+            ...changed,
+          }),
+        ).rejects.toThrow(/exact write/);
+        expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("approved");
+      }
+      vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce(editedStatus());
+      await expect(
+        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+      ).rejects.toThrow("Commit the current work");
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("approved");
+      rmSync(edit);
+      vi.mocked(workspace.branchHead).mockResolvedValue("b".repeat(40));
+      await expect(
+        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+      ).rejects.toThrow("current version");
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      await supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite);
+      await expect(
+        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+      ).rejects.toThrow("once");
+      const restored = new TaskService({ db });
+      expect(restored.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("unknown");
+      expect(restored.get(taskId)?.delivery?.reviewVerdict).toBe("blocked");
+      console.log(
+        "INF-125 shared-effect boundary",
+        JSON.stringify({
+          head,
+          permission: restored.get(taskId)?.delivery?.liveValidation?.permissions[0],
+          review: restored.get(taskId)?.delivery?.reviewVerdict,
+        }),
+      );
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-125: asks about the current required gap before accepting any exception, without treating the answer as proof", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs, ops, events } = setup(builder, {
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Verify target-device input",
+        intent: intentOf("Verify the keyboard action on the target device."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      const report = specs[0]!.onReport!;
+      await report("The required scenario reaches the actual target device.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "The requested result includes the actual device input.",
+          scenarios: [
+            {
+              id: "device-input",
+              source: "Verify the keyboard action on the target device.",
+              importance: "required",
+              action: "Press the keyboard control on the target device",
+              expected: "The control responds once.",
+              adverse: "Unavailable input is not a pass.",
+              environment: "Disposable device",
+              signal: "The actual device shows the action.",
+              boundary: "Actual device input",
+            },
+          ],
+        },
+      });
+      await report("The isolated simulator cannot prove the actual device input.", undefined, {
+        validation: {
+          kind: "run",
+          id: "device-missing",
+          head,
+          scenarioRevision: 1,
+          completion: "complete",
+          verdict: "inconclusive",
+          reason: "A required device is not connected.",
+          observations: [
+            {
+              scenario: "device-input",
+              result: "untested",
+              live: false,
+              actual: "No target device is connected.",
+              evidence: [],
+              standIns: ["Isolated simulator"],
+              unproven: ["Actual device input"],
+              attempted: ["The isolated simulator cannot exercise the device input."],
+              missingCapability: "Target device",
+              reason: "No target device is connected.",
+            },
+          ],
+          evidence: [],
+        },
+      });
+      await report("The specific required gap needs the captain's decision.", undefined, {
+        validation: {
+          kind: "request",
+          request: {
+            kind: "gap",
+            id: "missing-device",
+            head,
+            scenario: "device-input",
+            missingCapability: "Target device",
+            reason: "No target device is connected.",
+            alternatives: [
+              {
+                attempted: "Isolated simulator",
+                result: "It cannot demonstrate the actual device input.",
+              },
+            ],
+            remedies: ["Connect a disposable target device and run the check."],
+          },
+        },
+      });
+      const cardId = String(
+        await specs[0]!.onCard!({
+          title: "The device check needs your decision",
+          body: "<p>The isolated simulator cannot demonstrate input on the actual device.</p><p>Connect a disposable target device, or accept this specific gap without claiming a live pass.</p>",
+          validationDecision: { request: "missing-device", action: "accept" },
+          actions: [
+            { id: "accept", label: "Accept this gap", default: true },
+            { id: "hold", label: "Keep it held" },
+          ],
+        }),
+      );
+      await reportTurn(builder, taskId, "The device check stays held until the captain answers.");
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
+      expect(() => supervisor.act(cardId, "accept", "frame")).toThrow(CardChoiceUnavailableError);
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
+      // INF-203 F2/F3: a reviewed gap is blocked until the captain answers; no duplicate run is needed.
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("Review device proof."),
+        shape: { review_of: taskId },
+      });
+      await tick();
+      const judgment = {
+        kind: "review" as const,
+        head,
+        revision: 1,
+        code: "clear" as const,
+        coverage: "complete" as const,
+        coverageReason: "The actual device boundary is covered by the scenario.",
+        effects: [],
+        omitted: [],
+        verdict: "inconclusive" as const,
+        reason: "The device remains unavailable; the captain decides the specific exception.",
+      };
+      await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
+      await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
+      expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("blocked");
+      const blocked = tasks.timeline(taskId).findLast((event) => event.kind === "review");
+      expect(blocked?.data?.validationReason).toContain("Required proof is missing");
+      expect(blocked?.text).toContain("Required proof is missing");
+      expect(ops.findLast((text) => text.includes("with verdict blocked"))).toContain(
+        String(blocked?.data?.validationReason),
+      );
+      expect(tasks.briefContains(taskId, CAREFUL_LIVE_VALIDATION)).toBe(true);
+      supervisor.act(cardId, "accept", "chrome");
+      const validation = tasks.get(taskId)?.delivery?.liveValidation;
+      expect(validation?.permissions[0]?.state).toBe("approved");
+      expect(validation?.runs[0]?.observations[0]?.result).toBe("untested");
+      expect(validation?.reviews).toHaveLength(1);
+      await tick();
+      await reportTurn(
+        builder,
+        taskId,
+        "The captain granted the recorded exception; re-review this validation state.",
+      );
+      const priorState = tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision;
+      await supervisor.steerCrewmate(
+        reviewId,
+        "Re-review the captain-granted gap exception at this same head and evidence revision.",
+      );
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.validationAssignment).toMatchObject({
+        head,
+        revision: 1,
+      });
+      expect(tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision).not.toBe(
+        priorState,
+      );
+      await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
+      await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
+      expect(tasks.get(reviewId)?.status).toBe("done");
+      expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.runs).toHaveLength(1);
+      tasks.recordDelivery(taskId, {
+        ci: "green",
+        headSha: head,
+        prNumber: 21,
+        prUrl: "https://github.com/fleet/meter/pull/21",
+      });
+      await expect(
+        specs[0]!.onCard!({
+          title: "The device change has your reviewed exception",
+          body: completionBody("<p>Your device exception remains explicit.</p>"),
+          requiredActions: [],
+          actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+        }),
+      ).resolves.toBeTruthy();
+      expect(
+        events.some((event) => event.type === "open_card_shown" && event.cardId === cardId),
+      ).toBe(true);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-203 F6: a stale approval shows its card, expires its button and tells the builder to ask again", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs, events } = setup(builder);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Reproduce the shared fixture",
+        intent: intentOf("Reproduce the shared fixture before editing."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      vi.mocked(workspace.reviewChangedFiles).mockResolvedValue([]);
+      await specs[0]!.onReport!("Recorded the reproduction scenario.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "Reproduction precedes the edit.",
+          scenarios: [
+            {
+              id: "reproduce",
+              source: "Reproduce the shared fixture.",
+              importance: "required",
+              action: "Write one shared fixture record.",
+              expected: "One visible record.",
+              adverse: "An unknown outcome is never repeated.",
+              environment: "Disposable fixture",
+              signal: "The service records one write.",
+              boundary: "Shared fixture",
+            },
+          ],
+        },
+      });
+      await specs[0]!.onReport!("The reproduction needs a decision.", undefined, {
+        validation: {
+          kind: "request",
+          request: {
+            kind: "effect",
+            id: "reproduction",
+            head,
+            scenario: "reproduce",
+            action: "Write one shared fixture record.",
+            destination: "Disposable service",
+            audience: "Collaborators",
+            visibility: "others",
+            persistent: true,
+            purpose: "Reproduction before editing",
+            lastingEffects: "Service history",
+            cleanup: "Delete the disposable record",
+            access: "Disposable account",
+            preChange: true,
+            prerequisitePublication: false,
+          },
+        },
+      });
+      const cardId = String(
+        await specs[0]!.onCard!({
+          title: "Approve the reproduction",
+          body: "<p>One disposable record will be visible to collaborators.</p><p>Its service history remains after cleanup.</p>",
+          validationDecision: { request: "reproduction", action: "approve" },
+          actions: [
+            { id: "approve", label: "Approve", default: true },
+            { id: "hold", label: "Keep it held" },
+          ],
+        }),
+      );
+      await specs[0]!.onReport!("The reproduction waits for an answer.", undefined, {
+        wait: { reason: "Read the validation question", cardId },
+      });
+      await reportTurn(builder, taskId, "The reproduction waits for an answer.");
+      tasks.recordDelivery(taskId, { validationHead: "b".repeat(40) });
+      const before = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+      expect(() => supervisor.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("expired");
+      expect(supervisor.cardsSnapshot().find((card) => card.id === cardId)?.actions).toEqual([]);
+      expect(
+        events.some((event) => event.type === "open_card_shown" && event.cardId === cardId),
+      ).toBe(true);
+      await tick();
+      expect(builder.promptCalls.at(-1)).toContain("fresh request with a new identity");
+      console.log(
+        "INF-203 stale question",
+        JSON.stringify({
+          before,
+          after: supervisor.cardsSnapshot().find((card) => card.id === cardId),
+        }),
+      );
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-203 F3: an older Careful builder already reporting completion receives the missing contract at merge and review", async () => {
+    const repo = directPrRepo();
+    try {
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, ops } = setup(reviewer, {
+        mergePullRequest: async (_task, _guard, boundary) => {
+          const reason = boundary?.beforeDispatch(HEAD);
+          return { ok: !reason, text: reason ?? "Merged" };
+        },
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      seedTask(tasks, {
+        id: "legacy-careful",
+        title: "Older Careful work",
+        repoId: view.id,
+        repoDir: repo.dir,
+        worktreeDir: repo.dir,
+        branch: "fm/task-legacy-careful",
+        status: "idle",
+        prompt: "Review before the pull request.",
+        shape: { kind: "fix", rigor: "reviewed", rigor_ask: "reviewed" },
+        intent: intentOf("Fix the meter carefully."),
+      });
+      tasks.recordBrief("legacy-careful", ["Review before the pull request."]);
+      tasks.recordReport("legacy-careful", {
+        text: "The change is complete and its earlier review passed.",
+        summary: "The change is complete.",
+      });
+      tasks.recordDelivery("legacy-careful", {
+        reviewVerdict: "pass",
+        reviewSha: HEAD,
+        headSha: HEAD,
+        ci: "green",
+      });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const held = await supervisor.settleTaskDetailed(
+        "legacy-careful",
+        "merge-pr",
+        undefined,
+        false,
+        "captain",
+      );
+      expect(held.text).toContain("needs live validation");
+      expect(held.text).toContain(CAREFUL_LIVE_VALIDATION);
+      expect(tasks.get("legacy-careful")).toMatchObject({ status: "active", activity: "idle" });
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("Fix the meter carefully."),
+        shape: { review_of: "legacy-careful" },
+      });
+      await tick();
+      await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
+      const note = tasks.timeline("legacy-careful").findLast((event) => event.kind === "review");
+      expect(note?.data?.validationReason).toBe(
+        "This version needs live validation of the current scenarios.",
+      );
+      expect(ops.findLast((text) => text.includes("with verdict blocked"))).toContain(
+        CAREFUL_LIVE_VALIDATION,
+      );
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-125: accepts only the assigned proof pair and rejects evidence-only reuse of a review", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs } = setup(builder, {
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Explain the empty fixture",
+        intent: intentOf("Explain this fixture; it has no running surface."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      const report = specs[0]!.onReport!;
+      await report(
+        "The scenario set is empty because this fixture has no product.",
+        "Recorded the empty fixture",
+        {
+          validation: {
+            kind: "plan",
+            previousRevision: 0,
+            reason: "An empty lifecycle fixture has no running surface.",
+            scenarios: [],
+          },
+        },
+      );
+      expect(tasks.get(taskId)?.outcome).toBeNull();
+      const proof = noSurfaceProof(head);
+      const { revision: _revision, deviceId: _deviceId, at: _at, ...run } = proof.runs[0]!;
+      await report("The empty fixture has no running surface to exercise.", "No running surface", {
+        validation: run,
+      });
+      await reportTurn(builder, taskId, "The empty fixture has no running surface to exercise.");
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("Review the empty fixture and its proof."),
+        shape: { review_of: taskId },
+      });
+      await tick();
+      await expect(
+        specs[1]!.onReport!("verdict: pass", "Read the proof", {
+          validation: { ...proof.reviews[0]!, revision: 2 },
+        }),
+      ).rejects.toThrow("assigned");
+      await specs[1]!.onReport!(
+        "verdict: pass\nNo running surface exists.\nrisk: low",
+        "Accepted the no-surface reason",
+        { validation: proof.reviews[0]! },
+      );
+      await reportTurn(reviewer, reviewId, "verdict: pass\nNo running surface exists.\nrisk: low");
+      expect(tasks.get(reviewId)?.status).toBe("done");
+      expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
+      await report(
+        "The evidence reason was corrected without a code change.",
+        "Revised the proof",
+        {
+          validation: {
+            ...run,
+            id: "revised-reason",
+            reason: "This fixture contains no application behavior.",
+          },
+        },
+      );
+      expect(tasks.get(taskId)?.delivery?.liveValidation?.runs.at(-1)?.revision).toBe(2);
+      await expect(
+        specs[0]!.onCard!({
+          title: "The fixture is explained",
+          body: completionBody("<p>The empty fixture has no product.</p>"),
+          requiredActions: [],
+          actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+        }),
+      ).rejects.toThrow(/review|proof|validation/i);
+      expect(tasks.get(taskId)?.delivery?.reviewSha).toBe(head);
+      expect(tasks.get(taskId)?.delivery?.reviewRounds).toBeUndefined();
+    } finally {
+      repo.dispose();
+    }
+  });
+
   it("derives the rigor at dispatch, stamps the shape, and names the tier in the brief - never in the classifier's input", async () => {
     const repo = directPrRepo();
     try {
@@ -16162,6 +16812,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(builderId)?.delivery?.reviewSha).toBe(repaired);
 
       vi.mocked(workspace.branchHead).mockResolvedValue(later);
+      // INF-125 supplies this lifecycle fixture's proof separately from the
+      // existing assertion that review uses the committed repair, not the PR.
+      tasks.recordDelivery(builderId, { liveValidation: noSurfaceProof(later, reviewId) });
       await supervisor.steerCrewmate(reviewId, "re-review the repaired commit");
       await tick();
       expect(tasks.get(reviewId)?.delivery?.headSha).toBe(later);
@@ -16216,10 +16869,16 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // The first review has no earlier pass: it reads the whole change.
       vi.mocked(workspace.branchHead).mockResolvedValue(passed);
+      // INF-125: this empty-branch lifecycle fixture has no running product,
+      // but its first code pass still needs the assigned reviewer's proof judgment.
+      const proof = noSurfaceProof(passed);
+      proof.reviews = [];
+      tasks.recordDelivery(builderId, { liveValidation: proof });
       const { taskId: firstId } = await review();
       await tick();
       expect(firstReviewer.promptCalls[0]).not.toContain("An earlier review already passed");
       expect(tasks.get(firstId)?.delivery?.passedHead).toBeUndefined();
+      tasks.recordDelivery(builderId, { liveValidation: noSurfaceProof(passed, firstId) });
       await reportTurn(firstReviewer, firstId, "verdict: pass\nNo findings.\nrisk: low - small.");
       expect(tasks.get(builderId)?.delivery).toMatchObject({
         reviewVerdict: "pass",
@@ -16459,6 +17118,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
+      });
+      tasks.recordDelivery(reviewId, {
+        validationAssignment: {
+          head: tasks.get(reviewId)!.delivery!.headSha!,
+          revision: 1,
+          scenarioRevision: 1,
+          effects: [],
+        },
+      });
       await reportTurn(
         reviewer,
         reviewId,
@@ -16509,7 +17179,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
         ciAt: Date.now(),
       });
-      const cardId = premature() as string;
+      const cardId = (await premature()) as string;
       await tick();
       const card = cards().find((entry) => entry.id === cardId);
       expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
@@ -16519,6 +17189,81 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(mergePullRequest).toHaveBeenCalledTimes(1);
       expect(tasks.get(builderId)).toMatchObject({ status: "done", closedReason: "merged" });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  it("INF-125 and INF-148: a completion keeps unchanged code clearance but needs the current proof", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, specs, cards } = setup(builder, { realWorkspace: true });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Explain the meter fixture",
+        intent: intentOf("Document the meter fixture."),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      const task = tasks.get(taskId)!;
+      const run = (...args: string[]) =>
+        execFileSync(
+          "git",
+          [
+            "-C",
+            task.worktreeDir!,
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@localhost",
+            ...args,
+          ],
+          { encoding: "utf8" },
+        ).trim();
+      writeFileSync(
+        join(task.worktreeDir!, "fixture.txt"),
+        "This lifecycle fixture has no running product.\n",
+      );
+      run("add", "fixture.txt");
+      run("commit", "-m", "docs: explain the fixture");
+      const reviewed = run("rev-parse", "HEAD");
+      const reading = await readChangeReading(task.repoDir, reviewed);
+      run("commit", "--allow-empty", "-m", "chore: retain the unchanged fixture");
+      const updated = run("rev-parse", "HEAD");
+      const currentReading = await readChangeReading(task.repoDir, updated);
+      if (!reading || reading !== currentReading)
+        throw new Error("The fixture must retain its actual unchanged patch.");
+      tasks.recordDelivery(taskId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: updated,
+        ci: "green",
+        reviewVerdict: "pass",
+        reviewSha: reviewed,
+        reviewChange: reading,
+        versionReadings: { [updated]: currentReading },
+        liveValidation: noSurfaceProof(reviewed),
+      });
+      const offer = () =>
+        specs[0]!.onCard!({
+          requiredActions: [],
+          title: "The fixture documentation is ready",
+          body: completionBody(
+            "<p>The change explains a plain text fixture; it has no running behavior.</p>",
+          ),
+          actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
+        });
+      await expect(offer()).rejects.toThrow("This version needs live validation");
+      tasks.recordDelivery(taskId, { liveValidation: noSurfaceProof(updated) });
+      const cardId = await offer();
+      await tick();
+      expect(cards().map((card) => card.id)).toContain(cardId);
+      expect(tasks.get(taskId)?.delivery?.reviewSha).toBe(reviewed);
+      expect(tasks.get(taskId)?.delivery?.validationHead).toBe(updated);
     } finally {
       repo.dispose();
     }
@@ -16842,6 +17587,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
       await tick();
       expect(reviewer.promptCalls).toHaveLength(5);
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
+      });
+      tasks.recordDelivery(reviewId, {
+        validationAssignment: {
+          head: tasks.get(reviewId)!.delivery!.headSha!,
+          revision: 1,
+          scenarioRevision: 1,
+          effects: [],
+        },
+      });
       await reportTurn(reviewer, reviewId, "verdict: pass\nNo findings.\nrisk: low - one test.");
       expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
       expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
@@ -16911,9 +17667,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         expect(resets.at(-1)).toMatchObject({ actor: "firstmate", feed: true });
         const nextHead = `${index + 1}${HEAD.slice(1)}`;
         vi.mocked(workspace.branchHead).mockResolvedValue(nextHead);
+        // INF-125: this empty-branch cap fixture still needs current proof;
+        // reopening review rounds never substitutes for the proof judgment.
+        const proof = noSurfaceProof(nextHead);
+        proof.reviews = [];
+        tasks.recordDelivery(builderId, { liveValidation: proof });
         await supervisor.steerCrewmate(reviewId, `re-review at ${nextHead}`);
         await tick();
       }
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
+      });
       await reportTurn(
         reviewer,
         reviewId,
@@ -17168,6 +17932,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       await supervisor.steerCrewmate(reviewId, "review again");
       await tick();
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
+      });
+      tasks.recordDelivery(reviewId, {
+        validationAssignment: {
+          head: tasks.get(reviewId)!.delivery!.headSha!,
+          revision: 1,
+          scenarioRevision: 1,
+          effects: [],
+        },
+      });
       await reportTurn(
         reviewer,
         reviewId,
@@ -17188,6 +17963,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       const b2 = ops.length;
       vi.mocked(workspace.branchHead).mockResolvedValue(null);
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(r2)!.delivery!.headSha!, r2),
+      });
+      tasks.recordDelivery(r2, {
+        validationAssignment: {
+          head: tasks.get(r2)!.delivery!.headSha!,
+          revision: 1,
+          scenarioRevision: 1,
+          effects: [],
+        },
+      });
       await reportTurn(reviewer2, r2, "verdict: pass\nNo findings.\nrisk: low");
       expect(ops.slice(b2)).toEqual([
         `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low); the hold is released and review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: verdict: pass\nNo findings.\nrisk: low ${REVIEW_PASSED_NEXT}`,
@@ -17298,6 +18084,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // no-mistakes rule), so the review closes and the hold releases.
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
+      tasks.recordDelivery(builderId, {
+        liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
+      });
+      tasks.recordDelivery(reviewId, {
+        validationAssignment: {
+          head: tasks.get(reviewId)!.delivery!.headSha!,
+          revision: 1,
+          scenarioRevision: 1,
+          effects: [],
+        },
+      });
       await reportTurn(
         reviewer,
         reviewId,

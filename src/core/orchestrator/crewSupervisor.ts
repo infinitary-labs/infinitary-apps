@@ -87,6 +87,15 @@ import {
 } from "@shared/folderRefresh";
 import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
+import type { ValidationForgeWrite } from "@shared/liveValidation";
+import {
+  acceptedValidation,
+  keptValidationInputSchema,
+  validationAssignment,
+  validationPair,
+  validationRevision,
+  validationStateRevision,
+} from "@shared/liveValidation";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import {
@@ -232,10 +241,15 @@ import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { type CrewStatusEntry, NOTHING_SPAWNED } from "../pi/crewTools";
 import { renderPlaceText } from "../pi/panelTools";
+import {
+  verifyKeptValidationEvidence,
+  verifyKeptValidationEvidenceSync,
+} from "../pi/validationEvidence";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
 import type { CrewMachines } from "../placed/placedSessions";
+import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import {
   KIND_SOURCE,
@@ -284,6 +298,10 @@ import type {
   TaskRecord,
   TaskStartPolicy,
 } from "../storage/taskStore";
+import {
+  recordValidation as checkValidationTransition,
+  StaleValidationDecisionError,
+} from "../tasks/liveValidation";
 import { modelMoveWords } from "../tasks/recordActivity";
 import { queryTasks, type TaskQueryInput, type TaskQueryRow } from "../tasks/taskQuery";
 import {
@@ -378,6 +396,7 @@ import type { MergeGuard, PrCiOverall, PrOutcome } from "./prCi";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
+import { reviewCoversHead } from "./reviewCarry";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
 import { folderMissingText } from "./settleWords";
@@ -1326,6 +1345,7 @@ export class CrewSupervisor {
       workspace: options.workspace,
       repos: options.repos,
       cards: this.cards,
+      verifyValidationEvidence: (taskId) => this.verifyValidationEvidence(taskId),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
       stopRuntime: (taskId) => this.stopRuntime(taskId),
       ...(options.killJobs ? { killJobs: options.killJobs } : {}),
@@ -1612,6 +1632,28 @@ export class CrewSupervisor {
         `${builder.key || builder.id} has no commits on its branch to review yet. Steer the crewmate to commit its work and report first.`,
       );
     const captainCard = this.captainCardFacts(builder);
+    const proof = builder.delivery?.liveValidation?.runs.at(-1);
+    if (proof)
+      await verifyKeptValidationEvidence(
+        proof.evidence,
+        crewmateCardPicturesDir(this.options.paths, builder.id),
+        builder.id,
+      );
+    const keptFile = async (name: string): Promise<string> => {
+      const file = join(crewmateCardPicturesDir(this.options.paths, builder.id), name);
+      if (!device) return file;
+      if (!machines?.sourceFile)
+        throw new Error("The kept proof cannot be copied to the reviewer's computer.");
+      return machines.sourceFile(device, builder.id, `proof-${name}`, file);
+    };
+    const proofFiles = await Promise.all(
+      (proof?.evidence ?? []).map(async (item) => ({
+        id: item.id,
+        file: await keptFile(item.file),
+        ...(item.posterFile ? { poster: await keptFile(item.posterFile) } : {}),
+      })),
+    );
+    const validation = builder.delivery?.liveValidation;
     return {
       builderTitle: builder.title,
       branch: builder.branch,
@@ -1622,6 +1664,15 @@ export class CrewSupervisor {
       changedFiles,
       ...(changeReading ? { changeReading } : {}),
       ...(captainCard ? { captainCard } : {}),
+      proofFiles,
+      validation: validation
+        ? {
+            ...validation,
+            runs: proof
+              ? [{ ...proof, evidence: proof.evidence.map(({ text: _text, ...item }) => item) }]
+              : [],
+          }
+        : undefined,
     };
   }
 
@@ -2990,9 +3041,9 @@ export class CrewSupervisor {
    * orders it: the reviewer reads the builder's branch at its current
    * head (worktrees share the repository's refs, so the diff against the
    * default branch is the change), fix rounds land as local commits, and
-   * the push, PR and CI come after the pass. A builder that already
-   * opened a PR is still reviewed at its committed branch head, not that
-   * pull request's recorded head. The reviewer is a fresh crewmate on the
+   * the push, PR and CI come after the pass. An existing PR never hides a
+   * newer builder version; an unreadable current branch holds the review.
+   * The reviewer is a fresh crewmate on the
    * builder's repository, briefed by the host with the fixed review text,
    * its shape `review` established by the host and never the classifier,
    * and linked `blocks` onto the builder so the builder's close waits on
@@ -3032,8 +3083,8 @@ export class CrewSupervisor {
         `${handle} has not reported yet; a reviewer reads the builder's report beside its change. Wait for the report.`,
       );
     }
-    // Review-before-PR: the reviewer reads the builder's committed branch
-    // head, even when a pull request already records an older head.
+    // Review-before-PR: the reviewer reads the builder's branch at its
+    // current head and evidence, including unpublished repairs to an existing PR.
     const facts = await this.reviewFacts(builder);
     const { headSha, prUrl } = facts;
     const open = this.openReviewOf(builder.id);
@@ -3104,6 +3155,7 @@ export class CrewSupervisor {
       headSha,
       ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
       ...(passedHead ? { passedHead } : {}),
+      validationAssignment: validationAssignment(builder.delivery?.liveValidation, headSha),
     });
     // The hold: the review blocks the builder's close until it is done.
     // The parent edge deliberately does not carry it - a child out of the
@@ -3159,7 +3211,19 @@ export class CrewSupervisor {
     const open = this.openReviewOf(builder.id);
     if (!open || this.options.tasks.verdictReviewOf(builder)?.id !== open.id) return undefined;
     const head = builder.delivery?.reviewSha;
-    return { key: open.key || open.id, verdict, ...(head ? { head } : {}) };
+    return {
+      key: open.key || open.id,
+      verdict,
+      ...(head ? { head } : {}),
+      ...(builder.delivery?.liveValidation
+        ? {
+            evidenceRevision: open.delivery?.validationAssignment?.revision ?? 0,
+            currentEvidenceRevision: validationRevision(builder.delivery.liveValidation),
+            stateRevision: open.delivery?.validationAssignment?.stateRevision ?? 0,
+            currentStateRevision: validationStateRevision(builder.delivery.liveValidation),
+          }
+        : {}),
+    };
   }
 
   /** The builder a review task reads: its parent, the one stored join. */
@@ -3182,6 +3246,9 @@ export class CrewSupervisor {
     // Keep it through retries; only a later review turn takes a new head.
     if (review.delivery?.headSha && !review.outcome) return undefined;
     const facts = await this.reviewFacts(builder);
+    this.options.tasks.recordDelivery(review.id, {
+      validationAssignment: validationAssignment(builder.delivery?.liveValidation, facts.headSha),
+    });
     const previousHead = review.delivery?.headSha;
     if (!review.intent) throw new Error("The review has no recorded brief to refresh.");
     if (facts.headSha !== previousHead) {
@@ -6034,8 +6101,13 @@ export class CrewSupervisor {
     text: string,
     summary?: string,
     declared?: ReportDeclaration,
-  ): string {
+  ): string | Promise<string> {
     if (task.state === "idle") this.startAutonomousTurn(task);
+    if (declared?.validation)
+      return this.recordValidationReport(task, text, summary, declared).then((receipt) => {
+        this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
+        return receipt;
+      });
     const receipt = this.recordExplicitReport(task, text, summary, declared);
     // The report is the crewmate's close-out: what it wrote on its cards
     // since the last one reaches the stage now, not at its turn's end.
@@ -6505,6 +6577,32 @@ export class CrewSupervisor {
       );
       return;
     }
+    const proof = this.options.tasks.get(builder.id)?.delivery?.liveValidation;
+    const assigned = review.delivery?.validationAssignment;
+    const typedVerdict = proof?.reviews.findLast(
+      (item) =>
+        item.reviewer === task.id &&
+        item.head === sha &&
+        item.revision === assigned?.revision &&
+        (item.stateRevision ?? 0) === (assigned?.stateRevision ?? 0),
+    );
+    const acceptance = acceptedValidation(proof, sha);
+    const validationReason = !acceptance.ready
+      ? acceptance.reason
+      : !assigned ||
+          assigned.revision !== validationRevision(proof) ||
+          assigned.scenarioRevision !== proof?.scenarioRevision ||
+          (assigned.stateRevision !== undefined &&
+            assigned.stateRevision !== validationStateRevision(proof))
+        ? "The validation facts changed after assignment; re-review the current validation state, even at the same head."
+        : !typedVerdict
+          ? "The assigned reviewer has not reported a typed judgment of this validation state."
+          : undefined;
+    const blockedReason = parsed.verdict === "pass" ? validationReason : undefined;
+    if (blockedReason) {
+      parsed.verdict = "blocked";
+      parsed.derivedPass = false;
+    }
     const shortSha = sha.slice(0, 7);
     const at = this.now();
     const riskText = parsed.risk
@@ -6566,11 +6664,17 @@ export class CrewSupervisor {
       );
       return;
     }
-    // A findings verdict is one round per HEAD (captain ruling,
-    // 2026-09-19): a stated verdict at a head already counted - a repeat
+    // A findings verdict is one round per version/evidence pair (captain ruling,
+    // 2026-09-19): a stated verdict at a pair already counted - a repeat
     // of the same review - records the verdict without spending a round,
     // so only real re-reviews walk toward the cap.
-    const newHead = sha == null || builder.delivery?.reviewRoundSha !== sha;
+    const pair = validationPair(sha, review.delivery?.validationAssignment?.revision ?? 0);
+    const countedPairs =
+      builder.delivery?.reviewRoundPairs ??
+      (builder.delivery?.reviewRoundSha
+        ? [validationPair(builder.delivery.reviewRoundSha, 0)]
+        : []);
+    const newHead = !countedPairs.includes(pair);
     const rounds =
       parsed.verdict === "findings" && newHead
         ? (builder.delivery?.reviewRounds ?? 0) + 1
@@ -6580,15 +6684,20 @@ export class CrewSupervisor {
       {
         ...facts,
         ...(rounds !== undefined ? { reviewRounds: rounds } : {}),
-        ...(rounds !== undefined && sha ? { reviewRoundSha: sha } : {}),
+        ...(rounds !== undefined && sha
+          ? { reviewRoundSha: sha, reviewRoundPairs: [...countedPairs, pair] }
+          : {}),
       },
       {
         kind: "review",
         text: `review ${parsed.verdict} at ${shortSha}, ${riskText}${
           rounds !== undefined ? ` - findings round ${rounds}` : ""
-        }${parsed.verdict === "findings" && !newHead ? " - same head, round not counted" : ""}`,
+        }${parsed.verdict === "findings" && !newHead ? " - same head, round not counted" : ""}${blockedReason ? ` - ${blockedReason}` : ""}`,
         feed: false,
-        data: { reviewTaskId: task.id },
+        data: {
+          reviewTaskId: task.id,
+          ...(blockedReason ? { validationReason: blockedReason } : {}),
+        },
       },
     );
     const capped =
@@ -6607,6 +6716,10 @@ export class CrewSupervisor {
       // The reviewed brief carries the fix rules; a builder dispatched at
       // another care never read them, so the wake names them for its steer.
       briefed: builder.shape?.rigor === "reviewed",
+      ...(this.options.tasks.briefContains(builder.id, CAREFUL_LIVE_VALIDATION)
+        ? {}
+        : { liveValidationBriefed: false }),
+      ...(blockedReason ? { validationReason: blockedReason } : {}),
     };
     this.hooks.notifyOp(
       capped
@@ -7445,6 +7558,7 @@ export class CrewSupervisor {
   private addCrewmateCard(
     task: TaskRuntime,
     input: DeclaredCardInput,
+    checkedHead?: string,
     presentationChecked?: { revision: number; head: string },
   ): string | Promise<string> {
     if (input.presentationRevision !== undefined) {
@@ -7461,7 +7575,10 @@ export class CrewSupervisor {
           const head = this.options.tasks.get(task.id)?.delivery?.presentation?.published?.head;
           if (!head) throw new Error("The current story has not been published.");
           const { presentationRevision: _revision, ...rest } = input;
-          return await this.addCrewmateCard(task, { ...rest, ...story }, { revision, head });
+          return await this.addCrewmateCard(task, { ...rest, ...story }, undefined, {
+            revision,
+            head,
+          });
         } catch (caught) {
           const files = cardPictureFiles(story.body, this.options.paths.crewmatesDir);
           // A late failure after persistence must not delete a shown card's own evidence.
@@ -7492,6 +7609,63 @@ export class CrewSupervisor {
       throw new Error(
         "Use presentation on the completion card so it shows the current published story, not a second account of the change.",
       );
+    const before = this.options.tasks.get(task.id);
+    const carefulMerge =
+      before?.delivery?.reviewVerdict === "pass" &&
+      this.policiesOf(before)?.rigor.value === "reviewed" &&
+      input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
+    if (!checkedHead && (input.validationDecision || carefulMerge)) {
+      if (!before || this.policiesOf(before)?.rigor.value !== "reviewed")
+        throw new Error("A validation decision needs its Careful task.");
+      return this.validationHead(before).then(async (head) => {
+        const current = this.options.tasks.get(task.id);
+        if (!current) throw new Error("The task closed while reading its version.");
+        const binding = input.validationDecision;
+        if (binding) {
+          if (
+            input.actions.some(
+              (action) =>
+                settleEffectOf(action) ||
+                requestMergeEffectOf(action) ||
+                requestWriteEffectOf(action),
+            )
+          )
+            throw new Error(
+              "A validation question cannot also merge or send another write; keep those separate.",
+            );
+          if (!input.actions.some((action) => action.id === binding.action && !action.effect))
+            throw new Error(
+              "The validation approval must be an ordinary decision action, not a merge or another effect.",
+            );
+          checkValidationTransition(
+            current.delivery?.liveValidation,
+            {
+              kind: "decision",
+              request: binding.request,
+              card: input.id ?? "pending",
+              action: binding.action,
+            },
+            {
+              head,
+              deviceId: current.deviceId ?? null,
+              at: this.now(),
+              decision: { offer: "pending" },
+            },
+          );
+        }
+        if (carefulMerge) {
+          const proof = current.delivery?.liveValidation?.runs.at(-1);
+          if (proof)
+            await verifyKeptValidationEvidence(
+              proof.evidence,
+              crewmateCardPicturesDir(this.options.paths, task.id),
+              task.id,
+            );
+        }
+        this.options.tasks.recordDelivery(task.id, { validationHead: head });
+        return this.addCrewmateCard(task, input, head, presentationChecked);
+      });
+    }
     // The task's holds speak before the card's shape: a card the task
     // cannot take at all is refused for that, not for its headings.
     if (
@@ -7536,15 +7710,17 @@ export class CrewSupervisor {
       );
     if (input.requiredActions !== undefined)
       this.options.tasks.validateRequiredActions(task.id, input.requiredActions);
+    const reviewHead = checkedHead ?? record?.delivery?.headSha ?? record?.delivery?.validationHead;
     if (
       record &&
       this.policiesOf(record)?.rigor.value === "reviewed" &&
-      record.delivery?.reviewVerdict !== "pass" &&
+      (!reviewCoversHead(record.delivery, reviewHead) ||
+        !acceptedValidation(record.delivery?.liveValidation, reviewHead).ready) &&
       (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge")
     ) {
       const review = this.reviewState(record) ?? "awaiting review";
       throw new CardRefusedError(
-        `Card refused: this task ships at the reviewed tier and its review has not passed yet (${review}). Report under the five headings with report instead; the first mate tells you when to emit the completion card.`,
+        `Card refused: this task ships at the reviewed tier and its review has not passed yet (${review}). ${acceptedValidation(record.delivery?.liveValidation, reviewHead).reason} Report under the five headings with report instead; the first mate tells you when to emit the completion card.${this.options.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` This contract was missing from your brief: ${CAREFUL_LIVE_VALIDATION}`}`,
         "review",
         `its review has not passed yet (${review})`,
       );
@@ -7649,7 +7825,11 @@ export class CrewSupervisor {
       : finished;
     // What the click sends, drawn by the host from its own record after the
     // lint (FI3-1571): the author words why, never the call itself.
-    const strip = this.requestStrip(task.id, shown.actions);
+    const strip =
+      (this.requestStrip(task.id, shown.actions) ?? "") +
+      (input.validationDecision
+        ? this.validationRequestStrip(task.id, input.validationDecision.request)
+        : "");
     const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
     // A request for the captain's help pauses the browser before the card
     // goes up (docs/task-browser.md, "Asking for help").
@@ -7683,6 +7863,26 @@ export class CrewSupervisor {
         task.session?.modelLabel() ?? task.session?.modelRef()?.id ?? "Unknown model",
         this.cardPlace(task.id),
       );
+      if (input.validationDecision) {
+        const offered = this.cards.get(id);
+        if (!offered?.offerId) throw new Error("The validation decision has no kept offer.");
+        this.options.tasks.recordLiveValidation(
+          task.id,
+          {
+            kind: "decision",
+            request: input.validationDecision.request,
+            card: id,
+            action: input.validationDecision.action,
+          },
+          {
+            head: current.delivery?.validationHead ?? "",
+            decision: {
+              offer: offered.offerId,
+              ...(offered.lifecycleId ? { lifecycle: offered.lifecycleId } : {}),
+            },
+          },
+        );
+      }
       // A completion card is up: an earlier refusal no longer stands.
       if (card.actions.some((action) => settleEffectOf(action))) {
         this.options.tasks.clearCardRefusal(task.id);
@@ -9489,6 +9689,204 @@ export class CrewSupervisor {
     return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
   }
 
+  private validationRequestStrip(taskId: string, requestId: string): string {
+    const permission = this.options.tasks
+      .get(taskId)
+      ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === requestId);
+    if (!permission) throw new Error("That validation request is not on this task.");
+    const request = permission.request;
+    const entries: [string, string][] = [
+      ["Version", request.head.slice(0, 7)],
+      ["Scenario", permission.scenario.action],
+    ];
+    if (request.kind === "effect")
+      entries.push(
+        ["Action", request.action],
+        ["Destination", request.destination],
+        ["Who can see it", request.audience],
+        ["Purpose", request.purpose],
+        ["Lasting effects", request.lastingEffects],
+        ["Cleanup", request.cleanup],
+        ["Access", request.access],
+      );
+    else
+      entries.push(
+        ["Missing access", request.missingCapability],
+        ["Reason", request.reason],
+        [
+          "Safe alternatives tried",
+          request.alternatives.map((item) => `${item.attempted}: ${item.result}`).join("\n"),
+        ],
+        ["Ways to close the gap", request.remedies.join("\n")],
+      );
+    const exact =
+      request.kind === "effect" && request.forgeWrite
+        ? `<details><summary>Exact request</summary><pre>${escapeCardText(`${request.forgeWrite.host} ${request.forgeWrite.method} ${request.forgeWrite.path}\nBody SHA-256: ${request.forgeWrite.bodyDigest ?? "No body"}`)}</pre></details>`
+        : "";
+    return `<section class="inf-panel"><h3>${request.kind === "gap" ? "Missing required proof" : "Validation action"}</h3><dl>${entries.map(([name, value]) => `<dt>${escapeCardText(name)}</dt><dd>${escapeCardText(value)}</dd>`).join("")}</dl>${exact}<p>This choice grants no merge permission${request.kind === "gap" ? " and never records a live pass" : " and covers only this action"}.</p></section>`;
+  }
+
+  verifyValidationEvidence(taskId: string): void {
+    const run = this.options.tasks.get(taskId)?.delivery?.liveValidation?.runs.at(-1);
+    if (run)
+      verifyKeptValidationEvidenceSync(
+        run.evidence,
+        crewmateCardPicturesDir(this.options.paths, taskId),
+        taskId,
+      );
+  }
+
+  /** The write gateway calls this at execution, including a captain-approved kept write. */
+  async consumeValidationEffect(
+    taskId: string,
+    request: string,
+    write?: ValidationForgeWrite,
+  ): Promise<void> {
+    const task = this.options.tasks.get(taskId);
+    if (!task) throw new Error("The task no longer exists; nothing was sent.");
+    if (write) {
+      const requested = task.delivery?.liveValidation?.permissions.find(
+        (item) => item.request.id === request,
+      )?.request;
+      const approved = requested?.kind === "effect" ? requested.forgeWrite : undefined;
+      if (
+        !approved ||
+        approved.host !== write.host ||
+        approved.method !== write.method ||
+        approved.path !== write.path ||
+        approved.bodyDigest !== write.bodyDigest
+      )
+        throw new Error(
+          "This exact write was not included in the validation request. Ask about its destination, action and contents before sending it.",
+        );
+    }
+    const head = await this.validationHead(task);
+    await this.requireCleanValidationWork(task, head);
+    if (!head) throw new Error("The current version cannot be read; nothing was sent.");
+    this.options.tasks.recordLiveValidation(
+      taskId,
+      {
+        kind: "effect-state",
+        request,
+        state: "started",
+        evidence: "The approved validation write passed the execution gate.",
+      },
+      { head },
+    );
+    this.options.tasks.recordLiveValidation(
+      taskId,
+      {
+        kind: "effect-state",
+        request,
+        state: "unknown",
+        evidence:
+          "The write is being sent. Reconcile its result before any further action; never replay an unknown outcome.",
+      },
+      { head },
+    );
+  }
+
+  private async validationHead(record: TaskRecord): Promise<string> {
+    const head = record.deviceId
+      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
+      : record.branch
+        ? await this.options.workspace.branchHead(record.repoDir, record.branch)
+        : undefined;
+    if (!head)
+      throw new Error("The task's committed version cannot be read; validation remains held.");
+    return head;
+  }
+
+  private async requireCleanValidationWork(record: TaskRecord, head: string): Promise<void> {
+    if ((!record.deviceId && !record.worktreeDir) || !record.branch)
+      throw new Error("The validation working copy cannot be read; nothing may run.");
+    const status = record.deviceId
+      ? await this.options.machines?.workStatus(record.id)
+      : await this.options.workspace.taskWorkStatus(
+          {
+            taskId: record.id,
+            cwd: record.worktreeDir,
+            repoDir: record.repoDir,
+            branch: record.branch,
+          },
+          { strict: true },
+        );
+    const actual = record.deviceId
+      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
+      : await this.options.workspace.branchHead(record.worktreeDir, "HEAD");
+    if (!status || status.dirty || actual !== head)
+      throw new Error(
+        "Commit the current work before validation; proof and permission name one clean committed version.",
+      );
+  }
+
+  private async recordValidationReport(
+    task: TaskRuntime,
+    text: string,
+    summary: string | undefined,
+    declared: ReportDeclaration,
+  ): Promise<string> {
+    const input = keptValidationInputSchema.parse(declared.validation);
+    const record = this.options.tasks.get(task.id);
+    if (!record) throw new Error("The task no longer exists.");
+    const builder = this.reviewBuilderOf(record);
+    const owner = builder ?? record;
+    if (
+      this.policiesOf(owner)?.rigor.value !== "reviewed" ||
+      this.taskDelivery(owner.id) !== "direct-pr"
+    )
+      throw new Error(
+        "Live validation belongs to a Careful change delivered through a pull request.",
+      );
+    const currentHead = await this.validationHead(owner);
+    const head = builder ? record.delivery?.validationAssignment?.head : currentHead;
+    if (!head)
+      throw new Error(
+        "The review has no assigned validation revision. Request a fresh review turn.",
+      );
+    if (input.kind === "decision")
+      throw new Error(
+        "Bind validation permission with emit_card.validation_request so the shown offer carries its exact facts; a report cannot attach permission to an unrelated card.",
+      );
+    if (
+      input.kind === "run" ||
+      (input.kind === "request" && input.request.kind === "effect") ||
+      (input.kind === "effect-state" && input.state === "started")
+    )
+      await this.requireCleanValidationWork(owner, currentHead);
+    if (input.kind === "request" && input.request.kind === "effect" && input.request.preChange) {
+      const files = owner.deviceId
+        ? (await this.options.machines?.revision(owner.deviceId, owner.id))?.changedFiles
+        : await this.options.workspace.reviewChangedFiles(owner.repoDir, head);
+      if (!files || files.length)
+        throw new Error(
+          "A changed branch needs code review before a validation effect; it is not a pre-change reproduction.",
+        );
+    }
+    if (input.kind === "run")
+      await verifyKeptValidationEvidence(
+        input.evidence,
+        crewmateCardPicturesDir(this.options.paths, owner.id),
+        owner.id,
+      );
+    this.options.tasks.recordLiveValidation(owner.id, input, {
+      head,
+      ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
+    });
+    this.options.tasks.recordDelivery(owner.id, { validationHead: currentHead });
+    const { validation: _validation, ...declaration } = declared;
+    const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
+    if (
+      input.kind !== "run" &&
+      input.kind !== "review" &&
+      !declaration.needsFirstmate &&
+      !declaration.wait &&
+      !declaration.finished
+    )
+      return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
+    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.`;
+  }
+
   /**
    * report (WI-1): the crewmate's explicit report for the turn in flight.
    * It wins over the turn's final text and is sorted exactly once, when the
@@ -10603,16 +11001,80 @@ export class CrewSupervisor {
             approve?.();
           }
         : approve;
-    const closedAnswer = this.cards.resolve(card, actionId, actionId, answers, by, evidence, () => {
-      carryOffer?.();
-      if (card.taskId && associated?.delivery?.captainAction) {
-        if (effect?.kind === "host" && effect.op === "confirm-required-action") {
-          const [id, generation] = (effect.arg ?? "").split(":");
-          if (id === card.taskId)
-            this.options.tasks.completeCaptainAction(id, Number(generation), "confirmed");
-        } else this.options.tasks.deferCaptainAction(card.taskId);
+    const validationDecision = associated?.delivery?.liveValidation?.permissions.some(
+      (item) => item.state === "requested" && item.decision?.card === card.id,
+    );
+    if (validationDecision) {
+      if (
+        !associated?.delivery?.liveValidation?.permissions.some(
+          (item) =>
+            item.state === "requested" &&
+            item.decision?.card === card.id &&
+            item.decision.offer === card.offerId,
+        )
+      ) {
+        this.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("action-changed");
       }
-    });
+      const gesture =
+        submission === undefined ? undefined : cardSubmissionSchema.safeParse(submission);
+      if (
+        source !== "chrome" ||
+        (gesture &&
+          (!gesture.success ||
+            gesture.data.remounted ||
+            gesture.data.offerId !== card.offerId ||
+            gesture.data.lifecycleId !== card.lifecycleId))
+      ) {
+        this.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("action-changed");
+      }
+    }
+    let closedAnswer: ReturnType<CardService["resolve"]>;
+    try {
+      closedAnswer = this.cards.resolve(card, actionId, actionId, answers, by, evidence, () => {
+        if (validationDecision && card.taskId && card.offerId)
+          this.options.tasks.decideLiveValidation(card.taskId, {
+            card: card.id,
+            offer: card.offerId,
+            action: actionId,
+            label: chosen.label,
+            head: associated?.delivery?.validationHead ?? "",
+          });
+        carryOffer?.();
+        if (card.taskId && associated?.delivery?.captainAction) {
+          if (effect?.kind === "host" && effect.op === "confirm-required-action") {
+            const [id, generation] = (effect.arg ?? "").split(":");
+            if (id === card.taskId)
+              this.options.tasks.completeCaptainAction(id, Number(generation), "confirmed");
+          } else this.options.tasks.deferCaptainAction(card.taskId);
+        }
+      });
+    } catch (error) {
+      if (!(error instanceof StaleValidationDecisionError) || !card.taskId || !card.offerId)
+        throw error;
+      this.options.tasks.expireValidationDecision(
+        card.taskId,
+        card.id,
+        card.offerId,
+        error.message,
+      );
+      this.cards.put({
+        ...card,
+        actions: [],
+        title: "This validation question needs a new answer",
+        body: `<p>This question changed, so I accepted no answer.</p><p>The crewmate must ask about the current validation facts.</p>${card.body}`,
+      });
+      this.cards.showOpenCard(card.id);
+      void this.steerCrewmate(card.taskId, {
+        facts: {
+          kind: "validation-question-stale",
+          card: card.id,
+          reason: error.message,
+        },
+      });
+      throw new CardChoiceUnavailableError("action-changed");
+    }
     const choice: WakeChoice = {
       id: actionId,
       label: chosen.label,

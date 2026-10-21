@@ -88,6 +88,7 @@ type BodyProps = {
   onPicture?: (
     set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo },
     opener: HTMLIFrameElement | null,
+    title?: string,
   ) => void;
   /**
    * The body's own form (inline decisions, contract 4.22): the draft each

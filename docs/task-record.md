@@ -409,3 +409,22 @@ The task board and compact Tasks count use that same projection, and restoring o
 Click or Enter restores the task’s minimized cards; a task’s existing ready card already opens on a row click through `openTask`.
 The record’s Cards row labels an open minimized card Minimized, and its link brings the live card back.
 The record’s Show the card also brings back a minimized decision.
+
+## Live validation
+
+A Careful change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
+`TaskService.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
+The merge completion card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
+The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under Details in the existing record frame.
+Details starts closed, so validation does not displace the record's overview and ordinary rows.
+Delivery and timeline rows contain evidence metadata and compact references, never transcript bytes or a repeated copy of the complete validation state.
+The detail reader loads only bounded retained text for presentation, never media bytes or repeated proof hashes.
+Digest verification remains uncached at review and delivery gates.
+Retained pictures and recording posters open the existing picture and demo viewer, with focus returning to their record control.
+Only media named by that record's retained proof may open, and playback requires the captain's press.
+The record frame never plays a recording itself: its opaque origin cannot load the media URL.
+The contract, expiry and delivery gates are owned by `docs/delivery-rigor.md`, "Careful live validation".
+A keyed `tasks` read includes `live_validation` and, for a reviewer, `validation_assignment`; compact lists include neither.
+That agent-facing record carries proof identities and digests, not duplicate transcript bytes; the reviewer reads the verified files named in its assignment.
+
+Proof for a different committed version remains readable, with its scenario result marked Another version rather than a current live pass.

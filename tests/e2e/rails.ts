@@ -365,6 +365,23 @@ export async function expectRecordBody(page: Page): Promise<void> {
   await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
 }
 
+/**
+ * INF-100: after a record section opens, wait for the host to size its
+ * unbounded frame before native Tab decides what to scroll into view.
+ * Inner visibility alone precedes that cross-frame height acknowledgment.
+ */
+export async function expectRecordSized(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        recordFrame(page)
+          .locator("body")
+          .evaluate((body) => innerHeight >= body.getBoundingClientRect().height),
+      { message: "the host has sized the opened task record before the next key" },
+    )
+    .toBe(true);
+}
+
 /** A detail fact's value, by stable identity rather than its displayed label. */
 export function recordFact(page: Page, fact: RecordFact): Locator {
   return recordFrame(page).locator(`[data-record-fact="${fact}"]`);

@@ -336,12 +336,12 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain(
       "Info findings never block: a review whose findings are all info/no-op is read as a pass.",
     );
-    // Convergence: the ignore list, and no verdict without a new head.
+    // INF-125 convergence: the ignore list, and no verdict without a new proof pair.
     expect(brief).toContain(
       "when it lists findings under user_chose_to_ignore, do not re-report those unless the current code genuinely introduces a new, materially different problem",
     );
     expect(brief).toContain(
-      "A message with no new head to review needs no verdict: never restate one.",
+      "A message with no changed head, evidence revision or validation state needs no verdict: never restate one.",
     );
     expect(brief).toContain(`The builder's report:\n${facts.builderReport}`);
     expect(brief).toContain(

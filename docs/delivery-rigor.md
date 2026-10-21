@@ -287,7 +287,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    Info findings never block and need no steer.
    It decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake, while no cap holds the re-reviews).
-   When that report brings a new head, the first mate steers the reviewer to re-review at that head, listing findings the captain declined under `user_chose_to_ignore` with the instruction not to re-report them unless the code genuinely introduces a new, materially different problem - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
+   When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts, listing findings the captain declined under `user_chose_to_ignore` with the instruction not to re-report them unless the code genuinely introduces a new, materially different problem - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
 6. **A pass closes the review task** (done / finished, the host's actor), which releases the hold.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
    The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then with autonomy on, `settle_task merge-pr`, otherwise the builder's completion card is the decision.
@@ -519,7 +519,7 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
   A report with NO verdict line records nothing and spends no round - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and the merge stays held regardless; a stated findings verdict whose findings are all info/no-op derives a PASS, because info never blocks (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
   Findings/blocked leave the reviewer idle and steerable, a pass records verdict, head and risk on the BUILDER's delivery facts as a feed-worthy `review` event, closes the review task silently (done/finished) and wakes the first mate with the builder as ref.
   Risk never holds (Q4); a completion card with a merge effect before the pass is refused; `settleFacts`, `crewStatus` and the context crew lines carry `rigor` and the review state.
-  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride re-review steers as `user_chose_to_ignore` and are never re-reported, and a reviewer is steered only to re-review at a named new head - never to stand by; since FI3-566 the preamble is in the builder's reviewed brief and the other steps ride the review wakes ("The reviewed sequence").
+  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride re-review steers as `user_chose_to_ignore` and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the preamble is in the builder's reviewed brief and the other steps ride the review wakes ("The reviewed sequence").
   `tests/e2e/rigor-reviewed.spec.ts` is the binding test.
 - The tier as a record, with host holds (delivery rigor phase 3; `docs/delivery-rigor.md` "The record and its holds"): a repository's standing rigor is `repos.rigor` (migration 36; null = derive), set by talking through `app_change project-settings` with `changes.rigor` of `quick`, `standard`, `reviewed`, or `default` (`configure_repo` is retired) or Settings → Projects - the `project settings` feed line names the care only when set.
   The round caps are RECORDS on the builder's delivery facts: `observeCheckRepair` counts one CI round only for an unsuccessful declared own repair (`ciRounds`; a passing repair spends nothing, and a legacy uncapped red-head count is archived rather than charged; a crewmate's `check_change` and the host's watch write the same ledger), stamps `ciCapAt` once at `CI_ROUND_CAP` (3) and tells `CrewSupervisor.holdForCiCap` through the `onCap` seam - ONE `[fm-op]`, and `pendingCiGate` refuses the completion card while the cap holds, even on a green reading, before any gh call; every stated `findings` verdict at a head not yet counted is a `reviewRounds` round (`reviewRoundSha` is the last counted head - a repeat at the same head records the verdict and spends nothing) and the third is one past `REVIEW_ROUND_CAP` (2): that findings wake carries the cap (never a second wake), `reviewCapAt` holds, and a steer to the review task is refused as text naming the door.
@@ -537,3 +537,105 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
   `missingEvidenceHeading` (`src/shared/rigor.ts`) is the one order check, over `reportEvidenceHeadings` for a report and `bodyHeadings` (`src/shared/cardHeadings.ts`) for a body, so nothing grades a change by a rule nobody asked for.
   The committed replay fixtures predate rigor: all-quick, zero reviews.
   Observe gains a fifth group, **Review**, listing review tasks with their verdicts (the verdict lives on the builder, read only while it still names that review task).
+
+## Careful live validation
+
+Careful change work uses the builder as its only runner and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
+Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
+The shared `CAREFUL_LIVE_VALIDATION` brief reaches both model families, on this computer or a work computer.
+A reviewer runs neither the product nor the tests: it reads the captain's words, the whole changed-file checklist, the scenario record and the kept proof.
+
+Before editing, the builder records `report.validation` with `kind: plan`.
+Each scenario has a stable identity, the captain's words it serves, required or supplementary importance, an action, expected result, adverse case, environment, completion signal and the actual product, service or device boundary the claim requires.
+A plan revision compares its previous revision and gives a reason; difficulty never silently downgrades required proof.
+The builder runs the actual product with disposable data and accounts, using the real service or device when that boundary changes.
+A stand-in names exactly what it leaves unproven; a simulator cannot demonstrate device-specific behavior.
+
+A `run` reports its unique identity, committed version, scenario revision, completion state, verdict and one observation for every scenario, including those that could not run.
+The builder records proof and starts or requests validation effects only from a clean working copy at the named committed version.
+Uncommitted edits cannot use the pre-change reproduction exception to skip code clearance.
+Pass and fail need execution and evidence; an untested observation names attempted alternatives and a reason.
+Go requires completed live proof of each required scenario; its observation has `result: pass`, `live: true` and `unproven: []`.
+`unproven` names missing proof within that scenario's claimed boundary; limits outside that boundary go in `reason`, not in a passed observation's `unproven` list.
+A real required gap stays recorded; never clear it merely to obtain go.
+An observed failure is no-go even with other proof missing; missing proof or omitted coverage alone is inconclusive, and interrupted or unknown work cannot pass.
+This distinction applies to the reviewer's live-proof verdict too; code findings remain separate.
+The reviewer records its assigned version and evidence revision, code clearance, coverage with omissions, any inspected effect identities, and its verdict and reason.
+Code clearance is separate from final proof acceptance.
+A missing required scenario goes back to the builder; supplementary gaps remain explained beside the claim.
+No-surface means nothing to run, not missing access, and needs the reviewer's reason rather than a live-pass label.
+
+### Kept proof and exact-version gates
+
+`TaskService` alone writes validation plans, runs, reviews and permissions into the existing delivery record.
+The existing `report` tool keeps selected UTF-8 text, JSON or log transcripts, pictures, and recordings with inspected posters through the card-media owner before recording their digests.
+It refuses databases and directories; selected text totals at most 1 MB, individual media at most 16 MB, and the selected proof at most 64 MB.
+The kept bytes live in the task's cards folder until the task record is purged, not in its seven-day evidence folder.
+Delivery rows contain only evidence metadata; validation events contain compact references, never the complete validation history or transcript bytes.
+The task record reads only bounded retained text for presentation; it does not read media or re-hash proof on each refresh.
+Review and delivery gates still re-read and verify every selected artifact without a cache.
+The home verifies incoming proof, gives a reviewer readable copies on its own computer, and rechecks digests at review, completion, publication and the final merge boundary.
+A changed transcript or a displayed attachment that does not name the kept bytes is refused.
+
+The existing review assignment binds the commit, evidence revision, scenario revision and validation-state revision.
+A captain-granted gap exception or an effect request recorded after assignment permits re-review at the same commit and evidence revision; no duplicate run is needed.
+The state revision advances for changed validation facts and captain answers, not for reviewer judgments themselves.
+An old assignment cannot reuse its earlier typed judgment to accept changed facts.
+A new commit, including a check repair or an update from the default branch, needs a new run and a current review of that proof.
+The existing code-review carry still covers an unchanged change; an unavoidable update reviews only its code difference, not the whole change again.
+New evidence at the same commit also needs review, without a dummy commit.
+The findings allowance counts distinct version-and-evidence pairs; repeating a report spends no round, and a captain-authorized reset clears those counted pairs with the existing counter.
+Opening a pull request, offering completion, merge preflight and a kept merge approval all require the current accepted pair.
+Raising care on open work applies that requirement; lowering care removes only this hold.
+A held review reports the proof-acceptance reason in its timeline and wake.
+The first mate relays the complete Careful contract when the pinned served brief lacks it, including upgraded in-flight builders and work already offered for completion.
+Required checks, their repair allowance, autonomy and separate merge consent are unchanged.
+
+### Visible validation effects
+
+The builder declares persistence and audience as typed facts; the host never infers them from a command or report prose.
+A persistent validation effect visible to anyone besides the captain needs an action-specific captain approval after the reviewer clears its code and effects.
+Collaborator-only visibility counts, uncertain visibility asks, and planned deletion is no exemption.
+The request binds its version, scenario, action, destination, audience, purpose, lasting effects, cleanup and required access.
+The approval question covers exactly that recorded action, not follow-on writes described only in its prose.
+Further actions need their own review, request and consent.
+A pre-change reproduction still asks; the host checks that the branch has no changed files before accepting that declaration.
+The builder binds an ordinary decision using `emit_card.validation_request`, naming the request and its approval action.
+Only the captain's exact shown chrome action grants consent; a frame action, revised offer, reviewer verdict or task approval cannot substitute.
+A stale approval refuses through the ordinary unavailable-choice path, shows its card, removes the unusable actions and asks the builder for a fresh request and revised question.
+
+A changed version or effect needs a new request and approval.
+For `github_write`, `validationEffect` names that request: the gateway rechecks it when sending, including a previously kept write, and consumes it before the call.
+Other actions record `effect-state: started` before execution and an evidenced outcome afterward.
+An uncertain result stays unknown and is reconciled, never repeated.
+Existing write-approval and browser-handoff boundaries still apply.
+The task's own pull request, ordinary checks and attachments are delivery rather than validation.
+An approved prerequisite publication additionally names this task's project and branch; the opening guard consumes its permission and opens a draft where supported, without granting final proof or merge.
+After fresh proof and independent review pass at the current head, the host marks that draft ready through the forge owner: GitHub's private GraphQL mutation or GitLab's removal of the `Draft: ` title prefix, never `github_write`.
+The prerequisite publication permission remains tied to the task's project and branch; later commits need fresh proof and review, not another publication permission.
+A later ready reading settles an unknown readiness result as applied; a later still-draft reading settles it as not applied and permits a new idempotent readiness request.
+Overlapping readiness attempts do not send concurrently, and readiness failures never replace or prevent check readings.
+Readiness recorded as applied for a change number and head stops further readiness requests for that version, preserving a person's later return to draft; a newer commit still needs its own current proof and review.
+Unrelated drafts remain the captain's to change; this reconciliation rule does not permit repeating an unknown validation effect or publication.
+
+### Required proof that cannot run
+
+After safe alternatives fail, the builder first records a `run` at the current version and scenario revision with verdict `inconclusive` and the affected scenario `untested`, not live.
+That observation names the attempted alternatives, `missingCapability` and `reason`.
+Only then does the builder record a `request` of kind `gap`, matching that scenario, missing capability and reason in the latest run; a request before the run is refused.
+The builder promptly asks through the same decision binding, giving the alternatives and their results, and ways to close the gap.
+Only the captain can permit proceeding without this proof; neither the builder nor reviewer grants an exception.
+The exception carries to later versions only while the scenario, missing capability and reason are identical.
+A changed scenario or gap, or access becoming available, expires it; a later recurrence needs a fresh answer.
+It never covers a known failure, failed checks or a merge.
+
+The merge completion card is the primary presentation of live validation.
+A version-2 saved story pairs visual evidence in Before and after; its typed Checked facts name what the builder exercised, what happened, and what the independent reviewer checked without rerunning it.
+A missing proof, stand-in or accepted exception stays in the same visible result, not only under Not done; a check mark never turns missing proof into a pass.
+Other completion cards present those results and evidence in After.
+The captain need not visit the task record to understand what was and was not demonstrated.
+Commands, supporting transcripts and detailed observations sit under How it was checked or equivalent disclosures.
+The existing task record retains Live validation as supporting history under Details, with scenario disclosures and kept evidence reachable by pointer or keyboard.
+Its accepted labels are Demonstrated for this version, No running surface and Proceeding without live proof.
+Awaiting live validation appears only for an approved early publication that is still waiting for proof.
+Selected evidence and captain answers survive restarts with the review and repair allowances.

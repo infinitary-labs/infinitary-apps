@@ -4,6 +4,7 @@ import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePr
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import { acceptedValidation } from "@shared/liveValidation";
 import {
   type AbsentChecksDeclaration,
   MERGE_REVIEW_CAP,
@@ -38,6 +39,7 @@ import {
   presentationLines,
 } from "../forge";
 import type { CiWatch } from "../storage/taskStore";
+import { earlyPublication } from "../tasks/liveValidation";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";
@@ -250,6 +252,7 @@ function sameDescription(held: string | undefined, body: string): boolean {
 export class PrCiService {
   /** The checked change per task, for the put-in that follows a check. */
   private readonly checked = new Map<string, CheckedChange>();
+  private readonly readinessInFlight = new Set<string>();
   /** The task's pull request as the last reading found it merged outside the app. */
   private readonly merged = new Map<string, { pull: ForgePull; forge: Forge }>();
 
@@ -282,6 +285,8 @@ export class PrCiService {
        * it, into the project's folder (docs/helper.md, "Its working
        * copies"). Never throws.
        */
+      /** Synchronous: kept proof is checked immediately before the forge send. */
+      verifyValidationEvidence?: (taskId: string) => void;
       bringBranchHome?: (taskId: string, strict?: boolean) => Promise<string | undefined>;
     },
   ) {}
@@ -1258,13 +1263,14 @@ export class PrCiService {
     if ("said" in located) return { kind: "failed", transient: false, problem: located.said };
     const { record, branch, forge } = located;
     try {
-      const change = await forge.changeFor(branch);
+      let change = await forge.changeFor(branch);
       if (!change) {
         const pull = await this.namedPull(forge, record.delivery?.prNumber);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged) this.merged.set(record.id, { pull, forge });
         return { kind: "gone" };
       }
+      change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
       const words = changeWords(forge, change);
       if (running(checks.items)) {
@@ -1421,7 +1427,12 @@ export class PrCiService {
       const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
-        requireConventional(existing.title ?? "", "existing pull request title");
+        requireConventional(
+          existing.draft && forge.kind === "gitlab"
+            ? (existing.title ?? "").replace(/^Draft: /, "")
+            : (existing.title ?? ""),
+          "existing pull request title",
+        );
       const current = this.options.tasks.get(taskId);
       const policy =
         current &&
@@ -1431,6 +1442,20 @@ export class PrCiService {
         );
       if (!current || !policy || policy.delivery.value !== "direct-pr")
         return "Cannot open the change: its delivery policy changed. Read the current task record.";
+      let prerequisite: string | undefined;
+      let validationHead: string | undefined;
+      if (
+        !existing &&
+        current.delivery?.liveValidation?.permissions.some(
+          (item) =>
+            item.request.kind === "effect" &&
+            item.request.prerequisitePublication &&
+            item.request.publication?.repoId === current.repoId &&
+            item.request.publication.branch === branch &&
+            (item.state === "started" || item.state === "unknown"),
+        )
+      )
+        return "The earlier prerequisite publication has an unknown outcome. Reconcile it before another publication; a missing result does not prove it failed.";
       if (policy.rigor.value === "reviewed") {
         // Read where the range was checked: the project's folder, where a
         // branch from another computer came home.
@@ -1443,8 +1468,43 @@ export class PrCiService {
           head,
         });
         const covered = this.options.tasks.get(taskId);
-        if (!reviewCoversHead(covered?.delivery, head))
+        validationHead = head;
+        this.options.tasks.recordDelivery(taskId, { validationHead: head });
+        const early =
+          earlyPublication(current.delivery?.liveValidation, head, Boolean(existing)) ??
+          (existing
+            ? current.delivery?.liveValidation?.permissions.find(
+                (item) =>
+                  item.request.kind === "effect" &&
+                  item.request.prerequisitePublication &&
+                  item.request.head === head &&
+                  item.request.publication?.repoId === current.repoId &&
+                  item.request.publication.branch === branch &&
+                  ["started", "unknown", "succeeded"].includes(item.state),
+              )
+            : undefined);
+        if (
+          early?.request.kind === "effect" &&
+          early.request.publication?.repoId === current.repoId &&
+          early.request.publication.branch === branch
+        )
+          prerequisite = early.request.id;
+        if (
+          !prerequisite &&
+          !(
+            reviewCoversHead(covered?.delivery, head) &&
+            acceptedValidation(covered?.delivery?.liveValidation, head).ready
+          )
+        )
           return "Cannot open the change: the current version needs an independent review before the next push or pull request.";
+        if (!prerequisite) {
+          if (
+            !this.options.verifyValidationEvidence &&
+            current.delivery?.liveValidation?.runs.at(-1)?.evidence.length
+          )
+            return "Cannot open the change: kept proof cannot be verified here.";
+          await this.options.verifyValidationEvidence?.(taskId);
+        }
       }
       const presentations = this.options.presentations;
       if (!existing && presentations && forge.attachments) {
@@ -1466,6 +1526,58 @@ export class PrCiService {
         return "Nothing was sent: around.to is the same as around.from.";
       if (!usesStory && !existing && input.body === undefined)
         return "The pull request description is missing.";
+      const beginPublication = (head: string) => {
+        if (!validationHead || (prerequisite && existing)) return;
+        const latest = this.options.tasks.get(taskId);
+        if (
+          head !== validationHead ||
+          latest?.repoId !== current.repoId ||
+          latest.branch !== branch
+        )
+          throw new Error(
+            "The publication changed; nothing was sent. Read its current version and permission.",
+          );
+        if (!prerequisite) {
+          if (
+            !reviewCoversHead(latest?.delivery, head) ||
+            !acceptedValidation(latest?.delivery?.liveValidation, head).ready
+          )
+            throw new Error(
+              "The current proof or review changed before publication; nothing was sent.",
+            );
+          if (
+            !this.options.verifyValidationEvidence &&
+            latest?.delivery?.liveValidation?.runs.at(-1)?.evidence.length
+          )
+            throw new Error("Kept proof cannot be verified here; nothing was sent.");
+          this.options.verifyValidationEvidence?.(taskId);
+          return;
+        }
+        // The transition rechecks the current approval, code clearance and
+        // scenario. For saved stories this runs after their preflight, before
+        // any attachment leaves the computer, not before a possibly long read.
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "started",
+            evidence: "The approved prerequisite draft publication passed its execution gate.",
+          },
+          { head },
+        );
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "unknown",
+            evidence:
+              "The approved prerequisite publication is being sent; read the host before any repeat.",
+          },
+          { head },
+        );
+      };
       let change: ForgeChange;
       let described = "";
       if (usesStory) {
@@ -1480,18 +1592,54 @@ export class PrCiService {
             : "pending",
           input.recovery,
           input.around,
+          validationHead
+            ? {
+                beforePublish: beginPublication,
+                ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
+              }
+            : undefined,
         );
         if (input.around)
           described = `Changed the words around the story: ${forge.place ?? "the project's host"} shows them, and the story is as published.`;
       } else if (existing) {
         ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
       } else {
-        change = await forge.openChange({ branch, title: input.title, body: input.body ?? "" });
+        beginPublication(validationHead ?? "");
+        change = await forge.openChange({
+          branch,
+          title: input.title,
+          body: input.body ?? "",
+          ...(prerequisite && hasChangeRequests(forge.kind) ? { draft: true } : {}),
+        });
         if (!hasChangeRequests(forge.kind)) described = keepsNoDescription(forge);
       }
+      if (
+        prerequisite &&
+        ["started", "unknown"].includes(
+          this.options.tasks
+            .get(taskId)
+            ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === prerequisite)
+            ?.state ?? "",
+        )
+      )
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "succeeded",
+            evidence: `The host confirmed ${changeWords(forge, change)}.`,
+          },
+          { head: validationHead ?? "" },
+        );
+      change = await this.readyPrerequisite(record.id, forge, change);
       this.noteChange(record.id, { change, forge });
-      const next =
-        "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.";
+      const next = [
+        "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.",
+        this.readinessProblem(taskId, change),
+      ]
+        .filter(Boolean)
+        .join(" ");
       const said = described ? ` ${described}` : "";
       return existing
         ? `A pull request for ${branch} is already open: ${changeWords(forge, change)}.${said} ${next}`
@@ -1599,6 +1747,133 @@ export class PrCiService {
     };
   }
 
+  /** Only a task-owned prerequisite draft graduates automatically after final proof and review. */
+  private async readyPrerequisite(
+    taskId: string,
+    forge: Forge,
+    change: ForgeChange,
+  ): Promise<ForgeChange> {
+    if (change.number === undefined || this.readinessInFlight.has(taskId)) return change;
+    this.readinessInFlight.add(taskId);
+    const allowed = () => {
+      const task = this.options.tasks.get(taskId);
+      return (
+        task?.branch === change.branch &&
+        reviewCoversHead(task.delivery, change.headSha) &&
+        acceptedValidation(task.delivery?.liveValidation, change.headSha).ready &&
+        task.delivery?.liveValidation?.permissions.some(
+          (item) =>
+            item.state === "succeeded" &&
+            item.request.kind === "effect" &&
+            item.request.prerequisitePublication &&
+            item.request.publication?.repoId === task.repoId &&
+            item.request.publication.branch === change.branch,
+        )
+      );
+    };
+    try {
+      const readiness = this.options.tasks.get(taskId)?.delivery?.validationReadiness;
+      // A person may restore draft after readiness applied. That holds this version;
+      // only a newer version may graduate again with its own current proof and review.
+      if (
+        readiness?.state === "ready" &&
+        readiness.number === change.number &&
+        readiness.head === change.headSha
+      )
+        return change;
+      if (readiness?.state === "unknown" && readiness.number === change.number && change.draft) {
+        // Read after the earlier attempt settled locally, not an overlapping caller's old snapshot.
+        const current = await forge.changeFor(change.branch);
+        if (!current || current.number !== change.number || current.branch !== change.branch)
+          throw new ForgeError(
+            "refused",
+            "The earlier draft-readiness request cannot be reconciled with this change.",
+          );
+        change = current;
+        if (change.draft)
+          this.options.tasks.recordDelivery(
+            taskId,
+            {
+              validationReadiness: {
+                head: change.headSha,
+                number: readiness.number,
+                state: "not-applied",
+              },
+            },
+            {
+              kind: "note",
+              text: "The host still reports a draft; the earlier readiness request did not apply.",
+            },
+          );
+      }
+      if (!change.draft) {
+        if (readiness && readiness.number === change.number)
+          this.options.tasks.recordDelivery(taskId, {
+            validationReadiness: { head: change.headSha, number: readiness.number, state: "ready" },
+          });
+        return change;
+      }
+      if (!allowed()) return change;
+      if (!forge.markReady)
+        throw new ForgeError("unsupported", "This host cannot mark the prerequisite draft ready.");
+      if (
+        !this.options.verifyValidationEvidence &&
+        this.options.tasks.get(taskId)?.delivery?.liveValidation?.runs.at(-1)?.evidence.length
+      )
+        throw new ForgeError("refused", "Kept proof cannot be verified here.");
+      const ready = await forge.markReady(change, () => {
+        if (!allowed())
+          throw new ForgeError(
+            "refused",
+            "Validation changed; the prerequisite draft stays held until review.",
+          );
+        this.options.verifyValidationEvidence?.(taskId);
+        this.options.tasks.recordDelivery(taskId, {
+          validationReadiness: { head: change.headSha, number: change.number!, state: "unknown" },
+        });
+      });
+      this.options.tasks.recordDelivery(taskId, {
+        validationReadiness: { head: ready.headSha, number: ready.number!, state: "ready" },
+      });
+      return ready;
+    } catch (caught) {
+      const previous = this.options.tasks.get(taskId)?.delivery?.validationReadiness;
+      const problem = caught instanceof Error ? caught.message : String(caught);
+      // Readiness is delivery bookkeeping, never a replacement for the host's check reading.
+      this.options.tasks.recordDelivery(
+        taskId,
+        {
+          validationReadiness: {
+            ...(previous && previous.number === change.number
+              ? previous
+              : {
+                  head: change.headSha,
+                  number: change.number!,
+                  state: "not-applied" as const,
+                }),
+            problem,
+          },
+        },
+        previous?.problem === problem
+          ? undefined
+          : {
+              kind: "note",
+              text: `Draft readiness is held: ${problem}`,
+            },
+      );
+      return change;
+    } finally {
+      this.readinessInFlight.delete(taskId);
+    }
+  }
+
+  private readinessProblem(taskId: string, change: ForgeChange): string {
+    const readiness = this.options.tasks.get(taskId)?.delivery?.validationReadiness;
+    return readiness && readiness.number === change.number && readiness.problem
+      ? `Draft readiness is held: ${readiness.problem}`
+      : "";
+  }
+
   /** A placed task's branch, brought here before this Mac's git reads it. */
   private async branchHome(record: { id: string; deviceId?: string | null }): Promise<void> {
     if (record.deviceId) await this.options.bringBranchHome?.(record.id);
@@ -1689,7 +1964,7 @@ export class PrCiService {
     if ("said" in located) return { text: located.said, recorded: false };
     const { record, branch, forge } = located;
     try {
-      const change = await forge.changeFor(branch);
+      let change = await forge.changeFor(branch);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
@@ -1708,6 +1983,7 @@ export class PrCiService {
           recorded: true,
         };
       }
+      change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
       const earlier = await this.settleEarlierRepair(record.id, forge, change);
       const stillRunning = running(checks.items);
@@ -1734,6 +2010,7 @@ export class PrCiService {
         text: [
           `${changeWords(forge, change)} head ${change.headSha}`,
           `overall: ${checks.overall}`,
+          ...(this.readinessProblem(taskId, change) ? [this.readinessProblem(taskId, change)] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
           ...(earlier ? [earlier] : []),
           ...cap,

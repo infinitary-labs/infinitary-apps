@@ -157,7 +157,12 @@ export class GitLabForge implements Forge {
     return project.default_branch;
   }
 
-  async openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange> {
+  async openChange(input: {
+    branch: string;
+    title: string;
+    body: string;
+    draft?: boolean;
+  }): Promise<ForgeChange> {
     const target = await this.defaultBranch().catch((error: unknown) => {
       throw new ForgeWriteError(
         "failed",
@@ -171,7 +176,7 @@ export class GitLabForge implements Forge {
       {
         source_branch: input.branch,
         target_branch: target,
-        title: input.title,
+        title: input.draft ? `Draft: ${input.title}` : input.title,
         description: input.body,
       },
       "opening the merge request",
@@ -294,6 +299,40 @@ export class GitLabForge implements Forge {
     return sha ? { sha } : {};
   }
 
+  async markReady(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange> {
+    const request = await this.mergeRequest(numbered(change, this.place));
+    const current = this.changeOf(request);
+    if (
+      current.headSha !== change.headSha ||
+      current.branch !== change.branch ||
+      request.state !== "opened"
+    )
+      throw new ForgeError(
+        "refused",
+        "The prerequisite merge request changed; review its current version first.",
+      );
+    if (!current.draft) return current;
+    if (!request.title.startsWith("Draft: "))
+      throw new ForgeError(
+        "refused",
+        "The draft title changed; read the merge request before making it ready.",
+      );
+    const updated = (await this.client.request(
+      "PUT",
+      this.mergeRequestPath(request.iid),
+      { title: request.title.slice("Draft: ".length) },
+      GITLAB_READ_MAX_BYTES,
+      beforeSend,
+    )) as MergeRequestJson;
+    const ready = this.changeOf(updated);
+    if (ready.draft)
+      throw new ForgeError(
+        "refused",
+        "GitLab did not confirm the draft is ready; read its state before another request.",
+      );
+    return ready;
+  }
+
   async pull(number: number): Promise<ForgePull> {
     const request = await this.mergeRequest(number);
     const merged = request.state === "merged";
@@ -332,6 +371,11 @@ export class GitLabForge implements Forge {
   private changeOf(request: MergeRequestJson): ForgeChange {
     return {
       number: request.iid,
+      ...(request.draft === true ||
+      request.work_in_progress === true ||
+      request.title.startsWith("Draft: ")
+        ? { draft: true }
+        : {}),
       url: request.web_url,
       branch: request.source_branch,
       headSha: headOf(request, this.place),

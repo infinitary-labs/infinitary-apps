@@ -20,7 +20,7 @@ Every other file is a minor change, and its name without `.md` is what this buil
 A minor change only adds: a new request, a new push, a new optional field, a new order.
 
 1. Add one file named for the change in lowercase words joined by hyphens, such as `story-around.md`, never with a version number.
-2. Write what the change adds and what an older side does without it, one sentence per line, as `story-around.md` does.
+2. Write what the change adds and what an older side does without it, one sentence per line.
 3. Leave `PROTOCOL_VERSION` as it is, and run `pnpm generate:contract` when a published shape changed.
 
 A file's name is the change's name for good: never rename a minor file, and delete one only in a major.

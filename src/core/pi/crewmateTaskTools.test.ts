@@ -264,6 +264,36 @@ describe("the crewmate tool spec", () => {
     ).toContain("authorizes nothing");
   });
 
+  it("INF-125: carries validation once, separately from a report's captain wait on both runtimes", async () => {
+    const declared: unknown[] = [];
+    const delegate = {
+      ...crewmateToolDelegate(),
+      onReport: (_text: string, _summary?: string, declaration?: unknown) => {
+        declared.push(declaration);
+        return "reported";
+      },
+    };
+    const params = {
+      text: "The documentation-only change is ready for the captain's decision.",
+      validation: {
+        kind: "plan",
+        previousRevision: 0,
+        reason: "Only explanatory prose changes; there is no running surface.",
+        scenarios: [],
+      },
+      waiting_on_captain: { reason: "Read the documentation change", card_id: "documentation" },
+    };
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report");
+    const claude = claudeCrewmateTools(delegate).find((tool) => tool.name === "report");
+    await runPi(pi as PiTool, params);
+    await runClaude(claude as ClaudeTool, params);
+    const expected = {
+      validation: params.validation,
+      wait: { reason: params.waiting_on_captain.reason, cardId: params.waiting_on_captain.card_id },
+    };
+    expect(declared).toEqual([expected, expected]);
+  });
+
   it("carries a capture's pictures beside its text on both runtimes", async () => {
     const pi = createCrewmateTools(crewmateToolDelegate()).find(
       (tool) => tool.name === "capture_panel",

@@ -55,6 +55,8 @@ export type ForgeChange = {
   headSha: string;
   /** Host title; required on a pull or merge request, absent for plain Git branches. */
   title?: string;
+  /** A prerequisite publication remains a draft until final proof is reviewed. */
+  draft?: boolean;
   /** Host body, retained for legacy delivery and breaking-change footers. */
   body?: string;
   /** Plain text from the verified saved story, never its rendered description. */
@@ -253,13 +255,20 @@ export interface Forge {
   findProject?(fullName: string): Promise<ForgeProject | null>;
   defaultBranch(): Promise<string>;
   /** Offer the branch as a proposed change; on a plain host this sends it up. */
-  openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange>;
+  openChange(input: {
+    branch: string;
+    title: string;
+    body: string;
+    draft?: boolean;
+  }): Promise<ForgeChange>;
   /** Replace the description, a saved story or legacy words, only if its just-read body and code version still match. */
   updateChangeBody?(change: ForgeChange, body: string): Promise<void>;
   /** Read the pushed branch before opening a story-bound change. */
   branchHead?(branch: string): Promise<string>;
   /** The open proposed change for a branch, or null when there is none. */
   changeFor(branch: string): Promise<ForgeChange | null>;
+  /** Host-owned readiness transition for this version, never the public write gateway. */
+  markReady?(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange>;
   /**
    * The checks on `change.headSha`: the change's head version, read by the one
    * green rule, or an earlier version of it an open repair was declared at (INF-685).

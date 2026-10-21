@@ -42,6 +42,7 @@ import type { ReviewVerdict } from "@shared/rigor";
 import type { ServedOrigin } from "@shared/servedFrame";
 import { UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
+import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import type { CardRefusal } from "../storage/taskStore";
 import type { SettleRefusal } from "../tasks/taskService";
@@ -198,6 +199,8 @@ export type ReviewVerdictFacts = {
    * build queued - the next step names the rules for the steer.
    */
   briefed?: boolean;
+  liveValidationBriefed?: boolean;
+  validationReason?: string;
 };
 
 /**
@@ -207,7 +210,7 @@ export type ReviewVerdictFacts = {
  * latest decision; the builder's brief keeps how to fix a finding.
  */
 export const REVIEWER_IDLE_NEXT =
-  "Steer a reviewer only to re-review at a new head its builder reports - an idle reviewer needs no stand-by and no status.";
+  "Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.";
 
 /** What a findings or blocked verdict asks of the Firstmate next. */
 export function reviewFindingsNext(briefed: boolean): string {
@@ -219,7 +222,7 @@ export function reviewFindingsNext(briefed: boolean): string {
 
 /** What a builder's report asks of its open review, which last returned findings or blocked. */
 export const REVIEW_NEW_HEAD_NEXT =
-  "When this report brings a new head, steer that reviewer to re-review at it, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.";
+  "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.";
 
 /** What a passed review asks of the Firstmate next. */
 export const REVIEW_PASSED_NEXT =
@@ -227,6 +230,10 @@ export const REVIEW_PASSED_NEXT =
 
 /** A builder's open review whose last verdict asks for a re-review at a new head. */
 export type WakeOpenReview = {
+  evidenceRevision?: number;
+  currentEvidenceRevision?: number;
+  stateRevision?: number;
+  currentStateRevision?: number;
   /** The review task's key. */
   key: string;
   verdict: Exclude<ReviewVerdict, "pass">;
@@ -242,6 +249,7 @@ export type WakeNote = { id: string; title: string };
  * a fact the host read, never a sentence. A new wake adds its kind here.
  */
 export type WakeFacts =
+  | { kind: "validation-question-stale"; card: string; reason: string }
   | {
       kind: "task-policies-changed";
       task: { id: string; key: string; title: string };
@@ -1442,8 +1450,10 @@ export const CAREFUL_NOTICE =
 
 function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">): string {
   switch (facts.kind) {
+    case "validation-question-stale":
+      return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":
-      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
+      return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope.${facts.policies.rigor.value === "reviewed" ? ` Careful contract: ${CAREFUL_LIVE_VALIDATION}` : ""} Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
     case "idle-nudge":
       if (facts.thread) return IDLE_THREAD_NUDGE_TEXT;
       if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true);
@@ -1862,12 +1872,12 @@ function unknownWake(facts: unknown, ways: HoldWay[] | undefined): string {
  * review cap rides a findings one without them: its own words name the way.
  */
 function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
-  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${cardsText(facts.cards)}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
+  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
 }
 
 /** A builder report's open review, and the re-review it may ask for. */
-function openReviewText(review: WakeOpenReview): string {
-  return ` Its open review ${review.key} last returned ${review.verdict} at ${review.head ? review.head.slice(0, 7) : "an unrecorded head"}. ${REVIEW_NEW_HEAD_NEXT}`;
+export function openReviewText(review: WakeOpenReview): string {
+  return ` Its open review ${review.key} last returned ${review.verdict} at ${review.head ? review.head.slice(0, 7) : "an unrecorded head"}.${review.evidenceRevision !== undefined ? ` It read evidence revision ${review.evidenceRevision}; the builder now has revision ${review.currentEvidenceRevision}.` : ""} ${review.stateRevision !== undefined ? `Its assigned validation state is ${review.stateRevision}; the builder now has state ${review.currentStateRevision}. ` : ""}${REVIEW_NEW_HEAD_NEXT}`;
 }
 
 /**

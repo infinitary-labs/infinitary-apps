@@ -2,15 +2,25 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { renderWake, replyWordsSpan, type TypedWake } from "../../src/core/orchestrator/wakes";
+import { appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
+import { keepValidationEvidence } from "../../src/core/pi/validationEvidence";
 import { openDatabase } from "../../src/core/storage/db";
 import { ACTIVITY_PLACES } from "../../src/core/tasks/recordActivity";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { DEMO_POSTER, GIF_DEMO_RECORDING } from "./demoFixtures";
 import { launchApp } from "./launch";
-import { expandDock, openGroup, pressRow, recordCard, recordFrame } from "./rails";
-import { pressKey } from "./windowKeys";
+import {
+  expandDock,
+  expectRecordSized,
+  openGroup,
+  pressRow,
+  recordCard,
+  recordFrame,
+} from "./rails";
+import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 /**
  * A task's Activity leaves nothing out (FI3-1189's rule 2, "fold instead of
@@ -27,7 +37,7 @@ import { pressKey } from "./windowKeys";
 const ID = "activity-folds";
 const WORDS = "merge the fix first, then rerun it";
 
-function seeded(): string {
+async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   const userDataDir = scratchDir("infinitary-record-activity-");
   const db = openDatabase(userDataDir);
   let at = Date.now() - 60 * 60_000;
@@ -66,14 +76,99 @@ function seeded(): string {
     tasks.recordDelivery(ID, { ci, prNumber: 977 }, { kind: "ci", text: `CI ${ci}` });
   }
   tasks.note(ID, "The captain approved merging #977.", { news: true });
+  // INF-125: a historical fixture's unavailable live boundary remains explicit, not a pass.
+  const head = "a".repeat(40);
+  tasks.recordLiveValidation(
+    ID,
+    {
+      kind: "plan",
+      previousRevision: 0,
+      reason: "The workflow is the requested runtime boundary.",
+      scenarios: [
+        {
+          id: "mac-workflow",
+          source: "rerun the practice release",
+          importance: "required",
+          action: "Run the practice release's Mac check.",
+          expected: "The workflow completes successfully.",
+          adverse: "A failed or unavailable run must not become a live pass.",
+          environment: "Disposable practice release",
+          signal: "The actual workflow reports its result.",
+          boundary: "Mac workflow runner",
+        },
+      ],
+    },
+    { head },
+  );
+  // INF-203 F4: show the actual stored readings after bytes leave the delivery row.
+  const transcript = JSON.stringify(tasks.timeline(ID).filter((event) => event.kind === "ci"));
+  writeFileSync(join(userDataDir, "proof-readings.json"), transcript);
+  const poster = join(userDataDir, "proof-poster.png");
+  const recording = join(userDataDir, "proof-recording.gif");
+  if (!DEMO_POSTER.bytes) throw new Error("The recorded fixture must supply its poster bytes.");
+  writeFileSync(poster, DEMO_POSTER.bytes);
+  writeFileSync(recording, GIF_DEMO_RECORDING.bytes);
+  tasks.recordLiveValidation(
+    ID,
+    await keepValidationEvidence(
+      {
+        kind: "run",
+        id: "isolated-record",
+        head,
+        scenarioRevision: 1,
+        completion: "complete",
+        verdict: "inconclusive",
+        reason: "This isolated fixture cannot exercise the actual runner.",
+        observations: [
+          {
+            scenario: "mac-workflow",
+            result: "untested",
+            live: false,
+            actual: "No actual Mac workflow runner is connected to this fixture.",
+            evidence: ["picture", "recording", "readings"],
+            standIns: [
+              "Stored workflow readings",
+              "Captioned media fixture; not proof of workflow execution",
+            ],
+            unproven: ["Actual workflow execution"],
+            attempted: ["Read the stored workflow results."],
+            missingCapability: "Mac workflow runner",
+            reason: "The isolated fixture has no actual workflow runner.",
+          },
+        ],
+        evidence: [
+          { id: "picture", path: "proof-poster.png", description: DEMO_POSTER.alt },
+          {
+            id: "recording",
+            path: "proof-recording.gif",
+            poster: "proof-poster.png",
+            description: "A retained media fixture, not an actual workflow run.",
+          },
+          {
+            id: "readings",
+            path: "proof-readings.json",
+            description: "The stored check readings; not live workflow proof.",
+          },
+        ],
+      },
+      {
+        taskId: ID,
+        worktree: userDataDir,
+        dir: crewmateCardPicturesDir(appPathsFor(userDataDir), ID),
+      },
+    ),
+    { head },
+  );
+  tasks.recordDelivery(ID, { validationHead: head });
   tasks.close(ID, { status: "done", reason: "merged", actor: "host" });
   tasks.markWorkspaceRemoved(ID);
   db.close();
-  return userDataDir;
+  return { userDataDir, transcript };
 }
 
 test("a record's Activity folds minor events under the row they led to, opened by keys", async () => {
-  const app = await launchApp({ userDataDir: seeded() });
+  const { userDataDir, transcript } = await seeded();
+  const app = await launchApp({ userDataDir });
   try {
     const { page } = app;
     const detail: TaskDetail = await page.evaluate((id) => window.infinitary.tasks.detail(id), ID);
@@ -115,6 +210,60 @@ test("a record's Activity folds minor events under the row they led to, opened b
     await expect(folded.first()).toBeVisible();
     await page.keyboard.press("Enter");
     await expect(folded.first()).toBeHidden();
+
+    // INF-100 captain reply: proof is supporting history under Details;
+    // the merge completion card, not this record, presents the result first.
+    const details = body.locator('[data-record-section="details"] > summary');
+    const proof = body.locator('[data-validation-scenario="mac-workflow"]');
+    const proofSummary = proof.locator(":scope > summary");
+    await expect(proof).toBeHidden();
+    await runFromSearch(app.app, page, "focus.card-body");
+    await pressKey(details, "Enter");
+    await expect(proofSummary).toBeVisible();
+    await expectRecordSized(page);
+    await page.keyboard.press("Tab");
+    await untilFocused(proofSummary);
+    await page.keyboard.press("Enter");
+    await expect(proofSummary).toBeInViewport({ ratio: 1 });
+    await expect(proof.locator("[data-validation-observation]")).toBeVisible();
+    await expect(proof.locator("[data-validation-observation]")).toContainText(
+      detail.liveValidation?.rows[0]?.reason ?? "missing proof reason",
+    );
+    await expect(proof.locator("pre")).toHaveText(transcript);
+    // INF-125: retained pictures and recordings use the existing keyboard viewer,
+    // not a native player inside the opaque record frame (its URL cannot play there).
+    await runFromSearch(app.app, page, "focus.card-body");
+    await pressKey(proof.locator("figure img").first(), "Enter");
+    const viewer = page.locator("[data-picture-viewer]");
+    await expect(viewer).toBeVisible();
+    await expect(viewer.getByText(detail.title, { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await pressKey(proof.locator("[data-inf-demo-play]"), "Enter");
+    await expect(viewer.locator("[data-demo-animation]")).toBeVisible();
+    await pressKey(viewer.locator("[data-demo-player] button"), "Enter");
+    await expect(viewer.locator("[data-demo-animation]")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await page.keyboard.press("Enter");
+    await expect(viewer).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await pressKey(proofSummary, "Enter");
+    await expect(proof.locator("[data-validation-observation]")).toBeHidden();
+    await page.keyboard.press("Shift+Tab");
+    await untilFocused(details);
+    await page.keyboard.press("Enter");
+    await expect(proof).toBeHidden();
+    await page.keyboard.press("Enter");
+    await expect(proofSummary).toBeVisible();
+    await expectRecordSized(page);
+    await page.keyboard.press("Tab");
+    await untilFocused(proofSummary);
+    await page.keyboard.press("Enter");
+    await expect(proof.locator("[data-validation-observation]")).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(proof.locator("[data-validation-observation]")).toBeHidden();
   } finally {
     await app.close();
   }

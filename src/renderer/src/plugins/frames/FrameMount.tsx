@@ -120,9 +120,14 @@ export function useFrameController(
         onDraft: (text) => specRef.current.onDraft?.(text),
         // Only a mount that opens pictures makes them stops for the keyboard.
         ...(specRef.current.onImage
-          ? { onImage: (index, pictures) => specRef.current.onImage?.(index, pictures) }
+          ? {
+              onImage: (index, pictures) =>
+                specRef.current.onImage?.(index, pictures, frameRef.current),
+            }
           : {}),
-        ...(specRef.current.onDemo ? { onDemo: (demo) => specRef.current.onDemo?.(demo) } : {}),
+        ...(specRef.current.onDemo
+          ? { onDemo: (demo) => specRef.current.onDemo?.(demo, frameRef.current) }
+          : {}),
         onTask: (gesture, key, box) =>
           specRef.current.onTask?.(gesture, key, box, frameRef.current),
         onEntry: (id) => specRef.current.onEntry?.(id),

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import {
@@ -43,6 +44,7 @@ import {
 } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -1097,15 +1099,53 @@ export class SessionHost {
       onFollowup: (input, signal) => ask("inf:work:followup", { input }, signal),
       onProgress: (note, plan, signal) =>
         ask("inf:work:progress", { text: note, ...(plan !== undefined ? { plan } : {}) }, signal),
-      onReport: (report, summary, declared, signal) =>
-        ask(
+      onReport: (report, summary, declared, toolSignal) =>
+        this.withDeadline(
           "inf:work:report",
-          {
-            text: report,
-            ...(summary !== undefined ? { summary } : {}),
-            ...(declared !== undefined ? { declared } : {}),
+          async (signal) => {
+            if (declared?.validation?.kind === "run") {
+              verifyKeptValidationEvidenceSync(
+                declared.validation.evidence,
+                folders.cards,
+                held.task,
+              );
+              for (const proof of declared.validation.evidence) {
+                for (const file of [proof.file, ...(proof.posterFile ? [proof.posterFile] : [])]) {
+                  if (file.includes("/") || !file.startsWith(`${held.task}-`))
+                    throw new Error("That proof is not this task's.");
+                  const dot = file.lastIndexOf(".");
+                  const data = readFileSync(join(folders.cards, file));
+                  for (let offset = 0; offset < data.length; offset += CARD_MEDIA_PIECE_BYTES) {
+                    await this.call(
+                      held,
+                      "inf:work:media",
+                      {
+                        callId: randomUUID(),
+                        id: file.slice(0, dot),
+                        extension: file.slice(dot + 1),
+                        offset,
+                        size: data.length,
+                        data: data
+                          .subarray(offset, offset + CARD_MEDIA_PIECE_BYTES)
+                          .toString("base64"),
+                      },
+                      signal,
+                    );
+                  }
+                }
+              }
+            }
+            return text(
+              "inf:work:report",
+              {
+                text: report,
+                ...(summary !== undefined ? { summary } : {}),
+                ...(declared !== undefined ? { declared } : {}),
+              },
+              signal,
+            );
           },
-          signal,
+          toolSignal,
         ),
       onReply: (input, signal) => ask("inf:work:reply", input, signal),
       onQueryTasks: (input, toolSignal) =>

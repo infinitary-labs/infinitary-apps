@@ -76,6 +76,52 @@ const PULL = {
 };
 
 describe("GitHubForge", () => {
+  it("INF-203 F5: marks only the reviewed draft ready through the forge's GraphQL request", async () => {
+    let draft = true;
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({
+        json: { ...PULL, node_id: "PR_fixture_23", state: "open", base: { ref: "main" }, draft },
+      }),
+      "POST /graphql": (call) => {
+        expect(call.body).toMatchObject({ variables: { id: "PR_fixture_23" } });
+        draft = false;
+        return {
+          json: { data: { markPullRequestReadyForReview: { pullRequest: { isDraft: false } } } },
+        };
+      },
+    });
+    const change = {
+      number: PULL.number,
+      url: PULL.html_url,
+      branch: PULL.head.ref,
+      headSha: PULL.head.sha,
+      draft: true,
+    };
+    await expect(
+      forge.markReady({ ...change, headSha: "another-version" }, () => {}),
+    ).rejects.toThrow("changed");
+    await expect(
+      forge.markReady(change, () => {
+        throw new Error("Proof changed before send");
+      }),
+    ).rejects.toThrow("Proof changed");
+    expect(seen.filter((call) => call.method === "POST")).toHaveLength(0);
+    const result = await forge.markReady(change, () => {});
+    expect(result.draft).toBe(false);
+    expect((await forge.pull(PULL.number)).readiness).not.toBe("draft");
+    await forge.markReady(change, () => {
+      throw new Error("Already ready must not send");
+    });
+    expect(seen.filter((call) => call.method === "POST")).toHaveLength(1);
+    expect(seen.find((call) => call.method === "POST")?.headers.authorization).toBe(
+      "Bearer gho_test",
+    );
+    console.log(
+      "INF-203 GitHub readiness",
+      JSON.stringify(seen.map(({ method, url, body }) => ({ method, url, body }))),
+    );
+  });
+
   it("finds the open change for a branch, with the person's sign-in and GitHub's API headers", async () => {
     const { seen, forge } = await stub({ "GET /repos/octo/meter/pulls": () => ({ json: [PULL] }) });
     const change = await forge.changeFor("fm/task-1");

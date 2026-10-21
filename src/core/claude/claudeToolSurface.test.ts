@@ -269,12 +269,13 @@ describe("what the Claude client serves equals the source", () => {
     timeout: 180_000,
   }, async () => {
     const cwd = scratchDir("infinitary-tool-surface-");
-    const served = await captureServedTools(cwd, claudeToolServer(censusTools(cwd)));
+    const tools = censusTools(cwd);
+    const served = await captureServedTools(cwd, claudeToolServer(tools));
     const ours = served.filter((tool) => tool.name.startsWith(CLAUDE_SEAT_TOOL_PREFIX));
     expect(ours.length, "the in-process tool server reached the model").toBeGreaterThan(0);
 
     const source = new Map(
-      claudeToolsOf(censusTools(cwd)).map((tool) => [
+      claudeToolsOf(tools).map((tool) => [
         `${CLAUDE_SEAT_TOOL_PREFIX}${tool.name}`,
         tool.description,
       ]),
@@ -285,6 +286,22 @@ describe("what the Claude client serves equals the source", () => {
         source.get(tool.name),
       );
     }
+
+    // INF-125: exact effect consent must reach Claude, including the top-level parameter help.
+    const write = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}github_write`);
+    const writeSource = tools.find((tool) => tool.name === "github_write");
+    const effectHelp = (writeSource?.parameters as Schema | undefined)?.properties?.validationEffect
+      ?.description;
+    expect(effectHelp).toBeTruthy();
+    expect(write?.input_schema?.properties?.validationEffect?.description).toBe(effectHelp);
+    console.info(
+      "INF-125 captured Claude forge consent",
+      JSON.stringify({
+        description: write?.description,
+        descriptionLength: write?.description?.length,
+        validationEffect: write?.input_schema?.properties?.validationEffect?.description,
+      }),
+    );
 
     // `emit_card` is the only app tool with nested parameters, and the
     // audit found only its top-level descriptions surviving. Whatever a

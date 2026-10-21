@@ -310,8 +310,9 @@ describe("renderWake", () => {
       });
     // A builder briefed reviewed holds the fix rules: the findings are
     // relayed verbatim, ask-user ones decided or carded, the reviewer left idle.
+    // INF-203 F2: changed proof facts also justify re-review, without a dummy commit.
     expect(verdict({ briefed: true })).toBe(
-      "[fm-op] crewmate 2 reported on review task r1 \"Review: Fix the pin\" - the review of task t1 \"Fix the pin\" - with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user Steer the builder with every auto-fix finding verbatim; its brief says how to fix them. Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Steer a reviewer only to re-review at a new head its builder reports - an idle reviewer needs no stand-by and no status.",
+      "[fm-op] crewmate 2 reported on review task r1 \"Review: Fix the pin\" - the review of task t1 \"Fix the pin\" - with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user Steer the builder with every auto-fix finding verbatim; its brief says how to fix them. Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.",
     );
     expect(renderRigorSection("reviewed")).toContain(REVIEW_FIX_RULES);
     expect(verdict({ verdict: "blocked", briefed: true }).endsWith(reviewFindingsNext(true))).toBe(
@@ -341,7 +342,7 @@ describe("renderWake", () => {
       `[fm-op] crewmate 1 reported on task t1 "Fix the pin": Fixed F1; committed 89abcde. Its open review FI3-9 last returned findings at 0123456. ${REVIEW_NEW_HEAD_NEXT}`,
     );
     expect(REVIEW_NEW_HEAD_NEXT).toBe(
-      "When this report brings a new head, steer that reviewer to re-review at it, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.",
+      "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.",
     );
     expect(report({ key: "FI3-9", verdict: "blocked" })).toContain(
       "Its open review FI3-9 last returned blocked at an unrecorded head.",

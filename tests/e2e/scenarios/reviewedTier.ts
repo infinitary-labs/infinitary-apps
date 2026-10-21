@@ -1,4 +1,6 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
+import { liveValidationSchema } from "../../../src/shared/liveValidation";
+import { noSurfaceProof } from "../../helpers/liveValidation";
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
 import {
   calledTool,
@@ -12,6 +14,7 @@ import {
   type ScenarioRequest,
   type ScriptedCall,
 } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * The reviewed tier (delivery rigor phases 2 and 3, rigor-reviewed e2e): a
@@ -260,7 +263,7 @@ function crewmateMove({
   if (body.includes(REVIEW_BRIEF_MARKER)) {
     const rereviews = body.split(MOCK_REREVIEW_STEER).length - 1;
     if (!latestUserTail.includes(MOCK_REREVIEW_STEER)) return { text: MOCK_REVIEW_FINDINGS_REPORT };
-    return { text: rereviews >= 3 ? MOCK_REVIEW_PASS_REPORT : MOCK_REVIEW_REFINDINGS_REPORT };
+    return rereviews >= 3 ? liveReviewAnswer(body) : { text: MOCK_REVIEW_REFINDINGS_REPORT };
   }
   // The reviewed builder: a green report and no card on its brief, the
   // fix on the auto-fix steer, the completion card once told the
@@ -286,6 +289,25 @@ function crewmateMove({
     return { text: MOCK_REVIEWED_FIX_REPORT };
   if (latestUserTail.includes(MOCK_REVIEW_REFIX_STEER)) return { text: MOCK_REVIEWED_REFIX_REPORT };
   if (latestUserTail.includes(MOCK_CAP_RETRY_STEER)) return { text: MOCK_REVIEWED_RETRY_REPORT };
+  // INF-125: this lifecycle fixture changes only commit history, not a running product.
+  if (!calledTool(body, "report")) {
+    return {
+      calls: [
+        {
+          name: "report",
+          args: {
+            text: "The lifecycle fixture has no running product.",
+            validation: {
+              kind: "plan",
+              previousRevision: 0,
+              reason: "Only the empty lifecycle fixture's history changes.",
+              scenarios: [],
+            },
+          },
+        },
+      ],
+    };
+  }
   // Its own save point on its branch first - the head its change is
   // checked, reviewed and put in at - then the green report on it.
   if (!calledTool(body, "bash"))
@@ -300,5 +322,70 @@ function crewmateMove({
   // Then its own check reading, as a real builder takes one before
   // it reports: the app records it, and the Firstmate reads it.
   if (!calledTool(body, "check_change")) return { calls: [{ name: "check_change", args: {} }] };
+  if (
+    !providerMessages(body).some(
+      (message) =>
+        message.role === "tool" &&
+        message.text.includes("Validation recorded at evidence revision"),
+    )
+  ) {
+    const head = providerMessages(body)
+      .filter((message) => message.role === "tool")
+      .map((message) => message.text)
+      .join("\n")
+      .match(/head ([a-f0-9]{40})/)?.[1];
+    if (!head) throw new Error("The scripted builder needs its actual checked version.");
+    const {
+      revision: _revision,
+      deviceId: _deviceId,
+      at: _at,
+      ...run
+    } = noSurfaceProof(head).runs[0]!;
+    return {
+      calls: [
+        {
+          name: "report",
+          args: {
+            text: MOCK_REVIEWED_BUILDER_REPORT,
+            validation: { ...run, id: `fixture-${head}`, evidence: [] },
+          },
+        },
+      ],
+    };
+  }
   return { text: MOCK_REVIEWED_BUILDER_REPORT };
+}
+
+/** INF-125: the scripted pass carries the assigned proof judgment, not prose alone. */
+export function liveReviewAnswer(body: string): ScenarioAnswer {
+  if (calledTool(body, "report")) return { text: MOCK_REVIEW_PASS_REPORT };
+  const assignment = providerMessages(body)
+    .filter((message) => message.role === "user")
+    .map((message) => message.text)
+    .join("\n")
+    .matchAll(/Assigned live-validation record: (.+)/g);
+  const snapshot = [...assignment].at(-1)?.[1];
+  if (!snapshot) throw new Error("The scripted reviewer needs its assigned validation record.");
+  const validation = liveValidationSchema.parse(JSON.parse(snapshot));
+  const run = validation.runs.at(-1);
+  if (!run) throw new Error("The scripted reviewer has no assigned proof.");
+  const review = noSurfaceProof(run.head).reviews[0];
+  if (!review) throw new Error("The lifecycle fixture has no review template.");
+  const {
+    reviewer: _reviewer,
+    at: _at,
+    scenarioRevision: _scenarioRevision,
+    ...reviewInput
+  } = review;
+  return {
+    calls: [
+      {
+        name: "report",
+        args: {
+          text: MOCK_REVIEW_PASS_REPORT,
+          validation: { ...reviewInput, revision: run.revision },
+        },
+      },
+    ],
+  };
 }

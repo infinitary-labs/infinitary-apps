@@ -5,6 +5,7 @@ import { openChangeInputSchema, stagedChangePresentationSchema } from "./changeP
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "./checkRepair";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
+import { keptValidationInputSchema } from "./liveValidation";
 import {
   PLACEMENT_FACTS_ORDER,
   placementFactsAnswerSchema,
@@ -305,6 +306,8 @@ export const placedCardSchema = z.object({
   browserButton: z.string().optional(),
   /** Its request that the captain take its browser over (docs/task-browser.md, "Asking for help"). */
   browserHandoff: z.object({ site: z.string(), reason: z.string(), after: z.string() }).optional(),
+  /** Bind the shown ordinary action to a recorded validation request. */
+  validationDecision: z.object({ request: z.string(), action: z.string() }).optional(),
   /** The page from its task's project that its browser button opens (docs/task-browser.md, "A page from the project"). */
   browserPage: z.string().optional(),
 });
@@ -505,6 +508,7 @@ export const workRequests = {
       summary: z.string().optional(),
       declared: z
         .object({
+          validation: keptValidationInputSchema.optional(),
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           needsFirstmate: z.string().optional(),
@@ -572,6 +576,7 @@ export const workRequests = {
         method: z.enum(["POST", "PATCH", "PUT", "DELETE"]),
         path: z.string(),
         body: z.string().optional(),
+        validationEffect: z.string().optional(),
       }),
     }),
     response: toolTextSchema,
@@ -651,8 +656,8 @@ export const workRequests = {
     effect: "change",
     repeats: "safe",
     request: asked({
-      id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$/),
-      extension: z.enum(CARD_MEDIA_KINDS),
+      id: z.string().regex(/^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32,64}$/),
+      extension: z.enum([...CARD_MEDIA_KINDS, "png", "jpg", "webp", "txt", "json", "log"]),
       offset: z.number().int().nonnegative(),
       size: z.number().int().positive().max(RECORDING_MAX_BYTES),
       data: z.string().min(1).max(RECORDING_PIECE_MAX_CHARS),

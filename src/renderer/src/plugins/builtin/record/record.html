@@ -25,6 +25,10 @@
   a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
   a[href]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-s); }
+  [data-validation-rows] pre { white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-sm) var(--font-mono); }
+  [data-validation-rows] figure { margin: var(--space-2) 0; }
+  [data-validation-rows] figcaption { color: var(--fg-3); font-size: var(--text-sm); }
+  [data-validation-rows] img { display: block; max-width: 100%; height: auto; }
   .rows { display: flex; flex-direction: column; gap: 2px; }
   details.row, details.earlier { margin: 0; border: 0; border-radius: 0; padding: 0; background: none; }
   details.row > summary::before, details.earlier > summary::before { content: none; display: none; }
@@ -157,7 +161,16 @@
       </details>
       <details class="row" data-record-section="details" hidden>
         <summary><span class="label">Details</span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
-        <div class="row-body"><dl class="facts" data-record-facts></dl><p class="policy-helper" data-policy-helper></p></div>
+        <div class="row-body">
+          <dl class="facts" data-record-facts></dl>
+          <p class="policy-helper" data-policy-helper></p>
+          <section data-record-section="validation" hidden>
+            <h3 class="label">Live validation</h3>
+            <p class="goal" data-validation-label></p>
+            <p class="verdict" data-validation-reason></p>
+            <div class="rows" data-validation-rows></div>
+          </section>
+        </div>
       </details>
     </div>
   </div>

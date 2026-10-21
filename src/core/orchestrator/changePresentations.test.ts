@@ -246,6 +246,57 @@ describe("saved change publication", () => {
     expect(at.upload).not.toHaveBeenCalled();
   });
 
+  it("INF-125: preserves an approved prerequisite draft through the saved-story publisher", async () => {
+    const at = await arrange();
+    const revision = await at.prepare();
+    const beforePublish = vi.fn((head: string) => {
+      expect(head).toBe(HEAD);
+      at.order.push("authority");
+    });
+    const change = await at.service.publish(
+      TASK,
+      revision,
+      at.forge,
+      BRANCH,
+      "feat: share the change story",
+      "pending",
+      undefined,
+      undefined,
+      { draft: true, beforePublish },
+    );
+    expect(beforePublish).toHaveBeenCalledTimes(1);
+    expect(at.order[0]).toBe("authority");
+    expect(at.open).toHaveBeenCalledWith(expect.objectContaining({ draft: true }));
+    expect(change.draft).toBe(true);
+    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(revision);
+  });
+
+  it("INF-125: an expired prerequisite permission stops the story before any upload or opening", async () => {
+    const at = await arrange();
+    const revision = await at.prepare();
+    await expect(
+      at.service.publish(
+        TASK,
+        revision,
+        at.forge,
+        BRANCH,
+        "feat: share the change story",
+        "pending",
+        undefined,
+        undefined,
+        {
+          draft: true,
+          beforePublish: () => {
+            throw new Error("The prerequisite permission expired.");
+          },
+        },
+      ),
+    ).rejects.toThrow("permission expired");
+    expect(at.upload).not.toHaveBeenCalled();
+    expect(at.open).not.toHaveBeenCalled();
+    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+  });
+
   // INF-285 F3: the complete rendered description must fit before any upload.
   it("refuses a valid story whose escaped Markdown exceeds GitHub's body limit before uploading", async () => {
     const at = await arrange();
@@ -688,7 +739,22 @@ describe("saved change publication", () => {
     const asset = at.staged.assets[0];
     if (!asset) throw new Error("No fixture asset");
     writeFileSync(join(at.media, asset.file), "changed bytes");
-    await expect(at.publish()).rejects.toThrow(/changed after inspection/);
+    // INF-125: a refused preflight must not consume prerequisite authority.
+    const beforePublish = vi.fn();
+    await expect(
+      at.service.publish(
+        TASK,
+        1,
+        at.forge,
+        BRANCH,
+        "feat: share the change story",
+        "pending",
+        undefined,
+        undefined,
+        { draft: true, beforePublish },
+      ),
+    ).rejects.toThrow(/changed after inspection/);
+    expect(beforePublish).not.toHaveBeenCalled();
     expect(at.upload).not.toHaveBeenCalled();
   });
 

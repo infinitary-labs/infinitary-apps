@@ -156,6 +156,7 @@ import { PiAccountBackend } from "./pi/piAccountBackend";
 import { PiAuthService } from "./pi/piAuth";
 import { piReasoningCapabilities } from "./pi/reasoning";
 import { createPiSessionFactory } from "./pi/sessionFactory";
+import { readKeptValidationEvidence } from "./pi/validationEvidence";
 import { AutomaticPlacement } from "./placed/automaticPlacement";
 import { ComputerResourceFeed } from "./placed/computerResourceFeed";
 import { ComputerResources } from "./placed/computerResources";
@@ -801,6 +802,8 @@ export async function createServices(
     | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
+    validationEvidence: (taskId, evidence) =>
+      readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     repos,
     cards: {
       listOpen: () => cardStore.listOpen(),
@@ -1671,6 +1674,7 @@ export async function createServices(
     onCap: (taskId, facts) => supervisor.holdForCiCap(taskId, facts),
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
     bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
+    verifyValidationEvidence: (taskId): void => supervisor.verifyValidationEvidence(taskId),
     now: ticker.now,
   });
   const githubGateway = new GithubGatewayService({
@@ -1679,6 +1683,8 @@ export async function createServices(
     forgeFor,
     accountForge: () => githubForge({ kind: "github", host: GITHUB_COM, dir: "" }),
     readChecks: (taskId) => prCi.checkForCrew(taskId),
+    beforeValidationWrite: (taskId, request, write): Promise<void> =>
+      supervisor.consumeValidationEffect(taskId, request, write),
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
     now: ticker.now,
   });

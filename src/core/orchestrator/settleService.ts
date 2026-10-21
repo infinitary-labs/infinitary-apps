@@ -5,6 +5,7 @@ import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
+import { acceptedValidation } from "@shared/liveValidation";
 import type { MergeRelationship } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import type { RepoDelivery } from "@shared/repos";
@@ -14,6 +15,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskDeliveryMode } from "@shared/tasks";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { type ForgePull, forgeLocationOf, signInRefusal } from "../forge";
+import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import {
   type MergeAuthorization,
@@ -231,6 +233,8 @@ export type SettleServiceHost = {
   workspace: WorkspaceService;
   repos: RepoRegistry;
   cards: CardService;
+  /** Check selected proof synchronously, preserving the final no-yield send boundary. */
+  verifyValidationEvidence?: (taskId: string) => void;
   /** The task's live crewmate turn state, when a runtime holds it. */
   runtimeState(taskId: string): "starting" | "streaming" | "idle" | undefined;
   /**
@@ -408,9 +412,25 @@ export class SettleService {
       }
       if (
         this.policiesOf(record)?.rigor.value === "reviewed" &&
-        !reviewCoversHead(record.delivery, head)
+        !(
+          reviewCoversHead(record.delivery, head) &&
+          head &&
+          acceptedValidation(record.delivery?.liveValidation, head).ready
+        )
       )
-        return "the current version needs an independent review";
+        return `the current version needs an independent review: ${acceptedValidation(record.delivery?.liveValidation, head).reason}`;
+      if (this.policiesOf(record)?.rigor.value === "reviewed") {
+        if (
+          !this.host.verifyValidationEvidence &&
+          record.delivery?.liveValidation?.runs.at(-1)?.evidence.length
+        )
+          return "kept proof cannot be verified here";
+        try {
+          this.host.verifyValidationEvidence?.(taskId);
+        } catch {
+          return "kept proof changed or is missing; restore it or record and review new proof";
+        }
+      }
       this.sentMerges.add(taskId);
       return undefined;
     };
@@ -1160,7 +1180,26 @@ export class SettleService {
   ): Promise<string> {
     const result = await this.settleTaskGuarded(taskId, mode, confirm, actor, proceedWithOpen);
     this.recordRefusal(taskId, mode, result);
-    return result.text;
+    return result.text + this.missingValidationBrief(taskId, mode, result);
+  }
+
+  private missingValidationBrief(
+    taskId: string,
+    mode: "merge-pr" | "land" | "discard",
+    result: SettleOutcome,
+  ): string {
+    const record = this.host.tasks.get(taskId);
+    return mode !== "discard" &&
+      !result.ok &&
+      record &&
+      this.policiesOf(record)?.rigor.value === "reviewed" &&
+      !acceptedValidation(
+        record.delivery?.liveValidation,
+        record.delivery?.headSha ?? record.delivery?.validationHead,
+      ).ready &&
+      !this.host.tasks.briefContains(taskId, CAREFUL_LIVE_VALIDATION)
+      ? `\n\nRelay this missing contract to the builder, even if its completion card is already up; other holds still apply: ${CAREFUL_LIVE_VALIDATION}`
+      : "";
   }
 
   /**
@@ -1184,7 +1223,7 @@ export class SettleService {
     );
     this.recordRefusal(taskId, mode, result);
     return {
-      text: result.text,
+      text: result.text + this.missingValidationBrief(taskId, mode, result),
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
@@ -1840,7 +1879,10 @@ export class SettleService {
     const head = candidateHead(authorization);
     if (
       this.policiesOf(record)?.rigor.value === "reviewed" &&
-      !reviewCoversHead(record.delivery, head)
+      !(
+        reviewCoversHead(record.delivery, head) &&
+        acceptedValidation(record.delivery?.liveValidation, head).ready
+      )
     ) {
       return { wait: "review" };
     }
@@ -2016,7 +2058,7 @@ export class SettleService {
     });
     this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
-      text: `${result.text}\n\n${keptNote(wait, head, place)}`,
+      text: `${result.text}\n\n${keptNote(wait, head, place)}${wait === "review" && record ? ` ${acceptedValidation(record.delivery?.liveValidation, head).reason}${this.host.tasks.briefContains(record.id, CAREFUL_LIVE_VALIDATION) ? "" : ` Relay this missing contract to the builder: ${CAREFUL_LIVE_VALIDATION}`}` : ""}`,
     });
   }
 
@@ -2179,7 +2221,10 @@ export class SettleService {
           )
         : settleFeedLine(title, mode, result),
     });
-    this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, result);
+    this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, {
+      ...result,
+      text: result.text + this.missingValidationBrief(taskId, mode, result),
+    });
   }
 
   /**

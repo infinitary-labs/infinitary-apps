@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { taskLifecycleOpSchema } from "./cards";
 import { computerReachSchema } from "./devices";
+import { liveValidationSummarySchema } from "./liveValidationSummary";
 import { modelReasonSchema } from "./modelReason";
 import { slotSchema } from "./modelSlots";
 import { placementSnapshotSchema } from "./placement";
@@ -537,6 +538,7 @@ export type TaskCardRow = z.infer<typeof taskCardRowSchema>;
 
 /** One record in full: the view plus what the board leaves out. */
 export const taskDetailSchema = taskViewSchema.extend({
+  liveValidation: liveValidationSummarySchema.optional(),
   /** Current policies, separate from dispatch and published delivery history. */
   policies: effectiveTaskPoliciesSchema.nullable().optional(),
   /**

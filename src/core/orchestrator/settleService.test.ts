@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { InboxStore } from "../storage/inboxStore";
 import type { MergeAuthorization } from "../storage/taskStore";
@@ -170,6 +171,18 @@ describe("a kept merge carries a passed review across a pure update", () => {
     // with the repair. A branch read would fail once the checkout is gone.
     const { tasks, host, updated, dir, merged } = await reviewedUpdate();
     execFileSync("rm", ["-rf", join(dir, ".git")]);
+    // INF-125: unchanged code clearance alone is not current proof. This
+    // non-running a.txt change still needs an explicit no-surface judgment.
+    await host.runMergeAuthorization("review01");
+    expect(merged()).toBe(false);
+    expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("review");
+    tasks.recordDelivery("review01", {
+      liveValidation: noSurfaceProof(
+        updated,
+        "fixture-reviewer",
+        "This lifecycle fixture changes only a.txt; it has no running product.",
+      ),
+    });
     await host.runMergeAuthorization("review01");
     const delivery = tasks.get("review01")?.delivery;
     expect(delivery?.reviewCarrySha).toBeUndefined();

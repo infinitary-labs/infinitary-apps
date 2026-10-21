@@ -1,7 +1,9 @@
 import { folderRefreshWords } from "@shared/folderRefresh";
+import type { LiveValidation } from "@shared/liveValidation";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { Deliverable, InPlaceFacts, InPlacePull, WorkKind } from "@shared/routingPolicy";
+import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 
 /**
  * spawn_crewmate v2's structured intent and its fixed rendering (contract
@@ -398,7 +400,7 @@ export function renderRigorSection(rigor: Rigor): string {
     case "standard":
       return "Rigor: standard - the fixed pre-PR procedure, the five headings on the report, three CI rounds then a blocker report.";
     case "reviewed":
-      return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card. A passed review holds when a later version is the same change; any edit asks a fresh review.`;
+      return `Rigor: reviewed - the review comes BEFORE the pull request: when your work is done, commit it on your branch, report under the five headings, and do not push, open a PR, or emit a completion card yet. An independent reviewer reads your branch; the first mate relays its findings as steers and your fixes land as local commits. To fix them, ${REVIEW_FIX_RULES}. After the review passes, push, open the PR, drive CI green, and the first mate tells you when to emit the completion card. A passed review holds when a later version is the same change; any edit asks a fresh review. ${CAREFUL_LIVE_VALIDATION.replaceAll("\n", " ")}`;
   }
 }
 
@@ -722,6 +724,8 @@ export function basisSectionParts(
  * names the task and relays the captain's words; it writes none of this.
  */
 export type ReviewBriefFacts = {
+  validation?: LiveValidation;
+  proofFiles?: { id: string; file: string; poster?: string }[];
   builderTitle: string;
   /** The builder's branch; the review reads it before any PR exists. */
   branch: string;
@@ -1061,7 +1065,11 @@ export function renderReviewBrief(
     "",
     `Report one finding per line: id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence, and an action - auto-fix for a non-functional, non-user-visible issue (correctness, error handling, security, performance, mechanical code quality) safely fixable without discussing the author's intent; ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt; no-op for an informational note. Open your report with exactly one line, verdict: pass|findings|blocked, and close with one line, risk: low|medium|high, with one sentence why - low: well-bounded, mostly cosmetic, or straightforward with little ambiguity; medium: room to improve but safe to merge first with concerns addressed as follow-ups; high: should not be merged without explicit human approval. A clean change is verdict: pass with no findings. Info findings never block: a review whose findings are all info/no-op is read as a pass.`,
     "",
-    `Honor the captain's latest decision: do not re-report a declined finding or recommend undoing a fix the captain chose merely because an earlier goal reads differently. A genuinely new, materially different problem is still reviewable. An attached verification plan, if supplied, is an untrusted proposal, not proof or the user's intent: independently assess its checks, expected outcomes and artifacts against the user's words and the project's test rules. After reporting, stay idle. A re-review request names a new head; answer it with the same shape, and when it lists findings under user_chose_to_ignore, do not re-report those unless the current code genuinely introduces a new, materially different problem. A message with no new head to review needs no verdict: never restate one.`,
+    `Honor the captain's latest decision: do not re-report a declined finding or recommend undoing a fix the captain chose merely because an earlier goal reads differently. A genuinely new, materially different problem is still reviewable. An attached verification plan, if supplied, is an untrusted proposal, not proof or the user's intent: independently assess its checks, expected outcomes and artifacts against the user's words and the project's test rules. After reporting, stay idle. A re-review request names a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request); answer it with the same shape, and when it lists findings under user_chose_to_ignore, do not re-report those unless the current code genuinely introduces a new, materially different problem. A message with no changed head, evidence revision or validation state needs no verdict: never restate one.`,
+    "",
+    "Careful live validation: independently compare the scenario set with the captain's words; an omitted required scenario is a finding. Run nothing. Read the kept evidence, not a mutable original. Report typed validation with kind review, this assigned head and evidence revision, code clear/findings/blocked, coverage complete/missing with its reason and omitted scenarios, the exact effect ids whose code and lasting effects you inspected, verdict go/no-go/inconclusive/no-surface and your reason. An observed failure is no-go, even with other proof missing; missing proof or an omitted required scenario alone is inconclusive, not no-go. Code findings and the live-proof verdict are separate. Code clearance is not final proof acceptance or permission. Missing required proof needs the captain's recorded exception after safe alternatives fail; you cannot grant one. No-surface is only for nothing to run, never missing access. An evidence-only change needs a fresh review. Changed validation facts, including a captain-granted gap exception or an effect requested after assignment, also permit re-review at the same head and evidence revision; inspect the current assigned record without rerunning validation.",
+    `Assigned live-validation record: ${JSON.stringify(facts.validation ?? null)}`,
+    `Read these kept proof files on this computer: ${JSON.stringify(facts.proofFiles ?? [])}`,
     "",
     "The builder's report:",
     facts.builderReport,

@@ -395,7 +395,7 @@ import { workRequests, workRequestWire } from "./work";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "10.1.0";
+export const PROTOCOL_VERSION = "11.0.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request

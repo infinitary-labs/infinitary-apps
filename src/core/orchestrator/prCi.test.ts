@@ -8,6 +8,7 @@ import type { MergeReview } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   AttachmentUploadError,
@@ -29,6 +30,7 @@ import type { MergeAuthorization } from "../storage/taskStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { TaskService } from "../tasks/taskService";
+import { git } from "../workspace/git";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import { ChangePresentations } from "./changePresentations";
@@ -105,7 +107,14 @@ class FakeForge implements Forge {
   async defaultBranch() {
     return "main";
   }
-  async openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange> {
+  drafts: boolean[] = [];
+  async openChange(input: {
+    branch: string;
+    title: string;
+    body: string;
+    draft?: boolean;
+  }): Promise<ForgeChange> {
+    this.drafts.push(input.draft === true);
     this.calls.push(`openChange ${input.branch} ${input.title}`);
     if (this.fail.openChange) throw this.fail.openChange;
     this.change = { ...this.opened, branch: input.branch };
@@ -130,6 +139,14 @@ class FakeForge implements Forge {
       throw this.fail.changeFor ?? new Error("changeFor failed");
     }
     return this.change ? { ...this.change, branch } : null;
+  }
+  failReady: Error | undefined;
+  async markReady(change: ForgeChange, beforeSend: () => void) {
+    beforeSend();
+    this.calls.push(`markReady ${change.headSha}`);
+    if (this.failReady) throw this.failReady;
+    this.change = { ...change, draft: false, title: change.title?.replace(/^Draft: /, "") };
+    return this.change;
   }
   async checks(change: ForgeChange) {
     this.calls.push(`checks ${change.headSha}`);
@@ -241,6 +258,340 @@ describe("PrCiService", () => {
     expect(result.text).toContain("story has not been published");
     expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
   });
+  it.each([
+    { kind: "github", readiness: "applied", carried: false },
+    { kind: "github", readiness: "not-applied", carried: false },
+    { kind: "github", readiness: "manual-hold", carried: false },
+    { kind: "gitlab", readiness: "applied", carried: false },
+    { kind: "git", readiness: "applied", carried: false },
+    { kind: "github", readiness: "applied", carried: true },
+    { kind: "gitlab", readiness: "applied", carried: true },
+  ] as const)(
+    "INF-125 / INF-203 N1–N2: $kind prerequisite publication survives a newer head and $readiness readiness (carried code review: $carried)",
+    async ({ kind, readiness, carried }) => {
+      const { tasks, repos, service, forge } = setup({ forge: new FakeForge({ kind }) });
+      const publication = kind === "git" ? "branch" : "draft";
+      forge.change = null;
+      await insertDirectPrTask(tasks, repos, {
+        shape: { kind: "fix", rigor: "reviewed", rigor_ask: "reviewed" },
+      });
+      const task = tasks.get("ab12cd34")!;
+      await git(task.repoDir, [
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@localhost",
+        "commit",
+        "--allow-empty",
+        "-m",
+        "chore: initialize validation fixture",
+      ]);
+      await git(task.repoDir, ["branch", task.branch!]);
+      const head = await git(task.repoDir, ["rev-parse", task.branch!]);
+      forge.opened =
+        kind === "git" ? { headSha: head, url: null } : { ...forge.opened, headSha: head };
+      tasks.recordDelivery(task.id, { reviewVerdict: "pass", reviewSha: head });
+      const input = {
+        title: "fix: validate the isolated fixture",
+        body: "The branch has no running product.",
+      };
+      expect(await service.open(task.id, input)).toContain("independent review");
+      expect(forge.drafts).toEqual([]);
+      const scenario = {
+        id: "draft",
+        source: `Validate the isolated environment obtained by a ${publication}.`,
+        importance: "required" as const,
+        action: `Publish the prerequisite ${publication}`,
+        expected: "The isolated validation environment becomes available.",
+        adverse: "A lost response is not sent twice.",
+        environment: "Disposable project",
+        signal: `The host confirms the ${publication}.`,
+        boundary: "Actual forge publication",
+      };
+      tasks.recordLiveValidation(
+        task.id,
+        {
+          kind: "plan",
+          previousRevision: 0,
+          reason: `This scenario needs an approved ${publication}.`,
+          scenarios: [scenario],
+        },
+        { head },
+      );
+      tasks.recordLiveValidation(
+        task.id,
+        {
+          kind: "request",
+          request: {
+            kind: "effect",
+            id: "draft-once",
+            head,
+            scenario: scenario.id,
+            action: scenario.action,
+            destination: "Disposable project",
+            audience: "Project collaborators",
+            visibility: "others",
+            persistent: true,
+            purpose: "Obtain the isolated environment",
+            lastingEffects: `One ${publication} and its history`,
+            cleanup: `Remove the ${publication}; history remains`,
+            access: "Disposable account",
+            preChange: false,
+            prerequisitePublication: true,
+            publication: { repoId: task.repoId!, branch: task.branch! },
+          },
+        },
+        { head },
+      );
+      tasks.recordLiveValidation(
+        task.id,
+        {
+          kind: "review",
+          head,
+          revision: 0,
+          code: "clear",
+          coverage: "complete",
+          coverageReason: "The requested publication is the necessary boundary.",
+          effects: ["draft-once"],
+          omitted: [],
+          verdict: "inconclusive",
+          reason: "Code cleared; the live environment is still unavailable.",
+        },
+        {
+          head,
+          reviewer: "reviewer",
+          assignment: { head, revision: 0, scenarioRevision: 1, effects: ["draft-once"] },
+        },
+      );
+      tasks.recordLiveValidation(
+        task.id,
+        { kind: "decision", request: "draft-once", card: "approve-draft", action: "approve" },
+        { head, decision: { offer: "shown" } },
+      );
+      tasks.decideLiveValidation(task.id, {
+        card: "approve-draft",
+        offer: "shown",
+        action: "approve",
+        label: `Approve the ${publication}`,
+        head,
+      });
+      forge.fail.openChange = new Error("The connection ended before the host's answer.");
+      expect(await service.open(task.id, input)).toContain("connection ended");
+      expect(forge.drafts).toEqual([kind !== "git"]);
+      const uncertain = tasks.get(task.id)?.delivery?.liveValidation?.permissions ?? [];
+      expect(uncertain[0]?.state).toBe("unknown");
+      // Even complete final proof cannot convert that unknown attempt into permission to repeat it.
+      const proof = noSurfaceProof(head);
+      tasks.recordDelivery(task.id, {
+        reviewVerdict: "blocked",
+        liveValidation: { ...proof, permissions: uncertain },
+      });
+      delete forge.fail.openChange;
+      expect(await service.open(task.id, input)).toContain("unknown outcome");
+      expect(forge.drafts).toEqual([kind !== "git"]);
+      forge.change = {
+        ...forge.opened,
+        branch: task.branch!,
+        draft: kind !== "git",
+        title: kind === "gitlab" ? `Draft: ${input.title}` : input.title,
+      };
+      expect(await service.open(task.id, input)).toContain("already open");
+      expect(forge.drafts).toEqual([kind !== "git"]);
+      expect(tasks.get(task.id)?.delivery?.liveValidation?.permissions[0]?.state).toBe("succeeded");
+      expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
+      // N1: publication authority identifies the draft, not every later commit on its branch.
+      await git(task.repoDir, ["checkout", task.branch!]);
+      await git(task.repoDir, [
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@localhost",
+        "commit",
+        "--allow-empty",
+        "-m",
+        "fix: update the prerequisite candidate",
+      ]);
+      const currentHead = await git(task.repoDir, ["rev-parse", task.branch!]);
+      expect(currentHead).not.toBe(head);
+      forge.change = { ...forge.change!, headSha: currentHead };
+      tasks.recordDelivery(task.id, { reviewVerdict: "pass", reviewSha: head });
+      expect(await service.readWatched(task.id)).toMatchObject({
+        kind: "settled",
+        head: currentHead,
+      });
+      expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
+      tasks.recordDelivery(task.id, { reviewSha: currentHead });
+      expect(await service.readWatched(task.id)).toMatchObject({
+        kind: "settled",
+        head: currentHead,
+      });
+      expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
+      const published = tasks.get(task.id)!.delivery!.liveValidation!.permissions;
+      expect(published).toHaveLength(1);
+      expect(published[0]).toMatchObject({ state: "succeeded", request: { head } });
+      tasks.recordDelivery(task.id, {
+        liveValidation: { ...noSurfaceProof(currentHead), permissions: published },
+      });
+      if (carried) {
+        // INF-148's code clearance carries across this actual empty commit;
+        // INF-125 still requires the new version's proof and its own judgment.
+        const reading = await readChangeReading(task.repoDir, head);
+        const currentReading = await readChangeReading(task.repoDir, currentHead);
+        if (!reading || currentReading !== reading)
+          throw new Error("The fixture's unchanged patch must have the same real change reading.");
+        tasks.recordDelivery(task.id, {
+          reviewSha: head,
+          reviewChange: reading,
+          versionReadings: { [currentHead]: currentReading },
+        });
+      }
+      if (kind !== "git") {
+        const markReady = forge.markReady.bind(forge);
+        forge.markReady = async (change, beforeSend) => {
+          tasks.recordDelivery(task.id, { reviewVerdict: "blocked" });
+          return markReady(change, beforeSend);
+        };
+        expect(await service.checkForCrew(task.id)).toContain("Validation changed");
+        expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
+        expect(tasks.get(task.id)?.delivery?.validationReadiness?.state).toBe("not-applied");
+        forge.markReady = markReady;
+        tasks.recordDelivery(task.id, {
+          reviewVerdict: "pass",
+          reviewSha: carried ? head : currentHead,
+        });
+      }
+      if (kind === "gitlab") {
+        // A watch still reads checks while another readiness request is in flight.
+        const markReady = forge.markReady.bind(forge);
+        let start!: () => void;
+        let finish!: () => void;
+        const started = new Promise<void>((resolve) => {
+          start = resolve;
+        });
+        const release = new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+        const pendingReady = vi.fn(async (change: ForgeChange, beforeSend: () => void) => {
+          beforeSend();
+          start();
+          await release;
+          return markReady(change, () => {});
+        });
+        forge.markReady = pendingReady;
+        const active = service.checkForCrew(task.id);
+        await started;
+        try {
+          expect(await service.readWatched(task.id)).toMatchObject({
+            kind: "settled",
+            overall: "green",
+          });
+          expect(pendingReady).toHaveBeenCalledTimes(1);
+        } finally {
+          finish();
+          await active;
+          forge.markReady = markReady;
+        }
+      }
+      if (kind === "github") {
+        forge.failReady = new Error("Readiness response lost");
+        const reading = await service.checkForCrew(task.id);
+        expect(reading).toContain("Readiness response lost");
+        expect(reading).toContain("overall: green");
+        expect(tasks.get(task.id)?.delivery?.validationReadiness?.state).toBe("unknown");
+        if (readiness === "not-applied") {
+          // N2: failed readiness never wedges any of the three ordinary entry points.
+          expect(await service.readWatched(task.id)).toMatchObject({
+            kind: "settled",
+            overall: "green",
+          });
+          const reopened = await service.open(task.id, input);
+          expect(reopened).toContain("already open");
+          expect(reopened).toContain("Readiness response lost");
+          expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(3);
+          expect(tasks.timeline(task.id)).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                data: expect.objectContaining({
+                  validationReadiness: expect.objectContaining({ state: "not-applied" }),
+                }),
+              }),
+            ]),
+          );
+          // Only the later still-draft reading permits another idempotent readiness request.
+        } else {
+          // A later ready reading reconciles success without another write.
+          forge.change = { ...forge.change!, draft: false };
+        }
+        forge.failReady = undefined;
+      }
+      expect(await service.checkForCrew(task.id)).toContain("overall: green");
+      expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(
+        kind === "git" ? 0 : readiness === "not-applied" ? 4 : 1,
+      );
+      if (kind !== "git")
+        expect(tasks.get(task.id)?.delivery?.validationReadiness).toMatchObject({
+          head: currentHead,
+          state: "ready",
+        });
+      expect(forge.change?.draft).toBe(false);
+      if (readiness === "manual-hold") {
+        // INF-203 P2: the captain chose to preserve a person's restored draft at this head.
+        forge.change = { ...forge.change!, draft: true };
+        expect(await service.readWatched(task.id)).toMatchObject({
+          kind: "settled",
+          overall: "green",
+        });
+        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        expect(await service.open(task.id, input)).toContain("already open");
+        expect(forge.change.draft).toBe(true);
+        expect(forge.calls.filter((call) => call.startsWith("markReady"))).toEqual([
+          `markReady ${currentHead}`,
+        ]);
+        expect(tasks.get(task.id)?.delivery?.validationReadiness).toMatchObject({
+          head: currentHead,
+          number: forge.change.number,
+          state: "ready",
+        });
+        // N1 still permits a newer commit, but not on the older commit's proof or review.
+        await git(task.repoDir, [
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@localhost",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "fix: revise the held candidate",
+        ]);
+        const nextHead = await git(task.repoDir, ["rev-parse", task.branch!]);
+        expect(nextHead).not.toBe(currentHead);
+        forge.change = { ...forge.change, headSha: nextHead };
+        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        expect(forge.change.draft).toBe(true);
+        expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(1);
+        tasks.recordDelivery(task.id, {
+          reviewSha: nextHead,
+          liveValidation: { ...noSurfaceProof(nextHead), permissions: published },
+        });
+        expect(await service.checkForCrew(task.id)).toContain("overall: green");
+        expect(forge.change.draft).toBe(false);
+        expect(forge.calls.filter((call) => call.startsWith("markReady"))).toEqual([
+          `markReady ${currentHead}`,
+          `markReady ${nextHead}`,
+        ]);
+        console.log(
+          "INF-203 P2 restored draft",
+          JSON.stringify({ heldHead: currentHead, nextHead, calls: forge.calls }),
+        );
+      }
+      expect((await service.merge(task.id)).ok).toBe(true);
+      expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(true);
+      console.log(
+        "INF-203 prerequisite through merge",
+        JSON.stringify({ kind, readiness, publishedHead: head, currentHead, calls: forge.calls }),
+      );
+    },
+  );
 
   it("reads a change with no checks as green, says so, and lets the put-in through", async () => {
     // A repo whose check suite is deliberately absent (or skipped for the
@@ -2342,7 +2693,11 @@ describe("a passed review covers the same change", () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
-    tasks.recordDelivery("ab12cd34", { reviewVerdict: "pass", reviewSha: "feedbeef" });
+    tasks.recordDelivery("ab12cd34", {
+      reviewVerdict: "pass",
+      reviewSha: "feedbeef",
+      liveValidation: noSurfaceProof("feedbeef"),
+    });
     const opened = await service.open("ab12cd34", { title: "fix: ship it", body: "Why" });
     expect(opened).toContain("already open");
     expect(opened).not.toContain("needs an independent review");
@@ -2397,6 +2752,15 @@ describe("a passed review covers the same change", () => {
     run("checkout", "fm/task-ab12cd34");
     run("rebase", "main");
     const updated = run("rev-parse", "HEAD");
+    // INF-125: proof still names this version; the code-review assertion below
+    // independently proves that an unchanged patch keeps its earlier review.
+    tasks.recordDelivery("ab12cd34", {
+      liveValidation: noSurfaceProof(
+        updated,
+        "fixture-reviewer",
+        "This fixture changes only the lines of a plain text file.",
+      ),
+    });
     expect(
       await service.open("ab12cd34", { title: "feat: change line 20", body: "Why" }),
     ).toContain("Opened pull request #42");
@@ -2436,6 +2800,13 @@ describe("a passed review covers the same change", () => {
       headSha: edited,
       title: "feat: change line 20",
     };
+    tasks.recordDelivery("ab12cd34", {
+      liveValidation: noSurfaceProof(
+        edited,
+        "fixture-reviewer",
+        "The edited fixture still contains only a plain text file, not a running product.",
+      ),
+    });
     const refused = await service.merge("ab12cd34", undefined, {
       unattended: false,
       beforeDispatch: () => {
@@ -2619,6 +2990,44 @@ describe("shared story delivery boundaries", () => {
     expect(stale).toContain(corrected);
     expect(at.update).toHaveBeenCalledTimes(1);
   });
+
+  // INF-125 and INF-497: changing surrounding words must retain the same final proof gate.
+  it.each(["story", "surroundings"] as const)(
+    "INF-125: rechecks current proof after %s preflight",
+    async (mode) => {
+      const at = await saved();
+      at.tasks.setDevice("ab12cd34", null);
+      at.repos.configure(at.tasks.get("ab12cd34")!.repoId!, { rigor: "reviewed" });
+      at.tasks.recordDelivery("ab12cd34", {
+        reviewVerdict: "pass",
+        reviewSha: original,
+        liveValidation: noSurfaceProof(original),
+      });
+      const title = "fix: explain the publication recovery";
+      if (mode === "story")
+        at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+          ...current!,
+          revisions: [...current!.revisions, { ...at.story, revision: 2, title }],
+        }));
+      at.readHead.mockImplementation(async () => {
+        at.tasks.recordDelivery("ab12cd34", {
+          liveValidation: { ...noSurfaceProof(original), reviews: [] },
+        });
+        return original;
+      });
+      expect(
+        await at.service.open("ab12cd34", {
+          title,
+          presentation: mode === "story" ? 2 : 1,
+          ...(mode === "surroundings"
+            ? { around: { from: "", to: "Keep the current reviewed proof." } }
+            : {}),
+        }),
+      ).toContain("The current proof or review changed before publication");
+      expect(at.update).not.toHaveBeenCalled();
+      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(1);
+    },
+  );
 
   it("merges the published PR while its work computer is asleep and reads completion only once", async () => {
     const at = await saved();

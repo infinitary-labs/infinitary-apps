@@ -2,17 +2,20 @@ import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { renderRigorSection } from "../../src/core/orchestrator/intentBrief";
 import {
-  REVIEW_NEW_HEAD_NEXT,
+  openReviewText,
   REVIEW_PASSED_NEXT,
   reviewFindingsNext,
 } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
+import { TaskStore } from "../../src/core/storage/taskStore";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import { REVIEW_FINDING_LABEL } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
+import { validationStateRevision } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
 import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { noSurfaceProof } from "../helpers/liveValidation";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -29,6 +32,7 @@ import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
 import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   MOCK_CAP_RETRY_STEER,
   MOCK_REVIEW_ASK_CARD_TITLE,
@@ -113,11 +117,20 @@ function builderReads(taskId: string, head: string): void {
   const db = openDatabase(userDataDir);
   try {
     // e2e-writer-ok: stands in for the builder's check_change, which the mock builder takes once, on its first report
-    new TaskService({ db }).recordDelivery(taskId, {
+    const tasks = new TaskService({ db });
+    tasks.recordDelivery(taskId, {
       ci: "green",
       ciAt: Date.now(),
       headSha: head,
     });
+    // e2e-writer-ok: the scripted builder revalidates this fixture's history-only commit.
+    const {
+      revision: _revision,
+      deviceId: _deviceId,
+      at: _at,
+      ...run
+    } = noSurfaceProof(head).runs[0]!;
+    tasks.recordLiveValidation(taskId, { ...run, id: `fixture-${head}` }, { head });
   } finally {
     db.close();
   }
@@ -224,6 +237,10 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   // The builder saved its work before reporting: its branch's commit is the head.
   const builderBranch = `fm/task-${builder.id}`;
   const HEAD_SHA = branchHead(builderBranch);
+  const initialProofRevision = (
+    await page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id)
+  ).liveValidation?.revision;
+  expect(initialProofRevision).toBeDefined();
   expect(git(repoDir, "log", "-1", "--format=%s", HEAD_SHA)).toBe(MOCK_REVIEWED_CHANGE.title);
   await page.screenshot({ path: test.info().outputPath("rigor-reviewed-activity.png") });
   await expectNoCard(page, MOCK_REVIEWED_CARD_TITLE);
@@ -279,6 +296,17 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     );
   }
   await setThemeViaSettings(page, "dark");
+
+  // INF-203 F2: the wake now carries validation state as well as code and evidence.
+  // Read those facts from their owner and derive the complete wording, rather than pinning a fragment.
+  const firstReviewState = readSavedData(userDataDir, (db) => {
+    const stored = new TaskStore(db);
+    return {
+      assignment: stored.get(review.id)?.delivery?.validationAssignment,
+      current: validationStateRevision(stored.get(builder.id)?.delivery?.liveValidation),
+    };
+  });
+  expect(firstReviewState.assignment).toBeDefined();
 
   // 5. The hold: a merge asked for while the review is open is refused by
   //    the blocks edge, and nothing was merged. The refusal's words are
@@ -494,7 +522,15 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
       (wake) =>
         wake.includes(`reported on task ${builder.id}`) &&
         wake.endsWith(
-          `Its open review ${review.key} last returned findings at ${HEAD_SHA.slice(0, 7)}. ${REVIEW_NEW_HEAD_NEXT}`,
+          openReviewText({
+            key: review.key,
+            verdict: "findings",
+            head: HEAD_SHA,
+            evidenceRevision: initialProofRevision,
+            currentEvidenceRevision: initialProofRevision,
+            stateRevision: firstReviewState.assignment?.stateRevision,
+            currentStateRevision: firstReviewState.current,
+          }),
         ),
     ),
   ).toBe(true);

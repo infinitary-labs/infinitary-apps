@@ -45,6 +45,7 @@ import {
 } from "../../../tests/helpers/anthropicDialect";
 import { freePort } from "../../../tests/helpers/connectionClient";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -1835,6 +1836,177 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
+  it("INF-203 F1: the real home accepts a clean placed run and effect request, but refuses dirty placed work", async () => {
+    const project = await gitProject();
+    const at = await world((repo) => project.forge(Buffer.alloc(0), repo?.path));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr", rigor: "reviewed" });
+    model([{ text: "The clean checkout will be validated." }]);
+    await at.start(
+      "t-validation",
+      "Check this placed checkout's committed version and clean status.",
+      repo.id,
+    );
+    await expect.poll(() => home.tasks.get("t-validation")?.activity).toBe("idle");
+    expect(home.tasks.get("t-validation")?.worktreeDir).toBe("");
+    const work = at.folders("t-validation").work;
+    const head = await git(work, ["rev-parse", "HEAD"]);
+    const scenario = {
+      id: "checkout",
+      source: "Check the placed checkout's version and clean status.",
+      importance: "required",
+      action: "Read HEAD and git status on the work computer.",
+      expected: "One committed version with no edits.",
+      adverse: "Uncommitted work must be refused.",
+      environment: "Disposable paired helper",
+      signal: "Git's actual readings.",
+      boundary:
+        "The actual placed working copy and home report path, not a physical second computer.",
+    };
+    model([
+      {
+        tools: [
+          {
+            name: "report",
+            args: {
+              text: "Recorded the checkout scenario.",
+              validation: {
+                kind: "plan",
+                previousRevision: 0,
+                reason: scenario.source,
+                scenarios: [scenario],
+              },
+            },
+          },
+        ],
+      },
+      { text: "The checkout scenario is recorded." },
+    ]);
+    await home.supervisor.steerCrewmate(
+      "t-validation",
+      "Record the scenario before reading its result.",
+    );
+    await expect
+      .poll(() => home.tasks.get("t-validation")?.delivery?.liveValidation?.scenarioRevision)
+      .toBe(1);
+    await expect.poll(() => home.tasks.get("t-validation")?.activity).toBe("idle");
+    const observed = JSON.stringify({
+      head: await git(work, ["rev-parse", "HEAD"]),
+      status: await git(work, ["status", "--porcelain"]),
+    });
+    const file = join(at.folders("t-validation").evidence, "checkout.json");
+    mkdirSync(at.folders("t-validation").evidence, { recursive: true });
+    writeFileSync(file, observed);
+    const run = {
+      kind: "run",
+      id: "checkout-clean",
+      head,
+      scenarioRevision: 1,
+      completion: "complete",
+      verdict: "go",
+      reason: "The actual placed checkout was clean at this committed version.",
+      observations: [
+        {
+          scenario: "checkout",
+          result: "pass",
+          live: true,
+          actual: observed,
+          evidence: ["checkout"],
+          standIns: [],
+          unproven: [],
+          attempted: [],
+        },
+      ],
+      evidence: [
+        {
+          id: "checkout",
+          path: file,
+          description: "HEAD and git status from the actual placed working copy.",
+        },
+      ],
+    };
+    const effect = {
+      kind: "request",
+      request: {
+        kind: "effect",
+        id: "clean-reproduction",
+        head,
+        scenario: "checkout",
+        action: "Publish the exact pre-change reproduction.",
+        destination: "Disposable fixture",
+        audience: "Fixture collaborators",
+        visibility: "others",
+        persistent: true,
+        purpose: "Reproduce the clean-checkout condition",
+        lastingEffects: "A retained fixture record",
+        cleanup: "Delete the fixture afterward",
+        access: "Disposable fixture only",
+        preChange: true,
+        prerequisitePublication: false,
+      },
+    };
+    model([
+      {
+        tools: [
+          { name: "report", args: { text: "The placed checkout was exercised.", validation: run } },
+        ],
+      },
+      {
+        tools: [
+          {
+            name: "report",
+            args: { text: "The pre-change reproduction needs an answer.", validation: effect },
+          },
+        ],
+      },
+      { text: "The home has the proof and unanswered request." },
+    ]);
+    await home.supervisor.steerCrewmate(
+      "t-validation",
+      "Record the observed run and request, not approval.",
+    );
+    await expect
+      .poll(() => home.tasks.get("t-validation")?.delivery?.liveValidation?.permissions[0]?.state)
+      .toBe("requested");
+    await expect.poll(() => home.tasks.get("t-validation")?.activity).toBe("idle");
+    const kept = home.tasks.get("t-validation")?.delivery?.liveValidation?.runs[0];
+    expect(kept).toMatchObject({ head, deviceId: at.deviceId, verdict: "go" });
+    expect(
+      readFileSync(
+        join(crewmateCardPicturesDir(home.paths, "t-validation"), kept!.evidence[0]!.file),
+        "utf8",
+      ),
+    ).toBe(observed);
+    expect(kept!.evidence[0]!.text).toBeUndefined();
+    writeFileSync(join(work, "uncommitted.txt"), "Not the approved version.");
+    model([
+      {
+        tools: [
+          {
+            name: "report",
+            args: {
+              text: "Attempt the dirty checkout report.",
+              validation: { ...run, id: "dirty" },
+            },
+          },
+        ],
+      },
+      { text: "The dirty report was refused." },
+    ]);
+    await home.supervisor.steerCrewmate(
+      "t-validation",
+      "Check whether a dirty checkout can record the same proof.",
+    );
+    await expect.poll(() => home.tasks.get("t-validation")?.activity).toBe("idle");
+    expect(said(api.requests.at(-1))).toContain("Commit the current work before validation");
+    expect(home.tasks.get("t-validation")?.delivery?.liveValidation?.runs).toHaveLength(1);
+    console.log(
+      "INF-203 placed home proof",
+      JSON.stringify({ head, kept: kept!.evidence, observed, dirtyRefused: true }),
+    );
+  });
+
   // INF-97: INF-40 started on the Mac mini before its home moved Firstmate
   // 3000's folder into Infinitary's. A reviewed open_change read the branch
   // in the older folder's copy of the project, which never received it:
@@ -1856,7 +2028,17 @@ describe("a task that runs on a computer that runs work", () => {
     const work = at.folders("t-moved").work;
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
-    at.home().tasks.recordDelivery("t-moved", { reviewVerdict: "pass", reviewSha: tip });
+    // INF-125 adds an explicit proof prerequisite; INF-97 still owns the real moved-folder/git boundary below.
+    at.home().tasks.recordDelivery("t-moved", {
+      reviewVerdict: "pass",
+      reviewSha: tip,
+      validationHead: tip,
+      liveValidation: noSurfaceProof(
+        tip,
+        "fixture-reviewer",
+        "INF-97 is a git-publication fixture with no running application; footer.html is unserved branch content, not a claimed UI result.",
+      ),
+    });
 
     const moved = await moveProjectFolder(at, repo.path);
     const home = at.home();

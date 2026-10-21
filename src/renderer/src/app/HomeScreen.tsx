@@ -1024,9 +1024,14 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const openPictures = (
     set: { index: number; pictures: FramePicture[]; demo?: ViewerDemo },
     opener: HTMLIFrameElement | null,
+    recordTitle?: string,
   ) => {
-    // A past card's entry holds no title of its own: the viewer names the card it read.
-    const title = pastRead?.state === "ready" ? pastRead.card.title : card?.title;
+    // A held record or past card reads its title rather than carrying it on the stack entry.
+    const title = card?.recordTaskId
+      ? (recordTitle ?? "Task record")
+      : pastRead?.state === "ready"
+        ? pastRead.card.title
+        : card?.title;
     if (card && cardId) setViewer({ cardId, title: title ?? "", ...set, opener });
   };
   // Paging remembers which way the arrow went, for the slide (../cards/stageMoves).
@@ -1444,7 +1449,13 @@ function EntrySurface({
   }
   if (entry.recordTaskId) {
     return (
-      <RecordCard taskId={entry.recordTaskId} theme={theme} onClose={onClose} onDrawn={drew} />
+      <RecordCard
+        taskId={entry.recordTaskId}
+        theme={theme}
+        onClose={onClose}
+        onDrawn={drew}
+        onPicture={onPicture}
+      />
     );
   }
   if (entry.panelCard) {

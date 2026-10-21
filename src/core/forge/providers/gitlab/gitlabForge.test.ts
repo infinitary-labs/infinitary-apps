@@ -46,6 +46,44 @@ function forgeAnswering(answer: (method: string, path: string) => Response) {
 }
 
 describe("GitLabForge", () => {
+  it("INF-203 F5: removes only the prerequisite draft prefix, at the reviewed version", async () => {
+    let draft = true;
+    const { forge, fetcher } = forgeAnswering((method) => {
+      if (method === "PUT") draft = false;
+      return Response.json(
+        request({
+          draft,
+          title: draft ? "Draft: fix: the meter" : "fix: the meter",
+          detailed_merge_status: "mergeable",
+        }),
+      );
+    });
+    const change = {
+      number: 4,
+      url: null,
+      branch: "fm/task-1",
+      headSha: "a".repeat(40),
+      draft: true,
+    };
+    await expect(forge.markReady({ ...change, headSha: "b".repeat(40) }, () => {})).rejects.toThrow(
+      "changed",
+    );
+    await expect(
+      forge.markReady(change, () => {
+        throw new Error("Proof changed before send");
+      }),
+    ).rejects.toThrow("Proof changed");
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
+    expect(await forge.markReady(change, () => {})).toMatchObject({ title: "fix: the meter" });
+    expect((await forge.pull(4)).readiness).toBe("clean");
+    await forge.markReady(change, () => {
+      throw new Error("Already ready must not send");
+    });
+    const writes = fetcher.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(String(writes[0]?.[1]?.body))).toEqual({ title: "fix: the meter" });
+  });
+
   it.each([
     [{ detailed_merge_status: "mergeable" }, "clean"],
     [{ detailed_merge_status: "conflict" }, "conflict"],

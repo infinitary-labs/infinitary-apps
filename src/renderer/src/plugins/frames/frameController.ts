@@ -111,14 +111,14 @@ export type FrameMountSpec = {
    * envelope is checked here; which sources may be shown is the caller's
    * call (`viewablePictures`).
    */
-  onImage?: (index: number, pictures: FramePicture[]) => void;
+  onImage?: (index: number, pictures: FramePicture[], frame?: HTMLIFrameElement | null) => void;
   /**
    * A demo's Play button or poster was pressed (docs/card-authoring.md
    * "Demo recordings"): the recording's served name, its poster and caption
    * as the frame saw them, and whether to play. Which recordings may play is
    * the caller's call (the card's own, `isPlayableDemoSource`).
    */
-  onDemo?: (demo: FrameDemo) => void;
+  onDemo?: (demo: FrameDemo, frame?: HTMLIFrameElement | null) => void;
   /**
    * The task keys a card body or a task's record writes that name recorded
    * tasks (FI3-594, FI3-1271): pushed to every document after its `ready`

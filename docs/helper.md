@@ -1061,3 +1061,11 @@ Its account catalogs refresh without holding up work, and its sign-in model rows
 A computer with a contract older than 5.2 keeps Standard and the home explains that it cannot use the faster choice.
 
 `src/core/pi/placedMigration.test.ts` checks recovered Pi turn order with and without newer turns, an unchanged recovery copy, a missing current copy, a mismatched conversation refused, and replay after a lost completion marker.
+
+### Kept validation proof
+
+A work computer sends selected validation files through the existing bounded media transport before its typed report reaches the home.
+The home verifies filenames, ownership, bytes and content digests before recording the report; it never treats a remote mutable source path as proof.
+The reviewer receives verified copies through the existing source-file transport on the computer that owns its review.
+Both session backends use the same report and decision declarations.
+The contract version must support those declarations; the existing same-major work rule prevents an older helper from silently dropping them.

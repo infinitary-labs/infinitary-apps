@@ -11,6 +11,7 @@ import {
   placedTaskFolders,
   type WorkOrderChannel,
   type WorkOrderResponse,
+  workRequests,
 } from "@shared/work";
 import { Type } from "typebox";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -973,6 +974,129 @@ describe("a conversation held on a computer that runs work", () => {
       "inf:work:progress",
     ]);
   });
+
+  // INF-125 proof custody also keeps INF-312's cancellation rule: a stopped
+  // proof transfer must not go on to send its report.
+  it.each([false, true])(
+    "INF-125: transfers kept validation bytes before the report (cancelled: %s)",
+    async (cancelled) => {
+      const controller = new AbortController();
+      const at = await placed(cancelled ? { toolSignal: controller.signal } : {});
+      await at.open();
+      model([
+        {
+          tools: [
+            {
+              name: "note_progress",
+              args: { text: "The paired work connection delivered this observation." },
+            },
+          ],
+        },
+        { text: "Recorded." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "proof:observe", task: TASK, text: "Record one observation." },
+      ]);
+      await at.ended(1);
+      const transcript = JSON.stringify(
+        at.home.effects.filter((item) => item.channel === "inf:work:progress"),
+      );
+      expect(JSON.parse(transcript)).toHaveLength(1);
+      const folders = placedTaskFolders(join(at.dataDir, "tasks"), TASK);
+      const path = join(folders.evidence, "paired-observation.json");
+      writeFileSync(path, transcript);
+      const start = at.home.effects.length;
+      const head = "a".repeat(40);
+      model([
+        {
+          tools: [
+            {
+              name: "report",
+              args: {
+                text: "The actual paired work connection delivered the observation.",
+                validation: {
+                  kind: "run",
+                  id: "paired-run",
+                  head,
+                  scenarioRevision: 1,
+                  completion: "complete",
+                  verdict: "go",
+                  reason: "The local paired helper and home exchanged the actual report call.",
+                  observations: [
+                    {
+                      scenario: "paired-report",
+                      result: "pass",
+                      live: true,
+                      actual: "The home recorded the helper's progress call.",
+                      evidence: ["received"],
+                      standIns: ["Two local processes, not two physical computers; scripted model"],
+                      unproven: [],
+                      attempted: [],
+                    },
+                  ],
+                  evidence: [
+                    {
+                      id: "received",
+                      path,
+                      description: "The actual progress call received by the home.",
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        { text: "Reported." },
+      ]);
+      const media = cancelled ? at.home.hold("inf:work:media") : undefined;
+      try {
+        await at.order("inf:session:prompt", [
+          { orderId: "proof:report", task: TASK, text: "Keep that observed call with its report." },
+        ]);
+        if (media) {
+          await media.reached;
+          controller.abort(new Error("The provider stopped waiting for the proof transfer"));
+          await at.ended(2);
+          expect(at.home.asked.filter((request) => request.channel === "inf:work:report")).toEqual(
+            [],
+          );
+          expect(
+            at.home.effects.slice(start).filter((effect) => effect.channel === "inf:work:report"),
+          ).toEqual([]);
+          console.info(
+            "INF-125 cancelled proof: the held transfer ended without sending a report.",
+          );
+          return;
+        }
+        await at.ended(2);
+      } finally {
+        media?.open();
+      }
+      const effects = at.home.effects.slice(start);
+      expect(effects.map((item) => item.channel)).toEqual(["inf:work:media", "inf:work:report"]);
+      const proof = workRequests["inf:work:report"].request.parse([effects[1]?.request])[0].declared
+        ?.validation;
+      if (!proof || proof.kind !== "run")
+        throw new Error("The paired report lost its validation run.");
+      expect(proof).toMatchObject({
+        head,
+        scenarioRevision: 1,
+        completion: "complete",
+        observations: [{ scenario: "paired-report", evidence: ["received"] }],
+      });
+      const received = proof.evidence[0]!;
+      expect(received.text).toBe(transcript);
+      expectBytesEqual(
+        at.home.recordings.get(String(effects[0]?.request.id)) as Buffer,
+        Buffer.from(transcript),
+      );
+      expect(effects[0]?.request).toMatchObject({
+        extension: "json",
+        size: Buffer.byteLength(transcript),
+        offset: 0,
+      });
+    },
+  );
 
   it("sends a card's picture before the card, from the folder the crewmate wrote it in", async () => {
     const at = await placed();

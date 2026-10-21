@@ -97,6 +97,9 @@ Local merge bounds Careful to Default; the muted explanation retains that Carefu
 The values update in place, leaving disclosures and keyboard focus alone; accepted changes appear in Activity and the feed.
 These are read-only facts, not switches: the existing message input is the only editing surface, and the action bar does not change.
 Closed tasks keep their policies as history and omit the helper; answers, reviews and the personal workspace keep their existing no-merge presentation.
+A Careful change presents its live-validation result, evidence and limitations primarily in the merge completion card, beside the decision.
+The task record keeps its retained validation evidence under Details, closed by default, rather than as a prominent section above the record's rows.
+Its scenario observations can expand there to show the supporting transcript, picture or recording; these are history, not another merge decision.
 
 The fact strip sits just above the action bar, under a `--line-1` hairline, after those rows (FI3-1159, the captain's layout B): MODEL, INTELLIGENCE, REASONING, PULL REQUEST, CHECKS and REVIEW as cells, the merge card's own shape, then the footnote saying why that model (`components/now/NowPanel`, Shared task facts).
 The pull request and its checks are there, beside the model, and nowhere in the body: the body holds the work and its record, the strip where the work lands.
@@ -109,7 +112,7 @@ The merge card's PULL REQUEST cell is the same link, and so is a pull request nu
 The crew summary never takes the pointer, so its pull request stays plain text; a click on what opened it opens this record.
 Every time reads relative, the absolute time on rest; the ages of Now, Progress and each finished item, and the checks' words and finish age, are Tab stops of their own, and the keyboard's focus shows the absolute time - for the checks, when they started and when they were last read - as the pointer's rest does (readme, "Facts shown on rest").
 So are the body's ages - an Activity or ask line's, a closed task's, a card's - each named by its short age and absolute time, in the same label the body draws in its own page; an Activity line that opens is the stop for its age, and its name reads the age's.
-No row nests another row: inside a row, only Activity's `Show earlier · N` link and the Activity lines that open (below) open further.
+Inside a row, only Activity's `Show earlier · N` link, the Activity lines that open (below), and the retained validation observations under Details open further.
 
 **The Cards row** (FI3-579 direction A, the captain's 3 "a Cards row on the task's record").
 Its label is `Cards`, with the count in mono, and it sits between Goal and your words and Activity; it is absent when the task never showed a card.

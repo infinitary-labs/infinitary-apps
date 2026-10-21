@@ -31,6 +31,7 @@ export type GithubWriteInput = {
   method: ApiWriteMethod;
   path: string;
   body?: string;
+  validationEffect?: string;
   /** A regular file in the task's working copy, relative to it. Never a link. */
   file?: string;
 };

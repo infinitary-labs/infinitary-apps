@@ -1,4 +1,5 @@
 import { REVIEW_CAREFULLY_WORDS } from "../../../src/shared/vocabulary";
+import { noSurfaceProof } from "../../helpers/liveValidation";
 import {
   calledTool,
   MOCK_STANDARD_DRAWN_BODY,
@@ -7,9 +8,10 @@ import {
   REVIEW_CAREFULLY_MARKER,
   type Scenario,
   type ScriptedCall,
+  sinceLastUser,
 } from "../mockProvider";
 import {
-  MOCK_REVIEW_PASS_REPORT,
+  liveReviewAnswer,
   MOCK_REVIEW_PASSED_STEER,
   MOCK_REVIEWED_CHANGE,
   REVIEW_BRIEF_MARKER,
@@ -37,10 +39,10 @@ export const reviewCarefully: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (isFirstmate || !wantsStream) return undefined;
-    // A review the captain asked for from his merge card passes once its
-    // brief names the card he read; any other review is `reviewedTier`'s.
+    // INF-125 / INF-562: the merge-card review uses the same assigned,
+    // typed no-surface judgment as the lifecycle review.
     if (body.includes(REVIEW_BRIEF_MARKER)) {
-      return body.includes(MOCK_CAREFUL_CARD_TITLE) ? { text: MOCK_REVIEW_PASS_REPORT } : undefined;
+      return body.includes(MOCK_CAREFUL_CARD_TITLE) ? liveReviewAnswer(body) : undefined;
     }
     // The careful builder: its change and completion card at Default care;
     // after Review carefully a report with nothing pushed; after the pass
@@ -64,6 +66,49 @@ export const reviewCarefully: Scenario =
       latestUserTail.includes("the user chose") &&
       latestUserTail.includes(REVIEW_CAREFULLY_WORDS)
     ) {
+      // INF-125 / INF-562: keep the actual already-pushed empty commit;
+      // declare its lack of a running surface and read that same head.
+      const results = sinceLastUser(body).results;
+      if (results.length === 0) {
+        return {
+          calls: [
+            {
+              name: "report",
+              args: {
+                text: "The lifecycle fixture has no running product.",
+                validation: {
+                  kind: "plan",
+                  previousRevision: 0,
+                  reason: "Only the empty lifecycle fixture's history changes.",
+                  scenarios: [],
+                },
+              },
+            },
+          ],
+        };
+      }
+      if (results.length === 1) return { calls: [{ name: "check_change", args: {} }] };
+      if (results.length === 2) {
+        const head = results.join("\n").match(/head ([a-f0-9]{40})/)?.[1];
+        if (!head) throw new Error("The scripted builder needs its actual checked version.");
+        const {
+          revision: _revision,
+          deviceId: _deviceId,
+          at: _at,
+          ...run
+        } = noSurfaceProof(head).runs[0]!;
+        return {
+          calls: [
+            {
+              name: "report",
+              args: {
+                text: MOCK_CAREFUL_BUILDER_REPORT,
+                validation: { ...run, id: `fixture-${head}`, evidence: [] },
+              },
+            },
+          ],
+        };
+      }
       return { text: MOCK_CAREFUL_BUILDER_REPORT };
     }
     if (!calledTool(body, "bash")) {

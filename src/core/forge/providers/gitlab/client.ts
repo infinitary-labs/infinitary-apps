@@ -106,8 +106,9 @@ export class GitLabClient {
     path: string,
     body?: unknown,
     maxBytes = API_RESPONSE_MAX_BYTES,
+    beforeSend?: () => void,
   ): Promise<unknown> {
-    return (await this.exchange(method, path, body, maxBytes)).body;
+    return (await this.exchange(method, path, body, maxBytes, beforeSend)).body;
   }
 
   private async exchange(
@@ -115,9 +116,11 @@ export class GitLabClient {
     path: string,
     body: unknown,
     maxBytes: number,
+    beforeSend?: () => void,
   ): Promise<{ body: unknown; total: number | null }> {
     const token = await this.options.token();
     if (!token) throw new ForgeError("sign-in", notSignedInText(this.place, this.host));
+    beforeSend?.();
     let response: Response;
     try {
       response = await this.send(token, method, path, body);

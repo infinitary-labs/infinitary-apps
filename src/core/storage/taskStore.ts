@@ -3,6 +3,7 @@ import type {
   MergeRepairDeclaration,
   MergeRepairImpact,
 } from "@shared/checkRepair";
+import type { LiveValidation } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
 import type { CommittedPlacement } from "@shared/placement";
 import type { CaptainAction, RequiredActionOffer } from "@shared/requiredActions";
@@ -236,6 +237,22 @@ export type MergeAuthorization = {
 export type TaskDelivery = {
   /** Versioned public story and native-upload receipts; only TaskService writes them. */
   presentation?: import("@shared/changePresentation").ChangePresentationRecord;
+  liveValidation?: LiveValidation;
+  validationAssignment?: {
+    head: string;
+    revision: number;
+    scenarioRevision: number;
+    stateRevision?: number;
+    effects: string[];
+  };
+  validationHead?: string;
+  validationReadiness?: {
+    head: string;
+    number: number;
+    state: "unknown" | "not-applied" | "ready";
+    problem?: string;
+  };
+  reviewRoundPairs?: string[];
   requiredActionOffer?: RequiredActionOffer;
   captainAction?: CaptainAction;
   /** Policies frozen with the closed outcome, never a routing/dispatch stamp. */

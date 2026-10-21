@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "10.1.0",
+  "protocolVersion": "11.0.0",
   "versionRule": {
     "majorsBehind": 0,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -24128,6 +24128,115 @@
               }
             ]
           },
+          "liveValidation": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "head": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "number"
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "action": {
+                      "type": "string"
+                    },
+                    "result": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "bytes": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 16777216
+                          },
+                          "file": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9_-]+\\.(png|jpg|webp|mp4|gif|txt|json|log)$"
+                          },
+                          "text": {
+                            "type": "string",
+                            "maxLength": 1048576
+                          },
+                          "picture": {
+                            "type": "string"
+                          },
+                          "media": {
+                            "type": "string"
+                          },
+                          "durationMs": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "posterFile": {
+                            "type": "string"
+                          },
+                          "posterDigest": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "description",
+                          "digest",
+                          "bytes",
+                          "file"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "action",
+                    "result",
+                    "reason",
+                    "evidence"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "label",
+              "reason",
+              "revision",
+              "rows"
+            ]
+          },
           "policies": {
             "anyOf": [
               {
@@ -37352,6 +37461,21 @@
                       "after"
                     ]
                   },
+                  "validationDecision": {
+                    "type": "object",
+                    "properties": {
+                      "request": {
+                        "type": "string"
+                      },
+                      "action": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "request",
+                      "action"
+                    ]
+                  },
                   "browserPage": {
                     "type": "string"
                   }
@@ -37710,6 +37834,679 @@
               "declared": {
                 "type": "object",
                 "properties": {
+                  "validation": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "plan"
+                          },
+                          "previousRevision": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "scenarios": {
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "importance": {
+                                  "type": "string",
+                                  "enum": [
+                                    "required",
+                                    "supplementary"
+                                  ]
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "expected": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "adverse": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "environment": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "signal": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "boundary": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "source",
+                                "importance",
+                                "action",
+                                "expected",
+                                "adverse",
+                                "environment",
+                                "signal",
+                                "boundary"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "previousRevision",
+                          "reason",
+                          "scenarios"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "run"
+                          },
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                          },
+                          "head": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{40,64}$"
+                          },
+                          "scenarioRevision": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "completion": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "interrupted",
+                              "unknown"
+                            ]
+                          },
+                          "verdict": {
+                            "type": "string",
+                            "enum": [
+                              "go",
+                              "no-go",
+                              "inconclusive",
+                              "no-surface"
+                            ],
+                            "description": "go: required live proof; no-go: observed failure; inconclusive: missing proof/coverage; no-surface: nothing to run, not missing access."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "observations": {
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "scenario": {
+                                  "type": "string",
+                                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                },
+                                "result": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pass",
+                                    "fail",
+                                    "untested"
+                                  ]
+                                },
+                                "live": {
+                                  "type": "boolean"
+                                },
+                                "actual": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "evidence": {
+                                  "maxItems": 32,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  }
+                                },
+                                "standIns": {
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "unproven": {
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "description": "Gaps inside this boundary; a live pass requires []."
+                                },
+                                "attempted": {
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "missingCapability": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                }
+                              },
+                              "required": [
+                                "scenario",
+                                "result",
+                                "live",
+                                "actual",
+                                "evidence",
+                                "standIns",
+                                "unproven",
+                                "attempted"
+                              ]
+                            }
+                          },
+                          "evidence": {
+                            "maxItems": 32,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 4000
+                                },
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                },
+                                "bytes": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 16777216
+                                },
+                                "file": {
+                                  "type": "string",
+                                  "pattern": "^[a-zA-Z0-9_-]+\\.(png|jpg|webp|mp4|gif|txt|json|log)$"
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "maxLength": 1048576
+                                },
+                                "picture": {
+                                  "type": "string"
+                                },
+                                "media": {
+                                  "type": "string"
+                                },
+                                "durationMs": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "posterFile": {
+                                  "type": "string"
+                                },
+                                "posterDigest": {
+                                  "type": "string",
+                                  "pattern": "^[a-f0-9]{64}$"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "description",
+                                "digest",
+                                "bytes",
+                                "file"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "id",
+                          "head",
+                          "scenarioRevision",
+                          "completion",
+                          "verdict",
+                          "reason",
+                          "observations",
+                          "evidence"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "review"
+                          },
+                          "head": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{40,64}$"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "clear",
+                              "findings",
+                              "blocked"
+                            ]
+                          },
+                          "coverage": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "missing"
+                            ]
+                          },
+                          "coverageReason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "effects": {
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                            }
+                          },
+                          "omitted": {
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            }
+                          },
+                          "verdict": {
+                            "type": "string",
+                            "enum": [
+                              "go",
+                              "no-go",
+                              "inconclusive",
+                              "no-surface"
+                            ],
+                            "description": "go: required live proof; no-go: observed failure; inconclusive: missing proof/coverage; no-surface: nothing to run, not missing access."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "head",
+                          "revision",
+                          "code",
+                          "coverage",
+                          "coverageReason",
+                          "effects",
+                          "omitted",
+                          "verdict",
+                          "reason"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "request"
+                          },
+                          "request": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "effect"
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "head": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{40,64}$"
+                                  },
+                                  "scenario": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "destination": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "audience": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "visibility": {
+                                    "type": "string",
+                                    "enum": [
+                                      "captain-only",
+                                      "others",
+                                      "uncertain"
+                                    ]
+                                  },
+                                  "persistent": {
+                                    "type": "boolean"
+                                  },
+                                  "purpose": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "lastingEffects": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "cleanup": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "access": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "preChange": {
+                                    "type": "boolean"
+                                  },
+                                  "prerequisitePublication": {
+                                    "type": "boolean"
+                                  },
+                                  "publication": {
+                                    "type": "object",
+                                    "properties": {
+                                      "repoId": {
+                                        "type": "string",
+                                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                      },
+                                      "branch": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 4000
+                                      }
+                                    },
+                                    "required": [
+                                      "repoId",
+                                      "branch"
+                                    ]
+                                  },
+                                  "forgeWrite": {
+                                    "type": "object",
+                                    "properties": {
+                                      "host": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 255
+                                      },
+                                      "method": {
+                                        "type": "string",
+                                        "enum": [
+                                          "POST",
+                                          "PATCH",
+                                          "PUT",
+                                          "DELETE"
+                                        ]
+                                      },
+                                      "path": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 4096
+                                      },
+                                      "bodyDigest": {
+                                        "type": "string",
+                                        "pattern": "^[a-f0-9]{64}$"
+                                      }
+                                    },
+                                    "required": [
+                                      "host",
+                                      "method",
+                                      "path"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "head",
+                                  "scenario",
+                                  "action",
+                                  "destination",
+                                  "audience",
+                                  "visibility",
+                                  "persistent",
+                                  "purpose",
+                                  "lastingEffects",
+                                  "cleanup",
+                                  "access",
+                                  "preChange",
+                                  "prerequisitePublication"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "gap"
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "head": {
+                                    "type": "string",
+                                    "pattern": "^[a-f0-9]{40,64}$"
+                                  },
+                                  "scenario": {
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "missingCapability": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000,
+                                    "description": "Match the current inconclusive run: scenario untested, not live; safe alternatives exhausted."
+                                  },
+                                  "alternatives": {
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "attempted": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4000
+                                        },
+                                        "result": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 4000
+                                        }
+                                      },
+                                      "required": [
+                                        "attempted",
+                                        "result"
+                                      ]
+                                    }
+                                  },
+                                  "remedies": {
+                                    "minItems": 1,
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 4000
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "head",
+                                  "scenario",
+                                  "missingCapability",
+                                  "reason",
+                                  "alternatives",
+                                  "remedies"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "request"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "decision"
+                          },
+                          "request": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                          },
+                          "card": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "action": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "request",
+                          "card",
+                          "action"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "effect-state"
+                          },
+                          "request": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "started",
+                              "succeeded",
+                              "failed",
+                              "unknown"
+                            ]
+                          },
+                          "evidence": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "request",
+                          "state",
+                          "evidence"
+                        ]
+                      }
+                    ]
+                  },
                   "wait": {
                     "type": "object",
                     "properties": {
@@ -38198,6 +38995,9 @@
                     "type": "string"
                   },
                   "body": {
+                    "type": "string"
+                  },
+                  "validationEffect": {
                     "type": "string"
                   }
                 },
@@ -39821,13 +40621,19 @@
               },
               "id": {
                 "type": "string",
-                "pattern": "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32}$"
+                "pattern": "^[A-Za-z0-9_-]{1,64}-[0-9a-f]{32,64}$"
               },
               "extension": {
                 "type": "string",
                 "enum": [
                   "mp4",
-                  "gif"
+                  "gif",
+                  "png",
+                  "jpg",
+                  "webp",
+                  "txt",
+                  "json",
+                  "log"
                 ]
               },
               "offset": {

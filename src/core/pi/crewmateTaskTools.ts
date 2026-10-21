@@ -1,6 +1,9 @@
+import { type LiveValidationInput, liveValidationInputSchema } from "@shared/liveValidation";
 import { Type } from "typebox";
+import { z } from "zod";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
 import { type CrewmateTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
+import { cardPictureRoot } from "./cardImages";
 import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
 import {
   CHECK_CHANGE_TOOL,
@@ -13,6 +16,7 @@ import {
 } from "./forgeTools";
 import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL, PLACE_PANEL_TOOL } from "./panelTools";
 import { TASKS_QUERY_TOOL } from "./taskTools";
+import { keepValidationEvidence } from "./validationEvidence";
 
 /**
  * The crewmate's record-facing tools (task-system P2, design section 7):
@@ -146,6 +150,13 @@ export const REPORT_TOOL = crewmateTool({
   label: "Report",
   description: REPORT_TOOL_DESCRIPTION,
   parameters: Type.Object({
+    validation: Type.Optional(
+      Type.Unsafe<LiveValidationInput>({
+        ...z.toJSONSchema(liveValidationInputSchema),
+        description:
+          "Careful: plan before edits; keep run proof; review assigned head/revision. Live pass: result pass, live true, unproven []; out-of-scope limits go in reason, never hide gaps. Gaps match a current inconclusive, untested/non-live run's scenario, missingCapability and reason. Requests grant nothing: emit_card.validation_request asks the captain for one action or gap, never follow-on writes. Forge starts approved effects; otherwise record started then outcome; never retry unknown.",
+      }),
+    ),
     text: Type.String({
       description: "The report: outcome first, then what you verified; plain prose",
     }),
@@ -184,15 +195,23 @@ export const REPORT_TOOL = crewmateTool({
       }),
     ),
   }),
-  bind: ({ onReport }) =>
-    onReport &&
+  bind: (delegate) =>
+    delegate.onReport &&
     (async (params, signal) => ({
       text: await callWithSignal(
-        onReport,
+        delegate.onReport!,
         [
           params.text,
           params.summary,
           {
+            ...(params.validation
+              ? {
+                  validation: await keepValidationEvidence(
+                    liveValidationInputSchema.parse(params.validation),
+                    cardPictureRoot(delegate),
+                  ),
+                }
+              : {}),
             ...(params.waiting_on_captain
               ? {
                   wait: {

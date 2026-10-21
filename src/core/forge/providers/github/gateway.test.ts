@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { symlinkSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import type { ValidationForgeWrite } from "@shared/liveValidation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
@@ -99,7 +101,16 @@ afterEach(async () => {
 type Seen = { method: string; path: string; auth?: string; body: string };
 
 async function fixture(
-  options: { oversize?: boolean; signedOut?: boolean; dispatchStatus?: number } = {},
+  options: {
+    oversize?: boolean;
+    signedOut?: boolean;
+    dispatchStatus?: number;
+    beforeValidationWrite?: (
+      taskId: string,
+      request: string,
+      write: ValidationForgeWrite,
+    ) => Promise<void>;
+  } = {},
 ) {
   const seen: Seen[] = [];
   const types: (string | undefined)[] = [];
@@ -240,6 +251,7 @@ async function fixture(
         },
       ),
     readChecks,
+    beforeValidationWrite: options.beforeValidationWrite,
     now: () => 1234,
     sleep: async () => {},
   });
@@ -252,6 +264,7 @@ async function fixture(
     onGithubWrite: (i) => service.write("task-2", i),
   });
   return {
+    service,
     readWithoutProject,
     writeWithoutProject,
     seen,
@@ -259,7 +272,6 @@ async function fixture(
     onSignInRejected,
     tasks,
     dir,
-    service,
     read,
     write,
     readChecks,
@@ -349,6 +361,43 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     });
     expect(alias.text).toContain("saved story with open_change");
     expect(f.seen).toHaveLength(1);
+  });
+
+  it("INF-125: checks the exact declared validation write at execution, including a kept write", async () => {
+    const guard = vi.fn(
+      async (_task: string, _request: string, _write: ValidationForgeWrite) => {},
+    );
+    const { service, tasks, write, writeWithoutProject, seen } = await fixture({
+      beforeValidationWrite: guard,
+    });
+    const body = JSON.stringify({ body: "Disposable validation record" });
+    const input = {
+      method: "POST" as const,
+      path: "/repos/octo/meter/issues/1/comments",
+      body,
+      validationEffect: "shared-1",
+    };
+    const exact = {
+      host: "github.com",
+      method: input.method,
+      path: input.path,
+      bodyDigest: createHash("sha256").update(body).digest("hex"),
+    };
+    await write.run(input);
+    expect(guard).toHaveBeenNthCalledWith(1, "task-1", "shared-1", exact);
+    expect(seen.filter((item) => item.method === "POST")).toHaveLength(1);
+    await writeWithoutProject.run({ ...input, validationEffect: "shared-2" });
+    expect(guard).toHaveBeenCalledTimes(1);
+    const ask = tasks.get("task-2")?.delivery?.writeAsks?.at(-1);
+    expect(ask?.validationEffect).toBe("shared-2");
+    await service.sendAsk("task-2", ask!.id);
+    expect(guard).toHaveBeenNthCalledWith(2, "task-2", "shared-2", exact);
+    expect(seen.filter((item) => item.method === "POST")).toHaveLength(2);
+    guard.mockRejectedValueOnce(new Error("The validation action is no longer approved."));
+    expect((await write.run({ ...input, validationEffect: "shared-3" })).text).toContain(
+      "no longer approved",
+    );
+    expect(seen.filter((item) => item.method === "POST")).toHaveLength(2);
   });
 
   it("reads a project route with the app's token and hands back status, request id and a next page", async () => {
@@ -711,6 +760,22 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       "200 GitHub calls",
     );
     expect(seen).toHaveLength(200);
+  });
+
+  it("INF-125: refuses to substitute release-file bytes for an approved JSON validation write", async () => {
+    const guard = vi.fn(async () => {});
+    const { write, seen, dir, tasks } = await fixture({ beforeValidationWrite: guard });
+    writeFileSync(join(dir, "app.dmg"), "release-bytes");
+    const result = await write.run({
+      method: "POST",
+      path: "/repos/octo/meter/releases/9/assets",
+      file: "app.dmg",
+      validationEffect: "shared-1",
+    });
+    expect(result.text).toContain("not a release file");
+    expect(seen).toEqual([]);
+    expect(guard).not.toHaveBeenCalled();
+    expect(tasks.get("task-1")?.delivery?.writeAsks ?? []).toEqual([]);
   });
 
   it("streams a release file to GitHub's upload address and keeps another project's file for the captain", async () => {

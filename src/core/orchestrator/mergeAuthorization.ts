@@ -658,7 +658,7 @@ export function keptNote(wait: MergeWait, head: string, place: string): string {
     case "outcome":
       return `${kept} ${place} gave no clear answer; the host reads it again on its own. Nothing is needed from you.`;
     case "draft":
-      return `${kept} The pull request is a draft: steer the crewmate to mark it ready for review.`;
+      return `${kept} The pull request is a draft. For an approved prerequisite publication, the host marks it ready after current proof and independent review pass; otherwise the captain controls its draft status. Never ask the crewmate to change draft status through github_write.`;
     case "sign-in":
       return `${kept} The captain's ${place} sign-in is needed; the merge runs once he signs in again.`;
     case "refused":

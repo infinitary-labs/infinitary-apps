@@ -2,11 +2,12 @@ import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import { isSafeCardHref } from "@shared/linkify";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { recordBarOf } from "@shared/recordBar";
+import { recordProofDemo, recordProofPictures } from "@shared/recordProof";
 import { browserDriverOf } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { presentTask } from "@shared/taskWaiting";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentProps, useEffect, useMemo, useRef, useState } from "react";
 import { focusPanelCard } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
@@ -15,6 +16,7 @@ import { hasFactStrip, TaskFactRows, TaskFactStrip } from "../design/core/TaskFa
 import { recordTemplate } from "../plugins/builtin";
 import { BUILTIN_PLUGIN_ID } from "../plugins/builtin/manifest";
 import { FrameMount } from "../plugins/frames/FrameMount";
+import { windowGesture } from "../plugins/frames/frameActivation";
 import { whenFrameHoldsFocus } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import {
@@ -24,6 +26,7 @@ import {
 } from "../plugins/point/openKnowledge";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
+import type { HtmlCardBody } from "./PrototypeBody";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { KeyedText } from "./TaskKey";
@@ -87,11 +90,13 @@ export function RecordCard({
   theme,
   onClose,
   onDrawn,
+  onPicture,
 }: {
   taskId: string;
   theme: FrameTheme;
   onClose: () => void;
   onDrawn: () => void;
+  onPicture: ComponentProps<typeof HtmlCardBody>["onPicture"];
 }) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [unreadable, setUnreadable] = useState(false);
@@ -326,6 +331,26 @@ export function RecordCard({
               onDrawn: () => setFrameDrawn(true),
               onAction: (id, value) => void openCard(id, value),
               onLink: openLink,
+              onImage: (index, pictures, frame) => {
+                const set = recordProofPictures(detailRef.current?.liveValidation, index, pictures);
+                if (set)
+                  whenFrameHoldsFocus(
+                    () => frame ?? null,
+                    () => onPicture?.(set, frame ?? null, detailRef.current?.title),
+                  );
+              },
+              onDemo: (demo, frame) => {
+                const set = recordProofDemo(
+                  detailRef.current?.liveValidation,
+                  demo,
+                  windowGesture(),
+                );
+                if (set)
+                  whenFrameHoldsFocus(
+                    () => frame ?? null,
+                    () => onPicture?.(set, frame ?? null, detailRef.current?.title),
+                  );
+              },
               taskKeys: links.keys,
               litKey: links.lit,
               onTask: (gesture, key, box, frame) => {

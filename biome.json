@@ -402,6 +402,7 @@
         "!tests/bench-attempt.test.ts",
         "!tests/eval-auth-turn-taking.test.ts",
         "!tests/account-eval.test.ts",
+        "!tests/careful-live-eval.test.ts",
         "!tests/bench-patch-pool.test.ts",
         "!tests/cask-consumers.test.ts",
         "!tests/e2e-contract-lint.test.ts",

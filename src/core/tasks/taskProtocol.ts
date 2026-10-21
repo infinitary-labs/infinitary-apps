@@ -7,6 +7,8 @@ import {
   emptyTranscript,
 } from "@shared/crewTranscript";
 import type { FmEvent } from "@shared/events";
+import type { ValidationEvidence } from "@shared/liveValidation";
+import { liveValidationSummary } from "@shared/liveValidationSummary";
 import type { ModelReason } from "@shared/modelReason";
 import { providerLabel, type Slot, slotSchema } from "@shared/modelSlots";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
@@ -122,6 +124,7 @@ export type BoardPushMode = "snapshot" | "delta";
 
 export type TaskProtocolOptions = {
   tasks: TaskService;
+  validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
   /** Repo facts the views denormalize; absent repos read as none. */
   repos: {
     get(
@@ -440,6 +443,15 @@ export class TaskProtocol {
         },
       ];
     });
+    const proof = liveValidationSummary(
+      record.delivery?.liveValidation,
+      record.delivery?.headSha ?? record.delivery?.validationHead,
+      Boolean(record.delivery?.prUrl || record.delivery?.changeLabel),
+    );
+    if (proof && this.options.validationEvidence) {
+      for (const row of proof.rows)
+        row.evidence = this.options.validationEvidence(id, row.evidence);
+    }
     return {
       ...view,
       ...(origin
@@ -452,6 +464,7 @@ export class TaskProtocol {
           }
         : {}),
       intent: record.intent,
+      liveValidation: proof,
       // The rigor the host derived at dispatch (delivery rigor phase 2), off
       // the shape it was stamped on; null on a row dispatched before it.
       policies: effectiveTaskPolicies(

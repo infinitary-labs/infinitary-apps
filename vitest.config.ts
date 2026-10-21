@@ -64,6 +64,7 @@ const isolatedUnit = [
   "src/core/pi/piResources.isolation.test.ts",
   "src/core/pi/sessionFactory.test.ts",
   "src/core/pi/toolSpec.test.ts",
+  "src/core/pi/validationEvidence.test.ts",
   "src/core/placed/placedClaude.contract.test.ts",
   "src/core/placed/placedModelLabel.test.ts",
   "src/main/voice/voiceHelper.test.ts",

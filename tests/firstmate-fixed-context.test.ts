@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderRigorSection } from "../src/core/orchestrator/intentBrief";
-import { renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
+import { REVIEW_NEW_HEAD_NEXT, renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../src/core/personal/sequencesSkill";
 import { OLLAMA_MIN_CONTEXT } from "../src/core/pi/ollamaProfile";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "../src/core/pi/ollamaStream";
@@ -192,9 +192,10 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default.",
   },
   {
-    rule: "a new head is re-reviewed with the declined findings ignored",
+    // INF-125 also binds a pending review to current proof/state, not just code.
+    rule: "new code or proof facts are re-reviewed with the declined findings ignored",
     home: { wake: "builder report" },
-    says: "When this report brings a new head, steer that reviewer to re-review at it, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem.",
+    says: REVIEW_NEW_HEAD_NEXT,
   },
   {
     rule: "an idle reviewer is never steered for a stand-by or a status",

@@ -132,6 +132,8 @@ export type GitHubForgeOptions = {
 const sleep = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
 
 type PullJson = {
+  node_id?: string;
+  draft?: boolean;
   number: number;
   html_url: string;
   title: string;
@@ -316,7 +318,12 @@ export class GitHubForge implements Forge {
     return repo.default_branch;
   }
 
-  async openChange(input: { branch: string; title: string; body: string }): Promise<ForgeChange> {
+  async openChange(input: {
+    branch: string;
+    title: string;
+    body: string;
+    draft?: boolean;
+  }): Promise<ForgeChange> {
     const base = await this.defaultBranch().catch((error: unknown) => {
       throw new ForgeWriteError(
         "failed",
@@ -332,6 +339,7 @@ export class GitHubForge implements Forge {
         head: input.branch,
         base,
         body: input.body,
+        ...(input.draft ? { draft: true } : {}),
       }),
     );
     if (answer.status !== 201)
@@ -617,6 +625,49 @@ export class GitHubForge implements Forge {
       );
     }
     return answer.sha ? { sha: answer.sha } : {};
+  }
+
+  async markReady(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange> {
+    const pull = (await this.request(
+      "GET",
+      `${this.repoPath()}/pulls/${change.number}`,
+    )) as PullStateJson;
+    if (
+      pull.head.sha !== change.headSha ||
+      pull.head.ref !== change.branch ||
+      pull.state !== "open"
+    )
+      throw new ForgeError(
+        "refused",
+        "The prerequisite pull request changed; review its current version first.",
+      );
+    if (!pull.draft) return changeOf(pull, change.branch);
+    if (!pull.node_id)
+      throw new ForgeError("refused", "GitHub did not identify the draft pull request.");
+    const answer = (await this.request(
+      "POST",
+      "",
+      {
+        query:
+          "mutation Ready($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }",
+        variables: { id: pull.node_id },
+      },
+      API_VERSION,
+      beforeSend,
+      githubGraphqlUrl(this.base),
+    )) as {
+      errors?: unknown[];
+      data?: { markPullRequestReadyForReview?: { pullRequest?: { isDraft?: boolean } } };
+    };
+    if (
+      answer.errors?.length ||
+      answer.data?.markPullRequestReadyForReview?.pullRequest?.isDraft !== false
+    )
+      throw new ForgeError(
+        "refused",
+        "GitHub did not confirm the draft is ready; read its state before another request.",
+      );
+    return { ...changeOf(pull, change.branch), draft: false };
   }
 
   async pull(number: number): Promise<ForgePull> {
@@ -1032,14 +1083,17 @@ export class GitHubForge implements Forge {
     path: string,
     body?: unknown,
     version = API_VERSION,
+    beforeSend?: () => void,
+    url = `${this.base}${path}`,
   ): Promise<unknown> {
     const token = await this.options.token();
     if (!token) {
       throw new ForgeError("sign-in", notSignedInText(this.place, this.host ?? GITHUB_COM));
     }
+    beforeSend?.();
     let response: Response;
     try {
-      response = await this.fetcher(`${this.base}${path}`, {
+      response = await this.fetcher(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1067,6 +1121,7 @@ function changeOf(pull: PullJson, branch: string): ForgeChange {
     url: pull.html_url,
     branch,
     headSha: pull.head.sha,
+    ...(pull.draft ? { draft: true } : {}),
     title: pull.title,
     body: pull.body ?? "",
   };

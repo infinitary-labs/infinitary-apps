@@ -182,21 +182,20 @@ describe("createEmitCardTool", () => {
         },
       ),
     ) as unknown as AnyTool;
-    expect(Object.keys(crewTool.parameters.properties)).toEqual([
-      "required_actions",
-      "title",
-      "body",
-      "id",
-      "width",
-      "holds_place",
-      "reply",
-      "actions",
-      "presentation",
-      "risk",
-      "asking",
-      "design_only",
-      "body_file",
-    ]);
+    // The runtime consumes the owned schema; only a task with a browser gets
+    // its three browser fields. INF-125 adds a typed validation request here.
+    expect(Object.keys(crewTool.parameters.properties)).toEqual(
+      Object.keys(EMIT_CARD_TOOL.parameters.properties).filter(
+        (key) => !["browser_button", "browser_page", "browser_handoff"].includes(key),
+      ),
+    );
+    expect(crewTool.parameters.properties).toHaveProperty("risk");
+    expect(crewTool.parameters.properties).not.toHaveProperty("task_id");
+    expect(crewTool.parameters.properties).not.toHaveProperty("standalone");
+    expect(crewTool.parameters.properties).toHaveProperty(
+      "validation_request",
+      EMIT_CARD_TOOL.parameters.properties.validation_request,
+    );
     expect(Object.keys(fmTool.parameters.properties)).toEqual([
       "required_actions",
       "title",
@@ -218,6 +217,26 @@ describe("createEmitCardTool", () => {
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
     await tool.execute("t1", { title: "Note", body: "x", task_id: "t9", standalone: true });
     expect(onCard).toHaveBeenCalledWith({ title: "Note", body: "x", actions: [] });
+
+    // INF-125: the approval names the recorded request and its exact action;
+    // forwarding this declaration grants nothing at the tool boundary.
+    const request = { request: "shared-record", action: "approve-record" };
+    const actions = [
+      { id: "hold", label: "Keep it held", default: true },
+      { id: request.action, label: "Approve this record" },
+    ];
+    await tool.execute("t2", {
+      title: "Approve one test record",
+      body: "<p>This test adds one shared record.</p>",
+      actions,
+      validation_request: request,
+    });
+    expect(onCard).toHaveBeenLastCalledWith({
+      title: "Approve one test record",
+      body: "<p>This test adds one shared record.</p>",
+      actions,
+      validationDecision: request,
+    });
   });
 
   // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.

@@ -11,6 +11,7 @@ import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
+import type { KeptValidationInput } from "@shared/liveValidation";
 import type { ReasoningChoice } from "@shared/modelSlots";
 import {
   type CommittedPlacement,
@@ -120,6 +121,7 @@ import {
   TaskStore,
 } from "../storage/taskStore";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
+import { decideValidation, recordValidation } from "./liveValidation";
 import type { TaskExportBundle } from "./taskExport";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
@@ -365,6 +367,7 @@ function settleRef(record: TaskRecord | undefined, fallbackId: string): SettleTa
  * can raise it again while the Firstmate leaves it unanswered (FI3-714).
  */
 export type ReportDeclaration = {
+  validation?: KeptValidationInput;
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
   needsFirstmate?: string;
@@ -896,6 +899,15 @@ export class TaskService {
       if (named && reportHash(named.text) === ref.sha256) return named.text;
       return own.find((event) => reportHash(event.text) === ref.sha256)?.text;
     });
+  }
+
+  /** Whether the pinned served brief actually contained a particular contract. */
+  briefContains(id: string, text: string): boolean {
+    return this.timeline(id).some(
+      (event) =>
+        event.kind === "briefed" &&
+        this.servedBrief(event).replace(/\s+/g, " ").includes(text.replace(/\s+/g, " ")),
+    );
   }
 
   /** The tasks that must close before this one is ready. */
@@ -3110,6 +3122,98 @@ export class TaskService {
     run();
   }
 
+  recordLiveValidation(
+    id: string,
+    input: KeptValidationInput,
+    context: Omit<Parameters<typeof recordValidation>[2], "at" | "deviceId">,
+  ): void {
+    this.write(() => {
+      const task = this.mustGet(id);
+      const liveValidation = recordValidation(task.delivery?.liveValidation, input, {
+        ...context,
+        at: this.now(),
+        deviceId: task.deviceId ?? null,
+      });
+      this.recordDelivery(
+        id,
+        { liveValidation },
+        {
+          kind: "note",
+          text: `Live validation: ${input.kind}`,
+          feed: false,
+          data: {
+            validation: {
+              kind: input.kind,
+              scenarioRevision: liveValidation.scenarioRevision,
+              stateRevision: liveValidation.stateRevision ?? 0,
+              ...("head" in input ? { head: input.head } : {}),
+              ...(input.kind === "run"
+                ? {
+                    run: input.id,
+                    revision: liveValidation.runs.at(-1)?.revision,
+                    evidence: input.evidence.map(({ id, digest, file, bytes }) => ({
+                      id,
+                      digest,
+                      file,
+                      bytes,
+                    })),
+                  }
+                : {}),
+              ...(input.kind === "request" ? { request: input.request.id } : {}),
+            },
+          },
+        },
+      );
+    })();
+  }
+
+  expireValidationDecision(id: string, card: string, offer: string, reason: string): void {
+    this.write(() => {
+      const task = this.mustGet(id);
+      if (!task.delivery?.liveValidation) return;
+      const liveValidation = structuredClone(task.delivery.liveValidation);
+      for (const item of liveValidation.permissions) {
+        if (
+          item.state !== "requested" ||
+          item.decision?.card !== card ||
+          item.decision.offer !== offer
+        )
+          continue;
+        item.state = "expired";
+        liveValidation.stateRevision = (liveValidation.stateRevision ?? 0) + 1;
+      }
+      this.recordDelivery(
+        id,
+        { liveValidation },
+        { kind: "note", text: reason, data: { validationDecisionExpired: { card, offer } } },
+      );
+    })();
+  }
+
+  decideLiveValidation(
+    id: string,
+    input: Omit<Parameters<typeof decideValidation>[1], "at">,
+  ): void {
+    this.write(() => {
+      const task = this.mustGet(id);
+      if (!task.delivery?.liveValidation) return;
+      const liveValidation = decideValidation(task.delivery.liveValidation, {
+        ...input,
+        at: this.now(),
+      });
+      this.recordDelivery(
+        id,
+        { liveValidation },
+        {
+          kind: "note",
+          text: "The captain answered a live-validation request",
+          feed: false,
+          data: { validationDecision: input },
+        },
+      );
+    })();
+  }
+
   /**
    * Delivery facts as they become known: a CI read, an opened PR. The mode
    * comes from the repo posture when the row has none yet.
@@ -3118,7 +3222,7 @@ export class TaskService {
     id: string,
     patch: Partial<TaskDelivery>,
     event?: {
-      kind: "ci" | "pr_opened" | "review" | "cap_reset";
+      kind: "ci" | "pr_opened" | "review" | "cap_reset" | "note";
       text: string;
       feed?: boolean;
       actor?: TaskEventActor;
@@ -3135,13 +3239,14 @@ export class TaskService {
       const delivery = this.mergeDelivery(record, patch);
       this.patch(id, { delivery, updatedAt: at });
       if (event) {
+        const { liveValidation: _validationState, ...eventPatch } = patch;
         this.addEvent({
           taskId: id,
           at,
           actor: event.actor ?? "host",
           kind: event.kind,
           text: event.text,
-          data: { ...patch, ...event.data },
+          data: { ...eventPatch, ...event.data },
           feed: event.feed ?? false,
         });
       }
@@ -4522,7 +4627,17 @@ export class TaskService {
         record,
         record.repoId ? this.options.repos?.get(record.repoId)?.delivery : undefined,
       );
-    return { ...(record.delivery ?? {}), ...patch, mode };
+    const delivery = { ...(record.delivery ?? {}), ...patch, mode };
+    // Kept files own the bytes. CI polls and event rows never copy transcripts.
+    if (delivery.liveValidation)
+      delivery.liveValidation = {
+        ...delivery.liveValidation,
+        runs: delivery.liveValidation.runs.map((run) => ({
+          ...run,
+          evidence: run.evidence.map(({ text: _transcript, ...metadata }) => metadata),
+        })),
+      };
+    return delivery;
   }
 
   /**

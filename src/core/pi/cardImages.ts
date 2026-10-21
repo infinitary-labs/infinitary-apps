@@ -318,7 +318,11 @@ type PictureHomes = { worktree: string; evidence?: string };
  * working copy, an absolute one inside the evidence folder, through every
  * symlink. `what` names the refusal ("Card picture refused").
  */
-async function containedFile(src: string, homes: PictureHomes, what: string): Promise<string> {
+export async function containedFile(
+  src: string,
+  homes: PictureHomes,
+  what: string,
+): Promise<string> {
   if (isAbsolute(src) && !homes.evidence) {
     throw new Error(`${what}: src must be a path relative to the task's working copy.`);
   }

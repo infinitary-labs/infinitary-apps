@@ -194,6 +194,8 @@ export type EmittedCard = {
    * browser before the card goes up, or refuses the card.
    */
   browserHandoff?: { site: string; reason: string; after: string };
+  /** Bind the shown ordinary action to a recorded validation request. */
+  validationDecision?: { request: string; action: string };
   /**
    * The crewmate's risk assessment of its change (`risk`, only on its
    * completion decision; docs/card-authoring.md "The risk chart"): the host
@@ -382,6 +384,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   review_task_id?: string;
   standalone?: boolean;
   browser_button?: string;
+  validation_request?: { request: string; action: string };
   browser_handoff?: { site: string; reason: string; after: string };
   browser_page?: string;
 };
@@ -442,6 +445,15 @@ const crewmateCardParams = Type.Object({
   ),
   asking: Type.Optional(Type.Boolean({ description: CARD_PARAMS.asking })),
   design_only: Type.Optional(Type.Boolean({ description: CARD_PARAMS.design_only })),
+  validation_request: Type.Optional(
+    Type.Object(
+      { request: Type.String(), action: Type.String() },
+      {
+        description:
+          "Bind an approval action to a recorded validation request. Code clearance precedes display. Only the captain's exact chrome choice grants this one effect or gap, never a merge.",
+      },
+    ),
+  ),
   body_file: Type.Optional(
     Type.String({
       description:
@@ -675,6 +687,7 @@ async function emitCard(
     ...(options.browserButton && params.browser_button !== undefined
       ? { browserButton: params.browser_button }
       : {}),
+    ...(params.validation_request ? { validationDecision: params.validation_request } : {}),
     ...(options.browserButton && params.browser_handoff !== undefined
       ? { browserHandoff: params.browser_handoff }
       : {}),

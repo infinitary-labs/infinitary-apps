@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "careful-live-validation",
+      "kind": "improvement",
+      "title": "Careful changes keep reviewed live proof",
+      "body": "Careful changes now keep live proof for independent review. The merge card shows results and gaps, with supporting history in the task record. An untested required result waits for your decision and never counts as a pass. Tests that leave changes visible to other people ask for your approval first.",
+      "area": "tasks",
+      "picture": {
+        "dark": "careful-live-validation-dark.webp",
+        "light": "careful-live-validation-light.webp",
+        "alt": "A merge card shows the keyboard result, the controlled review and scripted-model limits, and a closed How it was checked section."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

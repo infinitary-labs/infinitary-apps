@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
+import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type { WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import {
   API_CALLS_PER_TASK,
@@ -86,6 +87,11 @@ export class GithubGatewayService {
       now: () => number;
       /** Arm the independent run watch from an accepted own-project start or rerun. */
       watchRun?: (taskId: string, runId: number) => string;
+      beforeValidationWrite?: (
+        taskId: string,
+        request: string,
+        write: ValidationForgeWrite,
+      ) => Promise<void>;
       sleep?: (ms: number) => Promise<void>;
     },
   ) {}
@@ -103,6 +109,11 @@ export class GithubGatewayService {
     return this.answer(taskId, async (target) => {
       const { api, forge } = target;
       if (input.file !== undefined) {
+        if (input.validationEffect !== undefined)
+          throw new ForgeError(
+            "refused",
+            "A validation effect binds a JSON request, not a release file. No file was sent.",
+          );
         return this.writeFile(taskId, target, input);
       }
       const body = input.body;
@@ -127,8 +138,17 @@ export class GithubGatewayService {
       }
       this.guardPresentationWrite(taskId, forge, route, parsed);
       const why = this.askReason(taskId, route, target);
-      if (why) return this.keepAsk(taskId, target, route, body, why);
-      const response = await this.send(taskId, api, route.method, route.path, body);
+      if (why)
+        return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
+      const response = await this.send(
+        taskId,
+        api,
+        route.method,
+        route.path,
+        body,
+        input.validationEffect,
+        forge.host ?? GITHUB_HOST,
+      );
       const answered = render(response, api);
       return `${answered}${await this.afterWrite(taskId, target, route, response)}`;
     });
@@ -235,6 +255,14 @@ export class GithubGatewayService {
         ask.body === undefined ? undefined : JSON.parse(ask.body),
       );
       this.spend(taskId, target.api);
+      await this.beforeValidationWrite(
+        taskId,
+        ask.validationEffect,
+        ask.host,
+        route.method,
+        route.path,
+        ask.body,
+      );
     } catch (caught) {
       return done({ kind: "refused", why: messageOf(caught) });
     }
@@ -326,6 +354,7 @@ export class GithubGatewayService {
     body: string | undefined,
     why: string,
     file?: string,
+    validationEffect?: string,
   ): string {
     const ask: WriteAsk = {
       id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -337,6 +366,7 @@ export class GithubGatewayService {
       path: route.path,
       ...(body !== undefined ? { body } : {}),
       ...(file !== undefined ? { file } : {}),
+      ...(validationEffect ? { validationEffect } : {}),
       at: this.options.now(),
     };
     this.options.tasks.keepWriteAsk(taskId, ask);
@@ -425,9 +455,48 @@ export class GithubGatewayService {
     method: Parameters<ForgeApi["call"]>[0],
     path: string,
     body?: string,
+    validationEffect?: string,
+    host = GITHUB_HOST,
   ): Promise<ForgeApiResponse> {
     this.spend(taskId, api);
+    await this.beforeValidationWrite(taskId, validationEffect, host, method, path, body);
     return api.call(method, path, body);
+  }
+
+  private async beforeValidationWrite(
+    taskId: string,
+    request: string | undefined,
+    host: string,
+    method: ApiRoute["method"],
+    path: string,
+    body?: string,
+  ): Promise<void> {
+    if (!request) return;
+    if (!this.options.beforeValidationWrite)
+      throw new ForgeError(
+        "refused",
+        "Validation approval cannot be checked here; nothing was sent.",
+      );
+    if (method === "GET" || method === "HEAD")
+      throw new ForgeError("refused", "A validation write approval cannot authorize a read.");
+    try {
+      await this.options.beforeValidationWrite(taskId, request, {
+        host,
+        method,
+        path,
+        ...(body === undefined
+          ? {}
+          : { bodyDigest: createHash("sha256").update(body).digest("hex") }),
+      });
+    } catch (caught) {
+      // This is the host's preflight, before the API has been called, not an unknown network outcome.
+      throw new ForgeError(
+        "refused",
+        caught instanceof Error
+          ? caught.message
+          : "Validation approval could not be checked; nothing was sent.",
+      );
+    }
   }
 
   /** One call of the task's budget, or the refusal once it is spent. */

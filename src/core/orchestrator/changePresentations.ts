@@ -58,6 +58,12 @@ function hostWords(forge: Forge): { place: string; change: string; oneOpen: stri
       };
 }
 
+type PublicationOpening = {
+  draft?: boolean;
+  /** Recheck and consume the caller's publication authority after preflight, before uploads. */
+  beforePublish?: (head: string) => void;
+};
+
 /** Serialization, retained receipts and the all-files-first barrier; never merge authority. */
 export class ChangePresentations {
   private readonly active = new Map<string, ReadonlySet<string>>();
@@ -157,6 +163,7 @@ export class ChangePresentations {
     checks: "pending" | "passed" = "pending",
     recovery?: PresentationRecovery,
     around?: StoryAround,
+    opening?: PublicationOpening,
   ): Promise<ForgeChange> {
     return this.serial(taskId, () =>
       this.publishLocked(
@@ -170,6 +177,7 @@ export class ChangePresentations {
         false,
         undefined,
         around,
+        opening,
       ),
     );
   }
@@ -185,6 +193,7 @@ export class ChangePresentations {
     remoteOnly = false,
     inheritedContentHash?: string,
     around?: StoryAround,
+    opening?: PublicationOpening,
   ): Promise<ForgeChange> {
     const story = this.current(taskId, revision);
     if (story.version === 2 && title !== story.title)
@@ -267,6 +276,7 @@ export class ChangePresentations {
         ),
       existing,
     );
+    opening?.beforePublish?.(story.head);
     const urls = new Map<string, string>();
     for (const asset of this.uploadAssets(story)) {
       let receipt = this.receipt(story, asset);
@@ -351,7 +361,12 @@ export class ChangePresentations {
         if (!forge.updateChangeBody) throw new Error("This host cannot replace a saved story.");
         await forge.updateChangeBody(fresh, body);
       } else {
-        const opened = await forge.openChange({ branch, title, body });
+        const opened = await forge.openChange({
+          branch,
+          title,
+          body,
+          ...(opening?.draft !== undefined ? { draft: opening.draft } : {}),
+        });
         if (opened.number) publication.number = opened.number;
       }
       // Neither GitHub nor GitLab offers an atomic conditional body update. Reread both sides and disclose the race.

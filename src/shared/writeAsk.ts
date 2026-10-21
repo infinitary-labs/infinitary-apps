@@ -23,6 +23,7 @@ export type WriteAsk = {
   body?: string;
   /** A release file in the working copy, relative to it. The bytes are read when the click sends it. */
   file?: string;
+  validationEffect?: string;
   at: number;
   /** When the captain's click took it, set before it was sent: it is never sent again. */
   sentAt?: number;

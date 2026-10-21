@@ -1337,6 +1337,7 @@ export class IdleLadder {
         ciCapAt: undefined,
         reviewRounds: undefined,
         reviewRoundSha: undefined,
+        reviewRoundPairs: undefined,
         reviewCapAt: undefined,
         reviewCapOwner: undefined,
         capAnsweredAt: undefined,

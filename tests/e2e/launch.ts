@@ -167,12 +167,18 @@ export type LaunchOptions = {
    */
   voiceModelReady?: boolean;
   /**
-   * Stand a fixed transcript in for the voice helper's model
+   * The words the stand-in voice helper answers for each recording
    * (`tests/e2e/voiceHelperStandIn.ts`): each recording still travels from
-   * the window through the main process to a helper process, which answers
-   * these words.
+   * the window through the main process to a helper process. None by
+   * default, as the app's own helper answers without its weights.
    */
   voiceTranscript?: string;
+  /**
+   * Run the app's own voice helper and this computer's speech library in
+   * place of the stand-in, for a check with the real model on disk: what the
+   * library lists then decides where speech runs (`voice-freeze.check`).
+   */
+  useAppVoiceHelper?: boolean;
   /** Keep the fake device but use the app permission handlers instead of Chromium auto-grant. */
   useAppMediaPermissions?: boolean;
   /**
@@ -470,16 +476,22 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       INFINITARY_DNS_SD: standInDnsSd([]),
       INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
       INFINITARY_VOICE_MODEL_READY: options.voiceModelReady === false ? "0" : "1",
-      ...(options.voiceTranscript === undefined
-        ? {}
-        : { INFINITARY_VOICE_HELPER_ENTRY: writeVoiceHelperStandIn(options.voiceTranscript) }),
       // macOS's microphone answer is the spec's, never this Mac's own
       // (src/main/voice/micAccess.ts); a spec names another in `env`.
       INFINITARY_MIC_ACCESS: "granted",
       // So is whether this computer has a graphics card for speech
-      // (src/main/voice/graphicsCard.ts): the hosted Linux runner has none,
-      // and the voice journeys run there with the stand-in model.
+      // (src/main/voice/graphicsCard.ts): the hosted Linux runner has none.
       INFINITARY_GRAPHICS_CARD: "present",
+      // And what its speech library can do there (docs/architecture.md
+      // section 8, "Where speech runs"): the stand-in voice helper lists
+      // WebGPU, as the library's builds for Apple silicon and Linux x64 do.
+      // Linux arm64's lists none, which leaves speech to the window's own
+      // adapter, and a virtual screen has none, so dictation would hide.
+      ...(options.useAppVoiceHelper
+        ? {}
+        : {
+            INFINITARY_VOICE_HELPER_ENTRY: writeVoiceHelperStandIn(options.voiceTranscript ?? ""),
+          }),
       // The Claude transport runs the client the MACHINE has installed (F14),
       // and a developer's real one must never be spawned by a test. Every
       // run gets the stub unless the spec names its own path.

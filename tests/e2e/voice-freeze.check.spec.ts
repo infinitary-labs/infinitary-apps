@@ -107,8 +107,13 @@ test("starting and ending voice input leaves the window thread free", {
   execFileSync("cp", ["-cR", MODEL_DIR, join(userDataDir, "models", "whisper-large-v3-turbo")]);
   const traceDir = test.info().outputPath("chromium");
   mkdirSync(traceDir, { recursive: true });
-  // The fake device's beep is not silence, so every release runs a full Whisper pass.
-  const launched = await launchApp({ withMockProvider: true, userDataDir });
+  // The fake device's beep is not silence, so every release runs a full Whisper pass,
+  // in the app's own voice helper on this Mac's speech library.
+  const launched = await launchApp({
+    withMockProvider: true,
+    userDataDir,
+    useAppVoiceHelper: true,
+  });
   const { app, page } = launched;
   try {
     await expect(promptInput(page)).toBeEnabled();

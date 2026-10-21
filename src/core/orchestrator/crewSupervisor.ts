@@ -915,6 +915,13 @@ type TaskRuntime = {
   /** The vault account serving this crewmate; absent = base runtime. */
   accountId?: string;
   cancelled: boolean;
+  /**
+   * A settle stopped this runtime to close the task with its own reason
+   * (`closeTask`): the captain's choice on an answer, a discard. That close
+   * owns the record and what is queued about it, so the end of the turn it
+   * stopped is not a cancel (INF-721).
+   */
+  settling?: boolean;
   /** Set by interrupt mode "interrupt": the abort keeps the task steerable. */
   interruptRequested: boolean;
   /**
@@ -8673,6 +8680,13 @@ export class CrewSupervisor {
   }
 
   private finish(task: TaskRuntime, status: "cancelled" | "failed", error?: string): void {
+    // The turn a settle stopped ends before or after that settle's close,
+    // as its backend goes. Either way the close keeps its own reason and
+    // hands on what it carries - the captain's choice on an answer reaches
+    // the first mate - so this end neither closes the record cancelled nor
+    // purges what is queued about it (INF-721: a choice outranks a cancel).
+    // The settle releases the runtime once the abort returns.
+    if (task.settling) return;
     if (status === "failed" && error && isSignInFailure(task.session?.controlProfile, error)) {
       // Auth-required is never silent (docs/architecture.md section 6): a
       // decision card offers the way back to a signed-in provider.
@@ -8713,9 +8727,9 @@ export class CrewSupervisor {
     this.tasks.delete(task.id);
     this.settle.releaseSettleBoundary(task.id);
     this.options.personal?.endLiveTask(task.id);
-    // A settle that aborted this turn (discard with confirm) already closed
-    // the record with its own reason - and purged - so the turn's end must
-    // not relabel it. Either way nothing queued about the task survives.
+    // A record another close already ended keeps its own reason; the turn's
+    // end must not relabel it. Either way nothing queued about the task
+    // survives.
     const record = this.options.tasks.get(task.id);
     if (record && (record.status === "open" || record.status === "active")) {
       // A typed backend's session failure has no class: it is never read as
@@ -8821,6 +8835,7 @@ export class CrewSupervisor {
     const runtime = this.tasks.get(taskId);
     if (!runtime) return undefined;
     runtime.cancelled = true;
+    runtime.settling = true;
     return (async () => {
       await runtime.session?.abort().catch(() => {});
       this.releaseSession(runtime);

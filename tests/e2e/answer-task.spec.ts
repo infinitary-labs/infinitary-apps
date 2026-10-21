@@ -1,9 +1,11 @@
 import { expect, type Locator, test } from "@playwright/test";
 import { renderAnswerShapeSection } from "../../src/core/orchestrator/intentBrief";
+import { renderWake } from "../../src/core/orchestrator/wakes";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { launchClaudeCrew } from "./claudeCrew";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   ANSWER_TASK_PROMPT_MARKER,
@@ -29,6 +31,13 @@ import {
   statusLine,
   taskKey,
 } from "./rails";
+import {
+  ANSWER_MID_TURN_CARD_TITLE,
+  ANSWER_MID_TURN_CHOICE,
+  ANSWER_MID_TURN_MARKER,
+  ANSWER_MID_TURN_TITLE,
+  answerMidTurn,
+} from "./scenarios/answerMidTurn";
 import { expectNoCard, shownCard, shownEntry } from "./stack";
 
 /**
@@ -307,6 +316,103 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
       dir: test.info().outputPath("hero"),
     });
   } finally {
+    await own.close();
+  }
+});
+
+/**
+ * INF-721 friction 1: the captain chooses on an answer task's card while its
+ * crewmate is still working. The choice stops that turn to close the task,
+ * and the stopped turn's end is not a cancel: the task closes answered and
+ * the first mate hears the choice, once. INF-648's 11:21 AM choice closed
+ * cancelled and never reached the first mate. Its own app, on the Claude
+ * crew, whose stand-in holds the crewmate's next step open.
+ */
+test("a choice on an answer card while its crewmate works closes it answered and reaches the first mate", async () => {
+  const own = await launchClaudeCrew({ scenarios: [answerMidTurn] });
+  let taskId: string | undefined;
+  try {
+    const { page, mockProvider } = own;
+    const input = promptInput(page);
+    await expect(input).toBeEnabled({ timeout: 30_000 });
+    await input.click();
+    await input.fill(`${ANSWER_MID_TURN_MARKER} ${ANSWER_MID_TURN_TITLE}`);
+    await input.press("Enter");
+
+    // The card is up and the crewmate's turn still runs: its next step
+    // waits on the model.
+    await expect(shownCard(page, ANSWER_MID_TURN_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => mockProvider?.heldRequests(), { timeout: 30_000 }).toBe(1);
+    const [card] = await page.evaluate(() => window.infinitary.cards.list());
+    if (!card?.taskId) throw new Error("the answer card names no task");
+    taskId = card.taskId;
+    const detail = async (): Promise<TaskDetail> =>
+      page.evaluate((id) => window.infinitary.tasks.detail(id), card.taskId as string);
+    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
+      deliverable: "answer",
+      status: "active",
+      activity: "running",
+      waitingCardId: card.id,
+    });
+    const { key, title } = await detail();
+    await page.screenshot({ path: test.info().outputPath("answer-mid-turn-before.png") });
+
+    await page.getByRole("button", { name: ANSWER_MID_TURN_CHOICE }).click();
+
+    // The choice is the close: answered, never cancelled.
+    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
+      status: "done",
+      closedReason: "answered",
+    });
+    await expect(statusLine(page, key).filter({ hasText: ANSWER_MID_TURN_CHOICE })).toBeVisible({
+      timeout: 30_000,
+    });
+    expect(mockProvider?.heldRequests()).toBe(0);
+
+    // The first mate is served the choice it closed on, once.
+    const told = renderWake({
+      facts: {
+        kind: "answer-closed",
+        handoff: {
+          version: 1,
+          event: "answer_task_closed",
+          task: { id: card.taskId, key, title },
+          card: { id: card.id, title: card.title },
+          choice: { id: "free-and-restart", label: ANSWER_MID_TURN_CHOICE, effect: null },
+          close: { status: "done", reason: "answered", actor: "captain" },
+        },
+      },
+    });
+    const heard = () =>
+      (mockProvider?.requestBodies() ?? [])
+        .map(
+          (body) =>
+            providerMessages(body).filter(
+              (message) => message.role === "user" && message.text.includes(told),
+            ).length,
+        )
+        .filter((count) => count > 0);
+    await expect.poll(heard, { timeout: 30_000 }).not.toHaveLength(0);
+    expect(heard().every((count) => count === 1)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath("answer-mid-turn-after.png") });
+  } finally {
+    // What the record says and every answer_task_closed the first mate was served.
+    if (taskId)
+      await test.info().attach("answer-mid-turn.json", {
+        body: JSON.stringify(
+          {
+            task: await own.page.evaluate((id) => window.infinitary.tasks.detail(id), taskId),
+            served: (own.mockProvider?.requestBodies() ?? []).flatMap((body) =>
+              providerMessages(body)
+                .filter((message) => message.text.includes("answer_task_closed"))
+                .map((message) => message.text),
+            ),
+          },
+          null,
+          2,
+        ),
+        contentType: "application/json",
+      });
     await own.close();
   }
 });

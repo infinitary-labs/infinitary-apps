@@ -18780,6 +18780,101 @@ describe("the deliverable axis (Task B)", () => {
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
 
+  /**
+   * INF-721 friction 1: "A card choice outranks a cancel: the task closes as
+   * answered and the first mate hears it". INF-648's crewmate was mid-turn
+   * when the captain chose "Free the lock and restart both" on this card;
+   * the answered close stopped that turn, the turn's end closed the task
+   * cancelled, and the first mate never heard the choice.
+   */
+  const STUCK_JOBS_CARD = {
+    title: "Both Mac journey jobs are stuck at the check lock and have run nothing",
+    body: "<p>Yes, both jobs are stuck: neither has run a single journey.</p><p>Both have waited at the Mac mini's check lock since 9:52 AM.</p>",
+    actions: [
+      { id: "free-only", label: "Only free the lock" },
+      { id: "leave", label: "Leave them" },
+      { id: "free-and-restart", label: "Free the lock and restart both", default: true },
+    ],
+  };
+
+  /** The first mate's one wake about the close: the receipt of the captain's choice. */
+  function answerClosedWakes(inbox: InboxStore) {
+    return inbox
+      .pending(FIRSTMATE_RECIPIENT)
+      .map((row) => JSON.parse(renderWake(row).replace("[fm-op] ", "")));
+  }
+
+  const CHOSE_FREE_AND_RESTART = expect.objectContaining({
+    event: "answer_task_closed",
+    choice: { id: "free-and-restart", label: "Free the lock and restart both", effect: null },
+    close: { status: "done", reason: "answered", actor: "captain" },
+  });
+
+  // A backend ends a stopped turn before its abort returns (Pi waits for
+  // idle; a computer that runs work lets the waiting prompt go) or after it.
+  it.each([
+    ["before", true],
+    ["after", false],
+  ])(
+    "closes answered and wakes the first mate when the chosen-on turn ends %s the close (INF-721)",
+    async (_order, endsWithAbort) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, specs, cards, inbox, taskId } = await investigation(crewmate);
+      specs[0]?.onCard?.(STUCK_JOBS_CARD);
+      await tick();
+      const card = cards().find((entry) => entry.taskId === taskId) as Card;
+      specs[0]?.onReport?.("Both jobs are stuck, not slow.", undefined, {
+        wait: { reason: "choose the next move", cardId: card.id },
+      });
+      crewmate.finishPrompt();
+      await tick();
+      // A steer starts another turn, and the captain chooses while it runs.
+      await supervisor.steerCrewmate(taskId, "INF-599's helpers still hold the lock.");
+      await tick();
+      expect(tasks.get(taskId)?.activity).toBe("running");
+      if (endsWithAbort) {
+        crewmate.abort = async () => {
+          crewmate.aborts.push(undefined);
+          crewmate.finishPrompt();
+        };
+      }
+      supervisor.act(card.id, "free-and-restart");
+      await tick();
+      if (!endsWithAbort) {
+        crewmate.finishPrompt();
+        await tick();
+      }
+      expect(crewmate.aborts).toHaveLength(1);
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(answerClosedWakes(inbox)).toEqual([CHOSE_FREE_AND_RESTART]);
+    },
+  );
+
+  it.each(["cancel", "choice"])(
+    "closes answered when a cancel and the choice land at once, the %s first (INF-721)",
+    async (first) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks, specs, cards, inbox, taskId } = await investigation(crewmate);
+      specs[0]?.onCard?.(STUCK_JOBS_CARD);
+      await tick();
+      const card = cards().find((entry) => entry.taskId === taskId) as Card;
+      specs[0]?.onReport?.("Both jobs are stuck, not slow.");
+      let cancelled: Promise<void>;
+      if (first === "cancel") {
+        cancelled = supervisor.interruptCrewmate(taskId, "cancel");
+        supervisor.act(card.id, "free-and-restart");
+      } else {
+        supervisor.act(card.id, "free-and-restart");
+        cancelled = supervisor.interruptCrewmate(taskId, "cancel");
+      }
+      await cancelled;
+      crewmate.finishPrompt();
+      await tick();
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(answerClosedWakes(inbox)).toEqual([CHOSE_FREE_AND_RESTART]);
+    },
+  );
+
   it.each([
     "Got it",
     ABANDON,

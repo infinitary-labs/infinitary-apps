@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "answer-choice-outranks-cancel",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A choice on an answer card counts while its crewmate is still working",
+      "body": "When you choose on a crewmate's answer card while that crewmate is still working, the task now closes as answered and your first mate hears what you chose. Before, the choice could end the task as cancelled, or close it without your first mate ever hearing it.",
+      "noPicture": "The screen looks the same after the choice; what changed is how the task closes and what your first mate is told.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

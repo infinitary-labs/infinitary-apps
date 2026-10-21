@@ -553,11 +553,21 @@ async function world() {
   const here = await home.vault.add(CLAUDE_PROVIDER_ID, "oauth", bridge);
   await home.vault.status(here.id, { refresh: true });
 
-  /** Waits for every turn in flight to end, after a turn may have started. */
+  /**
+   * Waits for every turn in flight to end, after a turn may have started.
+   * A task a start claimed reads "starting" until its first turn begins,
+   * which waits for the Mac mini's answer to installing its working copy
+   * (`prepareFirstTurn`), so that turn is in flight too: on a slow runner
+   * that answer comes later than any fixed wait (INF-696).
+   */
   const settle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 15));
     await expect
-      .poll(() => home.tasks.listActive().every((record) => record.activity !== "running"))
+      .poll(() =>
+        home.tasks
+          .listActive()
+          .every((record) => record.activity !== "starting" && record.activity !== "running"),
+      )
       .toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 5));
   };

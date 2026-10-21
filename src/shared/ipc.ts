@@ -563,10 +563,11 @@ export function speaksResources(deviceVersion: string): boolean {
  * The first contract a computer that runs work knows the code names of the
  * Infinitary rename on (step 8 of FI3-1780's plan): a task's starting work
  * fetched into `refs/infinitary/sources/`, from a kept ref under
- * `refs/infinitary/kept/` (`inf:working-copy:source-ref`, src/shared/work.ts),
- * and its crewmates' browser command, `infinitary-browser-axi`. One that
- * speaks an older one knows only Firstmate 3000's names (`refs/fm3000/`,
- * `infinitary-browser-axi`), so the home names those to it.
+ * `refs/infinitary/kept/` (`inf:working-copy:source-ref`, src/shared/work.ts).
+ * One that speaks an older one knows only Firstmate 3000's names (`refs/fm3000/`),
+ * so the home names those to it. The browser command is not
+ * swapped: `fm-browser-axi`, Firstmate 3000's command, stays an alias of
+ * `infinitary-browser-axi` (src/core/axi/names.ts).
  */
 export const INFINITARY_NAMES_SINCE = "8.4.0";
 
@@ -1859,9 +1860,9 @@ export const invokeContract = {
   // Knowledge (docs/knowledge.md, "The browser"): whether this build keeps
   // it and whether there is any to show (`held`: an entry, or a collection
   // that cannot be read), which the window asks before it registers the
-  // Knowledge panel, and the browser's reads, scoped as Firstmate's are. An
-  // alpha or development build answers them; every other build refuses each
-  // read before it opens the collection. This Mac's own window only: a view
+  // Knowledge panel, and the browser's reads, scoped as Firstmate's are.
+  // Every build answers them (`knowledgeEnabled`,
+  // src/core/knowledge/availability.ts). This Mac's own window only: a view
   // of another Mac reads none.
   "inf:knowledge:enabled": {
     effect: "read",

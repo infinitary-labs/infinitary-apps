@@ -613,7 +613,7 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 - **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
 Device update and change-address requests always answer Remote Login refusals as typed data; Devices shows the two lines in one error line above the list.
-A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`deviceConnected`: connected over SSH, in reach, or in reach on another version), after the row had said it was not.
+A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`reachRefusalAfter`, `src/renderer/src/settings/DevicesTab.tsx`): the row's `connectedAt` is later than the refusal, after the row had said it was not.
 For Change address the row has to reconnect at the address that was tried.
 Any other refusal stays until the captain's next action.
 
@@ -659,7 +659,7 @@ Linux keeps its current delivery path, and a Mac a command added downloads over 
 4. "Mac mini runs this computer's version of Infinitary now." once it is back on this Mac's version.
    Not back within three minutes, the feed says so in two warning lines instead ("Mac mini has this computer's version of Infinitary now, and has not started again yet."), and one with no background to start it again says it runs it once it is started there again.
 
-Each step is a `device_update` feed line, a count with its `copy` and its `run`, and each refusal two `warn` lines that `inf:devices:update` rejects with too (`remoteLoginWords.refused`): `out-of-reach`, `current` (it runs this Mac's version already), `not-updatable`, `cannot-send` (another Mac, from a copy of Infinitary with no bundle to send), and `failed` (the computer could not get or keep the copy).
+Each step is a `device_update` feed line, a count with its `copy` and its `run`, and each refusal two `warn` lines that `inf:devices:update` answers as typed data too (`remoteLoginWords.refused`): `out-of-reach`, `current` (it runs this Mac's version already), `not-updatable`, `cannot-send` (another Mac, from a copy of Infinitary with no bundle to send), and `failed` (the computer could not get or keep the copy).
 A turn running there is cut off, as when that computer restarts.
 
 ### Downloading over the connection
@@ -846,7 +846,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:change-address` | home | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |
 | `inf:devices:add` | home | none: the captain's click adds the Mac at an address over Remote Login; `device-invite` with `how: "address"`, tier `hands`, only offers the card |
 | `inf:devices:update` | home | none: the captain's click updates Infinitary on a computer that runs work, over Remote Login or the connection; `device-update`, tier `hands`, only offers the card |
-| `inf:devices:shown` | home | none: whether Devices is offered here, and whether it offers + A phone; every build's home answers yes to both, and a Mac that controls another is not answered |
+| `inf:devices:shown` | home | none: whether Devices is offered here; every build's home answers `{ shown: true }`, and a Mac that controls another is not answered |
 | `inf:devices:stop` | home | none: it closes the captain's own open link and sets nothing |
 | `inf:devices:addresses` | home | none |
 | `inf:devices:address:set` | home | `device-address`, tier `hands` |
@@ -870,7 +870,7 @@ A lost view can therefore ask for those until the captain removes it here.
 ## Settings -> Devices
 
 Every build offers the tab and the first mate's device cards: `inf:devices:shown` answers yes on every home, stable, alpha and development alike.
-Its `phone`, whether the tab offers **+ A phone**, is yes on every build too.
+The tab offers **+ A phone** on every build too; no flag gates it.
 On an app that controls another Mac the tab is that Mac's row with Leave instead, and that Mac is not asked `inf:devices:shown`.
 
 The tab after Usage, built to the agreed design in the design skill's `components/devices/DevicesTab` (`src/renderer/src/settings/DevicesTab.tsx`):
@@ -929,7 +929,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   A Mac whose user runs another first mate's work asks once under the foot, with Cancel focused, before anything is sent there (above, "Another first mate's Mac").
   A computer whose Infinitary is updating reads "Updating Infinitary on Mac mini…" in place of what it runs, with no Update or Remove.
   **+ Running as another user** makes the command for another user on this Mac at once.
-  **+ A phone**, offered only where `phone` says so (above), opens the scan-code panel (`docs/ios.md`).
+  **+ A phone**, offered on every build, opens the scan-code panel (`docs/ios.md`).
   The link or command stands in a panel at the top of the tab with Copy link or Copy command, "works once · 9:41 left" and Stop it, then reads what joined (`deviceJoinedLine`), and for a computer that runs work "Give it a project in Projects when you want it to run work.", with Done; once that computer has a sign-in the panel goes, and Done dismisses it before then; or "The link expired before any computer used it."
   (or "The command expired…") with Make a new one.
   Making a new one stops the one it replaces.

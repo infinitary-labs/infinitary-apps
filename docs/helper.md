@@ -548,7 +548,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   The computer records an errored `continuation_ended` before detaching a continuation at shutdown, or on recovery if a crash cut it off, so the home ends its autonomous turn and stops repeat copies after reconnect.
   Its optional `interrupted` fact lets the home use its own interruption wording with that computer's name, without interpreting the helper's error text; a closed task records no extra ending.
   The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.
-  The reopen names the tools and the instruction rewrite that computer's contract allows now, not the ones it allowed when the conversation opened, so a version-gated tool such as `prepare_change` arrives without this Mac restarting.
+  The reopen names the tools that computer's contract allows now, not the ones it allowed when the conversation opened, and keeps the instructions as they were, so a version-gated tool such as `prepare_change` arrives without this Mac restarting.
   A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
   The task's timeline notes the move, and its record names the new conversation at once.
   Why, the brief and where the earlier transcript is saved on that computer are a once-named wake on the task's lane, served first on the next prompt, so a quit before that turn ends clean still delivers it (`docs/claude-client.md`).
@@ -656,7 +656,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   The personal workspace and a project with no origin run only here (`runsHereOnly`), since no other computer could clone them.
 - **In Settings and by talking.**
   Settings -> Projects draws a fourth row, Runs on, for an eligible project or once a computer that runs work is on the list, with one select: Automatic, This computer, then "Your computers", then "As another user", each naming why it cannot take work now ("out of reach", "connecting" while its connection is being made, "no sign-ins yet").
-  A task on a computer whose connection is being made reads "connecting" in the Tasks panel and the task footer, with its mark as it was, not warn (`TaskPlace.connecting`).
+  A task on a computer whose connection is being made reads "connecting" in the Tasks panel and the task footer, with its mark as it was, not warn (`TaskPlace.reach` is `connecting`).
   A project that runs only here shows "This computer" as text with its reason, and a collapsed project that runs elsewhere adds an accent badge, "runs on Mac mini" or "runs as Builder".
   The first mate sets the same row with `app_change` `project-runs-on`, a line offered only where this build offers devices.
   The feed says "website runs on Mac mini now.
@@ -687,8 +687,8 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   The place rides as its own field, never inside the meta text, so a long title gives way and the place reads whole.
   A completion card's fact strip has a Runs cell after the project ("on Mac mini", `device`).
 - **The Tasks row, the summary and the status.**
-  A task another computer runs carries where on the board, in words (`TaskView.place`, `CrewSupervisor.taskPlace`): where it started, or where it would start now, and `outOfReach` while open or underway work's computer is out of reach, or back and not yet caught up.
-  Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, "connecting" in `--fg-3` with no warn mark while its connection is being made (`place.connecting`, which comes with `place.outOfReach` and is read first), or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
+  A task another computer runs carries where on the board, in words (`TaskView.place`, `CrewSupervisor.taskPlace`): where it started, or where it would start now, and `reach` (`in-reach`, `connecting`, `reconnecting` or `out-of-reach`) while open or underway work's computer is not in reach, or back and not yet caught up.
+  Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, "connecting" in `--fg-3` with no warn mark while its connection is being made (`place.reach`: `connecting`, or anything but `in-reach` for out of reach), or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
   A part that does not fit leaves whole, the project's name first and then the place, so the narrow panel says "out of reach" alone, as it leaves out the project's name.
   The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary; "Mac mini is connecting", with the mark as it was, while its connection is being made), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
   The crew summary's Project row reads "website · on Mac mini", and the record names the computer in Details (below, "A task's own Runs on").

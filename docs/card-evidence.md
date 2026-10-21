@@ -61,7 +61,7 @@ Its ending's `by` is that observation's actor, so a choice the body's own script
 Its actions travel without their `effect`.
 It is a pure read: it records no observation, takes no turn and never reopens the card.
 
-Bringing one forward is `inf:cards:show-past` (FI3-579 piece 4), the single door behind the `show-card` catalog action: it refuses a card that is open or unknown in words, otherwise broadcasts `past_card_shown` and returns the same read.
+Bringing one forward is `inf:cards:show` (FI3-579 piece 4), the single door behind the `show-card` catalog action: it brings an open card back to the stack, refuses an unknown card in words, and for a closed card broadcasts `past_card_shown` and returns the same read (`inf:cards:show-past` is the closed-card half alone).
 It stores nothing, emits no card and runs no effect.
 The first mate's call leaves one feed line and operation record; the captain's own gesture leaves none.
 What's new brings a closed release note forward the same way, broadcasting `past_card_shown` from `inf:release-notes:show` (`docs/release-notes.md` "Reading a note again").

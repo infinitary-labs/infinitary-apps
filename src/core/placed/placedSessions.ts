@@ -965,7 +965,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * session this Mac still holds; the lane waits until it is open, and until
    * the supervisor took a conversation that started over there.
    *
-   * The tool names and the contract's instruction rewrite are the ones that
+   * The tool names are the ones that
    * computer allows now, not the ones it allowed when the conversation
    * opened, so a version-gated tool arrives without this Mac restarting.
    */

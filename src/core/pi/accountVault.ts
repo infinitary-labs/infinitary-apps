@@ -152,12 +152,14 @@ export type AccountVaultOptions = {
    * The models a non-Pi account serves. Pi accounts report their own
    * availability from their runtime; Claude has no in-process catalog, so
    * its models come from the account's last successful catalog read, else
-   * its module's shipped list (docs/model-lists.md).
+   * its module's shipped list (docs/model-lists.md). Each carries the name
+   * that list gives it, which the Models board shows until the quota
+   * catalog names it.
    */
   modelsForAccount?: (account: {
     accountId: string;
     providerId: string;
-  }) => { provider: string; id: string }[];
+  }) => { provider: string; id: string; name?: string }[];
   /**
    * The account's own model list, when a successful read of it is in hand:
    * a Pi account then serves only the catalog ids it names. Undefined means

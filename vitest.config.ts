@@ -45,6 +45,7 @@ const isolatedUnit = [
   "src/core/claude/claudeStoreLease.test.ts",
   "src/core/helper/sessionHost.test.ts",
   "src/core/helper/signIns.test.ts",
+  "src/core/models/accountStore.test.ts",
   "src/core/models/catalogReaders.test.ts",
   "src/core/orchestrator/localOrchestrator.test.ts",
   "src/core/pi/accountVault.test.ts",

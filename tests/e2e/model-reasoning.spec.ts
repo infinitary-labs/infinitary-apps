@@ -99,11 +99,12 @@ async function open(app: LaunchedApp) {
  * Opus as this launch's board names it, read once the launch's model catalog
  * carries its row. Until a launch's first allowance read builds that catalog,
  * or a catalog read rebuilds it over the saved reading, the board names a
- * model by its raw id, and by the catalog's name after (`ModelSlots.view`):
- * on hosted Linux the first launch named Opus "claude-opus-5-5" and the
- * relaunch "Claude Opus 5.5", so a name read before the catalog missed the
- * boxes (verify run 39474081020, INF-686). The wait is the launch's own work,
- * for as long as the test allows.
+ * model by the account's own name for it, and by the catalog's name after
+ * (`ModelSlots.view`). The two agree for Opus since INF-713; before it the
+ * first launch on hosted Linux named Opus "claude-opus-5-5" and the relaunch
+ * "Claude Opus 5.5", so a name read before the catalog missed the boxes
+ * (verify run 39474081020, INF-686). The wait is the launch's own work, for
+ * as long as the test allows.
  */
 async function catalogedOpus(app: LaunchedApp): Promise<SlotModelView> {
   const key = offeringKey({ provider: "anthropic-claude", id: claudeStarter("high").id });

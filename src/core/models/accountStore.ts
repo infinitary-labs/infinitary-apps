@@ -64,13 +64,19 @@ export function createAccountStore(
     ...vaultOptions
   } = options;
   // Until an account's read succeeds - and whenever one fails - its models
-  // are the shipped catalog.
+  // are the shipped catalog. Either way each keeps its name, so the Models
+  // board names it before the first allowance read builds the catalog.
   let served: ServedModels | undefined;
   const vault = AccountVault.create(paths, {
     ...vaultOptions,
     modelsForAccount: ({ accountId, providerId }) => {
       const read = served?.read(accountId);
-      if (read) return read.models.map((model) => ({ provider: providerId, id: model.id }));
+      if (read)
+        return read.models.map((model) => ({
+          provider: providerId,
+          id: model.id,
+          ...(model.name ? { name: model.name } : {}),
+        }));
       if (providerId === CLAUDE_PROVIDER_ID) return claudeAvailableModels();
       return [];
     },

@@ -22,7 +22,11 @@ export const CLAUDE_MODELS: ReadonlyArray<{ id: string; name: string }> = [
   { id: "claude-haiku-5-5", name: "Claude Haiku 5.5" },
 ];
 
-/** Availability contributed by a connected Claude account. */
-export function claudeAvailableModels(): { provider: string; id: string }[] {
-  return CLAUDE_MODELS.map((model) => ({ provider: CLAUDE_PROVIDER_ID, id: model.id }));
+/** Availability contributed by a connected Claude account, each model by its name. */
+export function claudeAvailableModels(): { provider: string; id: string; name: string }[] {
+  return CLAUDE_MODELS.map((model) => ({
+    provider: CLAUDE_PROVIDER_ID,
+    id: model.id,
+    name: model.name,
+  }));
 }

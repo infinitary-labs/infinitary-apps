@@ -165,7 +165,9 @@ describe("Claude accounts in the vault", () => {
     await subject.status(account.id);
 
     const models = subject.availableModels();
-    expect(models).toContainEqual({ provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" });
+    expect(models).toContainEqual(
+      expect.objectContaining({ provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" }),
+    );
 
     // A paused account leaves the pool, models and all.
     subject.setEnabled(account.id, false);

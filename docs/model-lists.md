@@ -80,6 +80,7 @@ The captain's two rules:
   - A pass starts without being awaited - after the startup liveness sweep, daily, and when an account connects, signs in or is switched on - and each read is bounded.
   - No user path awaits one: not launch, the first-run gate, opening Settings, starting a crewmate, or routing.
     Until a read lands, the shipped catalog serves.
+    Either list carries each model's name, so the Models board names a Claude model ("Claude Opus 5.5") from launch, before the first allowance read builds the quota catalog (`createAccountStore`).
     When one lands, the quota catalog is rebuilt over the last snapshot with no fetch (`QuotaService.recatalog`), so the new ids can be named and routed, and the snapshot is pushed so Settings re-reads.
   - Child processes run at utility QoS.
   - A successful read leaves one trace, `[models] <provider> model list read: N models`, once per change in what was served.

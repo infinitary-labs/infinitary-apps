@@ -549,7 +549,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   Its optional `interrupted` fact lets the home use its own interruption wording with that computer's name, without interpreting the helper's error text; a closed task records no extra ending.
   The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.
   The reopen names the tools that computer's contract allows now, not the ones it allowed when the conversation opened, and keeps the instructions as they were, so a version-gated tool such as `prepare_change` arrives without this Mac restarting.
-  A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
+  A Claude conversation that starts over on that reopen, because the computer's update describes a tool it had in other words, adds or removes a tool, or its instructions changed, is carried into its new one as an open carries it (`PlacedHost.reopened`; `docs/claude-client.md`, "The crewmate on Claude"), before its lane goes on.
   The task's timeline notes the move, and its record names the new conversation at once.
   Why, the brief and where the earlier transcript is saved on that computer are a once-named wake on the task's lane, served first on the next prompt, so a quit before that turn ends clean still delivers it (`docs/claude-client.md`).
 - **The record's copy.**

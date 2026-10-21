@@ -114,11 +114,10 @@ export const CREWMATE_CONTRACT_VERSION = "crewmate";
  * The contract a crewmate's conversation is served, as its record stamps
  * it: the prompt exactly as the session serves it, the tool surface, and
  * each tool's own sha. A Claude client resumes a conversation on the
- * prompt and tool descriptions it recorded at its start, so an upgrade
- * that changed either starts the conversation over (`renewIfChanged`)
- * rather than running this build's tools under an earlier build's words.
- * A tool the task gains or loses alone does not: the client serves the set
- * it is handed.
+ * prompt, tool list and tool descriptions it recorded at its start, so an
+ * upgrade that changed any of them, or a tool the task gained or lost,
+ * starts the conversation over (`renewIfChanged`) rather than running
+ * this build's tools under an earlier build's words or list.
  */
 export function crewmateContractStamp(
   instructions: string,

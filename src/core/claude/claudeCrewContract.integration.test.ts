@@ -27,10 +27,11 @@ vi.setConfig({ testTimeout: 40_000 });
  * opened through Claude's factory from the crewmate preset, the way the
  * supervisor opens it. The installed client resumes a conversation on the
  * system prompt and tool descriptions it recorded at its start (measured on
- * 2.1.295): reopened by a build whose crewmate instructions or a tool it
- * had changed, the crewmate starts a new conversation that serves the
- * build's own; reopened by the same build, or with a tool only gained or
- * lost, it resumes.
+ * 2.1.295), and on the tool list too, offering a tool the task has lost
+ * (measured on 2.1.306): reopened by a build whose crewmate instructions or
+ * a tool it had changed, or with a tool its task lost, the crewmate starts
+ * a new conversation that serves the build's own; reopened by the same
+ * build, it resumes.
  */
 
 const MODEL = "claude-haiku-4-5";
@@ -184,16 +185,18 @@ it("starts a new conversation on the build's own instructions after an upgrade c
   });
 });
 
-it("starts a new conversation when an upgrade reworded a tool it had, and resumes when its task only lost one", async () => {
+it("starts a new conversation when an upgrade reworded a tool it had, or its task lost one", async () => {
   const c = crewmate();
   const build = c.spec();
   const started = await c.turn(build, "Remember the word cobalt.");
-  // The task lost a tool: the client serves the set it is handed, so the
-  // conversation resumes without it.
+  // The task lost a tool: a reopened conversation would still offer it
+  // (INF-750), so the crewmate moves to a new one that serves the set it
+  // is handed.
   const { onOpenChange: _openChange, calls: _calls, ...fewer } = crewmateToolDelegate();
   const lost = await c.turn(c.spec(fewer), "Which word?", started.id);
-  expect(lost).toMatchObject({ id: started.id, renewal: undefined });
-  expect(lost.messages).toContain("cobalt");
+  expect(lost.renewal).toEqual({ from: started.id, changed: ["prompt"] });
+  expect(lost.id).not.toBe(started.id);
+  expect(lost.messages).not.toContain("cobalt");
   expect(lost.tools).not.toContain("mcp__infinitary__open_change");
   expect(lost.tools).toContain("mcp__infinitary__report");
   // The next build reworded the report tool: a reopened conversation would
@@ -204,7 +207,7 @@ it("starts a new conversation when an upgrade reworded a tool it had, and resume
   expect(after.raw).toContain(REWORDED);
   evidence("tool-upgrade", {
     client: c.client,
-    lostTool: { resumed: lost.id === started.id, offered: lost.tools.length },
+    lostTool: { renewal: lost.renewal, offered: lost.tools.length },
     reworded: { renewal: after.renewal, described: after.raw.includes(REWORDED) },
   });
 });

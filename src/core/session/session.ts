@@ -119,15 +119,16 @@ export type SessionResume =
  * point instead of resuming: the id it would have resumed, and which part
  * of the prompt array it serves had changed since that session started.
  * `prompt` is the prompt as the client recorded it at the start: the
- * system prompt and the description of each tool it had then.
+ * system prompt and the tools it had then, as they were described then.
  */
 export type SessionRenewal = { from: string; changed: readonly ("prompt" | "instructions")[] };
 
 /**
  * The contract fingerprint a role stamps on its record. `tools`, when the
  * role fingerprints each tool too, names each tool's own sha: a resumed
- * session whose client serves the descriptions it recorded at its start
- * then starts over when a tool it had is described differently now.
+ * session whose client serves the tools it recorded at its start then
+ * starts over when a tool it had is described differently now, or a tool
+ * came or went.
  */
 export type ContractStamp = {
   version: string;

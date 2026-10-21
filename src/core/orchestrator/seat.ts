@@ -224,8 +224,9 @@ export type ServedState = {
  * The contract that serves the seat, as its record stamps it: the contract
  * revision, the byte-stable prompt's sha, the tool surface's fingerprint
  * and each tool's own sha. A Claude client resumes the seat's session on
- * the tool descriptions it recorded at its start, so an update that
- * reworded a tool the seat had starts the session over (`renewIfChanged`).
+ * the tools it recorded at its start, as they were described then, so an
+ * update that reworded, added or removed a tool starts the session over
+ * (`renewIfChanged`).
  * The captain's served text is stamped beside it by the backend
  * (`instructions_sha`), so it never moves the trainable contract.
  */

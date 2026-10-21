@@ -93,7 +93,7 @@ The card-derived captain-contact path (`card_resolved` plus the card's declared 
 
 **The stamp is the role's; the backend only writes it.**
 A rolling session's spec may carry a `ContractStamp` - `{version, promptSha, toolsSha, tools?}` on `shape.record.stamp` (`src/core/session/session.ts`).
-The seat preset sets one (`firstmateContractStamp` in `src/core/orchestrator/seat.ts`: `FIRSTMATE_CONTRACT_VERSION`, the served system prompt's sha, the tool surface's sha, and `tools`, each tool's own sha), so a Claude-served seat starts over when an update reworded a tool it had (`docs/claude-client.md`).
+The seat preset sets one (`firstmateContractStamp` in `src/core/orchestrator/seat.ts`: `FIRSTMATE_CONTRACT_VERSION`, the served system prompt's sha, the tool surface's sha, and `tools`, each tool's own sha), so a Claude-served seat starts over when an update reworded, added or removed a tool (`docs/claude-client.md`).
 The crewmate preset sets one too (`crewmateContractStamp` in `src/core/orchestrator/crewSession.ts`: the version `crewmate`, the sha of the prompt exactly as served, the tool surface's sha, and `tools`, each tool's own sha), so a Claude crewmate's conversation starts over when an upgrade changed what it was started under (`docs/claude-client.md`).
 The backend adds `instructions_sha` when captain-served instructions are on the session (`docs/sequences.md`) and writes the stamp in its own dialect, again whenever any field changes, never when it is the session's newest one already:
 

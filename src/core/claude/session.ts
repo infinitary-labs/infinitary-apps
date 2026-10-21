@@ -155,11 +155,12 @@ import { locateClaudeTranscript } from "./claudeTranscript";
  *   reads the client's own file; when that is gone, the session starts
  *   fresh under a new id (and the app's copy of the old one stays). A
  *   resumed client serves the system prompt it recorded when the session
- *   started, and the descriptions of the tools it had then, not the ones
- *   it is handed, so a session with a contract whose prompt array (or,
- *   where the contract fingerprints each tool, a tool it had) changed
- *   since it started never resumes: it starts over under a new id with the
- *   new array, at open or at the idle boundary `serveInstructions` is, and
+ *   started, and the tools it had then as they were described then, not
+ *   the ones it is handed, so a session with a contract whose prompt array
+ *   (or, where the contract fingerprints each tool, a tool it had, or
+ *   which tools it has) changed since it started never resumes: it
+ *   starts over under a new id with the new array, at open or at the idle
+ *   boundary `serveInstructions` is, and
  *   says so once (`takeRenewal`). (Not
  *   the SDK's session store: resuming from it has the SDK read the
  *   person's credential and copy it into a temporary config dir, and the
@@ -1050,14 +1051,15 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
    * session on the system prompt it recorded at its start (its
    * `prompt_snapshot`), whatever it is handed, so a changed array reaches
    * no request on resume (measured on 2.1.283). It records each tool's
-   * description there too and serves a tool it had with the recorded one,
-   * while a tool it lacked arrives as it is now and a tool gone is gone
-   * (measured on 2.1.295), so a stamp that fingerprints each tool also
-   * starts over when a tool the session had is described differently -
-   * or, when its start named no tool of its own (a seat's from before
-   * seats did), when the whole tool surface moved. A session the client
-   * has not recorded starts on whatever it is served, and a session with
-   * no contract has nothing to compare. A recorded
+   * description there too and serves a tool it had with the recorded one
+   * (measured on 2.1.295), and it serves the tool list it recorded as well:
+   * a tool it lacked never arrives and a tool gone is still offered
+   * (measured on 2.1.306). So a stamp that fingerprints each tool also
+   * starts over when a tool the session had is described differently or
+   * a tool came or went - or, when its start named no tool of its own (a
+   * seat's from before seats did), when the whole tool surface moved. A
+   * session the client has not recorded starts on whatever it is served,
+   * and a session with no contract has nothing to compare. A recorded
    * session with no contract stamped before its first prompt started under
    * one nothing vouches for - a crewmate's from before crewmates were
    * stamped - and starts over too. A client that took a prompt has
@@ -1075,7 +1077,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       return;
     }
     const changed: ("prompt" | "instructions")[] = [];
-    if (started.prompt_sha !== stamp.promptSha || describedOtherwise(started, stamp)) {
+    if (started.prompt_sha !== stamp.promptSha || toolsChanged(started, stamp)) {
       changed.push("prompt");
     }
     if (started.instructions_sha !== this.instructions?.sha) changed.push("instructions");
@@ -1889,13 +1891,15 @@ function sha256(text: string): string {
 }
 
 /**
- * A tool both fingerprints name is described differently now. A stamp
- * that names no tool of its own has nothing to say. A start recorded
- * before its role named each tool (a seat's from before seats did) names
- * only the whole surface: one that moved since may have reworded a tool
- * the session had, so it counts as described differently.
+ * The tools a resumed client would serve are not the ones it is handed: a
+ * tool both fingerprints name is described differently now, or one names
+ * a tool the other lacks. A stamp that names no tool of its own has
+ * nothing to say. A start recorded before its role named each tool (a
+ * seat's from before seats did) names only the whole surface: one that
+ * moved since may have reworded a tool the session had, so it counts as
+ * changed.
  */
-function describedOtherwise(
+function toolsChanged(
   started: Pick<Extract<SessionSidecarRecord, { kind: "contract" }>, "tools_sha" | "tool_shas">,
   stamp: ContractStamp,
 ): boolean {
@@ -1903,8 +1907,10 @@ function describedOtherwise(
   if (!current) return false;
   const recorded = started.tool_shas;
   if (!recorded) return started.tools_sha !== stamp.toolsSha;
-  return Object.entries(current).some(
-    ([name, sha]) => recorded[name] !== undefined && recorded[name] !== sha,
+  const names = Object.keys(current);
+  return (
+    names.length !== Object.keys(recorded).length ||
+    names.some((name) => recorded[name] !== current[name])
   );
 }
 

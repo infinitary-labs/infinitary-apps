@@ -1377,7 +1377,7 @@ describe("the crewmate's contract across an upgrade", () => {
     };
   }
 
-  it("starts over when this build's prompt or a tool it had is described differently, and resumes when only its tools came and went", async () => {
+  it("starts over when this build's prompt or a tool it had is described differently, or a tool came or went", async () => {
     const c = conversations();
     const tools = [tool("report", "Report v1."), tool("emit_card", "Show a card v1.")];
     const started = await c.open("Crewmate prompt v1.", tools);
@@ -1385,15 +1385,21 @@ describe("the crewmate's contract across an upgrade", () => {
     // The same build reopens the same conversation.
     const same = await c.open("Crewmate prompt v1.", tools, { resume: started.id });
     expect(same).toMatchObject({ id: started.id, renewal: undefined, resumed: started.id });
-    // A tool the task gains or loses alone: the client serves the set it is handed.
+    // A tool the task gains or loses: the client would serve the list it
+    // recorded at the start, without the new one and with the lost one
+    // (INF-750, measured on 2.1.306).
     const gained = await c.open("Crewmate prompt v1.", [...tools, tool("open_change", "PR.")], {
       resume: started.id,
     });
-    expect(gained).toMatchObject({ id: started.id, renewal: undefined });
+    expect(gained.id).not.toBe(started.id);
+    expect(gained.renewal).toEqual({ from: started.id, changed: ["prompt"] });
+    expect(gained.resumed).toBeUndefined();
     const lost = await c.open("Crewmate prompt v1.", [tools[0] as BoundTool], {
       resume: started.id,
     });
-    expect(lost).toMatchObject({ id: started.id, renewal: undefined });
+    expect(lost.id).not.toBe(started.id);
+    expect(lost.renewal).toEqual({ from: started.id, changed: ["prompt"] });
+    expect(lost.resumed).toBeUndefined();
     // A tool it had, described differently: the client would serve the old words.
     const reworded = await c.open(
       "Crewmate prompt v1.",

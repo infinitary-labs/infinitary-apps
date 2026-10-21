@@ -1,3 +1,4 @@
+import { pbkdf2 } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -623,5 +624,34 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     });
     expect(strip).toContain(`PUT ${OWN}/packages/generic/release/v1/app.dmg`);
     expect(strip).toContain(`POST ${OWN}/releases/v1/assets/links`);
+  });
+
+  // INF-777 (reproduced in INF-773): a release GitLab says is missing refuses the file before
+  // reading it. The answer must wait until the file's stream has closed, or an open still queued
+  // can fail after the working copy is gone, with no listener, and crash the process.
+  it("answers a refused release file only after its stream has closed", async () => {
+    const missing = await fixture();
+    writeFileSync(join(missing.dir, "app.dmg"), "gitlab-bytes");
+    // Every thread of Node's file pool busy, so the file's open queues behind them.
+    const threads = Number(process.env.UV_THREADPOOL_SIZE) || 4;
+    let freed = 0;
+    const busy = Array.from(
+      { length: threads },
+      () =>
+        new Promise<void>((resolve) =>
+          pbkdf2("x", "y", 1_000_000, 32, "sha256", () => {
+            freed++;
+            resolve();
+          }),
+        ),
+    );
+    const notFound = (
+      await missing.write.run({ method: "POST", path: `${OWN}/releases/missing`, file: "app.dmg" })
+    ).text;
+    const freedBeforeAnswer = freed;
+    await Promise.all(busy);
+    expect(notFound).toContain("not found");
+    expect(missing.seen.map((request) => request.method)).toEqual(["GET"]);
+    expect(freedBeforeAnswer).toBeGreaterThan(0);
   });
 });

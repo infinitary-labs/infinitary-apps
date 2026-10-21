@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-file-stream-close",
+      "reason": "Internal: a release file the host refuses before reading now waits for its file to close, which stops a test's unhandled error; no person-visible effect was reproduced."
+    }
+  ]
+}

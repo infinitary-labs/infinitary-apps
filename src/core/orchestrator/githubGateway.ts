@@ -479,7 +479,7 @@ export class GithubGatewayService {
     try {
       return await api.upload(route, file);
     } finally {
-      file.stream.destroy();
+      await closed(file.stream);
     }
   }
 
@@ -681,6 +681,21 @@ export const DOWNLOAD_TOKEN_NOTE = "Download tokens were removed from links.";
 
 /** What the crewmate is told when a repository's clone token was left out. */
 export const CLONE_TOKEN_NOTE = "Temporary clone tokens were removed.";
+
+/**
+ * Destroy a release file's stream and wait until it has closed. A stream the
+ * host refused before reading (a missing release, a refused sign-in) may still
+ * have its open queued; the upload's answer is already decided, so a late open
+ * error is dropped rather than left with no listener (INF-773, INF-777).
+ */
+function closed(stream: Readable): Promise<void> {
+  stream.on("error", () => {});
+  if (stream.closed) return Promise.resolve();
+  return new Promise((resolve) => {
+    stream.once("close", () => resolve());
+    stream.destroy();
+  });
+}
 
 /** Status, ids and the bounded answer; a next page only as a path a read may reach. */
 function render(response: ForgeApiResponse, api: ForgeApi, said: string[] = []): string {

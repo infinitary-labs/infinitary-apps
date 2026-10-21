@@ -322,6 +322,7 @@ The personal workspace takes no policy at all - its registry refuses the whole p
 Raw failed head/check history lives in `TaskDelivery.ciRepair.failures`, separately from diagnoses, repair ids/results and the one flake reservation.
 The host does not infer ownership from report prose.
 `check_change` carries `diagnosis`, `repair` or `rerun`; it requires observed failure evidence, an existing separate baseline task in this project, and an own-regression diagnosis before a repair declaration.
+A failed job of a workflow run the task read, or its run watch read, is observed failure evidence at the run's version with no pull request, and a flake rerun reservation can be bound to that run (`docs/forge.md`, "A workflow run's failures").
 An unknown diagnosis cannot exempt an attempt or reserve a rerun.
 Only an unsuccessful declared own repair result adds to `ciRounds`; a repaired check passing while an unrelated check fails spends nothing but still cannot complete.
 Foreground reads and check watches use the same ledger.

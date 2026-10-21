@@ -20,8 +20,28 @@ export type CheckRerun = {
   headSha: string;
   check: string;
   evidence: string;
+  /**
+   * Set by the host when the reservation is for a workflow run's failed job
+   * rather than the pull request's current version (INF-688): only a rerun
+   * of this run dates it.
+   */
+  runId?: number;
   /** Set by the host when the gateway sent the rerun: the one reservation is spent. */
   startedAt?: number;
+};
+
+/**
+ * A workflow run as the crewmate's short read or the run watch last read it
+ * (INF-688): its version, the attempt read, and that attempt's failed job
+ * names. A job named here is an observed failing head/check with or without
+ * a pull request, and stays current until a newer reading of the run stops
+ * listing it.
+ */
+export type ObservedRun = {
+  runId: number;
+  headSha: string;
+  attempt: number;
+  failed: string[];
 };
 
 /**
@@ -117,11 +137,30 @@ export type CheckChangeInput = {
   skipRules?: { headSha: string; method: "squash" };
 };
 
+/**
+ * The workflow run whose newest reading still lists `check` failed at
+ * `headSha` (INF-688): the one whose reading changed last when several do.
+ * A run counts only at the change's current version, or while the task has
+ * no pull request version at all, so a new version ends what an older run
+ * showed, as it does for a pull request's checks.
+ */
+export function failingRun(
+  delivery: { headSha?: string; ciRepair?: CheckRepairLedger } | null | undefined,
+  failed: { headSha: string; check: string },
+): ObservedRun | undefined {
+  if (delivery?.headSha !== undefined && delivery.headSha !== failed.headSha) return undefined;
+  return delivery?.ciRepair?.runs?.findLast(
+    (run) => run.headSha === failed.headSha && run.failed.includes(failed.check),
+  );
+}
+
 /** Persisted independently of raw check observations and the captain's round hold. */
 export type CheckRepairLedger = {
   /** Pre-upgrade failed-version counts are history, not declared repair attempts. */
   legacyFailedVersions?: number;
   failures: { headSha: string; checks: string[] }[];
+  /** Workflow runs read with failed jobs, newest change last; absent before INF-688. */
+  runs?: ObservedRun[];
   /** `at`: when the host recorded it (absent on rows from before FI3-250). */
   diagnoses: (CheckDiagnosis & { at?: number })[];
   repairs: (CheckRepair & { outcome?: "passed" | "failed" })[];

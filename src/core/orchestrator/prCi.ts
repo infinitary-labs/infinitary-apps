@@ -383,16 +383,21 @@ export class PrCiService {
     }
     if (checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
       const located = this.locate(taskId);
-      if ("said" in located) return located.said;
-      // A new repair waits on the outstanding one, so one the change moved
-      // past is read at its own version first (INF-685).
-      const earlier = checkInput.repair ? await this.settleBeforeRepair(located) : undefined;
-      const declaration = declareCheckAction(
-        this.options.tasks,
-        located.record.id,
-        checkInput,
-        this.now(),
-      );
+      let id: string;
+      let earlier: string | undefined;
+      if ("said" in located) {
+        // Only a repair is settled by a pull request's checks: a diagnosis or
+        // rerun reservation for a workflow run the task read needs none (INF-688).
+        const record = checkInput.repair ? undefined : this.options.tasks.get(taskId.trim());
+        if (!record) return located.said;
+        id = record.id;
+      } else {
+        id = located.record.id;
+        // A new repair waits on the outstanding one, so one the change moved
+        // past is read at its own version first (INF-685).
+        earlier = checkInput.repair ? await this.settleBeforeRepair(located) : undefined;
+      }
+      const declaration = declareCheckAction(this.options.tasks, id, checkInput, this.now());
       if (!declaration.read) return [earlier, declaration.text].filter(Boolean).join("\n");
       declared = [declared, earlier].filter(Boolean).join("\n");
     }

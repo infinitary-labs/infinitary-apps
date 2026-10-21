@@ -252,6 +252,7 @@ A program the captain asks a crewmate to run still runs; these tools do not read
 `read_workflow` and `download_artifact` are entries of the same runtime-neutral tool spec as `open_change`; both Pi and Claude receive them, including project answer tasks, never personal-workspace tasks.
 The supervisor binds the task id, `WorkflowEvidenceService` resolves its registered project and working copy, and the optional `Forge.workflows` capability reads only that project's GitHub Actions API, or its GitLab pipelines, using the existing app-owned sign-in.
 Reads do not record a CI reading, classify a failure, reserve a rerun, spend a repair, or modify a workflow.
+A short read does keep the run's failed jobs on the repair ledger, so `check_change` takes a diagnosis or the one flake rerun reservation for one of them with no pull request ("A workflow run's failures" below).
 
 - Listing runs and artifacts is still `github_read`'s job (see the gateway below): `GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id>` lists a version's runs, an untouched-main commit gives the baseline comparison, and `/actions/runs/{runId}/artifacts` lists artifact metadata.
   A named run's jobs are the short read below, not a jobs page the crewmate has to page itself.
@@ -368,7 +369,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A write whose outcome is uncertain is never retried automatically; read the project's state before deciding what happened.
 - **Accepted reruns refresh the checks.**
   `POST .../actions/runs/{id}/rerun`, `.../rerun-failed-jobs` and `.../actions/jobs/{id}/rerun` are available without a gateway reservation veto, like other project operations.
-  On acceptance, the gateway dates an existing unspent current-head rerun reservation when there is one; it neither invents repair history nor rewrites a previous receipt.
+  On acceptance, the gateway dates an existing unspent reservation when this rerun is the one it reserved: a rerun of the workflow run a run-bound reservation names (the route's run, or a rerun job's own `run_id`), otherwise a rerun at the change's current head; it neither invents repair history nor rewrites a previous receipt.
   It then takes the crewmate's check reading up to three times, two seconds apart, until the rerun reads as running, arming the ordinary check watch.
   The crewmate still follows its CI diagnosis and evidenced-flake rerun instructions; those govern its work, not which GitHub endpoints exist.
 - **Not built yet:** automatic retry of safe reads.
@@ -570,7 +571,7 @@ Starting and ending a watch each writes one task timeline line.
 While a watch stands, `checksWatched` keeps the idle ladder from nudging or reporting the task stuck, and its existing posture reads Waiting for checks.
 Each reading also keeps the run's state and host times for the checks cell ("The checks cell's time").
 
-The run watch never writes pull request check readings, diagnoses, repair counts or merge permission.
+The run watch never writes pull request check readings, diagnoses, repair counts or merge permission; like the short read, it keeps the run's failed jobs on the repair ledger ("A workflow run's failures" below).
 `check_change` remains the pull request green gate; `github_read`, job log reads and downloads keep their existing contracts.
 An accepted own-project `github_write` dispatch with `workflow_run_id` arms the run watch immediately and says so.
 The crewmate sends `"return_run_details": true` itself; the app never adds it, because older GitHub Enterprise servers may refuse it.
@@ -582,6 +583,22 @@ An existing watch keeps its original bound and sent wakes; a rerun after that wa
 A write kept for the captain arms no watch until his click sends it successfully, and writes outside the task's project never arm one.
 The five-run limit still applies; a full watch list or an unavailable run number explicitly says to take a short read later.
 Reruns of a task's pull request still record its existing rerun reservation and read its checks separately; a non-PR rerun makes no pull request reading.
+
+### A workflow run's failures
+
+A run a task reads needs no pull request for its diagnosis or its one flake rerun (INF-688).
+Every short `read_workflow({ runId })` and every reading of the run watch records the run's failed jobs on the task's repair ledger (`observeRunFailures` in `src/core/orchestrator/checkRepair.ts`, `recordRunFailures` in `runWatch.ts`).
+Each failed job's name joins `ciRepair.failures` at the run's version, so `check_change` accepts a diagnosis keyed to that version and job name, as it does a failed pull request check.
+`ciRepair.runs` keeps each run's newest reading: its version, its attempt and that attempt's failed jobs.
+A newer reading replaces it, so a job that passed on a rerun is no longer listed; an incomplete job list never drops a job the same attempt already showed failed.
+A reading with no failed job is recorded only for a run already on the ledger.
+
+A run counts only at the change's current version, or at any version while the task has no pull request version yet (`failingRun` in `src/shared/checkRepair.ts`), so a new version ends what an older run showed.
+A flake rerun reservation is current at the change's current failed head, as before, or else while the newest reading of a run that counts still lists the job failed.
+The second kind is bound to that run (`ciRepair.rerun.runId`), and only an accepted rerun of that run or of one of its jobs dates it.
+A baseline-blocked diagnosis at a run's version stands while the newest reading of a run that counts still lists the job failed (`baselineStands` in `src/core/tasks/dependencyWaits.ts`), so the crewmate is resumed when the separately owned task closes, as on a pull request.
+A repair is still settled only by a pull request's checks, so it still needs one.
+A task whose work never has a pull request still declares a run's diagnosis or rerun with `check_change`, without a check reading after it.
 
 ## Failures are typed
 

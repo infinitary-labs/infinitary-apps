@@ -19,6 +19,7 @@ import {
   RUN_WATCH_TICK_MS,
   type RunReading,
   recordRunChecks,
+  recordRunFailures,
   runFinished,
 } from "./runWatch";
 
@@ -133,6 +134,7 @@ export class WorkflowEvidenceService {
   private observe(taskId: string, { run, list }: RunReading): string {
     const task = this.options.tasks.get(taskId);
     if (!task || TaskService.isClosed(task)) return "The task is closed; no watch was started.";
+    recordRunFailures(this.options.tasks, taskId, { run, list });
     const watches = task.delivery?.runWatches ?? [];
     const existing = watches.find((w) => w.runId === run.id);
     const now = (this.options.now ?? Date.now)();

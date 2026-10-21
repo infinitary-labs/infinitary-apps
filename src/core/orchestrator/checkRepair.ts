@@ -1,7 +1,8 @@
-import type { CheckChangeInput, CheckRepairLedger } from "@shared/checkRepair";
+import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
 import { CI_ROUND_CAP, ciCapReached } from "@shared/rigor";
 import { type ForgeCheckState, isAcceptedCheckState } from "../forge";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
+import { baselineStands } from "../tasks/dependencyWaits";
 import { TaskService } from "../tasks/taskService";
 import { liveWaitCycle, waitCycleWords } from "../tasks/waitCycles";
 
@@ -35,6 +36,47 @@ export function outstandingRepair(
 const same = (a: { headSha: string; check: string }, b: { headSha: string; check: string }) =>
   a.headSha === b.headSha && a.check === b.check;
 const text = (s: string | undefined) => Boolean(s?.trim());
+
+/**
+ * A workflow run's reading on the repair ledger (INF-688), from the
+ * crewmate's short read or the run watch: its failed jobs join the raw
+ * failure history at the run's version, so a run with no pull request
+ * names an observed failing head/check, and the run's own entry keeps the
+ * newest attempt's failed jobs. An incomplete job list never drops a job
+ * the same attempt already showed failed. Answers the ledger to record, or
+ * nothing when the reading adds nothing.
+ */
+export function observeRunFailures(
+  delivery: TaskDelivery | null | undefined,
+  run: { id: number; headSha: string; attempt: number },
+  read: { failed: string[]; complete: boolean },
+): CheckRepairLedger | undefined {
+  const ledger = structuredClone(delivery?.ciRepair ?? empty());
+  const runs = ledger.runs ?? [];
+  const seen = runs.find((r) => r.runId === run.id);
+  if (!seen && read.failed.length === 0) return undefined;
+  const kept =
+    seen && !read.complete && seen.attempt === run.attempt && seen.headSha === run.headSha
+      ? seen.failed
+      : [];
+  const failed = [...new Set([...kept, ...read.failed])];
+  const unchanged =
+    seen?.attempt === run.attempt &&
+    seen.headSha === run.headSha &&
+    seen.failed.length === failed.length &&
+    failed.every((name) => seen.failed.includes(name));
+  if (unchanged) return undefined;
+  ledger.runs = [
+    ...runs.filter((r) => r.runId !== run.id),
+    { runId: run.id, headSha: run.headSha, attempt: run.attempt, failed },
+  ];
+  if (failed.length) {
+    const history = ledger.failures.find((f) => f.headSha === run.headSha);
+    if (history) history.checks = [...new Set([...history.checks, ...failed])];
+    else ledger.failures.push({ headSha: run.headSha, checks: failed });
+  }
+  return ledger;
+}
 
 /** A declaration is validated as a closed typed fact, never parsed out of prose. */
 export function declareCheckAction(
@@ -115,7 +157,7 @@ export function declareCheckAction(
       };
     // Historical and duplicate diagnoses create no new standing wait. No
     // await separates this check from TaskService's delivery write below.
-    if (waitsOn && diagnosis.headSha === task.delivery?.headSha && task.delivery.ci !== "green") {
+    if (waitsOn && baselineStands(task.delivery, diagnosis)) {
       const cycle = liveWaitCycle(tasks, taskId, waitsOn.id, TaskService.blockerHoldsClose);
       if (cycle) return { read: false, text: `Diagnosis refused: ${waitCycleWords(tasks, cycle)}` };
     }
@@ -165,21 +207,35 @@ export function declareCheckAction(
       };
     ledger.repairs.push(repair);
   }
-  const rerun = input.rerun;
-  if (rerun) {
+  const asked = input.rerun;
+  let rerun: CheckRepairLedger["rerun"];
+  if (asked) {
     if (ledger.rerun)
       return {
         read: false,
         text: "Rerun refused: this task already reserved its one failed-job rerun; do not rerun again. Report unresolved evidence to the first mate for diagnosis.",
       };
-    const source = ledger.diagnoses.find((d) => same(d, rerun));
-    if (source?.classification !== "suspected-flake" || !text(rerun.evidence))
+    const source = ledger.diagnoses.find((d) => same(d, asked));
+    if (source?.classification !== "suspected-flake" || !text(asked.evidence))
       return {
         read: false,
         text: "Rerun refused: first record an evidenced suspected-flake diagnosis for this head/check.",
       };
-    if (task.delivery?.headSha !== rerun.headSha || task.delivery.ci === "green")
-      return { read: false, text: "Rerun refused: the failed head is no longer current." };
+    // The change's current failed version, or else a workflow run whose
+    // newest reading still lists the job failed (INF-688).
+    const onChange = task.delivery?.headSha === asked.headSha && task.delivery.ci !== "green";
+    const run = onChange ? undefined : failingRun(task.delivery, asked);
+    if (!onChange && !run)
+      return {
+        read: false,
+        text: "Rerun refused: the failed head is no longer current, and no workflow run you read still shows that job failed there.",
+      };
+    rerun = {
+      headSha: asked.headSha,
+      check: asked.check,
+      evidence: asked.evidence,
+      ...(run ? { runId: run.runId } : {}),
+    };
     ledger.rerun = rerun;
   }
   tasks.recordDelivery(
@@ -194,7 +250,9 @@ export function declareCheckAction(
   return {
     read: Boolean(repair),
     text: rerun
-      ? "Rerun authorized once: rerun only this failed job without changing code, using github_write on its rerun-failed-jobs route: that call also reads the checks and starts the watch. This reservation survives restarts; another call will not authorize it again."
+      ? rerun.runId !== undefined
+        ? `Rerun authorized once: rerun only this failed job of run ${rerun.runId} without changing code, using github_write to rerun that run's failed jobs or this job alone (a job retry on GitLab): the accepted call starts the run watch. This reservation survives restarts; another call will not authorize it again.`
+        : "Rerun authorized once: rerun only this failed job without changing code, using github_write on its rerun-failed-jobs route: that call also reads the checks and starts the watch. This reservation survives restarts; another call will not authorize it again."
       : diagnosis
         ? `Diagnosis recorded: ${diagnosis.classification}; no repair attempt spent.${diagnosis.classification === "unknown" ? " Investigate once, then report the gap to the first mate if unresolved; do not loop readings or reruns." : ""}${waitsOn ? dependencyWords(tasks, waitsOn) : ""}`
         : "Own repair recorded; only its unsuccessful result spends an attempt.",

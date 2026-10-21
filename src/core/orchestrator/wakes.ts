@@ -921,7 +921,7 @@ function renderRunWatch(facts: Extract<WakeFacts, { kind: "run-watch" }>): strin
     case "passed":
       return `${run} passed. Carry on from where you stopped. This is a run outcome, not a pull request check reading or merge approval.`;
     case "failed":
-      return `${run} ended (${facts.state ?? "failed"})${jobs ? `: ${jobs}` : ". No failed job was named"}.${incomplete} Read failed logs with read_workflow before diagnosing; use check_change for a pull request's checks.`;
+      return `${run} ended (${facts.state ?? "failed"})${jobs ? `: ${jobs}` : ". No failed job was named"}.${incomplete} Read failed logs with read_workflow before diagnosing with check_change at the run's version and the failed job's name.`;
     case "cancelled":
       return `${run} was cancelled. The app stopped watching it; read the run and report what stopped your work.`;
     case "timed-out":

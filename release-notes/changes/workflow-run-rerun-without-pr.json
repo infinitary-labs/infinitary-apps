@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "workflow-run-rerun-without-pr",
+      "reason": "Internal crew tooling: a crewmate can record a diagnosis and reserve its one rerun for a failed job of a workflow run it read, without opening a pull request first. The app shows nothing new."
+    }
+  ]
+}

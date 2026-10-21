@@ -3,6 +3,7 @@ import { ForgeError, type WorkflowJobLine, type WorkflowJobList, type WorkflowRu
 import type { InboxStore } from "../storage/inboxStore";
 import type { RunWatch } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
+import { observeRunFailures } from "./checkRepair";
 import type { TypedWake } from "./wakes";
 
 export const RUN_WATCH_BOUND_MS = 3 * 60 * 60_000;
@@ -63,6 +64,23 @@ export function recordRunChecks(
       at,
     },
   });
+}
+
+/**
+ * Keeps a run's failed jobs on the task's repair ledger (INF-688): a job a
+ * reading names failed is an observed failing head/check at the run's
+ * version, so its diagnosis and rerun reservation need no pull request.
+ */
+export function recordRunFailures(
+  tasks: Pick<TaskService, "get" | "recordDelivery">,
+  taskId: string,
+  { run, list }: RunReading,
+): void {
+  const ledger = observeRunFailures(tasks.get(taskId)?.delivery, run, {
+    failed: failedRunJobs(list).map((job) => job.name),
+    complete: list.complete,
+  });
+  if (ledger) tasks.recordDelivery(taskId, { ciRepair: ledger });
 }
 
 export function runWatchOnce(watch: RunWatch, event: "failure" | "end"): string {
@@ -129,6 +147,7 @@ export class RunWatcher {
       // A close or a crewmate read during this request owns the newer facts.
       if (!this.current(taskId, watch)) return;
       recordRunChecks(this.host.tasks, taskId, read.run, now);
+      recordRunFailures(this.host.tasks, taskId, read);
       const current = { ...watch, attempt: read.run.attempt, name: read.run.name };
       const failed = failedRunJobs(read.list);
       const facts = {

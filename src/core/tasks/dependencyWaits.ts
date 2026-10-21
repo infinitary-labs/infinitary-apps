@@ -1,3 +1,4 @@
+import { failingRun } from "@shared/checkRepair";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 
 /**
@@ -12,22 +13,40 @@ import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 export type DependencyWait = { task: TaskRecord; since?: number };
 
 /**
+ * Whether a baseline wait declared at this version and check stands: at the
+ * change's current head while its checks are not green, or while the
+ * newest reading of a workflow run at the change's version (or of any run,
+ * before the task has a pull request version) still lists the check failed
+ * (INF-688).
+ */
+export function baselineStands(
+  delivery: TaskDelivery | null | undefined,
+  failed: { headSha: string; check: string },
+): boolean {
+  if (!delivery) return false;
+  return (
+    (failed.headSha === delivery.headSha && delivery.ci !== "green") ||
+    failingRun(delivery, failed) !== undefined
+  );
+}
+
+/**
  * The tasks a task's standing baseline waits name (FI3-671): the
- * dependencyTask of each baseline-blocked diagnosis at its change's current
- * head, while its checks are not green, with when the earliest of them was
- * declared (FI3-250). Derived and never stored, so a new head or a passing
- * reading ends the wait by itself.
+ * dependencyTask of each baseline-blocked diagnosis that still stands
+ * (`baselineStands`), with when the earliest of them was declared
+ * (FI3-250). Derived and never stored, so a new head, a passing reading or
+ * a newer reading of the run without the failure ends the wait by itself.
  */
 export function standingDependencyWaits(
   tasks: { get(id: string): TaskRecord | undefined },
   delivery: TaskDelivery | null | undefined,
 ): DependencyWait[] {
-  if (!delivery || delivery.ci === "green") return [];
+  if (!delivery) return [];
   // A diagnosis from before the time was recorded leaves its wait's start unknown.
   const since = new Map<string, number | undefined>();
   for (const d of delivery.ciRepair?.diagnoses ?? []) {
     const id = d.dependencyTask;
-    if (d.classification !== "baseline-blocked" || d.headSha !== delivery.headSha || !id) continue;
+    if (d.classification !== "baseline-blocked" || !id || !baselineStands(delivery, d)) continue;
     const prior = since.has(id) ? since.get(id) : d.at;
     since.set(id, prior === undefined || d.at === undefined ? undefined : Math.min(prior, d.at));
   }

@@ -25,6 +25,12 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 /** Thrown before a release file is sent, so an ask records it as nothing sent. */
 const FILE_CHANGED_BEFORE_SEND = "The file changed before it was sent.";
 
+/** An accepted start or rerun whose run the watch could not take up. */
+const WATCH_NOT_STARTED =
+  "The write was accepted, but its run watch could not start. Find the run with github_read, then call read_workflow with runId alone. Do not repeat the write.";
+const NO_RUN_NUMBER =
+  "The write was accepted, but it supplied no run number to watch. Find the run with github_read, then call read_workflow with runId alone. Do not repeat the write.";
+
 /** The reading after a rerun may race GitHub queuing the job, so it tries a few times. */
 const REREAD_ATTEMPTS = 3;
 const REREAD_DELAY_MS = 2000;
@@ -445,45 +451,53 @@ export class GithubGatewayService {
   ): Promise<string> {
     if (response.status >= 300 || !route.own || target.via !== "project") return "";
     const notes: string[] = [];
-    if (this.options.watchRun && route.method === "POST") {
-      const rest = route.rest.split("/").map(decodeURIComponent).join("/");
-      const dispatch =
-        target.forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
-      const pipeline = target.forge.kind === "gitlab" && rest === "pipeline";
-      if (dispatch || pipeline || route.rerun) {
-        try {
-          const body = responseObject(response);
-          let runId: unknown;
-          if (dispatch) runId = body.workflow_run_id;
-          else if (pipeline) runId = body.id;
+    const rest = route.rest.split("/").map(decodeURIComponent).join("/");
+    const dispatch =
+      target.forge.kind === "github" && /^actions\/workflows\/[^/]+\/dispatches$/.test(rest);
+    const pipeline = target.forge.kind === "gitlab" && rest === "pipeline";
+    const started = route.method === "POST" && (dispatch || pipeline || route.rerun);
+    // A reservation bound to a workflow run is dated only by that run's rerun (INF-688).
+    const bound = route.rerun
+      ? this.options.tasks.get(taskId)?.delivery?.ciRepair?.rerun?.runId
+      : undefined;
+    let runId: unknown;
+    let unread = false;
+    if (started && (this.options.watchRun || bound !== undefined)) {
+      try {
+        const body = responseObject(response);
+        if (dispatch) runId = body.workflow_run_id;
+        else if (pipeline) runId = body.id;
+        else {
+          const run = rest.match(/^(?:actions\/runs|pipelines)\/(\d+)\//);
+          if (run) runId = Number(run[1]);
+          else if (target.forge.kind === "gitlab") runId = objectOf(body.pipeline).id;
           else {
-            const run = rest.match(/^(?:actions\/runs|pipelines)\/(\d+)\//);
-            if (run) runId = Number(run[1]);
-            else if (target.forge.kind === "gitlab") runId = objectOf(body.pipeline).id;
-            else {
-              // GitHub's job rerun is empty: the job itself supplies the parent run number.
-              const jobPath = route.path.split("?")[0]?.replace(/\/[^/]+$/, "");
-              if (jobPath) {
-                const job = await this.send(taskId, target.api, "GET", jobPath);
-                if (job.status < 300) runId = responseObject(job).run_id;
-              }
+            // GitHub's job rerun is empty: the job itself supplies the parent run number.
+            const jobPath = route.path.split("?")[0]?.replace(/\/[^/]+$/, "");
+            if (jobPath) {
+              const job = await this.send(taskId, target.api, "GET", jobPath);
+              if (job.status < 300) runId = responseObject(job).run_id;
             }
           }
-          if (typeof runId === "number" && Number.isSafeInteger(runId) && runId > 0)
-            notes.push(this.options.watchRun(taskId, runId));
-          else
-            notes.push(
-              "The write was accepted, but it supplied no run number to watch. Find the run with github_read, then call read_workflow with runId alone. Do not repeat the write.",
-            );
-        } catch {
-          notes.push(
-            "The write was accepted, but its run watch could not start. Find the run with github_read, then call read_workflow with runId alone. Do not repeat the write.",
-          );
         }
+      } catch {
+        unread = true;
       }
     }
+    const known = typeof runId === "number" && Number.isSafeInteger(runId) && runId > 0;
+    if (this.options.watchRun && started) {
+      let note = unread ? WATCH_NOT_STARTED : NO_RUN_NUMBER;
+      if (known) {
+        try {
+          note = this.options.watchRun(taskId, runId as number);
+        } catch {
+          note = WATCH_NOT_STARTED;
+        }
+      }
+      notes.push(note);
+    }
     if (route.rerun) {
-      this.spendRerun(taskId);
+      this.spendRerun(taskId, known ? (runId as number) : undefined);
       // Non-PR reruns have no check reading to make; preserve the PR seam when a change exists.
       if (this.options.tasks.get(taskId)?.delivery?.prNumber || !this.options.watchRun)
         notes.push(await this.armWatch(taskId));
@@ -491,18 +505,27 @@ export class GithubGatewayService {
     return notes.length ? `\n\n${notes.join("\n\n")}` : "";
   }
 
-  private spendRerun(taskId: string): void {
+  /**
+   * Date the task's one reservation when this rerun is the one it reserved:
+   * a rerun of the run it names (INF-688), or else a rerun at the change's
+   * current head.
+   */
+  private spendRerun(taskId: string, runId: number | undefined): void {
     const delivery = this.options.tasks.get(taskId)?.delivery;
     const ledger = structuredClone(delivery?.ciRepair);
     // Reservation is diagnosis bookkeeping, not permission to use the host's API.
-    // Do not invent one, spend an old head's, or rewrite a prior receipt.
+    // Do not invent one, spend an old head's or another run's, or rewrite a prior receipt.
+    const reserved = ledger?.rerun;
     if (
-      !ledger?.rerun ||
-      ledger.rerun.headSha !== delivery?.headSha ||
-      ledger.rerun.startedAt !== undefined
+      !ledger ||
+      !reserved ||
+      reserved.startedAt !== undefined ||
+      (reserved.runId !== undefined
+        ? reserved.runId !== runId
+        : reserved.headSha !== delivery?.headSha)
     )
       return;
-    ledger.rerun.startedAt = this.options.now();
+    reserved.startedAt = this.options.now();
     this.options.tasks.recordDelivery(
       taskId,
       { ciRepair: ledger },

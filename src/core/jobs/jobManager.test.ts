@@ -93,6 +93,37 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(outcome).toEqual({ kind: "done", exitCode: 3, output: "oops" });
   });
 
+  // INF-689: `git commit && git push && git config --get remote.origin.url`
+  // came back with the address ahead of the lines push printed first: the
+  // app was busy while the command ran, then read stdout before stderr.
+  it("keeps the order the command wrote stdout and stderr in, however late the app reads them", async () => {
+    const { jobs, exits } = manager();
+    const written = join(scratchDir("infinitary-job-order-"), "written");
+    const outcome = jobs.run({
+      ownerId: "t1",
+      command: `echo "[main 1a2b3c4] fix: the meter"; echo "To /srv/notes.git" >&2; echo " * [new branch] HEAD -> main" >&2; echo "https://gitlab.com/group/notes.git"; touch '${written}'`,
+      cwd: "/tmp",
+      background: true,
+    });
+    // The app busy until the command has written all of it: nothing is read
+    // until both pipes hold their lines.
+    const pause = new Int32Array(new SharedArrayBuffer(4));
+    for (let tries = 0; !existsSync(written) && tries < 1000; tries += 1) {
+      Atomics.wait(pause, 0, 0, 10);
+    }
+    expect(existsSync(written)).toBe(true);
+    expect((await outcome).kind).toBe("job");
+    await vi.waitFor(() => expect(exits).toHaveLength(1));
+    expect(exits[0]?.tail).toBe(
+      [
+        "[main 1a2b3c4] fix: the meter",
+        "To /srv/notes.git",
+        " * [new branch] HEAD -> main",
+        "https://gitlab.com/group/notes.git",
+      ].join("\n"),
+    );
+  });
+
   // INF-247: a crewmate placed on a separate Mac that runs work starved
   // behind that Mac's other work at utility priority, so its commands run at
   // the run's own priority there; the home's, and another user's work on the

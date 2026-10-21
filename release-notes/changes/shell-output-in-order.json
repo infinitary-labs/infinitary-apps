@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shell-output-in-order",
+      "reason": "Internal: a crewmate's shell now joins a command's stderr to its stdout before the command runs, so the crewmate reads the output in the order the command wrote it, not with an earlier line after a later one when the app read the two late; it steadies the GitLab merge request journey, and a person sees no change."
+    }
+  ]
+}

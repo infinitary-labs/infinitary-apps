@@ -167,12 +167,16 @@ export class JobManager {
     // The channel compares this stamp with `Date.now()`, not the ticker.
     const shellStartedAt = Date.now();
     // A crewmate's builds and tests run below the UI (../utilityQos.ts),
-    // where there is one.
-    const shell = ["-c", input.command];
+    // where there is one. Its stderr is its stdout, joined by a `sh` that
+    // then becomes bash, so the output reads in the order the command wrote
+    // it: read from two pipes, a line written earlier on one landed after a
+    // later line on the other whenever the app reached them late (INF-689).
+    // The command itself is bash's, word for word, so its errors quote it.
+    const shell = ["-c", 'exec "$@" 2>&1', "sh", "/bin/bash", "-c", input.command];
     const command =
       this.options.belowUi === false
-        ? { file: "/bin/bash", args: shell }
-        : atUtilityQos("/bin/bash", shell);
+        ? { file: "/bin/sh", args: shell }
+        : atUtilityQos("/bin/sh", shell);
     const child = spawn(command.file, command.args, {
       cwd: input.cwd,
       // The person's search path, so node, pnpm and gh are there from a Dock

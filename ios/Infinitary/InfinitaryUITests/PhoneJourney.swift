@@ -75,12 +75,27 @@ import XCTest
         XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20), app.debugDescription)
     }
 
-    func testPhoneReadsItsMacAndRecovers() async throws {
+    // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's four parts are
+    // four tests, each run from its own fresh home and simulator (scripts/phone-test-plan.ts), side by side.
+    // Every check the single journey made stays, in the part it belongs to; each part first reaches the
+    // state the single journey reached before that part.
+    private func launchFresh() async throws {
         continueAfterFailure = false
         app.launchEnvironment["INFINITARY_ISOLATED_PHONE_TEST"] = "1"
         XCUIDevice.shared.orientation = .portrait
         try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForExistence(timeout: 10), app.debugDescription)
+    }
+
+    private func launchJoined() async throws {
+        try await launchFresh()
+        try await join()
+        XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForExistence(timeout: 10), app.debugDescription)
+    }
+
+    /// Part 1, join and recover: a wrong Mac, joining, reading, relaunch, out of reach, catch-up, Leave, Forget and Removed.
+    func testJoinAndRecover() async throws {
+        try await launchFresh()
         try await appearances("join")
         try await submitLink("wrong-link")
         XCTAssertTrue(app.staticTexts["This is not the computer your link names. Nothing was sent."].waitForExistence(timeout: 15))
@@ -313,12 +328,29 @@ import XCTest
         let afterDamage = try await home("state", method: "GET")
         XCTAssertEqual((afterDamage["devices"] as? [[String: Any]])?.compactMap { $0["id"] as? String }, retainedIDs)
         picture("rejoined-after-damaged-record")
+    }
+
+    /// Part 2, cards: forms, paging, answers, pictures, recordings, threads, out-of-reach refusal and large type.
+    func testCards() async throws {
+        try await launchJoined()
         try await verifyCards()
-        app.terminate()
-        app.launchArguments.removeAll { ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"].contains($0) }
-        try await launchPhoneApp(app)
+    }
+
+    /// Part 3, talk and tasks: the composer, a photo, task search, start, interrupt, continue and steer.
+    func testTalkAndTasks() async throws {
+        try await launchJoined()
+        // The single journey reached this part with the cards part's hero card on the stage, after a relaunch.
+        _ = try await home("empty-cards")
+        let hero = try await home("hero-card")
+        XCTAssertTrue(cardHeading(try XCTUnwrap(hero["title"] as? String)).waitForExistence(timeout: 10), app.debugDescription)
+        app.terminate(); try await launchPhoneApp(app)
         XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
         try await talkAndTasks()
+    }
+
+    /// Part 4, the character and past choices: a real held turn, saved-sign-in and saved-answer choices, past-card context.
+    func testCharacterAndPastChoices() async throws {
+        try await launchJoined()
         try await verifyConversationCharacter()
         try await verifyReviewedCardChoices()
         try await verifyPastMessageContext()
@@ -352,7 +384,7 @@ import XCTest
     }
 
     /// INF-64 piece 4: a phone answers at the real home, not a local stand-in; opaque scripts cannot gain native effects.
-    /// Same owned simulator/home as the ordered trust journey above, no shared account or signed build.
+    /// The cards part owns its simulator/home, no shared account or signed build.
     private func cardHeading(_ title: String) -> XCUIElement {
         // INF-64 piece 4: departure means leaving the stage, not erasing INF-82's foreground notice.
         app.staticTexts.matching(identifier: "card-title").matching(NSPredicate(format: "label == %@", title)).firstMatch

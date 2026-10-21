@@ -286,8 +286,12 @@ Apple's internal-testing state means testers can install the build, not that a p
 
 `pnpm test:phone --evidence <absolute-folder-outside-the-project>` takes the same exclusive lease as CI's native gate, waiting behind pull-request journeys and CI phone gates, then runs the foundation's native gate on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
-Add `--both` to run the checks and build once, then the iPhone and the iPad side by side, each as its own gate with its own simulator and test home; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
-The build is `xcodebuild build-for-testing` for any simulator, and each device runs `test-without-building` from a copy of the built test plan that names its own test home (`scripts/phone-test-plan.ts`).
+Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
+The native journey is four tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
+Each part on each device is its own gate with its own simulator and test home, and `--simulators` (default 6) sets how many run at once; they start longest part first, each part on the iPad before the iPhone.
+A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
+The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
+No part stops another, and any part failing fails the gate.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
 Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.
@@ -295,8 +299,9 @@ The runner creates and deletes its own simulator, scratch HOME, real-core home, 
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 It first verifies the independent published-contract client can join and read the sample card.
-The native journey covers a wrong Mac pin, joining, cards and feed, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
-Its Cards section drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
+The join part covers a wrong Mac pin, joining, cards and feed, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
+Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
+The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
 It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
@@ -313,8 +318,8 @@ Subscription renewal happens only at the explicit launch boundary, never as a ti
 An evidence-writer failure stops the observer, rejects readiness and waits for both output streams before simulator cleanup.
 An app-side command list is not that acknowledgement; a missing witness fails before sending the chord, without a delay, another priming attempt or a repeated chord.
 For Return, the driver checks the router's carriage-return registration but supplies newline to XCTest: Xcode 26.4 emits the physical Return key for newline and no key for its Return constant.
-The full journey checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
-The full journey exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
+The talk part checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
+The talk part exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
 App-hosted shell tests render each native character's still pose, play the greeting and the held reply nod through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
@@ -323,7 +328,7 @@ A stopped or lost connection clears the busy reading; the published connection h
 Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.
 Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
 
-Its talk-and-tasks section chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
+The talk part chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
 It pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
@@ -331,7 +336,7 @@ It also checks that the foreground notice opens its own card, retained offline d
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
-Each journey starts from its own fresh home and simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
+Each part starts from its own fresh home and simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.
 App-hosted tests repair a missing certificate in the disposable simulator's own Keychain and inject protected-data read failures to check retry and the joining explanation.
 They refuse to run on a physical device, and the iOS identity API itself refuses creation on macOS.
@@ -340,7 +345,7 @@ Unsigned simulator tests need an application identifier to use the simulator's o
 `SimulatorTests.xcconfig` disables signing and injects `Simulator.entitlements` into the app's simulator-only `__TEXT,__entitlements` section through the linker.
 This is simulator metadata, not a signature: no `security` or `codesign` command, signing identity, profile, certificate lookup or keychain search-list change is involved.
 Normal device builds use Xcode's own signing settings and do not include this test configuration.
-The runner waits for simulator boot completion before launching tests and uses one test worker.
+The runner waits for simulator boot completion before launching tests and uses one test worker per simulator.
 
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
@@ -369,7 +374,7 @@ No desktop work runs between the iPhone and the iPad: the one gate holds the lea
 The native job's 165-minute limit allows 45 minutes for the device gate, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
 The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
 Setup, evidence upload, the choosers and Linux jobs remain independent.
-Neither device's failure is ignored: the two run side by side, neither stops the other, and either failing fails the gate.
+Neither device's failure is ignored: their parts run side by side, none stops another, and any failing fails the gate.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
 
@@ -380,7 +385,7 @@ Unset or empty, `native-phone` runs exactly as described above.
 Set, the job runs on the phone check's own runner, labelled `mini-mac-vm`, which takes no Mac mini slot, and it installs no packages on the Mac itself.
 `scripts/virtual-mac/phone.sh start` deletes a clone an earlier check left, clones `infinitary-lane` as `infinitary-lane-phone`, starts it with the pull request's committed version and installs its packages inside it.
 The version rides in as a `git archive` of the checkout, because a pull request's checkout is shallow and a bundle of it cannot be fetched into an empty clone.
-The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both` inside the clone and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
+The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both --simulators 2` inside the clone, two simulators at a time for its 6 CPUs and 16 GB, and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
 The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
 No gate in the virtual Mac takes the Mac check lease, so phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
 The `mac-mini-phone` queue is what keeps one phone clone running at a time.

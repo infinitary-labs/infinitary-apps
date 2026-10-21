@@ -8,7 +8,7 @@ import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHa
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { runEveryCheck } from "./phone-checks.ts";
-import { testHomeKeys } from "./phone-test-plan.ts";
+import { PHONE_PARTS, type PhoneDevice, partSelection, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
 
 const { values } = parseArgs({ options: {
   evidence: { type: "string" },
@@ -16,7 +16,10 @@ const { values } = parseArgs({ options: {
   demo: { type: "boolean", default: false },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
   both: { type: "boolean", default: false },
-  // One device of a --both run: its test plan from that run's build.
+  // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many simulators at once.
+  part: { type: "string", multiple: true },
+  simulators: { type: "string", default: "6" },
+  // One part on one device: its test plan from the gate's build.
   xctestrun: { type: "string" },
 } });
 if (process.platform !== "darwin") throw new Error("The native gate needs Xcode on a Mac");
@@ -25,6 +28,10 @@ const evidence = resolve(values.evidence);
 if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
   throw new Error("Native evidence must stay outside the working copy");
 if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
+if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun runs exactly one --part");
+const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
+const jobs = phoneJobs(devices, values.part ?? PHONE_PARTS.map((part) => part.name));
+const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
 const root = scratchDir("infinitary-native-");
 const home = join(root, "home");
@@ -56,7 +63,7 @@ const run = async (command: string, args: string[]) => {
   }).finally(() => children.delete(child));
   const log = join(evidence, `${++number}-${command.replaceAll("/", "-")}.log`);
   writeFileSync(log, output);
-  if (status !== 0) throw new Error(`${command} failed (${status}); see ${log}`);
+  if (status !== 0) throw Object.assign(new Error(`${command} failed (${status}); see ${log}`), { output });
   return output;
 };
 let simulator: string | undefined;
@@ -133,40 +140,46 @@ const recording = {
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
   "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
-// Builds once for any simulator, then runs each device as its own gate from that build, at once.
-const bothDevices = async () => {
+// Builds once for any simulator, then runs each part on each device as its own gate from that
+// build, with its own simulator and test home, at most --simulators at once.
+const everyPart = async () => {
   await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator",
     "-derivedDataPath", join(root, "DerivedData"), `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
   const products = join(root, "DerivedData", "Build", "Products");
   const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
   const [plan] = plans;
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
-  const gate = async (device: "iphone" | "ipad") => {
+  // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it.
+  const folder = (device: PhoneDevice, part: string) => values.both ? join(evidence, device, part) : join(evidence, part);
+  const gate = async ({ device, part }: { device: PhoneDevice; part: string }) => {
+    const name = `${device} ${part}`;
+    const began = Date.now();
+    console.log(`${name}: began at ${new Date(began).toISOString()}`);
     const child = spawn(process.execPath, ["scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...(values.demo ? ["--demo"] : []), "--evidence", join(evidence, device), "--xctestrun", join(products, plan)],
+      ...(values.demo ? ["--demo"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)],
     { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
     children.add(child);
     for (const stream of [child.stdout, child.stderr])
-      createInterface({ input: stream }).on("line", (line) => console.log(`${device}: ${line}`));
+      createInterface({ input: stream }).on("line", (line) => console.log(`${name}: ${line}`));
     const status = await new Promise<number | null>((resolveExit, reject) => {
       child.once("error", reject); child.once("close", resolveExit);
     }).finally(() => children.delete(child));
-    console.log(`${device}: ended with ${status}`);
-    return status === 0 ? [] : [device];
+    console.log(`${name}: ended with ${status} after ${((Date.now() - began) / 60_000).toFixed(1)} minutes`);
+    return status === 0 ? [] : [name];
   };
-  // Neither device stops the other; either failing fails the gate.
-  const failed = (await Promise.all([gate("iphone"), gate("ipad")])).flat();
-  if (failed.length) throw new Error(`The phone gate failed on ${failed.join(" and ")}; see its results in ${evidence}`);
+  // No part stops another; any part failing fails the gate.
+  const failed = (await runSideBySide(jobs, simulators, gate)).flat();
+  if (failed.length) throw new Error(`The phone gate failed: ${failed.join(", ")}; see its results in ${evidence}`);
 };
 // A test plan copy beside the built one, naming this device's own test home.
 const planFor = async (built: string, url: string) => {
-  const plan = join(dirname(built), `${values.ipad ? "ipad" : "iphone"}.xctestrun`);
+  const plan = join(dirname(built), `${values.ipad ? "ipad" : "iphone"}-${values.part![0]}.xctestrun`);
   copyFileSync(built, plan);
   for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built]))))
     await run("plutil", ["-replace", key, "-string", url, plan]);
   return plan;
 };
-const oneDevice = async () => {
+const onePart = async () => {
   // Do not borrow or erase a developer's simulator. Own exactly one, from create to delete.
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
@@ -185,10 +198,14 @@ const oneDevice = async () => {
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
   const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${simulator}`,
     "-resultBundlePath", join(evidence, "phone.xcresult")];
-  if (values.xctestrun)
-    await run("xcodebuild", ["-xctestrun", await planFor(values.xctestrun, fixture.url), ...destination, "test-without-building"]);
-  else await run("xcodebuild", [...project, ...destination, "-derivedDataPath", join(root, "DerivedData"),
-    `PHONE_TEST_HOME=${fixture.url}`, "test"]);
+  const plan = await planFor(values.xctestrun!, fixture.url);
+  await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!), "test-without-building"])
+    .catch((error: Error & { output?: string }) => {
+      // The CI job log names why a part failed; its results archive is often too large to fetch.
+      for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
+        console.log(line);
+      throw error;
+    });
   if (values.demo) for (const { name, raw } of recordings) {
     const crop = name === "reconnect" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
     await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
@@ -197,7 +214,7 @@ const oneDevice = async () => {
 };
 let failures: string[] = [];
 try {
-  // A device of a --both run skips these: that run checked them once for both.
+  // A part skips these: its gate checked them once for every part.
   if (!values.xctestrun) {
     // A failed check here is reported, and the simulator tests still run (INF-663).
     failures = await runEveryCheck([
@@ -208,10 +225,10 @@ try {
     ], () => interrupted);
     for (const failure of failures) console.log(`::error::${failure}`);
   }
-  await (values.both ? bothDevices() : oneDevice());
+  await (values.xctestrun ? onePart() : everyPart());
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
-  console.log(values.both ? "The iPhone and the iPad each joined their disposable Mac, read, reconnected, left and were removed."
-    : "The phone joined its disposable Mac, read its cards and Activity, reconnected, left and was removed.");
+  console.log(values.xctestrun ? `The ${values.part![0]} part passed on its own simulator and disposable Mac.`
+    : `Every part passed on ${devices.join(" and ")}, each on its own simulator and disposable Mac.`);
 } finally {
   cleaningUp = true;
   try {

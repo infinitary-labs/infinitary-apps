@@ -216,9 +216,9 @@ describe.skipIf(process.platform === "win32")("the phone check in a virtual Mac"
       expect(both.stdout).toContain("ipad: ipad checked");
       const guest = join(f.state, "vms", CLONE, "home", "job", "Application Support", "infinitary");
       const home = join(f.state, "vms", CLONE, "home");
-      // One run of the gate for both devices, not one per device.
+      // One run of the gate for both devices, not one per device, two simulators at a time (INF-662 piece 2).
       expect(f.read("gates")).toBe(
-        `${guest} scripts/test-phone.ts --both --evidence ${home}/phone-results/both\n`,
+        `${guest} scripts/test-phone.ts --both --simulators 2 --evidence ${home}/phone-results/both\n`,
       );
       // Each device's results land where the Mac mini's gate writes them.
       for (const device of ["iphone", "ipad"])

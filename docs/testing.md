@@ -113,7 +113,7 @@ The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate o
 It keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, then runs the iPhone and the iPad side by side, each on its own simulator and test home.
+That gate checks and builds once, then runs the phone journey's four parts on the iPhone and the iPad, eight in all, each on its own simulator and test home, six at a time (`docs/ios.md`, "Disposable verification").
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
 A manual rerun of a replaced version stops before its gate.
 Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
@@ -148,7 +148,7 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 `phone.yml` also runs on request (`workflow_dispatch`), such as the nightly check of `main`: `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
 A run on request skips the chooser and runs the device gate whatever changed; it starts no release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
-Neither device stops the other, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
+No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 It takes the same `mac-mini-phone` queue and exclusive Mac check lease as a pull request's phone check.
 
 ## Journeys on the pull request

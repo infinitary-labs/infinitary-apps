@@ -143,7 +143,9 @@ import XCTest
     photo.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
     XCTAssertTrue(add.waitForExistence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
-    XCTAssertTrue(app.buttons["photo-chip"].waitForExistence(timeout: 10), app.debugDescription)
+    // INF-662 piece 2: with other simulators beside this one, Photos has taken just over 10 seconds
+    // to hand the picked photo's bytes over; the chip appears once they have loaded.
+    XCTAssertTrue(app.buttons["photo-chip"].waitForExistence(timeout: 30), app.debugDescription)
 }
 
 /// INF-230: the actual footer contains every visible row and does not overlap native bottom tabs or the keyboard.

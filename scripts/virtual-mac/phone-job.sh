@@ -35,7 +35,8 @@ device() {
 both() {
   local out="$1" code
   echo "== iphone and ipad began ($(stamp))"
-  node scripts/test-phone.ts --both --evidence "$RESULTS/both"
+  # INF-662 piece 2: the clone has 6 cores and 16 GB, room for two simulators at a time.
+  node scripts/test-phone.ts --both --simulators 2 --evidence "$RESULTS/both"
   code="$?"
   mkdir -p "$out"
   cp -R "$RESULTS/both/." "$out/" 2> /dev/null || true

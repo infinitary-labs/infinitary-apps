@@ -2133,8 +2133,10 @@ describe("capture: every captain ask lands in a task", () => {
 
   it("ask: a task-less decision opens a decision task the captain's choice closes", async () => {
     // The mock Firstmate offers the projects in its context as the choices,
-    // so this case registers the one it offers.
+    // and a decision gives two or three, so this case registers both it
+    // offers rather than borrowing the one an earlier case adopts.
     await core.services.repos.setup({ kind: "init", name: "capture-decision" });
+    await core.services.repos.setup({ kind: "init", name: "capture-decision-other" });
     const ask = await turn(AMBIGUOUS_PROMPT_MARKER);
     expect(ask.attachedVia).toBe("tool:emit_card");
     const task = core.services.tasks.get(ask.taskId ?? "");

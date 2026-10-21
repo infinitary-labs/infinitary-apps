@@ -57,6 +57,7 @@ describe("sortReport", () => {
     ["outOfReach", "still-moving"],
     ["captainGateOwed", "captain-gate"],
     ["needsFirstmate", "needs-firstmate"],
+    ["waitedOn", "waited-on"],
     ["finished", "finished"],
     ["filedFollowups", "filed-followups"],
     ["waitsOnUnstarted", "waits-unstarted"],
@@ -96,6 +97,21 @@ describe("sortReport", () => {
         jobsRunning: true,
       }),
       rule: "needs-firstmate",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // INF-735: work the first mate holds on this task's finding hears of
+      // the report whatever card is up or still moves.
+      name: "0b. started work waits on this task through the first mate's link: wake",
+      facts: facts({
+        waitedOn: true,
+        decisionCardOpen: true,
+        checksWatched: true,
+        jobsRunning: true,
+        workObservable: true,
+      }),
+      rule: "waited-on",
       verdict: "captain",
       wake: true,
     },
@@ -282,6 +298,32 @@ describe("sortReport", () => {
         "waits-unstarted",
       );
     }
+  });
+
+  // INF-735, the captain's "file a fix so a hold on another task's finding
+  // ends when that task reports it": INF-621 reported the finding PR #184's
+  // task waited for while it still moved, and that task stayed held 2,393
+  // minutes for INF-621's close.
+  it("work held on the reporting task outranks every quiet row but the captain's unanswered reply", () => {
+    for (const quiet of [
+      "decisionCardOpen",
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "waitsOnUnderway",
+      "accountHeld",
+      "outOfReach",
+    ] as const) {
+      expect(sortReport(facts({ waitedOn: true, [quiet]: true })).rule, quiet).toBe("waited-on");
+    }
+    expect(sortReport(facts({ waitedOn: true, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ waitedOn: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
   });
 
   it("a wait on work underway reads after a card, filings and a wait on unstarted work", () => {

@@ -6440,6 +6440,13 @@ export class CrewSupervisor {
       title: wait.title,
       state: wait.status === "dropped" ? ("dropped" as const) : ("not-started" as const),
     }));
+    // A hold on this task's finding ends when it reports, not when it
+    // closes (INF-735): the work held on it is named on every wake.
+    const waiting = (record ? this.ladder.heldOn(record) : []).map((held) => ({
+      id: held.id,
+      key: held.key || held.id,
+      title: held.title,
+    }));
     const review = record ? this.reviewToReread(record) : undefined;
     const witnesses = this.ladder.witnesses(task.id, this.now());
     // A wait it declared with nothing on the captain's screen to answer is
@@ -6453,6 +6460,7 @@ export class CrewSupervisor {
         excerpt: capWithOverflow(report, "task-report"),
         filed: filed.map(({ key, title, blocks }) => ({ key, title, blocks })),
         ...(waits.length > 0 ? { waits } : {}),
+        ...(waiting.length > 0 ? { waiting } : {}),
         cards: this.cards.shownCards(task.id),
         ...(refused ? { refused } : {}),
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
@@ -6472,6 +6480,7 @@ export class CrewSupervisor {
       internalStep: record?.shape?.internal_step === true,
       finished,
       needsFirstmate: needsFirstmate !== undefined,
+      waitedOn: waiting.length > 0,
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.
       workObservable: task.session?.controlProfile.backgroundWork === "host",

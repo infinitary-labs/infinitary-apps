@@ -74,6 +74,7 @@ export const APPLICATION_SUITES = [
   "failed-turn.spec.ts",
   "file-drop.spec.ts",
   "filed-task-model.spec.ts",
+  "finding-relay.spec.ts",
   "frame-answers.spec.ts",
   "frame-vehicle.spec.ts",
   "idle-ladder.spec.ts",

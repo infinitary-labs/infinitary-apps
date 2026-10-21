@@ -118,6 +118,47 @@ describe("renderWake", () => {
     expect(report([])).toBe(report());
   });
 
+  // INF-735, the captain's "file a fix so a hold on another task's finding
+  // ends when that task reports it": PR #184's task stayed held 2,393
+  // minutes after INF-621 reported the finding it waited for. These words
+  // are that rule's one home; whether the report carries the finding is the
+  // first mate's judgment.
+  it("names the started work held on a report's task and how its hold ends (INF-735)", () => {
+    const report = (waiting?: Extract<WakeFacts, { kind: "report" }>["waiting"]) =>
+      renderWake({
+        facts: {
+          kind: "report",
+          task: { id: "438d43ea", title: "Prove the shared Mac image" },
+          crewmate: "crewmate 9",
+          // INF-621's report at 2:54 PM (event 91322), its closing sentence.
+          excerpt:
+            "PR #184's verdict remains the captured native readiness race and a controlled rerun, not an Escape-code rewrite.",
+          filed: [],
+          ...(waiting ? { waiting } : {}),
+          cards: [],
+        },
+      });
+    const inf595 = {
+      id: "d8f35ffa",
+      key: "INF-595",
+      title: "Fix: task board Escape skips the open summary under load",
+    };
+    expect(report([inf595])).toBe(
+      `[fm-op] crewmate 9 reported on task 438d43ea "Prove the shared Mac image": PR #184's verdict remains the captured native readiness race and a controlled rerun, not an Escape-code rewrite. Started work waits on this task through your link: INF-595 "Fix: task board Escape skips the open summary under load". If this report carries what such work waits for, such as a finding or an answer, pass it on now with steer_crewmate and end that wait with link_tasks remove; a wait on this task's merge stays.`,
+    );
+    expect(
+      report([
+        inf595,
+        { id: "8bc93cc7", key: "INF-660", title: "Move phone checks off the Mac check lock" },
+      ]),
+    ).toContain(
+      `through your link: INF-595 "Fix: task board Escape skips the open summary under load", INF-660 "Move phone checks off the Mac check lock". If this report`,
+    );
+    // Nothing held on it, no words: the wake reads as it always did.
+    expect(report()).not.toContain("waits on this task");
+    expect(report([])).toBe(report());
+  });
+
   it("ends a report with the app's recorded checks when its task has a reading", () => {
     const report = (ci?: Extract<WakeFacts, { kind: "report" }>["ci"]) =>
       renderWake({

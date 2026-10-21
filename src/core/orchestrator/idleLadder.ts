@@ -392,6 +392,24 @@ export class IdleLadder {
   }
 
   /**
+   * The started work held on this task through a recorded wait (INF-735):
+   * every active task a `blocks` link from it reaches with no
+   * must-merge-first mark - the practical wait the Firstmate records, such
+   * as a hold on this task's finding. Its report may carry what that work
+   * waits for, which only the Firstmate can judge and pass on; the close
+   * that ends the wait may be days away. A marked edge and a baseline wait
+   * are waits on its merge, and its close still ends them.
+   */
+  heldOn(record: TaskRecord): TaskRecord[] {
+    const tasks = this.host.tasks;
+    return tasks.linksFrom(record.id).flatMap((link) => {
+      if (link.type !== "blocks" || link.holdsMerge) return [];
+      const waiter = tasks.get(link.toId);
+      return waiter?.status === "active" ? [waiter] : [];
+    });
+  }
+
+  /**
    * The waits whose work closed while the task waited on it (FI3-250): the
    * task it named is done or dropped, and it closed after the wait began
    * and after the task started - so a continuation its origin's close

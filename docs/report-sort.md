@@ -21,6 +21,7 @@ In order; the order IS the rule.
 |---|---|---|---|---|
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
+| 0b | Started work waits on this task through a recorded wait: a `blocks` link from it with no must-merge-first mark (INF-735) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
 | 1 | An open **decision** card for the task, or a wait on the captain its crewmate declared in its report while a card of the task is on his screen (FI3-435) | the captain's | no wake | `rule:captain-card` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
 | 2 | The report filed follow-ups this turn | the first mate's | wake | `rule:filed-followups` |
@@ -57,6 +58,15 @@ The `report` event keeps the request, and so do the record's delivery facts (`de
 While it stands and the first mate has not acted on the task since, the idle ladder raises it again ("The idle ladder" below).
 It may ride beside `finished` or `waiting_on_captain`; an empty one is refused.
 A report without it sorts exactly as before, and the receipt no longer promises a wake: it says whether the first mate is woken depends on the task's state.
+
+**A hold on a task's finding ends when that task reports it** (INF-735, INF-720's Fix 2: "file a fix so a hold on another task's finding ends when that task reports it").
+A wait the first mate records on started work is a `blocks` link with no must-merge-first mark (`docs/task-graph.md`), and the waiter reads as waiting on work underway, which nothing nudges until that work closes (row 3).
+When the wait is for the work's finding, its close can be days after the finding: PR #184's task waited 2,393 minutes after INF-621 reported what it was held on, because INF-621's report came while its own work still ran and woke no one.
+So a report from a task that such a link holds active work on wakes the first mate on any backend, above a card on the captain's screen and every moving witness (`IdleLadder.heldOn`, `waitedOn` on the facts).
+Every report wake from that task names the work (`waiting` on the report's facts), and its words tell the first mate what to do: when the report carries what that work waits for, such as a finding or an answer, pass it on with `steer_crewmate` and end the wait with `link_tasks remove`; a wait on the task's merge stays.
+Whether it does is the first mate's judgment; the host reads the link, never the words.
+A must-merge-first mark, a baseline wait and a planned waiter that has not started are waits on the close, so they read as before.
+The row sits below row 0, as the crewmate answers the captain's reply first, and below row 0a, which wakes anyway.
 
 **A note never holds the turn.**
 There is one card shape on the wire; the word comes from the actions alone (`cardPresentation` / `cardWord`, `src/shared/cards.ts`).

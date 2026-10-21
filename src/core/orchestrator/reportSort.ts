@@ -19,6 +19,12 @@
  *     approved by reply - never a reading of its words. After row 0, so
  *     the captain's reply is answered first; before every row that would
  *     otherwise hold the report quiet.
+ *  0b. Started work waits on this task through a wait the Firstmate
+ *     recorded (INF-735; `IdleLadder.heldOn`): wake, on any backend and
+ *     whatever card is up or still moves. The report may carry what that
+ *     work waits for - a finding, an answer - and only the Firstmate can
+ *     judge it and pass it on, while the task's close, which ends the wait
+ *     by itself, may be days away. A typed link, never a reading of words.
  *  1. An open DECISION card for the task: the CAPTAIN's turn. No wake; the
  *     report is already a feed line and the click returns to its author.
  *     A note never holds the turn on its own (R4.8 question 1 - a crewmate
@@ -79,6 +85,7 @@
 export type ReportSortRule =
   | "thread-unanswered"
   | "needs-firstmate"
+  | "waited-on"
   | "captain-card"
   | "finished"
   | "filed-followups"
@@ -207,6 +214,12 @@ export type ReportSortFacts = Witnesses & {
   /** The report declared that the Firstmate must act (the report tool's `needs_firstmate`). */
   needsFirstmate?: boolean;
   /**
+   * Started work waits on this task through a wait the Firstmate recorded
+   * (`IdleLadder.heldOn`, INF-735): its report may carry what that work
+   * waits for.
+   */
+  waitedOn?: boolean;
+  /**
    * Whether every way this crewmate's work continues is visible to the
    * host (`ControlProfile.backgroundWork === "host"`). False for a
    * client-side backend and for a task whose transport is gone.
@@ -242,6 +255,15 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       wake: true,
       reason:
         "the crewmate declared that the first mate must act on its report; the first mate's turn.",
+    };
+  }
+  if (facts.waitedOn) {
+    return {
+      rule: "waited-on",
+      verdict: "captain",
+      wake: true,
+      reason:
+        "started work waits on this task through the first mate's link; the first mate reads the report for it.",
     };
   }
   if (facts.decisionCardOpen) {

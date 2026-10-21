@@ -929,6 +929,10 @@ export class TaskService {
     return this.links.listTo(id);
   }
 
+  linksFrom(id: string): TaskLink[] {
+    return this.links.listFrom(id);
+  }
+
   /** Every edge in the graph, for a builder that resolves them in one pass. */
   allLinks(): TaskLink[] {
     return this.links.listAll();

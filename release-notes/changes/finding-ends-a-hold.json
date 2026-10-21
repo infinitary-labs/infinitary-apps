@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "finding-ends-a-hold",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task waiting on another's finding carries on once it is reported",
+      "body": "When a task waits for another task's finding, your first mate now passes the finding on as soon as that task reports it, and the waiting task carries on. Before, it waited until the other task finished, which could take days.",
+      "noPicture": "This changes when a waiting task carries on, not a view or a control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

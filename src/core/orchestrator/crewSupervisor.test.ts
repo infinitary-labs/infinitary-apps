@@ -9858,6 +9858,57 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
   });
 
+  // INF-735 (INF-720's Fix 2), the captain's "file a fix so a hold on another
+  // task's finding ends when that task reports it". PR #184's task was held
+  // on INF-621's finding through the first mate's link; INF-621 reported it
+  // at 2:54 PM while its own work still ran, so the report stayed quiet and
+  // the hold lasted 2,393 more minutes, until a close days away.
+  it("wakes for started work the first mate holds on the reporting task, until it ends the wait (INF-735)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, ops, sorts, tasks, ledgerFacts, taskId } = await reportedTask(crewmate, {
+      hasRunningJobs: () => true,
+    });
+    const held = seedTask(tasks, {
+      id: "d8f35ffa",
+      title: "Fix: task board Escape skips the open summary under load",
+      status: "idle",
+    });
+    // A merge it waits on, promised by a must-merge-first mark, and planned
+    // work that has not started, are no holds on its finding.
+    const merging = seedTask(tasks, { id: "inf-550", title: "Show the story", status: "idle" });
+    tasks.link(taskId, merging.id, "blocks", "host", true);
+    const planned = seedTask(tasks, {
+      id: "8bc93cc7",
+      title: "Move phone checks off the Mac check lock",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    supervisor.linkTasks(taskId, planned.id, "blocks");
+    // The captain chose to wait for this task's findings: the first mate's link.
+    supervisor.linkTasks(taskId, held.id, "blocks");
+    // INF-621's report at 2:54 PM (event 91322), its closing sentence.
+    const finding =
+      "PR #184's verdict remains the captured native readiness race and a controlled rerun, not an Escape-code rewrite.";
+    await report(crewmate, taskId, finding);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waited-on" });
+    expect(ledgerFacts.at(-1)).toMatchObject({
+      kind: "report",
+      excerpt: finding,
+      waiting: [{ id: held.id, key: held.key, title: held.title }],
+    });
+    expect(reportWakes(ops)).toHaveLength(1);
+    expect(reportWakes(ops)[0]).toContain(`through your link: ${held.key} "${held.title}".`);
+
+    // The first mate passes the finding on and ends the wait: the next
+    // report from the still-running task holds nobody and stays quiet.
+    supervisor.unlinkTasks(taskId, held.id, "blocks");
+    await supervisor.steerCrewmate(taskId, "go on");
+    await tick();
+    await report(crewmate, taskId, "Second clean phone run passed.");
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+    expect(reportWakes(ops)).toHaveLength(1);
+  });
+
   it("wakes for the follow-ups a report filed, whatever else is true", async () => {
     const crewmate = fakeCrewmate();
     const { ops, sorts, specs, taskId } = await reportedTask(crewmate, {

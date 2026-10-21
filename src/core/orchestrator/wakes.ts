@@ -438,6 +438,11 @@ export type WakeFacts =
       filed: WakeFiled[];
       /** The work its task waits on that nobody has started (FI3-671). */
       waits?: WakeWait[];
+      /**
+       * The started work held on its task through a wait the Firstmate
+       * recorded (INF-735): the report may carry what that work waits for.
+       */
+      waiting?: WakeKeyedTask[];
       /** Its cards on the captain's screen when it reported. */
       cards: WakeCard[];
       /**
@@ -1582,7 +1587,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open rather than closing as built in place. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
     case "report":
-      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on his screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
+      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on his screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
     case "review-orphan":
       return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`;
     case "review-unstated":
@@ -1955,6 +1960,21 @@ function waitsText(waits: WakeWait[] | undefined): string {
     )
     .join(", ");
   return ` It waits on ${named}; nothing starts that work by itself.`;
+}
+
+/** The words that open a report wake's list of the work held on its task (INF-735). */
+export const HELD_WORK_WORDS = "Started work waits on this task through your link:";
+
+/**
+ * A report wake names the started work held on its task through a wait the
+ * Firstmate recorded (INF-735), and is this rule's one home: a hold on a
+ * task's finding ends when that task reports it, not when it closes. Whether
+ * the report carries what the work waits for is the Firstmate's judgment.
+ */
+function waitingText(waiting: WakeKeyedTask[] | undefined): string {
+  if (!waiting?.length) return "";
+  const named = waiting.map((task) => `${task.key} "${task.title}"`).join(", ");
+  return ` ${HELD_WORK_WORDS} ${named}. If this report carries what such work waits for, such as a finding or an answer, pass it on now with steer_crewmate and end that wait with link_tasks remove; a wait on this task's merge stays.`;
 }
 
 /**

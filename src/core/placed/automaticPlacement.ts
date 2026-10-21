@@ -25,6 +25,8 @@ import {
   floorHold,
   type PlacementCandidate,
   resolvePlacementRequirements,
+  type SystemUnserved,
+  unservedSystems,
 } from "../routing/placementEngine";
 import type { RouteResult, Router } from "../routing/router";
 import type { TaskRecord } from "../storage/taskStore";
@@ -53,8 +55,10 @@ export type AutomaticChoice = {
  * Why a new Automatic task waits, once every computer was compared. `held` is
  * the route of a wait for the level the task asked for (`floorHold`), which
  * the supervisor holds on that level's reset as it holds a This computer start.
+ * `unserved` says no computer runs a system the task requires
+ * (`unservedSystems`), which no room or reading ends.
  */
-export type AutomaticWait = { wait: PlacementWait; held?: RouteResult };
+export type AutomaticWait = { wait: PlacementWait; held?: RouteResult; unserved?: SystemUnserved };
 
 /** The one start-time admission owner. Resource demand uses the screen/panel feed,
  * not a second sampler. Fresh compatibility is transient; only commitments persist.
@@ -175,7 +179,12 @@ export class AutomaticPlacement {
     });
     const resourceRound = this.options.resources.readCurrent(); // The same round that views use.
     const computers = [
-      { computerId: null as string | null, name: HERE.This, inReach: true },
+      {
+        computerId: null as string | null,
+        name: HERE.This,
+        inReach: true,
+        system: thisDeviceSystem().system,
+      },
       ...this.options
         .devices()
         .filter((device) => deviceRunsWork(device.kind))
@@ -183,6 +192,8 @@ export class AutomaticPlacement {
           computerId: device.id,
           name: deviceLabel(device),
           inReach: this.options.work.inReach(device.id),
+          // What it last said it runs, for a computer out of reach now.
+          system: device.system,
         })),
     ];
     const origin = repo.origin ? withoutSignIn(repo.origin) : undefined;
@@ -281,6 +292,14 @@ export class AutomaticPlacement {
         computers.find((row) => row.computerId === id)?.name ?? "The other computer";
       if (!chosen) {
         const held = floorHold(decision.candidates);
+        // A fresh reading's system, else the one the computer last said.
+        const unserved = unservedSystems(
+          requirements.systems,
+          computers.map((computer, index) => ({
+            name: computer.name,
+            system: candidates[index]?.system ?? computer.system,
+          })),
+        );
         wait = {
           wait: placementWait(
             decision.candidates.map((row) => ({
@@ -292,6 +311,7 @@ export class AutomaticPlacement {
             requirements.demand,
           ),
           ...(held ? { held } : {}),
+          ...(unserved ? { unserved } : {}),
         };
         return undefined;
       }

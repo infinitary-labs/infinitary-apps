@@ -268,6 +268,30 @@ export function evaluatePlacement(input: {
   };
 }
 
+/** A required system no computer runs, beside the system each computer runs. */
+export type SystemUnserved = {
+  required: PlacementSystem[];
+  computers: { name: string; system: DeviceSystem }[];
+};
+
+/**
+ * Whether a wait can end only by pairing a computer or by changing what the
+ * task requires (INF-720): every computer's system is known - this one's and
+ * each paired computer's that runs work, in reach or not, by its last word -
+ * and none runs a system the task requires. Undefined when one does, since
+ * it can end the wait, or when one's system is unknown or none is required.
+ */
+export function unservedSystems(
+  required: readonly PlacementSystem[],
+  computers: readonly { name: string; system?: DeviceSystem | undefined }[],
+): SystemUnserved | undefined {
+  if (required.length === 0) return undefined;
+  const known = computers.flatMap(({ name, system }) => (system ? [{ name, system }] : []));
+  if (known.length !== computers.length) return undefined;
+  if (known.some(({ system }) => required.some((wanted) => wanted === system))) return undefined;
+  return { required: [...required], computers: known };
+}
+
 /**
  * The route a waiting decision holds on when it waits for the level its task
  * asked for (`placementFloorHold`), read from the computers refused for that

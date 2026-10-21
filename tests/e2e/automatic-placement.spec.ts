@@ -370,3 +370,89 @@ test("a premium ask in an Automatic project that no computer can serve waits on 
     await app.close();
   }
 });
+
+test("a task in an Automatic project that requires a system no computer runs waits, and Firstmate hears at once", async () => {
+  test.setTimeout(180_000);
+  const userDataDir = scratchDir("infinitary-automatic-system-");
+  seedAutomaticProject(userDataDir);
+  // INF-720, the captain's Fix 4: INF-653 and INF-665 required Linux, which
+  // no computer paired with his runs, and each waited hours on "different
+  // required system" until Firstmate happened to look. Nothing is paired
+  // here, so this computer is the only one, and the task requires the
+  // system it does not run, as its own facts read it.
+  const here = process.platform === "darwin" ? "macos" : "linux";
+  const required = here === "macos" ? "linux" : "macos";
+  const app = await launchApp({ userDataDir, withMockProvider: true });
+  const mock = app.mockProvider;
+  if (!mock) throw new Error("Asking Firstmate needs the mock provider");
+  const title = "Compare the test failures on main";
+  let id: string | undefined;
+  const detail = () =>
+    app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
+  try {
+    // e2e-typed-words: the captain's own ask for a comparison on the other system
+    const words = "Compare the two test failures on main on the other system.";
+    await waitForFirstmateIdle(app.page);
+    const answer = mock.scriptFirstmateTurn(
+      served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) }),
+      [
+        {
+          name: "spawn_crewmate",
+          args: {
+            title,
+            goal: "Each failure is named a baseline failure or a flake.",
+            user_words: words,
+            repo_id: "repo-ledger",
+            shape: { skipped_plan_because: "A bounded comparison" },
+            placement_requirements: { systems: [required] },
+          },
+        },
+      ],
+    );
+    const input = promptInput(app.page);
+    await pressWindowKey(app.app, "l", ["meta"]);
+    await expect(input).toBeFocused();
+    await typeInto(input, words);
+    await input.press("Enter");
+    await expect.poll(answer.outcome, { timeout: 30_000 }).toMatchObject({ state: "closed" });
+    const filed = (await app.page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+      (task) => task.title === title,
+    );
+    id = filed?.id;
+    if (!filed || !id) throw new Error("The ask filed no task");
+
+    // Firstmate hears, once, that no computer runs what the task requires,
+    // naming this computer's own system.
+    const told = renderWake({
+      facts: {
+        kind: "system-wait",
+        task: { id, key: filed.key, title },
+        required: [required],
+        computers: [{ name: HERE.This, system: here }],
+      },
+    });
+    const heard = () =>
+      mock
+        .requestBodies()
+        .map(
+          (body) =>
+            providerMessages(body).filter(
+              (message) => message.role === "user" && message.text.includes(told),
+            ).length,
+        )
+        .filter((count) => count > 0);
+    await expect.poll(heard, { timeout: 30_000 }).not.toHaveLength(0);
+    expect(heard().every((count) => count === 1)).toBe(true);
+    // It waits, chosen nowhere and unstarted.
+    const waiting = await detail();
+    expect(waiting).toMatchObject({ status: "open", startedAt: null });
+    expect(waiting.placement).toBeUndefined();
+  } finally {
+    if (id)
+      await test.info().attach("task.json", {
+        body: JSON.stringify(await detail(), null, 2),
+        contentType: "application/json",
+      });
+    await app.close();
+  }
+});

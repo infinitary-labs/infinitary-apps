@@ -411,6 +411,7 @@ import {
   renderWake,
   replyWordsSpan,
   rowAttachments,
+  systemWaitWake,
   type TypedWake,
   type WakeBody,
   type WakeChoice,
@@ -10193,6 +10194,17 @@ export class CrewSupervisor {
           waiting?.wait ?? this.options.tasks.get(taskId)?.shape?.placement_wait ?? UNCOMPARED_WAIT;
         this.options.tasks.waitForPlacement(taskId, ignoreAsk, wait.words);
         this.sayAutomaticWait(record, wait);
+        // No computer runs a system it requires, which no room or reading
+        // changes: the first mate hears it at once, once (INF-720).
+        if (waiting?.unserved)
+          this.hooks.notifyOp(
+            systemWaitWake(
+              { id: record.id, key: record.key || record.id, title: record.title },
+              waiting.unserved,
+            ),
+            "agent",
+            taskId,
+          );
         // No computer serves the level it asked for: held on that level's
         // reset with one wake, as a This computer start is (P7 + R1).
         if (waiting?.held) {

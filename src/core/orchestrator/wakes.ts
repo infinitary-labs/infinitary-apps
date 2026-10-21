@@ -1,4 +1,6 @@
 import { HERE } from "@shared/deviceNames";
+import type { DeviceSystem } from "@shared/devices";
+import type { PlacementSystem } from "@shared/placement";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import {
   ABANDON,
@@ -589,6 +591,17 @@ export type WakeFacts =
        * the wait: placing a model there does (FI3-848).
        */
       empty?: true;
+    }
+  | {
+      /**
+       * An Automatic start waits for a system no computer runs (INF-720):
+       * this one, and each paired computer that runs work by what it last
+       * said it runs. No room or reading ends that wait.
+       */
+      kind: "system-wait";
+      task: WakeKeyedTask;
+      required: PlacementSystem[];
+      computers: { name: string; system: DeviceSystem }[];
     }
   | {
       /** The captain chose on a card with no effect: the choice returns to its author. */
@@ -1342,6 +1355,33 @@ export function jobBoundWake(
   };
 }
 
+/** A system by the name its maker gives it. */
+const SYSTEM_WORDS: Record<DeviceSystem, string> = {
+  macos: "macOS",
+  linux: "Linux",
+  windows: "Windows",
+  ios: "iOS",
+};
+
+/**
+ * The one wake about a task no computer can run (INF-720), once per system
+ * it requires: every later sweep compares the same computers again.
+ */
+export function systemWaitWake(
+  task: WakeKeyedTask,
+  unserved: { required: PlacementSystem[]; computers: { name: string; system: DeviceSystem }[] },
+): TypedWake {
+  return {
+    facts: {
+      kind: "system-wait",
+      task: { id: task.id, key: task.key, title: task.title },
+      required: [...unserved.required],
+      computers: unserved.computers.map(({ name, system }) => ({ name, system })),
+    },
+    once: `system-wait:${[...unserved.required].sort().join("+")}`,
+  };
+}
+
 /** The name a closed dependency's steer goes out once for: the work that closed. */
 export function dependencyClosedOnce(task: { id: string }): string {
   return `dependency-closed:${task.id}`;
@@ -1591,6 +1631,11 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ? `no model is placed at ${facts.requested}, so no quota reset will start it; it waits until one is placed at ${facts.requested} in Settings → Intelligence → Models`
         : `none has quota right now; it waits on the ${facts.requested} quota reset`;
       return `[fm-op] task ${facts.task.id} "${facts.task.title}" needs a ${facts.requested} model and ${wait} unless you say otherwise, and ${facts.served ? `a ${facts.served} model` : "the default model"} could serve it now.`;
+    }
+    case "system-wait": {
+      const runs = facts.computers.map((row) => `${row.name} runs ${SYSTEM_WORDS[row.system]}`);
+      const wanted = facts.required.map((system) => SYSTEM_WORDS[system]).join(" or ");
+      return `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" requires ${wanted}, and no computer runs it: ${runs.join(", ")}. No room or reading ends this wait: it starts once a computer that runs ${wanted} is paired and in reach, or once what it requires changes (update_task placement_requirements).`;
     }
     case "card-choice":
       if (facts.to === "firstmate") {

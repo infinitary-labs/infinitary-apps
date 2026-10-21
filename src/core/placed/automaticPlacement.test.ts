@@ -8,6 +8,7 @@ import {
 } from "@shared/placement";
 import type { RepoView } from "@shared/repos";
 import type { ResourceObservation } from "@shared/resources";
+import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import type { RoutePreview, Router } from "../routing/router";
@@ -149,8 +150,11 @@ function world(
   });
   const task = (id: string, title: string) =>
     seedTask(tasks, { id, title, repoId: ledger.id, status: "queued" });
-  const start = (record: ReturnType<typeof task>) =>
-    placement.choose(record, ledger, record.title, { kind: "fix" });
+  const start = (
+    record: ReturnType<typeof task>,
+    shape: WorkShape = { kind: "fix" },
+    project: RepoView = ledger,
+  ) => placement.choose(record, project, record.title, shape);
   return {
     tasks,
     running,
@@ -310,4 +314,69 @@ describe("AutomaticPlacement's words for a computer out of reach", () => {
       w.dispose();
     }
   });
+});
+
+/**
+ * INF-720, the captain's Fix 4: INF-653 and INF-665 needed Linux, and no
+ * computer paired with this one runs it, so each waited hours on "different
+ * required system" until the first mate happened to look. A wait says so as
+ * a fact of its own only when every computer's system is known and none runs
+ * it: a paired computer that runs it can end the wait, in reach or not.
+ */
+describe("AutomaticPlacement's wait for a system no computer runs", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T08:00:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A project whose tasks may declare either system. */
+  const either: RepoView = {
+    ...ledger,
+    placementRequirements: { systems: ["macos", "linux"], chips: ["arm64"] },
+  };
+  /** A task that compares test failures on Linux, as INF-653 did. */
+  const onLinux: WorkShape = { kind: "fix", placement_requirements: { systems: ["linux"] } };
+
+  it("says no computer runs Linux while this computer and the Mac mini both run macOS", async () => {
+    const w = world(undefined, {
+      devices: () => [{ ...macMini, system: "macos" }],
+      repo: () => either,
+    });
+    try {
+      const compare = w.task("compare", "Compare the Linux test failures on main");
+      expect(await w.start(compare, onLinux, either)).toMatchObject({
+        wait: { kind: "other" },
+        unserved: {
+          required: ["linux"],
+          computers: [
+            { name: HERE.This, system: "macos" },
+            { name: "Mac mini", system: "macos" },
+          ],
+        },
+      });
+      expect(w.tasks.get(compare.id)?.placement).toBeNull();
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it.each([
+    ["runs Linux and is out of reach", { ...macMini, kind: "work", system: "linux" }],
+    ["never said what it runs", macMini],
+  ] as const satisfies readonly (readonly [string, DeviceView])[])(
+    "says nothing of it while a paired computer %s",
+    async (_name, device) => {
+      const w = world(undefined, { devices: () => [device], repo: () => either });
+      try {
+        const compare = w.task("compare", "Compare the Linux test failures on main");
+        const waited = await w.start(compare, onLinux, either);
+        expect(waited).toMatchObject({ wait: { kind: "other" } });
+        expect(waited && "unserved" in waited).toBe(false);
+      } finally {
+        w.dispose();
+      }
+    },
+  );
 });

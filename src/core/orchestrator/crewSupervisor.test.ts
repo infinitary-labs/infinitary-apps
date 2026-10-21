@@ -22816,6 +22816,74 @@ describe("an Automatic wait in Activity", () => {
     expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);
     await restarted.disposeAll();
   });
+
+  // INF-720, the captain's Fix 4: INF-653 and INF-665 waited 219 and 115
+  // minutes on "different required system", since no paired computer runs
+  // Linux, until the first mate happened to look. It hears that at once, and
+  // once, though every sweep compares the same computers again.
+  it("tells the first mate at once, and once, that no computer runs the system a task requires", async () => {
+    const dir = scratchDir("infinitary-automatic-system-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const wait = placementWait(
+      [
+        { name: "This computer", rejections: ["system-incompatible"], capacity: null },
+        { name: "Mac mini", rejections: ["system-incompatible"], capacity: null },
+      ],
+      STANDARD,
+    );
+    const unserved = {
+      required: ["linux" as const],
+      computers: [
+        { name: "This computer", system: "macos" as const },
+        { name: "Mac mini", system: "macos" as const },
+      ],
+    };
+    let hostNow = Date.parse("2026-10-20T19:24:00Z");
+    const { supervisor, repos, tasks, inbox } = setup(fakeCrewmate(), {
+      now: () => hostNow,
+      automatic: { choose: async () => ({ wait, unserved }) },
+    });
+    // The first mate's lane, filled as its own seam fills it (`FirstmateAgent.notifyOp`).
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
+      retryConverse: vi.fn(),
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const task = seedTask(tasks, {
+      id: "compare",
+      title: "Compare the Linux test failures on main",
+      repoId: repo.id,
+      status: "queued",
+      startPolicy: "when-ready",
+    });
+    const key = task.key || task.id;
+    const heard = () => inbox.allFor(FIRSTMATE_RECIPIENT);
+
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(heard().map((row) => [row.ref, row.facts])).toEqual([
+      [
+        task.id,
+        {
+          kind: "system-wait",
+          task: { id: task.id, key, title: task.title },
+          ...unserved,
+        },
+      ],
+    ]);
+    expect(heard().map(renderWake)[0]).toContain(`${task.id} ${key} "${task.title}"`);
+
+    // The first mate's turn read it, and the ready sweep compares the same
+    // computers again, a minute at a time, long after a repeat would be new.
+    inbox.ack(heard().map((row) => row.id));
+    hostNow += INBOX_DEDUPE_WINDOW_MS + 60_000;
+    await supervisor.dispatchQueuedTask(task.id);
+    hostNow += 60_000;
+    await supervisor.dispatchQueuedTask(task.id);
+    expect(heard()).toEqual([]);
+    expect(tasks.get(task.id)?.status).toBe("open");
+  });
 });
 
 /**

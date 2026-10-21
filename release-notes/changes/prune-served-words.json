@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prune-served-words",
+      "reason": "Internal: the first mate's and crewmates' instructions drop sentences that repeat a refusal, a wake or a tool's own words, so each rule is said once; nothing a person sees changes."
+    }
+  ]
+}

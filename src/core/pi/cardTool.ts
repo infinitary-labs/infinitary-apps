@@ -56,7 +56,6 @@ export const CLOSE_CARD_TOOL_DESCRIPTION = [
   "A note you emitted as this turn's answer is current and must not be withdrawn during this turn.",
   "Close a decision only when the choice no longer applies - you are withdrawing it as obsolete, not answering for the captain.",
   "Someone else's card is not yours to close - steer its author instead; the captain dismisses a card himself.",
-  "Unknown ids fail loudly.",
 ].join(" ");
 
 const STABLE_CARD_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

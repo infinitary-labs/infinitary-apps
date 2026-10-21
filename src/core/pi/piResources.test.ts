@@ -25,6 +25,7 @@ import {
 } from "../prompts/cardContract";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
+import { CHECK_CHANGE_TOOL_DESCRIPTION } from "./forgeTools";
 import {
   buildCrewmateSystemPrompt,
   buildFirstmateSystemPrompt,
@@ -630,9 +631,9 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
   it("replaces answer ownership with steer-not-answer and revise-in-place", () => {
     expect(core).not.toContain("answer owner");
     expect(core).toContain("The context block lists each task's open cards.");
-    expect(core).toContain(
-      "your move is steer or nothing: steer the crewmate to revise its card (same id) with what you would add",
-    );
+    // Steer-not-answer is enforced, so its refusal says it, once (INF-490):
+    // tests/firstmate-fixed-context.test.ts's ledger names that home.
+    expect(core).not.toContain("your move is steer or nothing");
     // Revise-in-place is how the tool is called, so it is said once, in the
     // descriptor every emitter reads (v4.59).
     expect(CARD_MECHANICS).toContain(
@@ -716,7 +717,8 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
     expect(core).toContain(
       "An idle crewmate that finished its work is not settled until you merge or discard it - it stays resumable until then.",
     );
-    expect(core).toContain("For an external release, use released only with verified evidence.");
+    // What released needs is settle_task's own rule (INF-490; the ledger names it).
+    expect(core).not.toContain("use released only with verified evidence");
     // The `finish` mode and the `delivered` status are gone from the contract.
     expect(core).not.toMatch(/\bdelivered\b/);
     expect(core).not.toMatch(/\bfinish\b/);
@@ -760,9 +762,9 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // Autonomy is the third of the same shape (contract v3.9, captain
     // ruling of 2026-09-20): a repository default with a per-task ask on
     // the user's words alone, and the host - not this rule - enforces it.
-    expect(core).toContain(
-      "With autonomy off the host refuses a merge of yours - the captain's click on the completion card is the merge.",
-    );
+    // Its refusal says so when a merge is tried (INF-490; crewSupervisor.test.ts
+    // owns the words), so the core does not.
+    expect(core).not.toContain("With autonomy off the host refuses a merge of yours");
     expect(core).not.toContain("free constraint (rigor: quick)");
     // Contract v3.7: the personal workspace is a workspace KIND, so the
     // prompt names no `live` posture anywhere - not as a delivery, not as a
@@ -794,8 +796,10 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
 
   it("keeps a crewmate's three-round CI blocker and the host's cap wake as one decision card on its task (v3.4)", () => {
     expect(core).toContain(
-      "A crewmate's blocker report that names three unsuccessful own repairs, and the host's wake that a task hit its CI or review cap, are one decision card on its task, carrying the other ways that wake names; steer the crewmate with the captain's retry answer, which reopens its rounds - until then the host holds its completion card and its re-reviews.",
+      "A crewmate's blocker report that names three unsuccessful own repairs, and the host's wake that a task hit its CI or review cap, are one decision card on its task, carrying the other ways that wake names; steer the crewmate with the captain's retry answer, which reopens its rounds.",
     );
+    // What the host holds until then is the cap wake's to say (INF-490; the ledger names it).
+    expect(core).not.toContain("until then the host holds its completion card");
     // A repository's standing rigor is set by talking (phase 3): the tool,
     // named once, on the user's words alone - the Firstmate judges none.
     expect(core).toContain(
@@ -1078,9 +1082,9 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
       "Pass task_id when the card concerns existing work; a settle effect needs it",
     );
-    expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
-      "refuses a settle merge effect on any task whose crewmate has yet to emit its completion card",
-    );
+    // Its two refusals say themselves when a card breaks them (INF-490;
+    // cardLint.test.ts owns their words and the ledger names their homes).
+    expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).not.toContain("This tool refuses");
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).not.toContain("completion decision");
     for (const description of [CREWMATE_EMIT_CARD_DESCRIPTION, FIRSTMATE_EMIT_CARD_DESCRIPTION]) {
       expect(description).not.toMatch(/explain.more/i);
@@ -1336,10 +1340,17 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(buildFirstmateSystemPrompt()).not.toContain("For finished code work,");
   });
 
-  it("keeps the report rule and the CI rule", () => {
+  it("keeps the report rule and the CI rule, each in the tool it governs (INF-490)", () => {
     const prompt = buildCrewmateSystemPrompt();
-    expect(prompt).toContain("The first mate hears only an explicit report or a turn's final text");
-    expect(prompt).toContain("Standing CI rule: CI is green only when every check");
+    const report = CREWMATE_TOOLS.find((tool) => tool.name === "report");
+    expect(report?.description).toContain(
+      "The first mate hears only an explicit report, or your final message when a turn ends with text",
+    );
+    expect(CHECK_CHANGE_TOOL_DESCRIPTION).toContain(
+      "green only when all completed successfully or skipped",
+    );
+    expect(prompt).not.toContain("The first mate hears only an explicit report");
+    expect(prompt).not.toContain("Standing CI rule");
   });
 
   it("makes the crewmate drive a direct-pr task to green itself, before the completion card", () => {
@@ -1349,17 +1360,14 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("drive it to green yourself");
     expect(prompt).toContain("before writing the final report or emitting the completion decision");
     // The completion decision itself is gated on green, not merely on push.
-    expect(prompt).toContain("done means CI green, not merely pushed");
     expect(prompt).toContain("a completion decision emitted on anything but green");
     // Genuinely blocked is a report, never a card of its own.
     expect(prompt).toContain(
       "say so in your report as a blocker instead of emitting one; that is the escalation, not a card",
     );
-    // The freshness rule now names the completion decision explicitly, not
-    // only "reporting green".
-    expect(prompt).toContain(
-      "Verify with check_change immediately before emitting the completion decision",
-    );
+    // The freshness rule is the host's: a completion card is refused unless
+    // the checks it reads at that moment passed (INF-490).
+    expect(prompt).not.toContain("Verify with check_change immediately before");
     expect(prompt).not.toContain("Merge PR");
   });
 
@@ -1525,10 +1533,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 
 // Reader tags must not silently rewrite the full approved source.
 // INF-680 adds the Anything else? box sentence for crewmates.
+// INF-490 drops the sentences its refusals and the tool answers already say.
 it("keeps the full authoring and handoff sources word for word", () => {
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "00fd00f0b4fbb0918f249dc8455d0d2a6739baed8972b845cd8864a4c3b65557",
+    "1df95c8b86cb9c1db2c76231695d0d08b0492904aac05dfb724104243220875f",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   expect(hash(HANDOFF)).toBe("c743e70be54f1254e53cc65080b6e3c3c1cb562dc06c3c031ecb73abe7b3ce4e");

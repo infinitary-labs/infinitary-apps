@@ -65,11 +65,11 @@ function renderInstructions(parts: readonly InstructionPart[], reader?: Instruct
 
 const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "CARD AUTHORING",
-  "A decision with several questions asks each one in the body, beside the paragraph it is about, as an ordinary form control presented however reads best - radio buttons, checkboxes, a select, a text field. Give every question its own name on its controls, word the question itself in the <legend> of a <fieldset> around its options (or a <label> bound to a lone field), keep each name and option value short and stable, mark required a question the captain must answer, and bind a <label> to each option so the pick reads in words. Radio, checkbox and select questions arrive unpicked so every answer is the captain's own: check and select nothing, open a select on an empty <option value=\"\">Choose</option>, and put data-inf-recommended on the input or <option> you recommend - the app tags it Recommended without picking it. Outside a preview, every radio group, select and group of two or more checkboxes ends with your own row worded Something else and marked data-inf-write-in - one more input with the question's name, or the select's last <option> - and the app opens a text field under it once picked; a question whose options are the only possible answers carries data-inf-options-only on its <fieldset> or <select> instead, and a card with neither is refused at emit time. An answer marked written in is the captain's own words: follow them like a reply, and ask on the card only when they cannot be followed. A text field keeps its prefilled text and a preview its current settings. A pick sends nothing: the footer button the captain clicks carries every named field with that choice - the default once every required question has an answer, any other button whatever is picked so far - so never call inf.action from a control.",
+  "A decision with several questions asks each one in the body, beside the paragraph it is about, as an ordinary form control presented however reads best - radio buttons, checkboxes, a select, a text field. Give every question its own name on its controls, word the question itself in the <legend> of a <fieldset> around its options (or a <label> bound to a lone field), keep each name and option value short and stable, mark required a question the captain must answer, and bind a <label> to each option so the pick reads in words. Radio, checkbox and select questions arrive unpicked so every answer is the captain's own: check and select nothing, open a select on an empty <option value=\"\">Choose</option>, and put data-inf-recommended on the input or <option> you recommend - the app tags it Recommended without picking it. Outside a preview, every radio group, select and group of two or more checkboxes ends with your own row worded Something else and marked data-inf-write-in - one more input with the question's name, or the select's last <option> - and the app opens a text field under it once picked; a question whose options are the only possible answers carries data-inf-options-only on its <fieldset> or <select> instead. An answer marked written in is the captain's own words: follow them like a reply, and ask on the card only when they cannot be followed. A text field keeps its prefilled text and a preview its current settings. A pick sends nothing: the footer button the captain clicks carries every named field with that choice - the default once every required question has an answer, any other button whatever is picked so far - so never call inf.action from a control.",
   // The Firstmate's fixed context has no room for it (tests/firstmate-fixed-context.test.ts):
   // it reads the box's answer by the written-in rule above, and the lint names the reserved name.
   crewOnly(
-    "The app adds its own Anything else? box between a decision's body and its buttons; its words arrive with the clicked button as the answer anything_else, written in, so never name a control anything_else or add a box of your own for further comments.",
+    "The app adds its own Anything else? box between a decision's body and its buttons; its words arrive with the clicked button as the answer anything_else, written in, so never add a box of your own for further comments.",
   ),
   crewOnly(
     "A playable preview is a decision body that draws the thing being chosen with its own controls; a hidden field or inf.stage(name, value) carries its settings as a compact JSON snapshot with stable names and units, at most 4,096 UTF-8 bytes in all. Controls update the preview and the renderer's draft only, never an author turn; the footer choices submit the current settings, and so do author-directed replies. A preview ships nothing: scratch stays private in the working copy, and the same card is revised as feedback arrives.",
@@ -84,7 +84,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly("Crewmate answers, plans, decisions and notes may include demos."),
   "Prose carries what a picture cannot - a name, a number, a quote, a caveat - and stays in the open beside the figure it qualifies; <details> holds only what a reader who digs would want: evidence, exact code paths, qualifications.",
   'Drawn figures are inline <svg> with a viewBox, width="100%" when the drawing is full width, wrapped in <figure> with an aria-label. Make a drawn figure belong to the app by drawing in the design system: color through the theme tokens (--fg-1..3, --bg-0..3, --line-1..2, --accent, --ok, --warn, --danger, --idle; --accent, --ok, --warn and --danger each also have a -dim fill) so it follows light and dark, --accent for the lit or current element of that figure - one accent per figure, not one per card - and ok/warn/danger for real state; literal colors are fine where a token would not say more. Draw whatever figure the explanation calls for.',
-  "A full-width drawing is 750 units wide so one unit is one pixel in the usual card, and labels use the app's own sizes: unsized for 12.5px, 14px for the one that matters, 11px mono for micro labels, never larger than body text unless it is a deliberate display number. A smaller drawing takes its pixel width, not 100 percent, so the card only shrinks it. SVG type, including flowing text in foreignObject, scales with the drawing and shrinks with it in a narrow card, under 11px; text elements do not wrap, so shorten labels or use foreignObject for flowing text. The card is refused at emit time when measurable text would draw under 11px in the usual card.",
+  "A full-width drawing is 750 units wide so one unit is one pixel in the usual card, and labels use the app's own sizes: unsized for 12.5px, 14px for the one that matters, 11px mono for micro labels, never larger than body text unless it is a deliberate display number. A smaller drawing takes its pixel width, not 100 percent, so the card only shrinks it. SVG type, including flowing text in foreignObject, scales with the drawing and shrinks with it in a narrow card, under 11px; text elements do not wrap, so shorten labels or use foreignObject for flowing text.",
   crewOnly(
     "A picture from a working copy is an <img> whose src is the file's path relative to that working copy - a PNG, JPEG or WebP - and whose alt says what it proves, placed beside the sentence it illustrates; the host verifies the file, keeps its own copy, and shows it fitted to the card and whole, never cropped. Several pictures inside one <figure class=\"inf-pictures\"> are a group: the first shown large, the rest as small thumbnails, and a <figcaption> as the group's caption. A card holds as many pictures and groups as the answer needs, up to 64 MB in all; never encode a picture into the body yourself or name one by URL.",
   ),
@@ -99,9 +99,6 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "A sentence of card copy holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. It says the thing literally, with no figure of speech. Three or more actions in a row are a numbered list.",
   "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project, and repository only when the sentence points at GitHub; a pull request, or PR #N in mono, and on a plain host the pushed branch; the checks passed or failed, and CI, green or red may sit beside the checks; a branch for a git branch, a working copy for a worktree; merge, never land or put it in; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in, and OAuth app or token only one click deeper; where the project lives, name the host when known, and remote or origin only one click deeper; the version, never a SHA or head in the sentence; clone for cloning a project, never copy; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), where it is the thing itself in mono (a PR number, a key, a file path), or inside <details> for a reader who digs; the sentence around it never needs it to be understood.",
   'A pull request a body names by its number is a link to its page: <a class="inf-mono" href="its page">PR #N</a>. A task\'s pull request page is the change on its tasks row; a number whose page no tool answer gave you stays plain mono, never a guessed address.',
-  crewOnly(
-    "Your own pull request's page is also in the open_change and check_change answers, and any other's in a github_read answer.",
-  ),
   "Every time of day you write for the captain - on a card, in a reply, in a report - is in his local time zone, which your context names, such as 9:05 AM, unless he asks for another: convert a time a source gives in UTC, and never write UTC alone.",
   "On a card carrying a settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
 ];
@@ -250,28 +247,28 @@ export const CREWMATE_CARD_ADDENDUM = [
 ].join(" ");
 
 /**
- * What the Firstmate's descriptor adds (task-system P1, attach first; WI-12,
- * steer not answer): a card about existing work names its task, the two
- * refusals a carded task earns, and what reaches the Firstmate from a
- * settle effect or a dismissal. At v3.6 the never-author-a-merge-card rule is
- * the HOST's refusal rather than prose alone (captain lock 3, audit 4.4b row
- * 9: on 2026-09-19 the Firstmate steered four crewmates to emit their
- * completion cards and emitted its own merge card beside each of them). Since
- * v4.59 it repeats neither the persona (where the task id comes from, steer
- * the crewmate to revise its card) nor `CARD_MECHANICS` (what an effect-free
- * click does), and a note about no existing work is told to assert
- * standalone by the `standalone` parameter and the persona, not here.
+ * What the Firstmate's descriptor adds (task-system P1, attach first): a
+ * card about existing work names its task, and what reaches the Firstmate
+ * from a settle effect or a dismissal. At v3.6 the never-author-a-merge-card
+ * rule is the HOST's refusal rather than prose alone (captain lock 3, audit
+ * 4.4b row 9: on 2026-09-19 the Firstmate steered four crewmates to emit
+ * their completion cards and emitted its own merge card beside each of
+ * them). Since v4.59 it repeats neither the persona (where the task id comes
+ * from) nor `CARD_MECHANICS` (what an effect-free click does). Since INF-490
+ * the two refusals a carded task earns (`steerNotAnswerRefusal`,
+ * `crewmateOwesCompletionRefusal`) and the note that names no task
+ * (`NOTE_NEEDS_TASK_REFUSAL`, beside the `standalone` parameter) are said by
+ * the refusals alone.
  */
 export const FIRSTMATE_CARD_ADDENDUM = [
   "Pass task_id when the card concerns existing work; a settle effect needs it, and a decision without it becomes its own decision task waiting on the captain.",
-  "This tool refuses a second answer beside a crewmate's open card on its task, and refuses a settle merge effect on any task whose crewmate has yet to emit its completion card.",
   "A settle effect is run by the host, which reports the outcome; a dismissed card is not a choice and does not wake you - your next context block lists it.",
 ].join(" ");
 
 /** The crewmate's emit_card description: the mechanics plus the outcome-card rule. */
 export const CREWMATE_EMIT_CARD_DESCRIPTION = `${CARD_MECHANICS} ${CREWMATE_CARD_ADDENDUM}`;
 
-/** The Firstmate's emit_card description: the mechanics plus attach-first and steer-not-answer. */
+/** The Firstmate's emit_card description: the mechanics plus attach-first. */
 export const FIRSTMATE_EMIT_CARD_DESCRIPTION = `${CARD_MECHANICS} ${FIRSTMATE_CARD_ADDENDUM}`;
 
 /**

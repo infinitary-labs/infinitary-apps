@@ -546,19 +546,13 @@ export function createCrewTools(delegate: CrewDelegate) {
       "on a plain Git host), then closes the task and removes its worktree. land merges the " +
       "local branch into the local checkout, then closes the task and removes its worktree; " +
       "never use land for direct-PR delivery. discard removes the worktree without merging and " +
-      "closes the task as discarded; unmerged or uncommitted work refuses until you pass " +
-      "confirm true after the captain chooses. answered closes an idle answer task you opened " +
+      "closes the task as discarded. answered closes an idle answer task you opened " +
       "as an internal_step once a planned or started task names it as its basis or waits on it " +
       "through a blocks link (the close clears that wait), or an answer task whose crewmate " +
-      "reported it finished; it is refused on anything else, while the crewmate works, while " +
-      "its answer card waits on the captain, and when nothing builds on or waits on a step. " +
-      "released closes a reported, idle work task only after you independently verify its " +
+      "reported it finished. released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process; pass release_evidence naming the " +
-      "release and what proves delivery. It refuses a task-owned pull request and any unmerged " +
-      "commits or edits; a missing change or dismissed note alone is never proof. Closing the " +
-      "captain's settle card keeps an idle task resumable. A close refused for open children " +
-      "returns its ways out in the tool result; pass proceed_with_open true to settle and keep " +
-      "them planned. The task record and its session stay on file in every case. Use " +
+      "release and what proves delivery; a missing change or dismissed note alone is never proof. Closing the " +
+      "captain's settle card keeps an idle task resumable. The task record and its session stay on file in every case. Use " +
       "crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),

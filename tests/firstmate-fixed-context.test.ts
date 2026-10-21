@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { renderRigorSection } from "../src/core/orchestrator/intentBrief";
 import { REVIEW_NEW_HEAD_NEXT, renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../src/core/personal/sequencesSkill";
+import {
+  crewmateOwesCompletionRefusal,
+  NOTE_NEEDS_TASK_REFUSAL,
+  steerNotAnswerRefusal,
+} from "../src/core/pi/cardLint";
 import { OLLAMA_MIN_CONTEXT } from "../src/core/pi/ollamaProfile";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "../src/core/pi/ollamaStream";
 import { buildFirstmateSystemPrompt, FIRSTMATE_PROMPT_CORE } from "../src/core/pi/piResources";
@@ -99,8 +104,9 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
 /**
  * Where a rule the trim removed from one text is still said. `rule` names
  * what the removed sentence governed; `home` is the text it is still served
- * in - the Firstmate's fixed context, the wake it arises on, or the
- * builder's reviewed brief - and `says` the words that carry it there.
+ * in - the Firstmate's fixed context, the wake it arises on, the refusal
+ * that answers the call breaking it, or the builder's reviewed brief - and
+ * `says` the words that carry it there.
  */
 type Home =
   | "core"
@@ -108,7 +114,8 @@ type Home =
   | "handoff"
   | "sequences"
   | "reviewed brief"
-  | { wake: keyof typeof REVIEW_WAKES }
+  | { wake: keyof typeof WAKES }
+  | { refusal: keyof typeof REFUSALS }
   | { tool: string; parameter?: string };
 
 const BUILDER = { id: "t1", title: "Fix the pin" };
@@ -124,8 +131,8 @@ const verdictFacts = (briefed: boolean): WakeFacts => ({
   briefed,
 });
 
-/** The review wakes, as the host serves them (FI3-566 cut C). */
-const REVIEW_WAKES = {
+/** The wakes a ledger rule lives on, as the host serves them (FI3-566 cut C, INF-490). */
+const WAKES = {
   findings: verdictFacts(true),
   "findings, brief predates the care": verdictFacts(false),
   "builder report": {
@@ -152,7 +159,34 @@ const REVIEW_WAKES = {
     derived: false,
     excerpt: "verdict: pass",
   },
+  // INF-490: the wakes that carry what the core no longer repeats.
+  "captain start": {
+    kind: "captain-start",
+    task: { ...BUILDER, key: "FI3-8" },
+    move: "start",
+    at: 0,
+  },
+  "captain queue": {
+    kind: "captain-start",
+    task: { ...BUILDER, key: "FI3-8" },
+    move: "queue",
+    at: 0,
+  },
+  "ci cap": { kind: "ci-cap", task: BUILDER, rounds: 3, cap: 3, head: "0123456789ab" },
 } satisfies Record<string, WakeFacts>;
+
+/**
+ * The refusals that hold an enforced rule, served when a call breaks it
+ * (INF-490: a rule the host enforces is said once, as its refusal's text).
+ */
+const REFUSALS = {
+  "a note with no task": NOTE_NEEDS_TASK_REFUSAL,
+  "a second card beside a crewmate's": steerNotAnswerRefusal(BUILDER.id, {
+    id: "card-t1",
+    title: "Fixed the pin",
+  }),
+  "a merge card its crewmate owes": crewmateOwesCompletionRefusal(BUILDER.id),
+};
 
 const LEDGER: { rule: string; home: Home; says: string }[] = [
   // FI3-566 cut C moves the reviewed-work steps out of the core.
@@ -302,8 +336,8 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   {
     rule: "a one-off note asserts standalone",
-    home: "core",
-    says: "a note with neither task_id nor standalone is refused",
+    home: { refusal: "a note with no task" },
+    says: "or standalone true only when the ask is a one-off with no connection or consequence to any work",
   },
   {
     rule: "an overlapping card is revised in place, a distinct finding is a new card",
@@ -463,8 +497,8 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   {
     rule: "a carded task is revised through its crewmate",
-    home: "core",
-    says: "steer the crewmate to revise its card (same id) with what you would add, never a second card beside it",
+    home: { refusal: "a second card beside a crewmate's" },
+    says: "steer the crewmate with steer_crewmate to revise card card-t1 (same id) with what you would add, instead of answering it in a new card",
   },
   {
     rule: "every action closes the card, and a revision is asked by reply",
@@ -538,6 +572,33 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: "handoff",
     says: "call update_task basis first, read success, then call update_task start_now separately",
   },
+  // INF-490: an enforced rule is said once, as its refusal; a rule a wake or
+  // a tool already says leaves the core.
+  {
+    rule: "a merge decision on a crewmate's task is its completion card",
+    home: { refusal: "a merge card its crewmate owes" },
+    says: "a crewmate's completion card is the one merge decision on its task",
+  },
+  {
+    rule: "released needs independently verified delivery",
+    home: { tool: "settle_task" },
+    says: "released closes a reported, idle work task only after you independently verify its delivery through an external release process",
+  },
+  {
+    rule: "the captain's Start applies his directions, then starts",
+    home: { wake: "captain start" },
+    says: "Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline his Start",
+  },
+  {
+    rule: "a task the captain queued gets its directions and no start",
+    home: { wake: "captain queue" },
+    says: "Do not start it: the host starts it when its wait ends.",
+  },
+  {
+    rule: "a capped task's card and re-reviews wait for the steer",
+    home: { wake: "ci cap" },
+    says: "Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {
@@ -551,7 +612,8 @@ describe("every rule the trim took out of one text is still served (contract v4.
       if (home === "handoff") return FIRSTMATE_HANDOFF;
       if (home === "sequences") return SEQUENCES_SEED;
       if (home === "reviewed brief") return renderRigorSection("reviewed");
-      if ("wake" in home) return renderWake({ facts: REVIEW_WAKES[home.wake] });
+      if ("wake" in home) return renderWake({ facts: WAKES[home.wake] });
+      if ("refusal" in home) return REFUSALS[home.refusal];
       const tool = served.find((candidate) => candidate.name === home.tool);
       if (!tool) throw new Error(`the Firstmate holds no ${home.tool}`);
       if (!home.parameter) return tool.description;

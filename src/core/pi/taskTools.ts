@@ -198,8 +198,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "delivery/autonomy/rigor: explicit captain requests only, already consent; never re-ask.",
       "project resets overrides; omission keeps them. Policy edits never start/restart work.",
       "Local Careful = Default; keep request.",
-      "No silent PR close or fallback without access. Policies refuse closed/answer/review/",
-      "personal-workspace tasks. Ask only unclear task/scope/consent; refusals name blockers.",
+      "No silent PR close or fallback without access.",
+      "Ask only unclear task/scope/consent; refusals name blockers.",
     ].join(" "),
     parameters: Type.Object({
       task: Type.String({ description: "The task id or key" }),

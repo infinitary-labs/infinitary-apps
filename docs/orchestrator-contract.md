@@ -137,6 +137,9 @@ A rule that the core, a tool description and a parameter each stated is said onc
   The core keeps which move and when.
   How a call works is the tool's own text: what a spawn's intent carries and what queues it, each `shape` fact's rule, the notes policy (`remember`), revise-in-place and what an effect is (`emit_card`).
   A tool's text drops what the core already says: who may close a card, that crew_status outranks memory, that a red check is diagnosed first, where theme and panel changes go.
+  A rule the host enforces is said once, as its refusal's text, and neither the core nor a tool's text repeats it: a note with no task, a second card beside a crewmate's, a merge card the crewmate owes, a merge with autonomy off.
+  A rule a wake carries leaves the core: what the captain's Start asks, and what a capped task holds until the steer.
+  A sentence kept to compensate for today's model stays and is marked as a ceiling in a comment beside it (`docs/principles.md`, "Build the agent's reach, never its verdicts").
 - **A fixed choice is one string with an enum** (`stringEnum`, `src/core/session/tools.ts`), not a union of literals.
   The values and the validation are the same on both runtimes; `claudeTaskTools.ts` reads the form.
 - **A shape a zod schema owns is one `zodParameter`** (`src/core/session/tools.ts`), never a spread of `z.toJSONSchema`.
@@ -149,7 +152,8 @@ A change that would cross it trims first.
 The boundary is not a second number a revision raises.
 `tests/crewmate-fixed-context.test.ts` holds a crewmate's fixed part, for each runtime and kind of work, to a boundary derived from the same floor and reserve: the conversation is promised at least as much room as the fixed part takes, so the boundary is half of what the floor leaves after the reserve.
 Each revision file says what its words cost, and names the one home of each rule it adds.
-The test's ledger names, for every rule taken out of one text, the text that still says it.
+The test's ledger names, for every rule taken out of one text, the text that still says it: the core, a tool, a wake, or the refusal that answers the call breaking it.
+The crewmate prompt follows the same homes: its tools say how `check_change`, `read_workflow`, `github_write` and `report` work, their refusals hold the repair, rerun and baseline limits, and the prompt keeps which move comes when.
 
 ## An answer's closing receipt
 

@@ -93,7 +93,7 @@ describe("crew summary facts", () => {
     expect(taskFactsOf(crew.task, crew.modelName)).toEqual({
       key: "DEMO-14",
       title: "Refactor the sign-in flow",
-      status: { mark: "working", word: "Working", reason: "Waiting for checks" },
+      status: { mark: "working", word: "Working", reason: "Waiting for checks", wait: "checks" },
       // The board paints at once; Now waits for the record's read.
       now: undefined,
       model: "Claude Opus Latest",

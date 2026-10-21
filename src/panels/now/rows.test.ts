@@ -208,6 +208,24 @@ describe("the Tasks panel's rows", () => {
     expect(wordOf(task({ ...open, flags: { ...task().flags, blocked: true } }))).toBe("blocked");
     expect(wordOf(task({ ...open, flags: { ...task().flags, held: true } }))).toBe("held");
     expect(wordOf(task({ flags: { ...task().flags, blocked: true } }))).toBe("");
+    // INF-676: the row shows no reason, so the checks watch carries its own word.
+    const active = { status: "active" as const, activity: "idle" as const };
+    expect(
+      wordOf(
+        task({
+          ...active,
+          workPosture: { state: "active", reason: "checks" },
+        } as Partial<PanelTaskRow>),
+      ),
+    ).toBe("checks");
+    expect(
+      wordOf(
+        task({
+          ...active,
+          workPosture: { state: "active", reason: "turn" },
+        } as Partial<PanelTaskRow>),
+      ),
+    ).toBe("");
     const filed = task({
       ...open,
       foundOn: "FI3-12",

@@ -23,6 +23,40 @@ describe("crewmateLight", () => {
   });
 });
 
+// INF-676, the captain's direction A: waiting on its checks keeps the ember,
+// banked to idle strength, inside a cyan ring.
+describe("a crewmate waiting on its checks", () => {
+  it("keeps the ember but at idle strength", () => {
+    const banked = crewmateLight(colors, 0, 1);
+    expect(banked.color).toEqual(colors.hot);
+    expect(banked.strength).toBeCloseTo(0.6, 5);
+    expect(banked.strength).toBeLessThan(crewmateLight(colors, 1).strength);
+  });
+
+  it("draws a cyan ring with a travelling arc round the solid, and no tick or halo", () => {
+    const rec = recordingContext();
+    drawCrewmate(rec.ctx, { ...settled, checks: 1, checksArc: 2 }, 0, 0, colors, 5_000);
+    const ring = rec.log.filter((line) => line.startsWith("A120,0,24"));
+    expect(ring).toHaveLength(2);
+    const [faint, arc] = rec.strokes;
+    expect(channels(faint?.style ?? "")).toEqual(colors.accent);
+    expect(channels(arc?.style ?? "")).not.toEqual(colors.accent);
+    // The solid itself is ember, with no white-hot filament tick.
+    const solid = rec.strokes.slice(2);
+    expect(solid.every((s) => channels(s.style).join() === colors.hot.join())).toBe(true);
+    expect(rec.strokes.some((s) => whiteHot(s.style))).toBe(false);
+  });
+
+  it("holds the ring whole and still on a settled frame, and draws none when not waiting", () => {
+    const still = recordingContext();
+    drawCrewmate(still.ctx, { ...settled, checks: 1 }, 0, 0, colors, 5_000);
+    expect(still.log.filter((line) => line.startsWith("A120,0,24"))).toHaveLength(1);
+    const plain = recordingContext();
+    drawCrewmate(plain.ctx, settled, 0, 0, colors, 5_000);
+    expect(plain.log.filter((line) => line.startsWith("A120,0,24"))).toHaveLength(0);
+  });
+});
+
 /** A 2D context that records what each stroke and fill would paint, and nothing else. */
 function recordingContext() {
   const strokes: { style: string; alpha: number }[] = [];

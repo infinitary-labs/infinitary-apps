@@ -407,13 +407,20 @@ export class ComputerOrbits extends CrewOrbit {
     super.setDependencies(byComputer.get(HOME_COMPUTER) ?? []);
     for (const [id, local] of this.locals) local.model.setDependencies(byComputer.get(id) ?? []);
   }
-  override spawn(id: string, status: CrewStatus, now: number, settled = false, tier?: Slot): void {
+  override spawn(
+    id: string,
+    status: CrewStatus,
+    now: number,
+    settled = false,
+    tier?: Slot,
+    checks = false,
+  ): void {
     const existed = this.has(id);
     const computer = this.computerOf(id);
     this.owners.set(id, computer);
     this.tiers.set(id, tier);
     if (computer === HOME_COMPUTER) {
-      super.spawn(id, status, now, settled, tier);
+      super.spawn(id, status, now, settled, tier, checks);
       return;
     }
     const local = this.local(computer);
@@ -421,11 +428,15 @@ export class ComputerOrbits extends CrewOrbit {
       delete local.frozen;
       delete local.lastFrame;
     }
-    local.model.spawn(id, status, local.time, settled, tier);
+    local.model.spawn(id, status, local.time, settled, tier, checks);
   }
   override setStatus(id: string, status: CrewStatus): void {
     if (this.isHome(id)) super.setStatus(id, status);
     else this.local(this.computerOf(id)).model.setStatus(id, status);
+  }
+  override setChecks(id: string, checks: boolean): void {
+    if (this.isHome(id)) super.setChecks(id, checks);
+    else this.local(this.computerOf(id)).model.setChecks(id, checks);
   }
   override setTier(id: string, tier: Slot | undefined): void {
     this.tiers.set(id, tier);
@@ -548,6 +559,8 @@ export class ComputerOrbits extends CrewOrbit {
           ...(!computer.reachable
             ? {
                 work: 0,
+                checks: undefined,
+                checksArc: undefined,
                 activityUnknown: true,
                 status: "idle" as const,
                 alpha: c.alpha * 0.45,

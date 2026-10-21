@@ -67,7 +67,7 @@ describe("one task status", () => {
         captainWait: true,
         workPosture: { state: "active", reason: "checks" },
       }),
-    ).toEqual({ mark: "working", word: "Working", reason: "Waiting for checks" });
+    ).toEqual({ mark: "working", word: "Working", reason: "Waiting for checks", wait: "checks" });
     expect(
       read({
         status: "active",
@@ -76,6 +76,20 @@ describe("one task status", () => {
         workPosture: { state: "idle", reason: "captain" },
       }),
     ).toEqual({ mark: "idle", word: "Idle", reason: "Work is paused" });
+  });
+  // INF-676 (captain's direction A): the checks watch keeps Working and its
+  // reason, and only it carries the wait the shared mark draws.
+  it("marks only the checks watch as a wait inside Working", () => {
+    const checks = read({ status: "active", workPosture: { state: "active", reason: "checks" } });
+    expect(checks).toMatchObject({ mark: "working", word: "Working", wait: "checks" });
+    expect(taskStatusLabel(checks)).toBe("Working · Waiting for checks");
+    for (const reason of ["turn", "job", "guidance", "settlement", "timed-wait"] as const)
+      expect(
+        read({ status: "active", workPosture: { state: "active", reason } }),
+      ).not.toHaveProperty("wait");
+    expect(
+      read({ status: "active", workPosture: { state: "idle", reason: "checks" } }),
+    ).not.toHaveProperty("wait");
   });
   it("reads open work by its start policy, with a blocker or hold as the reason", () => {
     expect(

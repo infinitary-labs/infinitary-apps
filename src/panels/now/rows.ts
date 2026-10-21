@@ -6,6 +6,7 @@ import {
   type NowGroup,
   nowGroupOf,
   nowGroupsOf,
+  taskStatusOf,
 } from "@infinitary/ui";
 
 /**
@@ -53,7 +54,10 @@ function startMarks(task: PanelTaskRow): StartMarks {
   return task as PanelTaskRow & StartMarks;
 }
 
-/** The one dim word a row may carry. A crew filing reads "found on X". */
+/**
+ * The one dim word a row may carry. A crew filing reads "found on X"; work
+ * waiting on its checks reads "checks".
+ */
 export function wordOf(task: PanelTaskRow): string {
   const marks = startMarks(task);
   if (
@@ -64,6 +68,8 @@ export function wordOf(task: PanelTaskRow): string {
     return "starting";
   }
   if (marks.startNotice) return "could not start";
+  // The row shows no reason, so the checks watch says itself (INF-676).
+  if (task.status === "active" && taskStatusOf(task).wait === "checks") return "checks";
   if (task.status !== "open") return "";
   if (task.flags.blocked) return "blocked";
   if (task.flags.held) return "held";

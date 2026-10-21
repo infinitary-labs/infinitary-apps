@@ -33,6 +33,11 @@ export function crewStatusOf(activity: TaskView["activity"]): CrewStatus {
   return activity === "starting" || activity === "running" ? "working" : "idle";
 }
 
+/** Its working is the host's checks watch: the banked look with the checks ring (INF-676). */
+export function crewWaitsOnChecks(posture: TaskView["workPosture"]): boolean {
+  return posture?.state === "active" && posture.reason === "checks";
+}
+
 function centerNode(task: TaskView): CenterNode {
   return {
     id: task.id,
@@ -77,10 +82,12 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
         // The served slot rides the change (absent says nothing new, null
         // says it never routed): the crewmate's solid follows it.
         const tier = event.tier ?? undefined;
+        const checks = crewWaitsOnChecks(event.workPosture);
         if (model.has(event.taskId)) {
           model.setStatus(event.taskId, status);
+          model.setChecks(event.taskId, checks);
           if (event.tier !== undefined) model.setTier(event.taskId, tier);
-        } else model.spawn(event.taskId, status, now, false, tier);
+        } else model.spawn(event.taskId, status, now, false, tier, checks);
       } else {
         model.leave(event.taskId, leaveModeOf(event.status), now);
       }
@@ -134,6 +141,7 @@ export function seedCrew(model: CrewOrbit, tasks: readonly TaskView[], now: numb
       now,
       true,
       task.tier ?? undefined,
+      crewWaitsOnChecks(task.workPosture),
     );
   }
   for (const task of tasks) {

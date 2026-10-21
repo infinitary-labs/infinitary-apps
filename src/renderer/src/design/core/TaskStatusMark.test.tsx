@@ -31,6 +31,7 @@ const examples: Partial<TaskStatusInput>[] = [
   { startPolicy: "when-ready", flags: { ...base.flags, held: true } },
   { children: { total: 2, closed: 0 } },
   { status: "active", activity: "running" },
+  { status: "active", activity: "idle", workPosture: { state: "active", reason: "checks" } },
   { status: "active", activity: "idle" },
   { status: "active", activity: "interrupted" },
   { captainWait: true },
@@ -72,6 +73,37 @@ describe("the shared task mark", () => {
       }
     },
   );
+  // INF-676, the captain's direction A: the checks watch is Working drawn as
+  // an ember dot inside the accent ring, the fact strip's running-checks mark.
+  it("draws the checks watch as an ember dot in the accent ring, and a turn as the filled dot", () => {
+    const checks = renderToStaticMarkup(
+      <TaskStatusMark
+        reading={taskStatusOf({
+          ...base,
+          status: "active",
+          activity: "idle",
+          workPosture: { state: "active", reason: "checks" },
+        })}
+      />,
+    );
+    const turn = renderToStaticMarkup(
+      <TaskStatusMark
+        reading={taskStatusOf({
+          ...base,
+          status: "active",
+          activity: "running",
+          workPosture: { state: "active", reason: "turn" },
+        })}
+      />,
+    );
+    expect(checks).toContain('data-task-mark="working"');
+    expect(checks).toContain('data-task-wait="checks"');
+    expect(checks).toContain('aria-label="Working · Waiting for checks"');
+    expect(checks).toContain('r="6" fill="none" stroke="var(--accent)"');
+    expect(checks).toContain('r="3" fill="currentColor"');
+    expect(turn).not.toContain("data-task-wait");
+    expect(turn).toContain('r="6" fill="currentColor"');
+  });
   it("makes closed lifecycle visibly different from the backlog, even without color", () => {
     const backlog = renderToStaticMarkup(<TaskStatusMark reading={taskStatusOf(base)} />);
     const done = renderToStaticMarkup(

@@ -209,6 +209,12 @@ Host jobs remain active past their two-hour inspection bound; that bound remains
 An account cut-off or quota gate pauses queued delivery.
 A question with no continuing work and a dependency with no continuation are idle.
 Paused/unknown postures stay cool; the Tasks dot's tooltip carries the reason.
+
+Waiting on its checks (posture active, reason `checks`: a watched pull request's checks or a hand-started run) is working with a look of its own (captain's INF-676 direction A).
+On the stage the crewmate stays counted among the working but banks: its ember at idle strength (0.6) and idle pace, no filament tick, no halo, sitting at the idle radius, inside a thin cyan ring at 0.8 of the glyph whose brighter arc travels round at 1.6 radians a second, the fact strip's running-checks mark carried onto the stage.
+It eases in and out on the working blend's own ease and heats back to full ember the moment a turn runs; reduced motion draws the ring whole and still.
+The shared mark draws it as an ember dot inside an accent ring, still reading `Working · Waiting for checks`, and the Tasks row adds the dim word `checks`.
+`crewSignal.test.ts` and `crewmate.test.ts` check the stage look, and `tests/e2e/task-wait-reason.spec.ts` reads the ring off the painted stage and the mark off the row and the record.
 Interrupted turns retain the danger dot unless continuing work is known.
 
 The host refreshes sequenced presentation changes after job membership, inbox, card/thread, account cut-off and task events, with reconciliation on the existing ticker.

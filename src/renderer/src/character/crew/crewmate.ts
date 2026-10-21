@@ -10,7 +10,11 @@
 // slow tumble, a slow bob, sitting a touch farther out. Color says the same
 // thing, the Firstmate's own way (captain's board call): a working crewmate
 // heats from ice cyan to ember (`--wire-hot`) as the rig does on its turn,
-// an idle one stays a dim ice cyan.
+// an idle one stays a dim ice cyan. A crewmate waiting on its checks is
+// still working, banked (INF-676, the captain's direction A): its ember at
+// idle strength and pace, no tick and no halo, inside a thin cyan ring whose
+// arc travels as the fact strip's running checks do; reduced motion holds
+// the ring whole and still.
 //
 // The solid says how strong a model the crewmate runs on (captain's board
 // verdict, 2026-09-23): a richer 3D solid for a stronger slot, every one
@@ -177,9 +181,60 @@ function rgba(c: Rgb, alpha: number): string {
  * working): the rig's heat ramp, ice cyan to ember, and an idle crewmate
  * receding by strength, never by a second hue (components/mate/Crewmate).
  */
-export function crewmateLight(colors: CrewColors, work: number): { color: Rgb; strength: number } {
+export function crewmateLight(
+  colors: CrewColors,
+  work: number,
+  checks = 0,
+): { color: Rgb; strength: number } {
   const w = Math.max(0, Math.min(1, work));
-  return { color: mix(colors.accent, colors.hot, w), strength: 0.55 + 0.45 * w };
+  const c = Math.max(0, Math.min(1, checks));
+  // Waiting on its checks keeps the ember but banks it to idle strength.
+  const strength = 0.55 + 0.45 * w;
+  return {
+    color: mix(colors.accent, colors.hot, Math.max(w, c)),
+    strength: strength + (CHECKS_LIGHT.strength - strength) * c,
+  };
+}
+
+/** The banked wire strength, and the checks ring around the solid as a share of the glyph. */
+const CHECKS_LIGHT = { strength: 0.6, ring: 0.8, arc: 1.1 } as const;
+
+/**
+ * The checks ring (INF-676): the fact strip's running-checks mark carried onto
+ * the stage, a faint accent circle with a brighter arc travelling round it,
+ * or the whole circle still on a settled frame.
+ */
+function drawChecksRing(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const k = (f.checks ?? 0) * f.alpha * f.unfold;
+  if (k <= 0.01) return;
+  const r = f.size * CHECKS_LIGHT.ring;
+  ctx.lineCap = "round";
+  if (f.checksArc === undefined) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = rgba(colors.accent, 0.6 * k * colors.boost);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, TAU);
+    ctx.stroke();
+    return;
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = rgba(colors.accent, 0.22 * k * colors.boost);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, TAU);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(mix(colors.accent, WHITE_HOT, 0.2), 0.9 * k);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(px, py, r, f.checksArc, f.checksArc + CHECKS_LIGHT.arc);
+  ctx.stroke();
 }
 
 /** The light a spark or a packet carries: the Firstmate's accent lifted toward white. */
@@ -199,7 +254,7 @@ function drawStreak(
   cy: number,
   colors: CrewColors,
 ): void {
-  const color = mix(crewmateLight(colors, f.work).color, WHITE_HOT, 0.25);
+  const color = mix(crewmateLight(colors, f.work, f.checks).color, WHITE_HOT, 0.25);
   const segments = streak.length - 1;
   ctx.lineCap = "round";
   for (let i = 0; i < segments; i++) {
@@ -262,9 +317,10 @@ export function drawCrewmate(
   }
   if (f.unfold <= 0.01) return;
 
+  drawChecksRing(ctx, f, px, py, colors);
   const work = f.work;
   const flick = f.flicker;
-  const light = crewmateLight(colors, work);
+  const light = crewmateLight(colors, work, f.checks);
   // A working crewmate carries a little light of its own, in its own heat;
   // a completed request's flicker is a filament on the wires, so only a
   // whisper of it spills here (../flicker `glowSpill`).

@@ -23,7 +23,7 @@ A task another computer runs adds where after the project name, `website · on M
 A part that does not fit leaves whole, the project name first and then the place; `out of reach` always stays, so the narrow panel keeps the track for those words alone.
 Count from the full board, not the visible-task filter.
 The row keeps the full project name in its accessible label; the preview shows it, and the row has no hover title.
-A blocked or held row carries exactly one dim word after the title; a child row indents under its parent when both belong to the same group.
+A blocked or held row, or working one waiting on its checks, carries exactly one dim word after the title; a child row indents under its parent when both belong to the same group.
 The task key also stays on hover, search, and the row locator.
 The shared mark, word and reason follow the Shared task status rule below; group membership is not a status.
 Nothing else in the rail: no chips, meters, models, or ages - everything richer hides behind a rest (the crew summary, Row hover below) or a click (the record).
@@ -79,6 +79,7 @@ Open, working or idle work whose computer is out of reach keeps its mark's shape
 Keep rows otherwise minimal.
 
 Marks occupy a fixed 12px square, using a 16-unit viewBox: Backlog is a hollow circle, Queued adds a central dot, Working/Idle/Interrupted are filled circles in ember/cyan/lava, Waiting on you is an accent dot inside an accent ring, Done is a neutral check, Dropped is a tertiary cross.
+Working while waiting on its checks (`Working · Waiting for checks`) is an ember dot inside an accent ring, the fact strip's running-checks ring around the working ember (captain's INF-676 direction A); it stays Working in the Working group, and the Tasks row, which shows no reason, adds the dim word `checks`.
 Starting is a still open ring, cyan on the arc and neutral on the rest, with no spin.
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.

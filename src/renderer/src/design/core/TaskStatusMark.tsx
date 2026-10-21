@@ -13,6 +13,9 @@ export function TaskStatusMark({
   nativeTitle?: boolean;
 }) {
   const { mark } = reading;
+  // Working on the checks watch: an ember dot in the accent ring the fact
+  // strip's running checks draw (INF-676). Out of reach keeps the warn shape.
+  const checks = reading.wait === "checks" && !reading.outOfReach;
   // Its computer is out of reach: the same shape, in warn (docs/helper.md).
   const color = reading.outOfReach
     ? "var(--warn)"
@@ -33,6 +36,7 @@ export function TaskStatusMark({
     <svg
       data-task-mark={mark}
       data-task-out-of-reach={reading.outOfReach ? "" : undefined}
+      data-task-wait={checks ? "checks" : undefined}
       width="12"
       height="12"
       viewBox="0 0 16 16"
@@ -64,6 +68,11 @@ export function TaskStatusMark({
             <>
               <circle cx="8" cy="8" r="5" fill="none" stroke="var(--line-2)" strokeWidth="1.5" />
               <path d="M8 3a5 5 0 1 1-5 5" fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+            </>
+          ) : checks ? (
+            <>
+              <circle cx="8" cy="8" r="6" fill="none" stroke="var(--accent)" strokeWidth="1.2" />
+              <circle cx="8" cy="8" r="3" fill="currentColor" />
             </>
           ) : (
             <circle

@@ -20,6 +20,12 @@ export type TaskStatusReading = {
    * keeps its shape in `--warn` (docs/helper.md, "Runs on").
    */
   outOfReach?: true;
+  /**
+   * Working that is the host's checks watch (posture active, reason checks):
+   * the same word and reason, drawn as an ember dot in the accent ring the
+   * fact strip's running checks use (INF-676, direction A).
+   */
+  wait?: "checks";
 };
 /**
  * What a task's reading needs: a board row of the app's own, or the one a
@@ -144,7 +150,10 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
     task.workPosture?.state === "active" ||
     (!task.workPosture && (task.activity === "running" || task.activity === "starting"))
   ) {
-    return away ? awayReading("working", null) : reading("working", reason);
+    if (away) return awayReading("working", null);
+    return task.workPosture?.state === "active" && task.workPosture.reason === "checks"
+      ? { ...reading("working", reason), wait: "checks" }
+      : reading("working", reason);
   }
   if (task.activity === "interrupted") return reading("interrupted", reason);
   return away ? awayReading("idle", null) : reading("idle", reason);

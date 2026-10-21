@@ -12,6 +12,7 @@ In the home view and Tasks panel, status means host-evidenced continuing work (`
 Paused or unobserved work stays cool with an honest reason on the Tasks dot; the card-thread Working badge remains turn-only.
 Status is color: `working` heats the wires to ember (`--wire-hot`) and spins faster; `idle` is ice cyan (`--wire-accent`), recessive by alpha and a slow drift, never a second hue.
 Never paint an idle crewmate grey or `--wire-dim` — that reads as dormant, and it contradicts the row it sits beside.
+Waiting on its checks is still `working`, banked (captain's INF-676 direction A): ember at idle strength and pace with no tick or halo, inside a thin `--wire-accent` ring whose arc travels round like the fact strip's running checks, still under reduced motion; no new hue (`docs/crew-orbits.md`, "Continuing-work posture").
 
 In orbit (home view, captain-approved 2026-09-14; the app's `src/renderer/src/character/crew/` is the reference): each live crewmate is one solid on an inclined ring around the first mate (radius 190px, tilt 0.58, glyph 30px, one revolution per 64s), sent out as a spark that swirls 1.1rad out of the inner cell and unfolds on its slot over 720ms.
 Color follows the first mate's own heat ramp: a working crewmate blends ice cyan to ember (`--wire-hot`) with a white-hot filament and a halo in its own heat; an idle one stays a dim ice cyan.

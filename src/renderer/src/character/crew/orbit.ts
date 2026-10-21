@@ -230,6 +230,17 @@ export type CrewmateFrame = {
   streak?: Array<{ x: number; y: number }>;
   /** 0..1 eased working blend. */
   work: number;
+  /**
+   * 0..1 eased blend of waiting on its checks (INF-676): working that rests
+   * banked - ember at idle strength and pace - inside a cyan checks ring.
+   * Absent when it is not waiting.
+   */
+  checks?: number;
+  /**
+   * Where the checks ring's travelling arc starts, radians; absent on a
+   * settled (reduced-motion) frame, which draws the ring whole and still.
+   */
+  checksArc?: number;
   /** Own rotation, radians. */
   spin: number;
   /** 0..1 jitter strength of a nudge. */
@@ -310,6 +321,9 @@ type Crewmate = {
   angle: Spring;
   radius: Spring;
   work: number;
+  /** Its working is the host's checks watch (posture active, reason checks). */
+  checks: boolean;
+  checksBlend: number;
   seed: number;
   spin: number;
   spinVel: number;
@@ -335,6 +349,9 @@ type Crewmate = {
   /** Where it was last drawn, companion offset included; a send-off aims here. */
   drawn?: Point;
 };
+
+/** The checks ring's travelling arc, radians a second: the fact strip's running mark, carried round. */
+const CHECKS_ARC_RATE = 1.6;
 
 const easeIn = (t: number): number => t * t;
 const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
@@ -468,8 +485,16 @@ export class CrewOrbit {
    * the ring opens every new slot immediately, so the others re-space once.
    * `settled` places a crewmate that was already out (the roster at boot):
    * restart is not a spawn, so no spark, no stagger, no send-off.
+   * `checks` says its working is the wait on its checks, so it starts banked.
    */
-  spawn(id: string, status: CrewStatus, now: number, settled = false, tier?: Slot): void {
+  spawn(
+    id: string,
+    status: CrewStatus,
+    now: number,
+    settled = false,
+    tier?: Slot,
+    checks = false,
+  ): void {
     if (this.crew.has(id)) return;
     const spawnAt = settled ? now : Math.max(now, this.lastSpawnAt + this.tuning.staggerMs);
     if (!settled) this.lastSpawnAt = spawnAt;
@@ -480,6 +505,8 @@ export class CrewOrbit {
     // Beyond all three capacities, keep the old least-populated overflow rule.
     const plane = counts.findIndex((n, i) => n < (CROWDED_PLANES[i]?.capacity ?? 0));
     const chosenPlane = plane < 0 ? counts.indexOf(Math.min(...counts)) : plane;
+    const waits = status === "working" && checks;
+    const hot = status === "working" && !waits;
     const c: Crewmate = {
       id,
       status,
@@ -491,11 +518,13 @@ export class CrewOrbit {
       leaveFromR: ringR,
       angle: new Spring(0, 0.7, 1),
       // An idle crewmate's posture sits farther out from the first frame.
-      radius: new Spring(ringR * (status === "working" ? 1 : 1 + this.tuning.idleOffset), 0.8, 1),
-      work: status === "working" ? 1 : 0,
+      radius: new Spring(ringR * (hot ? 1 : 1 + this.tuning.idleOffset), 0.8, 1),
+      work: hot ? 1 : 0,
+      checks: waits,
+      checksBlend: waits ? 1 : 0,
       seed: this.random() * 1000,
       spin: this.random() * TAU,
-      spinVel: status === "working" ? 1.5 : 0.35,
+      spinVel: hot ? 1.5 : 0.35,
       nudgeAt: Number.NEGATIVE_INFINITY,
       flashAt: Number.NEGATIVE_INFINITY,
       flickerAt: Number.NEGATIVE_INFINITY,
@@ -523,6 +552,18 @@ export class CrewOrbit {
     const c = this.crew.get(id);
     if (!c || c.status === status) return;
     c.status = status;
+    this.bump();
+  }
+
+  /**
+   * Its working is, or stops being, the wait on its checks (INF-676). It
+   * stays among the working; only its look banks, and it heats back to full
+   * ember the moment a turn runs again.
+   */
+  setChecks(id: string, checks: boolean): void {
+    const c = this.crew.get(id);
+    if (!c || c.checks === checks) return;
+    c.checks = checks;
     this.bump();
   }
 
@@ -856,9 +897,15 @@ export class CrewOrbit {
       }
       if (lead > 0) c.angle.x += this.slotRate(c) * lead;
       // Working blend and own spin: the rig's dt*4 ease, spin easing over ~0.3s.
-      // The rush lends the spin a share of its boost.
-      const workTarget = c.status === "working" ? 1 : 0;
-      c.work += (workTarget - c.work) * Math.min(dt * 4, 1);
+      // The rush lends the spin a share of its boost. Waiting on its checks
+      // keeps it working at an idle pace, banked, on the same ease; a
+      // settled frame shows both blends as they will be.
+      const waits = c.status === "working" && c.checks;
+      const workTarget = c.status === "working" && !waits ? 1 : 0;
+      const checksTarget = waits ? 1 : 0;
+      const ease = settled ? 1 : Math.min(dt * 4, 1);
+      c.work += (workTarget - c.work) * ease;
+      c.checksBlend += (checksTarget - c.checksBlend) * ease;
       const spinTarget = 0.35 + 1.15 * c.work;
       c.spinVel += (spinTarget - c.spinVel) * Math.min(dt * 3, 1);
       c.spin += c.spinVel * dt * (1 + (travel - 1) * CREW_RUSH.spinShare);
@@ -1029,6 +1076,12 @@ export class CrewOrbit {
         trail,
         ...(streak ? { streak } : {}),
         work: c.work,
+        ...(c.checksBlend > 0.001
+          ? {
+              checks: c.checksBlend,
+              ...(settled ? {} : { checksArc: (now / 1000) * CHECKS_ARC_RATE + c.seed }),
+            }
+          : {}),
         spin: c.spin,
         nudge: nudge * Math.sin(nudge * Math.PI),
         flash,

@@ -411,6 +411,7 @@ test("interrupted work reads in danger and offers Continue beside Drop task; Con
  * Opens a task's record with the panel API's Open record, as the task
  * board's menu does, from the Tasks panel's page while it holds the keys:
  * the record opens even while the task's decision card waits elsewhere.
+ * The panel must be in sight: folded rails hide it and take its keys away.
  */
 async function openRecordFromPanel(page: Page, taskId: string): Promise<void> {
   await expandDock(page, "now");
@@ -681,8 +682,11 @@ const readsWhole = (chip: Locator) =>
 
 test("at the narrowest window the model a task ran on reads whole, on its record and on its card", async () => {
   const { page, app } = launched;
-  const before = await resizeWindow(app, page, await minimumWindowSize(app));
+  // The record opens before the window narrows: at the narrowest window the
+  // rails fold and hide the Tasks panel, whose page then loses the keys
+  // Open record answers to (INF-647).
   await openRecordFromPanel(page, "rc-decision");
+  const before = await resizeWindow(app, page, await minimumWindowSize(app));
   await expect(pane(page)).toHaveAttribute("data-task-record", "rc-decision");
   const recordModel = taskFact(pane(page), "model");
   await expect(recordModel).toHaveText(LONG_MODEL);

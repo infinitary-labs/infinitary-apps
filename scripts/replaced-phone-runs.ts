@@ -6,8 +6,9 @@ import { fileURLToPath } from "node:url";
 // Cancel a replaced run only where no simulator can exist yet: before its native job
 // starts a device gate, or right before either gate. A started gate deletes its own simulator.
 
-// The native job and its simulator steps, as phone.yml names them. In a virtual Mac
-// both devices can run at once in one step (PHONE_VIRTUAL_MAC=together).
+// The native job and its simulator steps, as phone.yml names them. Since INF-662 one
+// step runs both devices at once; a pull request's older run may still show the two
+// per-device steps of an earlier version.
 export const NATIVE_JOB = "native-phone";
 export const DEVICE_GATES: readonly string[] = [
   "Read and recover on iPhone", "Read and recover on iPad", "Read and recover on iPhone and iPad at once",

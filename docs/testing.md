@@ -103,18 +103,19 @@ Unit tests are unchanged.
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py`, the replacement helper `scripts/replaced-phone-runs.ts`, the check runner `scripts/phone-checks.ts` and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py`, the replacement helper `scripts/replaced-phone-runs.ts`, the check runner `scripts/phone-checks.ts`, the test plan helper `scripts/phone-test-plan.ts` and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
-The `native-phone` job runs the same disposable `scripts/test-phone.ts` gate for both devices on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
+The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
 It keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
-A newer push cancels its pull request's older phone runs whose native job has not started a device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulator; a replaced version then stops before its next gate.
-A manual rerun of a replaced version stops before its first gate.
+A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
+That gate checks and builds once, then runs the iPhone and the iPad side by side, each on its own simulator and test home.
+Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
+A manual rerun of a replaced version stops before its gate.
 Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
 Desktop journey jobs from different pull requests remain parallel.
-The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; each native device gate takes an exclusive lease against the same runner-account cache file.
+The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; the native device gate takes an exclusive lease against the same runner-account cache file, once for both devices.
 A waiting phone holds the entry lock while active desktops finish, so new desktops cannot continually pass it; after admission, command exit or cancellation releases the kernel lease.
 The helper holds the lease itself, as the command's parent, and starts the command in a session of its own that never inherits it, so the lease ends when the command exits, even if the command leaves background processes running (INF-649).
 The helper passes interrupt, termination and hangup on to the command's process group and exits with the command's status.
@@ -127,24 +128,24 @@ It takes the lease back at once from a holder whose command has ended, and from 
 The waiting check prints why, and the overdue command's job prints why and fails with status 124.
 A holder that dies loses the lease to the kernel at once; the next check admitted stops any command it left running before its own starts, and clears its record.
 A holder with no record, such as one started by an earlier version of the helper, cannot be taken back, and a waiting check says so.
-Each limit is about twice the longest hold measured in real runs of that command: 75 minutes for journeys and 40 minutes for each device gate, local `pnpm test:phone` included.
+Each limit is about twice the longest hold measured in real runs of that command: 75 minutes for journeys and 40 minutes for the device gate, which runs both devices at once, local `pnpm test:phone` included.
 The release upload keeps the 60 minutes its job allows release work, because a release job is never rerun.
 A crewmate's local `pnpm test:phone` takes the same exclusive lease through its package script, so it waits behind pull-request journeys and CI phone gates; `scripts/test-phone.ts` never takes it itself.
 The runner slots must share one account; the helper uses stock Python and `fcntl`, never signing material.
-The native job's 165-minute limit allows 45 minutes for both device gates, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
+The native job's 165-minute limit allows 45 minutes for the device gate, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
 The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
-Desktop work may run between the two device gates.
+No desktop work runs between the iPhone and the iPad.
 Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
 `tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure, cancellation, the waiting lines, a leftover background process, a command that starts only once its lease is recorded, a killed holder, a holder that outlived its command and a lease held past its limit.
-With the repository variable `PHONE_VIRTUAL_MAC` set, both device gates run in a fresh virtual Mac on their own runner and take no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
+With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner and takes no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request
 
 `phone.yml` also runs on request (`workflow_dispatch`), such as the nightly check of `main`: `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A run on request skips the chooser and runs both device gates whatever changed; it starts no release, TestFlight or App Store step.
-It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gates.
-The iPad gate runs after a failed iPhone gate, and inside each gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
+A run on request skips the chooser and runs the device gate whatever changed; it starts no release, TestFlight or App Store step.
+It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
+Neither device stops the other, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 It takes the same `mac-mini-phone` queue and exclusive Mac check lease as a pull request's phone check.
 
 ## Journeys on the pull request

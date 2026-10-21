@@ -1,23 +1,30 @@
 /** INF-64 piece 2's native gate: disposable real home, a fresh simulator, no signing. */
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { runEveryCheck } from "./phone-checks.ts";
+import { testHomeKeys } from "./phone-test-plan.ts";
 
 const { values } = parseArgs({ options: {
   evidence: { type: "string" },
   ipad: { type: "boolean", default: false },
   demo: { type: "boolean", default: false },
+  // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
+  both: { type: "boolean", default: false },
+  // One device of a --both run: its test plan from that run's build.
+  xctestrun: { type: "string" },
 } });
 if (process.platform !== "darwin") throw new Error("The native gate needs Xcode on a Mac");
 if (!values.evidence) throw new Error("Pass --evidence with a folder outside the working copy");
 const evidence = resolve(values.evidence);
 if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
   throw new Error("Native evidence must stay outside the working copy");
+if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
 mkdirSync(evidence, { recursive: true });
 const root = scratchDir("infinitary-native-");
 const home = join(root, "home");
@@ -124,15 +131,42 @@ const recording = {
   },
 };
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
-try {
-  // A failed check here is reported, and the simulator tests still run (INF-663).
-  const failures = await runEveryCheck([
-    () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),
-    () => run("node", ["scripts/generate-phone-theme.ts", "--check"]),
-    () => run("node", ["scripts/generate-phone-cards.ts", "--check"]),
-    () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]),
-  ], () => interrupted);
-  for (const failure of failures) console.log(`::error::${failure}`);
+const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
+  "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
+// Builds once for any simulator, then runs each device as its own gate from that build, at once.
+const bothDevices = async () => {
+  await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator",
+    "-derivedDataPath", join(root, "DerivedData"), `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
+  const products = join(root, "DerivedData", "Build", "Products");
+  const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
+  const [plan] = plans;
+  if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
+  const gate = async (device: "iphone" | "ipad") => {
+    const child = spawn(process.execPath, ["scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
+      ...(values.demo ? ["--demo"] : []), "--evidence", join(evidence, device), "--xctestrun", join(products, plan)],
+    { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+    children.add(child);
+    for (const stream of [child.stdout, child.stderr])
+      createInterface({ input: stream }).on("line", (line) => console.log(`${device}: ${line}`));
+    const status = await new Promise<number | null>((resolveExit, reject) => {
+      child.once("error", reject); child.once("close", resolveExit);
+    }).finally(() => children.delete(child));
+    console.log(`${device}: ended with ${status}`);
+    return status === 0 ? [] : [device];
+  };
+  // Neither device stops the other; either failing fails the gate.
+  const failed = (await Promise.all([gate("iphone"), gate("ipad")])).flat();
+  if (failed.length) throw new Error(`The phone gate failed on ${failed.join(" and ")}; see its results in ${evidence}`);
+};
+// A test plan copy beside the built one, naming this device's own test home.
+const planFor = async (built: string, url: string) => {
+  const plan = join(dirname(built), `${values.ipad ? "ipad" : "iphone"}.xctestrun`);
+  copyFileSync(built, plan);
+  for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built]))))
+    await run("plutil", ["-replace", key, "-string", url, plan]);
+  return plan;
+};
+const oneDevice = async () => {
   // Do not borrow or erase a developer's simulator. Own exactly one, from create to delete.
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
@@ -149,17 +183,35 @@ try {
   if (values.demo) await run("ffmpeg", ["-version"]);
   fixture = await startPhoneHome(root, recording);
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
-  await run("xcodebuild", ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
-    "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig", "-parallel-testing-enabled", "NO",
-    "-destination", `platform=iOS Simulator,id=${simulator}`, "-derivedDataPath", join(root, "DerivedData"),
-    "-resultBundlePath", join(evidence, "phone.xcresult"), `PHONE_TEST_HOME=${fixture.url}`, "test"]);
+  const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${simulator}`,
+    "-resultBundlePath", join(evidence, "phone.xcresult")];
+  if (values.xctestrun)
+    await run("xcodebuild", ["-xctestrun", await planFor(values.xctestrun, fixture.url), ...destination, "test-without-building"]);
+  else await run("xcodebuild", [...project, ...destination, "-derivedDataPath", join(root, "DerivedData"),
+    `PHONE_TEST_HOME=${fixture.url}`, "test"]);
   if (values.demo) for (const { name, raw } of recordings) {
     const crop = name === "reconnect" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
     await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
     await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, `${name}.mp4`), "-frames:v", "1", join(evidence, `${name}-poster.png`)]);
   }
+};
+let failures: string[] = [];
+try {
+  // A device of a --both run skips these: that run checked them once for both.
+  if (!values.xctestrun) {
+    // A failed check here is reported, and the simulator tests still run (INF-663).
+    failures = await runEveryCheck([
+      () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),
+      () => run("node", ["scripts/generate-phone-theme.ts", "--check"]),
+      () => run("node", ["scripts/generate-phone-cards.ts", "--check"]),
+      () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]),
+    ], () => interrupted);
+    for (const failure of failures) console.log(`::error::${failure}`);
+  }
+  await (values.both ? bothDevices() : oneDevice());
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
-  console.log("The phone joined its disposable Mac, read its cards and Activity, reconnected, left and was removed.");
+  console.log(values.both ? "The iPhone and the iPad each joined their disposable Mac, read, reconnected, left and were removed."
+    : "The phone joined its disposable Mac, read its cards and Activity, reconnected, left and was removed.");
 } finally {
   cleaningUp = true;
   try {

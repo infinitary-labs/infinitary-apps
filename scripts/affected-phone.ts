@@ -11,6 +11,8 @@ const INPUTS = [
   ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts", "tests/helpers/phoneKeyboard.ts",
   "scripts/phone-test-home.ts", "scripts/affected-phone.ts", "scripts/with-mac-check.py",
   "scripts/replaced-phone-runs.ts", "scripts/phone-checks.ts",
+  // INF-662: each device's own test home in the one build's test plan.
+  "scripts/phone-test-plan.ts",
   // INF-524: the device gates' virtual Mac path, which PHONE_VIRTUAL_MAC switches on.
   "scripts/virtual-mac/phone.sh", "scripts/virtual-mac/phone-job.sh", "scripts/virtual-mac/vm.sh",
 ] as const;

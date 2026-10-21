@@ -13,8 +13,8 @@
 # start deletes a clone an earlier check left, clones IMAGE (default
 # infinitary-lane) as PHONE_VM (default <IMAGE>-phone), starts it with the
 # working copy's committed version and installs its packages. gate runs
-# scripts/test-phone.ts in the clone for each device it names, both at once
-# when it names two, and copies each device's results into
+# scripts/test-phone.ts in the clone for the device it names, or for both at
+# once from one build when it names two, and copies each device's results into
 # <results folder>/<device>, where the Mac mini's gates write them; it exits
 # with the gate's own exit code. delete stops and deletes the clone.
 set -euo pipefail

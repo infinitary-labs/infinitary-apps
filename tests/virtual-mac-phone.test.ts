@@ -62,24 +62,26 @@ esac
 `;
 
 // scripts/test-phone.ts inside the guest: records how it was run, writes a result where
-// --evidence points, fails when told to, and with a peer named waits for it to begin.
+// --evidence points, or with --both one per device beneath it as the real one does, marking
+// each device's lines itself, and fails when told to.
 const NODE = `#!/bin/bash
 state="$TART_STAND_IN"
-device=iphone
-[ "$2" = --ipad ] && device=ipad
 evidence="\${@: -1}"
 echo "$PWD $*" >> "$state/gates"
-mkdir -p "$evidence/bundle.xcresult"
-echo "$device result" > "$evidence/bundle.xcresult/summary"
-touch "$state/began-$device"
-if [ -e "$state/together" ]; then
-  peer=ipad; [ "$device" = ipad ] && peer=iphone
-  for _ in $(seq 1 200); do [ -e "$state/began-$peer" ] && break; sleep 0.02; done
-  [ -e "$state/began-$peer" ] || { echo "$peer never began"; exit 9; }
-fi
-echo "$device checked"
-[ -e "$state/fail-$device" ] && exit 3
-exit 0
+devices=iphone
+[ "$2" = --ipad ] && devices=ipad
+[ "$2" = --both ] && devices="iphone ipad"
+code=0
+for device in $devices; do
+  folder="$evidence"
+  prefix=""
+  if [ "$2" = --both ]; then folder="$evidence/$device"; prefix="$device: "; fi
+  mkdir -p "$folder/bundle.xcresult"
+  echo "$device result" > "$folder/bundle.xcresult/summary"
+  echo "$prefix$device checked"
+  [ -e "$state/fail-$device" ] && code=3
+done
+exit "$code"
 `;
 
 const PNPM = `#!/bin/bash
@@ -202,22 +204,31 @@ describe.skipIf(process.platform === "win32")("the phone check in a virtual Mac"
       f.close();
     }
   });
-  it("runs both devices at once in one clone and fails when either fails", async () => {
+  // INF-662 piece 1 (the captain's "Approve and build"): one gate builds once and runs both.
+  it("runs both devices as one gate from one build and fails when either fails", async () => {
     const f = fixture();
     try {
       await f.commit();
-      writeFileSync(join(f.state, "together"), "");
       expect((await f.phone("start", f.results)).code).toBe(0);
       const both = await f.phone("gate", "iphone", "ipad");
-      // Each device waited for the other to begin, so they ran at once.
       expect(both.code, both.stdout).toBe(0);
       expect(both.stdout).toContain("iphone: iphone checked");
       expect(both.stdout).toContain("ipad: ipad checked");
+      const guest = join(f.state, "vms", CLONE, "home", "job", "Application Support", "infinitary");
+      const home = join(f.state, "vms", CLONE, "home");
+      // One run of the gate for both devices, not one per device.
+      expect(f.read("gates")).toBe(
+        `${guest} scripts/test-phone.ts --both --evidence ${home}/phone-results/both\n`,
+      );
+      // Each device's results land where the Mac mini's gate writes them.
       for (const device of ["iphone", "ipad"])
-        expect(existsSync(join(f.results, device, "bundle.xcresult", "summary"))).toBe(true);
+        expect(readFileSync(join(f.results, device, "bundle.xcresult", "summary"), "utf8")).toBe(
+          `${device} result\n`,
+        );
       writeFileSync(join(f.state, "fail-iphone"), "");
-      for (const device of ["iphone", "ipad"]) rmSync(join(f.state, `began-${device}`));
-      expect((await f.phone("gate", "iphone", "ipad")).code).toBe(3);
+      const failed = await f.phone("gate", "iphone", "ipad");
+      expect(failed.code, failed.stdout).toBe(3);
+      expect(failed.stdout).toContain("ipad: ipad checked");
       expect(f.calls().filter((call) => call.startsWith("clone "))).toHaveLength(1);
       expect((await f.phone("delete")).code).toBe(0);
       expect(f.vms()).toEqual([IMAGE]);

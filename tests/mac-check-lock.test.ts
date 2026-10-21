@@ -88,7 +88,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
   const children: Work[] = [];
   function launch(
     name: string,
-    kind: "desktop" | "iphone" | "ipad" | "package" | "virtual-iphone" | "virtual-both",
+    kind: "desktop" | "phone" | "package" | "virtual-phone",
     {
       fail = false,
       args = "",
@@ -104,9 +104,8 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
     } = {},
   ): Work {
     // A virtual Mac gate is the same step with the repository switch set.
-    const virtual =
-      kind === "virtual-iphone" ? "in-turn" : kind === "virtual-both" ? "together" : "";
-    const step = virtual ? (kind === "virtual-both" ? "both" : "iphone") : kind;
+    const virtual = kind === "virtual-phone" ? "together" : "";
+    const step = kind === "desktop" ? "e2e" : "both";
     const written =
       kind === "package"
         ? `${JSON.parse(readFileSync("package.json", "utf8")).scripts["test:phone"]} ${args}`
@@ -120,7 +119,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
               ),
             )
             .jobs[kind === "desktop" ? "affected-journeys" : "native-phone"].steps.find(
-              (item: { id?: string }) => item.id === (kind === "desktop" ? "e2e" : step),
+              (item: { id?: string }) => item.id === step,
             ).run;
     // A short limit stands in for an hours-long one; the rest of the command is the real one.
     const command = limit ? written.replace(/--max-hold \S+/, `--max-hold ${limit}`) : written;
@@ -258,7 +257,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       expect(await f.probe("exclusive")).toBe("busy");
       const b = f.launch("desktop-b", "desktop");
       await b.wait("started:desktop-b");
-      const phone = f.launch("phone-a", "iphone");
+      const phone = f.launch("phone-a", "phone");
       await phone.wait(queued("exclusive"));
       expect(await f.probe("exclusive", true)).toBe("busy");
       a.release();
@@ -268,7 +267,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       expect(await b.result).toBe(0);
       await phone.wait("started:phone-a");
       expect(await f.probe("shared")).toBe("busy");
-      const next = f.launch("phone-b", "ipad");
+      const next = f.launch("phone-b", "phone");
       await next.wait(queued("exclusive"));
       phone.stop();
       await phone.result;
@@ -291,7 +290,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
     try {
       const a = f.launch("desktop-a", "desktop");
       await a.wait("started:desktop-a");
-      const phone = f.launch("waiting-phone", "iphone");
+      const phone = f.launch("waiting-phone", "phone");
       await phone.wait(queued("exclusive"));
       expect(await f.probe("exclusive", true)).toBe("busy");
       phone.stop();
@@ -309,7 +308,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
   it("preserves a command failure and leaves no lease behind", async () => {
     const f = fixture();
     try {
-      const phone = f.launch("failed-phone", "iphone", { fail: true });
+      const phone = f.launch("failed-phone", "phone", { fail: true });
       expect(await phone.result).toBe(7);
       const desktop = f.launch("after-failure", "desktop");
       await desktop.wait("started:after-failure");
@@ -326,7 +325,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
     try {
       const a = f.launch("desktop-a", "desktop");
       await a.wait("started:desktop-a");
-      const phone = f.launch("phone-a", "iphone");
+      const phone = f.launch("phone-a", "phone");
       await phone.wait(queued("exclusive"));
       const b = f.launch("desktop-b", "desktop");
       await b.wait(lined("shared"));
@@ -458,26 +457,23 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
   });
   // INF-517, the captain's answer on INF-79's rule: in a virtual Mac a phone check waits only
   // for other phone checks (the mac-mini-phone queue), never for running journeys.
-  it("starts a virtual Mac's device gates beside running journeys, taking no lease", async () => {
+  it("starts a virtual Mac's device gate beside running journeys, taking no lease", async () => {
     const f = fixture();
     try {
       const desktop = f.launch("desktop-a", "desktop");
       await desktop.wait("started:desktop-a");
-      const iphone = f.launch("virtual-iphone", "virtual-iphone");
-      await iphone.wait("started:virtual-iphone");
-      const both = f.launch("virtual-both", "virtual-both");
-      await both.wait("started:virtual-both");
+      const both = f.launch("virtual-phone", "virtual-phone");
+      await both.wait("started:virtual-phone");
       // Journeys still hold their shared lease, and no phone waits at the entry lock.
       expect(await f.probe("exclusive")).toBe("busy");
       expect(await f.probe("exclusive", true)).toBe("free");
       const next = f.launch("desktop-b", "desktop");
       await next.wait("started:desktop-b");
-      for (const work of [iphone, both, desktop, next]) work.release();
-      expect(await iphone.result).toBe(0);
+      for (const work of [both, desktop, next]) work.release();
       expect(await both.result).toBe(0);
       expect(await desktop.result).toBe(0);
       expect(await next.result).toBe(0);
-      const failed = f.launch("failed-virtual-phone", "virtual-iphone", { fail: true });
+      const failed = f.launch("failed-virtual-phone", "virtual-phone", { fail: true });
       expect(await failed.result).toBe(7);
     } finally {
       await f.close();

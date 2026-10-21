@@ -77,7 +77,7 @@ const [IPHONE, IPAD, BOTH] = DEVICE_GATES as [string, string, string];
 const OFF = "";
 const IN_TURN = "in-turn";
 const TOGETHER = "together";
-const VIRTUAL_MAC_STEPS = ["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"];
+const VIRTUAL_MAC_STEPS = ["Start a fresh virtual Mac", "Delete the virtual Mac"];
 type Step = { id?: string; name?: string; uses?: string; if?: string; run?: string };
 type Plain = { [key: string]: string | Plain };
 const STATUS = ["success", "always", "cancelled", "failure"];
@@ -159,6 +159,7 @@ describe("the native pull-request gate", () => {
     "scripts/replaced-phone-runs.ts",
     // INF-663: the gate's checks before its simulator tests.
     "scripts/phone-checks.ts",
+    "scripts/phone-test-plan.ts",
     // INF-524: the virtual Mac path the switch turns on.
     "scripts/virtual-mac/phone.sh",
     "scripts/virtual-mac/phone-job.sh",
@@ -245,35 +246,28 @@ describe("the native pull-request gate", () => {
     expect(cancel.if).toBeUndefined();
     expect(cancel.steps.at(-1).run).toBe("node scripts/replaced-phone-runs.ts cancel-older");
   });
-  it("names the native job and its simulator steps as the replacement script reads them", () => {
+  it("names the native job and its simulator step as the replacement script reads them", () => {
     const gates = workflow.jobs[NATIVE_JOB].steps
       .filter((step: { run?: string }) =>
         /scripts\/test-phone\.ts|scripts\/virtual-mac\/phone\.sh gate/.test(step.run ?? ""),
       )
       .map((step: { name: string }) => step.name);
-    expect(gates).toEqual(DEVICE_GATES);
+    // INF-662 piece 1: one gate for both devices. The replacement script still knows the
+    // per-device gates, which a pull request's older run of an earlier version shows.
+    expect(gates).toEqual([BOTH]);
+    expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH]);
   });
-  it("reads the pull request's latest version right before each device gate", () => {
+  it("reads the pull request's latest version right before the device gate", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps;
-    for (const gate of [IPHONE, IPAD]) {
-      const at = steps.findIndex((step: { name: string }) => step.name === gate);
-      expect(steps[at - 1].run).toBe("node scripts/replaced-phone-runs.ts stop-if-replaced");
-    }
+    const at = steps.findIndex((step: { name: string }) => step.name === BOTH);
+    expect(steps[at - 1].run).toBe("node scripts/replaced-phone-runs.ts stop-if-replaced");
   });
-  it("skips the iPhone gate when a newer push replaced this version, a manual rerun included", () => {
+  it("skips the device gate when a newer push replaced this version, a manual rerun included", () => {
     // INF-487: a rerun of a replaced version has no newer run to cancel it while it waits.
-    expect(gateStarts(IPHONE, "", "false")).toBe("true");
+    expect(gateStarts(BOTH, "", "false")).toBe("true");
     // The replacement check failed to read: the gate still runs.
-    expect(gateStarts(IPHONE, "", "")).toBe("true");
-    expect(gateStarts(IPHONE, "", "true")).toBe("false");
-  });
-  it("skips the iPad gate only when a newer push replaced this version", () => {
-    expect(gateStarts(IPAD, "success", "false")).toBe("true");
-    expect(gateStarts(IPAD, "failure", "false")).toBe("true");
-    // The replacement check failed to read: the gate still runs.
-    expect(gateStarts(IPAD, "success", "")).toBe("true");
-    expect(gateStarts(IPAD, "success", "true")).toBe("false");
-    expect(gateStarts(IPAD, "skipped", "")).toBe("false");
+    expect(gateStarts(BOTH, "", "")).toBe("true");
+    expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
   it("receives every pull request and selects the Mac mini without a paid fallback", () => {
     expect(workflow.on).toEqual({ pull_request: null, workflow_dispatch: null });
@@ -297,12 +291,19 @@ describe("the native pull-request gate", () => {
     expect(names(stepsThatRun(OFF))).toEqual(
       all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name)),
     );
-    for (const step of stepsThatRun(OFF).filter(isGate)) {
-      // The step's shell takes the Mac check lease unless the switch is set.
-      expect(step.run).toMatch(
-        /^if \[ -n "\$PHONE_VIRTUAL_MAC" \]; then exec .*; fi\npython3 scripts\/with-mac-check\.py --max-hold \d+[smh] exclusive /,
-      );
-    }
+    // INF-662 piece 1: one gate takes the Mac check lease once, then checks and builds once
+    // and runs both devices side by side; the switch, when set, sends it to the virtual Mac.
+    expect(
+      stepsThatRun(OFF)
+        .filter(isGate)
+        .map((step) => step.run),
+    ).toEqual([
+      [
+        'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
+        'python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"',
+        "",
+      ].join("\n"),
+    ]);
     // The gates' shell sees the switch as the repository sets it, empty when unset.
     const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
       /^\$\{\{\s*|\s*\}\}$/g,
@@ -325,6 +326,8 @@ describe("the native pull-request gate", () => {
       }
     const inTurn = names(stepsThatRun(IN_TURN));
     const together = names(stepsThatRun(TOGETHER));
+    // INF-662 piece 1: every value of the switch runs both devices at once from one build.
+    expect(inTurn).toEqual(together);
     // The packages install inside the clone, never on this Mac.
     for (const ran of [inTurn, together])
       expect(ran.filter((name) => name.startsWith("Install") || name.startsWith("pnpm/"))).toEqual(
@@ -336,11 +339,6 @@ describe("the native pull-request gate", () => {
         ran.indexOf("Delete the virtual Mac") + 1,
       );
     expect(
-      gatesIn(inTurn).filter(
-        (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
-      ),
-    ).toEqual(["Start a fresh virtual Mac", IPHONE, IPAD, "Delete the virtual Mac"]);
-    expect(
       gatesIn(together).filter(
         (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
       ),
@@ -348,18 +346,12 @@ describe("the native pull-request gate", () => {
     // In the virtual Mac no gate takes the Mac check lease: phone checks wait only for each
     // other through the mac-mini-phone queue (the captain's answer on INF-79's rule).
     expect(
-      stepsThatRun(IN_TURN)
+      stepsThatRun(TOGETHER)
         .filter(isGate)
         .map((step) => step.run?.split("\n")[0]),
     ).toEqual([
-      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone; fi',
-      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate ipad; fi',
+      'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
     ]);
-    expect(
-      stepsThatRun(TOGETHER)
-        .filter(isGate)
-        .map((step) => step.run),
-    ).toEqual(["scripts/virtual-mac/phone.sh gate iphone ipad"]);
   });
   it("deletes the virtual Mac however the job ends, and never starts one with the switch off", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
@@ -412,10 +404,10 @@ describe("the phone check on request", () => {
     expect(eligible("", ON_REQUEST)).toBe("true");
     expect(eligible(false, "pull_request")).toBe("false");
   });
-  it("starts both device gates and the iPad gate after a failed iPhone gate", () => {
+  it("starts the device gate for both devices", () => {
     // The replacement script answers replaced=false with no pull request (replaced-phone-runs.test.ts).
-    for (const virtualMac of [OFF, IN_TURN])
-      expect(names(stepsThatRun(virtualMac, "false").filter(isGate))).toEqual([IPHONE, IPAD]);
-    expect(gateStarts(IPAD, "failure", "false")).toBe("true");
+    // INF-662: one gate runs both devices, and neither stops the other (virtual-mac-phone.test.ts).
+    for (const virtualMac of [OFF, IN_TURN, TOGETHER])
+      expect(names(stepsThatRun(virtualMac, "false").filter(isGate))).toEqual([BOTH]);
   });
 });

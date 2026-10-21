@@ -14,8 +14,8 @@ permissions:
 # INF-487: no run-level group for the pull request. A run that counts as running
 # while its native job waits for the Mac mini would hold the newer version behind
 # it for hours. cancel-replaced cancels the older runs of this pull request whose
-# native job has not started a device gate, and a replaced version ends its own
-# run before each device gate, a manual rerun of an older version included.
+# native job has not started its device gate, and a replaced version ends its own
+# run before that gate, a manual rerun of an older version included.
 # A started gate is never cancelled: it deletes its own simulator.
 
 jobs:
@@ -83,7 +83,7 @@ jobs:
       group: mac-mini-phone
       queue: max
       cancel-in-progress: false
-    # Allow 45 minutes for both native gates, 105 across admission waits
+    # Allow 45 minutes for the native gate, 105 across admission waits
     # (60 behind active desktop journeys plus two local phone gates of about
     # 22 minutes each, ahead through the entry lock), and 15 for setup, cleanup
     # and upload. Test deadlines remain unchanged.
@@ -141,35 +141,19 @@ jobs:
         run: node scripts/replaced-phone-runs.ts stop-if-replaced
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # test-phone owns a fresh HOME, real fixture and simulator, and disables signing.
+      # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
       # It checks generated files, Swift trust, native recovery and the published client.
-      # In the virtual Mac it takes no lease: phone checks wait only for each other.
-      # PHONE_VIRTUAL_MAC=together runs both devices at once instead (INF-517's trial).
-      # 40m is twice the longest measured device gate, in the virtual Mac.
-      - id: iphone
-        name: Read and recover on iPhone
-        if: ${{ steps.start.outputs.replaced != 'true' && vars.PHONE_VIRTUAL_MAC != 'together' }}
-        run: |
-          if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone; fi
-          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
-      # No simulator exists between the gates. A failed reading runs the iPad gate.
-      - id: current
-        name: Stop before the iPad if a newer push replaced this version
-        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
-        continue-on-error: true
-        run: node scripts/replaced-phone-runs.ts stop-if-replaced
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - id: ipad
-        name: Read and recover on iPad
-        if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' && steps.current.outputs.replaced != 'true' }}
-        run: |
-          if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate ipad; fi
-          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
+      # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
+      # side, each on its own simulator and test home; either failing fails it. On the Mac
+      # mini it takes the Mac check lease once for both. In the virtual Mac it takes no
+      # lease: phone checks wait only for each other.
+      # 40m is over twice the longest measured gate for both devices, 15 minutes.
       - id: both
         name: Read and recover on iPhone and iPad at once
-        if: ${{ vars.PHONE_VIRTUAL_MAC == 'together' && steps.start.outputs.replaced != 'true' }}
-        run: scripts/virtual-mac/phone.sh gate iphone ipad
+        if: ${{ steps.start.outputs.replaced != 'true' }}
+        run: |
+          if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
+          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete

@@ -2,9 +2,10 @@
 # phone-job.sh - runs inside the phone check's virtual Mac from phone.sh.
 #   prepare <in folder>: unpack the committed version phone.sh shared there
 #     and install its packages.
-#   gate <out folder> <device>...: run scripts/test-phone.ts for each device,
-#     both at once when it names two, copy each one's results to
-#     <out folder>/<device>, and fail when any device failed.
+#   gate <out folder> <device>...: run scripts/test-phone.ts for the device,
+#     or with --both for one build run on both at once when it names two
+#     (INF-662), copy each one's results to <out folder>/<device>, and fail
+#     when any device failed.
 set -uo pipefail
 export PATH="$HOME/node/bin:/opt/homebrew/bin:/usr/local/bin:$PATH" CI=true
 WORKING_COPY="$HOME/job/Application Support/infinitary"
@@ -29,6 +30,19 @@ device() {
   return "$code"
 }
 
+# both <out folder>: one gate that builds once and runs the iPhone and the iPad
+# at once; it marks each device's lines itself and writes <device> folders.
+both() {
+  local out="$1" code
+  echo "== iphone and ipad began ($(stamp))"
+  node scripts/test-phone.ts --both --evidence "$RESULTS/both"
+  code="$?"
+  mkdir -p "$out"
+  cp -R "$RESULTS/both/." "$out/" 2> /dev/null || true
+  echo "== iphone and ipad ended: exit $code ($(stamp))"
+  return "$code"
+}
+
 case "${1:-}" in
   prepare)
     [ "$#" -eq 2 ] || exit 2
@@ -42,16 +56,11 @@ case "${1:-}" in
     out="$2"
     shift 2
     cd "$WORKING_COPY" || exit 1
-    pids=()
-    for name in "$@"; do
-      device "$out" "$name" &
-      pids+=("$!")
-    done
-    status=0
-    for pid in "${pids[@]}"; do
-      wait "$pid" || status="$?"
-    done
-    exit "$status"
+    case "$*" in
+      iphone | ipad) device "$out" "$1" ;;
+      "iphone ipad") both "$out" ;;
+      *) exit 2 ;;
+    esac
     ;;
   *)
     echo "usage: phone-job.sh prepare <in folder> | gate <out folder> <iphone|ipad>..." >&2

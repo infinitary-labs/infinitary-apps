@@ -1,4 +1,4 @@
-import type { CardWidth, PastCard } from "@shared/cards";
+import { anythingElseOf, type CardWidth, type PastCard } from "@shared/cards";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
 import { HIDE_RECORD_LABEL } from "@shared/recordDrop";
@@ -9,6 +9,7 @@ import { ResponseCard } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../design/cards/riskRadar";
 import { useCutWords } from "../design/core/overflowTitle";
+import { AnythingElseBox } from "./AnythingElseBox";
 import { MessageList } from "./CardThread";
 import { pastReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import { footerGroups } from "./footerGroups";
@@ -218,6 +219,12 @@ export function PastCardColumn({
       attachment={
         past.requiredActions?.length ? (
           <RequiredActions actions={past.requiredActions} />
+        ) : undefined
+      }
+      // What the Anything else? box sent, read-only; nothing when it sent nothing.
+      comment={
+        anythingElseOf(past.answers) !== undefined ? (
+          <AnythingElseBox cardId={past.id} sent={anythingElseOf(past.answers)} />
         ) : undefined
       }
       actions={

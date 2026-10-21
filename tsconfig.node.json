@@ -56,6 +56,7 @@
     // line and the picture viewer's.
     "src/renderer/src/cards/revisedLine.ts",
     "src/renderer/src/cards/answersLine.ts",
+    "src/renderer/src/app/closeQuestionWords.ts",
     "src/renderer/src/design/cards/pictureViewerWords.ts",
     // The Intelligence tab's words and the Models board's drop plans; their e2e reads them here.
     "src/renderer/src/settings/subscriptionsWords.ts",

@@ -1,4 +1,4 @@
-import { type Card, type CardAnswer, isPreviewBody } from "@shared/cards";
+import { anythingElseOf, type Card, type CardAnswer, isPreviewBody } from "@shared/cards";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 
 /** Before the first send, retain the bridge's authored-proposal semantics.
@@ -24,4 +24,13 @@ export function unsentAnswers(
       JSON.stringify([...answer.values].sort()) !== JSON.stringify([...previous.values].sort())
     );
   }).length;
+}
+
+/**
+ * Whether closing would discard words in the Anything else? box (INF-680):
+ * there are some, and they are not what the card last sent.
+ */
+export function unsentComment(words: string | undefined, sent: CardAnswer[] | undefined): boolean {
+  const written = words?.trim() ?? "";
+  return written !== "" && written !== anythingElseOf(sent);
 }

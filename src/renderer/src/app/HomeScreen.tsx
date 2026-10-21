@@ -6,6 +6,7 @@ import {
   type CardWidth,
   cardMetaWords,
   cardPresentation,
+  cardTakesAnythingElse,
   cardTakesReplies,
   isPreviewBody,
   settleEffectOf,
@@ -44,6 +45,7 @@ import {
 } from "react";
 import { mainDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
+import { AnythingElseBox } from "../cards/AnythingElseBox";
 import { answersLine } from "../cards/answersLine";
 import { bridgeActionIds } from "../cards/bridgeActions";
 import { CardAttachment } from "../cards/CardAttachment";
@@ -169,7 +171,7 @@ import {
   visibleStack,
 } from "./store";
 import { TOP_BAR_HEIGHT } from "./TopBar";
-import { unsentAnswers } from "./unsentAnswers";
+import { unsentAnswers, unsentComment } from "./unsentAnswers";
 import { VoiceNotice } from "./VoiceNotice";
 
 /** Same symmetric clearance as the script, applied in the resize's layout. */
@@ -993,12 +995,10 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       if (!byKey) setConfirmingClose(null);
       return;
     }
-    const unsent = unsentAnswers(
-      card,
-      useShellStore.getState().cardAnswers[cardId],
-      useShellStore.getState().sentCardAnswers[cardId],
-    );
-    if (unsent > 0) {
+    const shell = useShellStore.getState();
+    const unsent = unsentAnswers(card, shell.cardAnswers[cardId], shell.sentCardAnswers[cardId]);
+    const wrote = unsentComment(shell.cardComments[cardId], shell.sentCardAnswers[cardId]);
+    if (unsent > 0 || wrote) {
       setConfirmingClose(cardId);
       setConfirmFocus(byKey);
       return;
@@ -1887,6 +1887,7 @@ function StackedCard({
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
   const sentAnswers = useShellStore((s) => s.sentCardAnswers[card.id]);
+  const comment = useShellStore((s) => s.cardComments[card.id]);
   const setCardAnswers = useShellStore((s) => s.setCardAnswers);
   const localCollectRef = useRef<CollectAnswers | null>(null);
   const collectRef = sharedCollectRef ?? localCollectRef;
@@ -2056,11 +2057,13 @@ function StackedCard({
         <CloseQuestion
           ask={closeConfirm}
           count={unsentAnswers(card, answers, sentAnswers)}
+          wrote={unsentComment(comment, sentAnswers)}
           preview={isPreviewBody(card.body)}
           trigger={closeRef}
         />
       }
       actions={footer}
+      comment={cardTakesAnythingElse(card) ? <AnythingElseBox cardId={card.id} /> : undefined}
       aside={
         risk && !showThread
           ? { node: <RiskChart risk={risk} />, width: riskChartBox().width, ref: asideRef }

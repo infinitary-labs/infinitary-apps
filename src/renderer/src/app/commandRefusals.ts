@@ -1,4 +1,4 @@
-import { cardTakesReplies } from "@shared/cards";
+import { cardTakesAnythingElse, cardTakesReplies } from "@shared/cards";
 import {
   type CARD_CHOICE_COMMANDS,
   isPanelCommandId,
@@ -177,6 +177,15 @@ const REFUSALS: Readonly<
     const entry = shownEntry(s);
     if (!entry) return NO_CARD;
     return isHeldEntry(entry) || !cardTakesReplies(entry) ? "This card takes no reply" : null;
+  },
+  // The app's Anything else? box: only a decision whose author reads it has one.
+  "focus.card-comment": (s) => {
+    if (s.recording) return RECORDING;
+    const entry = shownEntry(s);
+    if (!entry) return NO_CARD;
+    return isHeldEntry(entry) || !cardTakesAnythingElse(entry)
+      ? "This card has no comment box"
+      : null;
   },
   // The shown entry's body: a card's, a task's record or a past card.
   "focus.card-body": (s) => {

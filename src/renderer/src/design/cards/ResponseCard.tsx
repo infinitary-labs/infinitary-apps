@@ -62,6 +62,12 @@ export type ResponseCardProps = {
    */
   attachment?: React.ReactNode;
   /**
+   * Host chrome pinned between the body (and its attachment) and the action
+   * row, under a hairline: the app's own Anything else? box (INF-680), in
+   * view however long the body is.
+   */
+  comment?: React.ReactNode;
+  /**
    * Host chrome at the start of the action row, pushed left: a settle card's
    * fact strip, in view however long the body is. It shares the row with
    * the actions while there is room and takes a row of its own above them
@@ -183,6 +189,13 @@ export const CARD_MAX_HEIGHT =
  */
 export const cardFloor = (px: number) => `var(--card-floor, min(${px}px, ${CARD_MAX_HEIGHT}))`;
 
+/**
+ * The room the middle keeps beside the comment box: a line of the title and
+ * a few of the body, so the body stays in sight (a frame out of sight never
+ * draws) while the box is what a short card cuts.
+ */
+const COMMENT_BODY_FLOOR = "var(--space-4)";
+
 export function ResponseCard({
   kind = "note",
   chrome,
@@ -196,6 +209,7 @@ export function ResponseCard({
   model,
   actions,
   attachment,
+  comment,
   facts,
   aside,
   onClose,
@@ -363,7 +377,9 @@ export function ResponseCard({
         data-card-middle=""
         style={{
           flex: 1,
-          minHeight: 0,
+          // Beside the comment box the middle keeps a floor, so in a short
+          // card the box gives way before the body (see the comment row).
+          minHeight: comment && !bare ? COMMENT_BODY_FLOOR : 0,
           display: "flex",
           flexDirection: "column-reverse",
           overflowY: "auto",
@@ -449,6 +465,22 @@ export function ResponseCard({
           }}
         >
           {attachment}
+        </div>
+      )}
+      {!bare && comment && (
+        <div
+          data-card-comment-row=""
+          style={{
+            // The one row below the middle that gives way: once the middle is
+            // at its floor, a shorter card shrinks this row and it scrolls.
+            flexShrink: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            borderTop: "1px solid var(--line-1)",
+            padding: "var(--space-3) 16px 0",
+          }}
+        >
+          {comment}
         </div>
       )}
       {!bare && actions && (

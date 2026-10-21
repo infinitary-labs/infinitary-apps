@@ -2,19 +2,13 @@ import type React from "react";
 import { useEffect, useRef } from "react";
 import { Button } from "../design";
 import { usePopoverPresence } from "../design/motion";
+import { closeQuestionWords } from "./closeQuestionWords";
 
 /**
  * The close is asking first: closing discards the captain's unsent picks
  * (Q3 A). Asked for by a key, the question takes focus.
  */
 export type CloseAsk = { onClose: () => void; onKeep: () => void; focus?: boolean };
-
-/** What the question says (the captain's Build it on the close-question prototype). */
-export function closeQuestionWords(count: number, preview: boolean): string {
-  const noun = preview ? "setting" : "answer";
-  const what = count === 1 ? `1 ${noun}` : `${count} ${noun}s`;
-  return `You ${preview ? "changed" : "picked"} ${what}. Closing will discard ${count === 1 ? "it" : "them"}.`;
-}
 
 /** The panel's own width: room for Keep answering beside Discard and close. */
 const WIDTH = 296;
@@ -28,12 +22,15 @@ const WIDTH = 296;
 export function CloseQuestion({
   ask,
   count,
+  wrote = false,
   preview,
   trigger,
 }: {
   /** Present while the close is asking. */
   ask: CloseAsk | undefined;
   count: number;
+  /** The Anything else? box holds words the card has not sent. */
+  wrote?: boolean;
   preview: boolean;
   /** The card's ×, which the panel hangs from and grows out of. */
   trigger: React.RefObject<HTMLButtonElement | null>;
@@ -41,8 +38,8 @@ export function CloseQuestion({
   const panel = useRef<HTMLDivElement>(null);
   const open = ask !== undefined;
   // The panel keeps its words while it fades out after an answer.
-  const last = useRef({ ask, count });
-  if (ask) last.current = { ask, count };
+  const last = useRef({ ask, count, wrote });
+  if (ask) last.current = { ask, count, wrote };
   const shown = last.current;
   const drawn = usePopoverPresence(open, panel, trigger);
   const keep = useRef(ask?.onKeep);
@@ -119,7 +116,7 @@ export function CloseQuestion({
           lineHeight: "var(--leading-body)",
         }}
       >
-        {closeQuestionWords(shown.count, preview)}
+        {closeQuestionWords(shown.count, preview, shown.wrote)}
       </p>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
         <Button variant="secondary" size="sm" onClick={() => shown.ask?.onKeep()}>

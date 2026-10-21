@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { closeQuestionWords } from "../../src/renderer/src/app/closeQuestionWords";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
+import {
+  ANYTHING_ELSE_ANSWER,
+  ANYTHING_ELSE_HINT,
+  ANYTHING_ELSE_LABEL,
+  cardAnswerLines,
+} from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
@@ -23,8 +30,8 @@ import {
   WRITE_IN_TITLE,
   writeInQuestionsBody,
 } from "./mockProvider";
-import { cardReply, closeQuestion, expectNoCard, showCard, shownCard } from "./stack";
-import { focusOn, pressKey, typeInto } from "./windowKeys";
+import { cardReply, closeQuestion, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
+import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
  * Inline decisions (contract 4.22; the captain's Q1 B to Q4 A of
@@ -788,5 +795,124 @@ test("a 37-question card's footer sends its answers", async () => {
     }
   } finally {
     recordedDb.close();
+  }
+});
+
+/** What the captain writes in the Anything else? box, as the spec types it. */
+const COMMENT = "Check the light theme too";
+/** The title of the note the Anything else? journey seeds, which takes no box. */
+const NOTE_TITLE = "The access plan is filed";
+
+/**
+ * The captain's ask (INF-680): "every decision card has a "anything else?"
+ * input box at the bottom of the card body, so i can leave additional
+ * comments before clicking one of the action buttons". His Approve and build
+ * pinned the app's own box between the body and the buttons; its words ride
+ * whichever button he clicks as the answer named `anything_else`.
+ */
+test("the Anything else? box's words go with whichever button the captain clicks, and a note has no box", async () => {
+  const userDataDir = scratchDir("infinitary-anything-else-");
+  const db = openDatabase(userDataDir);
+  new CardStore(db).upsert({
+    id: "card-fm-filed",
+    title: NOTE_TITLE,
+    author: "firstmate",
+    priority: 10,
+    meta: "firstmate",
+    body: "<p>Nothing is left to decide.</p>",
+    status: "ready",
+    createdAt: Date.now(),
+    actions: [],
+  });
+  db.close();
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const { app, page } = launched;
+  try {
+    // A note has no buttons to send words with, so it draws no box.
+    await showCard(page, NOTE_TITLE);
+    await expect(shownCard(page, NOTE_TITLE).locator("[data-card-comment]")).toHaveCount(0);
+
+    const prompt = page.getByRole("textbox", { name: "Task prompt" });
+    await prompt.fill(`${SPAWN_PROMPT_MARKER} ${INLINE_QUESTIONS_PROMPT_MARKER}`);
+    await prompt.press("Enter");
+    await showCard(page, INLINE_QUESTIONS_TITLE);
+    const card = await page.evaluate(
+      async (title) =>
+        (await window.infinitary.cards.list()).find((entry) => entry.title === title),
+      INLINE_QUESTIONS_TITLE,
+    );
+    const taskId = card?.taskId as string;
+    const steers = async () =>
+      (await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)).events.filter(
+        (event) => event.kind === "steered",
+      );
+    const steersBefore = (await steers()).length;
+    const commentLine = cardAnswerLines([
+      { name: ANYTHING_ELSE_ANSWER, values: [], changed: true, written: COMMENT },
+    ])[0] as string;
+
+    // The box sits between the body and the buttons, labeled, with its hint.
+    const box = shownCard(page, INLINE_QUESTIONS_TITLE).getByRole("textbox", {
+      name: ANYTHING_ELSE_LABEL,
+    });
+    await expect(box).toHaveAttribute("placeholder", ANYTHING_ELSE_HINT);
+    // Command search goes to it; typing there sends nothing and picks nothing.
+    await runFromSearch(app, page, "focus.card-comment");
+    await expect(box).toBeFocused();
+    await typeInto(box, COMMENT);
+    await expect(box).toHaveValue(COMMENT);
+    await expect(answersLine(page)).toHaveText(pickedLine(1, 3));
+    expect((await steers()).slice(steersBefore)).toHaveLength(0);
+
+    // Closing would discard the words, so the × asks first.
+    await page.getByRole("button", { name: "Close", exact: true }).first().click();
+    await expect(closeQuestion(page)).toContainText(closeQuestionWords(0, false, true));
+    await closeQuestion(page).getByRole("button", { name: "Keep answering", exact: true }).click();
+    await expect(closeQuestion(page)).toHaveCount(0);
+
+    // A reply carries the words as context; the box keeps them, and so does
+    // the revision the reply asked for.
+    const reply = cardReply(page).field;
+    await reply.click();
+    await reply.fill(INLINE_QUESTIONS_REVISE_REPLY);
+    await page.getByRole("button", { name: "Send reply" }).click();
+    await showCard(page, INLINE_QUESTIONS_REVISED_TITLE);
+    await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(1);
+    expect((await steers()).at(-1)?.text).toContain(commentLine);
+    const revisedBox = shownCard(page, INLINE_QUESTIONS_REVISED_TITLE).getByRole("textbox", {
+      name: ANYTHING_ELSE_LABEL,
+    });
+    await expect(revisedBox).toHaveValue(COMMENT);
+
+    // ⌘2 from inside the box presses the button that is not the default,
+    // and the words go with it.
+    await focusOn(revisedBox);
+    await pressWindowKey(app, "2", ["meta"]);
+    await expectNoCard(page, INLINE_QUESTIONS_REVISED_TITLE);
+    await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(2);
+    const chosen = (await steers()).at(-1)?.text ?? "";
+    expect(chosen).toContain(
+      `Card "${INLINE_QUESTIONS_REVISED_TITLE}": the user chose "Not now" (later).`,
+    );
+    expect(chosen).toContain(commentLine);
+    const resolved = (
+      await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)
+    ).events.findLast((event) => event.kind === "card_resolved");
+    expect(resolved?.data).toMatchObject({
+      action: "later",
+      answers: expect.arrayContaining([
+        { name: ANYTHING_ELSE_ANSWER, values: [], changed: true, written: COMMENT },
+      ]),
+    });
+
+    // The past card shows what went, read-only.
+    await page.evaluate((id) => window.infinitary.cards.showPast(id), card?.id as string);
+    const past = page.locator(`[data-past-card="${card?.id}"]`);
+    await expect(past).toBeVisible();
+    const pastBox = shownEntry(page).getByRole("textbox", { name: ANYTHING_ELSE_LABEL });
+    await expect(pastBox).toHaveValue(COMMENT);
+    await expect(pastBox).toHaveAttribute("readonly", "");
+  } finally {
+    await launched.close();
   }
 });

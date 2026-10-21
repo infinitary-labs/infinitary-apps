@@ -2,6 +2,7 @@ import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { describe, expect, it } from "vitest";
 import { ABANDON, SAVE_AND_DEFER } from "../prompts/cardContract";
 import {
+  ANYTHING_ELSE_TAKEN_WORDS,
   type CardLintContext,
   COMPLETION_PICTURES_REFUSAL,
   closedTaskChoiceRefusal,
@@ -215,6 +216,25 @@ describe("lintCardShape (both boundaries)", () => {
     ]) {
       expect(lintCardShape(decision({ body })), body).toBeUndefined();
     }
+  });
+
+  it("keeps the name of the app's own Anything else? box for the box (INF-680)", () => {
+    // The box's words ride the click as `anything_else`; an author's own
+    // control or staged setting of that name would collide with them.
+    for (const body of [
+      '<p>Ship it?</p><label>Notes <textarea name="anything_else"></textarea></label>',
+      '<p>Ship it?</p><input type="text" name="anything_else">',
+      '<div data-inf-preview><script>inf.stage("anything_else", "{}")</script></div>',
+    ]) {
+      expect(lintCardShape(decision({ body })), body).toContain(ANYTHING_ELSE_TAKEN_WORDS);
+    }
+    // Another name, or a note with no buttons to send it, is the author's own.
+    expect(
+      lintCardShape(decision({ body: '<p>Ship it?</p><textarea name="notes"></textarea>' })),
+    ).toBeUndefined();
+    expect(
+      lintCardShape(note({ body: '<p>Shipped.</p><textarea name="anything_else"></textarea>' })),
+    ).toBeUndefined();
   });
 
   it("names an entity-escaped body as such, never as a shape problem (v2.0)", () => {

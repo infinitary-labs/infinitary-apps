@@ -647,6 +647,21 @@ export const CARD_ANSWERS_BOUND_REFUSAL = `The card's answers must be JSON no la
 export const CARD_WRITTEN_MAX = 500;
 
 /**
+ * The answer the app's own Anything else? box rides a footer click as
+ * (INF-680, the captain's Approve and build): the words the captain wrote
+ * between a decision's body and its buttons, marked written in. An author
+ * may not name a control of its own this (`cardLint`).
+ */
+export const ANYTHING_ELSE_ANSWER = "anything_else";
+/** What the box says over its field and inside it: the captain's label and hint. */
+export const ANYTHING_ELSE_LABEL = "Anything else?";
+export const ANYTHING_ELSE_HINT = "sent with the button you click";
+/** A reply is one message, not a document: longer is refused at the boundary. */
+export const CARD_REPLY_MAX_CHARS = 4_000;
+/** The most the Anything else? box holds: as much as a reply. */
+export const ANYTHING_ELSE_MAX_CHARS = CARD_REPLY_MAX_CHARS;
+
+/**
  * One question a card body asks with its own form (inline decisions,
  * contract 4.22; docs/card-authoring.md "Questions in the body"), as the
  * frame bridge reads it: its name, the value or values picked (none when
@@ -666,10 +681,40 @@ export const cardAnswerSchema = z.strictObject({
   labels: z.array(z.string().max(CARD_ANSWER_TEXT_MAX)).max(CARD_MAX_ANSWER_VALUES).optional(),
   changed: z.boolean(),
   json: z.literal(true).optional(),
-  written: z.string().min(1).max(CARD_WRITTEN_MAX).optional(),
+  // The Something else field holds itself to CARD_WRITTEN_MAX; the
+  // Anything else? box's answer is the longest written there is.
+  written: z.string().min(1).max(ANYTHING_ELSE_MAX_CHARS).optional(),
 });
 export type CardAnswer = z.infer<typeof cardAnswerSchema>;
 export const cardAnswersSchema = z.array(cardAnswerSchema).max(CARD_MAX_ANSWERS);
+
+/**
+ * The answers with the Anything else? box's words joined as one more
+ * answer, the captain's own and so changed; words of only whitespace add
+ * nothing. A body control of the same name gives way to the box.
+ */
+export function withAnythingElse(answers: readonly CardAnswer[], words: string): CardAnswer[] {
+  const rest = answers.filter((answer) => answer.name !== ANYTHING_ELSE_ANSWER);
+  const written = words.trim();
+  return written
+    ? [...rest, { name: ANYTHING_ELSE_ANSWER, values: [], changed: true, written }]
+    : rest;
+}
+
+/** What the Anything else? box sent with a card, if it sent anything. */
+export function anythingElseOf(answers: readonly CardAnswer[] | undefined): string | undefined {
+  return answers?.find((answer) => answer.name === ANYTHING_ELSE_ANSWER)?.written;
+}
+
+/**
+ * Whether a card draws the Anything else? box: it has buttons, and an
+ * author that reads what the captain writes (`cardTakesReplies`).
+ */
+export function cardTakesAnythingElse(
+  card: Pick<Card, "author" | "taskId" | "replies" | "actions">,
+): boolean {
+  return card.actions.length > 0 && cardTakesReplies(card);
+}
 
 /**
  * What a footer click carries as `inf:cards:act`'s value: the answers, in one
@@ -1122,9 +1167,6 @@ export const pastCardSchema = z.strictObject({
   messages: z.array(cardMessageSchema),
 });
 export type PastCard = z.infer<typeof pastCardSchema>;
-
-/** A reply is one message, not a document: longer is refused at the boundary. */
-export const CARD_REPLY_MAX_CHARS = 4_000;
 
 /**
  * A captain turn's text, refused past this at the `inf:converse` boundary.

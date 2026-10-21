@@ -56,6 +56,7 @@ describe("the command catalog", () => {
       expect(isWindowCommand(id)).toBe(command.scope === "window");
     }
     expect(COMMAND_IDS.filter((id) => KEYBOARD_COMMANDS[id].keys.length === 0)).toEqual([
+      "focus.card-comment",
       "focus.card-body",
       "focus.card-actions",
       "computers.previous",
@@ -96,6 +97,7 @@ describe("the command catalog", () => {
       "commands.search",
       "focus.main-message",
       "focus.card-reply",
+      "focus.card-comment",
       "focus.card-body",
       "focus.card-actions",
       "cards.choice-1",

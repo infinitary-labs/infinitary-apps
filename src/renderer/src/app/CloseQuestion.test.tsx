@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CloseQuestion, closeQuestionWords } from "./CloseQuestion";
+import { CloseQuestion } from "./CloseQuestion";
+import { closeQuestionWords } from "./closeQuestionWords";
 
 /**
  * The close's question says closing discards what the captain picked (the
@@ -10,6 +11,15 @@ describe("closeQuestionWords", () => {
   it("counts picked answers on a decision", () => {
     expect(closeQuestionWords(2, false)).toBe("You picked 2 answers. Closing will discard them.");
     expect(closeQuestionWords(1, false)).toBe("You picked 1 answer. Closing will discard it.");
+  });
+
+  it("names the words in the Anything else? box, alone or beside picks (INF-680)", () => {
+    expect(closeQuestionWords(0, false, true)).toBe(
+      "You wrote a comment. Closing will discard it.",
+    );
+    expect(closeQuestionWords(2, false, true)).toBe(
+      "You picked 2 answers and wrote a comment. Closing will discard them.",
+    );
   });
 
   it("counts changed settings on a preview", () => {

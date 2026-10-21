@@ -135,6 +135,17 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [{ key: "l", meta: true, shift: true }],
   },
+  // The app's own Anything else? box between a decision's body and its
+  // buttons (INF-680): chosen by name, with no key of its own.
+  "focus.card-comment": {
+    label: "Go to the card's comment box",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["anything else", "note", "comment"],
+  },
   // The shown card's own places (docs/keyboard.md, "Cards and frames"):
   // its body to read and answer, and its buttons. No key of their own yet:
   // chosen by name, and a person may give them one.

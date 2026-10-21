@@ -219,6 +219,15 @@ The author writes the link - `<a class="inf-mono" href="its page">PR #N</a>` - w
 - **Click.**
   A click or Enter opens the pull request in the browser, through the same safe opener as every link in a body.
 
+**The Anything else? box (INF-680).**
+Every card with buttons whose author can read a reply - a crewmate's card about its task and the first mate's, merge cards and previews included - carries the app's own Anything else? box, pinned between the body (and any live attachment) and the action row, so it stays in view however long the body is.
+It is host chrome, never the author's: a `--line-1` hairline above it, `--space-3` above, 16 px at its sides like the action row.
+It reads the label `Anything else?` in `--text-xs` `--fg-3`, then the field: `--surface-input`, a `--line-1` border that turns `--line-2` with the focus ring, `--radius-m`, `--space-1` `--space-3` padding, `--text-sm` at the body leading, with the hint `sent with the button you click` as its placeholder.
+The field is one line, grows to five as the captain writes and then scrolls; it holds 4,000 characters, and from 80 percent of that the reply's mono count sits at the label row's right.
+In a card too short for the body and the box, the box gives way first: the middle keeps `--space-4` of room, so the body stays in sight, and the box's row shrinks and scrolls.
+Typing sends nothing and Enter adds a line; whichever button the captain clicks carries the words with his choice, and the footer's picked count never counts them.
+A note, the app's own cards, a task's record and a panel card draw no box; a past card draws the words that were sent, read-only, and no box when none were.
+
 ## Past card (FI3-579, direction A)
 
 A closed card can be read again on the stage, exactly as the captain last saw it, and does nothing.

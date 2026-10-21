@@ -17,6 +17,7 @@ import {
   deviceArrival,
   onStage,
   TURN_IMAGES_MAX,
+  withAnythingElse,
 } from "@shared/cards";
 import {
   type ComposerNotice,
@@ -597,6 +598,12 @@ export type ShellState = {
   cardAnswers: Record<string, FrameAnswers>;
   /** Last accepted send, kept across revisions but retired with its card. */
   sentCardAnswers: Record<string, CardAnswer[]>;
+  /**
+   * What the captain wrote in each card's Anything else? box (INF-680),
+   * sent with whichever footer button he clicks. Renderer memory like the
+   * answers: a revision keeps it by the card's id, a restart loses it.
+   */
+  cardComments: Record<string, string>;
   /** Open shell-held records, newest opened first (one per task). */
   records: OpenRecord[];
   cardIndex: number;
@@ -874,6 +881,7 @@ export type ShellState = {
   ) => Promise<void>;
   /** A card body's frame read its form again (the bridge's `answers`). */
   setCardAnswers: (cardId: string, answers: FrameAnswers) => void;
+  setCardComment: (cardId: string, words: string) => void;
   /** The close control; `mounted` is the card it was clicked on. */
   closeCard: (cardId: string, mounted?: CardMount) => void;
   /** Read one card's thread from the core; idempotent, and safe to call on every show. */
@@ -1147,6 +1155,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingCardActions: {},
   cardActionErrors: {},
   cardAnswers: {},
+  cardComments: {},
   sentCardAnswers: {},
   records: [],
   cardIndex: 0,
@@ -1810,14 +1819,18 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         else if (reading) submission.questionsGap = "no-fresh-reading";
         const now = get().cards.find((card) => card.id === cardId)?.offerId;
         if (mounted?.offerId && now && now !== mounted.offerId) submission.remounted = true;
-        if (reading && reading.of > 0) {
-          if (defaultAction && reading.answered < reading.of) {
-            throw new Error("Answer every question the card asks first.");
-          }
-          if (cardAnswersBytes(reading.answers) > CARD_ANSWERS_MAX_BYTES) {
+        const asked = reading && reading.of > 0 ? reading : undefined;
+        if (asked && defaultAction && asked.answered < asked.of) {
+          throw new Error("Answer every question the card asks first.");
+        }
+        // The Anything else? box's words ride whichever button this is,
+        // never holding one up (INF-680).
+        const answers = withAnythingElse(asked?.answers ?? [], get().cardComments[cardId] ?? "");
+        if (asked || answers.length > 0) {
+          if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
             throw new Error(CARD_ANSWERS_TOO_LONG);
           }
-          sentAnswers = reading.answers;
+          sentAnswers = answers;
           sent = { answers: sentAnswers };
         }
       }
@@ -1889,6 +1902,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   clearPendingDeviceForgeSignIn: () => set({ pendingDeviceForgeSignIn: null }),
   setCardAnswers: (cardId, answers) =>
     set((s) => ({ cardAnswers: { ...s.cardAnswers, [cardId]: answers } })),
+  setCardComment: (cardId, words) =>
+    set((s) => ({ cardComments: { ...s.cardComments, [cardId]: words } })),
   closeCard: (cardId, mounted) => {
     const thisMac = get().thisMac;
     if (isView(thisMac) && changesOff(thisMac)) {
@@ -2037,7 +2052,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     try {
       const fresh = collect ? await collect() : undefined;
       const reading = fresh ?? get().cardAnswers[cardId];
-      const answers = reading?.answers;
+      // The Anything else? box's words go as context too, and the box keeps them.
+      const comment = get().cardComments[cardId] ?? "";
+      const answers =
+        reading || comment.trim() ? withAnythingElse(reading?.answers ?? [], comment) : undefined;
       if (answers && cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
         throw new Error(CARD_ANSWERS_TOO_LONG);
       }
@@ -2313,6 +2331,9 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ),
         cardAnswers: Object.fromEntries(
           Object.entries(s.cardAnswers).filter(([id]) => present.has(id)),
+        ),
+        cardComments: Object.fromEntries(
+          Object.entries(s.cardComments).filter(([id]) => present.has(id)),
         ),
         cardDrags: Object.fromEntries(
           Object.entries(s.cardDrags).filter(

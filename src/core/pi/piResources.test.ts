@@ -1520,10 +1520,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 });
 
 // Reader tags must not silently rewrite the full approved source.
+// INF-680 adds the Anything else? box sentence for crewmates.
 it("keeps the full authoring and handoff sources word for word", () => {
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "024fc749c97058a0f6190dc1f3333d267b66504c3307ac3410941f7d2b454318",
+    "00fd00f0b4fbb0918f249dc8455d0d2a6739baed8972b845cd8864a4c3b65557",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   expect(hash(HANDOFF)).toBe("c743e70be54f1254e53cc65080b6e3c3c1cb562dc06c3c031ecb73abe7b3ce4e");

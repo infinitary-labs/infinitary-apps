@@ -8,7 +8,7 @@ import {
   type CardQuestion,
   type CardQuestionsGap,
   type CardWidth,
-  cardAnswersSchema,
+  cardAnswerSchema,
   cardQuestionsGapSchema,
 } from "../cards";
 import { OWN_SPELLING, SPELLINGS } from "../codeNames";
@@ -1742,12 +1742,21 @@ const answerCount = z.number().int().nonnegative().max(CARD_MAX_ANSWERS);
  * author's proposal, `picked` of them the captain's own - changed, or chosen
  * where the author only recommended) and the answers, the shell's draft.
  */
+/**
+ * One answer as a frame reads it: a Something else field holds at most
+ * `CARD_WRITTEN_MAX`. Only the app's own Anything else? box, which is host
+ * chrome, writes more (`withAnythingElse`).
+ */
+const frameAnswerSchema = cardAnswerSchema.extend({
+  written: z.string().min(1).max(CARD_WRITTEN_MAX).optional(),
+});
+
 export const frameAnswersSchema = z.object({
   answered: answerCount,
   of: answerCount,
   changed: answerCount,
   picked: answerCount,
-  answers: cardAnswersSchema,
+  answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS),
 });
 /**
  * A reading of the form. The one a footer click asked for (`collect`) also

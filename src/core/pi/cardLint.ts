@@ -9,6 +9,7 @@ import {
   textOf,
 } from "@shared/cardHeadings";
 import {
+  ANYTHING_ELSE_ANSWER,
   isPreviewBody,
   isPullRequestMergeAction,
   requestMergeEffectOf,
@@ -476,6 +477,37 @@ function writeInRefusal(body: string): string | undefined {
   return `the question "${first.name}" ${WRITE_IN_GAP_WORDS}, so the captain has no way to write an answer that is none of them; give it ${row} - the app opens a text field under it once picked - or, when its options are the only possible answers, put ${OPTIONS_ONLY_MARK} on its <fieldset> or <select>.`;
 }
 
+/** A refusal's words for an author's control under the app's own box's name. */
+export const ANYTHING_ELSE_TAKEN_WORDS = "is the app's own Anything else? box";
+
+/**
+ * Whether a body names a control, or stages a setting, `anything_else`: the
+ * answer the app's own box rides the footer click as (INF-680), so an
+ * author's own would collide with it.
+ */
+function anythingElseRefusal(body: string): string | undefined {
+  const document = parseDocument(body, { decodeEntities: true });
+  let named = false;
+  const walk = (nodes: DomNode[]): void => {
+    for (const node of nodes as ControlNode[]) {
+      if (named || !ELEMENT_TYPES.has(node.type)) continue;
+      const tag = node.name?.toLowerCase() ?? "";
+      if (
+        (tag === "input" || tag === "select" || tag === "textarea") &&
+        node.attribs?.name === ANYTHING_ELSE_ANSWER
+      ) {
+        named = true;
+        return;
+      }
+      walk(node.children ?? []);
+    }
+  };
+  walk(document.children as unknown as DomNode[]);
+  const staged = new RegExp(`inf\\.stage\\(\\s*["'\`]${ANYTHING_ELSE_ANSWER}["'\`]`).test(body);
+  if (!named && !staged) return undefined;
+  return `the name "${ANYTHING_ELSE_ANSWER}" ${ANYTHING_ELSE_TAKEN_WORDS}, which the app draws between the body and the buttons and sends with the button the captain clicks; rename your control or setting, or drop it if it only asked for further comments.`;
+}
+
 /**
  * The shape rules both boundaries share (WI-11). Returns the corrective
  * refusal, or undefined when the card passes.
@@ -505,6 +537,12 @@ export function lintCardShape(card: ShapedCard): string | undefined {
         .map((action) => action.id)
         .join(", ")}); keep default only on the step you would take.`;
     }
+  }
+
+  // A product fact: the app's own box owns its answer's name, in a preview too.
+  if (decision) {
+    const taken = anythingElseRefusal(card.body);
+    if (taken) return taken;
   }
 
   // A product fact: no figure text under 11 px, in a preview too.

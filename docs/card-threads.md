@@ -42,6 +42,7 @@ Cards without the declaration retain their existing stage rules.
 The shell moves on as soon as the reply is taken, so the departing card never opens its thread on the way out (`replyLeaving`).
 A lone card stays put with the thread beside it, and its body, scroll and reply field stay the same elements as the thread opens: only the surface's columns change.
 Its reply field keeps the focus through the send, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
+A reply sent while the card's Anything else? box holds words carries them among its settings, as the answer `anything_else`, and the box keeps them for the button the captain clicks later (`docs/card-authoring.md`, "Anything else?").
 The author's answer redraws it at the close-out - see the next section.
 A refused reply moves nothing and keeps the draft.
 

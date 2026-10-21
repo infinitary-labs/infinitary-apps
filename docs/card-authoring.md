@@ -194,6 +194,7 @@ A refused card is never shown, and the refusal text names the fix:
 - consent: a decision that is not a preview ends every radio group, select and group of two or more checkboxes with a Something else row (FI3-1002): one without the row and without `data-inf-options-only` is refused, with the question's name and the row to add ("Something else" below);
 - consent: an action whose id or label reads like a merge or a landing carries a `settle` effect - a "Merge the pull request" button with no effect would run nothing when clicked, which is exactly the Sep 4-5 dogfood failure - and no action from an agent carries the host's own effect;
 - consent, at the crewmate boundary only: a declared `settle merge` decision has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
+- a product fact (INF-680): a decision, a preview included, that names a control or stages a setting `anything_else` is refused, because that is the answer the app's own Anything else? box rides ("Anything else?" below);
 - a product fact: measurable figure text that would draw under 11px in the usual 750px column is refused, and the refusal names the repair: a full-width drawing of at most 750 units, or larger type, and a pixel width for a smaller drawing.
   It does not measure the narrow card, and it does not refuse a small drawing stretched to 100 percent.
 
@@ -636,6 +637,34 @@ The captain's Approve and build chose the author's own row with the app checking
 - **Revisions and past cards.**
   A revision gets the written words back by name under its own Something else row, and a body that no longer has one leaves the question at its proposal.
   A past card shows the field with the words that were sent; a restart loses an unsent draft like any pick.
+
+### Anything else?
+
+INF-680 (the captain: "every decision card has a "anything else?" input box at the bottom of the card body, so i can leave additional comments before clicking one of the action buttons").
+His Approve and build chose a box pinned between the body and the buttons, the label Anything else? with the hint "sent with the button you click", 4,000 characters, five lines, and every card with buttons whose author can read a reply, merge cards and previews included.
+
+- **Which cards.**
+  A card draws the box when it has buttons and its author can read a reply (`cardTakesAnythingElse` in `src/shared/cards.ts`): a crewmate's card about its task and the first mate's card.
+  A note, the app's own cards, a task's record and a panel card draw none.
+- **The box.**
+  It is host chrome (`AnythingElseBox`, `src/renderer/src/cards/AnythingElseBox.tsx`), in a row of its own under a hairline after the body and its attachment, so it stays in view however long the body is.
+  Its field starts at one line and grows to five, then scrolls; it holds 4,000 characters (`ANYTHING_ELSE_MAX_CHARS`, a reply's limit), and its count shows from 80 percent of that, as a reply's does.
+  Typing sends nothing and Enter adds a line.
+  In a card too short for both, the box gives way before the body: the middle keeps one `--space-4` of room so the body stays in sight (a frame out of sight never draws), and the box's row shrinks and scrolls (`ResponseCard`).
+- **The answer.**
+  Whichever footer button the captain clicks carries the trimmed words as one more answer, `{ name: "anything_else", values: [], changed: true, written }` (`withAnythingElse`), on the path every answer takes: the author's wake, the card row, the task's `card_resolved` event, the first mate's resolutions line and a basis brief.
+  On a merge or discard the app runs the click and the first mate reads the words on the card's resolutions line, because the crewmate's task closes.
+  The box never counts in the footer's picks and never holds up the default.
+  A reply carries the words among its settings, and the box keeps them.
+  A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the box writes more.
+- **The name.**
+  `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app adds the box.
+  The first mate's fixed context has no room for that sentence, so it reads the box's words by the written-in rule it already has.
+- **Closing, revisions and past cards.**
+  The close asks first while the box holds words the card has not sent ("You wrote a comment.
+  Closing will discard it.").
+  A revision keeps the words, because they belong to the card's id; a restart loses them, as it loses picks.
+  A past card shows the words that were sent, read-only, and no box when none were.
 
 ## An answer task's card is its deliverable
 

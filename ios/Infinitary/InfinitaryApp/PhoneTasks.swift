@@ -55,7 +55,7 @@ struct PhoneTasks: View {
                         }
                     }
                 }
-            }.padding().frame(maxWidth: 750).frame(maxWidth: .infinity)
+            }.padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.always, axes: .vertical)
         .onScrollGeometryChange(for: Bool.self) { geometry in
@@ -64,7 +64,6 @@ struct PhoneTasks: View {
             if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
         }
         .background { Button("Find a task") { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).hidden() }
-        .background(PhoneTheme.background)
         .accessibilityIdentifier("tasks-list")
         .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty { closeSearch() } }
         .onDisappear { if query.isEmpty { searchOpen = false } }

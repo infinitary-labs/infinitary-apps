@@ -35,7 +35,7 @@ struct PhoneCards: View {
             // INF-589 item 11: with no card to page, the pager hides; Past cards stays reachable while there are any.
             if !session.cards.isEmpty || !session.pastCards.isEmpty { pager }
         }
-        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: 560).frame(maxWidth: .infinity)
+        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
         // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
         .sensoryFeedback(.phone, trigger: sent)

@@ -125,7 +125,9 @@ The phone containment review is in `docs/live-prototype-security.md`, “Phone c
 `PhoneWorkspace` supplies a stage, an optional Tasks view and an optional composer, with no draft or record state of its own.
 The composition installs `PhoneCards(session:)`, `PhoneTasks(session:)` and `MessageComposer(session:)` together.
 The composer stays mounted once, preserving its own text and photo state across tab and orientation changes; the shell never copies it into a tab or layout branch.
-In compact-height iPhone landscape, `AnyLayout` puts the last-turn lines side by side and the removable photo strip beside the message capsule, retaining one field and its complete draft.
+The card with its pager, the message box, Tasks and Activity share one centred reading column, `PhoneColumn`, 560 points with its gutters, so on an iPad the message box lines up with the card above it.
+On an iPhone on its side (compact height) the card gets the height: the title row is one line, the computer's name and then its reach, and the last turn and the notice wait until it is upright.
+There `AnyLayout` puts the removable photo strip beside the message capsule, retaining one field and its complete draft.
 The field displays up to two lines there, the controls retain 44-point targets, and warnings remain full-length; portrait and iPad keep the stacked arrangement.
 The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft above the tabs.
 Card and task owners keep their selected records and replies.
@@ -137,7 +139,7 @@ On iOS 26 each tab reserves that height as a safe-area bar, so the system's soft
 While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.
-The iPad's wide landscape workspace places collapsible Activity and Tasks panels beside the stage and puts the composer at the stage's foot.
+The iPad's wide landscape workspace places a sidebar beside the stage, with Activity and Tasks as a segmented pair at its top, each scrolling alone, and puts the composer at the stage's foot.
 Portrait or narrow multitasking returns to tabs; layout measurement excludes the keyboard.
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
 The task key sits inline before the words at micro size, as on the Mac's feed line.
@@ -195,7 +197,8 @@ The phone retains the draft, asks the captain to check the Mac, and never queues
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
 
 A new card or an answered reply raises an in-app notice while the app is open, after reading the Mac’s Notifications switch.
-The notice is a pill under the title on every tab, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
+The notice is a pill at the top of every tab, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
+It sits under the iPad's tabs, over the stage beside the landscape sidebar, and waits while an iPhone is on its side.
 A reply notice leaves after five seconds unless VoiceOver is running; a new-card notice stays until its card is read or the pill is swiped, and no pill points at the card already on the stage.
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
 Background stops the connection and clears the notice; there is no background notification service or push relay.
@@ -306,7 +309,7 @@ It checks both immediate script stalls and a stall during answer collection, and
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
 
-It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, collapse and return to portrait.
+It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, its Activity and Tasks pair and return to portrait.
 Every native journey launch goes through `launchPhoneApp`, which renews the owned simulator's keyboard log subscription and waits for its startup before launching the app.
 A live subscription is not proof that it still supplies registrations after relaunch; the new subscription starts with no cached witnesses and observes both launch and the home's keyboard attachment.
 The runner joins the old output streams before appending the new subscription's gzip member, keeping all registrations in order.
@@ -321,6 +324,7 @@ For Return, the driver checks the router's carriage-return registration but supp
 The talk part checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
 The talk part exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
+It also checks that the card and Tasks start and end where the message box does, the reading column.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
 App-hosted shell tests render each native character's still pose, play the greeting and the held reply nod through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
 The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.
@@ -332,7 +336,7 @@ The talk part chooses a project-owned picture from the disposable photo library,
 It pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
-It also checks that the foreground notice opens its own card, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
+It also checks that the foreground notice sits under the iPad's tabs and over its landscape stage, waits on an iPhone on its side beside a one-line title row, and opens its own card, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.

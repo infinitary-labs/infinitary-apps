@@ -27,13 +27,13 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     let tasks: Tasks?
     let composer: Composer?
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var viewport = CGSize.zero
     @State private var selection = 0
     @State private var messageContext = PhoneMessageContext()
-    @State private var activityExpanded = true
-    @State private var tasksExpanded = true
+    @State private var rail = Rail.activity
     @State private var footerHeight: CGFloat = 0
     @State private var tabClearance: CGFloat = 0
 
@@ -45,6 +45,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSize == .regular && viewport.width > viewport.height
     }
     private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
+    private enum Rail: Hashable { case activity, tasks }
 
     var body: some View {
         tabs(footerSpace: composer == nil ? 0 : footerHeight)
@@ -53,18 +54,6 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 footer
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
                     .padding(.bottom, tabClearance)
-            }
-            .overlay(alignment: .top) {
-                ZStack {
-                    // The card already on the stage needs no pill pointing at it.
-                    if let notice = session.notice, !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
-                        PhoneNoticePill(notice: notice, open: {
-                            selection = 0; session.showCardID = notice.cardID; session.notice = nil
-                        }, dismiss: { session.notice = nil })
-                        .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
-                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-                    }
-                }.animation(.snappy, value: session.notice)
             }
             .task(id: session.notice) {
                 // A reply notice leaves on its own; one about a new card waits until it is read or swiped.
@@ -94,25 +83,54 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }
     }
 
+    /// INF-589 item 6, placed by item 16: the pill sits at the top of what it is over, under the tabs and beside the sidebar.
+    /// An iPhone on its side gives the card that height, so the pill waits until it is upright.
+    private func noticed(_ content: some View) -> some View {
+        content.overlay(alignment: .top) {
+            ZStack {
+                // The card already on the stage needs no pill pointing at it.
+                if let notice = session.notice, !phoneOnItsSide(verticalSize),
+                   !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
+                    PhoneNoticePill(notice: notice, open: {
+                        selection = 0; session.showCardID = notice.cardID; session.notice = nil
+                    }, dismiss: { session.notice = nil })
+                    .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+            }.animation(.snappy, value: session.notice)
+        }
+    }
+
+    private var activity: some View {
+        ScrollView {
+            PhoneActivity(lines: session.activity)
+                .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
+        }
+    }
+
+    // INF-589 item 16: Activity and Tasks as a segmented pair at the sidebar's top, each scrolling alone.
+    private var sidebar: some View {
+        VStack(spacing: 0) {
+            if tasks != nil {
+                Picker("Show", selection: $rail) {
+                    Text("Activity").tag(Rail.activity)
+                    Text("Tasks").tag(Rail.tasks)
+                }.pickerStyle(.segmented).labelsHidden()
+                    .padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
+            }
+            if let tasks, rail == .tasks { tasks } else { activity }
+        }
+        .frame(width: sidebarWidth).background(PhoneTheme.panel)
+        .accessibilityElement(children: .contain).accessibilityIdentifier("phone-sidebar")
+    }
+
     private var stageAndSidebar: some View {
         HStack(spacing: 0) {
             if wide {
-                ScrollView {
-                    VStack(spacing: PhoneTheme.space4) {
-                        // A disclosure identifier propagates into its content and replaces the child controls’ IDs.
-                        DisclosureGroup("Activity", isExpanded: $activityExpanded) {
-                            PhoneActivity(lines: session.activity)
-                        }
-                        if let tasks {
-                            DisclosureGroup("Tasks", isExpanded: $tasksExpanded) { tasks }
-                        }
-                    }.font(PhoneFont.headline).padding(PhoneTheme.space4)
-                }
-                .frame(width: sidebarWidth).background(PhoneTheme.panel)
-                .accessibilityIdentifier("phone-sidebar")
+                sidebar
                 Rectangle().fill(PhoneTheme.line).frame(width: 1)
             }
-            stage.frame(maxWidth: .infinity, maxHeight: .infinity)
+            noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity))
         }.background(PhoneTheme.background)
     }
 
@@ -124,17 +142,12 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 .toolbar(wide ? .hidden : .visible, for: .tabBar)
                 .tabItem { Label { Text("Cards") } icon: { PhoneSymbol.cards.image } }.tag(0)
                 .badge(session.unreadCards)
-            ScrollView {
-                PhoneActivity(lines: session.activity)
-                    .padding(PhoneTheme.space4).frame(maxWidth: 750).frame(maxWidth: .infinity)
-            }
+            noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list"))
             .modifier(PhoneFooterSpace(height: footerSpace))
-            .background(PhoneTheme.background)
-            .accessibilityIdentifier("activity-list")
             .toolbar(wide ? .hidden : .visible, for: .tabBar)
             .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
             if let tasks {
-                tasks
+                noticed(tasks.background(PhoneTheme.background))
                     .modifier(PhoneFooterSpace(height: footerSpace))
                     .toolbar(wide ? .hidden : .visible, for: .tabBar)
                     .tabItem { Label { Text("Tasks") } icon: { PhoneSymbol.tasks.image } }.tag(2)
@@ -188,7 +201,7 @@ private struct PhoneNoticePill: View {
             .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain).frame(maxWidth: 560)
+        .buttonStyle(.plain).frame(maxWidth: PhoneColumn.inside)
         .offset(x: drag.width, y: min(0, drag.height))
         .highPriorityGesture(DragGesture(minimumDistance: 12)
             .onChanged { drag = $0.translation }

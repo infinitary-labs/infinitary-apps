@@ -16,15 +16,10 @@ struct MessageComposer: View {
     @FocusState private var focused: Bool
     @Environment(\.verticalSizeClass) private var verticalSize
 
-    // Native compact height identifies iPhone landscape, not a keyboard shrinking the workspace.
-    private var compact: Bool { UIDevice.current.userInterfaceIdiom == .phone && verticalSize == .compact }
+    private var compact: Bool { phoneOnItsSide(verticalSize) }
     private var draftLayout: AnyLayout {
         compact ? AnyLayout(HStackLayout(spacing: PhoneTheme.space2))
             : AnyLayout(VStackLayout(alignment: .leading, spacing: PhoneTheme.space2))
-    }
-    private var turnLayout: AnyLayout {
-        compact ? AnyLayout(HStackLayout(spacing: PhoneTheme.space2))
-            : AnyLayout(VStackLayout(spacing: 0))
     }
 
     private var canSend: Bool {
@@ -40,9 +35,10 @@ struct MessageComposer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            if let turn = session.lastTurn {
+            // INF-589 item 17: on its side an iPhone gives the card this height; the last turn returns upright.
+            if let turn = session.lastTurn, !compact {
                 // Two bare lines, as the Mac hangs them above its input: the captain's words, then the reply.
-                turnLayout {
+                VStack(spacing: 0) {
                     Group { turn.you.isEmpty ? Text("You sent photos") : quoted(turn.you) }
                         .foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("last-turn-you")
                     Group { turn.reply.map { quoted($0.text) } ?? Text("Working…").foregroundStyle(PhoneTheme.muted) }
@@ -96,7 +92,8 @@ struct MessageComposer: View {
                 Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("message-problem")
             }
         }.font(PhoneFont.callout).padding(.top, compact ? PhoneTheme.space2 : PhoneTheme.space3)
-            .frame(maxWidth: 750).frame(maxWidth: .infinity)
+            // INF-589 item 15: the message box lines up with the card above it, inside the gutters the footer keeps.
+            .frame(maxWidth: PhoneColumn.inside).frame(maxWidth: .infinity)
             .task(id: selection) { await loadPhotos() }
             // INF-589 item 12: a soft tap once the computer accepts the message.
             .sensoryFeedback(.phone, trigger: sent)

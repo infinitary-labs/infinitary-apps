@@ -35,6 +35,7 @@ struct PhoneView: View {
     @State private var linkText = ""
     @State private var details = false
     @State private var keyboardVisible = false
+    @Environment(\.verticalSizeClass) private var verticalSize
 
     var body: some View {
         NavigationStack {
@@ -70,9 +71,12 @@ struct PhoneView: View {
                 }
                 if let session = model.connection, !model.removed {
                     ToolbarItem(placement: .principal) {
-                        VStack(spacing: 2) {
-                            Text(session.mac.name).font(PhoneFont.headline).accessibilityIdentifier("home-name")
-                            PhoneReach(session: session)
+                        // INF-589 item 17: on its side an iPhone's title row is one line, the name and then its reach.
+                        let side = phoneOnItsSide(verticalSize)
+                        (side ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: PhoneTheme.space2))
+                            : AnyLayout(VStackLayout(spacing: 2))) {
+                            Text(session.mac.name).font(PhoneFont.headline).lineLimit(1).accessibilityIdentifier("home-name")
+                            PhoneReach(session: session, oneLine: side)
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {

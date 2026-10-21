@@ -1,5 +1,19 @@
 import SwiftUI
 
+/// INF-589 item 15: one reading column, centred, holds the card, its pager, the message box, Tasks and Activity on any width.
+enum PhoneColumn {
+    /// The column with its gutters: the card stage's own 560 points.
+    static let width: CGFloat = 560
+    /// What fills the column inside its gutters: the card itself, and the message box and notice that line up with it.
+    static let inside: CGFloat = width - 2 * PhoneTheme.space4
+}
+
+/// INF-589 item 17: an iPhone on its side gives the card the height, so the shell keeps only what reading it needs.
+/// Native compact height identifies it, not a keyboard shrinking the window.
+@MainActor func phoneOnItsSide(_ vertical: UserInterfaceSizeClass?) -> Bool {
+    UIDevice.current.userInterfaceIdiom == .phone && vertical == .compact
+}
+
 /// The app's own field, as the Mac draws its input: the panel fill, a hairline and the control radius.
 struct PhoneFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {

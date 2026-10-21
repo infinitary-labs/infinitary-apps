@@ -40,8 +40,9 @@ A damaged saved connection clears only the saved computer, keeps this device's i
 
 The compact shell uses iOS's own Cards and Activity tabs, tinted with the shared accent and Lucide outline template images.
 Tasks joins those tabs when the task reader is present, never as an inert placeholder.
-Landscape iPad uses two columns: collapsible Activity and, when present, Tasks panels in the sidebar, with the stage alongside at up to 560 points.
+Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks as a segmented pair at its top, each scrolling alone, with the stage alongside at up to 560 points.
 Portrait and narrow multitasking return to one column with tabs; the tablet's width and height decide the layout, not its physical orientation alone.
+On any width the card with its pager, the message box, Tasks and Activity share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.
 A row has a semantic kind dot, the computer-authored words, an optional task key in micro mono inline before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
@@ -81,7 +82,7 @@ On iOS 26 the capsule is native glass over the system's soft scroll edge; on iOS
 The fixed-height system tab accessory is not used for multi-line content.
 In the landscape sidebar layout it sits at the stage's foot.
 The message box stays mounted once, so its own text and photo drafts survive changing tabs or rotating; no tab or orientation branch owns another copy.
-On an iPhone in compact-height landscape, the last-turn excerpts sit side by side above a row containing the removable photo strip and the message capsule.
+On an iPhone on its side the card gets the height: the title row is one line, the computer's name and then its reach; the last turn and the notice wait until it is upright; and one row holds the removable photo strip and the message capsule.
 The field shows at most two lines there and keeps its full text; the 44-point controls and complete warning rows remain visible above the native tabs.
 Portrait and iPad retain the stacked layout; a landscape card must show its full heading and have enough scrollable height to read body text and use its actions.
 Dictation is the keyboard's own.
@@ -116,6 +117,6 @@ Start and Continue follow the Mac’s own allowed moves; Steer sends to that cre
 The actions sit at the record's foot like a card's footer: Start or Continue full width with the accent fill, Interrupt bordered beside it, and above them a capsule message box whose arrow is Steer.
 A closed task remains readable without a message box or actions.
 New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
-The notice is a quiet pill under the title on every tab: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
+The notice is a quiet pill at the top of every tab, under the iPad's tabs and over the stage beside the landscape sidebar: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
 A tap opens the card on the Cards tab and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.
 No notice requests background delivery, and an initial snapshot does not announce old cards.

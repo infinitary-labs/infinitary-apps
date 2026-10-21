@@ -149,20 +149,30 @@ import XCTest
         if UIDevice.current.userInterfaceIdiom == .pad {
             XCUIDevice.shared.orientation = .landscapeLeft
             app.activate()
-            XCTAssertTrue(app.scrollViews["phone-sidebar"].waitForExistence(timeout: 10), app.debugDescription)
+            let sidebar = phoneSidebar(app)
+            XCTAssertTrue(sidebar.waitForExistence(timeout: 10), app.debugDescription)
             XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
-            XCTAssertLessThanOrEqual(app.scrollViews["phone-sidebar"].frame.maxX, app.scrollViews["card-scroll"].frame.minX)
+            XCTAssertLessThanOrEqual(sidebar.frame.maxX, app.scrollViews["card-scroll"].frame.minX)
             try await appearances("ipad-landscape")
-            let sidebar = app.scrollViews["phone-sidebar"]
-            let disclosure = phoneActivityDisclosure(in: sidebar)
-            XCTAssertTrue(disclosure.exists)
-            disclosure.tap()
-            XCTAssertFalse(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.exists)
-            disclosure.tap()
-            XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForExistence(timeout: 10))
+            // INF-589 item 16: Activity and Tasks are a segmented pair at the sidebar's top, each scrolling alone.
+            let activityRail = phoneSidebarRail("Activity", in: sidebar), tasksRail = phoneSidebarRail("Tasks", in: sidebar)
+            let activity = sidebar.staticTexts.matching(identifier: "activity-text").firstMatch
+            XCTAssertTrue(activity.waitForExistence(timeout: 10))
+            XCTAssertTrue(activityRail.isSelected)
+            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, activity.frame.minY, "The pair sits at the sidebar's top")
+            tasksRail.tap()
+            let waiting = sidebar.buttons["group-waiting"]
+            XCTAssertTrue(waiting.waitForExistence(timeout: 10), "Tasks opens at once, not under the whole Activity list")
+            XCTAssertTrue(waiting.isHittable)
+            XCTAssertFalse(activity.exists)
+            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY)
+            picture("ipad-landscape-tasks")
+            activityRail.tap()
+            XCTAssertTrue(activity.waitForExistence(timeout: 10))
+            XCTAssertFalse(waiting.exists)
             XCUIDevice.shared.orientation = .portrait
             app.activate()
-            XCTAssertTrue(app.scrollViews["phone-sidebar"].waitForNonExistence(timeout: 10))
+            XCTAssertTrue(sidebar.waitForNonExistence(timeout: 10))
         }
         // INF-136 #2: no product traffic for longer than both former pairing deadlines.
         let idle = try await home("idle")
@@ -805,7 +815,35 @@ import XCTest
         // INF-589 item 6: the notice is a quiet pill under the title on any tab, and a tap opens its card.
         let notice = app.buttons["phone-notice"]
         XCTAssertTrue(notice.waitForExistence(timeout: 10))
+        let cardsTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Cards")).firstMatch
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCTAssertGreaterThanOrEqual(notice.frame.minY, cardsTab.frame.maxY, "The notice sits under the iPad's tabs, not over them")
+        }
         picture("foreground-notice")
+        let name = app.staticTexts["home-name"], reach = app.staticTexts["contact"]
+        XCTAssertGreaterThanOrEqual(reach.frame.minY, name.frame.maxY, "Upright, the reach sits under the name")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        app.activate()
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            // INF-589 item 16: in landscape the notice sits over the stage, beside the sidebar rather than across it.
+            let sidebar = phoneSidebar(app)
+            XCTAssertTrue(sidebar.waitForExistence(timeout: 10))
+            XCTAssertTrue(notice.waitForExistence(timeout: 10))
+            XCTAssertGreaterThanOrEqual(notice.frame.minX, sidebar.frame.maxX, "The notice belongs to the stage")
+            picture("notice-landscape")
+        } else {
+            // INF-589 item 17: on its side the card gets the height; the title row is one line and the notice and last turn wait.
+            XCTAssertTrue(notice.waitForNonExistence(timeout: 10))
+            XCTAssertFalse(app.staticTexts["last-turn-you"].exists)
+            XCTAssertLessThan(reach.frame.minY, name.frame.maxY, "The reach shares the name's line")
+            XCTAssertGreaterThanOrEqual(reach.frame.minX, name.frame.maxX)
+            picture("on-its-side")
+        }
+        XCUIDevice.shared.orientation = .portrait
+        app.activate()
+        XCTAssertTrue(notice.waitForExistence(timeout: 10), "Upright, the unread notice returns")
+        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(reach.frame.minY, name.frame.maxY)
         let noticed = notice.label
         notice.tap()
         XCTAssertTrue(notice.waitForNonExistence(timeout: 10))

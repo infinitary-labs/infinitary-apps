@@ -3,8 +3,10 @@ import SwiftUI
 
 struct PhoneReach: View {
     let session: ReadOnlySession
+    /// INF-589 item 17: on an iPhone on its side the time it was last heard follows on the same line.
+    var oneLine = false
     var body: some View {
-        VStack(spacing: 2) {
+        (oneLine ? AnyLayout(HStackLayout(spacing: PhoneTheme.space2)) : AnyLayout(VStackLayout(spacing: 2))) {
             HStack(spacing: PhoneTheme.space2) {
                 Circle().fill(session.contact == "in-reach" ? PhoneTheme.accent : PhoneTheme.warning)
                     .frame(width: 6, height: 6).accessibilityHidden(true)

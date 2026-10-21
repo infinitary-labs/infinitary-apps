@@ -26,6 +26,7 @@ import XCTest
             : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
         XCTAssertTrue(surface.waitForExistence(timeout: 10), "The requested tab actually opens")
         XCTAssertTrue(surface.isHittable)
+        if name != "Activity" { verifyPhoneReadingColumn(surface, app: app) }
         XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
         XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1, "Changing tabs keeps the picked photo")
         XCTAssertEqual(app.textFields.matching(identifier: "message-box").count, 1)
@@ -36,16 +37,17 @@ import XCTest
     app.activate()
     XCTAssertTrue(input.waitForExistence(timeout: 10))
     if UIDevice.current.userInterfaceIdiom == .pad {
-        let sidebar = app.scrollViews["phone-sidebar"]
+        let sidebar = phoneSidebar(app)
         XCTAssertTrue(sidebar.waitForExistence(timeout: 10))
         let cardsTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Cards")).firstMatch
         XCTAssertFalse(cardsTab.isHittable, "Landscape columns have no second tab row above them")
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
             "The landscape composer belongs to the stage beside the sidebar")
-        phoneActivityDisclosure(in: sidebar).tap()
+        verifyPhoneReadingColumn(app.scrollViews["card-scroll"], app: app)
+        phoneSidebarRail("Tasks", in: sidebar).tap()
         // The search waits above the list until it is pulled down (INF-589 item 9), so the first group stands for Tasks.
         let tasks = sidebar.buttons["group-waiting"]
-        XCTAssertTrue(tasks.waitForExistence(timeout: 10), "Collapsing Activity reveals Tasks in the landscape sidebar")
+        XCTAssertTrue(tasks.waitForExistence(timeout: 10), "The Tasks rail shows Tasks in the landscape sidebar")
         XCTAssertTrue(tasks.isHittable)
     }
     XCTAssertEqual(input.value as? String, words, "Rotating keeps the unsent words")
@@ -78,13 +80,13 @@ import XCTest
         XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     } else { picture("draft-landscape") }
     if UIDevice.current.userInterfaceIdiom == .pad {
-        let sidebar = app.scrollViews["phone-sidebar"]
-        phoneActivityDisclosure(in: sidebar).tap()
+        let sidebar = phoneSidebar(app)
+        phoneSidebarRail("Activity", in: sidebar).tap()
         XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForExistence(timeout: 10))
     }
     XCUIDevice.shared.orientation = .portrait
     app.activate()
-    XCTAssertTrue(app.scrollViews["phone-sidebar"].waitForNonExistence(timeout: 10))
+    XCTAssertTrue(phoneSidebar(app).waitForNonExistence(timeout: 10))
     XCTAssertTrue(input.waitForExistence(timeout: 10))
     XCTAssertEqual(input.value as? String, words)
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
@@ -208,7 +210,21 @@ import XCTest
     XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 10))
 }
 
-/// INF-209: read the native disclosure inside its sidebar, never the identically named tab.
-@MainActor func phoneActivityDisclosure(in sidebar: XCUIElement) -> XCUIElement {
-    sidebar.buttons["Activity"]
+/// INF-589 item 15: the card, the Tasks list and the message box share one centred reading column on any width.
+@MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, app: XCUIApplication) {
+    let frame = phoneAccessibilityBounds(surface.frame)
+    let left = phoneAccessibilityBounds(app.buttons["add-photos"].frame).minX
+    let right = phoneAccessibilityBounds(app.buttons["send-message"].frame).maxX
+    XCTAssertEqual(frame.minX, left, accuracy: 1, "\(surface.identifier) \(surface.frame) starts where the message box does")
+    XCTAssertEqual(frame.maxX, right, accuracy: 1, "\(surface.identifier) \(surface.frame) ends where the message box does")
+}
+
+/// The iPad's landscape sidebar, a container holding its Activity and Tasks pair.
+@MainActor func phoneSidebar(_ app: XCUIApplication) -> XCUIElement {
+    app.descendants(matching: .any).matching(identifier: "phone-sidebar").firstMatch
+}
+
+/// INF-209: read the sidebar's own Activity or Tasks segment, never the identically named tab.
+@MainActor func phoneSidebarRail(_ name: String, in sidebar: XCUIElement) -> XCUIElement {
+    sidebar.buttons[name]
 }

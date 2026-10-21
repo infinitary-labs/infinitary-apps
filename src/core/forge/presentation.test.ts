@@ -108,6 +108,24 @@ function story(
 function figures(body: string) {
   return DomUtils.findAll((node) => node.name === "figure", parseDocument(body).children);
 }
+/** Each table's header words and, per row, each cell's figure (or null when it is empty). */
+function tables(body: string) {
+  return DomUtils.findAll((node) => node.name === "table", parseDocument(body).children).map(
+    (table) => ({
+      headers: DomUtils.findAll((node) => node.name === "th", table.children).map((th) =>
+        DomUtils.getText(th),
+      ),
+      rows: DomUtils.findAll(
+        (node) => node.name === "tr",
+        DomUtils.findAll((node) => node.name === "tbody", table.children),
+      ).map((tr) =>
+        DomUtils.findAll((node) => node.name === "td", tr.children).map(
+          (td) => DomUtils.findOne((node) => node.name === "figure", td.children) ?? null,
+        ),
+      ),
+    }),
+  );
+}
 function inGrid(body: string) {
   return DomUtils.findAll(
     (node) => node.attribs.class === "inf-grid",
@@ -322,8 +340,11 @@ describe("version-two stories read in two tiers", () => {
     const card = presentationCardBody(selected);
     const body = presentationMarkdown(selected, urls, "pending");
     const document = parseDocument(card);
-    expect(inGrid(card)).toHaveLength(1);
-    expect(figures(card).map((figure) => DomUtils.getText(figure))).toEqual(["Before", "After"]);
+    // INF-706: Before and After head the table's columns, never a label under a picture.
+    const [table] = tables(card);
+    expect(table?.headers).toEqual(["Before", "After"]);
+    expect(table?.rows.map((row) => row.map((figure) => Boolean(figure)))).toEqual([[true, true]]);
+    expect(DomUtils.findAll((node) => node.name === "figcaption", document.children)).toEqual([]);
     const details = DomUtils.findAll((node) => node.name === "details", document.children);
     expect(details).toHaveLength(1);
     const detail = details[0];
@@ -346,12 +367,19 @@ describe("version-two stories read in two tiers", () => {
     }
     expect(body).toBe(presentationMarkdown(selected, urls, "passed"));
   });
-  it("stacks every recording and mixed view, marks new views, and retains substantive unfinished work in a fold", () => {
+  // INF-706: the captain's answer puts a recording's poster and Play button in the card's table.
+  it("tables recordings on the card, stacks them in the pull request, heads new views New, and retains substantive unfinished work in a fold", () => {
     const selected = tiered(["picture", "recording"]);
     selected.unfinished = ["Continue: inspect playback starts once this is merged."];
     const card = presentationCardBody(selected);
     const body = presentationMarkdown(selected, urls, "passed");
-    expect(inGrid(card)).toHaveLength(0);
+    // Each row pairs the matching entries: the picture beside the picture, the recording beside the recording.
+    expect(
+      tables(card)[0]?.rows.map((row) => row.map((figure) => figure?.attribs["data-inf-demo"])),
+    ).toEqual([
+      [undefined, undefined],
+      [`app-frame://media/${video}.mp4`, `app-frame://media/${video}.mp4`],
+    ]);
     expect(body).not.toContain("<table>");
     expect(body.split("\n\n").filter((block) => block === urls.get(video))).toHaveLength(2);
     expect(card).toContain("<summary>Not done</summary>");
@@ -361,8 +389,10 @@ describe("version-two stories read in two tiers", () => {
     view.kind = "new";
     view.before = [];
     const fresh = presentationCardBody(selected);
-    expect(fresh).toContain("data-inf-new");
-    expect(figures(fresh).map((figure) => DomUtils.getText(figure))).toEqual(["After", "After"]);
+    // A new view's own table is headed New; its caption keeps no New of its own to cover.
+    expect(tables(fresh).map((table) => table.headers)).toEqual([["New"]]);
+    expect(tables(fresh)[0]?.rows.map((row) => row.length)).toEqual([1, 1]);
+    expect(DomUtils.getText(parseDocument(fresh))).not.toContain("New: ");
     expect(presentationMarkdown(selected, urls, "passed")).toContain("### New: The comparison");
   });
   it("names only raised risk dimensions in the open line and preserves GitLab's native media and inert prose", () => {

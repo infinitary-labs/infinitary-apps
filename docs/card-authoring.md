@@ -205,10 +205,10 @@ The saved story's title wins over the title field, and its risk and required act
 A conventional title's breaking marker (`!:`) is metadata, not excited copy; the saved title keeps it.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
 Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
-Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
+Each view's caption sits above its own table on the card: Before and After head a changed view's columns, a new view's table is headed New, and empty sections disappear.
 Version-1 stories keep their existing drawing; the report, legacy descriptions and free-form completion outline stay unchanged.
 The host renders its body from the same version as the PR and keeps the risk chart, requirements and merge controls under their existing owners.
-Picture-only pairs may sit side by side; any pair containing a recording stacks in both outputs to fit GitHub's and GitLab's native players.
+The card's table holds recordings too, as their posters; in the pull request picture-only pairs sit side by side and any pair containing a recording stacks to fit GitHub's and GitLab's native players.
 
 The lint asks for shape, never for the absence of words: there is no progress-phrase ban list, and the merge-claim rule is a consistency check on an action, not a ban on what a body may say.
 The first mate's boundary adds typed facts - attach-first (`task_id` or `standalone`), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its completion card.

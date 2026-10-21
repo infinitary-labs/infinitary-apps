@@ -130,7 +130,7 @@ export function tieredPresentationCardBody(story: ChangePresentation): string {
     if (!asset) throw new Error("The story has missing retained media.");
     return `app-frame://${asset.mediaType === "video/mp4" ? "media" : "images"}/${asset.file}`;
   };
-  const media = (entry: RetainedPresentationMedia, role: string) => {
+  const media = (entry: RetainedPresentationMedia) => {
     const asset = story.assets.find((candidate) => candidate.id === entry.asset);
     const poster = story.assets.find((candidate) => candidate.id === (entry.poster ?? entry.asset));
     if (!asset || !poster) throw new Error("The story has missing retained media.");
@@ -139,15 +139,39 @@ export function tieredPresentationCardBody(story: ChangePresentation): string {
     const demo = entry.poster
       ? ` data-inf-demo="${assetUrl(entry.asset)}" data-inf-demo-duration="${asset.durationMs}"`
       : "";
-    return `<figure${demo}><img src="${assetUrl(entry.poster ?? entry.asset)}" alt="${html(entry.alt)}" width="${poster.width}" height="${poster.height}"><figcaption>${role}</figcaption></figure>`;
+    return `<figure${demo} style="margin:0"><img src="${assetUrl(entry.poster ?? entry.asset)}" alt="${html(entry.alt)}" width="${poster.width}" height="${poster.height}"></figure>`;
+  };
+  // INF-706 (approved table): one boxed table per view, its caption above,
+  // Before and After only in the header, and the matching pictures in a row.
+  const LINE = "1px solid var(--line-1)";
+  // The frame stylesheet's New tag, as words in the header rather than over a corner.
+  const NEW_TAG =
+    '<span style="display:inline-block;padding:1px var(--space-1);font-family:var(--font-mono);font-size:var(--text-xs);font-weight:400;color:var(--fg-1);background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-s)">New</span>';
+  const table = (head: string, rows: (RetainedPresentationMedia | undefined)[][]) => {
+    const cell = (entry: RetainedPresentationMedia | undefined, column: number, last: boolean) =>
+      `<td style="vertical-align:top${column ? `;border-left:${LINE}` : ""}${last ? ";border-bottom:0" : ""}">${entry ? media(entry) : ""}</td>`;
+    const body = rows
+      .map(
+        (row, index) =>
+          `<tr>${row.map((entry, column) => cell(entry, column, index === rows.length - 1)).join("")}</tr>`,
+      )
+      .join("");
+    return `<table style="table-layout:fixed;border-collapse:separate;border-spacing:0;border:${LINE};border-radius:var(--radius-m);overflow:hidden"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   };
   const views = story.views
     .map((view) => {
-      const paired =
-        (view.kind === "changed" || view.layout === "adjacent") && picturesOnly(story, view);
-      const states = (role: "before" | "after") =>
-        view[role].map((entry) => media(entry, role === "before" ? "Before" : "After")).join("\n");
-      return `<section${view.kind === "new" ? " data-inf-new" : ""}><p>${view.kind === "new" ? "New: " : ""}${html(view.caption)}</p><div${paired ? ' class="inf-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"' : ""}>${view.before.length ? `<div>${states("before")}</div><div>${states("after")}</div>` : states("after")}</div></section>`;
+      if (view.kind === "new") {
+        const columns = view.layout === "adjacent" ? 2 : 1;
+        const rows = Array.from({ length: Math.ceil(view.after.length / columns) }, (_, index) =>
+          view.after.slice(index * columns, index * columns + columns),
+        );
+        return `<section><p>${html(view.caption)}</p>${table(`<th scope="colgroup" colspan="${columns}">${NEW_TAG}</th>`, rows)}</section>`;
+      }
+      const rows = Array.from(
+        { length: Math.max(view.before.length, view.after.length) },
+        (_, index) => [view.before[index], view.after[index]],
+      );
+      return `<section><p>${html(view.caption)}</p>${table(`<th scope="col">Before</th><th scope="col" style="border-left:${LINE}">After</th>`, rows)}</section>`;
     })
     .join("\n");
   const fold = (title: string, lines: string[]) =>

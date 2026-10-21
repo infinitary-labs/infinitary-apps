@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { presentationCardBody } from "../../src/core/forge/presentation";
 import { stageChangePresentation } from "../../src/core/pi/changePresentation";
 import { CardStore } from "../../src/core/storage/cardStore";
@@ -13,20 +13,30 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
-import { showCard, shownCard } from "./stack";
+import { showCard } from "./stack";
 
 const TITLE = "fix(cards): compare each view in one place";
 const CAPTION = "The reply view in two themes";
+const NEW_CAPTION = "The choice keys in two themes";
 
 /**
- * INF-467 direction B: the two real card pictures remain whole and share one
- * caption, with the earlier state beside the result. A local hidden window,
- * disposable HOME and userData, no sign-in, and no shared resource.
+ * INF-467 direction B, and INF-706's approved table (the captain: "a table
+ * format may work better, and before/after would be in the table header"):
+ * real release-note pictures, two per state, stay whole; each view's caption
+ * sits above its table, Before and After head their own columns, matching
+ * pictures share a row, and a new view's table is headed New. A local hidden
+ * window, disposable HOME and userData, no sign-in, and no shared resource.
  * Publication itself is owned by forge-signin.spec.ts; this owns the layout.
  */
 test("a saved story pairs the states of each view and preserves the old drawing", async () => {
   const pictureDir = process.env.INFINITARY_STORY_PICTURES;
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const shown = (name: string, theme: string) => ({
+    path: `release-notes/pictures/${name}.webp`,
+    alt: `${name.replaceAll("-", " ")} in the ${theme} theme`,
+    inspected: true as const,
+    captureHead: head,
+  });
   for (const version of [1, 2] as const) {
     const userDataDir = scratchDir("infinitary-story-layout-");
     const taskId = "story-layout";
@@ -48,24 +58,27 @@ test("a saved story pairs the states of each view and preserves the old drawing"
         verification: ["Compared both complete reply-view pictures in the isolated app."],
         views: [
           {
-            id: "footer",
+            id: "reply",
             kind: "changed",
             caption: CAPTION,
             before: [
-              {
-                path: "release-notes/pictures/action-reply-line-dark.webp",
-                alt: "The reply view in the dark theme",
-                inspected: true,
-                captureHead: head,
-              },
+              shown("action-reply-line-dark", "dark"),
+              shown("action-reply-line-light", "light"),
             ],
             after: [
-              {
-                path: "release-notes/pictures/action-reply-line-light.webp",
-                alt: "The reply view in the light theme",
-                inspected: true,
-                captureHead: head,
-              },
+              shown("anything-else-box-dark", "dark"),
+              shown("anything-else-box-light", "light"),
+            ],
+          },
+          {
+            id: "keys",
+            kind: "new",
+            caption: NEW_CAPTION,
+            layout: "adjacent",
+            before: [],
+            after: [
+              shown("card-choice-keys-dark", "dark"),
+              shown("card-choice-keys-light", "light"),
             ],
           },
         ],
@@ -108,7 +121,7 @@ test("a saved story pairs the states of each view and preserves the old drawing"
       await showCard(page, TITLE);
       const body = cardBody(page, TITLE);
       const images = body.locator("img");
-      await expect(images).toHaveCount(2);
+      await expect(images).toHaveCount(6);
       await expect
         .poll(() =>
           images.evaluateAll((nodes) =>
@@ -116,28 +129,96 @@ test("a saved story pairs the states of each view and preserves the old drawing"
           ),
         )
         .toBe(true);
-      const boxes = await images.evaluateAll((nodes) =>
-        nodes.map((node) => node.getBoundingClientRect().toJSON()),
-      );
-      const [before, after] = boxes;
-      if (!before || !after) throw new Error("Missing comparison pictures");
-      if (version === 2) {
-        expect(before.x + before.width).toBeLessThanOrEqual(after.x);
-        expect(before.y).toBe(after.y);
-        await expect(body.getByText(CAPTION, { exact: true })).toHaveCount(1);
-      } else expect(before.y + before.height).toBeLessThanOrEqual(after.y);
       if (pictureDir) {
         // Version 1 is the unchanged legacy renderer, reproduced after implementation.
-        const section = version === 2 ? body.locator("section") : body.locator("body");
         await regionShot(
-          section,
+          body.locator("body"),
           join(pictureDir, version === 1 ? "paired-legacy-reproduction.png" : "paired-after.png"),
         );
       }
+      if (version === 1) {
+        const boxes = await images.evaluateAll((nodes) =>
+          nodes.map((node) => node.getBoundingClientRect().toJSON()),
+        );
+        const [before, after] = boxes;
+        if (!before || !after) throw new Error("Missing comparison pictures");
+        expect(before.y + before.height).toBeLessThanOrEqual(after.y);
+      } else {
+        // Each view: its caption, then a table whose header cells sit over their own pictures.
+        const placed = async (target: Locator) => {
+          const box = await target.boundingBox();
+          if (!box) throw new Error("A part of the view is not drawn");
+          return { left: box.x, right: box.x + box.width, top: box.y, bottom: box.y + box.height };
+        };
+        const tables = body.getByRole("table");
+        await expect(tables).toHaveCount(2);
+        const views = await Promise.all(
+          [CAPTION, NEW_CAPTION].map(async (text, index) => {
+            const table = tables.nth(index);
+            const headers = table.getByRole("columnheader");
+            const rows = table.getByRole("row").filter({ has: body.getByRole("cell") });
+            return {
+              caption: { text, box: await placed(body.getByText(text, { exact: true })) },
+              headers: await Promise.all(
+                (await headers.all()).map(async (header) => ({
+                  text: await header.textContent(),
+                  box: await placed(header),
+                })),
+              ),
+              rows: await Promise.all(
+                (await rows.all()).map((row) =>
+                  row
+                    .getByRole("img")
+                    .all()
+                    .then((pictures) => Promise.all(pictures.map(placed))),
+                ),
+              ),
+              labels: await table.locator("figcaption").count(),
+            };
+          }),
+        );
+        expect(views.map((view) => view.caption?.text)).toEqual([CAPTION, NEW_CAPTION]);
+        expect(views.map((view) => view.headers.map((header) => header.text))).toEqual([
+          ["Before", "After"],
+          ["New"],
+        ]);
+        expect(views.map((view) => view.labels)).toEqual([0, 0]);
+        const [changed, fresh] = views;
+        if (!changed || !fresh) throw new Error("Missing a view");
+        expect(changed.rows).toHaveLength(2);
+        for (const view of views) {
+          const headerBottom = Math.max(...view.headers.map((header) => header.box.bottom));
+          const captionBottom = view.caption?.box.bottom ?? Number.POSITIVE_INFINITY;
+          // The caption ends before the header starts, so no header or tag covers it.
+          for (const header of view.headers)
+            expect(captionBottom).toBeLessThanOrEqual(header.box.top);
+          for (const row of view.rows) {
+            const [left, right] = row;
+            if (!left || !right) throw new Error("A row is missing a picture");
+            // Matching pictures share a row, left beside right, below the header.
+            expect(left.top).toBe(right.top);
+            expect(left.right).toBeLessThanOrEqual(right.left);
+            expect(headerBottom).toBeLessThanOrEqual(left.top);
+          }
+        }
+        // Before heads the left column and After the right one.
+        const [beforeHeader, afterHeader] = changed.headers;
+        if (!beforeHeader || !afterHeader) throw new Error("Missing a header");
+        for (const [left, right] of changed.rows) {
+          if (!left || !right) throw new Error("A row is missing a picture");
+          for (const [picture, header] of [
+            [left, beforeHeader],
+            [right, afterHeader],
+          ] as const) {
+            expect(picture.left).toBeGreaterThanOrEqual(header.box.left);
+            expect(picture.right).toBeLessThanOrEqual(header.box.right);
+          }
+        }
+      }
       if (version === 2 && process.env.INFINITARY_STORY_HERO) {
         const hero = await heroShot(page, {
-          region: shownCard(page, TITLE),
-          name: "two-tier-change-stories",
+          region: body.locator("section").first(),
+          name: "before-after-table-on-merge-cards",
         });
         writeFileSync(test.info().outputPath("hero.json"), JSON.stringify(hero));
       }

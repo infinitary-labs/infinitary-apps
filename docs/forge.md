@@ -666,9 +666,11 @@ Authors never put code versions, hashes or revision numbers in prose, captions, 
 Capture versions and applicability remain retained data, never rendered on new stories.
 Version-1 saved stories keep their rendering; already published descriptions are not rewritten automatically.
 Changed views have Before and After media; new views have only After; an invisible change has no views and an explicit no-picture reason.
-Under Before and after, each changed view pairs its Before pictures with its After pictures, with one caption per view and labels for each state.
-A new view carries the New tag and After evidence only.
-A view containing a recording stacks in both outputs because GitHub's and GitLab's native players ignore the requested width and overflow a two-column table.
+Under Before and after, each changed view pairs its Before pictures with its After pictures, with one caption per view.
+On the card, each view's caption sits above its own boxed table: a changed view's header reads Before and After over its two columns, and each row holds the matching pictures, the first beside the first; no label sits under a picture.
+A new view carries After evidence only; on the card its own table is headed by the New tag, two pictures to a row for an adjacent view and one otherwise, and in the pull request its heading reads New.
+A recording sits in the card's table as its poster and Play button.
+In the pull request a view containing a recording stacks, because GitHub's and GitLab's native players ignore the requested width and overflow a two-column table.
 Version-1 stories retain the author's optional adjacent grouping within each state.
 The author judges relevance, safe publication and continued applicability; the host checks the typed relationships and byte identity, never natural-language intent.
 Meaningful drawn figures need inspected raster exports; arbitrary card HTML, interactive controls, host chrome and private threads are not exported.

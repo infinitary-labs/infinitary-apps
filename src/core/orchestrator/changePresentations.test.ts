@@ -463,8 +463,9 @@ describe("saved change publication", () => {
     const change = await at.publish();
     const card = await at.service.completion(TASK, 1, HEAD);
     expect(change.body?.match(/<td width="50%">/g)).toHaveLength(2);
-    expect(card.body).toContain('class="inf-grid"');
-    expect(card.body.match(/data-inf-new/g)).toHaveLength(1);
+    // INF-706: the adjacent new view is one table headed New, its two pictures in one row.
+    expect(card.body.match(/<th [^>]*colspan="2">.*?New<\/span><\/th>/g)).toHaveLength(1);
+    expect(card.body.match(/<td /g)).toHaveLength(2);
     expect(change.body).toContain("### New: Completion story");
     expect(card.requiredActions).toEqual([requirement]);
     expect(change.body).toContain(requirement.title);

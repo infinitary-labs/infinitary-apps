@@ -805,7 +805,7 @@ export type RepairAssessmentFacts = {
   fromHead: string;
   toHead: string;
   newBase: string;
-  /** Paths the approved change touches against its own base, and the repaired one against the newer base. */
+  /** Paths the approved change touches against its own base, and the repaired one against the base it sits on. */
   paths: { approved: string[]; repaired: string[] };
   evidence: string;
   validation: string;
@@ -822,7 +822,7 @@ function checklist(paths: RepairAssessmentFacts["paths"]): string[] {
     const only = !repaired.has(path)
       ? " (only in the approved change)"
       : !approved.has(path)
-        ? " (only in the brought-up-to-date change)"
+        ? " (only in the repaired change)"
         : "";
     return `- ${JSON.stringify(path)}${only}`;
   });
@@ -831,25 +831,25 @@ function checklist(paths: RepairAssessmentFacts["paths"]): string[] {
 /**
  * The brief of an independent repair assessment (FI3-663; FI3-304 section
  * 3's scope boundary, the captain's guard = builder): one bounded, read-only
- * look at whether bringing an approved change up to date kept it the change
- * the captain approved, answered with the one line the host reads.
+ * look at whether a repair of an approved change kept it the change the
+ * captain approved, answered with the one line the host reads.
  */
 export function renderRepairAssessmentBrief(facts: RepairAssessmentFacts): string {
   const approvedBase = `$(git merge-base ${facts.approvedHead} ${facts.newBase})`;
   const words = facts.userWords?.trim();
   return [
-    `Goal: assess whether bringing "${facts.builderTitle}" up to date kept the change the captain approved, and report one impact line.`,
+    `Goal: assess whether a repair of "${facts.builderTitle}" kept the change the captain approved, and report one impact line.`,
     "The impact report is the whole deliverable of this internal assessment; emit no card.",
     ...(words ? ["", "The captain's words the change was built for, verbatim:", words] : []),
     "",
-    `${REPAIR_ASSESSMENT_BRIEF_OPENING}: change nothing, commit nothing, push nothing, run no tests. The captain approved merging ${facts.change} at ${facts.approvedHead}. Newer work on the default branch then overlapped it, so its crewmate brought it up to date, from ${facts.fromHead} to ${facts.toHead}, taking in ${facts.newBase}. The crewmate could not tell whether that kept the approved work as it was, so you decide, independently of it. This repository's working copies share commits: the approved change is git diff ${approvedBase} ${facts.approvedHead}, the brought-up-to-date one is git diff ${facts.newBase} ${facts.toHead}, and git range-diff ${approvedBase}..${facts.approvedHead} ${facts.newBase}..${facts.toHead} lines them up commit by commit.`,
+    `${REPAIR_ASSESSMENT_BRIEF_OPENING}: change nothing, commit nothing, push nothing, run no tests. The captain approved merging ${facts.change} at ${facts.approvedHead}. Its crewmate then repaired it, from ${facts.fromHead} to ${facts.toHead}, on the default branch at ${facts.newBase}. The crewmate could not tell whether that kept the approved work as it was, so you decide, independently of it. This repository's working copies share commits: the approved change is git diff ${approvedBase} ${facts.approvedHead}, the repaired one is git diff ${facts.newBase} ${facts.toHead}, and git range-diff ${approvedBase}..${facts.approvedHead} ${facts.newBase}..${facts.toHead} lines them up commit by commit.`,
     "",
-    "conflict-only: the repaired change does what the approved one did, only on the newer base - resolved conflicts, an interface the newer work renamed adapted without changing behavior, and the tests and documents that adaptation directly needs. changed-work: anything else - new or removed behavior, unrelated fixes, weakened tests or protections, or edits the newer work did not require. Who wrote a commit, how few lines changed, or edits only in conflicted files prove nothing. If you cannot settle it within this one look, answer unknown: unknown never merges.",
+    "none: the repaired change does what the approved one did, whatever the repair was - such as resolved conflicts, an interface newer work renamed adapted without changing behavior, or a reworded commit message - with the tests and documents it directly needs. changed-work: anything else - new or removed behavior, unrelated fixes, weakened tests or protections, or edits the repair did not need. Who wrote a commit, how few lines changed, or edits only in conflicted files prove nothing. If you cannot settle it within this one look, answer unknown: unknown never merges.",
     "",
     "Every path either change touches - judge each one; a path only one of them touches is the first place to look:",
     ...checklist(facts.paths),
     "",
-    "Open your report with exactly one line, impact: conflict-only|changed-work|unknown, then say in a few lines what you compared and why it decides. Your first report is your verdict: the host reads that line and closes this task.",
+    "Open your report with exactly one line, impact: none|changed-work|unknown, then say in a few lines what you compared and why it decides. Your first report is your verdict: the host reads that line and closes this task.",
     "",
     "The crewmate's account of the repair:",
     `Evidence: ${facts.evidence}`,

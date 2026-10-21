@@ -679,7 +679,7 @@ export class ChangePresentations {
     }
   }
 
-  /** Called only on a host-accepted conflict-only lineage, not an author's arbitrary new story. */
+  /** Called only on a host-accepted repair lineage, not an author's arbitrary new story. */
   async refreshConflictOnly(
     taskId: string,
     fromHead: string,
@@ -707,7 +707,7 @@ export class ChangePresentations {
             ...media,
             applicability:
               media.applicability ??
-              `The accepted conflict-only repair from ${fromHead} to ${toHead} leaves this view unchanged.`,
+              `The accepted repair from ${fromHead} to ${toHead} leaves this view unchanged.`,
           })),
         })),
       });
@@ -716,7 +716,7 @@ export class ChangePresentations {
         JSON.stringify(latest) !== JSON.stringify(refreshed)
       )
         throw new Error(
-          "A newer edited story needs its own completion offer; it is not a conflict-only refresh.",
+          "A newer edited story needs its own completion offer; it is not a repair's refresh.",
         );
       if (latest.revision === published.revision)
         await this.save(taskId, (old) => ({

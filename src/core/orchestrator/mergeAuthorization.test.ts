@@ -1,6 +1,7 @@
 import type { AttachmentRef } from "@shared/attachments";
+import { repairImpact, wireRepairImpact } from "@shared/checkRepair";
 import { describe, expect, it } from "vitest";
-import { isCaptainGuidance } from "./mergeAuthorization";
+import { isCaptainGuidance, parseRepairAssessment } from "./mergeAuthorization";
 import {
   GUIDANCE_MARK_WORDS,
   renderWake,
@@ -86,5 +87,29 @@ describe("the captain's guidance on a kept merge (FI3-662)", () => {
     expect(renderWake(withGuidanceMark("Keep it.", 1))).toMatch(
       new RegExp(`^Keep it\\.\\n\\n.*${GUIDANCE_MARK_WORDS} 1 `),
     );
+  });
+});
+
+describe("a repair's declared impact (INF-493)", () => {
+  // `none` was named conflict-only before INF-493. A computer's work request
+  // to its home still carries that name, and an assessment asked before the
+  // rename answers with it: either way it must keep the captain's approval,
+  // never read as no verdict, which ends it.
+  it("reads conflict-only, none's older name, as none wherever it arrives", () => {
+    expect(wireRepairImpact("none")).toBe("conflict-only");
+    expect(repairImpact(wireRepairImpact("none"))).toBe("none");
+    expect(repairImpact(wireRepairImpact("changed-work"))).toBe("changed-work");
+    expect(repairImpact("only-a-title")).toBeUndefined();
+    expect(
+      parseRepairAssessment(
+        "impact: conflict-only\nThe range-diff lines up the approved commit unchanged on the newer base.",
+      ),
+    ).toBe("none");
+    expect(
+      parseRepairAssessment(
+        "**impact: none**\nOnly the commit's subject changed; the tree is the same.",
+      ),
+    ).toBe("none");
+    expect(parseRepairAssessment("The repaired change looks the same to me.")).toBe("unstated");
   });
 });

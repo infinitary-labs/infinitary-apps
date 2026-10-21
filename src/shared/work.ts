@@ -2,7 +2,7 @@ import { z } from "zod";
 import { CARD_MEDIA_KINDS, CARD_MEDIA_PIECE_BYTES, CARD_TYPEFACE_KINDS } from "./cardPictures";
 import { cardEffectSchema, cardPictureSchema, riskDeclarationSchema } from "./cards";
 import { openChangeInputSchema, stagedChangePresentationSchema } from "./changePresentation";
-import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "./checkRepair";
+import { LEGACY_NO_IMPACT, MERGE_GUIDANCE_IMPACTS } from "./checkRepair";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
 import { keptValidationInputSchema } from "./liveValidation";
@@ -366,7 +366,9 @@ const checkChangeInputSchema = z.object({
       fromHead: z.string(),
       toHead: z.string(),
       newBase: z.string(),
-      impact: z.enum(MERGE_REPAIR_IMPACTS),
+      // `none` travels by its older name, so this shape is the one every
+      // build on this contract admits (`wireRepairImpact`, INF-493).
+      impact: z.enum([LEGACY_NO_IMPACT, "changed-work", "unknown"]),
       changedPaths: z.array(z.string()),
       evidence: z.string(),
       validation: z.string(),

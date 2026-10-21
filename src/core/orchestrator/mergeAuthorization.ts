@@ -1,9 +1,9 @@
 import {
   MERGE_GUIDANCE_IMPACTS,
-  MERGE_REPAIR_IMPACTS,
   type MergeGuidanceDeclaration,
   type MergeRepairDeclaration,
   type MergeRepairImpact,
+  repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
 import type { RepoDelivery } from "@shared/repos";
@@ -27,13 +27,15 @@ import type { WakeBody } from "./wakes";
  *
  * - The candidate head is the approved head, or the newest repair the host
  *   accepted after it. No other head is ever merged on the approval.
- * - A repair is the crewmate's typed declaration on check_change: what it
- *   started from, what it pushed, the newer work it took in, its judgment
- *   of the impact and its evidence. The host checks lineage, ancestry and
- *   the paths the change touches against the ORIGINAL approved change, so
- *   drift across several repairs is caught as surely as in one; whether
+ * - A repair is any new head after the approved one, declared on
+ *   check_change: what it started from, what it pushed, the base it sits
+ *   on, its impact on the approved work and its evidence. The host checks
+ *   lineage, ancestry and the paths the change touches against the
+ *   ORIGINAL approved change, so drift across several repairs is caught as
+ *   surely as in one, and records the impact the crewmate declared: whether
  *   the repaired change still does what was approved is the crewmate's
- *   judgment (guard = builder), never a parser's.
+ *   judgment (guard = builder; INF-493), never a parser's or a kind of
+ *   repair the host names.
  * - A repair the crewmate cannot judge (`unknown`) is decided by one
  *   independent assessment the host commissions at that head (FI3-663,
  *   "uncertainty receives an independent bounded assessment"): its one
@@ -229,10 +231,8 @@ export type LineageFacts =
       known: true;
       /** The repaired head is a commit in the project's repository here. */
       toHeadHere: boolean;
-      /** The newer base is in the repaired head. */
+      /** The declared base is in the repaired head. */
       baseInTo: boolean;
-      /** The newer base was already in the head the repair started from. */
-      baseInFrom: boolean;
       /** The paths the approved change touches, against its own base. */
       approvedPaths: string[];
       /** The paths the repaired change touches, against the newer base. */
@@ -294,19 +294,20 @@ export function declareMergeRepair(
       text: `Repair declaration refused: no kept merge approval stands on this task${authorization?.reason ? ` (${authorization.reason})` : ""}. Drive the checks green and put up the completion card when the work is ready.`,
     };
   }
+  const impact = repairImpact(input.impact);
   if (
     !filled(input.fromHead) ||
     !filled(input.toHead) ||
     !filled(input.newBase) ||
     !filled(input.evidence) ||
     !filled(input.validation) ||
-    !MERGE_REPAIR_IMPACTS.includes(input.impact) ||
+    !impact ||
     !Array.isArray(input.changedPaths) ||
     !input.changedPaths.every((path) => typeof path === "string")
   ) {
     return {
       read: false,
-      text: "Repair declaration refused: give fromHead, toHead, newBase, impact, changedPaths (may be empty), evidence and the validation you ran at toHead.",
+      text: "Repair declaration refused: give fromHead, toHead, newBase, impact (none, changed-work or unknown), changedPaths (may be empty), evidence and the validation you ran at toHead.",
     };
   }
   if (input.toHead === input.fromHead) {
@@ -321,7 +322,7 @@ export function declareMergeRepair(
     fromHead: input.fromHead.trim(),
     toHead: input.toHead.trim(),
     newBase: input.newBase.trim(),
-    impact: input.impact,
+    impact,
     changedPaths: input.changedPaths.map((path) => path.trim()).filter(Boolean),
     evidence: input.evidence.trim(),
     validation: input.validation.trim(),
@@ -348,7 +349,7 @@ export function declareMergeRepair(
   };
   // The work changed: the approval no longer covers it, whatever the lineage.
   if (step.impact === "changed-work") {
-    const reason = "its crewmate declared that bringing it up to date changed the approved work";
+    const reason = "its crewmate declared that its repair changed the approved work";
     patch(
       {
         status: "invalidated",
@@ -372,8 +373,8 @@ export function declareMergeRepair(
   const tip = candidateHead(authorization);
   const undecided = authorization.undecided;
   // An unknown is the crewmate's last word on that repair: an independent
-  // assessment decides it, never the crewmate's own later conflict-only.
-  if (undecided && step.impact === "conflict-only") {
+  // assessment decides it, never the crewmate's own later none.
+  if (undecided && step.impact === "none") {
     return {
       read: false,
       text: `Repair declaration refused: you declared the repair to ${undecided.toHead} unknown, so an independent assessment decides it. End your turn; declare changed-work only if the work changed.`,
@@ -408,13 +409,7 @@ export function declareMergeRepair(
   if (!facts.baseInTo) {
     return {
       read: false,
-      text: `Repair declaration refused: ${step.newBase} is not in ${step.toHead}. Bring the change up to date with that version of the default branch first.`,
-    };
-  }
-  if (facts.baseInFrom) {
-    return {
-      read: false,
-      text: `Repair declaration refused: ${step.newBase} was already in ${step.fromHead}, so this repair took in no newer work. A change that is not bringing it up to date is changed-work.`,
+      text: `Repair declaration refused: ${step.newBase} is not in ${step.toHead}. newBase is the default branch commit the repaired change sits on: name that one, or bring the change up to date with ${step.newBase} first.`,
     };
   }
   // The lineage holds, and the crewmate cannot tell what the repair did:
@@ -436,7 +431,7 @@ export function declareMergeRepair(
   if (unaccounted.length > 0) {
     return {
       read: false,
-      text: `Repair declaration refused: these paths differ from the approved change and the declaration does not name them: ${unaccounted.join(", ")}. Name each in changedPaths if the newer work required it, or declare changed-work.`,
+      text: `Repair declaration refused: these paths differ from the approved change and the declaration does not name them: ${unaccounted.join(", ")}. Name each in changedPaths if the repair needed it, give as newBase the base the repaired change sits on, or declare changed-work.`,
     };
   }
   patch(
@@ -447,7 +442,7 @@ export function declareMergeRepair(
       retryAt: undefined,
       retries: undefined,
     },
-    `The captain's kept merge approval now covers ${step.toHead}: its crewmate declared the repair conflict-only and the host checked its lineage.`,
+    `The captain's kept merge approval now covers ${step.toHead}: its crewmate declared that the repair leaves the approved work as it was, and the host checked its lineage.`,
   );
   return {
     read: true,
@@ -457,17 +452,21 @@ export function declareMergeRepair(
 
 /** What the crewmate hears once its unknown repair is recorded (FI3-663). */
 function unknownRecorded(toHead: string): string {
-  return `Recorded as unknown, so the kept merge waits. Once your turn ends, the host asks an independent assessment of the repair at ${toHead}, and its verdict decides: conflict-only keeps the captain's approval and the host merges with no new card; anything else ends it, and you then put up a new completion card. End your turn now, and do not declare this repair again.`;
+  return `Recorded as unknown, so the kept merge waits. Once your turn ends, the host asks an independent assessment of the repair at ${toHead}, and its verdict decides: none keeps the captain's approval and the host merges with no new card; anything else ends it, and you then put up a new completion card. End your turn now, and do not declare this repair again.`;
 }
 
-/** How an independent repair assessment's report opens: its one typed line. */
-const ASSESSMENT_LINE = /^impact:\s*(conflict-only|changed-work|unknown)\b/i;
+/**
+ * How an independent repair assessment's report opens: its one typed line.
+ * `conflict-only` is `none`'s older name, which an assessment asked before
+ * INF-493 answers with.
+ */
+const ASSESSMENT_LINE = /^impact:\s*(none|conflict-only|changed-work|unknown)\b/i;
 
 /**
  * The verdict an independent repair assessment's report states (FI3-663):
- * its first line, `impact: conflict-only|changed-work|unknown`, the way a
- * review's first line is its verdict. A report without it states nothing,
- * which the host reads as no verdict - and no verdict never merges.
+ * its first line, `impact: none|changed-work|unknown`, the way a review's
+ * first line is its verdict. A report without it states nothing, which the
+ * host reads as no verdict - and no verdict never merges.
  */
 export function parseRepairAssessment(report: string): MergeRepairImpact | "unstated" {
   const first =
@@ -476,7 +475,7 @@ export function parseRepairAssessment(report: string): MergeRepairImpact | "unst
       .map((line) => line.replace(/[*_`]/g, "").trim())
       .find((line) => line.length > 0) ?? "";
   const match = ASSESSMENT_LINE.exec(first);
-  return match ? (match[1]?.toLowerCase() as MergeRepairImpact) : "unstated";
+  return (match && repairImpact(match[1]?.toLowerCase())) || "unstated";
 }
 
 /** How long an independent repair assessment may take before the approval stops waiting on it. */
@@ -484,22 +483,22 @@ export const ASSESSMENT_BOUND_MS = 60 * 60_000;
 
 /** Why an independent assessment's verdict ends the approval, in the host's words. */
 export function assessmentEndReason(
-  verdict: Exclude<NonNullable<MergeRepairAssessment["verdict"]>, "conflict-only">,
+  verdict: Exclude<NonNullable<MergeRepairAssessment["verdict"]>, "none">,
 ): string {
   switch (verdict) {
     case "changed-work":
-      return "an independent assessment found that bringing it up to date changed the approved work";
+      return "an independent assessment found that its repair changed the approved work";
     case "unknown":
     case "unstated":
-      return "an independent assessment could not show that bringing it up to date left the approved work as it was";
+      return "an independent assessment could not show that its repair left the approved work as it was";
     case "failed":
-      return "the independent assessment of bringing it up to date did not finish";
+      return "the independent assessment of its repair did not finish";
   }
 }
 
 /**
  * An independent assessment's verdict on the undecided repair, recorded on
- * the builder's approval (FI3-663). `conflict-only` accepts the repair into
+ * the builder's approval (FI3-663). `none` accepts the repair into
  * the lineage - the host had checked its lineage when it was declared, and
  * the assessment judged every path either change touches - so the merge goes on
  * under every other gate; any other verdict ends the approval with a hold,
@@ -523,10 +522,10 @@ export function decideMergeRepair(
     return { decided: "stale" };
   }
   const assessment = { ...undecided.assessment, verdict, decidedAt: now };
-  if (verdict === "conflict-only") {
+  if (verdict === "none") {
     const step: MergeRepairStep = {
       ...undecided,
-      impact: "conflict-only",
+      impact: "none",
       changedPaths: [
         ...new Set([
           ...undecided.changedPaths,
@@ -555,7 +554,7 @@ export function decideMergeRepair(
     });
     tasks.note(
       builderId,
-      `The captain's kept merge approval now covers ${step.toHead}: an independent assessment found that the repair only brought it up to date.`,
+      `The captain's kept merge approval now covers ${step.toHead}: an independent assessment found that the repair left the approved work as it was.`,
       { news: true, data: { mergeRepair: step } },
     );
     return { decided: "accepted", head: step.toHead };
@@ -602,9 +601,9 @@ export function keptFeedLine(
     case "conflict":
       return `Cannot merge "${title}" yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and the checks pass.`;
     case "repair":
-      return `Cannot merge "${title}" yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the change only brought it up to date.`;
+      return `Cannot merge "${title}" yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the work is still what you approved.`;
     case "evidence":
-      return `Cannot merge "${title}" yet: its crewmate could not tell what bringing it up to date changed, so another crewmate is checking. ${kept} and runs if that check finds it only brought the change up to date.`;
+      return `Cannot merge "${title}" yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. ${kept} and runs if that check finds the work is still what you approved.`;
     case "checks":
       return checks === "red"
         ? `Your merge of "${title}" waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
@@ -637,14 +636,14 @@ export function keptFeedLine(
 export function keptNote(wait: MergeWait, head: string, place: string): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
-  const declare = `When the crewmate brings the branch up to date it declares the repair with check_change conflictRepair from ${head}: conflict-only keeps the approval; changed-work ends it and it puts up a new completion card.`;
+  const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new completion card.`;
   switch (wait) {
     case "conflict":
       return `${kept} Steer the crewmate to bring the branch up to date with the default branch, rerun its validation, push, declare the repair and drive the checks green. ${declare}`;
     case "repair":
       return `${kept} The pull request is past the version the approval covers (${head}). Steer the crewmate to declare what changed. ${declare}`;
     case "evidence":
-      return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: conflict-only keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new completion card. Nothing is needed from you.`;
+      return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new completion card. Nothing is needed from you.`;
     case "checks":
       return `${kept} The checks on ${head} have not all passed: the crewmate diagnoses and repairs under its usual rules, and a fix that changes the head is declared as a repair. ${declare}`;
     case "review":

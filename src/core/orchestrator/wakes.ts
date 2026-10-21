@@ -1053,11 +1053,9 @@ export const REPAIR_ASSESSED_OPENING = "An independent assessment of your repair
 /** What ended the approval, in the crewmate's words. */
 const ASSESSED_FINDING: Record<Extract<WakeFacts, { kind: "repair-assessed" }>["verdict"], string> =
   {
-    "changed-work":
-      "found that bringing the change up to date changed the work the captain approved",
-    unknown:
-      "could not tell whether bringing the change up to date kept the work the captain approved",
-    unstated: "gave no clear verdict on what bringing the change up to date did",
+    "changed-work": "found that your repair changed the work the captain approved",
+    unknown: "could not tell whether your repair kept the work the captain approved",
+    unstated: "gave no clear verdict on what your repair did",
     failed: "did not finish",
   };
 

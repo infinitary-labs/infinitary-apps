@@ -3796,7 +3796,7 @@ export class CrewSupervisor {
       });
       return;
     }
-    if (decided.decided !== "ended" || verdict === "conflict-only") return;
+    if (decided.decided !== "ended" || verdict === "none") return;
     const wake: TypedWake = {
       facts: {
         kind: "repair-assessed",

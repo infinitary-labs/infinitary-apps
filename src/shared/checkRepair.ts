@@ -45,13 +45,37 @@ export type ObservedRun = {
 };
 
 /**
- * How a crewmate judges what bringing its approved change up to date did
- * (FI3-304, guard = builder): `conflict-only` keeps the captain's merge
- * approval, `changed-work` ends it, `unknown` holds it until an independent
- * assessment decides (FI3-663).
+ * How a crewmate judges what a repair of its approved change did to that
+ * work (FI3-304, guard = builder; INF-493): `none` leaves it as approved and
+ * keeps the captain's merge approval, whatever the repair was; `changed-work`
+ * ends it; `unknown` holds it until an independent assessment decides
+ * (FI3-663). The impact is the crewmate's to declare and the host records
+ * it; the host never sorts the repair into a kind.
  */
-export const MERGE_REPAIR_IMPACTS = ["conflict-only", "changed-work", "unknown"] as const;
+export const MERGE_REPAIR_IMPACTS = ["none", "changed-work", "unknown"] as const;
 export type MergeRepairImpact = (typeof MERGE_REPAIR_IMPACTS)[number];
+
+/**
+ * `none`'s name before INF-493, which still means it wherever it arrives:
+ * the work request a computer sends its home carries it, so the published
+ * contract keeps its shape and two builds understand each other, and an
+ * older crewmate's tools, an assessment asked before then or a saved repair
+ * may still say it.
+ */
+export const LEGACY_NO_IMPACT = "conflict-only";
+
+/** The impact a declaration or an assessment names, `none`'s older name read as `none`. */
+export function repairImpact(value: unknown): MergeRepairImpact | undefined {
+  if (value === LEGACY_NO_IMPACT) return "none";
+  return MERGE_REPAIR_IMPACTS.find((impact) => impact === value);
+}
+
+/** An impact as the work request to the home carries it: `none` by its older name. */
+export function wireRepairImpact(
+  impact: MergeRepairDeclaration["impact"],
+): Exclude<MergeRepairDeclaration["impact"], "none"> {
+  return impact === "none" ? LEGACY_NO_IMPACT : impact;
+}
 
 /**
  * How the host establishes an independent repair assessment's kind
@@ -69,18 +93,21 @@ export function isRepairAssessment(
 
 /**
  * A repair of an approved change, declared at its new head: the transition,
- * the newer work it took in, the crewmate's judgment and its evidence. The
- * host checks the closed facts (lineage, ancestry, the paths it touches);
- * the judgment of semantic equivalence is the crewmate's.
+ * the base it sits on, the crewmate's judgment of its impact and its
+ * evidence. Any new head is a repair - bringing the change up to date, a
+ * reworded commit, a fix for what refused the merge. The host checks the
+ * closed facts (lineage, ancestry, the paths it touches); the judgment of
+ * semantic equivalence is the crewmate's.
  */
 export type MergeRepairDeclaration = {
   /** The head the repair started from: the approved head or the last accepted repair. */
   fromHead: string;
   /** The pushed head after the repair. */
   toHead: string;
-  /** The default branch's commit the change was brought up to date with. */
+  /** The default branch's commit the repaired change sits on: newer work it took in, or the base it already had. */
   newBase: string;
-  impact: MergeRepairImpact;
+  /** Saved repairs and older senders may name `none` as `conflict-only` (`LEGACY_NO_IMPACT`). */
+  impact: MergeRepairImpact | typeof LEGACY_NO_IMPACT;
   /** Paths the repair changed beyond the approved change, or that it no longer touches. */
   changedPaths: string[];
   /** How the approved behavior was compared with the repaired change. */

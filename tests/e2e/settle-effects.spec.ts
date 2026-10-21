@@ -566,9 +566,7 @@ for (const backend of CREW_BACKENDS) {
       expect(record()?.delivery?.mergeAuthorization).toMatchObject({
         status: "consumed",
         approvedHead: approved,
-        lineage: [
-          { fromHead: approved, toHead: repaired, newBase: newer, impact: "conflict-only" },
-        ],
+        lineage: [{ fromHead: approved, toHead: repaired, newBase: newer, impact: "none" }],
         receipt: { head: repaired },
       });
       // The one card the task ever showed is the one clicked: no second ask.
@@ -718,7 +716,7 @@ for (const backend of CREW_BACKENDS) {
       expect(record()?.delivery?.mergeAuthorization).toMatchObject({
         status: "consumed",
         approvedHead: approved,
-        lineage: [{ fromHead: approved, toHead: repaired, impact: "conflict-only" }],
+        lineage: [{ fromHead: approved, toHead: repaired, impact: "none" }],
         guidance: { latest: 2, declared: 2 },
         receipt: { head: repaired },
       });

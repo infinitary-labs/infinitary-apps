@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-any-repair",
+      "kind": "fix",
+      "title": "Your merge click survives a fix that leaves the work as you approved it",
+      "body": "When your merge is refused and its crewmate fixes something that leaves the work as you approved it, such as a commit's title, the app keeps your click and merges once the checks pass. Before, only bringing the change up to date kept your click, and any other fix asked you again on a new card.",
+      "area": "cards",
+      "noPicture": "Nothing new on screen: the merge happens later without asking again.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

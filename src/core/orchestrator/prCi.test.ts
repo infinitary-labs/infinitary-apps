@@ -2338,7 +2338,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     });
   });
 
-  it("checks a declared repair against real git: lineage, newer work taken in, and every path accounted for", async () => {
+  it("checks a declared repair against real git: lineage, the base it sits on, and every path accounted for", async () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     const dir = tasks.get("ab12cd34")?.repoDir as string;
@@ -2388,7 +2388,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
           fromHead: approved,
           toHead,
           newBase,
-          impact: "conflict-only",
+          impact: "none",
           changedPaths,
           evidence: "git range-diff: the approved commit is unchanged",
           validation: "the unit tests at the repaired head",
@@ -2400,19 +2400,20 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       "these paths differ from the approved change and the declaration does not name them: billing.ts",
     );
     run("reset", "--hard", repaired);
-    // No newer work: declaring the approved head's own base is refused.
+    // A base older than the one the repair sits on: the newer work's own
+    // file then differs from the approved change, and nothing names it.
     const stale = await service.checkForCrew("ab12cd34", {
       conflictRepair: {
         fromHead: approved,
         toHead: repaired,
         newBase: run("rev-parse", "main~1"),
-        impact: "conflict-only",
+        impact: "none",
         changedPaths: [],
         evidence: "e",
         validation: "v",
       },
     });
-    expect(stale).toContain("took in no newer work");
+    expect(stale).toContain("the declaration does not name them: other.ts");
     const accepted = await declare(repaired);
     expect(accepted).toContain(
       `Repair accepted: the captain's kept merge approval now covers ${repaired}`,
@@ -2421,6 +2422,73 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(accepted).toContain(`The captain's merge approval is kept and covers ${repaired}`);
     expect(tasks.get("ab12cd34")?.delivery?.mergeAuthorization?.lineage).toMatchObject([
       { fromHead: approved, toHead: repaired, newBase, generation: 1 },
+    ]);
+  });
+
+  // INF-484's E6 (INF-493): on 2026-10-11 a crewmate reworded a commit title
+  // its merge was refused for, the tree unchanged and no newer work taken
+  // in, and the host refused its repair twice because it was not "bringing
+  // it up to date". The impact on the approved work is the crewmate's to
+  // declare; the host checks the facts and records it.
+  it("keeps the approval for a repair that only rewords a commit title, declared with no impact on the approved work", async () => {
+    const { tasks, repos, service } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const dir = tasks.get("ab12cd34")?.repoDir as string;
+    const run = (...args: string[]) =>
+      execFileSync("git", ["-C", dir, "-c", "user.name=T", "-c", "user.email=t@l", ...args])
+        .toString()
+        .trim();
+    const base = run("rev-parse", "main");
+    run("checkout", "-b", "fm/task-ab12cd34");
+    writeFileSync(join(dir, "pi-settings.json"), '{ "lastChangelogVersion": "1.0.0" }\n');
+    run("add", "pi-settings.json");
+    run("commit", "-m", "pi config");
+    const approved = run("rev-parse", "HEAD");
+    run("commit", "--amend", "-m", "chore(pi): record Pi changelog version 1.0.0");
+    const reworded = run("rev-parse", "HEAD");
+    tasks.recordDelivery("ab12cd34", {
+      mergeAuthorization: {
+        version: 1,
+        id: "auth-1",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "card-ab12cd34-1", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: tasks.get("ab12cd34")?.repoId as string,
+          host: "github.com",
+          owner: "x",
+          name: "y",
+          prNumber: 23,
+          branch: "fm/task-ab12cd34",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: approved,
+        lineage: [],
+        proceedWithOpen: false,
+        status: "standing",
+      },
+    });
+    const said = await service.checkForCrew("ab12cd34", {
+      conflictRepair: {
+        fromHead: approved,
+        toHead: reworded,
+        newBase: base,
+        impact: "none",
+        changedPaths: [],
+        evidence:
+          "git diff of the approved commit and the new head is empty; only the commit's subject changed",
+        validation: "the tree matches the approved commit",
+      },
+    });
+    expect(said).toContain(
+      `Repair accepted: the captain's kept merge approval now covers ${reworded}`,
+    );
+    const kept = tasks.get("ab12cd34")?.delivery?.mergeAuthorization;
+    expect(kept?.status).toBe("standing");
+    expect(kept?.lineage).toMatchObject([
+      { fromHead: approved, toHead: reworded, newBase: base, impact: "none", generation: 1 },
     ]);
   });
 });
@@ -2867,7 +2935,9 @@ describe("a passed review covers the same change", () => {
     expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
   });
 
-  it("asks for an update only when the kept merge waits on a conflict or a moved version", async () => {
+  // INF-493: a version that moved past the approved one may be any repair,
+  // such as a reworded commit title, so only a conflict asks for an update.
+  it("asks for an update only when the kept merge waits on a conflict, and for the repair's declaration on a moved version", async () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     const authorization: MergeAuthorization = {
@@ -2906,9 +2976,9 @@ describe("a passed review covers the same change", () => {
     expect(await reading("conflict")).toContain(
       "Declare a repair that brings the change up to date with conflictRepair from that head.",
     );
-    expect(await reading("repair")).toContain(
-      "Declare a repair that brings the change up to date with conflictRepair from that head.",
-    );
+    const moved = await reading("repair");
+    expect(moved).toContain("Declare the repair with conflictRepair from that head.");
+    expect(moved).not.toContain("brings the change up to date");
   });
 });
 
@@ -3138,7 +3208,7 @@ describe("shared story delivery boundaries", () => {
     expect(completion).toHaveBeenCalledTimes(1);
   });
 
-  it("automatically republishes the unchanged story before a kept conflict-only merge", async () => {
+  it("automatically republishes the unchanged story before a kept merge of an accepted repair", async () => {
     const at = await saved();
     const putIn = vi.spyOn(at.forge, "putIn");
     at.forge.change = { ...(at.forge.change as ForgeChange), headSha: repaired };
@@ -3168,7 +3238,7 @@ describe("shared story delivery boundaries", () => {
           fromHead: original,
           toHead: repaired,
           newBase: original,
-          impact: "conflict-only",
+          impact: "none",
           changedPaths: [],
           evidence: "The accepted repair preserves behavior.",
           validation: "The affected checks passed.",

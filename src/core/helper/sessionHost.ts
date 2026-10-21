@@ -8,6 +8,7 @@ import {
   parseCardTypefaceFileName,
 } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
+import { wireRepairImpact } from "@shared/checkRepair";
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
 import {
@@ -1196,8 +1197,13 @@ export class SessionHost {
           );
         return ask("inf:work:open-change", { input }, signal);
       },
-      onCheckChange: (input, signal) =>
-        ask("inf:work:check-change", { input: input ?? {} }, signal),
+      onCheckChange: (input, signal) => {
+        const repair = input?.conflictRepair;
+        const wire = repair
+          ? { ...input, conflictRepair: { ...repair, impact: wireRepairImpact(repair.impact) } }
+          : input;
+        return ask("inf:work:check-change", { input: wire ?? {} }, signal);
+      },
       onDownloadArtifact: (input, signal) => ask("inf:work:download-artifact", { input }, signal),
       // The home's knowledge, read and written there as for a crewmate of its own.
       knowledge: {

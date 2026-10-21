@@ -100,7 +100,7 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
                 fromHead: fromHead ?? "missing",
                 toHead: toHead ?? "missing",
                 newBase: newBase ?? "missing",
-                impact: "conflict-only",
+                impact: "none",
                 changedPaths: [],
                 evidence:
                   "git range-diff shows the one approved commit unchanged on the newer main",
@@ -117,7 +117,7 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
           {
             name: "report",
             args: {
-              text: `${KEPT_MERGE_MARKER}: brought up to date with main and declared conflict-only; the host merges on the captain's kept click.`,
+              text: `${KEPT_MERGE_MARKER}: brought up to date with main and declared impact none; the host merges on the captain's kept click.`,
             },
           },
         ],

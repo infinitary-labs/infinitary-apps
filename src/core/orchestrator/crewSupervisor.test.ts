@@ -3410,12 +3410,11 @@ describe("CrewSupervisor", () => {
       known: true,
       toHeadHere: true,
       baseInTo: true,
-      baseInFrom: false,
       approvedPaths: ["src/meter.ts"],
       repairedPaths: ["src/meter.ts"],
     };
     const repair = (
-      impact: "conflict-only" | "changed-work" | "unknown",
+      impact: "none" | "changed-work" | "unknown",
       fromHead = APPROVED,
       changedPaths: string[] = [],
     ): CheckChangeInput => ({
@@ -4134,12 +4133,12 @@ describe("CrewSupervisor", () => {
       expect(forge.merges).toEqual([]);
     });
 
-    it("merges a repair declared conflict-only once, when the crewmate's turn ends, with no second click or card", async () => {
+    it("merges a repair declared with impact none once, when the crewmate's turn ends, with no second click or card", async () => {
       const harness = await kept();
       let said: string | undefined;
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
-        said = await harness.declare(repair("conflict-only"));
+        said = await harness.declare(repair("none"));
       });
       expect(said).toContain(
         `Repair accepted: the captain's kept merge approval now covers ${REPAIRED}`,
@@ -4154,7 +4153,7 @@ describe("CrewSupervisor", () => {
       expect(harness.authorization()).toMatchObject({
         status: "consumed",
         receipt: { head: REPAIRED, sha: `squash-${REPAIRED}` },
-        lineage: [{ fromHead: APPROVED, toHead: REPAIRED, impact: "conflict-only" }],
+        lineage: [{ fromHead: APPROVED, toHead: REPAIRED, impact: "none" }],
       });
       expect(harness.cards()).toEqual([]);
     });
@@ -4171,22 +4170,22 @@ describe("CrewSupervisor", () => {
       expect(harness.tasks.get(harness.taskId)?.status).toBe("active");
     });
 
-    it("refuses a repair off the lineage, one that took in no newer work, and one whose paths it cannot account for", async () => {
+    it("refuses a repair off the lineage, one whose head does not hold its base, and one whose paths it cannot account for", async () => {
       const harness = await kept();
       harness.forge.headSha = REPAIRED;
-      expect(await harness.declare(repair("conflict-only", "elsewhere0009"))).toContain(
+      expect(await harness.declare(repair("none", "elsewhere0009"))).toContain(
         `a repair starts from ${APPROVED}`,
       );
-      harness.setFacts({ ...cleanFacts, baseInFrom: true });
-      expect(await harness.declare(repair("conflict-only"))).toContain("took in no newer work");
+      harness.setFacts({ ...cleanFacts, baseInTo: false });
+      expect(await harness.declare(repair("none"))).toContain(`${NEW_BASE} is not in ${REPAIRED}`);
       harness.setFacts({ ...cleanFacts, repairedPaths: ["src/meter.ts", "src/billing.ts"] });
-      expect(await harness.declare(repair("conflict-only"))).toContain(
+      expect(await harness.declare(repair("none"))).toContain(
         "these paths differ from the approved change and the declaration does not name them: src/billing.ts",
       );
-      // Naming the path it needed for the newer work accounts for it.
-      expect(
-        await harness.declare(repair("conflict-only", APPROVED, ["src/billing.ts"])),
-      ).toContain("Repair accepted");
+      // Naming the path the repair needed accounts for it.
+      expect(await harness.declare(repair("none", APPROVED, ["src/billing.ts"]))).toContain(
+        "Repair accepted",
+      );
       expect(harness.authorization()?.lineage).toHaveLength(1);
     });
 
@@ -4205,7 +4204,7 @@ describe("CrewSupervisor", () => {
       expect(harness.authorization()).toMatchObject({ status: "invalidated", holds: true });
       vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
       expect(await harness.supervisor.settleTask(harness.taskId, "merge-pr")).toContain(
-        "the captain's merge approval ended because its crewmate declared that bringing it up to date changed the approved work",
+        "the captain's merge approval ended because its crewmate declared that its repair changed the approved work",
       );
       expect(harness.forge.merges).toEqual([]);
     });
@@ -4220,7 +4219,7 @@ describe("CrewSupervisor", () => {
       harness.forge.readiness = "blocked";
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
-        await harness.declare(repair("conflict-only"));
+        await harness.declare(repair("none"));
       });
       await vi.waitFor(() =>
         expect(harness.authorization()?.waiting).toMatchObject({ on: "protected", head: REPAIRED }),
@@ -4253,7 +4252,7 @@ describe("CrewSupervisor", () => {
       harness.forge.readiness = "blocked";
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
-        await harness.declare(repair("conflict-only"));
+        await harness.declare(repair("none"));
       });
       await vi.waitFor(() =>
         expect(harness.authorization()?.waiting).toMatchObject({ on: "protected", head: REPAIRED }),
@@ -4284,7 +4283,7 @@ describe("CrewSupervisor", () => {
       const harness = await kept();
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
-        await harness.declare(repair("conflict-only"));
+        await harness.declare(repair("none"));
         // The captain takes it back while the host-run attempt reads the checks.
         harness.forge.duringChecks = () => {
           harness.forge.duringChecks = () => {};
@@ -4302,7 +4301,7 @@ describe("CrewSupervisor", () => {
       capped.tasks.recordDelivery(capped.taskId, { ciCapAt: Date.now(), ciRounds: 3 });
       await repairTurn(capped, async () => {
         capped.forge.headSha = REPAIRED;
-        await capped.declare(repair("conflict-only"));
+        await capped.declare(repair("none"));
       });
       await vi.waitFor(() =>
         expect(capped.authorization()?.waiting).toMatchObject({ on: "cap", head: REPAIRED }),
@@ -4347,7 +4346,7 @@ describe("CrewSupervisor", () => {
       });
       expect(h.crewmate.promptCalls.at(-1)).toContain(`${GUIDANCE_MARK_WORDS} 1 `);
       h.forge.headSha = REPAIRED;
-      await h.declare(repair("conflict-only"));
+      await h.declare(repair("none"));
       h.crewmate.finishPrompt();
       await tick();
       await vi.waitFor(() =>
@@ -4388,7 +4387,7 @@ describe("CrewSupervisor", () => {
       h.forge.states = ["pending"];
       await repairTurn(h, async () => {
         h.forge.headSha = REPAIRED;
-        await h.declare(repair("conflict-only"));
+        await h.declare(repair("none"));
         await h.specs[0]?.onCard?.({
           title: "Rename the meter?",
           body: "<p>Should the meter get a new name?</p><p>I kept the name you approved.</p>",

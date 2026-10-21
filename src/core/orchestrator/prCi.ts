@@ -414,9 +414,14 @@ export class PrCiService {
     // repair starts from is never a guess.
     const kept = standingAuthorization(this.options.tasks.get(taskId.trim())?.delivery);
     const mark = kept ? outstandingGuidance(kept) : undefined;
-    const needsUpdate = kept?.waiting?.on === "conflict" || kept?.waiting?.on === "repair";
+    const repairAsk =
+      kept?.waiting?.on === "conflict"
+        ? " Declare a repair that brings the change up to date with conflictRepair from that head."
+        : kept?.waiting?.on === "repair"
+          ? " Declare the repair with conflictRepair from that head."
+          : "";
     const keptLine = kept
-      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${needsUpdate ? " Declare a repair that brings the change up to date with conflictRepair from that head." : ""}${mark === undefined ? "" : ` His guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
+      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` His guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
       : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
   }
@@ -2141,7 +2146,7 @@ export class PrCiService {
       if (checked.change.headSha !== guard.head) {
         return {
           ok: false,
-          text: `Cannot merge yet: the pull request is at ${checked.change.headSha}, and the captain's approval covers ${guard.head}. A repair that brought it up to date is declared with check_change conflictRepair.`,
+          text: `Cannot merge yet: the pull request is at ${checked.change.headSha}, and the captain's approval covers ${guard.head}. A repair of the approved change is declared with check_change conflictRepair.`,
           plain: "it changed after the version you approved",
           stop: "moved",
         };
@@ -2894,7 +2899,6 @@ async function lineageFacts(dir: string, question: LineageQuestion): Promise<Lin
       known: true,
       toHeadHere: false,
       baseInTo: false,
-      baseInFrom: false,
       approvedPaths: [],
       repairedPaths: [],
     };
@@ -2927,7 +2931,6 @@ async function lineageFacts(dir: string, question: LineageQuestion): Promise<Lin
     known: true,
     toHeadHere: true,
     baseInTo: await ancestor(newBase, toHead),
-    baseInFrom: await ancestor(newBase, fromHead),
     approvedPaths: await paths(approvedBase, approvedHead),
     repairedPaths: await paths(newBase, toHead),
     approvedReading,

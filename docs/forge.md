@@ -809,8 +809,8 @@ GitHub Enterprise Server, self-hosted GitLab, plain Git, local-only delivery, an
 
 Preparation and ordinary publication reject tracked uncommitted changes, not untracked downloads such as `.infinitary-artifacts` archives.
 The completion card reads its local committed version and retained files once; merge checks compare the remote PR head with the published head, not a work computer's dirty copy or availability.
-An accepted conflict-only repair republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
-The completion offer binds a content hash; only the host's exact conflict-only clone inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
+An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
+The completion offer binds a content hash; only the host's exact clone for an accepted repair inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
 
 ### Declared validation writes

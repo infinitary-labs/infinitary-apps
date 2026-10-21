@@ -97,7 +97,10 @@ export type CompletionOffer = {
 export type MergeRepairAssessment = {
   taskId: string;
   at: number;
-  /** `unstated`: it reported without the impact line; `failed`: it could not start or ended with no report. */
+  /**
+   * `unstated`: it reported without the impact line; `failed`: it could not
+   * start or ended with no report. Rows before INF-493 say `conflict-only` for `none`.
+   */
   verdict?: MergeRepairImpact | "unstated" | "failed";
   decidedAt?: number;
 };
@@ -158,7 +161,7 @@ export type MergeWait =
  * The captain's merge approval (FI3-304), version 1: minted by his click on
  * a completion offer the host published at a known head, in the same
  * transaction as the card's resolution. It covers that pull request, that
- * head and the conflict-only repairs the host accepted after it, and it
+ * head and the repairs the host accepted after it, and it
  * stands through conflicts, waits and restarts until it is consumed by the
  * merge, revoked (an interruption, his withdrawal), invalidated (the work
  * changed, the pull request or project is no longer the one approved) or
@@ -198,7 +201,7 @@ export type MergeAuthorization = {
    * (INF-416 G). Absent when that commit could not be read.
    */
   changeReading?: string;
-  /** Accepted conflict-only repairs, oldest first. */
+  /** Accepted repairs, each declared to leave the approved work as it was, oldest first. */
   lineage: MergeRepairStep[];
   /** The captain's leave to merge with open children (`proceed_with_open`). */
   proceedWithOpen: boolean;

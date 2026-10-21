@@ -400,23 +400,23 @@ The captain's merge click on a completion card is an approval of that change, an
   The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while the task's checks are still running, Merge after fixing errors once they failed (the captain's words), and Merge the pull request again once they pass.
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
   A click then keeps the approval waiting on the checks, and its feed line says what the merge waits for (`keptFeedLine`, by the task's last reading): the running checks, or a fix after failed ones.
-  A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix that only brought the change up to date, or the same version passing on a rerun, merges on the kept approval once the checks pass.
+  A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
   A card whose click approves nothing keeps its words, since a click there is refused and nothing waits.
 - **The head it covers.**
   A merge under the approval runs with a `MergeGuard` (`PrCiService.merge`): only the candidate head (the approved head, or the newest accepted repair) on the pinned pull request.
   A pull request at any other head stops as `moved`, and nothing is sent.
 - **Repairs.**
-  The crewmate declares bringing the change up to date with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).
-  The host checks the closed facts with git: the repair starts from the candidate head, `toHead` is a commit here, `newBase` is in it and was not already in `fromHead`, and every path that differs between the ORIGINAL approved change and the repaired one is named, so drift across several repairs adds up.
+  Any new version after the approved one is a repair - bringing the change up to date, a reworded commit, a fix for what refused the merge - and the crewmate declares it with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).
+  The host checks the closed facts with git: the repair starts from the candidate head, `toHead` is a commit here, `newBase` - the default branch commit the repaired change sits on, newer or the one it already had - is in it, and every path that differs between the ORIGINAL approved change and the repaired one is named, so drift across several repairs adds up.
   That same read stores the repaired head's change reading on the repair.
-  `conflict-only` extends the lineage; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card; `unknown` holds the merge for an independent assessment (next).
-  Whether the repaired change still does what was approved is the crewmate's judgment (the captain's guard = builder).
+  The impact is the crewmate's judgment of what the repair did to the approved work, and the host records it rather than sorting the repair into a kind (the captain's guard = builder; INF-484's E6, INF-493): `none` extends the lineage; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card; `unknown` holds the merge for an independent assessment (next).
+  `conflict-only`, `none`'s name before INF-493, still means `none` wherever it arrives: the work request a computer sends its home carries it, so the published contract keeps its shape (`wireRepairImpact`, `repairImpact`).
 - **An undecided repair (FI3-663).**
-  The guard = builder choice gives uncertainty "an independent bounded assessment", so a crewmate's `unknown` is its last word on that repair: the host checks the same lineage facts, keeps the paths both changes touch on the repair (`paths`), and refuses the crewmate's own later `conflict-only` for it (`changed-work` still ends the approval).
+  The guard = builder choice gives uncertainty "an independent bounded assessment", so a crewmate's `unknown` is its last word on that repair: the host checks the same lineage facts, keeps the paths both changes touch on the repair (`paths`), and refuses the crewmate's own later `none` for it (`changed-work` still ends the approval).
   Once the crewmate's turn is over, the kept merge's preflight asks the supervisor to assess it (`CrewSupervisor.assessRepair`), which commissions one assessment of that repair and records it on the repair before it starts, so a second read starts none.
   The assessment is a review-kind child of the builder with `kind_source: host:repair-assessment` (`isRepairAssessment`): delivery machinery like the independent review, retired with its builder, placed on another provider than the builder's when one can serve, and never counted as the task's code review.
-  Its brief (`renderRepairAssessmentBrief`) names the approved head, the repair's heads, the newer base, every path either change touches and the crewmate's evidence, and asks for one read-only look answered with a first line, `impact: conflict-only|changed-work|unknown` (`parseRepairAssessment`).
-  Its first report is its verdict, and the host closes it (`decideMergeRepair`): `conflict-only` adds the repair to the lineage and the kept merge runs again under every gate; anything else - `changed-work`, `unknown`, no impact line - invalidates the approval with a hold, writes one feed line, and steers the crewmate once (`repair-assessed`) to put up a new completion card, so the captain decides again.
+  Its brief (`renderRepairAssessmentBrief`) names the approved head, the repair's heads, the newer base, every path either change touches and the crewmate's evidence, and asks for one read-only look answered with a first line, `impact: none|changed-work|unknown` (`parseRepairAssessment`).
+  Its first report is its verdict, and the host closes it (`decideMergeRepair`): `none` adds the repair to the lineage and the kept merge runs again under every gate; anything else - `changed-work`, `unknown`, no impact line - invalidates the approval with a hold, writes one feed line, and steers the crewmate once (`repair-assessed`) to put up a new completion card, so the captain decides again.
   The bound is a fact the tick reads: an `evidence` wait is timed, and an assessment that could not start, stopped without reporting, or is still open an hour after it started (`ASSESSMENT_BOUND_MS`) ends the approval the same way.
   A verdict about a repair the approval no longer waits on - a newer repair, a newer approval, an ended one - records nothing.
 - **The captain's newer words (FI3-662).**
@@ -549,7 +549,7 @@ A change that never settled with a completion card is `null`, not a failure: it 
 
 Observe is the one surface in the app where any of this renders: the crewmate header carries the rigor, the review verdict and its risk, and the reviewers sit in their own **Review** group with each row's verdict on it (`docs/dev-observe.md`).
 
-For a saved story on GitHub or GitLab, a host-accepted conflict-only repair republishes the same content at its new head after checks pass, before the kept-approval merge.
+For a saved story on GitHub or GitLab, a host-accepted repair republishes the same content at its new head after checks pass, before the kept-approval merge.
 It reuses confirmed attachments and the approved content hash; a separate story edit needs a new completion offer.
 The merge validates the published and PR heads without waking the work computer or inspecting its uncommitted files.
 

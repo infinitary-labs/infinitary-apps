@@ -54,15 +54,15 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "On failure read logs first, then pass diagnosis keyed to headSha/check with classification and evidence; baseline-blocked also needs a separately owned dependencyTask reproduced on untouched main. A workflow run you read with read_workflow needs no PR: key it to the run's version and the failed job's name. A wait is not evidence. Unknown earns one investigation. No captain card for diagnosis, repair or dependency waits.",
   "For your regression pass repair with a stable id, sourceHead, new headSha, check and evidence of the fix; only unsuccessful own repairs spend the three attempts. For an evidenced flake reserve rerun before rerunning the failed job once with github_write; proceed only if this call authorizes it. A duplicate reservation is not permission. A failed rerun is diagnosis, not another rerun.",
   "A reading is only good for the version it read: after you push a fix, read the new version.",
-  "When the captain's merge is kept after a refusal, declare bringing the change up to date with conflictRepair once it is pushed; conflict-only automatically republishes the unchanged story before merging. While it is kept, his new words hold the merge until you declare their impact with captainGuidance.",
+  "When the captain's merge is kept after a refusal, declare each new version you push with conflictRepair; impact none automatically republishes the unchanged story before merging. While it is kept, his new words hold the merge until you declare their impact with captainGuidance.",
   "Pass pull, a pull request number in this project, to prepare a merge review, including one this task did not open. The answer's review id is what request_merge references. That request grants no approval and merges nothing. Pass absentChecks only for that exact head, with workflow evidence and the local gate; it cannot waive a failed, pending or unreadable check.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
 export const CONFLICT_REPAIR_DESCRIPTION = [
-  "The captain's merge approval is kept after the project's host refused his click: declare what bringing the change up to date did, on its own, after you push.",
-  "fromHead is the head his approval covers (the approved head, or your last accepted repair); toHead your pushed head; newBase the default branch commit you took in.",
-  "conflict-only keeps his approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new completion card; unknown holds the merge, and once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare that repair again.",
+  "The captain's merge approval is kept after the project's host refused his click: declare what each version you push did to the approved work, on its own, after you push.",
+  "fromHead is the head his approval covers (the approved head, or your last accepted repair); toHead your pushed head; newBase the default branch commit it sits on.",
+  "none keeps his approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new completion card; unknown holds the merge, and once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare that repair again.",
   "changedPaths names every path that now differs from the approved change. Few lines, or editing only conflicted files, is not proof: compare the behavior.",
 ].join(" ");
 

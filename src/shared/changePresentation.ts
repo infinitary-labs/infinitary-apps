@@ -183,7 +183,7 @@ export type PresentationPublication = {
   /** The exact generated region sent; surrounding human text is not owned by the app. */
   region: string;
   regionHash: string;
-  /** The content the completion offer approved; conflict-only refreshes inherit it. */
+  /** The content the completion offer approved; an accepted repair's refresh inherits it. */
   contentHash?: string;
   /** INF-717: the title the change carries once this write lands, absent where the app sent none. */
   title?: string;

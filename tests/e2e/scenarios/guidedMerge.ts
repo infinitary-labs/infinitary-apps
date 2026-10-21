@@ -148,7 +148,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
                 fromHead: fromHead ?? "missing",
                 toHead: toHead ?? "missing",
                 newBase: newBase ?? "missing",
-                impact: "conflict-only",
+                impact: "none",
                 changedPaths: [],
                 evidence:
                   "git range-diff shows the one approved commit unchanged on the newer main",

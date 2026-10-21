@@ -12,6 +12,7 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { API_RESPONSE_MAX_BYTES } from "../../api";
 import { GitLabForge } from "./gitlabForge";
 
 /**
@@ -27,6 +28,85 @@ const HEAD = "a".repeat(40);
 const PROJECT = "group/sub/field-notes";
 const OWN = `/projects/${encodeURIComponent(PROJECT)}`;
 const cleanup: (() => Promise<void> | void)[] = [];
+
+/** A GitLab user as a merge request's author or reviewer carries it. */
+function gitlabUser(id: number, username: string) {
+  return {
+    id,
+    username,
+    name: username,
+    state: "active",
+    locked: false,
+    avatar_url: `https://secure.gravatar.com/avatar/${id}?s=80&d=identicon`,
+    web_url: `https://gitlab.com/${username}`,
+  };
+}
+
+/**
+ * One merge request as GitLab lists it, with the fields of its documented
+ * list answer and a description the length of a change story's (INF-733).
+ */
+function mergeRequest(iid: number) {
+  const author = gitlabUser(3233006, "kunchenguid");
+  return {
+    id: 300_000 + iid,
+    iid,
+    project_id: 42,
+    title: `feat(notes): keep field note ${iid} beside its photo`,
+    description: "## Why\nThe field notes lost their photo after a sync.\n\n".repeat(60),
+    state: "merged",
+    created_at: "2026-10-20T17:53:59.000Z",
+    updated_at: "2026-10-21T09:14:12.000Z",
+    merged_by: author,
+    merge_user: author,
+    merged_at: "2026-10-21T09:14:12.000Z",
+    closed_by: null,
+    closed_at: null,
+    target_branch: "main",
+    source_branch: `fm/task-${iid}`,
+    user_notes_count: 2,
+    upvotes: 0,
+    downvotes: 0,
+    author,
+    assignees: [author],
+    assignee: author,
+    reviewers: [gitlabUser(1001, "reviewer")],
+    source_project_id: 42,
+    target_project_id: 42,
+    labels: ["crew"],
+    draft: false,
+    work_in_progress: false,
+    milestone: null,
+    merge_when_pipeline_succeeds: false,
+    merge_status: "can_be_merged",
+    detailed_merge_status: "not_open",
+    sha: HEAD,
+    merge_commit_sha: null,
+    squash_commit_sha: "b".repeat(40),
+    discussion_locked: null,
+    should_remove_source_branch: true,
+    force_remove_source_branch: true,
+    prepared_at: "2026-10-20T17:54:09.000Z",
+    reference: `!${iid}`,
+    references: { short: `!${iid}`, relative: `!${iid}`, full: `${PROJECT}!${iid}` },
+    web_url: `https://gitlab.com/${PROJECT}/-/merge_requests/${iid}`,
+    time_stats: {
+      time_estimate: 0,
+      total_time_spent: 0,
+      human_time_estimate: null,
+      human_total_time_spent: null,
+    },
+    squash: true,
+    squash_on_merge: true,
+    task_completion_status: { count: 0, completed_count: 0 },
+    has_conflicts: false,
+    blocking_discussions_resolved: true,
+  };
+}
+
+/** The project's merge requests, newest first, as GitLab pages them. */
+const MERGE_REQUESTS = Array.from({ length: 150 }, (_, index) => mergeRequest(150 - index));
+
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
@@ -73,6 +153,19 @@ async function fixture(
     if (path === "/user") {
       if (options.keyRefused) json({ message: "401 Unauthorized" }, 401);
       else json({ username: "octo" });
+    } else if (path === `${OWN}/merge_requests` && url.searchParams.get("state") === "merged") {
+      // GitLab's paging: per_page (20 when unnamed) and page, and a next link.
+      const perPage = Number(url.searchParams.get("per_page") ?? 20);
+      const page = Number(url.searchParams.get("page") ?? 1);
+      const next = new URLSearchParams(url.searchParams);
+      next.set("page", String(page + 1));
+      json(
+        MERGE_REQUESTS.slice((page - 1) * perPage, page * perPage),
+        200,
+        page * perPage < MERGE_REQUESTS.length
+          ? { link: `<${base}/api/v4${OWN}/merge_requests?${next}>; rel="next"` }
+          : {},
+      );
     } else if (path === `${OWN}/merge_requests`) {
       json([{ iid: 1 }], 200, {
         link: `<${base}/api/v4${OWN}/merge_requests?id=group%2Fsub%2Ffield-notes&page=2&per_page=1>; rel="next"`,
@@ -433,6 +526,30 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     expect(redirected).toContain("Cannot call gitlab.example.com (refused)");
     expect(redirected).toContain("redirect");
     expect(redirected).not.toContain("glpat-");
+  });
+
+  // INF-733 (INF-721 friction 7): an oversized read pages on GitLab as it does on GitHub.
+  it("reads a merge request listing over 256 KiB again at the largest page that fits, and its nextPath goes on from there", async () => {
+    const { read, seen } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: `${OWN}/merge_requests?state=merged&per_page=100` })).text,
+    );
+    const served = answer.body.length;
+    expect(answer.status).toBe(200);
+    expect(served).toBeGreaterThan(0);
+    expect(served).toBeLessThan(100);
+    const bytes = (count: number) =>
+      Buffer.byteLength(JSON.stringify(MERGE_REQUESTS.slice(0, count)));
+    expect(bytes(served)).toBeLessThanOrEqual(API_RESPONSE_MAX_BYTES);
+    expect(bytes(served + 1)).toBeGreaterThan(API_RESPONSE_MAX_BYTES);
+    expect(answer.note).toContain(`GitLab's page at per_page=${served}`);
+    expect(seen.map((request) => request.path)).toEqual([
+      `/api/v4${OWN}/merge_requests?state=merged&per_page=100`,
+      `/api/v4${OWN}/merge_requests?state=merged&per_page=${served}`,
+    ]);
+    const next = JSON.parse((await read.run({ path: answer.nextPath })).text);
+    const iids = (requests: { iid: number }[]) => requests.map((request) => request.iid);
+    expect(iids(next.body)).toEqual(iids(MERGE_REQUESTS.slice(served, served * 2)));
   });
 
   it("answers a missing sign-in without a request, and stops a task at its call budget", async () => {

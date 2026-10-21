@@ -18,6 +18,7 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { API_RESPONSE_MAX_BYTES } from "../../api";
 import { GitHubForge } from "./githubForge";
 
 const HEAD = "a".repeat(40);
@@ -104,6 +105,207 @@ const DISPATCHED_RUN = {
   html_url: "https://github.com/octo/meter/actions/runs/39631227000",
 };
 
+/** A GitHub account as a run's actor or a repository's owner carries it, with every link it lists. */
+function account(login: string, id: number, type: "User" | "Organization") {
+  const url = `https://api.github.com/users/${login}`;
+  return {
+    login,
+    id,
+    node_id: "MDQ6VXNlcjMyMzMwMDY=",
+    avatar_url: `https://avatars.githubusercontent.com/u/${id}?v=4`,
+    gravatar_id: "",
+    url,
+    html_url: `https://github.com/${login}`,
+    followers_url: `${url}/followers`,
+    following_url: `${url}/following{/other_user}`,
+    gists_url: `${url}/gists{/gist_id}`,
+    starred_url: `${url}/starred{/owner}{/repo}`,
+    subscriptions_url: `${url}/subscriptions`,
+    organizations_url: `${url}/orgs`,
+    repos_url: `${url}/repos`,
+    events_url: `${url}/events{/privacy}`,
+    received_events_url: `${url}/received_events`,
+    type,
+    user_view_type: "public",
+    site_admin: false,
+  };
+}
+
+/** The repository a run carries twice, as `repository` and `head_repository`, with every link GitHub lists. */
+function runRepository() {
+  const url = "https://api.github.com/repos/octo/meter";
+  const links = Object.fromEntries(
+    [
+      ["forks", "forks"],
+      ["keys", "keys{/key_id}"],
+      ["collaborators", "collaborators{/collaborator}"],
+      ["teams", "teams"],
+      ["hooks", "hooks"],
+      ["issue_events", "issues/events{/number}"],
+      ["events", "events"],
+      ["assignees", "assignees{/user}"],
+      ["branches", "branches{/branch}"],
+      ["tags", "tags"],
+      ["blobs", "git/blobs{/sha}"],
+      ["git_tags", "git/tags{/sha}"],
+      ["git_refs", "git/refs{/sha}"],
+      ["trees", "git/trees{/sha}"],
+      ["statuses", "statuses/{sha}"],
+      ["languages", "languages"],
+      ["stargazers", "stargazers"],
+      ["contributors", "contributors"],
+      ["subscribers", "subscribers"],
+      ["subscription", "subscription"],
+      ["commits", "commits{/sha}"],
+      ["git_commits", "git/commits{/sha}"],
+      ["comments", "comments{/number}"],
+      ["issue_comment", "issues/comments{/number}"],
+      ["contents", "contents/{+path}"],
+      ["compare", "compare/{base}...{head}"],
+      ["merges", "merges"],
+      ["archive", "{archive_format}{/ref}"],
+      ["downloads", "downloads"],
+      ["issues", "issues{/number}"],
+      ["pulls", "pulls{/number}"],
+      ["milestones", "milestones{/number}"],
+      ["notifications", "notifications{?since,all,participating}"],
+      ["labels", "labels{/name}"],
+      ["releases", "releases{/id}"],
+      ["deployments", "deployments"],
+    ].map(([name, rest]) => [`${name}_url`, `${url}/${rest}`]),
+  );
+  return {
+    id: 1296269,
+    node_id: "R_kgDOVLsFlA",
+    name: "meter",
+    full_name: "octo/meter",
+    private: true,
+    owner: account("octo", 341614947, "Organization"),
+    html_url: "https://github.com/octo/meter",
+    description: null,
+    fork: false,
+    url,
+    ...links,
+  };
+}
+
+/**
+ * One workflow run as GitHub lists it under `workflow_runs`, from a reading
+ * of this project's own run listing on Oct 21 (INF-733), where a page of 20
+ * passed 256 KiB: a pull request's ci run, its squash commit's message, and
+ * the repository twice. `message` stands in for a longer commit message.
+ */
+function workflowRun(index: number, message?: string) {
+  const id = 39647876291 - index;
+  const sha = createHash("sha1").update(String(index)).digest("hex");
+  const url = `https://api.github.com/repos/octo/meter/actions/runs/${id}`;
+  const branch = `fm/task-${sha.slice(0, 8)}`;
+  const repo = { id: 1296269, url: "https://api.github.com/repos/octo/meter", name: "meter" };
+  const actor = account("kunchenguid", 3233006, "User");
+  return {
+    id,
+    name: "ci",
+    node_id: "WFR_kwLOVLsFlM8AAAAJOzKUww",
+    head_branch: branch,
+    head_sha: sha,
+    path: ".github/workflows/ci.yml",
+    display_title: "test(e2e): turn the microphone check off for the run-evidence fixture runs",
+    run_number: 618 - index,
+    event: "pull_request",
+    status: "completed",
+    conclusion: "success",
+    workflow_id: 386227718,
+    check_suite_id: 107449288593,
+    check_suite_node_id: "CS_kwDOVLsFlM8AAAAZBHoHkQ",
+    url,
+    html_url: `https://github.com/octo/meter/actions/runs/${id}`,
+    pull_requests: [
+      {
+        url: "https://api.github.com/repos/octo/meter/pulls/250",
+        id: 4955987269,
+        number: 250,
+        head: { ref: branch, sha, repo },
+        base: { ref: "main", sha: "7ba8b811f44141d42a14e049bad9cc310063df92", repo },
+      },
+    ],
+    created_at: "2026-10-21T17:53:59Z",
+    updated_at: "2026-10-21T17:54:09Z",
+    actor,
+    run_attempt: 1,
+    referenced_workflows: [],
+    run_started_at: "2026-10-21T17:53:59Z",
+    triggering_actor: actor,
+    jobs_url: `${url}/jobs`,
+    logs_url: `${url}/logs`,
+    check_suite_url: "https://api.github.com/repos/octo/meter/check-suites/107449288593",
+    artifacts_url: `${url}/artifacts`,
+    cancel_url: `${url}/cancel`,
+    rerun_url: `${url}/rerun`,
+    previous_attempt_url: null,
+    workflow_url: "https://api.github.com/repos/octo/meter/actions/workflows/386227718",
+    head_commit: {
+      id: sha,
+      tree_id: "8ac84a35d8406eea66624bca5a3167d56e7a4eff",
+      message:
+        message ??
+        "test(e2e): turn the microphone check off for the run-evidence fixture runs\n\nThe fixture runs in tests/run-evidence-playwright.test.ts go through the\ne2e global setup, which in a virtual Mac boots Electron to open the fake\nmicrophone (20 s budget) before the held spec writes. On a slow guest, or\na stage without the microphone grant, that outlasted the test's 12 s wait.\nTheir specs open no microphone, so the test sets\nINFINITARY_E2E_MIC_PREFLIGHT=0, a new value that turns the check off.\n\nRefs: INF-726",
+      timestamp: "2026-10-21T17:47:46Z",
+      author: { name: "kunchenguid", email: "kun@kunchenguid.com" },
+      committer: { name: "kunchenguid", email: "kun@kunchenguid.com" },
+    },
+    repository: runRepository(),
+    head_repository: runRepository(),
+  };
+}
+
+/** The project's runs, newest first, as GitHub pages them. */
+const RUNS = Array.from({ length: 120 }, (_, index) => workflowRun(index));
+const RUN_LISTING = (runs: unknown[]) => ({ total_count: RUNS.length, workflow_runs: runs });
+
+/**
+ * GitHub's compare answer between two versions far apart: its commits and
+ * every changed file with its patch, two lists in one object, where a
+ * reading of per_page=1 still passed 256 KiB (INF-733).
+ */
+function comparison() {
+  const file = (index: number) => ({
+    sha: createHash("sha1").update(`file ${index}`).digest("hex"),
+    filename: `src/core/feature${index}.ts`,
+    status: "modified",
+    additions: 120,
+    deletions: 40,
+    changes: 160,
+    blob_url: `https://github.com/octo/meter/blob/${HEAD}/src/core/feature${index}.ts`,
+    raw_url: `https://github.com/octo/meter/raw/${HEAD}/src/core/feature${index}.ts`,
+    contents_url: `https://api.github.com/repos/octo/meter/contents/src/core/feature${index}.ts?ref=${HEAD}`,
+    patch: `@@ -1,40 +1,120 @@\n${"+  const reading = await readings.next();\n".repeat(120)}`,
+  });
+  return {
+    url: "https://api.github.com/repos/octo/meter/compare/v0.4.1...main",
+    status: "ahead",
+    ahead_by: 300,
+    behind_by: 0,
+    total_commits: 300,
+    commits: [{ sha: HEAD, commit: { message: "feat: one change" } }],
+    files: Array.from({ length: 60 }, (_, index) => file(index)),
+  };
+}
+
+/**
+ * GitHub's contributor statistics: every contributor with a week-by-week
+ * count, one answer that ignores per_page.
+ */
+const CONTRIBUTORS = Array.from({ length: 40 }, (_, index) => ({
+  author: account(`author${index}`, 1000 + index, "User"),
+  total: 300,
+  weeks: Array.from({ length: 300 }, (_, week) => ({
+    w: 1_600_000_000 + week * 604_800,
+    a: 10,
+    d: 4,
+    c: 1,
+  })),
+}));
+
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
@@ -146,7 +348,31 @@ async function fixture(
       });
       res.end(JSON.stringify(value));
     };
-    if (url.pathname === "/repos/octo/meter/pulls") {
+    // GitHub's paging: per_page (30 when unnamed) and page, and a next link by repository id.
+    const paged = (items: unknown[], wrap: (page: unknown[]) => unknown, nextPath: string) => {
+      const perPage = Number(url.searchParams.get("per_page") ?? 30);
+      const page = Number(url.searchParams.get("page") ?? 1);
+      const next = new URLSearchParams(url.searchParams);
+      next.set("page", String(page + 1));
+      json(
+        wrap(items.slice((page - 1) * perPage, page * perPage)),
+        200,
+        page * perPage < items.length ? { link: `<${base}${nextPath}?${next}>; rel="next"` } : {},
+      );
+    };
+    if (url.pathname === "/repos/octo/meter/actions/runs") {
+      paged(RUNS, RUN_LISTING, "/repositories/1296269/actions/runs");
+    } else if (url.pathname === "/repositories/1296269/actions/runs") {
+      paged(RUNS, RUN_LISTING, "/repositories/1296269/actions/runs");
+    } else if (url.pathname === "/repos/octo/meter/actions/workflows/phone.yml/runs") {
+      // A run whose squash commit's message alone passes the cap leads the list.
+      const runs = [workflowRun(0, "x".repeat(300 * 1024)), ...RUNS.slice(1)];
+      paged(runs, RUN_LISTING, "/repositories/1296269/actions/workflows/phone.yml/runs");
+    } else if (url.pathname === "/repos/octo/meter/compare/v0.4.1...main") {
+      json(comparison());
+    } else if (url.pathname === "/repos/octo/meter/stats/contributors") {
+      json(CONTRIBUTORS);
+    } else if (url.pathname === "/repos/octo/meter/pulls") {
       json([{ number: 1 }], 200, {
         link: `<${base}/repos/octo/meter/pulls?page=2>; rel="next"`,
       });
@@ -696,6 +922,66 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     const redirected = (await read.run({ path: "/repos/octo/meter/redirect" })).text;
     expect(redirected).toContain("redirect");
     expect(redirected).not.toContain("gho_");
+  });
+
+  // INF-733 (INF-721 friction 7): 30 oversized reads were refused in a day, each sending the crewmate to guess a smaller page.
+  it("reads a run listing over 256 KiB again at the largest page that fits, and its nextPath goes on from there", async () => {
+    const { read, seen } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: "/repos/octo/meter/actions/runs?per_page=50" })).text,
+    );
+    const served = answer.body.workflow_runs.length;
+    expect(answer).toMatchObject({ status: 200, ok: true });
+    expect(served).toBeGreaterThan(0);
+    expect(served).toBeLessThan(50);
+    const ids = (runs: { id: number }[]) => runs.map((run) => run.id);
+    expect(ids(answer.body.workflow_runs)).toEqual(ids(RUNS.slice(0, served)));
+    // The largest page that fits: one more run would pass the cap.
+    const bytes = (count: number) =>
+      Buffer.byteLength(JSON.stringify(RUN_LISTING(RUNS.slice(0, count))));
+    expect(bytes(served)).toBeLessThanOrEqual(API_RESPONSE_MAX_BYTES);
+    expect(bytes(served + 1)).toBeGreaterThan(API_RESPONSE_MAX_BYTES);
+    expect(answer.note).toContain("at per_page=50 exceeds the 256 KiB read limit");
+    expect(answer.note).toContain(`GitHub's page at per_page=${served}`);
+    expect(seen.map((request) => request.path)).toEqual([
+      "/repos/octo/meter/actions/runs?per_page=50",
+      `/repos/octo/meter/actions/runs?per_page=${served}`,
+    ]);
+
+    const next = JSON.parse((await read.run({ path: answer.nextPath })).text);
+    expect(next.status).toBe(200);
+    expect(next.note).toBeUndefined();
+    expect(ids(next.body.workflow_runs)).toEqual(ids(RUNS.slice(served, served * 2)));
+  });
+
+  it("keeps the asked page's place in the list when it reads a smaller page", async () => {
+    const { read, seen } = await fixture();
+    const answer = JSON.parse(
+      (await read.run({ path: "/repos/octo/meter/actions/runs?per_page=50&page=2" })).text,
+    );
+    const served = answer.body.workflow_runs.length;
+    expect(50 % served).toBe(0);
+    expect(answer.body.workflow_runs[0].id).toBe(RUNS[50]?.id);
+    expect(answer.body.workflow_runs.at(-1).id).toBe(RUNS[50 + served - 1]?.id);
+    expect(seen.at(-1)?.path).toBe(
+      `/repos/octo/meter/actions/runs?per_page=${served}&page=${50 / served + 1}`,
+    );
+  });
+
+  it("refuses an answer no smaller page would shrink, and says why", async () => {
+    const f = await fixture();
+    const refusals = [
+      ["/repos/octo/meter/compare/v0.4.1...main?per_page=1", "not a list", 1],
+      ["/repos/octo/meter/actions/workflows/phone.yml/runs", "first item alone", 1],
+      ["/repos/octo/meter/stats/contributors?per_page=100", "per_page does not page it", 2],
+    ] as const;
+    for (const [path, why, calls] of refusals) {
+      const before = f.seen.length;
+      const text = (await f.read.run({ path })).text;
+      expect(text, path).toContain("Cannot call GitHub (refused): The answer exceeds the 256 KiB");
+      expect(text, path).toContain(why);
+      expect(f.seen.length - before, path).toBe(calls);
+    }
   });
 
   it("answers a task with no sign-in as the sign-in failure, not a crash", async () => {

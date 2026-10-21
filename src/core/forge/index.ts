@@ -32,7 +32,14 @@ export type {
   GithubWriteInput,
   ReleaseUpload,
 } from "./api";
-export { API_CALLS_PER_TASK, API_RESPONSE_MAX_BYTES, nextPagePath, parseApiRequest } from "./api";
+export {
+  API_CALLS_PER_TASK,
+  API_RESPONSE_MAX_BYTES,
+  nextPagePath,
+  OversizedAnswer,
+  parseApiRequest,
+  smallerPage,
+} from "./api";
 export type {
   AttachmentDestination,
   AttachmentMediaType,

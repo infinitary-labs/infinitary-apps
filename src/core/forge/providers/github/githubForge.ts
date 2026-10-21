@@ -3,11 +3,11 @@ import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { requireConventional } from "../../../workspace/conventional";
 import {
-  API_RESPONSE_MAX_BYTES,
   type ApiProject,
   type ApiRoute,
   type ForgeApi,
   type ForgeApiResponse,
+  gatewayAnswerBytes,
   nextPagePath,
   parseApiRequest,
   type ReleaseUpload,
@@ -57,6 +57,8 @@ import { GitHubWorkflows } from "./workflows";
  */
 
 export const GITHUB_API_URL = "https://api.github.com";
+/** GitHub's page size for a list read that names no `per_page`. */
+const GITHUB_DEFAULT_PER_PAGE = 30;
 const API_VERSION = "2022-11-28";
 /** GitHub documents its asynchronous merge, the one call that can skip rules, at this version. */
 const ASYNC_MERGE_API_VERSION = "2026-03-10";
@@ -210,6 +212,7 @@ export class GitHubForge implements Forge {
     this.place = forgePlace({ kind: "github", host: location.host ?? GITHUB_COM }) ?? "GitHub";
     this.api = {
       place: this.place,
+      defaultPerPage: GITHUB_DEFAULT_PER_PAGE,
       route: (method, raw, bodyBytes) => parseApiRequest(method, raw, this.apiProject(), bodyBytes),
       nextPath: (link) => nextPagePath(link, this.base, this.apiProject()),
       call: (method, path, body) => this.apiCall(method, path, body),
@@ -1057,7 +1060,7 @@ export class GitHubForge implements Forge {
         "GitHub answered with a redirect, which the gateway does not follow.",
       );
     }
-    const bytes = await boundedBytes(response, API_RESPONSE_MAX_BYTES, "The answer");
+    const bytes = await gatewayAnswerBytes(response);
     const remaining = response.headers.get("x-ratelimit-remaining");
     const reset = Number(response.headers.get("x-ratelimit-reset"));
     const retryAfter = Number(response.headers.get("retry-after"));

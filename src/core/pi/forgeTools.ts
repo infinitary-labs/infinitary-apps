@@ -35,11 +35,10 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your task's branch as a pull request where the project lives: a pull request onto the default branch on GitHub, a merge request onto it on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
-  "title must be conventional (feat, fix, chore, test, refactor, docs, perf), optionally scoped and marked ! for breaking changes.",
+  "title must be conventional.",
   "Every selected attachment must upload before a new pull or merge request opens or an existing story is replaced. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback.",
   "When body is the description, it replaces the open description whole; the answer says what the host shows when read back.",
   "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication.",
-  "Never squash your commits yourself (the merge does): bring the branch up to date with git rebase onto the default branch, never git reset --soft onto it, which would undo its newer work.",
 ].join(" ");
 
 /** The around parameter's own words: Claude drops nested descriptions, so from and to are explained here (INF-497). */
@@ -82,13 +81,29 @@ export const SKIP_RULES_DESCRIPTION = [
   "The review names each rule and failed check, and request_merge's card shows them. Only the captain's click on that card sends it, once, at that version.",
 ].join(" ");
 
+/**
+ * The story parameter's own words (INF-733): Claude serves a nested field's
+ * type but drops its limits and descriptions, so the shape the host checks -
+ * the counts, the commit-id pattern and the relationships `evidenceRelations`
+ * and `ChangePresentations.prepare` refuse - is said here.
+ */
+export const PREPARE_CHANGE_STORY_DESCRIPTION = [
+  "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
+  "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base.",
+  "Before media name base as captureHead, and a view kept from an earlier revision keeps them; kind new has none.",
+  "After media name head or give applicability, kept as data, not displayed.",
+  "layout adjacent needs exactly two media in each shown state.",
+].join(" ");
+
 export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same conventional title on the story, pull request and completion card. Supply Why as at most two short sentences, What changed as up to five short bullets, Before and After as one short sentence each, and checked as up to six {check, result} observed facts. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. This is an instruction, not a prose refusal check. Ordered views pair Before and After pictures under one heading; recordings stack; new views need only After. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. Before names the original base; After is fresh or has an explicit applicability declaration retained as data, not displayed. No visible change gives noPicture and no views. The host retains immutable copies in the task card folder. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
+    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same conventional title on the story, pull request and completion card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. This is an instruction, not a prose refusal check. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. The host retains immutable copies in the task card folder. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
   parameters: Type.Object({
-    story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema),
+    story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
+      description: PREPARE_CHANGE_STORY_DESCRIPTION,
+    }),
   }),
   bind: (delegate) => {
     const prepare = delegate.onPrepareChange;
@@ -301,7 +316,7 @@ export const DOWNLOAD_ARTIFACT_TOOL = crewmateTool({
 });
 
 const GITHUB_GATEWAY_RULES =
-  "Use this connection for your own GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page at 100, calls per task at 200; an oversized answer is refused, not cut. nextPath, when given, is the next page's path.";
+  "Use this connection for your own GitHub work. path is relative; give no host, token or header. JSON REST only: no GraphQL. Requests and answers are capped at 256 KiB, per_page at 100, calls per task at 200. nextPath, when given, is the next page's path.";
 
 const GITHUB_READ_SCOPE =
   "A read reaches whatever the sign-in may read - any repository (/repos/{owner}/{repo}/..., including issues, pull requests, contents and Actions), your account, organizations, notifications and search - and the host's own answer comes back. A task with no project, or whose project lives where the app has no API (on this computer, a plain Git host), reads through the github.com sign-in.";
@@ -315,7 +330,7 @@ const GITHUB_WRITE_SCOPE =
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
   label: "Read where the project lives",
-  description: `Read data where your project lives with GET or HEAD - GitHub's API, or GitLab's on a GitLab project - for example to find a repository by name with /user/repos?sort=updated&per_page=100 or /search/repositories?q=... ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A read changes nothing.`,
+  description: `Read data where your project lives with GET or HEAD - GitHub's API, or GitLab's on a GitLab project - for example to find a repository by name with /user/repos?sort=updated&per_page=100 or /search/repositories?q=... ${GITHUB_READ_SCOPE} ${GITLAB_READ_SCOPE} ${GITHUB_GATEWAY_RULES} A list over the cap comes back at the largest page that fits, each try a call; any other oversized answer is refused, never cut. A read changes nothing.`,
   parameters: Type.Object({
     path: Type.String({
       description:

@@ -168,7 +168,7 @@ A key is never renewed: a refused key needs a new sign-in, and an unreachable ho
 Observe redacts the standard `glpat-` token shape as well as sensitive token headers.
 
 `gitlabApiBaseFor` uses `https://<host>/api/v4`; `INFINITARY_GITLAB_API_URL` overrides it only in an unpackaged development/test run.
-`GitLabClient` sends `Authorization: Bearer` (accepted by GitLab for both keys and browser sign-ins) only to that API, refuses redirects, bounds each response to 256 KiB and each request to 30 seconds, and asks the existing health service to check a 401.
+`GitLabClient` sends `Authorization: Bearer` (accepted by GitLab for both keys and browser sign-ins) only to that API, refuses redirects, bounds each response to 256 KiB (a gateway answer past it is held, up to 100 times the cap, only to page it; "Caps", below) and each request to 30 seconds, and asks the existing health service to check a 401.
 `GitLabProjects` reads `/projects?membership=true&simple=true&order_by=last_activity_at&sort=desc`, 100 per page up to 1,000, reporting an incomplete listing honestly.
 Exact lookup uses `/projects/<encoded full namespace>` so nested groups are preserved.
 `locate_project` preserves subgroup paths and recognises GitLab's `/-/` page routes.
@@ -330,7 +330,13 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A write to account or organization administration (keys, emails, members, settings, billing, `/enterprises/...`) is never the task's own, so it asks like any other.
   This is not a workflow-specific exception or a filename allowlist.
 - **Caps.**
-  A JSON request body is 256 KiB, one answer 256 KiB (refused, never cut), a JSON call times out at 30 s, and a task may make 200 calls per app run.
+  A JSON request body is 256 KiB, one answer 256 KiB (never cut), a JSON call times out at 30 s, and a task may make 200 calls per app run.
+  A read whose answer passes 256 KiB is paged rather than refused when its answer is one list: the gateway holds the answer whole up to 100 times the cap, finds the largest page of that list that fits, and reads it again at that `per_page` (`smallerPage`, `src/core/forge/api.ts`).
+  The smaller page keeps the asked page's place: its size divides the items before it, so its `page` starts at the same item, and the host's own link names the next page at that size.
+  A read that names no `per_page` asked for the host's default page size (`ForgeApi.defaultPerPage`: 30 on GitHub, 20 on GitLab).
+  Each try is one of the task's calls, and each smaller try asks for fewer items, so the tries end.
+  The answer's note names the `per_page` it was read at, and its `nextPath` goes on at that size.
+  An answer no smaller page would shrink is refused with the reason: one object, a list that ignores `per_page`, a first item that alone passes the cap, a page not named by number, or an answer past the hold.
   A release file has its own 2 GB cap and a 30-minute send ("Release files", below).
   Redirects are never followed.
   The answer carries the status, request id, rate limit or retry-after, and `nextPath` whenever GitHub's next page stays on the API origin and under its own path - including a repository listing's `/repositories/{id}/...` pages (FI3-1546).
@@ -338,7 +344,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A nonempty `temp_clone_token` field, which GitHub puts on a private repository's answer, is left out at any depth the same way, and the answer says the temporary clone tokens were removed; an empty one, as on a public repository, stays.
   Tokens already saved are left where they are.
   A GitHub refusal (422, 404, 403) is a status in the answer; a 401 asks the health service to look again.
-  Nothing is retried for the crewmate.
+  Apart from a smaller page of an oversized list, nothing is retried for the crewmate.
 - **Release files.**
   `github_write` takes an optional `file`: a regular file in the task's working copy, relative to it, never a link anywhere on the way.
   With `file` set, the method is POST and `body` stays out.
@@ -355,8 +361,8 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   The own-project and ask rules stay: a file for another project is kept, and the click reads the file then, so the ask stores the path and not the bytes.
   A task running on another computer is refused, because the file is in that computer's working copy and the call is sent from here.
 - **Reading a project's pull request history.**
-  A `/pulls` page carries two repository objects and the whole description of each pull request, so on this project even 15 to a page passes the 256 KiB cap and is refused.
-  `/repos/{owner}/{repo}/issues?state=all&sort=created&direction=desc` lists pull requests too, each with `pull_request.merged_at`, and 30 to a page fits here; a refused page asks for a smaller `per_page`.
+  A `/pulls` page carries two repository objects and the whole description of each pull request, so on this project even 15 to a page passes the 256 KiB cap and comes back as a smaller page.
+  `/repos/{owner}/{repo}/issues?state=all&sort=created&direction=desc` lists pull requests too, each with `pull_request.merged_at`, and 30 to a page fits here, so it pages in fewer calls.
   GitHub names a repository listing's next page by repository id (`/repositories/{id}/...`); that answer's `nextPath` reads it, so the crewmate pages on without adding `page=N` itself (FI3-1546).
   File-level work belongs in git, not the API: `git fetch origin '+refs/pull/<n>/head:refs/remotes/pr/<n>'` brings a pull request's head into the working copy through the app's own sign-in.
   `refs/pull/*/head` brings them all, into refs that every working copy of the clone shares.
@@ -665,6 +671,7 @@ The saved story is a soft hold (`story`): when the captain's recorded override p
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The schema carries the captain’s selected item counts; the author owns sentence length and word targets, with no invented per-sentence character refusal.
+The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, and when `layout` adjacent applies, because a Claude crewmate's client serves a nested field's type but not its limits or relationships.
 `verification` keeps commands, file names and counts behind How it was checked on both surfaces; nonempty unfinished work folds under Not done.
 The card keeps its risk radar; the pull request gives one line naming dimensions above low and folds the seven-row assessment.
 Empty required-action and unfinished sections, a frozen checks status and story/version stamps are absent.

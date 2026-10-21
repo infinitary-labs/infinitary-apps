@@ -1,7 +1,12 @@
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
-import { API_RESPONSE_MAX_BYTES, type ForgeApiResponse, type ReleaseUpload } from "../../api";
+import {
+  API_RESPONSE_MAX_BYTES,
+  type ForgeApiResponse,
+  gatewayAnswerBytes,
+  type ReleaseUpload,
+} from "../../api";
 import { ForgeError, type ForgeFailure, ForgeWriteError, isSignInForgeFailure } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import { gitlabReleaseFileCalls } from "./api";
@@ -318,7 +323,13 @@ export class GitLabClient {
         `${this.place} answered with a redirect, which the gateway does not follow.`,
       );
     }
-    const bytes = await this.boundedBytes(response, API_RESPONSE_MAX_BYTES, "The answer");
+    let bytes: Uint8Array;
+    try {
+      bytes = await gatewayAnswerBytes(response);
+    } catch (caught) {
+      if (caught instanceof ForgeError) throw caught;
+      throw new ForgeError("transient", `${this.place}'s answer could not be read.`);
+    }
     if (response.status === 401 && (await this.whoAmI(token)) === "sign-in") {
       this.options.onSignInRejected?.();
     }

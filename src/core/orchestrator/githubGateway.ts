@@ -5,6 +5,7 @@ import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type { WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import {
   API_CALLS_PER_TASK,
+  API_RESPONSE_MAX_BYTES,
   type ApiRoute,
   type Forge,
   type ForgeApi,
@@ -15,9 +16,11 @@ import {
   type GithubWriteInput,
   isSignInForgeFailure,
   type LocatedReleaseFile,
+  OversizedAnswer,
   PLACED_RELEASE_FILE_REFUSAL,
   type ReleaseUpload,
   releaseFileIn,
+  smallerPage,
 } from "../forge";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import type { TaskService } from "../tasks/taskService";
@@ -97,12 +100,38 @@ export class GithubGatewayService {
     },
   ) {}
 
+  /**
+   * One read, and an answer past the JSON cap read again at the largest page
+   * of it that fits (`smallerPage`), each try one call of the task's
+   * allowance. Every try asks for fewer items than the last, so the tries
+   * end; an answer no smaller page would shrink is refused, saying why.
+   */
   read(taskId: string, input: GithubReadInput): Promise<string> {
     return this.answer(taskId, async ({ api }) => {
       const route = api.route(input.method ?? "GET", input.path);
       if (route.write) throw new ForgeError("refused", "github_read sends GET or HEAD only.");
-      const response = await this.send(taskId, api, route.method, route.path);
-      return render(response, api);
+      let path = route.path;
+      let served: number | undefined;
+      for (;;) {
+        try {
+          const response = await this.send(taskId, api, route.method, path);
+          const asked = new URLSearchParams(route.path.split("?")[1]).get("per_page");
+          const paged =
+            served === undefined
+              ? []
+              : [
+                  `The answer ${asked === null ? "at the default page size" : `at per_page=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at per_page=${served}; nextPath continues at that size.`,
+                ];
+          return render(response, api, paged);
+        } catch (caught) {
+          if (!(caught instanceof OversizedAnswer) || route.method !== "GET") throw caught;
+          const smaller = smallerPage(path, caught, api.defaultPerPage);
+          if ("refused" in smaller)
+            throw new ForgeError("refused", `${caught.message} ${smaller.refused}`);
+          path = api.route("GET", smaller.path).path;
+          served = smaller.perPage;
+        }
+      }
     });
   }
 
@@ -654,7 +683,7 @@ export const DOWNLOAD_TOKEN_NOTE = "Download tokens were removed from links.";
 export const CLONE_TOKEN_NOTE = "Temporary clone tokens were removed.";
 
 /** Status, ids and the bounded answer; a next page only as a path a read may reach. */
-function render(response: ForgeApiResponse, api: ForgeApi): string {
+function render(response: ForgeApiResponse, api: ForgeApi, said: string[] = []): string {
   let body: unknown = response.body;
   if (response.body) {
     try {
@@ -666,6 +695,7 @@ function render(response: ForgeApiResponse, api: ForgeApi): string {
   const removed = { links: false, fields: false };
   const cleaned = stripCredentials(body, removed);
   const notes = [
+    ...said,
     response.status === 404 ? "404 can also mean the sign-in cannot see the route." : undefined,
     response.status === 403 && response.rateLimit?.remaining === 0
       ? "The hourly allowance is spent; retry after the reset time."

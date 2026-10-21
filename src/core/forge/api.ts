@@ -18,6 +18,12 @@ import { ForgeError } from "./forge";
 export const API_REQUEST_MAX_BYTES = 256 * 1024;
 export const API_RESPONSE_MAX_BYTES = 256 * 1024;
 export const API_PER_PAGE_MAX = 100;
+/**
+ * The most of one oversized answer the gateway holds to page it: the largest
+ * page, every item at the cap. An answer past it has items averaging over
+ * the cap, so no smaller page of it would fit.
+ */
+export const API_OVERSIZE_HOLD_BYTES = API_PER_PAGE_MAX * API_RESPONSE_MAX_BYTES;
 /** Calls a task may make through the gateway in one run of the app. */
 export const API_CALLS_PER_TASK = 200;
 
@@ -63,6 +69,8 @@ export type ForgeApiResponse = {
 export interface ForgeApi {
   /** The host in a sentence: "GitHub", "GitLab", or a server's own address. */
   readonly place: string;
+  /** The page size the host answers a list with when the read names no `per_page`. */
+  readonly defaultPerPage: number;
   /** Parse and check a request; throws `ForgeError("refused")` naming the rule it broke. */
   route(method: string, raw: string, bodyBytes?: number): ApiRoute;
   /** The next page's relative path from a `Link` header, only where `route` would take it. */
@@ -105,6 +113,142 @@ const SCOPE =
 
 function refuse(why: string): never {
   throw new ForgeError("refused", why);
+}
+
+/**
+ * An answer past the JSON cap, as the typed fact a read is paged from
+ * (`smallerPage`): how many bytes it reached, and the answer whole when it
+ * ended within `API_OVERSIZE_HOLD_BYTES`. Anywhere else it refuses like the
+ * cap always has.
+ */
+export class OversizedAnswer extends ForgeError {
+  constructor(
+    readonly bytes: number,
+    readonly whole: string | null,
+  ) {
+    super("refused", `The answer exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit.`);
+    this.name = "OversizedAnswer";
+  }
+}
+
+/**
+ * A gateway answer's body within the JSON cap. A longer one is read on, up to
+ * `API_OVERSIZE_HOLD_BYTES`, and thrown as an `OversizedAnswer`. A body that
+ * breaks off mid-read throws the reader's own error, for the host to word.
+ */
+export async function gatewayAnswerBytes(response: Response): Promise<Uint8Array> {
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > API_OVERSIZE_HOLD_BYTES) {
+    await response.body?.cancel();
+    throw new OversizedAnswer(declared, null);
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > API_OVERSIZE_HOLD_BYTES) {
+        await reader.cancel();
+        throw new OversizedAnswer(size, null);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = Buffer.concat(chunks, size);
+  if (size > API_RESPONSE_MAX_BYTES) {
+    throw new OversizedAnswer(size, new TextDecoder().decode(bytes));
+  }
+  return bytes;
+}
+
+/** An answer's one list, and the answer with only some of its items. */
+function listIn(
+  answer: unknown,
+): { items: unknown[]; withItems: (kept: unknown[]) => unknown } | null {
+  if (Array.isArray(answer)) return { items: answer, withItems: (kept) => kept };
+  if (answer === null || typeof answer !== "object") return null;
+  const lists = Object.entries(answer).filter(([, field]) => Array.isArray(field));
+  if (lists.length !== 1) return null;
+  const [key, items] = lists[0] as [string, unknown[]];
+  return { items, withItems: (kept) => ({ ...answer, [key]: kept }) };
+}
+
+/** The same read at a smaller page that fits the cap, or why no smaller page would. */
+export type SmallerPage = { path: string; perPage: number } | { refused: string };
+
+/**
+ * The read `path` again at the largest `per_page` whose items fit the JSON
+ * cap, at the same place in the list: the new size divides the items before
+ * the asked page, and `page` moves to the same first item, so the host's own
+ * next page continues from it. The answer's items are the answer when it is
+ * a list, or the one list it holds (a run listing's `workflow_runs`, a
+ * search's `items`); their sizes in the held answer say how many fit. A path
+ * with no `per_page` asked for the host's `defaultPerPage`.
+ */
+export function smallerPage(
+  path: string,
+  answer: OversizedAnswer,
+  defaultPerPage: number,
+): SmallerPage {
+  const limit = `${API_RESPONSE_MAX_BYTES / 1024} KiB`;
+  const [pathPart = "", query = ""] = path.split(/\?(.*)/s, 2);
+  const params = new URLSearchParams(query);
+  const askedSize = params.get("per_page");
+  const askedPage = params.get("page");
+  if (askedPage !== null && !/^[1-9]\d*$/.test(askedPage)) {
+    return { refused: "Its page is not a page number, so a smaller page cannot keep its place." };
+  }
+  const perPage = askedSize === null ? defaultPerPage : Number(askedSize);
+  const page = askedPage === null ? 1 : Number(askedPage);
+  if (answer.whole === null) {
+    return {
+      refused: `It passes ${API_OVERSIZE_HOLD_BYTES / 1024 / 1024} MiB, more than ${perPage} items of ${limit} each, so no smaller page would fit.`,
+    };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(answer.whole);
+  } catch {
+    return { refused: "It is not JSON, so a smaller page cannot be read." };
+  }
+  const list = listIn(parsed);
+  // The held answer's own bytes per byte of its compact form, so a host that
+  // indents its answers is measured as it sends them.
+  const scale = answer.bytes / Buffer.byteLength(JSON.stringify(parsed));
+  let bytes = list ? Buffer.byteLength(JSON.stringify(list.withItems([]))) : Infinity;
+  if (!list || list.items.length === 0 || bytes * scale > API_RESPONSE_MAX_BYTES) {
+    return { refused: "It is one object, not a list, so a smaller page would not shrink it." };
+  }
+  const { items } = list;
+  if (items.length > perPage) {
+    return {
+      refused: `It holds ${items.length} items where a page holds ${perPage}, so per_page does not page it.`,
+    };
+  }
+  let fit = 0;
+  for (const item of items) {
+    bytes += Buffer.byteLength(JSON.stringify(item)) + (fit > 0 ? 1 : 0);
+    if (bytes * scale > API_RESPONSE_MAX_BYTES) break;
+    fit += 1;
+  }
+  if (fit === 0) {
+    return {
+      refused: `Its first item alone passes ${limit}, so even a page of one would not fit.`,
+    };
+  }
+  const before = (page - 1) * perPage;
+  let size = fit;
+  while (before % size !== 0) size -= 1;
+  const nextPage = before / size + 1;
+  params.set("per_page", String(size));
+  if (askedPage !== null || nextPage > 1) params.set("page", String(nextPage));
+  return { path: `${pathPart}?${params.toString()}`, perPage: size };
 }
 
 /** A request past the checks every host's policy shares, for that policy to place. */

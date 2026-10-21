@@ -303,6 +303,15 @@ describe("what the Claude client serves equals the source", () => {
       }),
     );
 
+    // INF-733: the change story's shape reaches Claude whole before a story is
+    // sent; the client keeps a nested field's type but drops its limits.
+    const prepare = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}prepare_change`);
+    const storySource = tools.find((tool) => tool.name === "prepare_change");
+    const storyHelp = (storySource?.parameters as Schema | undefined)?.properties?.story
+      ?.description;
+    expect(storyHelp).toBeTruthy();
+    expect(prepare?.input_schema?.properties?.story?.description).toBe(storyHelp);
+
     // `emit_card` is the only app tool with nested parameters, and the
     // audit found only its top-level descriptions surviving. Whatever a
     // Claude crewmate must know lives in the description or in one of

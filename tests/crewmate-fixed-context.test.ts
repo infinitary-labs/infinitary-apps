@@ -167,6 +167,21 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
     expect(toolsText).not.toContain("If not signed in, report a blocker");
   });
 
+  it("says the rebase and conventional-name rules in the prompt, not on open_change (INF-733)", () => {
+    for (const runtime of RUNTIMES) {
+      for (const kind of KINDS) {
+        const prompt = promptFor(runtime, kind);
+        expect(prompt, label(runtime, kind)).toContain("never git reset --soft onto it");
+        expect(prompt, label(runtime, kind)).toContain(
+          "Use feat, fix, chore, test, refactor, docs or perf",
+        );
+      }
+    }
+    const openChange = CREWMATE_TOOLS.find((tool) => tool.name === "open_change");
+    expect(openChange?.description).not.toContain("git reset --soft");
+    expect(openChange?.description).not.toContain("feat, fix, chore");
+  });
+
   it("leaves the smallest local window room for the conversation it promises", () => {
     const systemPrompt = buildCrewmateSystemPrompt("claude");
     const fits = (tokens: number) =>

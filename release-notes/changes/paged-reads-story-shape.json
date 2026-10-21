@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "paged-reads-story-shape",
+      "reason": "Internal: a crewmate's GitHub or GitLab list read over the answer cap comes back as a smaller page instead of a refusal, and its change-story tool states the shape the app checks before the story is sent; nothing a person sees changes."
+    }
+  ]
+}

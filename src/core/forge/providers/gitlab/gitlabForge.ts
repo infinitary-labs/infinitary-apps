@@ -83,6 +83,8 @@ type JobJson = {
   finished_at?: string | null;
 };
 
+/** GitLab's page size for a list read that names no `per_page`. */
+const GITLAB_DEFAULT_PER_PAGE = 20;
 /** The most job pages one pipeline's reading follows (100 per page). */
 const MAX_JOB_PAGES = 5;
 /** The most merged-result commits one reading opens to find the head among their parents. */
@@ -119,6 +121,7 @@ export class GitLabForge implements Forge {
     const project = location.owner && location.name ? `${location.owner}/${location.name}` : null;
     this.api = {
       place: this.place,
+      defaultPerPage: GITLAB_DEFAULT_PER_PAGE,
       route: (method, raw, bodyBytes) => parseGitLabApiRequest(method, raw, project, bodyBytes),
       nextPath: (link) => nextGitLabPagePath(link, options.apiBaseUrl, project),
       call: (method, path, body) => this.client.call(method, path, body),

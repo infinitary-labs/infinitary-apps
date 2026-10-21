@@ -107,6 +107,7 @@ export const PROBES = [
       "scripts/refuse-build-during-e2e.ts",
       "tests/e2e/globalSetup.ts",
       "tests/e2e/lanes.ts",
+      "tests/e2e/micPreflight.ts",
       "tests/e2e/runEvidence.ts",
     ],
   },

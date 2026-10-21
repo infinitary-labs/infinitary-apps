@@ -25,6 +25,22 @@ export function micPreflightFailure(probe: MicProbe): string | null {
   );
 }
 
+/**
+ * The run's switch for this check: "1" asks for it on any Mac, and "0" turns
+ * it off for a run whose specs open no microphone.
+ */
+export const MIC_PREFLIGHT = "INFINITARY_E2E_MIC_PREFLIGHT";
+
+/**
+ * Whether the run checks the microphone: in a virtual Mac or when asked with
+ * "1", unless the run turned it off with "0" (INF-726: the run-evidence
+ * fixture runs booted Electron for it before their first spec).
+ */
+export function micPreflightAsked(setting: string | undefined, virtualMac: boolean): boolean {
+  if (setting === "0") return false;
+  return virtualMac || setting === "1";
+}
+
 /** A virtual Mac, as macOS itself reports it. */
 export function inVirtualMac(): boolean {
   if (process.platform !== "darwin") return false;
@@ -52,7 +68,7 @@ export function probeMicrophone(): Promise<MicProbe> {
 
 /** Throws before any test when this runner cannot open the microphone. */
 export async function checkMicrophone(): Promise<void> {
-  if (!inVirtualMac() && process.env.INFINITARY_E2E_MIC_PREFLIGHT !== "1") return;
+  if (!micPreflightAsked(process.env[MIC_PREFLIGHT], inVirtualMac())) return;
   const failure = micPreflightFailure(await probeMicrophone());
   if (failure) throw new Error(failure);
 }

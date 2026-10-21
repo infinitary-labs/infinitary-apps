@@ -521,6 +521,7 @@ The image grants `kTCCServiceMicrophone` to that agent: sign the agent ad hoc (`
 The running agent keeps its old signature until it restarts, so the grant holds from the image's next start, which is every clone's first.
 `micProbe.cjs` opens the microphone from a file page, because a `data:` page is not a secure context and has no `navigator.mediaDevices`.
 `tests/e2e/globalSetup.ts` checks this before any test starts (`tests/e2e/micPreflight.ts`): in a virtual Mac, or with `INFINITARY_E2E_MIC_PREFLIGHT=1`, it opens the fake microphone once and fails the run with the fix when it does not open.
+`INFINITARY_E2E_MIC_PREFLIGHT=0` turns the check off for a run whose specs open no microphone, as `tests/run-evidence-playwright.test.ts`'s fixture runs do, so a slow virtual Mac does not boot Electron for it before their first spec.
 
 ### The Claude Code the app finds first
 

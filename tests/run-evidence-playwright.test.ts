@@ -2,13 +2,15 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { MIC_PREFLIGHT } from "./e2e/micPreflight";
 import { RUNS_DIR, runName } from "./e2e/runEvidence";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
  * Per-run e2e evidence (tests/e2e/runEvidence.ts, docs/testing.md "Per-run
  * e2e evidence"), through real Playwright runs of a fixture config that uses
- * the suite's own global setup: a run that starts while another is going
+ * the suite's own global setup, its microphone check off (the fixture specs
+ * open no microphone): a run that starts while another is going
  * keeps its evidence in its own directory and leaves the first one's alone,
  * and a build of the working copy is refused while a run of it is going. The
  * assertions are an order - what the first run had written before the second
@@ -71,6 +73,10 @@ function fixtureRuns() {
     TMPDIR: scratchDir("infinitary-evidence-tmp-"),
     INFINITARY_FIXTURE_LOG: log,
     INFINITARY_FIXTURE_RELEASE: release,
+    // Their specs open no microphone. In a virtual Mac the global setup's
+    // check would boot Electron first, for up to 20 s, past the wait for the
+    // held spec on a slow guest (INF-726).
+    [MIC_PREFLIGHT]: "0",
   };
   // This suite's run owns its own temp root; the fixture runs open theirs.
   delete env.INFINITARY_UNIT_TEMP_ROOT_OWNED;

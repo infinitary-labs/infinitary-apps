@@ -750,4 +750,47 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       at.db.close();
     }
   });
+
+  // INF-717: a republished story's new title reaches the merge request, so its squash
+  // carries the breaking marker; a draft keeps GitLab's marker until it is made ready.
+  it("renames a draft merge request to a republished story's title and squashes under it", async () => {
+    const at = await arrange();
+    try {
+      const service = at.service();
+      const words = { ...at.draft, views: [], noPicture: "This fixture publishes words alone." };
+      const first = await service.prepare(TASK, await at.stage(words), at.forge);
+      await service.publish(
+        TASK,
+        first,
+        at.forge,
+        STORY_BRANCH,
+        "feat: carry the evidence",
+        "pending",
+        undefined,
+        undefined,
+        { draft: true },
+      );
+      const second = await service.prepare(
+        TASK,
+        await at.stage({ ...words, title: "feat!: carry the evidence" }),
+        at.forge,
+      );
+      await service.publish(TASK, second, at.forge, STORY_BRANCH, "feat!: carry the evidence");
+      const draft = await at.forge.changeFor(STORY_BRANCH);
+      expect(draft).toMatchObject({ title: "Draft: feat!: carry the evidence", draft: true });
+      const project = `/api/v4/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`;
+      expect(at.gitlab.requests().filter((line) => /^(POST|PUT) /.test(line))).toEqual([
+        `POST ${project}/merge_requests`,
+        `PUT ${project}/merge_requests/1`,
+      ]);
+
+      const ready = await at.forge.markReady(draft as ForgeChange, () => {});
+      expect(ready).toMatchObject({ title: "feat!: carry the evidence" });
+      const published = await service.assertPublished(TASK, ready, at.forge);
+      await at.forge.putIn(published, published.headSha);
+      expect(at.gitlab.merges()[0]?.message.split("\n")[0]).toBe("feat!: carry the evidence");
+    } finally {
+      at.db.close();
+    }
+  });
 });

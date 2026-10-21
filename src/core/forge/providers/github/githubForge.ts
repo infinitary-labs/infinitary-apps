@@ -366,7 +366,7 @@ export class GitHubForge implements Forge {
     return value.object.sha as string;
   }
 
-  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+  async updateChangeBody(change: ForgeChange, body: string, title?: string): Promise<void> {
     const path = `${this.repoPath()}/pulls/${numbered(change)}`;
     const fresh = await this.apiCall("GET", path).catch((error: unknown) => {
       throw new ForgeWriteError(
@@ -394,14 +394,19 @@ export class GitHubForge implements Forge {
     if (
       pull?.state !== "open" ||
       pull.head?.sha !== change.headSha ||
-      (pull.body ?? "") !== (change.body ?? "")
+      (pull.body ?? "") !== (change.body ?? "") ||
+      (title !== undefined && pull.title !== change.title)
     )
       throw new ForgeWriteError(
         "failed",
         "refused",
         "The pull request changed after it was read, so its description was not replaced. Read it again before updating.",
       );
-    const answer = await this.apiCall("PATCH", path, JSON.stringify({ body }));
+    const answer = await this.apiCall(
+      "PATCH",
+      path,
+      JSON.stringify(title === undefined ? { body } : { title, body }),
+    );
     if (answer.status !== 200)
       throw changeWriteError(answer.status, "replacing the description", answer.body);
   }

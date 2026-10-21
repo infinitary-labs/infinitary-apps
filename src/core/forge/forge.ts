@@ -220,6 +220,11 @@ export class ForgeWriteError extends ForgeError {
   }
 }
 
+/** A change's own title, without the `Draft: ` marker GitLab keeps in a draft's title. */
+export function changeTitle(kind: ForgeKind, change: ForgeChange): string | undefined {
+  return kind === "gitlab" && change.draft ? change.title?.replace(/^Draft: /, "") : change.title;
+}
+
 /** The host refused who the app is: no sign-in, or one it no longer accepts. */
 export function isSignInForgeFailure(caught: unknown): boolean {
   return caught instanceof ForgeError && caught.failure === "sign-in";
@@ -261,8 +266,12 @@ export interface Forge {
     body: string;
     draft?: boolean;
   }): Promise<ForgeChange>;
-  /** Replace the description, a saved story or legacy words, only if its just-read body and code version still match. */
-  updateChangeBody?(change: ForgeChange, body: string): Promise<void>;
+  /**
+   * Replace the description, a saved story or legacy words, only if its just-read body and code
+   * version still match. A `title` goes in the same write, only if the just-read title still
+   * matches too; it is the change's own title, and GitLab keeps a draft's marker before it.
+   */
+  updateChangeBody?(change: ForgeChange, body: string, title?: string): Promise<void>;
   /** Read the pushed branch before opening a story-bound change. */
   branchHead?(branch: string): Promise<string>;
   /** The open proposed change for a branch, or null when there is none. */

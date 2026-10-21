@@ -64,6 +64,7 @@ export type {
   ForgeSkipMerge,
 } from "./forge";
 export {
+  changeTitle,
   describeCheckState,
   ForgeError,
   ForgeWriteError,

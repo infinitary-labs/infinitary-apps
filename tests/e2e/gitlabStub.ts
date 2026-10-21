@@ -43,7 +43,7 @@ import { join } from "node:path";
  *
  * And what a saved change story needs on gitlab.com (INF-132): the project's
  * numeric id, visibility, media protection and the key's role; a branch's
- * pushed commit; a merge request's description replaced in place; and
+ * pushed commit; a merge request's title and description replaced in place; and
  * multipart project uploads, kept byte for byte and served back from the
  * `/-/project/<id>/uploads/<secret>/<name>` address GitLab answers with; and
  * the quick actions a description's own lines carry, run and removed from
@@ -563,6 +563,7 @@ export async function startGitLabStub(host: string) {
       }
       if (request && method === "PUT" && numbered?.[2] === undefined) {
         if (body.state_event === "close" && request.state === "opened") request.state = "closed";
+        if (typeof body.title === "string") request.title = body.title;
         if (typeof body.description === "string")
           request.description = runQuickActions(body.description, quickActions);
         send(200, requestJson(request));

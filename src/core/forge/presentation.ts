@@ -314,7 +314,10 @@ ${old}`);
   return [preserved, next].filter(Boolean).join("\n\n");
 }
 
-/** INF-497: a passage around the story was not changed; the words are the crewmate's whole answer. */
+/**
+ * INF-497 and INF-717: a person's words beside the story - a passage around it, or the change's
+ * title - were not changed or read back as sent; the words are the crewmate's whole answer.
+ */
 export class PresentationAroundError extends Error {}
 
 /** The words a project template or a person keeps above and below the story; none without whole markers. */

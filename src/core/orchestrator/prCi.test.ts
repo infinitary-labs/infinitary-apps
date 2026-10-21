@@ -122,16 +122,21 @@ class FakeForge implements Forge {
     return this.change;
   }
   /** GitHub's and GitLab's conditional write: refused unless the change is as just read. */
-  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+  async updateChangeBody(change: ForgeChange, body: string, title?: string): Promise<void> {
     this.calls.push(`updateChangeBody ${this.label(change)}`);
     if (this.fail.updateChangeBody) throw this.fail.updateChangeBody;
     if (
       !this.change ||
       this.change.headSha !== change.headSha ||
-      (this.change.body ?? "") !== (change.body ?? "")
+      (this.change.body ?? "") !== (change.body ?? "") ||
+      (title !== undefined && this.change.title !== change.title)
     )
       throw new ForgeWriteError("failed", "refused", "The pull request changed after it was read.");
-    this.change = { ...this.change, body: this.heldAfterWrite ?? body };
+    this.change = {
+      ...this.change,
+      body: this.heldAfterWrite ?? body,
+      ...(title === undefined ? {} : { title }),
+    };
   }
   async changeFor(branch: string) {
     this.calls.push(`changeFor ${branch}`);
@@ -2966,8 +2971,12 @@ describe("shared story delivery boundaries", () => {
       published,
     }));
     at.forge.change = { ...(at.forge.change as ForgeChange), headSha: original, body: region };
-    const update = vi.fn(async (_change: ForgeChange, body: string) => {
-      at.forge.change = { ...(at.forge.change as ForgeChange), body };
+    const update = vi.fn(async (_change: ForgeChange, body: string, title?: string) => {
+      at.forge.change = {
+        ...(at.forge.change as ForgeChange),
+        body,
+        ...(title === undefined ? {} : { title }),
+      };
     });
     Object.assign(at.forge, {
       attachments: {
@@ -3030,6 +3039,51 @@ describe("shared story delivery boundaries", () => {
     });
     expect(stale).toContain(`no longer hold around.from exactly`);
     expect(stale).toContain(corrected);
+    expect(at.update).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-717 (INF-100's PR #138 kept its old title): open_change says the rename, or the person's title.
+  it("says the story's title once open_change renames the pull request, and a person's rename whole", async () => {
+    const at = await saved();
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(original);
+    const first: ChangePresentation = {
+      ...at.story,
+      version: 2,
+      title: "fix: ship it",
+      checked: [{ check: "Publication", result: "The story and the pull request agree." }],
+    };
+    const region = presentationMarkdown(first, new Map(), "passed");
+    const published = {
+      revision: 1,
+      head: original,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      title: first.title,
+      number: 23,
+    };
+    const breaking = "fix!: ship it";
+    at.tasks.updateChangePresentation("ab12cd34", () => ({
+      revisions: [first, { ...first, revision: 2, title: breaking }],
+      receipts: [],
+      publication: published,
+      published,
+    }));
+    at.forge.change = { ...(at.forge.change as ForgeChange), body: region };
+    const said = await at.service.open("ab12cd34", { title: breaking, presentation: 2 });
+    expect(said).toContain(`Its title now reads "${breaking}", the story's.`);
+    expect(at.forge.change?.title).toBe(breaking);
+
+    at.forge.change = { ...(at.forge.change as ForgeChange), title: "fix: ship it today" };
+    at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+      ...current!,
+      revisions: [...current!.revisions, { ...first, revision: 3, title: "fix: ship it" }],
+    }));
+    const refused = await at.service.open("ab12cd34", { title: "fix: ship it", presentation: 3 });
+    expect(refused).toBe(
+      `Nothing was sent: the pull request's title on GitHub reads "fix: ship it today", not the story's "fix: ship it". The app last left "${breaking}" there, so someone renamed it. To keep that title, prepare the story with it and call open_change again. To use the story's title instead, ask the captain on a card first, then set the title alone with github_write and call open_change again.`,
+    );
     expect(at.update).toHaveBeenCalledTimes(1);
   });
 

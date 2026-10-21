@@ -754,6 +754,15 @@ Neither GitHub nor GitLab supplies an atomic conditional description write, so t
 The read after a write compares only the generated region, the one text the app owns, so words a person adds around it, or template lines the host removes, do not make a confirmed write uncertain.
 An ambiguous PR write is reconciled by branch, PR number when known, and exact generated region before any further write; a later push does not prevent confirming the earlier write.
 
+A replacement keeps a version-2 story's conventional title as the change's title too, the one its squash merge uses (INF-717).
+When the change still carries the title the app last left there, the story's new title goes in the same conditional write as the description, and on GitLab a draft keeps its `Draft: ` marker before it; the answer names the new title.
+When a person renamed the change, nothing is sent, checked before any upload and again just before the write, and the answer quotes the change's title, the story's and the one the app last left.
+The crewmate then prepares the story with that title, or asks the captain on a card before setting the title alone with `github_write` and publishing again.
+A rename that races the write is answered once the story is confirmed, as the words around it are, and the next publication treats it as a person's.
+Each publication records the title it leaves; one recorded before that counts only its own version-2 story's title as the app's, and answers any other as a title the app has no record of setting, as on a pull request whose earlier republication kept its opening title.
+A version-1 story never renames its change.
+Evidence: `tests/githubStub.test.ts` ("a saved story's title through the real GitHub forge and the stand-in"), `tests/gitlabStub.test.ts` (a draft renamed and squashed under the new title), `changePresentations.test.ts` ("the title of a republished story": the races and older records), both forges' tests (the write itself) and `prCi.test.ts` (its answers).
+
 `open_change`'s `around` changes one passage of the words around a published story on its open pull or merge request, such as an outdated summary or a `BREAKING CHANGE:` footer the squash reads, while the story stays as published.
 `from` is the passage exactly as the description shows it, found once above or below the story, and `to` replaces it in place; an empty `from` adds words only where nothing surrounds the story.
 With the published revision, the host sends that published region, its content hash and its receipts byte for byte and uploads nothing; with a newer revision, the newer story is published in the same write.
@@ -779,7 +788,7 @@ The app never changes that setting; the refusal names it for a maintainer to tur
 A confirmed receipt is GitLab's project-relative `url`, `/uploads/<32 hex>/<name>`, checked against the name sent; its `full_path` must name the same file in the same project, as `/-/project/<id>/uploads/...` or the project's own path, or the answer is uncertain.
 Returned `markdown` is never used, and receipts keep only that reference, which GitLab resolves inside the merge request's project.
 Pictures are Markdown images and adjacent pictures use the same table as GitHub; a recording is an image link to its MP4, which GitLab renders in its own player with its alt text, never a bare reference.
-The merge request's description is replaced with `PUT /merge_requests/<N>` only after a fresh read still shows it open at the story's head with the words the publication read; `GET /repository/branches/<branch>` confirms the pushed version.
+The merge request's description is replaced with `PUT /merge_requests/<N>` only after a fresh read still shows it open at the story's head with the words the publication read, and with the title it read when the story renames it in the same request; `GET /repository/branches/<branch>` confirms the pushed version.
 Opening and replacing tell a refusal GitLab answered (a 4xx) from a lost connection, a redirect, a 5xx or an unreadable success, which stay uncertain and are read back, never replayed.
 An uncertain opening relies on GitLab permitting only one open merge request for a source and target branch.
 GitLab offers no lookup of an upload by digest either, so a lost upload receipt is disclosed as a possible orphan exactly as on GitHub.

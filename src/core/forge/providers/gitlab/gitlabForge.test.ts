@@ -207,6 +207,25 @@ describe("GitLabForge", () => {
       expect(JSON.parse(String(put?.[1]?.body))).toEqual({ description: "The story" });
     });
 
+    it("INF-717: keeps a draft's marker before a saved story's title, in the description's write", async () => {
+      const draft = { ...change, title: "Draft: fix: the meter", draft: true };
+      const { forge, fetcher } = forgeAnswering(() =>
+        Response.json(request({ title: draft.title, draft: true })),
+      );
+      await forge.updateChangeBody(draft, "The story", "fix!: the meter");
+      const put = fetcher.mock.calls.find(([, init]) => init?.method === "PUT");
+      expect(JSON.parse(String(put?.[1]?.body))).toEqual({
+        title: "Draft: fix!: the meter",
+        description: "The story",
+      });
+      // Someone renamed it after the read: only the reread goes.
+      const moved = forgeAnswering(() => Response.json(request({ title: "fix: the meter's lag" })));
+      await expect(
+        moved.forge.updateChangeBody(change, "The story", "fix!: the meter"),
+      ).rejects.toMatchObject({ outcome: "failed" });
+      expect(moved.fetcher.mock.calls.map(([, init]) => init?.method ?? "GET")).toEqual(["GET"]);
+    });
+
     it.each([
       [
         "a refusal GitLab answered",

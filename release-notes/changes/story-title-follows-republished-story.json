@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "story-title-follows-republished-story",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A pull request's title follows its updated change story",
+      "body": "When a crewmate updates the change story on an open pull request and the story's title changed, such as gaining a breaking-change mark, the pull request's title changes with it, so the merge uses the title you reviewed. If someone renamed the pull request, the crewmate changes nothing and is told both titles.",
+      "noPicture": "This changes the title a crewmate leaves where your project lives, not a view in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

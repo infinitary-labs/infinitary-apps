@@ -21,6 +21,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import {
   AttachmentUploadError,
+  changeTitle,
   describeCheckState,
   type Forge,
   type ForgeChange,
@@ -1428,12 +1429,7 @@ export class PrCiService {
       const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
-        requireConventional(
-          existing.draft && forge.kind === "gitlab"
-            ? (existing.title ?? "").replace(/^Draft: /, "")
-            : (existing.title ?? ""),
-          "existing pull request title",
-        );
+        requireConventional(changeTitle(forge.kind, existing) ?? "", "existing pull request title");
       const current = this.options.tasks.get(taskId);
       const policy =
         current &&
@@ -1618,8 +1614,18 @@ export class PrCiService {
               }
             : undefined,
         );
-        if (input.around)
-          described = `Changed the words around the story: ${forge.place ?? "the project's host"} shows them, and the story is as published.`;
+        const place = forge.place ?? "the project's host";
+        // INF-717: a renamed change says its new title, the story's.
+        const renamed =
+          existing && changeTitle(forge.kind, change) !== changeTitle(forge.kind, existing);
+        described = [
+          input.around
+            ? `Changed the words around the story: ${place} shows them, and the story is as published.`
+            : "",
+          renamed ? `Its title now reads "${changeTitle(forge.kind, change)}", the story's.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
       } else if (existing) {
         ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
       } else {

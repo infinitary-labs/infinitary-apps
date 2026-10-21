@@ -476,6 +476,33 @@ describe("GitHubForge", () => {
     },
   );
 
+  it("INF-717: sends a saved story's title in its description's write, only while the title reads as read", async () => {
+    let title = PULL.title;
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({ json: { ...PULL, title, state: "open" } }),
+      "PATCH /repos/octo/meter/pulls/23": () => ({ json: { ...PULL, state: "open" } }),
+    });
+    const change = {
+      number: PULL.number,
+      url: PULL.html_url,
+      branch: PULL.head.ref,
+      headSha: PULL.head.sha,
+      title: PULL.title,
+      body: PULL.body,
+    };
+    await forge.updateChangeBody(change, "Revised story", "fix!: correct meter");
+    await forge.updateChangeBody(change, "Revised story");
+    // Someone renamed it after the read: no write goes.
+    title = "fix: correct the meter's lag";
+    await expect(
+      forge.updateChangeBody(change, "Revised story", "fix!: correct meter"),
+    ).rejects.toMatchObject({ outcome: "failed" });
+    expect(seen.filter((call) => call.method === "PATCH").map((call) => call.body)).toEqual([
+      { title: "fix!: correct meter", body: "Revised story" },
+      { body: "Revised story" },
+    ]);
+  });
+
   it("puts the change in only at the checked head, and closes one without putting it in", async () => {
     const { forge, seen } = await stub({
       "PUT /repos/octo/meter/pulls/23/merge": () => ({ json: { merged: true } }),

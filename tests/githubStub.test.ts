@@ -1,12 +1,22 @@
 import { createHash } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it } from "vitest";
+import { readPresentationRegion } from "../src/core/forge";
 import { ForgeError } from "../src/core/forge/forge";
 import { readOpenChanges } from "../src/core/forge/providers/github/changes";
 import { GitHubForge } from "../src/core/forge/providers/github/githubForge";
 import { requestDeviceCode } from "../src/core/forge/providers/github/oauth";
+import { ChangePresentations } from "../src/core/orchestrator/changePresentations";
+import { stageChangePresentation } from "../src/core/pi/changePresentation";
+import { openDatabase } from "../src/core/storage/db";
+import { seedTask } from "../src/core/tasks/seedTask";
+import { TaskService } from "../src/core/tasks/taskService";
 import { DEMO_POSTER, DEMO_RECORDING } from "./e2e/demoFixtures";
 import { type GitHubStub, STUB_USER_CODE, startGitHubStub } from "./e2e/githubStub";
 import { expectBytesEqual } from "./helpers/expectBytes";
+import { scratchDir } from "./helpers/scratchDirs";
 
 /**
  * The GitHub stand-in the e2e journeys put changes in through
@@ -334,5 +344,121 @@ describe("the GitHub stand-in, through the app's forge", () => {
       const change = await forge.changeFor("fm/task-meter");
       expect((await forge.checks(change as NonNullable<typeof change>)).overall).toBe("red");
     });
+  });
+});
+
+// INF-717: PR #138's story gained its breaking marker, but republishing it left the old title,
+// which the squash merge uses; a person's own rename is said, never overwritten.
+describe("a saved story's title through the real GitHub forge and the stand-in", () => {
+  const TASK = "ab12cd34";
+  const STORY_BRANCH = `fm/task-${TASK}`;
+  const HEAD = sha("story head");
+  const FIRST = "feat(cards): show live validation proof";
+  const BREAKING = "feat(cards)!: show live validation proof";
+  const risk = Object.fromEntries(
+    RISK_DIMENSIONS.map((dimension) => [
+      dimension,
+      { level: "low", why: `The ${dimension} assessment for this fixture.` },
+    ]),
+  ) as RiskDeclaration;
+  const closes: (() => void)[] = [];
+  afterEach(() => {
+    for (const close of closes.splice(0)) close();
+  });
+
+  async function arrange() {
+    const { github, forge } = await forgeOver({ [STORY_BRANCH]: HEAD });
+    const root = scratchDir("infinitary-github-story-title-");
+    const media = join(root, "cards");
+    const worktree = join(root, "work");
+    mkdirSync(media);
+    mkdirSync(worktree);
+    const db = openDatabase(join(root, "data"));
+    closes.push(() => db.close());
+    const tasks = new TaskService({ db, strict: true });
+    seedTask(tasks, {
+      id: TASK,
+      title: "Show live validation proof",
+      prompt: "Share the evidence",
+      branch: STORY_BRANCH,
+      worktreeDir: worktree,
+      repoDir: worktree,
+      status: "idle",
+    });
+    const service = new ChangePresentations({
+      tasks,
+      mediaDir: () => media,
+      head: async () => HEAD,
+    });
+    const draft = {
+      title: FIRST,
+      base: HEAD,
+      head: HEAD,
+      publishable: true as const,
+      why: ["Careful changes should show their live proof before they merge."],
+      whatChanged: ["The task record shows each live validation run."],
+      before: ["The record showed no live proof."],
+      after: ["The record shows each run and its result."],
+      views: [],
+      noPicture: "This fixture publishes the story's words, not a screen.",
+      checked: [{ check: "Publication", result: "The story and the pull request agree." }],
+      verification: ["Read the pull request back from the stand-in."],
+      risk,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+    };
+    /** Prepare a story as a crewmate does, then open or replace its pull request under that title. */
+    const publish = async (story: typeof draft) => {
+      const staged = await stageChangePresentation(story, { taskId: TASK, worktree, dir: media });
+      const revision = await service.prepare(TASK, staged, forge);
+      return service.publish(TASK, revision, forge, STORY_BRANCH, story.title);
+    };
+    const writes = () => github.requests().filter((line) => /^(POST|PATCH|PUT) \/repos/.test(line));
+    return { github, forge, draft, publish, writes };
+  }
+
+  it("renames the pull request to a republished story's new title, in the same write as the story", async () => {
+    const at = await arrange();
+    const opened = await at.publish(at.draft);
+    expect(opened.title).toBe(FIRST);
+    const republished = await at.publish({
+      ...at.draft,
+      title: BREAKING,
+      after: ["The record shows each run, and the protocol moves to its next major version."],
+    });
+    const read = await at.forge.changeFor(STORY_BRANCH);
+    expect(read).toMatchObject({ number: opened.number, title: BREAKING });
+    expect(republished.title).toBe(BREAKING);
+    expect(readPresentationRegion(read?.body ?? "", TASK)).toContain("next major version");
+    // The title went with the story: one replacement, never a second write for the title.
+    expect(at.writes()).toEqual([
+      "POST /repos/octo/meterlab/pulls",
+      `PATCH /repos/octo/meterlab/pulls/${opened.number}`,
+    ]);
+  });
+
+  it("sends nothing when a person renamed the pull request, and says both titles", async () => {
+    const at = await arrange();
+    const opened = await at.publish(at.draft);
+    const person = "feat(cards): show live validation proof on the task record";
+    // Someone renames it on GitHub's own page.
+    await at.forge.api.call(
+      "PATCH",
+      `/repos/octo/meterlab/pulls/${opened.number}`,
+      JSON.stringify({ title: person }),
+    );
+    const sent = at.writes();
+    await expect(at.publish({ ...at.draft, title: BREAKING })).rejects.toThrow(
+      `Nothing was sent: the pull request's title on GitHub reads "${person}", not the story's "${BREAKING}". The app last left "${FIRST}" there, so someone renamed it.`,
+    );
+    expect(await at.forge.changeFor(STORY_BRANCH)).toMatchObject({
+      title: person,
+      body: opened.body,
+    });
+    expect(at.writes()).toEqual(sent);
+    // Keeping the person's title is a story with that title: aligned, so no rename is sent.
+    const kept = await at.publish({ ...at.draft, title: person });
+    expect(kept.title).toBe(person);
   });
 });

@@ -207,7 +207,7 @@ export class GitLabForge implements Forge {
   }
 
   /** GitLab has no conditional description write: reread first, and the caller reads it back after. */
-  async updateChangeBody(change: ForgeChange, body: string): Promise<void> {
+  async updateChangeBody(change: ForgeChange, body: string, title?: string): Promise<void> {
     const iid = numbered(change, this.place);
     let fresh: MergeRequestJson;
     try {
@@ -222,17 +222,22 @@ export class GitLabForge implements Forge {
     if (
       fresh.state !== "opened" ||
       (fresh.sha ?? fresh.diff_refs?.head_sha) !== change.headSha ||
-      (fresh.description ?? "") !== (change.body ?? "")
+      (fresh.description ?? "") !== (change.body ?? "") ||
+      (title !== undefined && fresh.title !== change.title)
     )
       throw new ForgeWriteError(
         "failed",
         "refused",
         "The merge request changed after it was read, so its description was not replaced. Read it again before updating.",
       );
+    // A draft stays one: GitLab reads its marker from the title, before the change's own title.
+    const marker = fresh.title.startsWith("Draft: ") ? "Draft: " : "";
     await this.client.write(
       "PUT",
       this.mergeRequestPath(iid),
-      { description: body },
+      title === undefined
+        ? { description: body }
+        : { title: `${marker}${title}`, description: body },
       "replacing the description",
     );
   }

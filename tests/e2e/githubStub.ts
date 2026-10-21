@@ -894,7 +894,12 @@ export async function startGitHubStub(
             send(404, { message: "Not Found" });
             return;
           }
-          const update = JSON.parse(raw || "{}") as { body?: string; state?: string };
+          const update = JSON.parse(raw || "{}") as {
+            title?: string;
+            body?: string;
+            state?: string;
+          };
+          if (update.title !== undefined) pull.title = update.title;
           if (update.body !== undefined) pull.body = update.body;
           if (update.state === "closed") pull.closed = true;
           send(200, { ...pullJson(pull, owner, name), state: pull.closed ? "closed" : "open" });

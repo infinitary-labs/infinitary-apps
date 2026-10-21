@@ -99,10 +99,10 @@ async function arrange() {
     };
     return { ...change };
   });
-  const update = vi.fn(async (_current: ForgeChange, body: string) => {
+  const update = vi.fn(async (_current: ForgeChange, body: string, title?: string) => {
     order.push("update");
     if (!change) throw new Error("No open change");
-    change = { ...change, body, headSha: head };
+    change = { ...change, body, headSha: head, ...(title === undefined ? {} : { title }) };
   });
   const forge: Forge = {
     kind: "github",
@@ -904,6 +904,122 @@ describe("the words around a published story", () => {
       state: "confirmed",
       region,
     });
+  });
+});
+
+// INF-717: republishing keeps the change's title the story's, or says a person's rename.
+// The stand-in journeys own the ordinary rename and refusal; these own the races and old records.
+describe("the title of a republished story", () => {
+  const BREAKING = "feat!: share the change story";
+  async function republish(at: Awaited<ReturnType<typeof arrange>>, title = BREAKING) {
+    const revision = await at.service.prepare(TASK, { ...at.staged, title }, at.forge);
+    return at.service.publish(TASK, revision, at.forge, BRANCH, title);
+  }
+
+  /** What a publication before INF-717 left on record: no title it set. */
+  function forgetTitles(at: Awaited<ReturnType<typeof arrange>>) {
+    at.tasks.updateChangePresentation(TASK, (record) => {
+      if (!record?.published) throw new Error("Missing publication");
+      const { title: _kept, ...published } = record.published;
+      return { ...record, publication: published, published };
+    });
+  }
+
+  it("renames a title published before the app kept titles, from that story's own title", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await at.publish();
+    forgetTitles(at);
+    await republish(at);
+    expect(at.update).toHaveBeenCalledWith(expect.anything(), expect.any(String), BREAKING);
+    expect(at.change?.title).toBe(BREAKING);
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      revision: 2,
+      title: BREAKING,
+    });
+  });
+
+  it("says it has no record of an older title PR #138 kept, and publishes once the title is set", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await at.publish();
+    const opened = at.change?.title;
+    await republish(at);
+    // Before INF-717 the breaking story was published and the opening's title kept.
+    if (!at.change || !opened) throw new Error("No open change");
+    at.change = { ...at.change, title: opened };
+    forgetTitles(at);
+    at.update.mockClear();
+    await expect(republish(at)).rejects.toThrow(
+      `Nothing was sent: the pull request's title on GitHub reads "${opened}", not the story's "${BREAKING}". The app has no record of setting that title.`,
+    );
+    expect(at.update).not.toHaveBeenCalled();
+    // The crewmate set the story's title alone, after asking the captain.
+    at.change = { ...at.change, title: BREAKING };
+    await republish(at);
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      revision: 4,
+      title: BREAKING,
+    });
+  });
+
+  it("writes nothing when a person renames the pull request during the uploads", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await at.publish();
+    // A fresh After picture: the republished story has a file to send.
+    copyFileSync(
+      resolve("release-notes/pictures/risk-note-title-row-dark.webp"),
+      join(at.worktree, "fresh.webp"),
+    );
+    const [view] = at.draft.views;
+    const [after] = view?.after ?? [];
+    if (!view || !after) throw new Error("The fixture needs a view");
+    const next = await at.service.prepare(
+      TASK,
+      await stageChangePresentation(
+        {
+          ...at.draft,
+          title: BREAKING,
+          views: [{ ...view, after: [{ ...after, path: "fresh.webp" }] }],
+        },
+        { taskId: TASK, worktree: at.worktree, dir: at.media },
+      ),
+      at.forge,
+    );
+    at.upload.mockImplementationOnce(async () => {
+      if (!at.change) throw new Error("No open change");
+      at.change = { ...at.change, title: "feat: the captain's own title" };
+      return {
+        url: "https://github.com/user-attachments/assets/846dced7-16ad-44c0-b6f5-0000000000aa",
+      };
+    });
+    await expect(at.service.publish(TASK, next, at.forge, BRANCH, BREAKING)).rejects.toThrow(
+      `Nothing was sent: the pull request's title on GitHub reads "feat: the captain's own title", not the story's "${BREAKING}". The app last left "feat: share the change story" there, so someone renamed it.`,
+    );
+    expect(at.update).not.toHaveBeenCalled();
+    expect(at.upload).toHaveBeenCalledTimes(3);
+    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+  });
+
+  it("says so when the pull request reads another title right after the write", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await at.publish();
+    at.update.mockImplementationOnce(async (_current, body) => {
+      if (!at.change) throw new Error("No open change");
+      at.change = { ...at.change, body, title: "feat: a simultaneous rename" };
+    });
+    await expect(republish(at)).rejects.toThrow(
+      `The story is published, but GitHub shows the title "feat: a simultaneous rename" rather than "${BREAKING}"`,
+    );
+    // The story landed; the next publication names that rename as a person's.
+    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+      revision: 2,
+      state: "confirmed",
+      title: BREAKING,
+    });
+    await expect(republish(at)).rejects.toThrow(/so someone renamed it/);
   });
 });
 

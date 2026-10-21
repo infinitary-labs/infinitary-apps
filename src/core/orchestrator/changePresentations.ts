@@ -13,6 +13,7 @@ import {
 } from "@shared/changePresentation";
 import {
   AttachmentUploadError,
+  changeTitle,
   type Forge,
   type ForgeChange,
   ForgeWriteError,
@@ -239,6 +240,8 @@ export class ChangePresentations {
     // INF-497: changing only the words around the published story keeps its region byte for byte.
     const kept = around && ledger.published?.revision === revision ? ledger.published : undefined;
     await this.validateCurrent(story, forge, branch, remoteOnly);
+    // A person's rename stops the story before any file is sent, not only before the write.
+    this.renameFor(story, ledger, existing, forge, title);
     const previousRegion =
       recovery?.replaceRegion ?? ledger.reconciled?.region ?? ledger.published?.region;
     const bodyFor = (region: string, current: ForgeChange | null): string => {
@@ -341,7 +344,14 @@ export class ChangePresentations {
       throw new Error("The pushed code does not match this story.");
     // A person may have added words during upload. Recheck before any description write.
     const body = bodyFor(region, fresh);
-    if (fresh && body === fresh.body && ledger.published?.revision === revision) return fresh;
+    const rename = this.renameFor(story, ledger, fresh, forge, title);
+    if (
+      fresh &&
+      body === fresh.body &&
+      rename === undefined &&
+      ledger.published?.revision === revision
+    )
+      return fresh;
     const publication: PresentationPublication = {
       revision,
       head: story.head,
@@ -349,6 +359,7 @@ export class ChangePresentations {
       region,
       regionHash: hash(region),
       contentHash: inheritedContentHash ?? kept?.contentHash ?? presentationContentHash(story),
+      ...(story.version === 2 || !fresh ? { title } : {}),
       ...(fresh?.number ? { number: fresh.number } : {}),
     };
     this.options.tasks.updateChangePresentation(taskId, (record) => ({
@@ -359,7 +370,7 @@ export class ChangePresentations {
     try {
       if (fresh) {
         if (!forge.updateChangeBody) throw new Error("This host cannot replace a saved story.");
-        await forge.updateChangeBody(fresh, body);
+        await forge.updateChangeBody(fresh, body, rename);
       } else {
         const opened = await forge.openChange({
           branch,
@@ -397,7 +408,46 @@ export class ChangePresentations {
       throw new PresentationAroundError(
         `The story is published, but ${words.place} shows different words around it than you sent; someone may have edited them at the same time. Read the description with github_read before changing them again.`,
       );
+    // INF-717: the title went in the same write; a person may have renamed the change meanwhile.
+    const shown = changeTitle(forge.kind, read);
+    if (fresh && story.version === 2 && shown !== undefined && shown !== title)
+      throw new PresentationAroundError(
+        `The story is published, but ${words.place} shows the title "${shown}" rather than "${title}"; someone may have renamed the ${words.change} at the same time. Read it with github_read before calling open_change again.`,
+      );
     return read;
+  }
+
+  /**
+   * INF-717: a version-2 story's conventional title is its change's title too. Answers the title
+   * to send with the story when the change still carries the one the app left there, or none when
+   * it already reads the story's; a person's rename sends nothing and is said.
+   */
+  private renameFor(
+    story: ChangePresentation,
+    record: ChangePresentationRecord,
+    current: ForgeChange | null,
+    forge: Forge,
+    title: string,
+  ): string | undefined {
+    if (story.version !== 2 || !current) return undefined;
+    const hosted = changeTitle(forge.kind, current);
+    if (hosted === undefined || hosted === title) return undefined;
+    const published = record.published;
+    const left = published?.title;
+    if (hosted === left) return title;
+    // A publication before INF-717 kept no title, and the app set one only on opening. Its own
+    // version-2 story's title is the app's; the record no longer keeps any older one.
+    if (
+      published &&
+      left === undefined &&
+      record.revisions.find((saved) => saved.revision === published.revision && saved.version === 2)
+        ?.title === hosted
+    )
+      return title;
+    const words = hostWords(forge);
+    throw new PresentationAroundError(
+      `Nothing was sent: the ${words.change}'s title on ${words.place} reads "${hosted}", not the story's "${title}". ${left === undefined ? "The app has no record of setting that title." : `The app last left "${left}" there, so someone renamed it.`} To keep that title, prepare the story with it and call open_change again. To use the story's title instead, ask the captain on a card first, then set the title alone with github_write and call open_change again.`,
+    );
   }
 
   /** A completion offer must use the newest fully published story at the current committed version. */

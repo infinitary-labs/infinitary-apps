@@ -185,6 +185,8 @@ export type PresentationPublication = {
   regionHash: string;
   /** The content the completion offer approved; conflict-only refreshes inherit it. */
   contentHash?: string;
+  /** INF-717: the title the change carries once this write lands, absent where the app sent none. */
+  title?: string;
   /** A deliberate opening retry was requested after a read found no open PR. */
   retryOpening?: true;
   number?: number;

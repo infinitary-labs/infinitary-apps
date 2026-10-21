@@ -11,7 +11,7 @@ const PANELS={
     text:`curl -fsSk --pinnedpubkey 'sha256//${KEY}=' https://192.168.1.20:47623/work | sh -s '${LINK}'`,copy:"Copy command",joined:"Mac mini joined. It has git and Claude Code, and no sign-ins yet.",
     add:{id:"mini",name:"Mac mini",detail:"a computer · joined today 15:22 · seen just now",summary:"Runs no project yet · No sign-ins yet"}},
   user:{label:"New command · running as another user",say:"Log in as the user who should run the work, and run this once in Terminal. Switch back when it says it joined.",
-    text:`'/Applications/Firstmate 3000.app/Contents/Resources/work/firstmate' join 'infinitary://join?as=user&at=127.0.0.1:47623&key=${KEY}&code=…'`,copy:"Copy command",joined:"Running as Builder is set up. It runs work only, and has no sign-ins yet.",
+    text:`'/Applications/Infinitary.app/Contents/MacOS/Infinitary' 'work' 'join' 'infinitary://join?as=user&at=127.0.0.1:47623&key=${KEY}&code=…'`,copy:"Copy command",joined:"Running as Builder is set up. It runs work only, and has no sign-ins yet.",
     add:{id:"builder",name:"Running as Builder",detail:"another user on this computer · runs work only, while Builder is logged in · seen just now",summary:"Runs no project yet · No sign-ins yet"}}
 };
 const ADDRESSES=[{value:"192.168.1.20",kind:"this network"},{value:"100.101.7.3",kind:"private network"}];

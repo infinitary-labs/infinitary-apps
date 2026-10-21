@@ -48,10 +48,10 @@ Code names built on `firstmate` - identifiers, files, stored values such as a ca
 
 ## Every old name, accounted for
 
-`scripts/old-names.ts` is the ledger: it finds every old name in the files git sees, tracked or new - a name with 3000 in it, and Firstmate 3000's code names above - and classifies each by rule as a reader, an identity, words or history.
+`scripts/old-names.ts` is the ledger: it finds every old name in the files git sees, tracked or new - a name with 3000 in it, Firstmate 3000 spelled with a space, a hyphen or neither, and Firstmate 3000's code names above - and classifies each by rule as a reader, an identity, words or history.
 `pnpm check` runs it, and it refuses an old name no rule classifies, so new code writes Infinitary's names.
 A **reader** is code that reads an old name, and the test that holds it.
-An **identity** is a name a system outside the code holds: Firstmate 3000's bundle id, data folders, packages, casks, tags and development signer, which step 10 renamed and the move, the old-cask switch and the Linux packages still name; Firstmate 3000's repository, which step 11 moved to the archive ("The repository" below); and names another program or a saved hash keeps, such as the Ollama alias, the placement salts and the Diagnostics series.
+An **identity** is a name a system outside the code holds: Firstmate 3000's bundle id, data folders, packages, casks, tags and development signer, which step 10 renamed and the move, the old-cask switch and the Linux packages still name; Firstmate 3000 itself, the app still installed on a computer, which the move, its hand-over and the old-cask switch take over from; Firstmate 3000's repository, which step 11 moved to the archive ("The repository" below); and names another program or a saved hash keeps, such as the Ollama alias, the placement salts and the Diagnostics series.
 **Words** are the product's old name kept on purpose in prose: the vocabulary's never-say column; step 9 renamed the rest.
 **History** is what was published or recorded: the changelog, release notes, contract revisions, recorded fixtures and cited design records.
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "old-names-spaced-firstmate-3000",
+      "reason": "Internal: the old-name ledger also finds Firstmate 3000 written with a space and classifies each use; the design tokens' header comments, the git helpers' comments, the design kit's mock join command and the task command's error text a crewmate reads now say Infinitary, and nothing a person sees changed."
+    }
+  ]
+}

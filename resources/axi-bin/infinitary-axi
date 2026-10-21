@@ -1,5 +1,5 @@
 #!/bin/sh
-# Firstmate 3000's task commands on a crewmate's search path
+# Infinitary's task commands on a crewmate's search path
 # (docs/axi-commands.md, "The launcher").
 #
 # Every infinitary-<tool>-axi name in this directory is a link to this one
@@ -51,7 +51,7 @@ case $port in
   '' | *[!0-9]*) address= ;;
 esac
 if [ -z "$address" ] || [ -z "$key" ] || [ ! -r "$key" ]; then
-  printf 'error: this shell has no channel to a Firstmate task, so %s cannot reach its task\ncode: NO_CHANNEL\nhelp[1]: Run %s in the shell of a task that has it, while Firstmate 3000 is open\n' "$tool" "$tool"
+  printf 'error: this shell has no channel to an Infinitary task, so %s cannot reach its task\ncode: NO_CHANNEL\nhelp[1]: Run %s in the shell of a task that has it, while Infinitary is open\n' "$tool" "$tool"
   exit 1
 fi
 
@@ -82,7 +82,7 @@ code=${answer%%"$nl"*}
 case $status:$code in
   0:[0-9] | 0:[0-9][0-9]) ;;
   *)
-    printf 'error: %s could not reach Firstmate 3000: %s\ncode: NO_CHANNEL\n' "$tool" "$code"
+    printf 'error: %s could not reach Infinitary: %s\ncode: NO_CHANNEL\n' "$tool" "$code"
     exit 1
     ;;
 esac

@@ -1,4 +1,4 @@
-/* Firstmate 3000 — radii, shadows, glow, blur, motion. */
+/* Infinitary — radii, shadows, glow, blur, motion. */
 :root {
   --radius-xs: 3px; /* small controls: a 14-16px box that must read square, not round */
   --radius-s: 6px; /* badges, keycaps */

@@ -1,8 +1,9 @@
 /**
  * The old-name ledger of the Infinitary rename (step 8 of FI3-1780's plan;
  * docs/infinitary-rename.md). Every name the rename leaves behind in the
- * files git sees - a name with 3000 in it, and Firstmate 3000's code names the
- * captain had renamed (`fm:` channels, `data-fm-*` hooks, `window.firstmate`,
+ * files git sees - a name with 3000 in it, Firstmate 3000 spelled with a
+ * space, a hyphen or neither, and Firstmate 3000's code names the captain had
+ * renamed (`fm:` channels, `data-fm-*` hooks, `window.firstmate`,
  * `@firstmate/*`, `fm-<tool>-axi` and the rest) - is classified here as one
  * of four things, so a new one cannot slip in unclassified:
  *
@@ -11,8 +12,10 @@
  *   identity  a name a system outside the code holds - Firstmate 3000's
  *             bundle id, data folders, packages, casks, tags and signer, which
  *             step 10 renamed and the move, the old-cask switch and the Linux
- *             packages still name; Firstmate 3000's repository, which step 11
- *             moved to the archive; and
+ *             packages still name; Firstmate 3000 itself, the app still
+ *             installed on a computer that the move takes over from;
+ *             Firstmate 3000's repository, which step 11 moved to the
+ *             archive; and
  *             names other programs keep (an Ollama alias, a Diagnostics series);
  *   words     the product's old name kept on purpose in words: the
  *             vocabulary's never-say column (step 9 renamed the rest);
@@ -36,7 +39,7 @@ export type OldNameClass = "reader" | "identity" | "words" | "history";
 type Family = { id: string; pattern: RegExp };
 
 export const FAMILIES: readonly Family[] = [
-  { id: "3000", pattern: /[A-Za-z0-9_]*(?:fm-?3000|firstmate-?3000)[A-Za-z0-9_]*/gi },
+  { id: "3000", pattern: /[A-Za-z0-9_]*(?:fm-?3000|firstmate[- ]?3000)[A-Za-z0-9_]*/gi },
   { id: "channel", pattern: /(?<![A-Za-z0-9_.-])fm:[a-z][a-z0-9-]*(?::[a-z0-9-]+)*/g },
   {
     id: "card-hook",
@@ -204,7 +207,19 @@ export const RULES: readonly Rule[] = [
   {
     class: "identity",
     why: "what Diagnostics reports the app as, a series the captain's dashboard keeps (docs/sharing.md)",
-    line: /app:\/\/firstmate-3000|DEFAULT_APP|firstmate-3000\/<version> telemetry|firstmate-3000\/\$\{/,
+    line: /app:\/\/firstmate-3000|DEFAULT_APP|DEFAULT_TITLE|"?title"?: "Firstmate 3000"|firstmate-3000\/<version> telemetry|firstmate-3000\/\$\{/,
+  },
+  {
+    class: "identity",
+    why: "Firstmate 3000 itself, the app still installed on a computer, which the one-time move, its hand-over and the old-cask switch take over from",
+    line: /installed Firstmate 3000|Firstmate 3000 (run|version)\b|`from` Firstmate 3000|Firstmate 3000 never opens|after Firstmate 3000 -/,
+    families: ["3000"],
+  },
+  {
+    class: "reader",
+    why: "the persona's opening before the rename, which Observe still redacts from a session recorded then",
+    path: /^src\/core\/observe\/redact\.ts$/,
+    line: /"You are (Firstmate 3000|a crewmate: a background worker aboard Firstmate 3000)/,
   },
   {
     class: "reader",
@@ -317,7 +332,7 @@ export type LedgerRow = {
  * any family could match. The families' own patterns decide.
  */
 const GREP =
-  "fm-?3000|firstmate-?3000|fm:[a-z]|data-fm-|fm-[a-z<]|fm\\.|fmAction|window\\.firstmate|__firstmateHost|@firstmate/|firstmate-env|mcp__firstmate__|firstmate-artifacts";
+  "fm-?3000|firstmate[- ]?3000|fm:[a-z]|data-fm-|fm-[a-z<]|fm\\.|fmAction|window\\.firstmate|__firstmateHost|@firstmate/|firstmate-env|mcp__firstmate__|firstmate-artifacts";
 
 /**
  * Every old name at `root`, classified: in its tracked files and in new ones
@@ -389,6 +404,8 @@ function main(argv: string[]): number {
   return 1;
 }
 
+// An exit code, not process.exit: on macOS a pipe takes the list as it is
+// written, and exiting at once would cut it short.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv.slice(2)));
+  process.exitCode = main(process.argv.slice(2));
 

@@ -21,9 +21,20 @@ describe("the old-name ledger", () => {
       'const tmp = mkdtempSync(join(tmpdir(), "fm3000-new-"));',
       'run("fm-browser-axi snapshot");',
       'const TOOL = "mcp__firstmate__report";',
-    ])
-      for (const [name, found] of classOf("src/core/new.ts", line))
-        expect(found, `${name} in ${line}`).toBeNull();
+      // The product's name with a space, as the token files' headers had it
+      // (INF-540: the ledger missed the spaced spelling).
+      '/* Firstmate 3000 — color system. Dark ("deep space") is the default theme. */',
+      'const title = "Firstmate 3000";',
+    ]) {
+      const found = classOf("src/core/new.ts", line);
+      expect(found, line).not.toEqual([]);
+      for (const [name, rule] of found) expect(rule, `${name} in ${line}`).toBeNull();
+    }
+  });
+
+  it("finds Firstmate 3000 however it is spelled, a space included (INF-540)", () => {
+    for (const name of ["Firstmate 3000", "firstmate-3000", "firstmate3000", "FM3000", "fm-3000"])
+      expect(oldNamesIn(`the ${name} folder`), name).toEqual([{ family: "3000", name }]);
   });
 
   it("keeps a reader, an outside identity and history, each for what it is", () => {
@@ -44,6 +55,24 @@ describe("the old-name ledger", () => {
     ]);
     expect(classOf("CHANGELOG.md", "* fetch quota with FM3000-managed keys")).toEqual([
       ["FM3000", "history"],
+    ]);
+    expect(classOf("src/core/telemetry.ts", 'const DEFAULT_TITLE = "Firstmate 3000";')).toEqual([
+      ["Firstmate 3000", "identity"],
+    ]);
+    expect(
+      classOf(
+        "src/main/handOverPage.ts",
+        "/** The two apps by the names a person knows them: `from` Firstmate 3000, `to` Infinitary. */",
+      ),
+    ).toEqual([["Firstmate 3000", "identity"]]);
+    expect(
+      classOf(
+        ".claude/skills/infinitary-design/copy/Vocabulary.prompt.md",
+        "| Firstmate 3000, FM3000, Firstmate, for the app | Infinitary, the app's name |",
+      ),
+    ).toEqual([
+      ["Firstmate 3000", "words"],
+      ["FM3000", "words"],
     ]);
   });
 });

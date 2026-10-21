@@ -1,5 +1,5 @@
 #!/bin/sh
-# Firstmate 3000's git helper (git integration PR 1.2, docs/forge.md).
+# Infinitary's git helper (git integration PR 1.2, docs/forge.md).
 #
 # Git runs this when a project's host asks who is pushing or pulling and no
 # credential helper answered: GIT_ASKPASS names it in every child the app

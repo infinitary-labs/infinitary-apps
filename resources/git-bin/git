@@ -1,5 +1,5 @@
 #!/bin/sh
-# Firstmate 3000's git on a crewmate's search path (git integration phase 2,
+# Infinitary's git on a crewmate's search path (git integration phase 2,
 # docs/forge.md "The app's own git").
 #
 # The app puts this directory - it holds only this file - first on the

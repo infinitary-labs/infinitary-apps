@@ -525,6 +525,16 @@ The running agent keeps its old signature until it restarts, so the grant holds 
 `tests/e2e/globalSetup.ts` checks this before any test starts (`tests/e2e/micPreflight.ts`): in a virtual Mac, or with `INFINITARY_E2E_MIC_PREFLIGHT=1`, it opens the fake microphone once and fails the run with the fix when it does not open.
 `INFINITARY_E2E_MIC_PREFLIGHT=0` turns the check off for a run whose specs open no microphone, as `tests/run-evidence-playwright.test.ts`'s fixture runs do, so a slow virtual Mac does not boot Electron for it before their first spec.
 
+### Drawing in software
+
+In a virtual Mac every app a journey starts draws in software (`--disable-gpu`, `virtualMacSwitches` in `tests/e2e/virtualMac.ts`).
+Its paravirtualized Metal now and then never signals that a frame finished, and Chromium's GPU process waits for that signal with no limit (`CALayerTreeCoordinator::ApplyBackpressure`).
+The app then draws nothing, `requestAnimationFrame` stops, and a screenshot waits until the GPU watchdog ends the process 25 to 50 s later, past Playwright's 30 s (INF-747).
+Other apps in the same guest keep drawing, because each GPU process waits on its own signal.
+Software drawing has no such wait.
+The Mac mini draws on its real graphics card and keeps that path covered.
+A perf run's paint budgets (`INFINITARY_PERF_BUDGETS=1`, `tests/e2e/perf.ts`) graded in a virtual Mac measure software drawing instead.
+
 ### The Claude Code the app finds first
 
 `knownClaudeHomes` looks in `~/.local/bin` and `~/.claude/local`, which the base image leaves empty, then in `/opt/homebrew/bin`, all before the search path.

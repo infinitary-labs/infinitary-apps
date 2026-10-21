@@ -28,6 +28,7 @@ import {
   type Scenario,
   startMockProvider,
 } from "./mockProvider";
+import { virtualMacSwitches } from "./virtualMac";
 import { writeVoiceHelperStandIn } from "./voiceHelperStandIn";
 import { untilWindowCommands } from "./windowKeys";
 import { stopWithWorker } from "./workerApps";
@@ -453,6 +454,8 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       // subpixel (LCD) text only on an opaque layer of its own, so the same
       // component would draw different pixels in and out of a panel.
       ...(process.platform === "linux" ? ["--disable-lcd-text"] : []),
+      // In a virtual Mac the app draws in software (tests/e2e/virtualMac.ts).
+      ...virtualMacSwitches(),
     ],
     env: {
       // Nothing of the session that ran the tests (tests/helpers/runnerSession.ts),

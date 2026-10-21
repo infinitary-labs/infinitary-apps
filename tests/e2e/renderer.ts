@@ -8,6 +8,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { virtualMacSwitches } from "./virtualMac";
 import { stopWithWorker } from "./workerApps";
 
 /** Real Chromium layout in a fresh, non-persistent browser partition per test. */
@@ -24,7 +25,11 @@ export const rendererTest = base.extend<{ page: Page }, { rendererApp: ElectronA
         // runs after Playwright's loader has already called whenReady, so
         // without the switch this process shares the default Electron
         // profile with the desktop lane.
-        args: [resolve("tests/e2e/renderer-main.cjs"), `--user-data-dir=${userData}`],
+        args: [
+          resolve("tests/e2e/renderer-main.cjs"),
+          `--user-data-dir=${userData}`,
+          ...virtualMacSwitches(),
+        ],
         env: {
           ...(process.env as Record<string, string>),
           HOME: root,

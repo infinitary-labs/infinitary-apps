@@ -1,6 +1,7 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import electronPath from "electron";
+import { inVirtualMac } from "./virtualMac";
 
 /**
  * Whether the fake microphone opens, asked once before the journeys start
@@ -39,13 +40,6 @@ export const MIC_PREFLIGHT = "INFINITARY_E2E_MIC_PREFLIGHT";
 export function micPreflightAsked(setting: string | undefined, virtualMac: boolean): boolean {
   if (setting === "0") return false;
   return virtualMac || setting === "1";
-}
-
-/** A virtual Mac, as macOS itself reports it. */
-export function inVirtualMac(): boolean {
-  if (process.platform !== "darwin") return false;
-  const read = spawnSync("sysctl", ["-n", "kern.hv_vmm_present"], { encoding: "utf8" });
-  return read.stdout.trim() === "1";
 }
 
 export function probeMicrophone(): Promise<MicProbe> {

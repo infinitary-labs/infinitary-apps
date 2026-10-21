@@ -9,7 +9,6 @@ import {
 } from "@shared/risk";
 import { TASK_BROWSER_REQUEST_MAX, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { type Static, type TSchema, Type } from "typebox";
-import { z } from "zod";
 import { browserCommand } from "../browser/commandWords";
 import {
   CARD_PARAMS,
@@ -31,6 +30,7 @@ import {
   OutcomeUnknownError,
   stringEnum,
   type ToolOutput,
+  zodParameter,
 } from "../session/tools";
 import { MAX_CARD_BODY_LENGTH, readCardBodyFile } from "./cardBodyFile";
 import { type CardPictureRoot, cardPictureRoot, verifyCardImages } from "./cardImages";
@@ -324,8 +324,7 @@ const REQUIRED_ACTIONS_DESCRIPTION =
 
 const sharedCardParams = {
   required_actions: Type.Optional(
-    Type.Unsafe<RequiredAction[]>({
-      ...z.toJSONSchema(requiredActionsSchema),
+    zodParameter<RequiredAction[]>(requiredActionsSchema, {
       description: REQUIRED_ACTIONS_DESCRIPTION,
     }),
   ),
@@ -408,14 +407,6 @@ const crewmateCardParams = Type.Object({
   title: Type.String({
     description: CARD_PARAMS.title,
   }),
-  required_actions: Type.Optional(
-    Type.Unsafe<RequiredAction[]>({
-      ...z.toJSONSchema(requiredActionsSchema),
-      description:
-        "Required on a completion merge offer, including [] when none. " +
-        REQUIRED_ACTIONS_DESCRIPTION,
-    }),
-  ),
   presentation: Type.Optional(
     Type.Integer({
       minimum: 1,

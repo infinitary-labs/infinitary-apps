@@ -1,8 +1,13 @@
 import { type LiveValidationInput, liveValidationInputSchema } from "@shared/liveValidation";
 import { Type } from "typebox";
-import { z } from "zod";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
-import { type CrewmateTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
+import {
+  type CrewmateTool,
+  callWithSignal,
+  crewmateTool,
+  stringEnum,
+  zodParameter,
+} from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
 import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
 import {
@@ -151,8 +156,7 @@ export const REPORT_TOOL = crewmateTool({
   description: REPORT_TOOL_DESCRIPTION,
   parameters: Type.Object({
     validation: Type.Optional(
-      Type.Unsafe<LiveValidationInput>({
-        ...z.toJSONSchema(liveValidationInputSchema),
+      zodParameter<LiveValidationInput>(liveValidationInputSchema, {
         description:
           "Careful: plan before edits; keep run proof; review assigned head/revision. Live pass: result pass, live true, unproven []; out-of-scope limits go in reason, never hide gaps. Gaps match a current inconclusive, untested/non-live run's scenario, missingCapability and reason. Requests grant nothing: emit_card.validation_request asks the captain for one action or gap, never follow-on writes. Forge starts approved effects; otherwise record started then outcome; never retry unknown.",
       }),

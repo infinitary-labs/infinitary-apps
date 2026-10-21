@@ -6,6 +6,7 @@ import type { RequiredAction } from "@shared/requiredActions";
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
+import { z } from "zod";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import type {
   DownloadArtifactInput,
@@ -452,6 +453,29 @@ export type StringEnum<V extends string> = TUnsafe<V> & {
   enum: V[];
   description?: string;
 };
+
+/**
+ * A parameter whose shape a zod schema owns, written as JSON Schema without
+ * two things only the generator needs. The dialect line names a whole
+ * document, never one parameter inside a tool (the published contract names
+ * it once too), and the safe-integer range zod writes beside every integer
+ * says no more than `integer` does. Both are words every model reads on every
+ * request (INF-718, the crewmate's fixed-context budget).
+ */
+export function zodParameter<T>(schema: z.ZodType, options?: { description?: string }): TUnsafe<T> {
+  const json = z.toJSONSchema(schema, {
+    override: ({ jsonSchema }) => {
+      if (jsonSchema.type !== "integer") return;
+      if (jsonSchema.maximum === Number.MAX_SAFE_INTEGER) delete jsonSchema.maximum;
+      if (jsonSchema.minimum === Number.MIN_SAFE_INTEGER) delete jsonSchema.minimum;
+    },
+  });
+  delete json.$schema;
+  return Type.Unsafe<T>({
+    ...json,
+    ...(options?.description !== undefined ? { description: options.description } : {}),
+  });
+}
 
 /** One crewmate tool, before it is bound to a crewmate's callbacks. */
 export type CrewmateTool<N extends string = string, T extends TObject = TObject> = {

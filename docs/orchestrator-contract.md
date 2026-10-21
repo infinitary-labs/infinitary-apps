@@ -139,6 +139,8 @@ A rule that the core, a tool description and a parameter each stated is said onc
   A tool's text drops what the core already says: who may close a card, that crew_status outranks memory, that a red check is diagnosed first, where theme and panel changes go.
 - **A fixed choice is one string with an enum** (`stringEnum`, `src/core/session/tools.ts`), not a union of literals.
   The values and the validation are the same on both runtimes; `claudeTaskTools.ts` reads the form.
+- **A shape a zod schema owns is one `zodParameter`** (`src/core/session/tools.ts`), never a spread of `z.toJSONSchema`.
+  It leaves out the JSON Schema dialect line and the safe-integer range zod writes beside each integer, which no model acts on.
 - **emit_card describes only its top-level parameters.**
   The Claude client never served a nested description, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 

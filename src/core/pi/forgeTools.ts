@@ -8,8 +8,7 @@ import {
 } from "@shared/changePresentation";
 import { MERGE_GUIDANCE_IMPACTS, MERGE_REPAIR_IMPACTS } from "@shared/checkRepair";
 import { Type } from "typebox";
-import { z } from "zod";
-import { callWithSignal, crewmateTool, stringEnum } from "../session/tools";
+import { callWithSignal, crewmateTool, stringEnum, zodParameter } from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
 import { stageChangePresentation } from "./changePresentation";
 
@@ -89,9 +88,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   description:
     "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same conventional title on the story, pull request and completion card. Supply Why as at most two short sentences, What changed as up to five short bullets, Before and After as one short sentence each, and checked as up to six {check, result} observed facts. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. This is an instruction, not a prose refusal check. Ordered views pair Before and After pictures under one heading; recordings stack; new views need only After. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. Before names the original base; After is fresh or has an explicit applicability declaration retained as data, not displayed. No visible change gives noPicture and no views. The host retains immutable copies in the task card folder. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
   parameters: Type.Object({
-    story: Type.Unsafe<ChangePresentationDraft>({
-      ...z.toJSONSchema(changePresentationDraftSchema),
-    }),
+    story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema),
   }),
   bind: (delegate) => {
     const prepare = delegate.onPrepareChange;
@@ -126,15 +123,13 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
       }),
     ),
     recovery: Type.Optional(
-      Type.Unsafe<PresentationRecovery>({
-        ...z.toJSONSchema(presentationRecoverySchema),
+      zodParameter<PresentationRecovery>(presentationRecoverySchema, {
         description:
           "Deliberate recovery only, never an automatic retry: retryOpening after the earlier uncertain opening was read and no open PR exists; retryUploads names the exact uncertain digests after a card disclosed possible orphan uploads and the captain chose another attempt; replaceRegion is the exact edited region shown with the saved story on a card, after the captain chose to republish. A newer edit refuses that choice; show it again. Existing confirmed uploads are reused.",
       }),
     ),
     around: Type.Optional(
-      Type.Unsafe<StoryAround>({
-        ...z.toJSONSchema(storyAroundSchema),
+      zodParameter<StoryAround>(storyAroundSchema, {
         description: OPEN_CHANGE_AROUND_DESCRIPTION,
       }),
     ),

@@ -335,6 +335,10 @@ Persistence:
 
 - **STT**: transformers.js whisper-large-v3-turbo on WebGPU - fp16 encoder + q4 merged decoder, 30 s windows with 5 s stride.
   The settings and the request handler are one module (`src/shared/voiceRecognizer.ts`), so wherever the model runs it runs the same files the same way.
+- **Language**: each recording is decoded in the language Whisper hears in its first 30 s, never a language the app picks.
+  The library, transformers.js, has no language detection and decodes in English when it is named no language, which turned other languages into an English translation (INF-608).
+  So the handler runs Whisper's own detection first: one decoder step after `<|startoftranscript|>`, limited to the language tokens, which costs one more encoder pass per recording.
+  The transcription's prompt then carries the language token itself, so a language the library has no name for, such as Cantonese (`<|yue|>`), decodes too.
 - **The voice helper** (captain's choice on FI3-1054: fix in place first, then a helper process): where ONNX Runtime's native build (`onnxruntime-node`) can use the graphics card, the model runs in an Electron utility process of its own (`src/main/voice/voiceHelper.ts`, entry `voiceHelperEntry.ts`) on the graphics provider that build lists.
   So the model's graphics work never runs on the GPU process's main thread, which composites and presents every window frame, and its memory stays out of the window and the GPU process.
   The window hands each prepared recording to the main process (`inf:voice:transcribe`), which passes it to the helper in a message; audio is only ever in memory (D-13), and the helper reads the weights from `userData/models/`, refuses the network, and writes nothing.
@@ -354,7 +358,7 @@ Persistence:
   Status and progress are core channels; the host still serves model files.
   The voice helper reads them from disk; the window's worker reads them over a privileged `app-model://` protocol, whose scoped direct file response lets Chromium stream the weights without per-chunk Node work on the main thread.
   Whichever holds the recognizer releases it after three idle minutes with no pending request - the helper process exits, the worker terminates - and the next recording starts it again without delaying microphone capture (`RecognizerClient`).
-- **Quality guards**: RMS silence gate (0.006), 0.4 s minimum clip for holds (not toggled or explicitly accepted recordings), whole-transcript stock-hallucination filter, warm-up inference, capture-before-warm-up ordering.
+- **Quality guards**: RMS silence gate (0.006), 0.4 s minimum clip for holds (not toggled or explicitly accepted recordings), whole-transcript stock-hallucination filter (letters of every script count, so a transcript in another script is never read as empty), warm-up inference, capture-before-warm-up ordering.
 - **Graphics gate**: no graphics card or WebGPU where the model runs → the voice affordance hides entirely (hi-bit's answer, and the captain's for Linux).
   The window asks for its own adapter only when its worker runs the model; the voice helper brings its own.
 - **Keybind (decision D-10, revised)**: **focused-window tap-to-toggle and hold-to-talk.**

@@ -89,7 +89,9 @@ export function isAudioSilent(samples: Float32Array, threshold = 0.006): boolean
 /**
  * Whisper hallucinates stock phrases on silence/noise. Drop the output only
  * when the entire transcript is one of these, so genuinely saying "thank
- * you" mid-sentence still goes through.
+ * you" mid-sentence still goes through. Letters of every script count, so a
+ * transcript in Chinese, Japanese or Korean is never read as the empty one
+ * (INF-608).
  */
 const STOCK_HALLUCINATIONS = new Set([
   "",
@@ -114,7 +116,7 @@ const STOCK_HALLUCINATIONS = new Set([
 export function isLikelyHallucination(text: string): boolean {
   const normalized = text
     .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/[^\p{L}\p{N} ]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
   return STOCK_HALLUCINATIONS.has(normalized);

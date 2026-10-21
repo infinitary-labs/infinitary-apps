@@ -34,6 +34,14 @@ export const WHISPER_TRANSCRIBE_OPTIONS = {
   return_timestamps: true,
 } as const;
 
+/**
+ * A transcription's options: the settings above, and the prompt that names
+ * the language the recording is decoded in (`languagePrompt`).
+ */
+export type WhisperTranscribeOptions = typeof WHISPER_TRANSCRIBE_OPTIONS & {
+  decoder_input_ids?: number[];
+};
+
 export type { RecognizerPlace };
 
 /**
@@ -89,16 +97,91 @@ export type RecognizerResponse =
   | { id: number; type: "result"; text: string }
   | { id: number; type: "error"; message: string };
 
-/** A loaded transformers.js speech pipeline: audio in, its output out. */
-export type Transcriber = (
-  audio: Float32Array,
-  options: typeof WHISPER_TRANSCRIBE_OPTIONS,
-) => Promise<unknown>;
+/** Whisper's special tokens, from the model's `generation_config.json`. */
+export type WhisperTokens = {
+  /** <|startoftranscript|>. */
+  decoder_start_token_id: number;
+  /** One token per language Whisper knows, such as `<|zh|>`; none on an English-only model. */
+  lang_to_id?: Record<string, number>;
+  task_to_id?: Record<string, number>;
+};
+
+/** One row of next-token scores per sequence, as a logits processor sees them. */
+export type NextTokenScores = { [row: number]: { data: Float32Array } | undefined };
+
+/**
+ * A loaded transformers.js speech pipeline, as far as the recognizer uses
+ * it: audio in, its output out, and the processor and model beneath it.
+ */
+export type Transcriber = {
+  (audio: Float32Array, options: WhisperTranscribeOptions): Promise<unknown>;
+  /** Log-mel features of up to one 30 s window, as the model reads them. */
+  processor: (audio: Float32Array) => Promise<{ input_features: unknown }>;
+  model: {
+    generation_config: WhisperTokens | null;
+    generate: (request: {
+      inputs: unknown;
+      decoder_input_ids: number[];
+      max_new_tokens: number;
+      logits_processor: Array<(inputIds: unknown[], scores: NextTokenScores) => NextTokenScores>;
+    }) => Promise<{ tolist: () => Array<Array<bigint | number>> }>;
+  };
+};
 
 function outputText(output: unknown): string {
   const first = Array.isArray(output) ? output[0] : output;
   const text = (first as { text?: unknown } | undefined)?.text ?? "";
   return String(text).trim();
+}
+
+/**
+ * The prompt a recording is decoded with: <|startoftranscript|>, the
+ * language Whisper hears in its first 30 s, and <|transcribe|>.
+ * transformers.js leaves Whisper's language detection unimplemented and
+ * decodes in English when it is named no language, which turned Mandarin
+ * dictation into an English translation (INF-608). This is the detection
+ * Whisper's own transcription runs: one decoder step after
+ * <|startoftranscript|>, its choice limited to the language tokens. The
+ * prompt carries the token itself, so a language the library has no name
+ * for, such as Cantonese (<|yue|>), decodes too. Null for a model with no
+ * language tokens, which decodes as it always has.
+ */
+async function languagePrompt(asr: Transcriber, audio: Float32Array): Promise<number[] | null> {
+  const tokens = asr.model.generation_config;
+  const transcribe = tokens?.task_to_id?.transcribe;
+  const languages = new Set(Object.values(tokens?.lang_to_id ?? {}));
+  if (!tokens || transcribe === undefined || languages.size === 0) return null;
+  const window = audio.subarray(0, WHISPER_SAMPLE_RATE * WHISPER_TRANSCRIBE_OPTIONS.chunk_length_s);
+  const { input_features } = await asr.processor(window);
+  const onlyLanguages = (inputIds: unknown[], scores: NextTokenScores) => {
+    for (let row = 0; row < inputIds.length; row++) {
+      const data = scores[row]?.data;
+      if (!data) continue;
+      for (let token = 0; token < data.length; token++) {
+        if (!languages.has(token)) data[token] = Number.NEGATIVE_INFINITY;
+      }
+    }
+    return scores;
+  };
+  const sequences = await asr.model.generate({
+    inputs: input_features,
+    decoder_input_ids: [tokens.decoder_start_token_id],
+    max_new_tokens: 1,
+    logits_processor: [onlyLanguages],
+  });
+  const heard = Number(sequences.tolist()[0]?.at(-1));
+  return languages.has(heard) ? [tokens.decoder_start_token_id, heard, transcribe] : null;
+}
+
+/** Words from `audio`, decoded in the language Whisper hears in it. */
+async function recognize(asr: Transcriber, audio: Float32Array): Promise<unknown> {
+  const prompt = await languagePrompt(asr, audio);
+  return asr(
+    audio,
+    prompt
+      ? { ...WHISPER_TRANSCRIBE_OPTIONS, decoder_input_ids: prompt }
+      : WHISPER_TRANSCRIBE_OPTIONS,
+  );
 }
 
 /**
@@ -137,11 +220,12 @@ export function createRecognizerHandler(
     try {
       const asr = await transcriber();
       if (request.type === "init") {
-        // One pass on 0.5 s of silence compiles the shaders now, so the
-        // first real transcription is not several times slower.
+        // One pass on 0.5 s of silence, language detection included,
+        // compiles the shaders now, so the first real transcription is not
+        // several times slower.
         if (asr && !warmedUp) {
           try {
-            await asr(new Float32Array(WHISPER_SAMPLE_RATE / 2), WHISPER_TRANSCRIBE_OPTIONS);
+            await recognize(asr, new Float32Array(WHISPER_SAMPLE_RATE / 2));
           } catch {
             // Priming failed; the real call will surface any genuine problem.
           }
@@ -150,7 +234,7 @@ export function createRecognizerHandler(
         return { id: request.id, type: "ready" };
       }
       if (!asr) return { id: request.id, type: "result", text: "" };
-      const output = await asr(request.audio, WHISPER_TRANSCRIBE_OPTIONS);
+      const output = await recognize(asr, request.audio);
       return { id: request.id, type: "result", text: outputText(output) };
     } catch (error) {
       return {

@@ -20,6 +20,16 @@ describe("isLikelyHallucination", () => {
     expect(isLikelyHallucination("Thank you for fixing the retry helper")).toBe(false);
     expect(isLikelyHallucination("refactor the auth middleware")).toBe(false);
   });
+
+  it("keeps words in every script (INF-608)", () => {
+    // The pinned Whisper model's own words for synthetic Mandarin, Japanese
+    // and Korean recordings (macOS's Tingting, Kyoko and Eddy voices).
+    expect(isLikelyHallucination("请帮我检查语音输入的效果,我希望说话的时候就能看到文字。")).toBe(
+      false,
+    );
+    expect(isLikelyHallucination("音声入力の結果を確認してください。")).toBe(false);
+    expect(isLikelyHallucination("음성 입력 결과를 확인해 주세요.")).toBe(false);
+  });
 });
 
 describe("insertVoiceTranscript", () => {

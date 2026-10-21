@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRecognizerHandler,
+  type NextTokenScores,
   RECOGNIZER_IDLE_MS,
   RecognizerClient,
   type RecognizerRequest,
@@ -8,7 +9,73 @@ import {
   type StartRecognizer,
   type Transcriber,
   WHISPER_SAMPLE_RATE,
+  WHISPER_TRANSCRIBE_OPTIONS,
+  type WhisperTokens,
+  type WhisperTranscribeOptions,
 } from "./voiceRecognizer";
+
+/**
+ * Whisper's special tokens as the pinned model revision's
+ * generation_config.json numbers them (VOICE_MODEL_REVISION in
+ * src/main/voice/voiceModelService.ts), its languages cut to those the
+ * readings below name.
+ */
+const PINNED_TOKENS = {
+  decoder_start_token_id: 50258,
+  lang_to_id: { "<|en|>": 50259, "<|zh|>": 50260, "<|ko|>": 50264, "<|ja|>": 50266 },
+  task_to_id: { translate: 50359, transcribe: 50360 },
+} satisfies WhisperTokens;
+
+/** The pinned model's vocabulary size (its config.json). */
+const PINNED_VOCABULARY = 51_866;
+
+/**
+ * The pinned model's four highest next-token scores after
+ * <|startoftranscript|>, read on a 19 s Mandarin recording spoken by
+ * macOS's Tingting voice (INF-608): every one a language, <|zh|> far ahead.
+ */
+const MANDARIN_READINGS = { "<|zh|>": 17.64, "<|en|>": 10.89, "<|ja|>": 9.81, "<|ko|>": 8.9 };
+
+/**
+ * A Whisper pipeline whose words come from `transcribe` and whose model
+ * answers each request greedily from `readings` after the request's own
+ * logits processors, as transformers.js's `generate` does. `heard` keeps
+ * each request: how much audio it read, its prompt and its length.
+ */
+function whisperHearing(
+  transcribe: (audio: Float32Array, options: WhisperTranscribeOptions) => Promise<unknown>,
+  readings: Partial<Record<keyof typeof PINNED_TOKENS.lang_to_id, number>> = MANDARIN_READINGS,
+) {
+  const heard: Array<{ samples: number; prompt: number[]; steps: number }> = [];
+  const asr: Transcriber = Object.assign(transcribe, {
+    processor: async (audio: Float32Array) => ({ input_features: audio }),
+    model: {
+      generation_config: PINNED_TOKENS,
+      generate: async (request: Parameters<Transcriber["model"]["generate"]>[0]) => {
+        heard.push({
+          samples: (request.inputs as Float32Array).length,
+          prompt: request.decoder_input_ids,
+          steps: request.max_new_tokens,
+        });
+        const row = new Float32Array(PINNED_VOCABULARY);
+        for (const [token, score] of Object.entries(readings)) {
+          row[PINNED_TOKENS.lang_to_id[token as keyof typeof readings]] = score;
+        }
+        let scores: NextTokenScores = [{ data: row }];
+        for (const process of request.logits_processor) {
+          scores = process([request.decoder_input_ids], scores);
+        }
+        const chooseFrom = scores[0]?.data ?? row;
+        let chosen = 0;
+        for (let token = 1; token < chooseFrom.length; token++) {
+          if ((chooseFrom[token] ?? 0) > (chooseFrom[chosen] ?? 0)) chosen = token;
+        }
+        return { tolist: () => [[...request.decoder_input_ids, chosen]] };
+      },
+    },
+  });
+  return { asr, heard };
+}
 
 /** A recognizer the test answers by hand, one per start. */
 class FakeRecognizers {
@@ -148,7 +215,7 @@ describe("createRecognizerHandler", () => {
       order.push("transcription");
       return Promise.resolve({ text: "words" });
     });
-    const handle = createRecognizerHandler(async () => asr as Transcriber);
+    const handle = createRecognizerHandler(async () => whisperHearing(asr).asr);
     const warm = handle({ id: 1, type: "init" });
     const words = handle(transcribe(2));
     await vi.waitFor(() => expect(order).toEqual(["warm-up started"]));
@@ -162,7 +229,7 @@ describe("createRecognizerHandler", () => {
     const load = vi
       .fn<() => Promise<Transcriber | null>>()
       .mockRejectedValueOnce(new Error("no adapter"))
-      .mockResolvedValue((async () => ({ text: "again" })) as Transcriber);
+      .mockResolvedValue(whisperHearing(async () => ({ text: "again" })).asr);
     const handle = createRecognizerHandler(load);
     await expect(handle(transcribe(1))).resolves.toEqual({
       id: 1,
@@ -170,5 +237,33 @@ describe("createRecognizerHandler", () => {
       message: "no adapter",
     });
     await expect(handle(transcribe(2))).resolves.toEqual({ id: 2, type: "result", text: "again" });
+  });
+
+  it("decodes a recording in the language Whisper hears in it, not the library's English (INF-608)", async () => {
+    // A 40 s recording: its language comes from its first 30 s window, its words from all of it.
+    const recording = new Float32Array(40 * WHISPER_SAMPLE_RATE);
+    const words = vi.fn(async () => ({ text: "请帮我检查语音输入的效果。" }));
+    const whisper = whisperHearing(words, MANDARIN_READINGS);
+    const handle = createRecognizerHandler(async () => whisper.asr);
+    await expect(handle(transcribe(1, recording))).resolves.toEqual({
+      id: 1,
+      type: "result",
+      text: "请帮我检查语音输入的效果。",
+    });
+    expect(whisper.heard).toEqual([
+      {
+        samples: WHISPER_TRANSCRIBE_OPTIONS.chunk_length_s * WHISPER_SAMPLE_RATE,
+        prompt: [PINNED_TOKENS.decoder_start_token_id],
+        steps: 1,
+      },
+    ]);
+    expect(words).toHaveBeenCalledWith(recording, {
+      ...WHISPER_TRANSCRIBE_OPTIONS,
+      decoder_input_ids: [
+        PINNED_TOKENS.decoder_start_token_id,
+        PINNED_TOKENS.lang_to_id["<|zh|>"],
+        PINNED_TOKENS.task_to_id.transcribe,
+      ],
+    });
   });
 });

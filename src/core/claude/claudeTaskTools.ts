@@ -1,15 +1,12 @@
-import {
-  createSdkMcpServer,
-  type McpSdkServerConfigWithInstance,
-  tool,
-} from "@anthropic-ai/claude-agent-sdk";
+import { type McpSdkServerConfigWithInstance, tool } from "@anthropic-ai/claude-agent-sdk";
 import type {
   BashInput,
   FileEditInput,
   FileReadInput,
   FileWriteInput,
 } from "@anthropic-ai/claude-agent-sdk/sdk-tools";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
@@ -200,10 +197,18 @@ export function claudeToolsOf(tools: readonly BoundTool[]) {
  * (22 ToolSearch calls for emit_card across the Sep 15 transcripts); these
  * tools are the session's outputs, so they are present on turn 1.
  *
+ * The server is the app's own copy of the MCP server, not the SDK's
+ * `createSdkMcpServer`: that one writes a tool's schema with the zod the SDK
+ * bundles, an older copy that reads each schema the app's zod builds with a
+ * check (`.int()`, `.min()`, `.regex()`) as the bare type beneath it, so a
+ * Claude seat was served no integer, minimum, maximum, pattern, item count or
+ * length (INF-744). Its list serves each tool's own JSON Schema, the one Pi
+ * serves, and a call is still checked against the zod built from it.
+ *
  * The transport guard (`claudeToolSurface.test.ts`) captures what this exact
  * server serves, rather than a lookalike built beside it: the client
- * truncates a tool description at 2,048 characters and drops every nested
- * parameter description, and nothing noticed for weeks.
+ * truncates a tool description at 2,048 characters, and nothing noticed for
+ * weeks.
  *
  * `wholeResultCharacters`, when given, is declared on every tool as the
  * client's `anthropic/maxResultSizeChars`: a longer result is the one the
@@ -214,18 +219,34 @@ export function claudeToolServer(
   tools: readonly BoundTool[],
   wholeResultCharacters?: number,
 ): McpSdkServerConfigWithInstance {
-  return createSdkMcpServer({
-    name: CLAUDE_SEAT_TOOL_SERVER,
-    alwaysLoad: true,
-    tools: claudeToolsOf(tools).map((served) =>
-      wholeResultCharacters === undefined
-        ? served
-        : {
-            ...served,
-            _meta: { ...served._meta, "anthropic/maxResultSizeChars": wholeResultCharacters },
-          },
-    ),
-  });
+  const meta = {
+    "anthropic/alwaysLoad": true,
+    ...(wholeResultCharacters === undefined
+      ? {}
+      : { "anthropic/maxResultSizeChars": wholeResultCharacters }),
+  };
+  const server = new McpServer(
+    { name: CLAUDE_SEAT_TOOL_SERVER, version: "1.0.0" },
+    { capabilities: { tools: {} } },
+  );
+  for (const served of claudeToolsOf(tools)) {
+    server.registerTool(
+      served.name,
+      { description: served.description, inputSchema: served.inputSchema, _meta: meta },
+      served.handler,
+    );
+  }
+  // Replaces the list registerTool installed, which writes each schema back
+  // from its zod; the call path stays the server's own.
+  server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+    tools: tools.map((bound) => ({
+      name: bound.name,
+      description: bound.description,
+      inputSchema: bound.parameters,
+      _meta: meta,
+    })),
+  }));
+  return { type: "sdk", name: CLAUDE_SEAT_TOOL_SERVER, instance: server };
 }
 
 /** A Claude crewmate's app-owned tools: every entry its callbacks bind, in the spec's order. */

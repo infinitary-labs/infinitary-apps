@@ -41,7 +41,7 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. For a deliberate retry use recovery; disclose a possible orphan before asking to retry an upload. Show edits inside the region on a card and await a republish choice before replacing them. A closed story PR stops publication.",
 ].join(" ");
 
-/** The around parameter's own words: Claude drops nested descriptions, so from and to are explained here (INF-497). */
+/** The around parameter's own words: no app tool describes a nested field, so from and to are explained here (INF-497). */
 export const OPEN_CHANGE_AROUND_DESCRIPTION = [
   "Change one passage of the words around this task's saved story on its open pull or merge request, such as an outdated summary or a footer, while the story stays exactly as published. Pass the newest presentation revision with it.",
   "from is that passage exactly as the description shows it now, found once above or below the story; to replaces it. An empty from adds to only when nothing surrounds the story.",
@@ -82,10 +82,10 @@ export const SKIP_RULES_DESCRIPTION = [
 ].join(" ");
 
 /**
- * The story parameter's own words (INF-733): Claude serves a nested field's
- * type but drops its limits and descriptions, so the shape the host checks -
- * the counts, the commit-id pattern and the relationships `evidenceRelations`
- * and `ChangePresentations.prepare` refuse - is said here.
+ * The story parameter's own words (INF-733): the relationships
+ * `evidenceRelations` and `ChangePresentations.prepare` refuse are in no
+ * schema, so they are said here, beside the counts and the commit-id pattern
+ * the schema also declares, which a Claude seat was not served until INF-744.
  */
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",

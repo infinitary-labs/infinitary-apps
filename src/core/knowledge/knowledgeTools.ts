@@ -27,8 +27,8 @@ import {
  * from the model. Every build binds them; for a task held on another
  * computer, that computer's tools ask the home to run this
  * binding (docs/knowledge.md, "Who has it"). The rules a Claude model must see
- * are in the descriptions and top-level parameters, because the Claude
- * client drops nested descriptions.
+ * are in the descriptions and top-level parameters, because no app tool
+ * describes a nested parameter (docs/claude-client.md).
  */
 
 export const KNOWLEDGE_TOOL_NAME = "knowledge";

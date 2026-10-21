@@ -39,7 +39,7 @@ import type { ReportDeclaration } from "../tasks/taskService";
  * The parameters are typebox, which is plain JSON Schema: Pi takes it as
  * is, and the Claude generator reads the same schema. A rule a Claude
  * model must see lives in the description or a top-level parameter's
- * description, because the Claude client drops every nested one
+ * description, because no app tool describes a nested one
  * (`docs/claude-client.md`).
  */
 

@@ -215,8 +215,8 @@ export const CREWMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "crewmate");
 
 /**
  * How to CALL the tool: the descriptor's shared half. Kept small on purpose -
- * the Claude transport serves at most 2,048 characters of a tool description
- * and drops every nested parameter description, so anything a Claude crewmate
+ * the Claude transport serves at most 2,048 characters of a tool description,
+ * and no app tool describes a nested parameter, so anything a Claude crewmate
  * must read lives here or in a top-level parameter, never in a nested one.
  */
 export const CARD_MECHANICS = [
@@ -303,9 +303,10 @@ const RISK_PARAM = [
  * and `risk` only in a crewmate's.
  *
  * Only TOP-LEVEL parameters are described (contract v4.59). The Claude
- * transport drops every nested description (audit 4.3a finding 2), so since
- * v4.13 each rule of `action`, `settle` and `open` has been carried by
- * `actions` or by `CARD_MECHANICS`; the nested copies a Pi seat also read
+ * transport served no nested description until INF-744 (audit 4.3a finding
+ * 2; the SDK's own tool server dropped them), so since v4.13 each rule of
+ * `action`, `settle` and `open` has been carried by `actions` or by
+ * `CARD_MECHANICS`; the nested copies a Pi seat also read
  * said nothing those do not, and they are gone. A row here states what the
  * description above it does not: `claudeToolSurface.test.ts` holds that no
  * app tool describes a nested parameter at all.

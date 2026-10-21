@@ -13,7 +13,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The tools come from the one tool spec (`src/core/session/tools.ts`, runtime-neutral): each factory returns a bound tool (name, label, description, parameters, `run`), `FirstmateAgent.buildTools` binds them to the host, and each runtime generates its own tool from that one list - `piToolOf` (`src/core/pi/toolSpec.ts`) at the Pi session factory's boundary, `claudeToolsOf` (`src/core/claude/claudeTaskTools.ts`) for a Claude seat - so a new first mate tool is one entry both seats and the pin pick up.
   The offline readers keep their own lists of those tools, which the same change updates (`docs/dispatch-extractor.md` "Tests", `docs/replay-harness.md` "What it replays").
   The self-source test reads the live agent's list (`tests/helpers/firstmateTools.ts`) and holds both runtimes' generated names to the pin plus `emote`, and the stamp's `toolsSha` fingerprints every tool's name, description and schema (`firstmateAgent.test.ts` holds that each moves it), so a change to the tool words always shows in the record.
-  A first mate tool rule lives in a tool description or a top-level parameter's, never only a nested one, because a Claude seat's client drops those (`docs/claude-client.md`).
+  A first mate tool rule lives in a tool description or a top-level parameter's, never only a nested one, because no app tool describes a nested parameter (`docs/claude-client.md`).
   The seat itself is backend-neutral (`src/core/orchestrator/seat.ts`, `docs/architecture.md` §2 "The seat seam"): the spec carries the binding, the spec tools and a per-backend resume, and a seat speaks `FmEvent`s plus `turn_closed`, so nothing in `src/core/orchestrator/` reads a Pi event.
   The answer move is answer-with-default: an answer that implies a next step is ONE `decision` whose proposed step is its `default` action; a pure fact is a `note`; an active crewmate shows what the captain must see or decide on its own card, and the first mate acts on its report rather than relaying it; there is no seventh move, no propose tool, no recommendation kind.
   Reading is a crewmate's job: anything needing code, files, logs, git history, builds or reproduction is an investigation spawn (the standing rule in the prompt).
@@ -149,7 +149,7 @@ A rule that the core, a tool description and a parameter each stated is said onc
 - **A shape a zod schema owns is one `zodParameter`** (`src/core/session/tools.ts`), never a spread of `z.toJSONSchema`.
   It leaves out the JSON Schema dialect line and the safe-integer range zod writes beside each integer, which no model acts on.
 - **emit_card describes only its top-level parameters.**
-  The Claude client never served a nested description, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
+  A Claude seat was served no nested description until INF-744, so each nested rule rides `actions` or `CARD_MECHANICS`; `claudeToolSurface.test.ts` holds that no app tool describes a nested parameter.
 
 `tests/firstmate-fixed-context.test.ts` fails a change that grows the fixed part past the boundary it derives: the 65,536-token floor, minus the 12,288 reserve, minus the promised 33,476-token conversation, which is 19,772.
 A change that would cross it trims first.

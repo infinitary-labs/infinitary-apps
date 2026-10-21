@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-served-limits",
+      "reason": "Internal: a first mate or crewmate on Claude is now served each tool's limits (whole numbers, ranges, patterns, counts and lengths) as Pi is, so it stops guessing them; nothing a person sees changes."
+    }
+  ]
+}

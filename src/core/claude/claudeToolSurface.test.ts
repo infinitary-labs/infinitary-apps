@@ -55,6 +55,9 @@ import { CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS } from "./session";
  * refusals. It cost behaviour, not just bytes: on the completion rules those
  * crewmates never saw, compliance ran 50-75% against 100% for the Pi
  * families. Nothing in the repository guarded it, which is why it lasted.
+ * The nested loss was not the client's: the SDK's own tool server wrote each
+ * schema with the older zod it bundles, which also dropped every limit, and
+ * the app serves its own since INF-744 (`claudeToolServer`).
  *
  * Two guards, in the order they are worth having:
  *
@@ -169,7 +172,7 @@ type ServedTool = { name: string; description?: string; input_schema?: Schema };
  * Every parameter description a schema carries, by its path: `constraints`
  * at the top level, `actions[].effect<settle>.mode` below it (a union member
  * is named by its `kind`). A top-level path has no separator; every other
- * one is nested, which is what the client drops.
+ * one is nested, which no app tool describes.
  */
 function parameterDescriptions(schema: Schema | undefined, at = ""): Map<string, string> {
   const found = new Map<string, string>();
@@ -192,6 +195,11 @@ function parameterDescriptions(schema: Schema | undefined, at = ""): Map<string,
 
 function isNested(path: string): boolean {
   return /[.[<]/.test(path);
+}
+
+/** A source schema as JSON carries it: typebox's own symbol keys left out. */
+function asJson(schema: unknown): unknown {
+  return JSON.parse(JSON.stringify(schema));
 }
 
 /**
@@ -303,14 +311,26 @@ describe("what the Claude client serves equals the source", () => {
       }),
     );
 
-    // INF-733: the change story's shape reaches Claude whole before a story is
-    // sent; the client keeps a nested field's type but drops its limits.
+    // INF-733: the change story's relationships, which no schema can say,
+    // reach Claude whole in the story's own description before it is sent.
     const prepare = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}prepare_change`);
     const storySource = tools.find((tool) => tool.name === "prepare_change");
     const storyHelp = (storySource?.parameters as Schema | undefined)?.properties?.story
       ?.description;
     expect(storyHelp).toBeTruthy();
     expect(prepare?.input_schema?.properties?.story?.description).toBe(storyHelp);
+
+    // INF-744: each tool's schema arrives as the source declares it, so every
+    // limit on it - an integer, a minimum or maximum, a pattern, an item
+    // count, a length - reaches Claude before a call, as it reaches Pi.
+    for (const tool of tools) {
+      const arrived = ours.find(
+        (served) => served.name === `${CLAUDE_SEAT_TOOL_PREFIX}${tool.name}`,
+      );
+      expect(arrived?.input_schema, `${tool.name} arrived with its schema rewritten`).toEqual(
+        asJson(tool.parameters),
+      );
+    }
 
     // `emit_card` is the only app tool with nested parameters, and the
     // audit found only its top-level descriptions surviving. Whatever a
@@ -362,9 +382,9 @@ function nestedFields(schema: Schema | undefined): string[] {
 
 /**
  * Where each nested emit_card field's rule is said. Since contract v4.59 a
- * nested field carries no description on any runtime - the Claude client
- * never served one, and the copy a Pi seat read repeated the served text -
- * so each rule lives in the `actions` description or in the tool's own
+ * nested field carries no description on any runtime - a Claude seat was
+ * served none until INF-744, and the copy a Pi seat read repeated the served
+ * text - so each rule lives in the `actions` description or in the tool's own
  * (`CARD_MECHANICS`). Keyed by the nested path: a new nested field fails
  * the census below until the phrase that carries its rule is named here.
  */
@@ -428,6 +448,10 @@ describe("what the Claude client serves the Firstmate equals the source (contrac
       expect(arrived?.description, `${tool.name} arrived truncated or rewritten`).toBe(
         tool.description,
       );
+      // INF-744: and its schema as declared, every limit on it included.
+      expect(arrived?.input_schema, `${tool.name} arrived with its schema rewritten`).toEqual(
+        asJson(tool.parameters),
+      );
       const servedParameters = parameterDescriptions(arrived?.input_schema);
       for (const [path, description] of parameterDescriptions(tool.parameters as Schema)) {
         if (isNested(path)) nested.push(`${tool.name}.${path}`);
@@ -435,8 +459,8 @@ describe("what the Claude client serves the Firstmate equals the source (contrac
       }
     }
     expect(lost, "a rule the client did not serve, which a Claude seat never reads").toEqual([]);
-    // The client drops every nested description, so the source declares
-    // none: a rule written there would reach a Pi seat alone.
+    // Each rule has its home in a description or a top-level parameter
+    // (contract v4.59), so the source declares no nested description.
     expect(nested, "a rule declared below a top-level parameter").toEqual([]);
 
     // Each nested emit_card field's rule is carried by the text that is served.

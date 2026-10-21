@@ -167,7 +167,7 @@ import XCTest
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         XCTAssertTrue(pager.waitForExistence(timeout: 10))
         XCTAssertTrue(pager.isHittable, "The card pager is not covered by the composer")
-        for id in ["previous-card", "card-pager", "next-card", "past-cards"] {
+        for id in ["previous-card", "card-pager", "next-card"] {
             let control = app.descendants(matching: .any).matching(identifier: id).firstMatch
             if !control.exists { continue }
             let frame = phoneAccessibilityBounds(control.frame)

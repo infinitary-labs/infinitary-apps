@@ -8,7 +8,6 @@ struct PhoneCards: View {
     @State private var past: PhoneCard?
     @State private var drafts: [String: PhoneJSON] = [:]
     @State private var replies: [String: String] = [:]
-    @State private var seen = Set<String>()
     @State private var previousIDs: [String] = []
     private var card: PhoneCard? { past ?? session.cards.first(where: { $0.id == selected }) ?? session.cards.first }
 
@@ -19,10 +18,10 @@ struct PhoneCards: View {
                     fill: card.isPast ? card.value["answers"] : drafts[card.id] ?? .array([]),
                     reply: Binding(get: { replies[card.id] ?? "" }, set: { replies[card.id] = $0 }),
                     onReading: { drafts[card.id] = $0["answers"] },
-                    onSeen: { seen.insert(card.offerID ?? card.id) },
+                    onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
                     onPage: { page($0) },
-                    showsNext: past == nil && index < session.cards.count - 1,
+                    showsNext: past == nil && index < session.cards.count - 1, visible: messageContext.cardsVisible,
                     replyLeaves: !card.value["holdsPlace"].flag && session.cards.count > 1)
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
             } else {
@@ -39,6 +38,11 @@ struct PhoneCards: View {
                     ForEach(session.cards) { item in
                         Button(item.title) { selected = item.id; past = nil }
                     }
+                    if !session.pastCards.isEmpty {
+                        Section("Past cards") {
+                            ForEach(session.pastCards) { item in Button(item.title) { past = item } }
+                        }
+                    }
                 } label: {
                     Text(past == nil ? "\(session.cards.isEmpty ? 0 : index + 1) of \(session.cards.count)" : "Past card")
                         .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
@@ -47,22 +51,13 @@ struct PhoneCards: View {
                 Button { page(1) } label: {
                     Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                         .overlay(alignment: .topTrailing) {
-                            if session.cards.dropFirst(index + 1).contains(where: { !seen.contains($0.offerID ?? $0.id) }) {
+                            if session.cards.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
                                 Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
                             }
                         }
                 }
                     .disabled(past != nil || index >= session.cards.count - 1).accessibilityIdentifier("next-card")
                     .keyboardShortcut("]", modifiers: [.command, .shift])
-                if !session.pastCards.isEmpty {
-                    Menu {
-                        ForEach(session.pastCards) { item in Button(item.title) { past = item } }
-                    } label: {
-                        Text("Past cards").font(PhoneFont.caption).frame(minWidth: 44, minHeight: 44)
-                    }.accessibilityIdentifier("past-cards")
-                }
-                let unread = session.cards.filter { !seen.contains($0.offerID ?? $0.id) }.count
-                if unread > 0 { Text("\(unread) new").font(PhoneFont.caption).foregroundStyle(PhoneTheme.accent) }
             }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: 560).frame(maxWidth: .infinity)
@@ -74,7 +69,7 @@ struct PhoneCards: View {
             if let marked = session.cards.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
-                selected = session.cards.first(where: { !seen.contains($0.offerID ?? $0.id) })?.id ?? ids.first
+                selected = session.cards.first(where: { !session.seenCards.contains($0.offerID ?? $0.id) })?.id ?? ids.first
             }
             previousIDs = ids
             if let past, ids.contains(past.id) { self.past = nil }
@@ -110,6 +105,8 @@ private struct PhoneCardPane: View {
     let onHide: () -> Void
     let onPage: (Int) -> Void
     let showsNext: Bool
+    /// The stage is on screen: a card drawn behind another tab is not yet read.
+    let visible: Bool
     let replyLeaves: Bool
     @State private var surfaceHeight: CGFloat = 0
     @State private var host: CardWebHost
@@ -120,14 +117,15 @@ private struct PhoneCardPane: View {
     @FocusState private var replyFocused: Bool
 
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, reply: Binding<String>,
-         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, showsNext: Bool, replyLeaves: Bool) {
+         onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onPage: @escaping (Int) -> Void, showsNext: Bool, visible: Bool, replyLeaves: Bool) {
         self.card = card; self.session = session; _reply = reply
         self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onPage = onPage
-        self.showsNext = showsNext; self.replyLeaves = replyLeaves
+        self.showsNext = showsNext; self.visible = visible; self.replyLeaves = replyLeaves
         _host = State(initialValue: CardWebHost(card: card, session: session, fill: fill))
     }
     private var messages: [PhoneJSON] { card.isPast ? card.value["messages"].list : session.threads[card.id]?["messages"].list ?? [] }
     private var reachable: Bool { session.contact == "in-reach" }
+    private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && PhoneCard.canSendReply(reply) }
 
     var body: some View {
         ScrollView {
@@ -237,9 +235,10 @@ private struct PhoneCardPane: View {
                     }.accessibilityIdentifier("card-thread")
                 }
                 if card.takesReplies && !card.isPast {
-                    HStack(alignment: .bottom, spacing: PhoneTheme.space2) {
+                    HStack(alignment: .bottom, spacing: 0) {
                         TextField("Reply to this card", text: $reply, axis: .vertical).lineLimit(1...5)
-                            .textFieldStyle(.phone).focused($replyFocused).accessibilityIdentifier("card-reply")
+                            .padding(.leading, PhoneTheme.space4).padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
+                            .focused($replyFocused).accessibilityIdentifier("card-reply")
                         Button {
                             perform {
                                 let text = reply
@@ -252,10 +251,12 @@ private struct PhoneCardPane: View {
                                 threadOpen = true; replyFocused = false
                             }
                         } label: {
-                            Label("Send reply", systemImage: "arrow.up").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                        }.buttonStyle(.bordered).accessibilityIdentifier("send-reply")
-                            .disabled(host.changing || !session.canChange || !host.drawn || !PhoneCard.canSendReply(reply))
-                    }
+                            Label("Send reply", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
+                                .foregroundStyle(canSendReply ? PhoneTheme.accent : PhoneTheme.muted)
+                                .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }.accessibilityIdentifier("send-reply")
+                            .disabled(!canSendReply)
+                    }.phoneInput()
                     if reply.utf16.count > PhoneLimits.reply { Text("Keep your reply within \(PhoneLimits.reply.formatted()) characters.").foregroundStyle(PhoneTheme.warning) }
                 }
             }
@@ -283,6 +284,7 @@ private struct PhoneCardPane: View {
         .onAppear { connectHost(); readThread() }
         .onChange(of: session.contact) { _, contact in if contact == "in-reach" { readThread(); markSeen() } }
         .onChange(of: phase) { _, phase in if phase == .active { markSeen() } }
+        .onChange(of: visible) { _, visible in if visible { markSeen() } }
         .sheet(isPresented: Binding(get: { host.presentation != nil }, set: { if !$0 { host.presentation = nil } })) {
             if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
         }
@@ -325,7 +327,7 @@ private struct PhoneCardPane: View {
     }
     private func connectHost() { host.onReading = onReading; host.onDrawn = markSeen }
     private func markSeen() {
-        guard !card.isPast, host.drawn, reachable, phase == .active else { return }
+        guard !card.isPast, host.drawn, reachable, visible, phase == .active else { return }
         onSeen()
         if let offer = card.offerID { Task { _ = try? await session.ask(.seen, [.string(card.id), .string(offer)]) } }
     }

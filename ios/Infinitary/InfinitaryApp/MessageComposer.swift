@@ -26,6 +26,10 @@ struct MessageComposer: View {
             : AnyLayout(VStackLayout(spacing: 0))
     }
 
+    private var canSend: Bool {
+        session.canChange && !sending && !loading && !(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty)
+    }
+
     struct Photo: Identifiable {
         let id = UUID()
         let data: Data
@@ -36,13 +40,14 @@ struct MessageComposer: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if let turn = session.lastTurn {
+                // Two bare lines, as the Mac hangs them above its input: the captain's words, then the reply.
                 turnLayout {
-                    Text(turn.you.isEmpty ? "You sent photos" : "“\(turn.you)”")
+                    Group { turn.you.isEmpty ? Text("You sent photos") : quoted(turn.you) }
                         .foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("last-turn-you")
-                    Text(turn.reply.map { "“\($0.text)”" } ?? "Working…")
+                    Group { turn.reply.map { quoted($0.text) } ?? Text("Working…").foregroundStyle(PhoneTheme.muted) }
                         .foregroundStyle(turn.reply?.problem == true ? PhoneTheme.warning : PhoneTheme.text)
                         .accessibilityIdentifier("last-turn-reply")
-                }.font(PhoneFont.caption).lineLimit(compact ? 1 : 2).multilineTextAlignment(.center)
+                }.font(PhoneFont.caption).lineLimit(1).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
             // AnyLayout moves the same controls; neither rotation nor a tab creates a second draft.
@@ -60,21 +65,22 @@ struct MessageComposer: View {
                         }
                     }.frame(maxWidth: compact ? 96 : .infinity).disabled(sending)
                 }
-                HStack(alignment: .center, spacing: PhoneTheme.space2) {
+                HStack(alignment: .bottom, spacing: 0) {
                     PhotosPicker(selection: $selection, maxSelectionCount: max(1, PhoneLimits.images - photos.count), matching: .images) {
                         Label("Photos", systemImage: "photo").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                     }.disabled(loading || sending || photos.count >= PhoneLimits.images).accessibilityIdentifier("add-photos")
                     TextField("Give your first mate a task", text: $text, axis: .vertical)
                         .lineLimit(1...(compact ? 2 : 4)).focused($focused).disabled(sending)
+                        .padding(.vertical, PhoneTheme.space2).frame(minHeight: 44)
                         .accessibilityIdentifier("message-box")
                     Button { send() } label: {
-                        Label("Send", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        Label("Send", systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly).imageScale(.large)
+                            .foregroundStyle(canSend ? PhoneTheme.accent : PhoneTheme.muted)
+                            .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                     }.keyboardShortcut(.return, modifiers: .command)
-                        .disabled(!session.canChange || sending || loading || (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && photos.isEmpty))
+                        .disabled(!canSend)
                         .accessibilityIdentifier("send-message")
-                }.padding(.horizontal, PhoneTheme.space2)
-                    .background(.regularMaterial, in: Capsule())
-                    .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+                }.phoneInput(floating: true)
             }
             if loading { ProgressView("Adding photos…") }
             if sending { ProgressView("Sending…") }
@@ -84,9 +90,15 @@ struct MessageComposer: View {
             if let problem {
                 Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("message-problem")
             }
-        }.font(PhoneFont.callout).padding(compact ? PhoneTheme.space2 : PhoneTheme.space3)
+        }.font(PhoneFont.callout).padding(.top, compact ? PhoneTheme.space2 : PhoneTheme.space3)
             .frame(maxWidth: 750).frame(maxWidth: .infinity)
             .task(id: selection) { await loadPhotos() }
+    }
+
+    /// Quotation marks in the faintest ink, so even a bare "Got it" reads as something said.
+    private func quoted(_ words: String) -> Text {
+        let open = Text(verbatim: "“").foregroundStyle(PhoneTheme.muted), close = Text(verbatim: "”").foregroundStyle(PhoneTheme.muted)
+        return Text("\(open)\(words)\(close)")
     }
 
     private func send() {

@@ -7,7 +7,9 @@ Native colors, spacing and radii are generated from the shared tokens; cards use
 The launch screen is the shared void in each appearance, so the first frame is already the app's own surface, never pure white or black.
 Every sheet title is inline in Space Grotesk at the headline size, as the joined computer's name is, never the system's large bold title.
 The paste and computer sheets sit on the panel color with a hairline at their edge.
-A plain field, such as a card's reply, the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
+A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
+A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
+That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
 The app follows the device's appearance; it never presents message bubbles.
 
 ## Joining and the computer
@@ -40,7 +42,9 @@ Activity is newest first on both devices, following the captain's submitted answ
 A row has a semantic kind dot, the computer-authored words, an optional task key in mono before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
-Cards shows one card at a time, with a peek of the next card at its right edge and a previous/next pager below it, including a menu of titles, a new-card dot and count; an ordinary arrival never replaces the card being read.
+Cards shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
+The count opens a menu of the current titles, then Past cards; the next chevron carries a dot while an unread card lies ahead.
+The Cards tab carries the native badge with the count of cards not yet read.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
 Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
 The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet.
@@ -66,8 +70,8 @@ A stopped or lost connection clears that reading; until a new busy event arrives
 Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.
 
 The conversation owner puts the message box at the foot on every tab, with the last turn's two lines above it.
-The footer grows with the message, photos, last turn and problems, above the measured native tabs.
-On iOS 26 it uses native glass; on iOS 18 it is a plain inset.
+One capsule floats alone above the measured native tabs and grows with the message, photos, last turn and problems; no panel sits behind it.
+On iOS 26 the capsule is native glass over the system's soft scroll edge; on iOS 18 it is the field's fill and hairline, with the page color fading in behind it.
 The fixed-height system tab accessory is not used for multi-line content.
 In the landscape sidebar layout it sits at the stage's foot.
 The message box stays mounted once, so its own text and photo drafts survive changing tabs or rotating; no tab or orientation branch owns another copy.
@@ -88,7 +92,8 @@ The panel says the phone app comes from TestFlight for now, only to people asked
 ## Talk and tasks
 
 The joined screen keeps the message box at its foot above the system tabs, with the last captain turn and the first mate’s reply immediately above it.
-The two turn excerpts are centred; the message field, Photos and Send sit in a native material capsule.
+The last turn is two bare centred lines, one each, with no border, fill or padding: the captain's words in the secondary ink, the reply in the primary ink, each inside quotation marks in the muted ink.
+The message field, Photos and Send sit inside the one capsule, Send at its right edge and dimmed until there is something to send.
 The native multiline field takes the keyboard’s dictation; there is no second microphone or speech engine.
 Photos opens the system library picker, and selected photos appear as removable thumbnail chips above the field.
 Send submits words and photos once; a refusal keeps the draft and says why, and an unconfirmed send asks the person to check the Mac before sending again.
@@ -100,5 +105,7 @@ A task opens its record in the same column: goal, captain’s words, progress, o
 The record's heading is the task's own title, with its key in mono at the start of the line below; the bar above it carries no key.
 Start and Continue follow the Mac’s own allowed moves; Steer sends to that crewmate, and Interrupt stops only its current turn.
 A closed task remains readable without a message box or action bar.
-New cards and answered replies announce themselves in a dismissible in-app notice while the phone is open, following the Mac’s Notifications switch.
+New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
+The notice is a quiet pill under the title on every tab: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
+A tap opens the card on the Cards tab and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.
 No notice requests background delivery, and an initial snapshot does not announce old cards.

@@ -8,6 +8,13 @@ public struct ActivityLine: Decodable, Sendable {
     public let at: Double
 }
 
+/// One card's arrival: a new card, or its author's answer to the captain's reply.
+public struct PhoneNotice: Equatable, Sendable {
+    public let cardID: String
+    public let title: String
+    public let reply: Bool
+}
+
 /// All product content is in memory. Only the joined computer's public routing facts persist.
 @MainActor @Observable public final class ReadOnlySession {
     public private(set) var mac: JoinedMac
@@ -24,7 +31,10 @@ public struct ActivityLine: Decodable, Sendable {
     public private(set) var firstmateBusy = false
     public private(set) var workRevision = 0
     public private(set) var access = "read"
-    public var notice: String?
+    public var notice: PhoneNotice?
+    /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
+    public private(set) var seenCards = Set<String>()
+    public var unreadCards: Int { cards.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {
         if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
@@ -55,6 +65,7 @@ public struct ActivityLine: Decodable, Sendable {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var calls: [Int: (Bool, CheckedContinuation<Data, Error>)] = [:]
     @ObservationIgnored private var notified: [String: Bool] = [:]
+    @ObservationIgnored private var awaited = Set<String>()
     @ObservationIgnored private var primed = false
     private let initialReads = [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
 
@@ -120,21 +131,33 @@ public struct ActivityLine: Decodable, Sendable {
 
     private func clearContent() {
         cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false
-        threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]
-        notified = [:]; primed = false; workRevision += 1
+        threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
+        notified = [:]; awaited = []; primed = false; workRevision += 1
+    }
+
+    /// Reading a card ends the notice about it.
+    public func markSeen(_ card: PhoneCard) {
+        seenCards.insert(card.offerID ?? card.id)
+        if notice?.cardID == card.id { notice = nil }
     }
 
     private func observeCards(_ snapshot: [PhoneCard]) {
         let live = snapshot.filter { $0.awaiting == nil || $0.sentBackAt != nil }
         let news = live.filter { primed && (notified[$0.id] == nil || (notified[$0.id] == true && $0.awaiting == nil)) }
+        // A card that waited on its author after the captain's reply returns as a reply: one the stage
+        // kept while it waited, or one that left the stage and was awaiting the answer.
+        let reply = news.last.map { notified[$0.id] == true || awaited.contains($0.id) } ?? false
         notified = Dictionary(uniqueKeysWithValues: live.map { ($0.id, $0.awaiting != nil) })
+        awaited = Set(snapshot.filter { $0.awaiting == "answer" || ($0.awaiting != nil && awaited.contains($0.id)) }.map(\.id))
         primed = true
         guard let newest = news.last, contact == "in-reach" else { return }
         let current = generation
         Task {
             let enabled = try? await request(.notifications, as: Bool.self)
             guard enabled == true, current == generation, contact == "in-reach" else { return }
-            notice = newest.title
+            // A new card the stage drew while this question was out is already read.
+            if !reply && seenCards.contains(newest.offerID ?? newest.id) { return }
+            notice = PhoneNotice(cardID: newest.id, title: newest.title, reply: reply)
         }
     }
 
@@ -293,7 +316,7 @@ public struct ActivityLine: Decodable, Sendable {
                   let seq = frame["seq"] as? Int, seq >= 0,
                   let catchUp = frame["catchUp"] as? String, ["replay", "reload"].contains(catchUp)
             else { throw PhoneError.invalidReply }
-            if catchUp == "reload" { self.sequence = seq; primed = false; notified = [:] }
+            if catchUp == "reload" { self.sequence = seq; primed = false; notified = [:]; awaited = [] }
             access = frame["access"] as? String == "full" ? "full" : "read"
             self.epoch = epoch
             refused = 0

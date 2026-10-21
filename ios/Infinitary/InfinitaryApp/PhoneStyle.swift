@@ -15,6 +15,25 @@ extension TextFieldStyle where Self == PhoneFieldStyle {
     static var phone: PhoneFieldStyle { PhoneFieldStyle() }
 }
 
+/// The Mac's input: one shape holding its field and send arrow, a pill at one line and a rounded rectangle taller.
+/// Floating at the foot it is native glass on iOS 26; elsewhere it is the app's field fill and hairline.
+private struct PhoneInputSurface: ViewModifier {
+    let floating: Bool
+    private let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            if floating { content.glassEffect(.regular, in: shape) } else { plain(content) }
+        } else { plain(content) }
+    }
+    private func plain(_ content: Content) -> some View {
+        content.background(PhoneTheme.panel, in: shape).overlay { shape.strokeBorder(PhoneTheme.line) }
+    }
+}
+
+extension View {
+    func phoneInput(floating: Bool = false) -> some View { modifier(PhoneInputSurface(floating: floating)) }
+}
+
 extension View {
     /// A sheet's title, inline in the app's own type, drawn as the joined computer's name is.
     func phoneTitle(_ title: String) -> some View {

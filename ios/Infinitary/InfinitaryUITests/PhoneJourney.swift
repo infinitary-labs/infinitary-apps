@@ -377,7 +377,7 @@ import XCTest
         let boundary = "effect refused · network refused · parent refused · native refused"
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForExistence(timeout: 20), app.debugDescription)
         // INF-209's native card chrome promises 44-point touch targets, not padding outside a tiny button.
-        for id in ["close-card", "previous-card", "next-card", "card-pager", "past-cards"] {
+        for id in ["close-card", "previous-card", "next-card", "card-pager"] {
             let control = app.descendants(matching: .any).matching(identifier: id).firstMatch
             // Accessibility geometry can represent 44 as 43.999999999999986.
             XCTAssertGreaterThanOrEqual(control.frame.width + 0.001, 44, id)
@@ -465,6 +465,11 @@ import XCTest
         app.buttons["close-card"].tap()
         _ = try await home("show-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForExistence(timeout: 10))
+        app.buttons["close-card"].tap()
+        // INF-589 item 7: the answered card is listed under Past cards in the pager's own menu.
+        showCard(choice)
+        XCTAssertTrue(app.staticTexts["Past"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.label, "Past card")
         app.buttons["close-card"].tap()
 
         showCard(chart)
@@ -737,9 +742,16 @@ import XCTest
         XCTAssertTrue(allWrites.contains { $0["channel"] as? String == "inf:task:run" && ($0["args"] as? [String])?.last == "continue-task" })
         picture("crewmate-steered")
         app.buttons["close-record"].tap()
-        tab("Cards")
-        XCTAssertTrue(app.staticTexts["phone-notice"].waitForExistence(timeout: 10))
+        // INF-589 item 6: the notice is a quiet pill under the title on any tab, and a tap opens its card.
+        let notice = app.buttons["phone-notice"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 10))
         picture("foreground-notice")
+        let noticed = notice.label
+        notice.tap()
+        XCTAssertTrue(notice.waitForNonExistence(timeout: 10))
+        let heading = app.staticTexts["card-title"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 10))
+        XCTAssertTrue(noticed.hasSuffix(": " + heading.label), "The notice \(noticed) opens its own card, not \(heading.label)")
         input.tap(); input.typeText("Keep this unsent draft")
         _ = try await home("offline")
         XCTAssertTrue(app.staticTexts["Out of reach"].waitForExistence(timeout: 20))

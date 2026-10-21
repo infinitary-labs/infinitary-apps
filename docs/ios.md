@@ -74,7 +74,8 @@ Neither reconnection nor discovery queues or retries a mutation.
 ## Cards on the phone
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
-It keeps one shown card with a next-card peek, a lower pager, a title menu and unread indicators.
+It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles and then a Past cards section.
+The session keeps which offers the stage drew while the person could see it, so the Cards tab's badge counts unread cards and the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
 Form and reply drafts live only in memory and survive paging.
@@ -120,14 +121,15 @@ The phone containment review is in `docs/live-prototype-security.md`, “Phone c
 `PhoneWorkspace` supplies a stage, an optional Tasks view and an optional composer, with no draft or record state of its own.
 The composition installs `PhoneCards(session:)`, `PhoneTasks(session:)` and `MessageComposer(session:)` together.
 The composer stays mounted once, preserving its own text and photo state across tab and orientation changes; the shell never copies it into a tab or layout branch.
-In compact-height iPhone landscape, `AnyLayout` puts the last-turn excerpts side by side and the removable photo strip beside the message capsule, retaining one field and its complete draft.
+In compact-height iPhone landscape, `AnyLayout` puts the last-turn lines side by side and the removable photo strip beside the message capsule, retaining one field and its complete draft.
 The field displays up to two lines there, the controls retain 44-point targets, and warnings remain full-length; portrait and iPad keep the stacked arrangement.
 The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft above the tabs.
 Card and task owners keep their selected records and replies.
 `PhoneMessageContext` carries only the shown current or past card, the Cards tab’s visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
-One content-sized footer overlays the tab container above the measured native bar, with each tab reserving its measured height; no native bar height is guessed.
+One content-sized footer floats over the tab container above the measured native bar, with each tab reserving its measured height; no native bar height is guessed.
 Only a tab bar attached to the same window contributes clearance; the iPad's top tabs leave a detached legacy bar whose stale frame must not move the footer.
-It uses native glass on iOS 26 and a plain surface on iOS 18.
+No panel sits behind it: the last turn is two bare lines over the message capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
+On iOS 26 each tab reserves that height as a safe-area bar, so the system's soft scroll edge sits behind the footer; on iOS 18 the page color fades in behind it.
 While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.
@@ -173,7 +175,9 @@ Every request has one connection-bound response and a bounded wait; a disconnect
 The phone retains the draft, asks the captain to check the Mac, and never queues or retries a mutation after reconnecting.
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
 
-A new card or an answered reply raises a dismissible in-app notice while the app is open, after reading the Mac’s Notifications switch.
+A new card or an answered reply raises an in-app notice while the app is open, after reading the Mac’s Notifications switch.
+The notice is a pill under the title on every tab, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
+A reply notice leaves after five seconds unless VoiceOver is running; a new-card notice stays until its card is read or the pill is swiped, and no pill points at the card already on the stage.
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
 Background stops the connection and clears the notice; there is no background notification service or push relay.
 
@@ -302,7 +306,7 @@ Its talk-and-tasks section chooses a project-owned picture from the disposable p
 It searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
-It also checks the foreground notice, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
+It also checks that the foreground notice opens its own card, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.

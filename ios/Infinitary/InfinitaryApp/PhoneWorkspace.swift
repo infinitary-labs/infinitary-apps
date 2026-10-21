@@ -27,6 +27,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     let tasks: Tasks?
     let composer: Composer?
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var viewport = CGSize.zero
     @State private var selection = 0
     @State private var messageContext = PhoneMessageContext()
@@ -52,6 +54,24 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
                     .padding(.bottom, tabClearance)
             }
+            .overlay(alignment: .top) {
+                ZStack {
+                    // The card already on the stage needs no pill pointing at it.
+                    if let notice = session.notice, !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
+                        PhoneNoticePill(notice: notice, open: {
+                            selection = 0; session.showCardID = notice.cardID; session.notice = nil
+                        }, dismiss: { session.notice = nil })
+                        .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                    }
+                }.animation(.snappy, value: session.notice)
+            }
+            .task(id: session.notice) {
+                // A reply notice leaves on its own; one about a new card waits until it is read or swiped.
+                guard let notice = session.notice, notice.reply, !voiceOver else { return }
+                try? await Task.sleep(for: .seconds(5))
+                if session.notice == notice { session.notice = nil }
+            }
         .environment(messageContext)
         .onChange(of: wide || selection == 0, initial: true) { _, visible in messageContext.cardsVisible = visible }
         .background {
@@ -66,7 +86,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         if let composer {
             composer
                 .fixedSize(horizontal: false, vertical: true)
-                .modifier(PhoneFooterSurface())
+                .background(alignment: .bottom) { PhoneFooterBackdrop() }
                 .accessibilityElement(children: .contain).accessibilityIdentifier("phone-composer")
                 .padding(.horizontal, PhoneTheme.space4)
                 .padding(.bottom, PhoneTheme.space2)
@@ -100,21 +120,22 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         // A landscape iPad always shows the stage, without losing the compact tab selection.
         TabView(selection: Binding(get: { wide ? 0 : selection }, set: { if !wide { selection = $0 } })) {
             stageAndSidebar
-                .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: footerSpace) }
+                .modifier(PhoneFooterSpace(height: footerSpace))
                 .toolbar(wide ? .hidden : .visible, for: .tabBar)
                 .tabItem { Label { Text("Cards") } icon: { PhoneSymbol.cards.image } }.tag(0)
+                .badge(session.unreadCards)
             ScrollView {
                 PhoneActivity(lines: session.activity)
                     .padding(PhoneTheme.space4).frame(maxWidth: 750).frame(maxWidth: .infinity)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: footerSpace) }
+            .modifier(PhoneFooterSpace(height: footerSpace))
             .background(PhoneTheme.background)
             .accessibilityIdentifier("activity-list")
             .toolbar(wide ? .hidden : .visible, for: .tabBar)
             .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
             if let tasks {
                 tasks
-                    .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: footerSpace) }
+                    .modifier(PhoneFooterSpace(height: footerSpace))
                     .toolbar(wide ? .hidden : .visible, for: .tabBar)
                     .tabItem { Label { Text("Tasks") } icon: { PhoneSymbol.tasks.image } }.tag(2)
             }
@@ -122,15 +143,63 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     }
 }
 
-/// The system's fixed-height tab accessory clips a multi-line composer, so the growing footer
-/// uses native glass above the measured tab bar on iOS 26 and an opaque native footer on iOS 18.
-private struct PhoneFooterSurface: ViewModifier {
+/// Each tab keeps the floating footer's height clear. On iOS 26 that space is a bar, so the system's
+/// soft scroll edge sits behind the last turn and the capsule instead of a drawn panel.
+private struct PhoneFooterSpace: ViewModifier {
+    let height: CGFloat
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            content.glassEffect(.regular, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius))
+            content.safeAreaBar(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
         } else {
-            content.background(PhoneTheme.panel, in: RoundedRectangle(cornerRadius: PhoneTheme.cardRadius))
+            content.safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
         }
+    }
+}
+
+/// The system's fixed-height tab accessory clips a multi-line composer, so the growing footer floats above the measured tabs.
+/// Only the composer's own capsule is drawn; on iOS 18 the page color fades in behind it so scrolled rows never run under its words.
+private struct PhoneFooterBackdrop: View {
+    var body: some View {
+        if #available(iOS 26, *) { Color.clear } else {
+            LinearGradient(stops: [.init(color: PhoneTheme.background.opacity(0), location: 0), .init(color: PhoneTheme.background, location: 0.35)],
+                startPoint: .top, endPoint: .bottom)
+                .padding(.horizontal, -PhoneTheme.space4).padding(.bottom, -PhoneTheme.space2).allowsHitTesting(false)
+        }
+    }
+}
+
+/// A quiet pill under the title: what arrived and the card's title. A tap opens the card; a swipe dismisses it.
+private struct PhoneNoticePill: View {
+    let notice: PhoneNotice
+    let open: () -> Void
+    let dismiss: () -> Void
+    @State private var drag = CGSize.zero
+
+    var body: some View {
+        Button(action: open) {
+            HStack(spacing: PhoneTheme.space2) {
+                Text(notice.reply ? "Reply" : "New card").textCase(.uppercase).font(PhoneFont.micro).tracking(1)
+                    .foregroundStyle(PhoneTheme.accent).fixedSize()
+                Text(notice.title).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).lineLimit(1)
+            }
+            .padding(.horizontal, PhoneTheme.space4).frame(minHeight: 44)
+            .background(PhoneTheme.surface, in: Capsule())
+            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+            .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain).frame(maxWidth: 560)
+        .offset(x: drag.width, y: min(0, drag.height))
+        .highPriorityGesture(DragGesture(minimumDistance: 12)
+            .onChanged { drag = $0.translation }
+            .onEnded { value in
+                if value.translation.height < -16 || abs(value.translation.width) > 60 { dismiss() }
+                else { withAnimation(.snappy) { drag = .zero } }
+            })
+        .accessibilityLabel("\(notice.reply ? "Reply" : "New card"): \(notice.title)")
+        .accessibilityHint("Opens the card")
+        .accessibilityAction(named: "Dismiss", dismiss)
+        .accessibilityIdentifier("phone-notice")
     }
 }
 

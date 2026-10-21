@@ -201,14 +201,6 @@ struct PhoneView: View {
                     .padding(PhoneTheme.space3).frame(maxWidth: .infinity, alignment: .leading)
                     .background(PhoneTheme.panel).accessibilityIdentifier("reach-notice")
             }
-            if let notice = session.notice {
-                HStack {
-                    Text(notice).accessibilityIdentifier("phone-notice")
-                    Spacer()
-                    Button("Dismiss") { session.notice = nil }
-                }.font(PhoneFont.callout).padding().background(PhoneTheme.surface)
-                    .accessibilityElement(children: .contain)
-            }
             PhoneWorkspace(session: session, stage: PhoneCards(session: session),
                 tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
                 .id(session.mac.deviceID)

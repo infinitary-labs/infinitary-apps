@@ -123,8 +123,11 @@ test("a task record opened on an empty stage keeps one height from its first vis
     const key = board.tasks.find((task) => task.id === "steady-crew-0")?.key;
     if (!key) throw new Error("The seeded task steady-crew-0 is missing");
     // Every frame, the stage shell's laid-out height (the arrival's scale does
-    // not touch it) and whether the stage has revealed the shown entry (it holds
-    // an unready one at opacity 0).
+    // not touch it) and whether the shown entry is on screen. Its computed
+    // opacity, not its inline style: the stage holds an unready entry at inline
+    // opacity 0, and an arrival animation would override that (INF-709: the
+    // captain saw the card "first shows ... didn't have full content drawn yet,
+    // then the card disappeard, then it shows up again fully filled").
     await page.evaluate(() => {
       const w = window as unknown as {
         __shell: { visible: boolean; height: number; title: string }[];
@@ -135,7 +138,7 @@ test("a task record opened on an empty stage keeps one height from its first vis
         const entry = shell?.querySelector<HTMLElement>(':scope > [data-stage-entry="shown"]');
         if (shell && entry)
           w.__shell.push({
-            visible: entry.style.opacity !== "0",
+            visible: Number(getComputedStyle(entry).opacity) > 0,
             height: shell.offsetHeight,
             title:
               shell.querySelector<HTMLElement>("[data-record-title]")?.textContent?.trim() ?? "",

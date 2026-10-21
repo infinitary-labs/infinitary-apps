@@ -56,6 +56,12 @@ export function StageEntry({
   const [reveal] = useState(
     () => role === "shown" && enabled && (!initial || initialSurfacePainted),
   );
+  // The arrival plays when the entry first comes into sight. An unready shown
+  // entry is held at inline opacity 0, which the arrival's animation would
+  // override: it would fade in undrawn, vanish when the animation ends, then
+  // appear again once ready (INF-709).
+  const [arrived, setArrived] = useState(ready);
+  if (ready && !arrived) setArrived(true);
   const [bodyDrawn, setBodyDrawn] = useState(false);
   const onDrawn = useCallback(() => setBodyDrawn(true), []);
   useEffect(() => {
@@ -67,7 +73,7 @@ export function StageEntry({
         <div
           data-stage-entry={role}
           data-stage-entry-id={entryId}
-          data-stage-reveal={reveal ? "entrance" : "static"}
+          data-stage-reveal={reveal && arrived ? "entrance" : "static"}
           inert={role !== "shown" || !ready}
           aria-hidden={role === "shown" && ready ? undefined : true}
           data-window-region={role === "shown" ? "card" : undefined}

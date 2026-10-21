@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-record-opens-once",
+      "kind": "fix",
+      "title": "A task's card opens once, already filled in",
+      "body": "Opening a task from Tasks could show an empty card for a moment, hide it, then show it again filled in. The card now stays hidden until it is ready and appears once, with its details already drawn.",
+      "area": "tasks",
+      "noPicture": "The fix removes a brief empty card; the finished card looks the same as before.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -157,6 +157,16 @@ jobs:
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete
+      # Keep diagnostics independently of screenshot-heavy xcresult bundles,
+      # so a failed gate can be diagnosed within the workflow reader's limits.
+      - name: Keep the small native command logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-logs
+          path: ${{ runner.temp }}/phone/**/*.log
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Keep native results and connection readings
         if: always()
         uses: actions/upload-artifact@v4

@@ -411,6 +411,11 @@ import XCTest
         XCTAssertTrue(element.isHittable, app.debugDescription)
     }
 
+    private func waitUntilEnabled(_ element: XCUIElement) {
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, app.debugDescription)
+    }
+
     private func verifyCards() async throws {
         let fixture = try await home("cards-fixture")
         let choice = try XCTUnwrap(fixture["choice"] as? String)
@@ -633,7 +638,11 @@ import XCTest
         let fallback = try XCTUnwrap(fixture["fallback"] as? String)
         showCard(saved)
         let useSaved = app.buttons["card-action-saved"]
-        reveal(useSaved); picture("saved-sign-in-choice"); useSaved.tap()
+        reveal(useSaved)
+        // INF-621: the failed iPad picture caught the footer before its body drew.
+        // A hittable button can still be disabled; wait for the real action gate.
+        waitUntilEnabled(useSaved)
+        picture("saved-sign-in-choice"); useSaved.tap()
         XCTAssertTrue(cardHeading(saved).waitForNonExistence(timeout: 10))
         let accepted = try await home("card-state", method: "GET")
         let savedPast = try XCTUnwrap(accepted["saved"] as? [String: Any])

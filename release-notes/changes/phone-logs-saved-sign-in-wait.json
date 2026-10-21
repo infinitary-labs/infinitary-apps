@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-logs-saved-sign-in-wait",
+      "reason": "Internal CI: the phone check keeps its command logs in their own small artifact apart from the large result bundles, and the native journey waits for the saved-sign-in action to become enabled before tapping it."
+    }
+  ]
+}

@@ -23,7 +23,7 @@ import {
   personalPanelRemovedLine,
   standingInstructionLine,
 } from "../personal/panelLines";
-import { mountOf } from "../personal/panelMounts";
+import { mountOf, surfaceWord } from "../personal/panelMounts";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
 import { boundTool, stringEnum } from "../session/tools";
 
@@ -149,30 +149,15 @@ function surfaceView(
 /**
  * A surface's state as the window last answered for it
  * (docs/personal-panels.md, "Placed on the rail"), never read off the
- * layout: a panel the layout places can still be refused, off its rail or
- * stopped. With no answer for it, the layout's hidden is still a fact; a
- * shown one is not, so it says the window has not answered.
+ * layout: a panel the layout places can still be refused, off its rail,
+ * stopped, or folded or gathered into its rail's More row for room. With
+ * no answer for it, the layout's hidden is still a fact; a shown one is
+ * not, so it says the window has not answered.
  */
 export function surfaceState(surface: SurfaceView, mounts: PanelMounts | null): string {
   const mount = mounts ? mountOf(mounts, surface.id, surface.kind) : undefined;
   if (!mount) return surface.hidden ? "hidden" : "no word from the window";
-  const why = mount.why ? `: ${mount.why}` : "";
-  switch (mount.state) {
-    case "drawn":
-      return "drawn";
-    case "collapsed":
-      return "drawn, collapsed";
-    case "loading":
-      return "loading";
-    case "stopped":
-      return `stopped drawing${why}`;
-    case "off":
-      return `off its rail${why}`;
-    case "hidden":
-      return "hidden";
-    case "refused":
-      return `refused by the window${why}`;
-  }
+  return surfaceWord(mount);
 }
 
 /**

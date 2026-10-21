@@ -17,6 +17,7 @@ import { pluginHost } from "./host";
 import { PanelHeaderButtons } from "./PanelHeaderButtons";
 import { pushPanelFocus } from "./panelCards";
 import { panelRail, type RailSaid, summaryLine, useRailSaid } from "./panelRail";
+import { railFolds, useRailFolds } from "./railFolds";
 import { railRoom } from "./railRoom";
 import { railStore, useBodyFocusAsk, usePanelCollapsed, useRailLayout } from "./railStore";
 import { SaidLine } from "./SaidLine";
@@ -47,7 +48,10 @@ export function Rail({
   const layout = useRailLayout();
   const [, setSaidVersion] = useState(0);
   useEffect(() => panelRail.subscribe(() => setSaidVersion((version) => version + 1)), []);
-  const [room, setRoom] = useState({ folded: new Set<string>(), hidden: new Set<string>() });
+  // The ladder's folds live in one store, which the window's answer about
+  // its panels reads too (./railFolds.ts); a rail no longer drawn folds nothing.
+  const room = useRailFolds(side);
+  useEffect(() => () => railFolds.clear(side), [side]);
   const bodyHeights = useRef(new Map<string, number>());
   useLayoutEffect(() => {
     const rail = root.current;
@@ -93,13 +97,7 @@ export function Rail({
         "[data-side-panel-body], [data-side-panel-body] > *, [data-side-panel-body] iframe",
       ))
         observer.observe(element);
-      const next = railRoom(readings, height, gap, header, layout.panelOrder?.[0]);
-      setRoom((before) =>
-        [...before.folded].join("\0") === [...next.folded].join("\0") &&
-        [...before.hidden].join("\0") === [...next.hidden].join("\0")
-          ? before
-          : next,
-      );
+      railFolds.note(side, railRoom(readings, height, gap, header, layout.panelOrder?.[0]));
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
@@ -123,7 +121,7 @@ export function Rail({
       mutations.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [panels, layout]);
+  }, [panels, layout, side]);
   const hidden = panels.filter((panel) => room.hidden.has(panel.id));
   return (
     <div data-rail={side} ref={root}>

@@ -7,7 +7,8 @@ import type { PanelMount, PanelMountKind, PanelMounts } from "@shared/personal/m
  * crewmate's `place_panel` waits on it and the Firstmate's surfaces list
  * reads it. Null until a window has answered, which every reader says as
  * "no word from the window", never as drawn. A plain module, so an e2e
- * spec reads `mountLine`'s words from their owner (docs/e2e-contracts.md).
+ * spec reads `mountLine`'s and `surfaceWord`'s words from their owner
+ * (docs/e2e-contracts.md).
  */
 export class PanelMountsHolder {
   private latest: PanelMounts | null = null;
@@ -68,7 +69,11 @@ export function mountLine(mount: PanelMount): string {
     case "drawn":
       return `drawn on ${rail}`;
     case "collapsed":
-      return `on ${rail}, folded to its header (the captain collapsed it), so its body is out of sight`;
+      return `on ${rail}, collapsed to its header as the captain's layout has it, so its body is out of sight`;
+    case "folded":
+      return `on ${rail}, folded to its header for room: the rail is too short for its body beside the panels around it, so its body is out of sight until the window has room`;
+    case "gathered":
+      return `in the More row at the foot of ${rail}: the rail is too short even for its header, so nothing of it is on screen until the captain chooses it there or the window has room`;
     case "loading":
       return `on ${rail}, its module still loading`;
     case "stopped":
@@ -79,5 +84,30 @@ export function mountLine(mount: PanelMount): string {
       return "kept off the rails: the captain's layout hides it";
     case "refused":
       return `refused${why}`;
+  }
+}
+
+/** One panel as the window answered for it, in the first mate's surfaces list (`surfaceState`). */
+export function surfaceWord(mount: PanelMount): string {
+  const why = mount.why ? `: ${mount.why}` : "";
+  switch (mount.state) {
+    case "drawn":
+      return "drawn";
+    case "collapsed":
+      return "drawn, collapsed";
+    case "folded":
+      return "folded to its header for room (the rail is too short for its body)";
+    case "gathered":
+      return "in the More row at its rail's foot (the rail is too short for its header)";
+    case "loading":
+      return "loading";
+    case "stopped":
+      return `stopped drawing${why}`;
+    case "off":
+      return `off its rail${why}`;
+    case "hidden":
+      return "hidden";
+    case "refused":
+      return `refused by the window${why}`;
   }
 }

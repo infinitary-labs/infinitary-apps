@@ -24,7 +24,9 @@ import type { SidePanelContribution } from "./contributions";
 import { createPanelSlot } from "./createPanelSlotStore";
 import type { PluginHost } from "./host";
 import { panelRail, type RailSaid } from "./panelRail";
+import { railFolds } from "./railFolds";
 import { type RailRefusal, railRefusals, refusalKey } from "./railRefusals";
+import type { RailRoom } from "./railRoom";
 import { railStore } from "./railStore";
 
 /**
@@ -32,7 +34,8 @@ import { railStore } from "./railStore";
  * the rail"): for every panel it knows, whether it drew it, and if not why,
  * read from the same records the rails draw from - the registered panels,
  * the captain's layout, what each panel's own code said, what refused one,
- * and how each of the captain's own bodies fared. Sent to the core whenever
+ * how each of the captain's own bodies fared, and what each rail folded or
+ * gathered into its More row for room. Sent to the core whenever
  * it changes, where a crewmate's `place_panel` waits on it and the
  * Firstmate's surfaces list reads it.
  */
@@ -46,6 +49,8 @@ export type MountFacts = {
   bodies: ReadonlyMap<string, PanelBodyState>;
   said: (id: string) => RailSaid;
   isCollapsed: (id: string) => boolean;
+  /** What a rail's room ladder did, as `Rail.tsx` last measured it (./railFolds.ts). */
+  room: (side: RailSide) => RailRoom;
   /** The create-your-own-panel slot: drawn, or why not. */
   slot: { shows: true } | { shows: false; why: string };
 };
@@ -100,7 +105,13 @@ function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
     if (!body || body.version !== base.version) return { ...base, state: "loading", why: null };
     if (body.state === "stopped") return { ...base, state: "stopped", why: cut(body.why) };
   }
+  // Room comes after the panel's own word: a rail folds or gathers only a
+  // panel it draws, and a header gathered into More is off the rail whatever
+  // its collapse choice.
+  const room = facts.room(rail);
+  if (room.hidden.has(panel.id)) return { ...base, state: "gathered", why: null };
   if (facts.isCollapsed(panel.id)) return { ...base, state: "collapsed", why: null };
+  if (room.folded.has(panel.id)) return { ...base, state: "folded", why: null };
   return { ...base, state: "drawn", why: null };
 }
 
@@ -205,6 +216,7 @@ export function startPanelMounts(
       bodies: panelBodies.list(),
       said: (id) => panelRail.get(id),
       isCollapsed: (id) => railStore.isCollapsed(id),
+      room: (side) => railFolds.of(side),
       slot: slotNow(layout),
     });
     const text = JSON.stringify(panels);
@@ -230,6 +242,7 @@ export function startPanelMounts(
   const offs = [
     host.sidePanels.subscribe(follow),
     railStore.subscribe(changed),
+    railFolds.subscribe(changed),
     railRefusals.subscribe(changed),
     panelBodies.subscribe(changed),
     panelRail.subscribe(changed),

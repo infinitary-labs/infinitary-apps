@@ -7,7 +7,13 @@ import type { PluginSource } from "./manifest";
  * Firstmate's surfaces list read, instead of guessing from the layout.
  *
  * - `drawn`: on its rail, open, its body drawn;
- * - `collapsed`: on its rail, folded to its header;
+ * - `collapsed`: on its rail, collapsed to its header, as the captain's
+ *   layout has it;
+ * - `folded`: on its rail, folded to its header by the window, because the
+ *   rail is too short for its body (docs/ui-plugins.md, "When a rail runs
+ *   out of room");
+ * - `gathered`: in its rail's More row, off the rail itself, because the
+ *   rail is too short even for its header;
  * - `loading`: on its rail, its module still importing;
  * - `stopped`: on its rail, its body threw or would not import;
  * - `off`: registered, but nothing on the rail - its presence rule finds
@@ -18,6 +24,8 @@ import type { PluginSource } from "./manifest";
 export const PANEL_MOUNT_STATES = [
   "drawn",
   "collapsed",
+  "folded",
+  "gathered",
   "loading",
   "stopped",
   "off",

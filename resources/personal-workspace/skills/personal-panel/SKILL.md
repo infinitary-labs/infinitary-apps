@@ -340,16 +340,21 @@ Two places, and the skill for the data source you need (`github-prs`, `quota`,
 - `place_panel` puts your version on the captain's own rail and answers with
   what his window did with it: drawn, or why not - another panel already holds
   its id, its module would not import, its body threw, its presence rule finds
-  nothing to show, his layout hides it. Then `capture_panel` again photographs
-  it docked, as he sees it. Place it and look at it before every report, the
-  first build and every change.
+  nothing to show, his layout hides it, or his rail is too short and folded it
+  to its header or gathered it into the rail's More row. Then `capture_panel`
+  again photographs it docked, as he sees it. Place it and look at it before
+  every report, the first build and every change.
 
-If the window drew it, report in one line what the panel does. If it did not
-and the reason is in your files, fix them and place again; an id another panel
-holds is a folder to rename. If the reason is outside your files - his layout,
-his panels switched off - never move, hide or remove his other panels. Report
-in plain words that the panel is built but not on his rail, and why, with
-`waiting_on_captain`, so the task waits for him instead of closing as done.
+If the window drew it, report in one line what the panel does. If it folded it
+for room or gathered it into the More row, the panel is built and on his rail,
+which is only too short to show it all: report what the panel does and where
+it sits, and never collapse, move or hide his other panels to make room. If it
+did not draw it and the reason is in your files, fix them and place again; an
+id another panel holds is a folder to rename. If the reason is outside your
+files - his layout, his panels switched off - never move, hide or remove his
+other panels. Report in plain words that the panel is built but not on his
+rail, and why, with `waiting_on_captain`, so the task waits for him instead of
+closing as done.
 
 ## What is refused
 

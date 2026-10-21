@@ -10,7 +10,10 @@ import { BUILTIN_PLUGIN_ID } from "./builtin/manifest";
 import { PluginHost } from "./host";
 import { noteMountSnapshot, readPanelMounts, startPanelMounts } from "./panelMounts";
 import { panelRail } from "./panelRail";
+import { railFolds } from "./railFolds";
 import { railRefusals } from "./railRefusals";
+import { type RailRoomPanel, railRoom } from "./railRoom";
+import { railStore } from "./railStore";
 
 /**
  * The window's answer about its panels (INF-607, docs/personal-panels.md
@@ -59,6 +62,7 @@ function answer(host: PluginHost, snapshot: PersonalSnapshot, layout: Layout = D
     bodies: panelBodies.list(),
     said: (id) => panelRail.get(id),
     isCollapsed: (id) => id === "folded",
+    room: (side) => railFolds.of(side),
     slot: { shows: false, why: "it shows once his third task has finished" },
   });
 }
@@ -74,6 +78,9 @@ describe("the window's answer about its panels", () => {
     plugins = null;
     builtin?.();
     builtin = null;
+    railFolds.clear("left");
+    railFolds.clear("right");
+    railStore.reset();
   });
 
   it("names a panel of the captain's refused for an id the app's panel holds, apart from that panel, and draws it under a new id", () => {
@@ -155,6 +162,89 @@ describe("the window's answer about its panels", () => {
       rail: "left",
       why: "it shows once his third task has finished",
     });
+  });
+
+  it("names the panels a short rail folded for room or gathered into More, as the rail measured them, apart from drawn ones", async () => {
+    // INF-711: the report reads the rail's own ladder (railFolds, written by
+    // Rail.tsx's measure), never a second room calculation. Five clocks on
+    // the left rail, as tests/e2e/rail-overflow.spec.ts docks them, the
+    // farthest top one collapsed by the captain.
+    const host = new PluginHost();
+    plugins = new PersonalPlugins(host, () => {});
+    const ids = ["clock-0", "clock-1", "clock-2", "clock-3", "clock-4"];
+    const collapsed = "clock-3";
+    const snapshot: PersonalSnapshot = {
+      extensions: ids.map((id, order) =>
+        view({ id, order, placement: { x: "left", y: id === "clock-4" ? "bottom" : "top" } }),
+      ),
+    };
+    plugins.apply(snapshot);
+    for (const id of ids) panelBodies.note(id, { version: VERSION, state: "drawn" });
+    railStore.toggleCollapsed(collapsed);
+    // The rail's readings: a 40 px header (INF-609's measure), the design
+    // skill's four-row body minimum (tokens/rails.css), a 12 px gap.
+    const readings: RailRoomPanel[] = ids.map((id) => ({
+      id,
+      end: id === "clock-4" ? "bottom" : "top",
+      header: 40,
+      body: 124,
+      collapsed: id === collapsed,
+      pinned: false,
+    }));
+    const sent: PanelMounts[] = [];
+    const stop = startPanelMounts(host, {
+      reportMounts: async (mounts) => {
+        sent.push(mounts);
+      },
+    });
+    const states = () =>
+      Object.fromEntries(
+        (sent.at(-1)?.panels ?? [])
+          .filter((mount) => ids.includes(mount.id))
+          .map((mount) => [mount.id, mount.state]),
+      );
+    try {
+      noteMountSnapshot(snapshot);
+      await Promise.resolve();
+      railFolds.note("left", railRoom(readings, 400, 12, 40));
+      await Promise.resolve();
+      // Room for headers but not every body: the middle folds, the rest draw.
+      expect(states()).toEqual({
+        "clock-0": "folded",
+        "clock-1": "folded",
+        "clock-2": "folded",
+        "clock-3": "collapsed",
+        "clock-4": "drawn",
+      });
+      const short = railRoom(readings, 150, 12, 40);
+      railFolds.note("left", short);
+      await Promise.resolve();
+      // Not even every header: the gathered ones are in More, the captain's
+      // collapsed one too, and the folded ones keep their headers.
+      expect(short.hidden).toContain(collapsed);
+      expect(states()).toEqual(
+        Object.fromEntries(ids.map((id) => [id, short.hidden.has(id) ? "gathered" : "folded"])),
+      );
+      expect(Object.values(states())).toContain("folded");
+      // Room comes back: every body draws again, and the collapse stays his.
+      railFolds.note("left", railRoom(readings, 1000, 12, 40));
+      await Promise.resolve();
+      expect(states()).toEqual({
+        "clock-0": "drawn",
+        "clock-1": "drawn",
+        "clock-2": "drawn",
+        "clock-3": "collapsed",
+        "clock-4": "drawn",
+      });
+      // The other rail's folds are not this rail's.
+      railFolds.note("right", { folded: new Set(["clock-0"]), hidden: new Set(["clock-1"]) });
+      await Promise.resolve();
+      expect(states()["clock-0"]).toBe("drawn");
+      expect(states()["clock-1"]).toBe("drawn");
+    } finally {
+      stop();
+      noteMountSnapshot({ extensions: [] });
+    }
   });
 
   it("sends the answer once per change of it, coalesced", async () => {

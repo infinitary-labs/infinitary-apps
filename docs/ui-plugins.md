@@ -664,7 +664,7 @@ A hidden panel is skipped, not unregistered, so "show tasks again" is a record d
 
 **Surfaces have ids.**
 `src/shared/surfaces.ts` declares the app's own panels once (`activity` "Activity", `now` "Tasks", with their default placements); the built-in manifest declares its side panels FROM it, and the first mate's context block gains a bounded "your surfaces" section (`FirstmateAgent.renderSurfaces`, with `renderSurfacesSection` in `src/core/pi/personalizeTool.ts` its plain-text form): the theme, each app panel, each personal extension from Step 2's snapshot (marked `(yours)`, capped at twelve with a count for the rest) with its effective rail, position and state, and how many standing instructions the captain skill holds.
-The state is the window's own word on the panel (`surfaceState`: drawn, collapsed, loading, stopped, off, hidden or refused, with the reason), never read from the layout alone, and "no word from the window" until a window has answered (`docs/personal-panels.md`, "Placed on the rail").
+The state is the window's own word on the panel (`surfaceState`: drawn, collapsed, folded for room, in its rail's More row, loading, stopped, off, hidden or refused, with the reason), never read from the layout alone, and "no word from the window" until a window has answered (`docs/personal-panels.md`, "Placed on the rail").
 `personalize` resolves a surface by that id (a title is accepted too) and refuses an unknown one WITH the list, never guessing.
 
 **The tool** (`createPersonalizeTool`): `theme` (dark|light; an already-set theme is text, no feed line); `panel` (surface plus any of rail, position, visible; a move back to the panel's own placement deletes the record; a move onto either rail is allowed however many panels it holds); `remove` (an app panel is hidden and every record about it forgotten - it cannot leave; a personal extension leaves the workspace through `PersonalExtensions.remove`: `git rm` and one commit under the app's identity, its store slice cleared, the snapshot pushed without it, which is what unregisters the panel); `instruction` (one line appended to the captain skill, below).
@@ -764,5 +764,6 @@ That move persists in the optional layout `panelOrder` list, most recently picke
 Missing order means the panel’s declared order and id as before, and a reset removes that panel from the list.
 The More row participates in F6 as a panel region, and its menu takes arrows and Escape.
 The narrow-window fold and each panel’s own presence remain independent.
+The ladder's folds are kept in one window store (`railFolds.ts`), written by the rail's measure and cleared when the rail is not drawn; the rail draws from it, and the window's answer about its panels reads it to name a panel `folded` or `gathered` (`docs/personal-panels.md`, "Placed on the rail").
 
 The most recent More choice keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.

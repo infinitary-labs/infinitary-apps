@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { MIN_BACKGROUND_INTERVAL_MS, type PersonalSnapshot } from "@shared/personal/manifest";
+import type { PanelMountState } from "@shared/personal/mounts";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CoreEventSink } from "../events";
@@ -719,7 +720,7 @@ describe("PersonalExtensions builds apart from the rails", () => {
  * and each panel of the captain's with the state the test gives.
  */
 describe("PersonalExtensions places a build on the rail", () => {
-  type WindowWord = { state: "drawn" | "refused"; why: string | null };
+  type WindowWord = { state: PanelMountState; why: string | null };
   const APP_ACTIVITY = {
     id: "activity",
     kind: "app",
@@ -888,6 +889,62 @@ describe("PersonalExtensions places a build on the rail", () => {
       service.endLiveTask("t-live");
       await service.refresh();
       expect(service.snapshot().extensions[0]?.panel?.version).toBe(committed);
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("says where a short rail put a placed panel: folded for room, or gathered into More with no picture to take", async () => {
+    // INF-711: a panel the rail folded or gathered is built and on the
+    // captain's rail; the crewmate hears where it sits, never "drawn".
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-short", title: "Build a clock", status: "running" });
+    let word: WindowWord = { state: "folded", why: null };
+    const window = windowFor(() => word);
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      mounts: window.mounts,
+      emit: (channel, payload) => {
+        h.emit(channel, payload);
+        if (channel === "inf:plugins:personal") window.answer(payload as PersonalSnapshot);
+      },
+      // The window has no box for a panel gathered into More, as for any
+      // panel it does not show.
+      capture: {
+        capturePanel: async () =>
+          word.state === "gathered"
+            ? null
+            : { png: Buffer.from("89504e47", "hex"), width: 300, height: 40 },
+      },
+    });
+    try {
+      service.beginLiveTask("t-short");
+      h.write("fresh/panel.tsx", PANEL);
+      const folded = renderPlaceText(await service.place("t-short"));
+      expect(folded).toContain(
+        "The window says it is on the left rail, folded to its header for room",
+      );
+      expect(folded).not.toContain("drawn");
+      const header = await service.capture("fresh", "t-short");
+      expect(header).toMatchObject({
+        ok: true,
+        photographed: "docked",
+        window: { state: "folded" },
+      });
+      expect(renderCaptureText(header)).toContain("folded to its header for room");
+
+      word = { state: "gathered", why: null };
+      h.write("fresh/panel.tsx", `${PANEL}\n// smaller rows`);
+      const gathered = renderPlaceText(await service.place("t-short"));
+      expect(gathered).toContain(
+        "The window says it is in the More row at the foot of the left rail",
+      );
+      const capture = await service.capture("fresh", "t-short");
+      expect(capture).toMatchObject({ ok: false, id: "fresh" });
+      expect(capture.ok ? "" : capture.reason).toContain(
+        '"fresh" is not on screen: in the More row at the foot of the left rail',
+      );
     } finally {
       service.dispose();
     }

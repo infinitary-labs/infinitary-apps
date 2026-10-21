@@ -8,6 +8,9 @@ export type RailRoomPanel = {
   pinned: boolean;
 };
 
+/** The panels a rail folds to their headers, and the ones it hides into its More row. */
+export type RailRoom = { folded: ReadonlySet<string>; hidden: ReadonlySet<string> };
+
 /** INF-609: fold the middle, then reserve one More header for those that cannot fit. */
 export function railRoom(
   panels: readonly RailRoomPanel[],
@@ -15,7 +18,7 @@ export function railRoom(
   gap: number,
   moreHeight: number,
   picked?: string,
-) {
+): RailRoom {
   const folded = new Set<string>();
   const hidden = new Set<string>();
   const top = panels.filter((panel) => panel.end === "top");

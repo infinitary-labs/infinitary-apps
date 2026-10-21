@@ -294,6 +294,42 @@ describe("the your-surfaces section", () => {
     expect(lines).toHaveLength(1 + 3 + SURFACES_CONTEXT_LIMIT + 1 + 1);
   });
 
+  it("says which panels a short rail folded for room or gathered into its More row, apart from drawn ones", () => {
+    // INF-711: the window's answer names the rail's room ladder, so the
+    // first mate can say where a panel went instead of calling it drawn.
+    const clocks: PersonalSnapshot = {
+      extensions: ["Tokyo", "Paris", "Sydney"].map((title, index) =>
+        extension(`clock-${index}`, title),
+      ),
+    };
+    const mount = (id: string, state: "drawn" | "folded" | "gathered") =>
+      ({ id, kind: "personal", version: "v0", state, rail: "right", why: null }) as const;
+    const lines = renderSurfacesSection(
+      {
+        appearance: { theme: "dark" },
+        layout: { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
+        panels: { enabled: true, offReason: null },
+      },
+      clocks,
+      0,
+      STABLE,
+      {
+        panels: [
+          mount("clock-0", "drawn"),
+          mount("clock-1", "folded"),
+          mount("clock-2", "gathered"),
+        ],
+      },
+    );
+    expect(lines).toContain('- clock-0 "Tokyo" (yours): right rail, top; drawn');
+    expect(lines).toContain(
+      '- clock-1 "Paris" (yours): right rail, top; folded to its header for room (the rail is too short for its body)',
+    );
+    expect(lines).toContain(
+      `- clock-2 "Sydney" (yours): right rail, top; in the More row at its rail's foot (the rail is too short for its header)`,
+    );
+  });
+
   it("derives every surface's effective placement from the layout", () => {
     const surfaces = listSurfaces(
       { collapsedPanels: {}, hiddenPanels: {}, placements: { now: { x: "left", y: "top" } } },

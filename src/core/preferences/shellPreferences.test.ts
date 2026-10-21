@@ -152,3 +152,19 @@ describe("ShellPreferencesService", () => {
     ).toEqual({ value: JSON.stringify({ version: 2, keys: {} }) });
   });
 });
+
+it("INF-609: a lasting More move survives unrelated layout writes and clearing removes only that panel", () => {
+  const { service, settings } = setup();
+  service.setLayout({
+    collapsedPanels: {},
+    hiddenPanels: {},
+    placements: {},
+    panelOrder: ["now", "activity"],
+  });
+  service.setPanelHidden("activity", true);
+  service.setPanelPlacement("now", { x: "left", y: "bottom" });
+  expect(settings.getLayout().panelOrder).toEqual(["now", "activity"]);
+  service.clearPanel("now");
+  expect(settings.getLayout().panelOrder).toEqual(["activity"]);
+  expect(settings.getLayout().hiddenPanels.activity).toBe(true);
+});

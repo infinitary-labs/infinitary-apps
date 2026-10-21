@@ -28393,6 +28393,14 @@
                 "y"
               ]
             }
+          },
+          "panelOrder": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
           }
         },
         "required": [
@@ -28466,6 +28474,14 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "panelOrder": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
               }
             },
             "required": [
@@ -28533,6 +28549,14 @@
                 "x",
                 "y"
               ]
+            }
+          },
+          "panelOrder": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
             }
           }
         },
@@ -28708,6 +28732,14 @@
                     "x",
                     "y"
                   ]
+                }
+              },
+              "panelOrder": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
                 }
               }
             },
@@ -50008,6 +50040,14 @@
                     "x",
                     "y"
                   ]
+                }
+              },
+              "panelOrder": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
                 }
               }
             },

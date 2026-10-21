@@ -1,3 +1,4 @@
+@import "./rails.css";
 /* Firstmate 3000 — spacing scale (4px base). Generous whitespace is the default; density is the exception. */
 :root{
   --space-1:4px;

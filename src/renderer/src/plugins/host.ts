@@ -220,7 +220,18 @@ export function placeSidePanels(
         ? panel
         : { ...panel, preferredPlacement: applied };
     })
-    .sort(bySidePanelPlacement);
+    .sort((a, b) => {
+      const group = RAIL_Y_RANK[a.preferredPlacement.y] - RAIL_Y_RANK[b.preferredPlacement.y];
+      if (group) return group;
+      const priority = (id: string) => {
+        const at = layout.panelOrder?.indexOf(id) ?? -1;
+        return at < 0 ? Number.POSITIVE_INFINITY : at;
+      };
+      const rankA = priority(a.id);
+      const rankB = priority(b.id);
+      const order = rankA === rankB ? 0 : rankA < rankB ? -1 : 1;
+      return (a.preferredPlacement.y === "top" ? order : -order) || bySidePanelPlacement(a, b);
+    });
   return {
     left: placed.filter((panel) => panel.preferredPlacement.x === "left"),
     right: placed.filter((panel) => panel.preferredPlacement.x === "right"),

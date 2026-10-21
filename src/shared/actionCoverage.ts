@@ -108,6 +108,10 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<Record<CoreInvokeChannel, Record<s
     usageUnit:
       "A view choice inside Settings → Usage, switched there or by Switch Usage units in command search",
   },
+  "inf:settings:layout:set": {
+    panelOrder:
+      "The captain's More-menu move saves rail order; the first mate's panel action changes rail and end, not order",
+  },
   "inf:settings:decisions:set": {
     version: "Stored format version, not a control",
     egress: "Outbound consent stays captain-only in Settings",

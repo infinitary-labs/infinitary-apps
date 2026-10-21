@@ -130,7 +130,14 @@ export class ShellPreferencesService {
       delete collapsedPanels[panelId];
       delete hiddenPanels[panelId];
       delete placements[panelId];
-      return { collapsedPanels, hiddenPanels, placements };
+      return {
+        collapsedPanels,
+        hiddenPanels,
+        placements,
+        ...(layout.panelOrder
+          ? { panelOrder: layout.panelOrder.filter((id) => id !== panelId) }
+          : {}),
+      };
     });
   }
 

@@ -77,6 +77,7 @@ const panelIdSchema = z.string().min(1).max(64);
  * - `collapsedPanels`: the header-only state (`DEFAULT_COLLAPSED_PANELS`).
  * - `hiddenPanels`: `true` keeps the panel off its rail entirely, whatever
  *   its data says - the rail stays zero-width for it. "hide tasks".
+ * - `panelOrder`: optional most-recent More picks first, nearest each anchored end.
  * - `placements`: which rail and which end of it, overriding the panel's
  *   `preferredPlacement`. "put activity on the right".
  *
@@ -88,6 +89,8 @@ export const layoutSchema = z.strictObject({
   collapsedPanels: z.record(panelIdSchema, z.boolean()),
   hiddenPanels: z.record(panelIdSchema, z.boolean()).default({}),
   placements: z.record(panelIdSchema, sidePanelPlacementSchema).default({}),
+  /** Most recently chosen in More first; nearest its anchored end within its group. */
+  panelOrder: z.array(panelIdSchema).optional(),
 });
 export type Layout = z.infer<typeof layoutSchema>;
 

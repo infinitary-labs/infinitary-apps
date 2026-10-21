@@ -1,6 +1,14 @@
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import type { RailSide } from "@shared/plugins/manifest";
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { RowMenu } from "../design/core/RowMenu";
 import { hasShellPainted } from "../design/reveals";
 import { CreatePanelSlot } from "./CreatePanelSlot";
 import type { PanelSource, SidePanelContribution } from "./contributions";
@@ -8,8 +16,9 @@ import { FrameMount } from "./frames/FrameMount";
 import { pluginHost } from "./host";
 import { PanelHeaderButtons } from "./PanelHeaderButtons";
 import { pushPanelFocus } from "./panelCards";
-import { type RailSaid, summaryLine, useRailSaid } from "./panelRail";
-import { railStore, useBodyFocusAsk, usePanelCollapsed } from "./railStore";
+import { panelRail, type RailSaid, summaryLine, useRailSaid } from "./panelRail";
+import { railRoom } from "./railRoom";
+import { railStore, useBodyFocusAsk, usePanelCollapsed, useRailLayout } from "./railStore";
 import { SaidLine } from "./SaidLine";
 import { SidePanelChrome } from "./SidePanelChrome";
 
@@ -34,12 +43,139 @@ export function Rail({
   /** The shell's theme, pushed into every frame the rail mounts. */
   theme: FrameTheme;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  const layout = useRailLayout();
+  const [, setSaidVersion] = useState(0);
+  useEffect(() => panelRail.subscribe(() => setSaidVersion((version) => version + 1)), []);
+  const [room, setRoom] = useState({ folded: new Set<string>(), hidden: new Set<string>() });
+  const bodyHeights = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const rail = root.current;
+    if (!rail) return;
+    let frame = 0;
+    const measure = () => {
+      const style = getComputedStyle(rail);
+      const px = (name: string) => Number.parseFloat(style.getPropertyValue(name)) || 0;
+      const gap = px("row-gap");
+      // Resolve design tokens through a physical probe, including calc() and zoom.
+      const probe = document.createElement("div");
+      probe.style.cssText =
+        "position:absolute;visibility:hidden;height:var(--rail-body-min-height);width:var(--rail-header-height)";
+      rail.append(probe);
+      const minimum = probe.getBoundingClientRect().height;
+      const header = probe.getBoundingClientRect().width;
+      probe.remove();
+      const readings = panels.flatMap((panel) => {
+        const node = rail.querySelector<HTMLElement>(`[data-side-panel="${CSS.escape(panel.id)}"]`);
+        if (!node || node.hasAttribute("data-side-panel-off-rail")) return [];
+        const body = node.querySelector<HTMLElement>("[data-side-panel-body]");
+        if (body && !body.hidden && !node.hidden)
+          bodyHeights.current.set(panel.id, body.scrollHeight);
+        const natural = bodyHeights.current.get(panel.id) ?? minimum;
+        return [
+          {
+            id: panel.id,
+            end: panel.preferredPlacement.y,
+            header,
+            body: Math.min(natural, minimum + px("--space-4")),
+            collapsed: railStore.isCollapsed(panel.id),
+            pinned: layout.collapsedPanels[panel.id] === false,
+          },
+        ];
+      });
+      const slot = rail.querySelector<HTMLElement>("[data-create-panel-slot]:not([hidden])");
+      const height =
+        rail.clientHeight -
+        px("padding-top") -
+        px("padding-bottom") -
+        (slot ? slot.offsetHeight + gap : 0);
+      for (const element of rail.querySelectorAll(
+        "[data-side-panel-body], [data-side-panel-body] > *, [data-side-panel-body] iframe",
+      ))
+        observer.observe(element);
+      const next = railRoom(readings, height, gap, header, layout.panelOrder?.[0]);
+      setRoom((before) =>
+        [...before.folded].join("\0") === [...next.folded].join("\0") &&
+        [...before.hidden].join("\0") === [...next.hidden].join("\0")
+          ? before
+          : next,
+      );
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(rail);
+    const mutations = new MutationObserver((changes) => {
+      if (changes.some((change) => change.target !== rail)) schedule();
+    });
+    mutations.observe(rail, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["data-side-panel-off-rail"],
+    });
+    measure();
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [panels, layout]);
+  const hidden = panels.filter((panel) => room.hidden.has(panel.id));
   return (
-    <div data-rail={side}>
+    <div data-rail={side} ref={root}>
       {side === "left" && <CreatePanelSlot />}
       {panels.map((panel) => (
-        <PanelMount key={panel.id} panel={panel} theme={theme} />
+        <PanelMount
+          key={panel.id}
+          panel={panel}
+          theme={theme}
+          folded={room.folded.has(panel.id)}
+          overflow={room.hidden.has(panel.id)}
+        />
       ))}
+      {hidden.length > 0 && (
+        <div data-rail-more="" data-window-region="panel">
+          <RowMenu
+            label="Panels folded for room"
+            word={`${hidden.length} more`}
+            items={hidden.map((panel) => ({
+              id: panel.id,
+              label: panel.title,
+              detail: panelRail
+                .get(panel.id)
+                .summary?.map((part) => ("text" in part ? part.text : part.line))
+                .join(" · "),
+              onSelect: () => {
+                railStore.promote(panel.id);
+                requestAnimationFrame(() =>
+                  document
+                    .querySelector<HTMLButtonElement>(
+                      `[data-side-panel="${CSS.escape(panel.id)}"] header button[aria-expanded]`,
+                    )
+                    ?.focus(),
+                );
+              },
+            }))}
+          />
+          <span data-rail-more-titles="">{hidden.map((panel) => panel.title).join(" · ")}</span>
+          <svg
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            style={{ flexShrink: 0, marginLeft: "auto", color: "var(--fg-3)" }}
+          >
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -58,11 +194,22 @@ function focusPanelFrame(id: string): void {
     ?.focus({ preventScroll: true });
 }
 
-function PanelMount({ panel, theme }: { panel: SidePanelContribution; theme: FrameTheme }) {
+function PanelMount({
+  panel,
+  theme,
+  folded,
+  overflow,
+}: {
+  panel: SidePanelContribution;
+  theme: FrameTheme;
+  folded: boolean;
+  overflow: boolean;
+}) {
   const content = useSyncExternalStore(panel.source.subscribe, panel.source.get, panel.source.get);
   const running = panel.running ?? notRunning;
   const busy = useSyncExternalStore(running.subscribe, running.get, running.get) === true;
-  const collapsed = usePanelCollapsed(panel.id);
+  const chosenCollapsed = usePanelCollapsed(panel.id);
+  const collapsed = chosenCollapsed || folded;
   const [reveal, setReveal] = useState(hasShellPainted);
   // Asked by F6 to take focus (railStore.askBodyFocus): the window gives
   // the panel's frame focus, as a click on it would, and asks the panel
@@ -85,14 +232,17 @@ function PanelMount({ panel, theme }: { panel: SidePanelContribution; theme: Fra
   const summary = collapsed && speaks ? said.summary : null;
   const toggle = () => {
     setReveal(true);
-    railStore.toggleCollapsed(panel.id);
+    if (folded) railStore.expand(panel.id);
+    else railStore.toggleCollapsed(panel.id);
   };
   if (content === null) return null;
   return (
     <SidePanelChrome
       id={panel.id}
-      hidden={offRail}
-      keepBody={speaks}
+      hidden={offRail || overflow}
+      offRail={offRail}
+      folded={folded}
+      keepBody={speaks || folded || overflow}
       title={panel.title}
       attribution={panel.attribution}
       running={busy}

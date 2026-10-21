@@ -100,7 +100,11 @@ export function RowMenu({
     const below = rect.bottom + GAP;
     const fits = below + height <= window.innerHeight - EDGE;
     const top = fits ? below : Math.max(EDGE, rect.top - GAP - height);
-    const right = window.innerWidth - rect.right;
+    const width = menu.current?.offsetWidth ?? 0;
+    const right = Math.max(
+      EDGE,
+      Math.min(window.innerWidth - rect.right, window.innerWidth - width - EDGE),
+    );
     setAnchor((prev) => (prev?.top === top && prev.right === right ? prev : { top, right }));
   }, []);
 
@@ -204,6 +208,10 @@ export function RowMenu({
               right: anchor.right,
               zIndex: 4,
               minWidth: 180,
+              maxWidth: `calc(100vw - ${EDGE * 2}px)`,
+              boxSizing: "border-box",
+              maxHeight: `calc(100vh - ${EDGE * 2}px)`,
+              overflowY: "auto",
               background: "var(--bg-2)",
               border: "1px solid var(--line-2)",
               borderRadius: "var(--radius-m)",

@@ -2,6 +2,7 @@
 @import "./tokens/colors.css";
 @import "./tokens/typography.css";
 @import "./tokens/spacing.css";
+@import "../../../../.claude/skills/infinitary-design/tokens/rails.css";
 @import "./tokens/effects.css";
 @import "./reveals.css";
 
@@ -52,7 +53,10 @@ html[data-card-stack-open] {
 }
 html[data-card-stack-open][data-prompt-on-panels]
   [data-rail]
-  > [data-side-panel][data-side-panel-collapsed][data-side-panel-placement-y="bottom"] {
+  > :is(
+    [data-side-panel][data-side-panel-collapsed][data-side-panel-placement-y="bottom"],
+    [data-rail-more]
+  ) {
   visibility: hidden;
 }
 /* Registered as lengths so HomePrompt reads them back in px: the composer's
@@ -165,7 +169,9 @@ html[data-rails-folded] {
   --occupied-rail-right: 0px;
 }
 html[data-rails-folded]
-  [data-rail]:has(> :is([data-side-panel], [data-create-panel-slot]):not([hidden])) {
+  [data-rail]:has(
+    > :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden])
+  ) {
   width: 0;
   padding: 0;
   /* Its panels are out of sight, so out of reach of F6 and Tab as well:
@@ -193,7 +199,9 @@ html[data-rails-folded]
     width var(--dur-med) var(--ease-out),
     padding var(--dur-med) var(--ease-out);
 }
-[data-rail]:not(:has(> :is([data-side-panel], [data-create-panel-slot]):not([hidden]))) {
+[data-rail]:not(
+  :has(> :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden]))
+) {
   width: 0;
   padding: 0;
 }
@@ -407,4 +415,27 @@ html[data-card-stack-open] [data-rail] {
 /* A panel that reads newest last lays its body out from the end; its page keeps its height. */
 [data-side-panel-newest-last] [data-side-panel-body] iframe {
   flex-shrink: 0;
+}
+
+/* One header-sized reachable door for panels that cannot fit. */
+[data-rail-more] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 var(--rail-header-height);
+  min-width: 0;
+  margin-top: auto;
+  padding: 0 var(--space-2);
+}
+[data-rail-more-titles] {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-side-panel-placement-y="bottom"]:not([hidden]) ~ [data-rail-more] {
+  margin-top: 0;
 }

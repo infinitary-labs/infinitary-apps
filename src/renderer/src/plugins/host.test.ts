@@ -261,3 +261,35 @@ describe("placement under the captain's layout (talk-to-personalize Step 1)", ()
     expect(host.sidePanels.get("activity")?.preferredPlacement).toEqual({ x: "left", y: "bottom" });
   });
 });
+
+describe("INF-609's lasting More move", () => {
+  it("keeps chosen panels nearest their anchored ends while preserving groups and declared defaults", () => {
+    const host = new PluginHost();
+    const input = manifestWithPanels("rail-order", [
+      { id: "first", side: "left", order: 1 },
+      { id: "middle", side: "left", order: 2 },
+      { id: "bottom-middle", side: "left", y: "bottom", order: 3 },
+      { id: "foot", side: "left", y: "bottom", order: 4 },
+    ]);
+    host.registerPlugin(parsePluginManifest(input), bindingsFor(input));
+    const panels = host.sidePanels.list();
+    const layout = {
+      collapsedPanels: {},
+      hiddenPanels: {},
+      placements: {},
+      panelOrder: ["middle", "bottom-middle"],
+    };
+    expect(placeSidePanels(panels, layout).left.map((panel) => panel.id)).toEqual([
+      "middle",
+      "first",
+      "foot",
+      "bottom-middle",
+    ]);
+    expect(placeSidePanels(panels).left.map((panel) => panel.id)).toEqual([
+      "first",
+      "middle",
+      "bottom-middle",
+      "foot",
+    ]);
+  });
+});

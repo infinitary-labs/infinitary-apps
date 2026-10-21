@@ -72,3 +72,17 @@ A 24 px `IconButton` Hide, an `--fg-3` x, sits in its top right corner and says 
 It fades in with opacity over `--dur-med`, a cut under reduced motion, and leaves as a cut, so the panel it invited takes its place without a jump.
 A click starts the ask in the message box; it never opens a card or a tip.
 It reserves card room as an expanded panel does, so a card never covers it.
+
+**When a rail runs out of room.**
+Expanded bodies keep four list rows (`--rail-body-min-height`, 124 px, owned by `tokens/rails.css`); a body whose complete content is shorter needs only its content height.
+When their shares would fall below that minimum, panels farthest from their anchored end fold to headers first: the lowest top panel or highest bottom panel, with top winning equal distances.
+An explicit expand pins that panel after unpinned panels, using the existing false collapse record, not a new setting.
+Folds are window state only and disappear when room returns.
+A folded chevron reads “Expand [title] · folded for room”.
+If headers alone cannot fit, the same middle-first order removes panels into one header-height More row at the rail’s foot, reserving room for that row too.
+The row reads “[count] more”, followed by the hidden titles in dim mono, with a trailing chevron; it has no card background.
+Its existing RowMenu lists titles and their last summaries, takes arrows and Escape, and stays inside the window with a scrolling menu when necessary.
+Choosing an item moves it nearest its anchored end, persists the priority in the layout, and focuses its header; it does not change its collapse choice.
+Tab reaches the More control and F6 treats it as part of the rail, with the usual focus ring.
+
+The most recent More choice keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.

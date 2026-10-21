@@ -8,7 +8,7 @@ The ⋯ at the end of a list row: every action the row offers, out of the glance
   {id:"disconnect",label:"Disconnect",tone:"danger"},
 ]}/>
 ```
-A 28px IconButton kebab opening a `--bg-2` popover (hairline `--line-2`, `--radius-m`, `--shadow-2`) anchored bottom-right, flipped above the kebab when it would run past the window's bottom edge (a menu is never off-screen); closes on Escape, an outside click, or a pick.
+A 28px IconButton kebab opening a `--bg-2` popover (hairline `--line-2`, `--radius-m`, `--shadow-2`) anchored bottom-right, flipped above the kebab when it would run past the window's bottom edge, clamped at either horizontal edge, and scrollable when taller than the window (a menu is never off-screen); closes on Escape, an outside click, or a pick.
 It grows from the kebab and fades out as it closes, like every popover (Motion in the readme).
 Sentence-case labels, one destructive item at most and it goes last behind the separator.
 Use it when a row would otherwise carry three or more controls; the one action that must stay inline is the one nothing moves without (a "Sign in" on a row that needs it).

@@ -70,7 +70,7 @@ const LIFTED = "data-rail-lifted";
  * The headers an input can come down onto: collapsed panels at the foot of
  * a rail that does not already end above it.
  */
-const FOOT_HEADERS = `[data-rail]:not([${LIFTED}]) > [data-side-panel][data-side-panel-collapsed][data-side-panel-placement-y="bottom"]:not([hidden])`;
+const FOOT_HEADERS = `[data-rail]:not([${LIFTED}]) > :is([data-side-panel][data-side-panel-collapsed][data-side-panel-placement-y="bottom"], [data-rail-more]):not([hidden])`;
 
 /** Set on the document while the input's foot would stand on those headers. */
 const ON_PANELS = "data-prompt-on-panels";

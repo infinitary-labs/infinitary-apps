@@ -246,3 +246,19 @@ describe("Rail", () => {
     expect(html.indexOf('data-side-panel="a"')).toBeLessThan(html.indexOf('data-side-panel="c"'));
   });
 });
+
+describe("INF-609's own expand and lasting More choice", () => {
+  it("pins an explicit expand in the existing collapse record and keeps More order through hydration", () => {
+    railStore.expand("board");
+    expect(railStore.isCollapsed("board")).toBe(false);
+    expect(railStore.layout().collapsedPanels.board).toBe(false);
+    railStore.promote("board");
+    railStore.promote("another");
+    railStore.promote("board");
+    const saved = railStore.layout();
+    railStore.reset();
+    railStore.hydrate(saved);
+    expect(railStore.layout().panelOrder).toEqual(["board", "another"]);
+    expect(railStore.isCollapsed("board")).toBe(false);
+  });
+});

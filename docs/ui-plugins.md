@@ -647,7 +647,7 @@ The e2e drives two of the three fixtures under `tests/fixtures/personal/` throug
 The third, `bad/panel.tsx`, has its `lodash` import refused with the path named, and nothing mounts for it (`src/core/personal/personalExtensions.test.ts`).
 
 Built since, by the plan's own sequencing and documented in `docs/personal-panels.md`: the component library, the skills and `pluginLint` (Step 3); the `personal` workspace kind, the crewmate brief, the stamp and the commit at turn end, `lint_panel` and `capture_panel`, the declared app-data reads, "your surfaces" and `personalize remove` (Step 4); the host-owned switch, the safe-mode boot and Observe's Panels group (Step 5, the last).
-Still ahead: the rail-cap decision.
+Rail overflow follows the measured fold ladder below.
 
 ## Preferences by talking (talk-to-personalize Step 1)
 
@@ -750,3 +750,19 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A frame panel's header press reaches its page once the page is born, drawn or not: Chromium drops focus handed to an out-of-process frame still being born, and a page that lists nothing draws nothing until the press opens something in it.
   A press the page hears before its panel listens is held for the panel's first listener.
   `tests/e2e/installed-panel-containment.spec.ts` (a hostile panel refused at every way out, a runaway torn down), `installed-panels.spec.ts` and `pluginInstaller.test.ts` are the binding tests.
+
+## When a rail runs out of room
+
+`Rail.tsx` measures the rail’s available height, excluding padding and the create-panel invitation, and reads the minimum from the design skill’s `--rail-body-min-height` token.
+`railRoom.ts` folds panels nearest the middle first, keeping an explicit expand (the existing false collapse record) until unpinned panels fold.
+Top and bottom groups keep their anchored ends; equal distances fold the top panel first.
+Bodies with less than four rows of content need only their full content height.
+A fold never writes collapse or visibility settings, and room returning restores the panel.
+When headers alone cannot fit, the ladder reserves one header for More and hides as many middle panels as needed, leaving their pages mounted.
+More uses the existing keyboard RowMenu, shows the hidden titles and their last summaries, and moves a picked panel nearest its anchored end.
+That move persists in the optional layout `panelOrder` list, most recently picked first; top groups read priorities forward and bottom groups backward.
+Missing order means the panel’s declared order and id as before, and a reset removes that panel from the list.
+The More row participates in F6 as a panel region, and its menu takes arrows and Escape.
+The narrow-window fold and each panel’s own presence remain independent.
+
+The most recent More choice keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.

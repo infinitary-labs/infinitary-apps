@@ -294,7 +294,7 @@ On a Mac F6 may need Fn, so like any key it can be changed in Keyboard settings.
 
 The parts go in the order a person reads the window:
 
-- home: the create-your-own-panel slot while it shows, then each side panel on the left rail, top to bottom; the shown card; each side panel on the right rail; then the main message;
+- home: the create-your-own-panel slot while it shows, then each side panel on the left rail, top to bottom, then its More row while present; the shown card; each side panel on the right rail and its More row; then the main message;
 - Settings: its tabs, then the open section.
 
 `moveToRegion` (`src/renderer/src/app/regions.ts`) reads the parts from the window as it stands: each part's root carries `data-window-region` with its kind (`panel`, `card`, `main-message`, `settings-tabs`, `settings-section`), painted by the code that draws it (`SidePanelChrome`, `CreatePanelSlot`, `StageEntry`, `HomePrompt`, `SettingsScreen`), so the module keeps no list of its own.
@@ -543,3 +543,10 @@ Every hint reads the installed map, the same keys the window resolves.
   A window key in an end-to-end test goes through `pressWindowKey` (`tests/e2e/windowKeys.ts`), Electron's own input path: Playwright's keyboard reaches the page through the debugger and skips `before-input-event`.
   A journey names ⌘ as `meta`, which `pressWindowKey` presses as Ctrl on Linux, so the Linux source lane runs `keyboard-routing.spec.ts` and `keyboard-regions.spec.ts` by the same keys, and the full Linux suite every other keyboard journey (`docs/testing.md`, "The Linux source desktop").
   `launchApp` returns once the window's keys are marked as the shell's, and `untilWindowCommands` waits for that mark again after a reload; `startRecording` and `endRecording` start and end Keyboard settings' recorder and return once the main process has; `typeInto` types with Playwright's keyboard only once the field it names holds the window's focus (`docs/testing.md`, "Keys wait until the app takes them").
+
+### Panels folded for room
+
+The counted More row at a rail’s foot is a panel region in the F6 walk.
+Tab reaches its control; Enter opens its menu, arrows choose a panel and Escape closes it.
+Choosing a panel writes its move nearest the anchored end of its group and focuses its header.
+An expand on a folded header pins it after the other panels in the fold order, without recording the automatic fold itself.

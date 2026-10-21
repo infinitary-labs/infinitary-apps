@@ -33,6 +33,8 @@ export type SidePanelChromeProps = {
    * mounted so its page runs on (a panel whose presence is its code's).
    */
   hidden?: boolean;
+  offRail?: boolean;
+  folded?: boolean;
   /** The body stays mounted, out of sight, while collapsed: its page keeps running. */
   keepBody?: boolean;
   children?: React.ReactNode;
@@ -61,6 +63,8 @@ export function SidePanelChrome({
   headerAction,
   headerTool,
   hidden = false,
+  offRail = false,
+  folded = false,
   keepBody = false,
   children,
 }: SidePanelChromeProps) {
@@ -70,6 +74,8 @@ export function SidePanelChrome({
     <section
       hidden={hidden}
       data-side-panel={id}
+      data-side-panel-off-rail={offRail ? "" : undefined}
+      data-side-panel-folded={folded ? "" : undefined}
       data-side-panel-size={size}
       data-side-panel-newest-last={newestLast ? "" : undefined}
       data-side-panel-placement-y={placementY}
@@ -164,7 +170,9 @@ export function SidePanelChrome({
         )}
         {headerTool}
         <IconButton
-          label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          label={
+            collapsed ? `Expand ${title}${folded ? " · folded for room" : ""}` : `Collapse ${title}`
+          }
           size={24}
           aria-expanded={!collapsed}
           onClick={onToggleCollapsed}

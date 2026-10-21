@@ -59,6 +59,7 @@ function persist(next: Layout): void {
       collapsedPanels: { ...next.collapsedPanels },
       hiddenPanels: { ...next.hiddenPanels },
       placements: { ...next.placements },
+      ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
     })
     .catch(() => {
       // The in-memory record still serves this session.
@@ -86,6 +87,7 @@ export const railStore = {
       collapsedPanels: { ...next.collapsedPanels },
       hiddenPanels: { ...next.hiddenPanels },
       placements: { ...next.placements },
+      ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
     };
     notify();
   },
@@ -97,6 +99,20 @@ export const railStore = {
     const stored = current().collapsedPanels;
     if (Object.hasOwn(stored, panelId)) return stored[panelId] === true;
     return DEFAULT_COLLAPSED_PANELS.has(panelId);
+  },
+  /** More is a lasting move to the anchored end, not a collapse or hide. */
+  promote(panelId: string): void {
+    layout = {
+      ...current(),
+      panelOrder: [panelId, ...(current().panelOrder ?? []).filter((id) => id !== panelId)],
+    };
+    persist(layout);
+    notify();
+  },
+  expand(panelId: string): void {
+    layout = { ...current(), collapsedPanels: { ...current().collapsedPanels, [panelId]: false } };
+    persist(layout);
+    notify();
   },
   toggleCollapsed(panelId: string): void {
     const next = !railStore.isCollapsed(panelId);

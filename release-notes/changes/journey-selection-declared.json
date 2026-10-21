@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-selection-declared",
+      "reason": "CI work: the pull request's journey chooser adds the journeys a change's commits name in a Journeys: trailer."
+    }
+  ]
+}

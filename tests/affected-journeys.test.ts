@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   closureOf,
+  declaredJourneys,
   holdsHook,
   holdsPhrase,
   importsOf,
@@ -501,4 +502,54 @@ it("INF-658: a JSX hook-value edit does not select a sibling screen region", () 
   expect(hooks?.has("data-prompt-dock")).toBe(true);
   expect(hooks?.has("data-character-frame")).toBe(false);
   expect(hooks?.has("data-stage-entry")).toBe(false);
+});
+
+describe("journeys a change declares (INF-631)", () => {
+  // PR #167 (run 39337683472) broke now-panel through taskFacts.ts, which no
+  // rule that reads files sees: the crewmate's Journeys: trailer names it.
+  const root = new URL("..", import.meta.url);
+  const realSpecs = readdirSync(new URL("tests/e2e/", root))
+    .filter((file) => file.endsWith(".spec.ts"))
+    .map((file) => `tests/e2e/${file}`);
+  const readReal = (file: string) => {
+    const path = new URL(file, root);
+    return existsSync(path) ? readFileSync(path, "utf8") : undefined;
+  };
+  const fixture = JSON.parse(
+    readFileSync(new URL("./fixtures/affected-journeys/39337683472.json", import.meta.url), "utf8"),
+  ) as { module: string; sourceDiff: string };
+  const change = {
+    changed: [fixture.module],
+    sourceDiff: fixture.sourceDiff,
+    specs: realSpecs,
+    read: readReal,
+  };
+
+  it("adds a declared journey no rule chose, with the declaration as its reason", () => {
+    expect(select(change).has("tests/e2e/now-panel.spec.ts")).toBe(false);
+    const reasons = select({ ...change, declared: declaredJourneys("now-panel\n") });
+    expect(reasons.get("tests/e2e/now-panel.spec.ts")).toEqual([
+      "the change's commits declare it reaches this journey",
+    ]);
+  });
+
+  it("refuses a name that is no journey rather than run nothing for it", () => {
+    expect(() => select({ ...change, declared: declaredJourneys("now-pannel.spec.ts") })).toThrow(
+      /now-pannel\.spec\.ts, which is not a journey/,
+    );
+  });
+
+  it("reads every commit's trailer, in each way a journey is named", () => {
+    // `git log --format=%(trailers:key=Journeys,valueonly)` over three commits:
+    // one trailer each, the third with none.
+    const log =
+      "now-panel.spec.ts, tests/e2e/task-crewmate.spec.ts\n\nrecord-controls panel-tasks\n\n\n";
+    expect(declaredJourneys(log)).toEqual([
+      "tests/e2e/now-panel.spec.ts",
+      "tests/e2e/task-crewmate.spec.ts",
+      "tests/e2e/record-controls.spec.ts",
+      "tests/e2e/panel-tasks.spec.ts",
+    ]);
+    expect(declaredJourneys("")).toEqual([]);
+  });
 });

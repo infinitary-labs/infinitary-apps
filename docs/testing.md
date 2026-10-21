@@ -179,7 +179,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 6. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the edited part of a file under `src/renderer/` draws before or after the change, even when the change adds or removes no hook.
    The parser uses the smallest enclosing JSX subtree plus ancestor container hooks, or the enclosing top-level declaration for non-JSX edits, following local declaration consumers.
    Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
-7. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence.
+7. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
+8. a commit of the change names the journey in a `Journeys:` trailer.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:
 
@@ -194,6 +195,18 @@ Directory paths match descendants; file paths match exactly.
 Each matched row reports its changed paths in the summary, including when existing rules already selected its files.
 A matched row with a target missing from the available specs refuses selection rather than silently omitting promised coverage.
 Documentation-only changes add no Mac files.
+
+The author of a change knows reach that no rule above reads, such as a journey that imports a module but never names what changed in it (PR #167 broke `now-panel.spec.ts` through `src/shared/taskFacts.ts` that way).
+The author names each such journey in a trailer on any of the branch's commits, separated by commas or spaces, as a file name with or without `.spec.ts` or as its path:
+
+```
+Journeys: now-panel, task-crewmate.spec.ts
+```
+
+The chooser reads the trailers of every commit between the base and the head, adds each named journey with the reason "the change's commits declare it reaches this journey", and the summary shows that reason.
+A declared journey is placed beside the screen readers, ahead of the importers of a distant shared helper.
+A name that is no journey under `tests/e2e/` fails the chooser rather than silently running nothing for it.
+A declaration only adds journeys; it never removes one a rule chose.
 
 A changed helper selects only journeys whose import closure imports one of its changed exports.
 The chooser compares top-level declarations and bodies, follows references to edited private declarations, and reads original names through import aliases.

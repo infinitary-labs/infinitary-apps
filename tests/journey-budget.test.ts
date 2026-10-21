@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { select } from "../scripts/affected-journeys.ts";
 import {
   budget,
   JOURNEY_BUDGET_MS,
@@ -103,5 +104,17 @@ describe("INF-658 measured journey placement", () => {
     expect(proximity(spec, [], new Set([spec]), read)).toBe(0);
     expect(proximity(spec, [], new Set(["tests/e2e/launch.ts"]), read)).toBe(1);
     expect(proximity(spec, [], new Set(["tests/e2e/mockProvider.ts"]), read)).toBe(2);
+    // INF-631: a journey the change declares sits beside the screen readers,
+    // ahead of a distant shared helper's importers.
+    const declared = select({
+      changed: ["src/core/tasks/taskService.ts"],
+      sourceDiff: "",
+      specs: [spec],
+      read,
+      declared: [spec],
+    }).get(spec);
+    expect(proximity(spec, declared ?? [], new Set(["src/core/tasks/taskService.ts"]), read)).toBe(
+      1,
+    );
   });
 });

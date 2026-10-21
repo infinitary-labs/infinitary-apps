@@ -32,7 +32,9 @@ import { editedScreenText, screenRanges } from "./screen-journeys.ts";
  *    edited region under `src/renderer/` draws, even when the change adds or
  *    removes none: the region owns what that hook shows; or
  * 7. its changed path matches a targeted fallback row below, even when no
- *    hook, symbol or sentence changed.
+ *    hook, symbol or sentence changed; or
+ * 8. a commit of the change names it in a `Journeys:` trailer: the author
+ *    knows the change reaches it where no rule above reads that reach.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
@@ -75,6 +77,22 @@ const FALLBACKS = [
     specs: ["automatic-placement.spec.ts"],
   },
 ] as const;
+
+/**
+ * The journeys the change's commits name in their `Journeys:` trailers, as
+ * `git log --format=%(trailers:key=Journeys,valueonly)` prints them. A name
+ * is a spec's file name with or without `.spec.ts`, or its path.
+ */
+export function declaredJourneys(trailers: string): string[] {
+  const named = trailers
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((name) => {
+      const file = name.replace(/^(?:\.\/)?(?:tests\/e2e\/)?/, "");
+      return `${E2E}/${file.endsWith(".spec.ts") ? file : `${file}.spec.ts`}`;
+    });
+  return [...new Set(named)];
+}
 
 /** Relative imports and re-exports of a TypeScript file, resolved to repository paths. */
 export function importsOf(
@@ -382,9 +400,18 @@ export type Change = {
   specs: readonly string[];
   read: (file: string) => string | undefined;
   readBefore?: (file: string) => string | undefined;
+  /** The journeys the change's commits declare they reach (`declaredJourneys`). */
+  declared?: readonly string[];
 };
 
-export function select({ changed, sourceDiff, specs, read, readBefore }: Change): Reasons {
+export function select({
+  changed,
+  sourceDiff,
+  specs,
+  read,
+  readBefore,
+  declared = [],
+}: Change): Reasons {
   const changedSet = new Set(changed);
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
   const owned = ownedHooks(changed, read, readBefore, sourceDiff);
@@ -490,6 +517,12 @@ export function select({ changed, sourceDiff, specs, read, readBefore }: Change)
       reasons.set(spec, [...(reasons.get(spec) ?? []), `targeted fallback for ${matches.join(", ")}`]);
     }
   }
+  for (const spec of declared) {
+    // A misspelt name would silently run nothing the author promised.
+    if (!available.has(spec))
+      throw new Error(`A commit's Journeys: trailer names ${spec}, which is not a journey`);
+    reasons.set(spec, [...(reasons.get(spec) ?? []), "the change's commits declare it reaches this journey"]);
+  }
   return reasons;
 }
 
@@ -523,7 +556,10 @@ export function affected(base: string, head: string): Reasons {
     }
     return beforeFiles.get(file);
   };
-  return select({ changed, sourceDiff, specs, read, readBefore });
+  const declared = declaredJourneys(
+    git(["log", "--format=%(trailers:key=Journeys,valueonly)", `${base}..${head}`]),
+  );
+  return select({ changed, sourceDiff, specs, read, readBefore, declared });
 }
 
 function main(): void {

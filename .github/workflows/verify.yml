@@ -116,10 +116,11 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
+      # No package cache on the mac lane (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ matrix.lane != 'mac' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - id: install
         run: pnpm install --frozen-lockfile

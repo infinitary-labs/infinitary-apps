@@ -113,11 +113,10 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
+      # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ !vars.PHONE_VIRTUAL_MAC && 'pnpm' || '' }}
-          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - name: Install without reading this Mac's signing material
         if: ${{ !vars.PHONE_VIRTUAL_MAC }}
         run: |

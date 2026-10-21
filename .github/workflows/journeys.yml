@@ -116,11 +116,12 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
+      # No package cache on a Mac (INF-724): a saved one is reachable only
+      # from its own branch and runner slot, so later jobs almost never read
+      # it back, and saving it took about 2 minutes; an install takes 10 s.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - id: dev-signing
         run: pnpm codesign:local

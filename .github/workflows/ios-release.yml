@@ -89,11 +89,10 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/infinitary/package.json
+      # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: Application Support/infinitary/pnpm-lock.yaml
       - id: release_request
         name: Refuse release-job reruns before installing or testing
         run: node scripts/phone-release.ts resolve

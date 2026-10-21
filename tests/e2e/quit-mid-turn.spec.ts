@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { RESTART_REPLAY_NOTE } from "../../src/core/orchestrator/wakes";
-import { type LaunchedApp, launchApp } from "./launch";
+import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import {
   FM_SYSTEM_MARKER,
@@ -32,8 +32,9 @@ test("a crewmate's turn the app closes under three times picks up again at the n
   test.setTimeout(360_000);
   const mockProvider = await startMockProvider();
   // A short grace between delivery attempts, so the work a quit left in
-  // flight is due again by the time the next launch sweeps its inbox.
-  const env = { INFINITARY_INBOX_GRACE_MS: "2000" };
+  // flight is due again by the time the next launch sweeps its inbox, and a
+  // short tick, so that sweep comes seconds after the launch, not a minute.
+  const env = { ...SHORT_TICK, INFINITARY_INBOX_GRACE_MS: "2000" };
   let app: LaunchedApp = await launchApp({ reuseMockProvider: mockProvider, env });
   /**
    * Each time the crewmate was handed its message, oldest first: its model

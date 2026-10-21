@@ -131,7 +131,7 @@ import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
 import { PrCiService } from "./orchestrator/prCi";
 import { Scheduler } from "./orchestrator/scheduler";
-import { TICK_PERIOD_MS, Ticker } from "./orchestrator/ticker";
+import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
 import { WorkflowEvidenceService } from "./orchestrator/workflowEvidence";
 import { initOverflowDir } from "./overflow";
@@ -623,8 +623,10 @@ export async function createServices(
   });
   // The host's one clock and one interval (P5, docs/architecture.md §17):
   // the watchdog, the idle ladder, the sweeps and the schedules register
-  // on it, and the stores they compare against read its clock.
-  const ticker = new Ticker();
+  // on it, and the stores they compare against read its clock. Dev/e2e may
+  // shorten its period, so a journey waiting on a pass need not wait out
+  // the minute; a packaged build always ticks at the design's.
+  const ticker = new Ticker({ periodMs: tickPeriodFor(host.app.packaged, process.env) });
   // The one task writer (task-system P0): records, keys, timeline. The
   // dev boot assertion is strict off a packaged build.
   const tasks = new TaskService({ db, repos, strict: !host.app.packaged, now: ticker.now });

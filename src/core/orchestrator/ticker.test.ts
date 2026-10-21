@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TICK_PERIOD_MS, Ticker, type TickerTimers } from "./ticker";
+import { TICK_PERIOD_MS, Ticker, type TickerTimers, tickPeriodFor } from "./ticker";
 
 /** A stand-in for the one interval: records what was scheduled and fires it on demand. */
 function manualTimers() {
@@ -87,6 +87,28 @@ describe("Ticker (one clock, P5)", () => {
     expect(() => ticker.register("never", 0, () => {})).toThrow(/whole number/);
   });
 
+  // The captain's ask (INF-724): "Let journeys shorten the app's one-minute timer, in test builds only."
+  it("on a shortened period runs every pass sooner in proportion, its cadence still counted in minutes", () => {
+    const interval = manualTimers();
+    const ticker = new Ticker({ periodMs: 2_000, timers: interval.timers });
+    const runs: string[] = [];
+    ticker.register("inbox-sweep", TICK_PERIOD_MS, () => runs.push("inbox-sweep"));
+    ticker.register("closed-task-files", 60 * TICK_PERIOD_MS, () => runs.push("closed-task-files"));
+    ticker.start();
+    expect(interval.scheduled.map((entry) => entry.ms)).toEqual([2_000]);
+
+    // The minute's pass runs on every shortened period, the hour's on every sixtieth.
+    interval.elapse();
+    expect(runs).toEqual(["inbox-sweep"]);
+    for (let tick = 1; tick < 60; tick += 1) interval.elapse();
+    expect(runs.filter((name) => name === "inbox-sweep")).toHaveLength(60);
+    expect(runs.filter((name) => name === "closed-task-files")).toHaveLength(1);
+    // A pass cannot ask for the shortened period itself: cadences stay whole minutes.
+    expect(() => ticker.register("faster", 2_000, () => {})).toThrow(
+      `a whole number of ${TICK_PERIOD_MS} ms periods`,
+    );
+  });
+
   it("starts one interval however often it is started, and stops it cleanly", () => {
     const { ticker, interval } = setup();
     const runs: number[] = [];
@@ -166,5 +188,23 @@ describe("Ticker (one clock, P5)", () => {
     const now = ticker.now();
     expect(now).toBeGreaterThanOrEqual(before);
     expect(now).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+// The captain's ask (INF-724): "Let journeys shorten the app's one-minute timer, in test builds only."
+describe("tickPeriodFor (a shorter tick in test builds only)", () => {
+  it("lets a development or end-to-end run name a shorter period", () => {
+    expect(tickPeriodFor(false, { INFINITARY_TICK_PERIOD_MS: "2000" })).toBe(2_000);
+    expect(tickPeriodFor(false, {})).toBe(TICK_PERIOD_MS);
+  });
+
+  it("keeps a packaged build on the design's minute whatever its environment names", () => {
+    expect(tickPeriodFor(true, { INFINITARY_TICK_PERIOD_MS: "2000" })).toBe(TICK_PERIOD_MS);
+  });
+
+  it("ignores a period that is not a shorter whole number of milliseconds", () => {
+    for (const named of ["", "0", "-2000", "1.5", "2s", String(2 * TICK_PERIOD_MS)]) {
+      expect(tickPeriodFor(false, { INFINITARY_TICK_PERIOD_MS: named })).toBe(TICK_PERIOD_MS);
+    }
   });
 });

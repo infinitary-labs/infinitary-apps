@@ -15,7 +15,7 @@ import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
-import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
+import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import {
   GIT_STATUS_PROMPT_MARKER,
   MOCK_GIT_REPORT_PREFIX,
@@ -65,9 +65,11 @@ const BUSY_WAIT = placementWait(
 const BUSY_MS = 6 * 60_000;
 
 /**
- * How long a task may go uncompared: one sweep, a minute on, with room. A
- * start that has not compared computers yet reads no wait words, or the
- * wait for room (PLACEMENT_WAIT).
+ * How long a task may go uncompared: one sweep, a tick on, with room. The
+ * journeys that wait for a sweep shorten the tick to seconds (`SHORT_TICK`),
+ * and the room is for a host too loaded to sweep on time. A start that has
+ * not compared computers yet reads no wait words, or the wait for room
+ * (PLACEMENT_WAIT).
  */
 const SWEEP_MS = 90_000;
 
@@ -213,10 +215,12 @@ test("a new task in an Automatic project starts on this computer from its own re
   test.setTimeout(STARTS_MS + 180_000);
   const userDataDir = scratchDir("infinitary-automatic-placement-");
   seedAutomaticProject(userDataDir);
+  const crew = seedGrokCrew(userDataDir);
   const app = await launchApp({
     userDataDir,
     withMockProvider: true,
-    ...seedGrokCrew(userDataDir),
+    ...crew,
+    env: { ...crew.env, ...SHORT_TICK },
   });
   let id: string | undefined;
   const detail = () =>
@@ -228,7 +232,7 @@ test("a new task in an Automatic project starts on this computer from its own re
 
     // Automatic committed this computer (null names the home), not a wait.
     // A start that read a busy processor, as a two-processor virtual machine
-    // can while the app itself starts, waits for the next sweep, a minute on.
+    // can while the app itself starts, waits for the next sweep, a tick on.
     await startsOnceThereIsRoom(detail, (task) => task.placement?.computerId === null);
     const here = (await detail()).placement?.candidates.find(
       (candidate) => candidate.computerId === null,
@@ -261,14 +265,14 @@ test("a new task in an Automatic project whose routing names no model starts on 
   // default, as it does for a person whose only model is a custom connection.
   // A project kept on This computer starts such a task on that default, and
   // Automatic waited for a computer with room instead (FI3-1739).
-  const app = await launchApp({ userDataDir, withMockProvider: true });
+  const app = await launchApp({ userDataDir, withMockProvider: true, env: SHORT_TICK });
   let id: string | undefined;
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
   try {
     const asked = await askForTask(app);
     id = asked.id;
-    // As above, a busy first reading starts on the next sweep, a minute on.
+    // As above, a busy first reading starts on the next sweep, a tick on.
     await startsOnceThereIsRoom(detail, (task) => task.startedAt !== null);
     await expect(ranOnItsBranch(app, asked.key)).toBeVisible({ timeout: 45_000 });
     // It ran on the default: no routing decision chose a model for it.
@@ -292,10 +296,12 @@ test("a premium ask in an Automatic project that no computer can serve waits on 
   // reset and tells Firstmate, which may offer to start it lower; Automatic
   // waited quietly instead, and with no premium model placed nothing ended
   // that wait (FI3-1744).
+  const crew = seedGrokCrew(userDataDir);
   const app = await launchApp({
     userDataDir,
     withMockProvider: true,
-    ...seedGrokCrew(userDataDir),
+    ...crew,
+    env: { ...crew.env, ...SHORT_TICK },
   });
   const mock = app.mockProvider;
   if (!mock) throw new Error("Asking Firstmate needs the mock provider");
@@ -335,7 +341,7 @@ test("a premium ask in an Automatic project that no computer can serve waits on 
 
     // Held on the premium reset, not merely queued for the next sweep. A
     // first reading that could not compare this computer asks again on the
-    // next sweep, a minute on.
+    // next sweep, a tick on.
     await expect.poll(async () => (await detail()).flags.held, { timeout: 90_000 }).toBe(true);
     expect((await detail()).status).toBe("open");
 

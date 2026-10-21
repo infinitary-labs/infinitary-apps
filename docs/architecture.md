@@ -796,6 +796,8 @@ Where the build carries the app's own git (`src/core/workspace/bundledGit.ts`), 
 Each pass registers by name and cadence (`register(name, cadence, fn)`) and runs in registration order on one reading of the clock: the quiet-turn watchdog, the ladder's reconcile with the job bound, the first mate's quiet check, the gate sweep, the inbox sweep, the first mate's drain poke, the sign-in health riders, then the schedules.
 The sessions add two more while they live: `session-bounds`, the one watcher that holds every session whose spec carries time bounds (the seat's, on either backend) to them (`src/core/session/bounds.ts`), and `claude-sessions`, Claude's rolling sessions' transcript copy and client hygiene (a client that did not exit or answer an interrupt within a tick is stopped).
 A throwing pass does not skip the rest, and every throw of a tick is raised after it; tests move that clock instead of faking `Date`.
+Cadences count the design's one-minute period (`TICK_PERIOD_MS`).
+A development or end-to-end run may shorten the interval's period with `INFINITARY_TICK_PERIOD_MS` (`tickPeriodFor`), and every pass then runs sooner in proportion, so a journey waiting on a sweep need not wait out the minute; a packaged build always ticks once a minute.
 
 `startCore(host)` (`src/core/index.ts`) builds all of it and returns `{ services, paths, events, dispatch, dispose }`; the host composes the adapters over it.
 `src/core/core.test.ts` boots the entire core under vitest - plain Node, no Electron runtime - and drives it through `dispatch` against real SQLite and real stores, with a stand-in shell, and over the connection with devices that know only the wire.

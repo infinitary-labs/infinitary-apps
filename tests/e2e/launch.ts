@@ -117,6 +117,14 @@ export function packagedEntry(appDir = builtAppDir(), devFlavor = false, version
   return entry;
 }
 
+/**
+ * The app's one-minute tick shortened to two seconds, for a journey that
+ * waits on one of its passes - a redelivery after a restart, a check's
+ * reread, a placement sweep (docs/architecture.md, "One clock"). A spec
+ * spreads it into `env`; a packaged launch ignores it.
+ */
+export const SHORT_TICK = { INFINITARY_TICK_PERIOD_MS: "2000" };
+
 export type LaunchOptions = {
   /** Emulate an installed build through packagedEntry, never the person's Keychain. */
   packaged?: boolean;

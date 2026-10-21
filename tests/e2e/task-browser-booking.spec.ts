@@ -24,7 +24,7 @@ import {
   SYNTHETIC_PASSWORD,
   startFakeAirline,
 } from "./fakeAirline";
-import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
+import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import {
   bookedNoteTitle,
@@ -618,9 +618,10 @@ for (const runtime of RUNTIMES) {
       const shoot = photographer(runtime);
       const airline = await startFakeAirline({ guest: true, lose: true });
       const mockProvider: MockProviderServer = await startMockProvider();
-      // Every run of the app spaces delivery attempts by a short grace, so the
-      // work a quit left in flight is delivered again soon after the next start.
-      const env = { INFINITARY_INBOX_GRACE_MS: "5000" };
+      // Every run of the app spaces delivery attempts by a short grace and
+      // sweeps its inbox every few seconds, so the work a quit left in flight
+      // is delivered again soon after the next start.
+      const env = { ...SHORT_TICK, INFINITARY_INBOX_GRACE_MS: "5000" };
       let app = await runtime.launch({ reuseMockProvider: mockProvider, env });
       const title = `${TASK_BROWSER_LOST_MARKER}${airline.url}pay${runtime.suffix}`;
       try {
@@ -702,8 +703,9 @@ for (const runtime of RUNTIMES) {
         });
 
         await test.step("its redelivered work finds the browser gone, checks again and asks, never paying again", async () => {
-          // The quit left the wake in flight, so the next run delivers it again,
-          // one inbox grace (shortened above) after its first delivery began (docs/inbox.md).
+          // The quit left the wake in flight, so the next run's sweep delivers it
+          // again, one inbox grace after its first delivery began (docs/inbox.md);
+          // both are shortened above.
           const current = await reported(detail, MOCK_LOST_REPORT_PREFIX, 240_000);
           expect(current.outcome).toContain(
             'My bookings said "No bookings yet. A payment may still be processing."',

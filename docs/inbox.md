@@ -20,6 +20,7 @@ A task lane has nowhere else to go, exactly as the first mate's lane has none.
   Three of those still escalate loudly and stop.
   A refusal's row is due one `INBOX_GRACE_MS` after its attempt began; `pending` reads `next_attempt_at` instead of a fixed grace.
   A development or end-to-end run may shorten that grace with `INFINITARY_INBOX_GRACE_MS`, so a journey that quits mid-turn sees its redelivery without waiting 90 s; a packaged build always uses `INBOX_GRACE_MS`.
+  The sweep that delivers it runs on the app's tick, which such a run shortens too (`INFINITARY_TICK_PERIOD_MS`, `docs/architecture.md` "One clock").
 - Wakes to the first mate, per outage: one at its first failure, one if it is still failing fifteen minutes in (the captain: "'30 minute still down' is too late. can we make it 15?"), and one when an attempt succeeds after two or more failures.
   The still-down wake is once per outage even across a restart (its once-identity, "The wake envelope" below).
   Each failure is still its own line on the task's timeline, and identical repeats keep deduping as they always have.

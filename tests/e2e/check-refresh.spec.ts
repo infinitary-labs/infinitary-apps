@@ -7,7 +7,7 @@ import { CHECK_WORDS, MERGE_AFTER_FIXING_WORDS, MERGE_WORDS } from "../../src/sh
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
-import { launchApp } from "./launch";
+import { launchApp, SHORT_TICK } from "./launch";
 import { SPAWN_PROMPT_MARKER, STALE_CHECKS_CARD, STALE_CHECKS_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
@@ -18,9 +18,10 @@ import { cardSurface, factsStrip } from "./stack";
 /**
  * GitHub changes after completion: the card and task facts refresh without a
  * model turn. The quiet refresh reads finished checks once they are
- * `CHECK_REFRESH_MS` old, on the host's one-minute tick. The spec records the
- * green reading as that old - an overdue clock, as idle-ladder.spec.ts seeds -
- * and waits for the read, never for five minutes of wall clock.
+ * `CHECK_REFRESH_MS` old, on the host's tick, which this journey shortens to
+ * seconds (`SHORT_TICK`). The spec records the green reading as that old - an
+ * overdue clock, as idle-ladder.spec.ts seeds - and waits for the read, never
+ * for five minutes of wall clock or the rest of a minute's tick.
  */
 test("external check changes refresh the completion strip and task facts", async () => {
   test.setTimeout(300_000);
@@ -36,7 +37,11 @@ test("external check changes refresh the completion strip and task facts", async
     "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'standard')",
   ).run("repo-meterlab", repo.repoDir, "meterlab", Date.now(), "https://github.com/o/meterlab.git");
   seedHostedOrigins(db, userDataDir);
-  const app = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  const app = await launchApp({
+    withMockProvider: true,
+    userDataDir,
+    env: { ...github.env, ...SHORT_TICK },
+  });
   const title = `meterlab ${STALE_CHECKS_MARKER}`;
   let taskId = "";
   const ledger = () => tasks.get(taskId);

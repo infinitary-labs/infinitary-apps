@@ -63,8 +63,9 @@ Using a saved sign-in is a normal choice sent to that computer, not a request to
 While out of reach, the shown body remains readable, actions and replies are unavailable, and no change waits to be sent later.
 A stalled body leaves the native card controls usable and offers Retry in its place.
 An empty stage shows the native first mate; a crew count appears only when the connection supplies it.
-The three native character states are idle (slow tesseract drift), listening (two counter-rotating hexagons) and working (fast double rotation with ember light and pulsing nodes).
-All three keep the inner eyes, stop their timeline off-screen or in the background, and show a still pose under Reduce Motion; there are no emotes.
+The native character moves as the Mac's does: idle drifts slowly with eyes that blink and wander, listening breathes as two counter-rotating hexagons, and working speeds up with the ember, shimmer and halo.
+It greets once when the app opens or joins a computer, and nods when the first mate's reply carries a nod; it plays no other emote.
+Every state stops its timeline off-screen or in the background and shows a still pose under Reduce Motion.
 The join stage uses idle; the empty stage shows working only when the Mac's published `firstmate_state.busy` says a conversational turn is running, and returns to idle when it finishes.
 A stopped or lost connection clears that reading; until a new busy event arrives, the character stays idle because the connection has no initial busy snapshot.
 Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.

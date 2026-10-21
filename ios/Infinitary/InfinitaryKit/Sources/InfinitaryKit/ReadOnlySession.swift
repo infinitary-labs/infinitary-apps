@@ -46,6 +46,8 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var removed = false
     public var onMacChanged: ((JoinedMac) -> Void)?
     public var onRemoved: (() -> Void)?
+    /// The Mac's first mate reacted (a firstmate_emote), heard live; a replay on reconnect is not a reaction now.
+    public var onEmote: ((String) -> Void)?
     @ObservationIgnored private let phone: PhoneIdentity
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
@@ -352,6 +354,7 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
                 if type == "firstmate_state", let busy = event["busy"] as? Bool { firstmateBusy = busy }
+                if type == "firstmate_emote", contact == "in-reach", let emote = event["emote"] as? String { onEmote?(emote) }
                 if type == "user_turn" || type == "firstmate_reply" {
                     try await refresh(PhoneRequest.lastTurn.rawValue, on: socket)
                 }

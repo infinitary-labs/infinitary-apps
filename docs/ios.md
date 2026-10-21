@@ -141,8 +141,14 @@ It exposes the full local timestamp to accessibility.
 `PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` puts a sheet on the panel color with a hairline at its edge.
 Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
 
-`PhoneCharacter` draws the tesseract, eyes and listening hexagons in a native Canvas, with idle, listening and working states only.
-Its timeline is capped at 30 frames per second, paused when hidden or backgrounded, and still under Reduce Motion.
+`PhoneCharacter` draws the Mac's character in a native Canvas with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.
+At rest the tesseract drifts slowly and the eyes blink every few seconds and wander; listening breathes as two counter-rotating hexagons; working speeds up with the Mac's ember, shimmer and halo, with white-hot cores.
+It plays two of the Mac's emotes and no others: the greeting, on the first character a person sees after the app opens or joins a computer (`CharacterCues.greetOnNextSight`), and the nod.
+A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive, hands the greeting on to the next one shown.
+The nod plays when the Mac's first mate reacts to a reply with one (`firstmate_emote`), held until that turn ends as on the Mac; a reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
+The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.
+Its timeline is capped at 30 frames per second, paused when hidden or backgrounded, and still under Reduce Motion, with no emote.
+Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
 The join stage uses idle; the empty stage follows the Mac's published busy event for working and idle, with the snapshot and listening limits described under “Disposable verification”.
 No crew count or joining time is invented: the current connection supplies neither, so those facts stay absent.
 Joining still confirms the link's computer address, not a name obtained before authenticating that computer.
@@ -296,7 +302,7 @@ The full journey checks that Command-Return restores the field's observed empty 
 The full journey exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
-App-hosted shell tests render each native character's still pose and read Activity from the real test home; the native journey also verifies the computer-authored task key.
+App-hosted shell tests render each native character's still pose, play the greeting and the held reply nod through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
 The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.
 A stopped or lost connection clears the busy reading; the published connection has no initial busy snapshot, so a fresh session stays idle until a busy event arrives.
 Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.

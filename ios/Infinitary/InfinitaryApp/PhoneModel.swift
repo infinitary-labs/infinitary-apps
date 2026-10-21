@@ -101,7 +101,7 @@ import UIKit
                 let name = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
                 let mac = try await transport.pair(link, name: name)
                 try save(mac)
-                proposal = nil; removed = false; connect(mac)
+                proposal = nil; removed = false; CharacterCues.greetOnNextSight(); connect(mac)
             } catch { problem = error.localizedDescription }
         }
     }
@@ -142,6 +142,7 @@ import UIKit
             do { try forget() } catch { problem = "Could not forget this computer. Try Leave again." }
             removed = true
         }
+        session.onEmote = { emote in CharacterCues.reacted(emote) }
         connection = session
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }

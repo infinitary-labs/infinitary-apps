@@ -17,6 +17,7 @@ import {
   filterDirections,
   focusInBrowser,
   graph,
+  holdBrowserFrames,
   inspector,
   KNOWLEDGE_TITLE,
   knowledgeHeader,
@@ -247,8 +248,22 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await expect(rows).toHaveCount(9);
     });
 
-    await test.step("Findings shows each finding's standing, and filters for rechecking and for differing evidence", async () => {
+    await test.step("the arrow moves to Findings, and a frame that comes late leaves focus on the finding row it has moved to since", async () => {
+      // INF-699: a virtual Mac drew a frame the tab's key asked for after
+      // focus had moved to a finding row, and focus went back to the tab.
+      const frames = await holdBrowserFrames(page);
       await pressKey(tab(page, "concepts"), "ArrowRight");
+      await expect(tab(page, "findings")).toHaveAttribute("aria-selected", "true");
+      const first = browser(page).locator(
+        '[data-knowledge-list="findings"] [data-knowledge-row][tabindex="0"]',
+      );
+      const id = await first.getAttribute("data-knowledge-row");
+      await focusOn(first);
+      await frames.release();
+      expect(await focusInBrowser(page)).toBe(`row:${id}`);
+    });
+
+    await test.step("Findings shows each finding's standing, and filters for rechecking and for differing evidence", async () => {
       await expect(tab(page, "findings")).toHaveAttribute("aria-selected", "true");
       const rows = browser(page).locator('[data-knowledge-list="findings"] [data-knowledge-row]');
       await expect(rows).toHaveCount(4);

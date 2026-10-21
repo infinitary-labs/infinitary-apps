@@ -136,6 +136,56 @@ export async function focusInBrowser(page: Page): Promise<string | null> {
   });
 }
 
+type HeldFrames = {
+  asked: Map<number, FrameRequestCallback>;
+  request: typeof requestAnimationFrame;
+  cancel: typeof cancelAnimationFrame;
+};
+
+/**
+ * Holds the animation frames the browser's page asks for until `release`
+ * runs them, in the order they were asked for: the order a late frame
+ * gives. A virtual Mac's hidden window drew the frame a tab's key had asked
+ * for after focus had moved on to a finding row (INF-699), and a journey
+ * that holds the frames meets that order on every run.
+ */
+export async function holdBrowserFrames(page: Page): Promise<{ release: () => Promise<void> }> {
+  await browser(page).evaluate((root) => {
+    const view = root.ownerDocument.defaultView as (Window & { heldFrames?: HeldFrames }) | null;
+    if (!view || view.heldFrames) throw new Error("the browser's frames are already held");
+    const held: HeldFrames = {
+      asked: new Map(),
+      request: view.requestAnimationFrame,
+      cancel: view.cancelAnimationFrame,
+    };
+    let next = 1_000_000;
+    view.heldFrames = held;
+    view.requestAnimationFrame = (callback) => {
+      next += 1;
+      held.asked.set(next, callback);
+      return next;
+    };
+    view.cancelAnimationFrame = (id) => {
+      if (!held.asked.delete(id)) held.cancel.call(view, id);
+    };
+  });
+  return {
+    release: () =>
+      browser(page).evaluate((root) => {
+        const view = root.ownerDocument.defaultView as
+          | (Window & { heldFrames?: HeldFrames })
+          | null;
+        const held = view?.heldFrames;
+        if (!view || !held) throw new Error("the browser's frames are not held");
+        view.requestAnimationFrame = held.request;
+        view.cancelAnimationFrame = held.cancel;
+        delete view.heldFrames;
+        const at = view.performance.now();
+        for (const callback of held.asked.values()) callback(at);
+      }),
+  };
+}
+
 /**
  * A pointer's drag on the graph, dispatched in the browser's own page as
  * pointer events: Chromium hands a hidden window's native pointer to a

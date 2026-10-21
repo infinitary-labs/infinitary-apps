@@ -306,13 +306,14 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
     [openInspector, say],
   );
 
+  // Every tab is always drawn, so the key moves focus to its tab at once: a
+  // frame later can come after focus has moved on, into the tab's list, and
+  // take it back (INF-699).
   const setTab = (tab: Tab, byKey: boolean) => {
     patch({ tab, detail: false });
     if (byKey) {
-      requestAnimationFrame(() => {
-        const button = rootRef.current?.querySelector<HTMLElement>(`[data-knowledge-tab="${tab}"]`);
-        if (button) focusWithRing(button);
-      });
+      const button = rootRef.current?.querySelector<HTMLElement>(`[data-knowledge-tab="${tab}"]`);
+      if (button) focusWithRing(button);
     }
   };
   const onTabKey = (event: ReactKeyboardEvent<HTMLElement>) => {

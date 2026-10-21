@@ -150,7 +150,7 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
   });
 
   await test.step("the pair sits above the input, and the input never moved", async () => {
-    const inputAfter = await settled(() => box(input));
+    const inputAfter = await settled(page, () => box(input));
     expect(inputAfter).toEqual(inputBefore);
     for (const bubble of [yourBubble(page), mateBubble(page)]) {
       const at = await box(bubble);
@@ -164,7 +164,7 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await saw(page, "mate:reply", from);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_ANSWER_TITLE);
     // The card on the stage keeps clear of the pair.
-    const card = await settled(() => box(cardSurface(page)));
+    const card = await settled(page, () => box(cardSurface(page)));
     for (const bubble of [yourBubble(page), mateBubble(page)]) {
       expect(intersects(card, await box(bubble))).toBe(false);
     }
@@ -253,7 +253,7 @@ test("both lines remain in sight with a tallest card at the smallest window", as
   await recordOnPage(page);
   const from = await say(page, TALL_ANSWER_PROMPT_MARKER);
   await saw(page, "mate:reply", from);
-  const card = await settled(() => box(cardSurface(page)));
+  const card = await settled(page, () => box(cardSurface(page)));
   for (const bubble of [yourBubble(page), mateBubble(page)]) {
     const at = await box(bubble);
     expect(intersects(card, at)).toBe(false);

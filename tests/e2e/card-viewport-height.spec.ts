@@ -59,7 +59,7 @@ for (const scripted of [false, true]) {
         SURFACE,
       );
       // Settled with all of the content inside the frame, none clipped.
-      const boxes = await settled(async () => ({
+      const boxes = await settled(page, async () => ({
         content: await content.boundingBox(),
         frame: await iframe.boundingBox(),
       }));

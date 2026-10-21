@@ -92,8 +92,8 @@ test("two before pictures and three after pictures, one new, are all reachable i
           return [node.naturalWidth, node.naturalHeight];
         }),
       ).toEqual([picture.width, picture.height]);
-      const box = await settled(() => image.boundingBox());
-      const body = await settled(() => iframe.boundingBox());
+      const box = await settled(page, () => image.boundingBox());
+      const body = await settled(page, () => iframe.boundingBox());
       if (!box || !body) throw new Error(`${picture.alt} or its card has no box`);
       expect(within(box, body)).toEqual([]);
       const top = await image.evaluate((node) => node.getBoundingClientRect().top + window.scrollY);
@@ -108,7 +108,7 @@ test("two before pictures and three after pictures, one new, are all reachable i
       marked.getByRole("img", { name: BEFORE_AFTER_NEW_PICTURE.alt, exact: true }),
     ).toBeVisible();
     await marked.scrollIntoViewIfNeeded();
-    const tag = await settled(() => pseudoBox(marked, "::before"));
+    const tag = await settled(page, () => pseudoBox(marked, "::before"));
     expect(tag?.width).toBeGreaterThan(0);
     expect(tag?.height).toBeGreaterThan(0);
   } finally {
@@ -132,7 +132,7 @@ test("the facts stay in view beside the merge button while the long body scrolls
           body.scrollTop = to === "top" ? 0 : body.scrollHeight;
         }, end);
         // ...while the facts stay whole on the card, never under the body.
-        const boxes = await settled(async () => ({
+        const boxes = await settled(page, async () => ({
           strip: await facts.strip.boundingBox(),
           card: await cardSurface(page).boundingBox(),
           body: await scroller.boundingBox(),

@@ -53,7 +53,7 @@ test("a very wide picture shows whole inside its card at the smallest window", a
     ).toEqual([WIDE_PICTURE.width, WIDE_PICTURE.height]);
     // Nothing of it is cut off: it lies inside the card's body, which has no
     // sideways scroll to hide a part behind.
-    const boxes = await settled(async () => ({
+    const boxes = await settled(page, async () => ({
       picture: await picture.boundingBox(),
       body: await iframe.boundingBox(),
     }));

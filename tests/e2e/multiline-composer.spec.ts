@@ -301,7 +301,7 @@ test("at the smallest window a tall draft stays in view and clear of the card, a
 
   const draft = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n");
   await input.fill(draft);
-  const laid = await settled(async () => ({
+  const laid = await settled(page, async () => ({
     shell: await box(shell(page)),
     card: await box(cardSurface(page)),
     window: await page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight })),

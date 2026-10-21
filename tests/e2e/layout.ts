@@ -1,4 +1,5 @@
 import { type ElectronApplication, expect, type Locator, type Page } from "@playwright/test";
+import { nextFrame } from "./crew";
 import { readInMain } from "./mainProcess";
 
 /**
@@ -131,15 +132,20 @@ export function pseudoBox(target: Locator, pseudo: "::before" | "::after"): Prom
 
 /**
  * A measurement once the layout holds still: `read` again until two reads
- * in a row agree. A card eases between widths as the stack pages, so boxes
- * taken mid-move - or in two reads either side of a frame - disagree with
- * each other though each was true when read.
+ * in a row agree, with a painted frame of `page` between them. A card eases
+ * between widths as the stack pages, so boxes taken mid-move - or in two
+ * reads either side of a frame - disagree with each other though each was
+ * true when read. What moves a box waits for a frame too - a ResizeObserver
+ * reports, a transition steps - so two reads with no frame between them
+ * agree even mid-move, and a machine whose frames come late would read that
+ * as still (INF-746, multiline-composer's tall draft).
  */
-export async function settled<T>(read: () => Promise<T>): Promise<T> {
+export async function settled<T>(page: Page, read: () => Promise<T>): Promise<T> {
   let last: string | undefined;
   let value: T | undefined;
   await expect
     .poll(async () => {
+      if (last !== undefined) await nextFrame(page);
       value = await read();
       const json = JSON.stringify(value);
       const same = json === last;

@@ -26,7 +26,7 @@ async function boxOf(locator: Locator): Promise<Rect> {
 }
 
 /** The shown card's box once its move has settled. */
-const cardBox = (page: Page) => settled(() => boxOf(layer(page)));
+const cardBox = (page: Page) => settled(page, () => boxOf(layer(page)));
 
 /** The shown card's width once its move has settled. */
 async function expectCardWidth(page: Page, width: number) {
@@ -61,7 +61,7 @@ test("a wide card's table is reachable whole at the smallest window, and the rai
     await expect(table).toBeVisible();
     // No column of it is cut off: it lies inside the card's body, which has
     // no sideways scroll to hide a part behind.
-    const boxes = await settled(async () => ({
+    const boxes = await settled(page, async () => ({
       table: await boxOf(table),
       body: await boxOf(cardBodyElement(page, WIDTH_CARD_TITLES.wide)),
     }));

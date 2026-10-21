@@ -23,7 +23,7 @@ export const CORNERS = {
  * moving into place, and a picture of it would then miss markers drawn early.
  */
 export async function markCorners(page: Page, region: Locator) {
-  const box = await settled(() => region.boundingBox());
+  const box = await settled(page, () => region.boundingBox());
   if (!box) throw new Error("The region is not on screen");
   await page.evaluate(
     ({ box, corners }) => {

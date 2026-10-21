@@ -66,7 +66,7 @@ test("long footer actions stay whole and usable at the smallest window", async (
       const action = card.getByRole("button", { name });
       // A trial click: Playwright's own checks that a press would land on it.
       await action.click({ trial: true });
-      const boxes = await settled(async () => ({
+      const boxes = await settled(page, async () => ({
         action: await action.boundingBox(),
         card: await card.boundingBox(),
       }));

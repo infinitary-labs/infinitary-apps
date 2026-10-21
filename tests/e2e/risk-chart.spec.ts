@@ -146,7 +146,7 @@ test("a merge card's risk chart sits at its top right, and each dot opens its ow
     const headline = page.locator(`${SHOWN_ENTRY} [data-card-title]`);
     const why = frame.getByRole("heading", { name: "Why" });
     const picture = frame.getByRole("img", { name: "A card at 560 px" });
-    const boxes = await settled(async () => ({
+    const boxes = await settled(page, async () => ({
       chart: (await risk.chart.boundingBox()) as Rect,
       headline: await wordsBox(headline),
       why: await wordsBox(why),

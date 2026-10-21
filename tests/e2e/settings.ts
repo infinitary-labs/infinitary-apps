@@ -5,7 +5,7 @@ import { overflows, settled, within } from "./layout";
 export async function assertSettingsFits(page: Page) {
   const screen = page.locator('[data-screen-label="Settings"]');
   const column = page.locator("[data-settings-column]");
-  const layout = await settled(() =>
+  const layout = await settled(page, () =>
     column.evaluate((el) => {
       const screen = el.closest<HTMLElement>('[data-screen-label="Settings"]');
       const tabs = el.querySelector('[role="tablist"]');

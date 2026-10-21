@@ -92,7 +92,7 @@ test("a closed task's record lists its cards newest first and opens one as the r
     await expect(lines.nth(2)).toContainText(
       pastEndingWords({ how: "chose", at, label: build.label }),
     );
-    await settled(() => page.locator(RECORD_FRAME_SELECTOR).boundingBox());
+    await settled(page, () => page.locator(RECORD_FRAME_SELECTOR).boundingBox());
     await page.screenshot({ path: test.info().outputPath("record-cards-row.png") });
 
     // The link takes the shared show-card door: the past card, read-only, nothing saved.

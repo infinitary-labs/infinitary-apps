@@ -146,7 +146,9 @@ test("a card maximizes into the window and comes back with its page, answers, re
         .evaluate((scroller) => {
           scroller.scrollTop = (scroller.scrollHeight - scroller.clientHeight) / 2;
         });
-      usual = await settled(() => surface.evaluate((e) => e.getBoundingClientRect().toJSON()));
+      usual = await settled(page, () =>
+        surface.evaluate((e) => e.getBoundingClientRect().toJSON()),
+      );
       const reading = await partAtTop(page, frame);
       expect(reading).toBeGreaterThan(1);
 
@@ -154,7 +156,9 @@ test("a card maximizes into the window and comes back with its page, answers, re
       await expect(sizeControl(page, RESTORE_LABEL)).toBeFocused();
       await expect(promptInput(page)).toBeHidden();
       await expect(page.locator('[data-side-panel="now"]')).toBeHidden();
-      const big = await settled(() => surface.evaluate((e) => e.getBoundingClientRect().toJSON()));
+      const big = await settled(page, () =>
+        surface.evaluate((e) => e.getBoundingClientRect().toJSON()),
+      );
       expect(big.width).toBeGreaterThan(usual.width);
       expect(big.height).toBeGreaterThan(usual.height);
       expect(within(big, await windowBox(page))).toEqual([]);
@@ -200,7 +204,9 @@ test("a card maximizes into the window and comes back with its page, answers, re
       await expect(sizeControl(page, MAXIMIZE_LABEL)).toBeFocused();
       await expect(promptInput(page)).toBeVisible();
       await expect(page.locator('[data-side-panel="now"]')).toBeVisible();
-      const back = await settled(() => surface.evaluate((e) => e.getBoundingClientRect().toJSON()));
+      const back = await settled(page, () =>
+        surface.evaluate((e) => e.getBoundingClientRect().toJSON()),
+      );
       expect(back.width).toBe(usual.width);
       await expect(answer).toBeChecked();
       await expect(reply).toHaveValue("draft beside the card");

@@ -66,7 +66,7 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
     await expect(frame.locator("[data-record-goal]")).toHaveText(goal);
     await frame.locator("body").evaluate(() => document.fonts.ready);
     await expect.poll(() => scroller.evaluate((el) => el.scrollHeight - el.clientHeight)).toBe(0);
-    const natural = await settled(() =>
+    const natural = await settled(page, () =>
       pane.evaluate((el) => ({
         height: el.getBoundingClientRect().height,
         margin: window.innerHeight - parseFloat(getComputedStyle(el).maxHeight),
@@ -152,7 +152,7 @@ test("a content-sized panel stops resizing at the width-consuming scrollbar thre
     await expect
       .poll(() => scroller.evaluate((el) => el.scrollHeight - el.clientHeight))
       .toBeGreaterThan(0);
-    const cap = await settled(() =>
+    const cap = await settled(page, () =>
       scroller.evaluate((el) => {
         const style = getComputedStyle(el);
         return {

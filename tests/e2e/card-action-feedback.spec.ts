@@ -112,7 +112,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.evaluate(() => document.fonts.ready);
       // Closing Settings replays the stage's entrance, so the row is measured
       // once it holds still: the click, not that move, must leave it in place.
-      const [before, siblingBefore] = await settled(() =>
+      const [before, siblingBefore] = await settled(page, () =>
         Promise.all([choose.boundingBox(), keep.boundingBox()]),
       );
       const committed = await choose.evaluate(async (button) => {

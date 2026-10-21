@@ -79,7 +79,7 @@ test("an unchanged card settles at the outer scrollbar threshold and still resiz
     await expect
       .poll(() => scroller.evaluate((element) => element.scrollHeight - element.clientHeight))
       .toBeGreaterThan(0);
-    const cap = await settled(async () => ({
+    const cap = await settled(page, async () => ({
       ...(await scroller.evaluate((element) => ({
         height: element.clientHeight,
         content: element.scrollHeight,

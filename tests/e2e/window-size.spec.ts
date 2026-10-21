@@ -313,7 +313,7 @@ const DECISION_TITLE = MOCK_CHOICE_CARD_TITLE;
 async function expectControlsWhole(page: Page, controls: Locator[]) {
   const card = cardSurface(page);
   for (const control of controls) await control.click({ trial: true });
-  const boxes = await settled(async () => ({
+  const boxes = await settled(page, async () => ({
     card: await card.boundingBox(),
     topbar: await page.locator("[data-topbar]").boundingBox(),
     input: await page.locator("[data-prompt-dock]").boundingBox(),
@@ -332,7 +332,7 @@ async function expectControlsWhole(page: Page, controls: Locator[]) {
 
 /** The height the stage gives the shown card, once it holds still. */
 const cardRoom = (page: Page) =>
-  settled(async () => (await cardSurface(page).boundingBox())?.height ?? 0);
+  settled(page, async () => (await cardSurface(page).boundingBox())?.height ?? 0);
 
 test("a card in a short window at a larger size keeps its reading room and every control", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -388,7 +388,7 @@ test("a card in a short window at a larger size keeps its reading room and every
     const notice = page.locator('[data-composer-notice="picture-too-big"]');
     const dismiss = notice.getByRole("button");
     await dismiss.click({ trial: true });
-    const noticed = await settled(async () => ({
+    const noticed = await settled(page, async () => ({
       notice: await notice.boundingBox(),
       window: await page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight })),
     }));
@@ -416,7 +416,7 @@ async function expectHeadersClearOfInput(page: Page, { cardUp }: { cardUp: boole
   for (const header of headers) {
     await expect(header).toHaveAttribute("data-side-panel-collapsed", "");
   }
-  const boxes = await settled(async () => ({
+  const boxes = await settled(page, async () => ({
     input: await page.locator("[data-prompt-dock]").boundingBox(),
     headers: await Promise.all(
       headers.map(async (header) => ({
@@ -490,7 +490,7 @@ async function expectMainMessageUsable(page: Page) {
   const panels = (["activity", "now"] as const).map((id) =>
     page.locator(`[data-side-panel="${id}"]`),
   );
-  const boxes = await settled(async () => ({
+  const boxes = await settled(page, async () => ({
     input: await dock.boundingBox(),
     addFiles: await addFiles.boundingBox(),
     window: await page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight })),
@@ -592,7 +592,7 @@ async function expectLonePanelClear(page: Page, dock: Dock) {
     "last turn": page.locator("[data-last-turn-slot]"),
     notices: page.locator("[data-prompt-notices]"),
   };
-  const boxes = await settled(async () => ({
+  const boxes = await settled(page, async () => ({
     drawn: await panel.isVisible(),
     panel: await panel.boundingBox(),
     around: await Promise.all(

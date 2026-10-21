@@ -402,7 +402,9 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
       if (!box) throw new Error(`${locator} has no box`);
       return box;
     };
-    expect(within(await settled(() => boxOf(recordCard(page))), await windowBox(page))).toEqual([]);
+    expect(
+      within(await settled(page, () => boxOf(recordCard(page))), await windowBox(page)),
+    ).toEqual([]);
     await recordFrame(page)
       .locator("details")
       .evaluateAll((nodes) => {
@@ -416,7 +418,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     // ellipsize rather than overflow.
     await hideRecord(page).click();
     await closeOpenCards(page);
-    const fit = await settled(async () => ({
+    const fit = await settled(page, async () => ({
       left: await boxOf(page.locator('[data-rail="left"]')),
       right: await boxOf(page.locator('[data-rail="right"]')),
       stage: await boxOf(page.locator("[data-stage]")),

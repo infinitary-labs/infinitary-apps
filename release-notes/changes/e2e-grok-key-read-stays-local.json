@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-grok-key-read-stays-local",
+      "reason": "Test only: a Grok API key's allowance read takes a development-only address, which the end-to-end launcher points at a local port, so no journey sends a seeded key to xAI. A packaged app never reads that address, so no shipped behavior changed."
+    }
+  ]
+}

@@ -200,11 +200,12 @@ export async function fetchGrokQuota(
   auth: ManagedAuth,
   now: number,
   usageUrl: string = GROK_USAGE_URL,
+  keyUrl: string = API_KEY_URL,
 ): Promise<ProviderOutcome> {
   if (!auth.apiKey && !auth.headers) return CREDENTIAL_UNAVAILABLE;
   if (!auth.usingOAuth) {
     // An API key can carry team credit metadata on the key probe.
-    const result = await http(API_KEY_URL, { headers: requestHeaders(auth) });
+    const result = await http(keyUrl, { headers: requestHeaders(auth) });
     if (!succeeded(result)) return failureFromResponse(result);
     const parsed = parseGrokKey(result.json, now);
     return parsed.windows.length > 0 ? { status: "ok", ...parsed } : NO_WINDOW;

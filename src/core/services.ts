@@ -1001,6 +1001,9 @@ export async function createServices(
                 ...(settingFrom(process.env, "GROK_USAGE_URL")?.trim()
                   ? { grokUsageUrl: settingFrom(process.env, "GROK_USAGE_URL")?.trim() }
                   : {}),
+                ...(settingFrom(process.env, "GROK_KEY_URL")?.trim()
+                  ? { grokKeyUrl: settingFrom(process.env, "GROK_KEY_URL")?.trim() }
+                  : {}),
                 ...(settingFrom(process.env, "KIMI_USAGE_URL")?.trim()
                   ? { kimiUsageUrl: settingFrom(process.env, "KIMI_USAGE_URL")?.trim() }
                   : {}),

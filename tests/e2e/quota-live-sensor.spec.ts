@@ -176,24 +176,62 @@ async function startStubMeter(accept: string[]): Promise<StubMeter> {
   return stub;
 }
 
+type StubKeyRead = {
+  server: Server;
+  url: string;
+  /** Keys the stub answers with the key's credits. */
+  accept: Set<string>;
+  seen: { method: string; bearer: string }[];
+};
+
+/**
+ * A stand-in for xAI's `GET /v1/api-key`, the read an API key's allowance
+ * comes from: it answers a key it knows with that key's team credits and
+ * any other with the vendor's 401.
+ */
+async function startStubKeyRead(accept: string[]): Promise<StubKeyRead> {
+  const stub: StubKeyRead = { server: createServer(), url: "", accept: new Set(accept), seen: [] };
+  stub.server.on("request", (request, response) => {
+    request.resume();
+    request.on("end", () => {
+      const bearer = (request.headers.authorization ?? "").replace(/^Bearer /, "");
+      stub.seen.push({ method: request.method ?? "", bearer });
+      if (!stub.accept.has(bearer)) {
+        response.writeHead(401, { "content-type": "application/json" });
+        response.end("{}");
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ remaining_credits: 40, credit_limit: 100 }));
+    });
+  });
+  await new Promise<void>((resolve) => stub.server.listen(0, "127.0.0.1", resolve));
+  const { port } = stub.server.address() as AddressInfo;
+  stub.url = `http://127.0.0.1:${port}/v1/api-key`;
+  return stub;
+}
+
 /**
  * A Grok account the way the vault stores one: Pi's own auth file in the
- * account's 0700 store, holding an OAuth entry the runtime resolves without
- * a network round trip because it has not expired.
+ * account's 0700 store, holding either an OAuth entry the runtime resolves
+ * without a network round trip because it has not expired, or an API key.
  */
-function seedGrokAccount(userDataDir: string, accessToken: string) {
+function seedGrokAccount(userDataDir: string, stored: { accessToken: string } | { key: string }) {
   const accountsDir = join(userDataDir, "accounts");
   const dir = join(accountsDir, "xai", GROK_PERSONAL);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   writeFileSync(
     join(dir, "auth.json"),
     JSON.stringify({
-      xai: {
-        type: "oauth",
-        access: accessToken,
-        refresh: "stub-refresh",
-        expires: Date.now() + 30 * 24 * 3600 * 1000,
-      },
+      xai:
+        "key" in stored
+          ? { type: "api_key", key: stored.key }
+          : {
+              type: "oauth",
+              access: stored.accessToken,
+              refresh: "stub-refresh",
+              expires: Date.now() + 30 * 24 * 3600 * 1000,
+            },
     }),
     { mode: 0o600 },
   );
@@ -205,7 +243,7 @@ function seedGrokAccount(userDataDir: string, accessToken: string) {
         {
           id: GROK_PERSONAL,
           providerId: "xai",
-          kind: "subscription_oauth",
+          kind: "key" in stored ? "api_key" : "subscription_oauth",
           label: "Personal",
           enabled: true,
           createdAt: Date.parse("2026-08-01T00:00:00Z"),
@@ -499,19 +537,27 @@ test.describe("the real quota sensor, end to end", () => {
   let meter: StubMeter | undefined;
   let kimi: StubKimi | undefined;
   let copilot: StubCopilot | undefined;
+  let keyRead: StubKeyRead | undefined;
 
   test.afterEach(async () => {
     await app?.close();
     app = undefined;
     // Only a started server can report its close; awaiting an absent one
     // would wait forever.
-    for (const server of [stub?.server, meter?.server, kimi?.server, copilot?.server]) {
+    for (const server of [
+      stub?.server,
+      meter?.server,
+      kimi?.server,
+      copilot?.server,
+      keyRead?.server,
+    ]) {
       if (server) await new Promise<void>((resolve) => server.close(() => resolve()));
     }
     stub = undefined;
     meter = undefined;
     kimi = undefined;
     copilot = undefined;
+    keyRead = undefined;
   });
 
   test("resolves the account's own store, reads the vendor, and renders real meters", async () => {
@@ -694,7 +740,7 @@ process.exit(run.status ?? 0);
     // Claude already do.
     const userDataDir = scratchDir("infinitary-e2e-");
     meter = await startStubMeter(["grok-live-token"]);
-    seedGrokAccount(userDataDir, "grok-live-token");
+    seedGrokAccount(userDataDir, { accessToken: "grok-live-token" });
     app = await launchApp({ userDataDir, env: { INFINITARY_GROK_USAGE_URL: meter.url } });
     await openSubscriptions(app);
     const row = accountRow(app, GROK_PERSONAL);
@@ -717,6 +763,29 @@ process.exit(run.status ?? 0);
     });
     const grokRow = readNewestSnapshotRow(userDataDir, "grok");
     expect(grokRow).toMatchObject({ status: "ok" });
+  });
+
+  test("a Grok API key reads its credits from the key read the launch names, never xAI's", async () => {
+    // INF-714: a journey's seeded Grok key went to xAI's real key read,
+    // because only the OAuth meter's address could be redirected. The key
+    // read now takes its own dev/e2e address (INFINITARY_GROK_KEY_URL),
+    // which launch.ts points at a closed port for every other journey.
+    const userDataDir = scratchDir("infinitary-e2e-");
+    keyRead = await startStubKeyRead(["xai-live-key"]);
+    seedGrokAccount(userDataDir, { key: "xai-live-key" });
+    app = await launchApp({ userDataDir, env: { INFINITARY_GROK_KEY_URL: keyRead.url } });
+    await openSubscriptions(app);
+    const row = accountRow(app, GROK_PERSONAL);
+
+    await expect(row.getByText(GROK_CREDITS_LABEL, { exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.notYet)).toHaveCount(0);
+    await expect(row.getByText(EMPTY_QUOTA_TEXT.unread)).toHaveCount(0);
+    await expect(row.getByText(GROK_NO_WINDOW_DETAIL)).toHaveCount(0);
+    // The read was the key's own, at the address the launch named.
+    expect(keyRead.seen[0]).toEqual({ method: "GET", bearer: "xai-live-key" });
+    expect(readNewestSnapshotRow(userDataDir, "grok")).toMatchObject({ status: "ok" });
   });
 
   test("a Kimi Code sign-in reads its usages meter with its own token and names the plan", async () => {

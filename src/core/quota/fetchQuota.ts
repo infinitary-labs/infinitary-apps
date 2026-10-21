@@ -60,6 +60,7 @@ export type QuotaFetcherOptions = {
   endpoints?: {
     claudeUsageUrl?: string;
     grokUsageUrl?: string;
+    grokKeyUrl?: string;
     kimiUsageUrl?: string;
     copilotUsageUrl?: string;
   };
@@ -247,7 +248,13 @@ async function dispatch(
     case "codex":
       return fetchCodexQuota(http, auth, now);
     case "grok":
-      return fetchGrokQuota(http, auth, now, options.endpoints?.grokUsageUrl);
+      return fetchGrokQuota(
+        http,
+        auth,
+        now,
+        options.endpoints?.grokUsageUrl,
+        options.endpoints?.grokKeyUrl,
+      );
     case "claude":
       return fetchClaudeQuota(http, auth, now, options.endpoints?.claudeUsageUrl);
     case "kimi":

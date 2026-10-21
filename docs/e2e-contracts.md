@@ -277,6 +277,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A spec names `absent` in `env` to see dictation hide, and a check with the real model on disk passes `useAppVoiceHelper` to run the app's own helper on this computer's library (`voice-freeze.check`).
   A voice journey presses the dictation key and reads its words through `tests/e2e/dictation.ts`: right ⌥ on a Mac and right Ctrl on Linux, from `desktopConventions`.
   Quota fixtures ride `INFINITARY_QUOTA_FIXTURE_DIR`.
+  A seeded Grok API key's allowance read goes to a local port nothing listens on (`INFINITARY_GROK_KEY_URL`), never to xAI; a spec that serves that read names its own stub in `env` (`quota-live-sensor.spec.ts`, `docs/quota.md`).
   Each home's connection stays on loopback at a port kept per userData (`INFINITARY_CONNECTION_LOOPBACK_PORT`, `docs/devices.md`), so a relaunched home is where its devices left it, and no test listens on the Mac's own network or on the port a real app holds.
   The port comes from `claimedPort` (`tests/helpers/claimedPort.ts`): it lies below every ephemeral range, so the system never hands it to a listener that asks for port 0, and the worker holds a claim on it until it exits, so no other worker or run on the computer hands it out.
   A launched home never takes a port that a port-0 listener found and closed again: that port can go to any other port-0 listener in the run, and a probe would then read that listener as the home.

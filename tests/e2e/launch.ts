@@ -478,6 +478,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       // the live pi.dev model catalog (docs/architecture.md §16.3); e2e must
       // stay hermetic, so the suite runs the static-fallback path instead.
       PI_OFFLINE: "1",
+      // A seeded Grok API key's allowance read goes to a port nothing
+      // listens on (9, discard), never to xAI with a made-up key; a spec
+      // that serves the read names its own stub in `env`.
+      INFINITARY_GROK_KEY_URL: "http://127.0.0.1:9/v1/api-key",
       // A task browser resolves only the names a spec gives it, so no page
       // reaches a real network (docs/task-browser.md, "Where a page may go").
       INFINITARY_TASK_BROWSER_HOSTS: "{}",

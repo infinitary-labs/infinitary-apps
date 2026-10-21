@@ -44,10 +44,10 @@ import { claudeStarter } from "./starters";
  * Nothing in this test reaches the network: the enabled Claude account
  * resolves no usage credential - its stand-in store has no credentials file
  * and no Keychain item exists for a throwaway config root - so the sensor
- * reports auth_required without any HTTP; Grok's meter is pointed at a
- * local port nothing listens on (`INFINITARY_GROK_USAGE_URL`), and its model
- * list stays offline. The model catalog comes from pi-ai's bundled data
- * (launch.ts sets PI_OFFLINE).
+ * reports auth_required without any HTTP; the Grok key's allowance read
+ * goes to the local port launch.ts names for it (`INFINITARY_GROK_KEY_URL`),
+ * where nothing listens, and its model list stays offline. The model catalog
+ * comes from pi-ai's bundled data (launch.ts sets PI_OFFLINE).
  */
 
 const GROK_DISABLED = "acct_grok_off";
@@ -125,8 +125,6 @@ test.beforeAll(async () => {
     prepareHome: (homeDir) => seedSignedInClaudeStore(claudeDefaultStore(homeDir)),
     env: {
       INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")),
-      // Port 9 (discard) has no listener: the meter read fails locally.
-      INFINITARY_GROK_USAGE_URL: "http://127.0.0.1:9/usage",
     },
   });
   await launched.page.getByRole("button", { name: "Settings" }).click();

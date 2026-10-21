@@ -128,7 +128,6 @@ test("independent model reasoning persists, restores inherited defaults and reco
   seedAccounts(userDataDir);
   const env = {
     INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-stub-")),
-    INFINITARY_GROK_USAGE_URL: "http://127.0.0.1:9/usage",
   };
   const launch = () =>
     launchApp({

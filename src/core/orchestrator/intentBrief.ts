@@ -908,21 +908,39 @@ export function renderFolderRepairBrief(
       `Once the folder is back, clean, on its default branch and level with where the project lives, report what you did and why it was missing in a few sentences. Infinitary sees the folder back and closes this task itself; show a card only when you must ask the captain.`,
     ].join("\n");
   }
+  // With no default branch read, the folder is up to date only once origin's
+  // HEAD names one: the host reads it there to close this task, and the next
+  // merge's update reads it there too (INF-583).
+  const unnamed = facts.branch
+    ? []
+    : [
+        ...(facts.cause !== "no-origin"
+          ? []
+          : facts.origin
+            ? [
+                `The folder has no remote called origin: add it at ${facts.origin}, where the project lives. Rename or remove no other remote without the captain's word on a card.`,
+              ]
+            : [
+                "The folder has no remote called origin, and Infinitary has no address where the project lives: ask the captain on a card where it lives before you add one.",
+              ]),
+        "Infinitary reads the folder's default branch from origin's HEAD (refs/remotes/origin/HEAD), after every merge and to see that this task is done, and it read none this time. Make sure origin's HEAD names the default branch: `git remote set-head origin --auto` sets it from where the project lives, while a pull or fetch of one branch leaves it unset.",
+      ];
   return [
-    `Goal: bring the folder of ${facts.project} at ${facts.folder} up to date: checked out on its default branch${facts.branch ? ` ${facts.branch}` : ""}, with no uncommitted edits, and at or past ${reach}.`,
+    `Goal: bring the folder of ${facts.project} at ${facts.folder} up to date: checked out on its default branch${facts.branch ? ` ${facts.branch}` : ""}, with no uncommitted edits, ${facts.branch ? "and " : ""}at or past ${reach}${facts.branch ? "" : ", and with origin's HEAD naming that branch"}.`,
     "",
     `Infinitary filed this task itself. ${found}, it could not bring the project's folder up to date: ${folderRefreshWords(facts.cause)}. It only ever fast-forwards a clean folder on its default branch, so the rest is yours to judge.`,
     "",
     ...factLines,
     "",
     `${IN_PLACE_OPENING}: your working directory is this folder itself, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
-    `Read the folder first: its status, the branch it is on, its stashes, and how its ${branch} compares with origin's.`,
+    `Read the folder first: its status, the branch it is on, its stashes, and how ${facts.branch ? `its ${facts.branch}` : "its default branch"} compares with origin's.`,
+    ...unnamed,
     `Judge whether it is safe to bring up to date. A clean folder on ${branch} only needs a fetch and a fast-forward.`,
     `Uncommitted edits or unpushed commits are the captain's: set them aside safely, on a backup branch or a stash with a message naming this task, then bring ${branch} up to date, and report exactly what you set aside and where.`,
     "Never do any of these without the captain's word on a card: discard or overwrite uncommitted edits or unpushed commits, switch the folder off its default branch, push, or open a pull request. Setting edits aside on a backup branch or a stash is allowed.",
     "When something of the captain's would have to go, or you cannot tell whether it is safe, ask him on a card before you change anything.",
     "If you can tell, say what put the folder in that state.",
-    `Once the folder is clean, on ${branch} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
+    `Once ${facts.branch ? `the folder is clean, on ${branch}` : "origin's HEAD names the default branch and the folder is clean, on that branch"} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
   ].join("\n");
 }
 

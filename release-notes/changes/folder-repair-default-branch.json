@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "folder-repair-default-branch",
+      "kind": "fix",
+      "title": "Bring the folder up to date finishes when the folder named no default branch",
+      "body": "When your project's folder did not know where your project lives, or did not name its default branch, the Bring the folder up to date task now has its crewmate fix that too. The task then finishes on its own instead of waiting for you to close it, and the next merge brings the folder up to date again.",
+      "area": "projects",
+      "noPicture": "It shows only as an ordinary task in Tasks that closes with its usual line in Activity, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

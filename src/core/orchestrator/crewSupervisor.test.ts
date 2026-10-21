@@ -22077,7 +22077,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
         repoId: repo.id,
         repoDir: folder,
       });
-    return { ...harness, crewmate, repo, folder, merged, ship };
+    return { ...harness, crewmate, repo, folder, remote, merged, ship };
   }
 
   function repairOf(tasks: TaskService, repoId: string) {
@@ -22190,6 +22190,57 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     await vi.waitFor(() => expect(h.sessionSpecs.at(-1)?.cwd).toBe(h.folder), REAL_GIT_WAIT);
     await h.supervisor.disposeAll();
   });
+
+  // INF-583: a repair filed because the folder named no default branch, or
+  // had no origin, closes once its crewmate has fixed the folder, like any
+  // other folder repair.
+  it.each(["no-default-branch", "no-origin"] as const)(
+    "a repair filed for %s has its crewmate name origin's default branch, and closes once it is named and the folder is current",
+    async (cause) => {
+      const h = await behindAfterMerge();
+      rmSync(join(h.folder, "draft.txt"));
+      if (cause === "no-origin") await run(h.folder, "remote", "remove", "origin");
+      else await run(h.folder, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD");
+      h.ship("shipped1", "Ship the shop");
+
+      await h.supervisor.settleTask("shipped1", "merge-pr");
+
+      const [repair] = repairOf(h.tasks, h.repo.id);
+      if (!repair) throw new Error("no repair task was filed");
+      expect(repair.shape?.in_place).toMatchObject({ cause, reach: h.merged });
+      expect(repair.shape?.in_place).not.toHaveProperty("branch");
+      await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+      const brief = h.crewmate.promptCalls[0] ?? "";
+      expect(brief).toContain(
+        "Make sure origin's HEAD names the default branch: `git remote set-head origin --auto` sets it from where the project lives",
+      );
+      if (cause === "no-origin") {
+        expect(brief).toContain(`The folder has no remote called origin: add it at ${h.remote}`);
+      }
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
+
+      // A pull of the one branch brings the folder level but leaves origin's
+      // HEAD unset, so the host still reads no default branch.
+      if (cause === "no-origin") await run(h.folder, "remote", "add", "origin", h.remote);
+      await run(h.folder, "pull", "--ff-only", "origin", "main");
+      await h.supervisor.closeCurrentFolders();
+      expect(h.tasks.get(repair.id)?.status).toBe("active");
+
+      // The crewmate names it as its brief says; the host reads the folder
+      // current and closes the task as settled, with its own line.
+      await run(h.folder, "remote", "set-head", "origin", "--auto");
+      await h.supervisor.closeCurrentFolders();
+      expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
+      expect(h.tasks.timeline(repair.id)).toContainEqual(
+        expect.objectContaining({
+          text: `The project's folder is up to date: clean, on main and at or past ${h.merged.slice(0, 7)}.`,
+          feed: true,
+        }),
+      );
+      await h.supervisor.disposeAll();
+    },
+  );
 });
 
 /**

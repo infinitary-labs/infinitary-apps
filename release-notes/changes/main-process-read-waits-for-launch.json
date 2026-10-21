@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "main-process-read-waits-for-launch",
+      "reason": "Test only: the journeys' main-process reads ask again until the main process answers, rather than giving up after twenty lost answers, so a slow first launch on hosted Linux no longer fails before its journey starts. No shipped behavior changed."
+    }
+  ]
+}

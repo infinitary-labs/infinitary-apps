@@ -326,7 +326,9 @@ function emulateFocusInFrames(page: Page): void {
 async function paintLikeAMac(app: ElectronApplication): Promise<void> {
   // The app's own window is its first, as every journey's window helper
   // reads it. Showing it again changes nothing, so `readInMain` may run it
-  // again when its answer is lost to a garbage collection.
+  // again when its answer is lost to a garbage collection. This is the
+  // launch's first main-process read, asked while the launch's work still
+  // runs, so it is asked until the main process answers.
   await readInMain(() =>
     app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.showInactive()),
   );

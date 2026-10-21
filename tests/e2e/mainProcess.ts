@@ -3,22 +3,27 @@ import type { ElectronApplication } from "@playwright/test";
 const COLLECTED = "Resulting promise was garbage collected";
 
 /**
- * Runs a read in the app's main process, again when Playwright reports
- * "Resulting promise was garbage collected". Playwright awaits main-process
- * evaluations through V8's inspector, which holds the awaited promise weakly,
- * so a long main-process turn that allocates (the model catalog rebuilds
- * after a launch) can free it before it settles. The read has run by then and
- * its answer is lost, so only a read that gives the same answer when run
- * again belongs here - a step with a side effect is split so each part is one.
+ * Runs a read in the app's main process, again each time Playwright reports
+ * "Resulting promise was garbage collected", until it is answered.
+ * Playwright awaits main-process evaluations through V8's inspector, which
+ * holds the awaited promise weakly, so a garbage collection while the main
+ * process is busy (the launch's work, the model catalog rebuilding) can free
+ * it before it settles. The read has run by then and its answer is lost, so
+ * only a read that gives the same answer when run again belongs here - a
+ * step with a side effect is split so each part is one.
+ *
+ * Every lost answer waits for a collection in the main process, so the reads
+ * keep pace with its work and the first one after the work drains is
+ * answered, however long a slow first launch keeps it busy: hosted Linux
+ * lost twenty in a row (journeys run 39464859977). A main process whose work
+ * never drains fails at this read when the caller's own timeout runs out.
  */
 export async function readInMain<T>(read: () => Promise<T>): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
+  for (;;) {
     try {
       return await read();
     } catch (error) {
-      if (attempt >= 20 || !(error instanceof Error) || !error.message.includes(COLLECTED)) {
-        throw error;
-      }
+      if (!(error instanceof Error) || !error.message.includes(COLLECTED)) throw error;
     }
   }
 }

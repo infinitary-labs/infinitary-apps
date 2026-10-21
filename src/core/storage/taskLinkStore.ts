@@ -113,6 +113,20 @@ export class TaskLinkStore {
     return rows.map(fromRow);
   }
 
+  /** Every edge from or to one of these tasks, oldest first, as `listAll` orders them. */
+  listTouching(ids: readonly string[]): TaskLink[] {
+    if (ids.length === 0) return [];
+    const json = JSON.stringify(ids);
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM task_links
+       WHERE from_id IN (SELECT value FROM json_each(?))
+          OR to_id IN (SELECT value FROM json_each(?))
+       ORDER BY created_at, from_id, to_id`,
+    ).all(json, json) as Row[];
+    return rows.map(fromRow);
+  }
+
   deleteAll(): void {
     this.db.prepare("DELETE FROM task_links").run();
   }

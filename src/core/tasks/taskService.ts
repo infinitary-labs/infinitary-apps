@@ -799,6 +799,26 @@ export class TaskService {
     return this.store.listByStatus("open", "active");
   }
 
+  /** The live set and every row closed at or after `since`, oldest first. */
+  listLiveOrClosedSince(since: number): TaskRecord[] {
+    return this.store.listLiveOrClosedSince(since);
+  }
+
+  /** How many rows of this kind hold this status, counted without reading them. */
+  count(status: TaskStatus, kind: TaskKind): number {
+    return this.store.count(status, kind);
+  }
+
+  /** These rows, oldest first; an unknown id reads as nothing. */
+  getMany(ids: readonly string[]): TaskRecord[] {
+    return this.store.getMany(ids);
+  }
+
+  /** How many children each of these parents has, and how many of them closed. */
+  childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
+    return this.store.childCounts(parentIds);
+  }
+
   timeline(id: string): TaskEvent[] {
     return this.events.listFor(id);
   }
@@ -899,6 +919,11 @@ export class TaskService {
   /** Every edge in the graph, for a builder that resolves them in one pass. */
   allLinks(): TaskLink[] {
     return this.links.listAll();
+  }
+
+  /** Every edge from or to one of these tasks, in `allLinks` order. */
+  linksTouching(ids: readonly string[]): TaskLink[] {
+    return this.links.listTouching(ids);
   }
 
   /** The newest feed-worthy timeline events across every task, newest first. */

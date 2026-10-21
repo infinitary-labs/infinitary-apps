@@ -903,17 +903,67 @@ export class TaskStore {
   }
 
   list(): TaskRecord[] {
-    const rows = this.db.prepare("SELECT * FROM tasks ORDER BY created_at, seq").all() as Row[];
+    const rows = prepared(this.db, "SELECT * FROM tasks ORDER BY created_at, seq").all() as Row[];
     return rows.map(fromRow);
   }
 
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
     if (statuses.length === 0) return [];
     const marks = statuses.map(() => "?").join(", ");
-    const rows = this.db
-      .prepare(`SELECT * FROM tasks WHERE status IN (${marks}) ORDER BY created_at, seq`)
-      .all(...statuses) as Row[];
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM tasks WHERE status IN (${marks}) ORDER BY created_at, seq`,
+    ).all(...statuses) as Row[];
     return rows.map(fromRow);
+  }
+
+  /**
+   * The live set and every row closed at or after `since`, oldest first:
+   * what the board shows, read without decoding the closed rows before it
+   * (a long record is mostly those).
+   */
+  listLiveOrClosedSince(since: number): TaskRecord[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM tasks WHERE status IN ('open', 'active') OR closed_at >= ?
+       ORDER BY created_at, seq`,
+    ).all(since) as Row[];
+    return rows.map(fromRow);
+  }
+
+  /** How many rows of this kind hold this status, counted without reading them. */
+  count(status: TaskStatus, kind: TaskKind): number {
+    const row = prepared(
+      this.db,
+      "SELECT COUNT(*) AS n FROM tasks WHERE status = ? AND kind = ?",
+    ).get(status, kind) as { n: number };
+    return row.n;
+  }
+
+  /** These rows, oldest first; an unknown id reads as nothing. */
+  getMany(ids: readonly string[]): TaskRecord[] {
+    if (ids.length === 0) return [];
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM tasks WHERE id IN (SELECT value FROM json_each(?))
+       ORDER BY created_at, seq`,
+    ).all(JSON.stringify(ids)) as Row[];
+    return rows.map(fromRow);
+  }
+
+  /** How many children each of these parents has, and how many of them closed. */
+  childCounts(parentIds: readonly string[]): Map<string, { total: number; closed: number }> {
+    const counts = new Map<string, { total: number; closed: number }>();
+    if (parentIds.length === 0) return counts;
+    const rows = prepared(
+      this.db,
+      `SELECT parent_id, COUNT(*) AS total,
+              SUM(status NOT IN ('open', 'active')) AS closed
+       FROM tasks WHERE parent_id IN (SELECT value FROM json_each(?))
+       GROUP BY parent_id`,
+    ).all(JSON.stringify(parentIds)) as { parent_id: string; total: number; closed: number }[];
+    for (const row of rows) counts.set(row.parent_id, { total: row.total, closed: row.closed });
+    return counts;
   }
 
   /** A parent's direct children, oldest first. */

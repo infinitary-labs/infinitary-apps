@@ -40,6 +40,33 @@ import { type TaskChange, TaskService } from "./taskService";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** How many rows the reads in `read` took from the database, counted where SQLite hands them over. */
+function rowsRead(db: ReturnType<typeof openInMemoryDatabase>, read: () => void): number {
+  const statement = Object.getPrototypeOf(db.prepare("SELECT 1")) as {
+    all: (...args: unknown[]) => unknown[];
+    get: (...args: unknown[]) => unknown;
+  };
+  const { all, get } = statement;
+  let rows = 0;
+  statement.all = function (this: unknown, ...args: unknown[]) {
+    const found = all.apply(this, args);
+    rows += found.length;
+    return found;
+  };
+  statement.get = function (this: unknown, ...args: unknown[]) {
+    const found = get.apply(this, args);
+    if (found !== undefined) rows += 1;
+    return found;
+  };
+  try {
+    read();
+  } finally {
+    statement.all = all;
+    statement.get = get;
+  }
+  return rows;
+}
+
 function setup(
   options: {
     deltaTrigger?: { rows: number; bytes: number };
@@ -826,6 +853,71 @@ describe("the task protocol (task-system P3)", () => {
     // History is still readable one task at a time.
     expect(protocol.detail("old-done").status).toBe("done");
     expect(() => protocol.detail("nope")).toThrow('Unknown task "nope"');
+  });
+
+  // INF-703: every crew event pushes the board, and reading the captain's
+  // 3,000 closed tasks on each push delayed keys in the message box.
+  it("reads no row closed before the board's window to push it, however long the record (INF-703)", () => {
+    const pushed = (history: number) => {
+      const f = setup();
+      // The old work the live rows still name: a parent and a filing's origin.
+      f.tasks.create({ id: "old-parent", title: "Old parent", prompt: "p", repoId: "r1" });
+      f.tasks.create({ id: "origin", title: "Origin", prompt: "p", repoId: "r1" });
+      const { record: filed } = f.tasks.fileFollowup({
+        id: "filed",
+        originId: "origin",
+        title: "Follow-up still open",
+        goal: "g",
+        why: "the meter test failed",
+        prompt: "p",
+      });
+      // The rest of the history: a chain of crew filings, each closed.
+      let from = "origin";
+      for (let i = 0; i < history; i++) {
+        const { record } = f.tasks.fileFollowup({
+          id: `old-${i}`,
+          originId: from,
+          title: `Earlier follow-up ${i}`,
+          goal: "g",
+          why: "found while working",
+          prompt: "p",
+        });
+        from = record.id;
+      }
+      for (let i = 0; i < history; i++)
+        f.tasks.close(`old-${i}`, { status: "done", reason: "settled", actor: "host" });
+      f.tasks.create({ id: "recent", title: "Recent", prompt: "p", repoId: "r1" });
+      f.tasks.create({
+        id: "child",
+        title: "Child",
+        prompt: "p",
+        repoId: "r1",
+        parentId: "old-parent",
+      });
+      f.tasks.close("old-parent", { status: "done", reason: "settled", actor: "host" });
+      f.tasks.close("origin", { status: "done", reason: "settled", actor: "host" });
+      f.tick(BOARD_RECENT_MS + 1);
+      f.tasks.close("recent", { status: "done", reason: "settled", actor: "host" });
+      f.protocol.refreshPresentation();
+      const rows = rowsRead(f.db, () => {
+        f.protocol.refreshPresentation();
+        f.protocol.board();
+      });
+      const board = f.protocol.board();
+      return { rows, board, originKey: f.tasks.get("origin")?.key, filed: filed.id };
+    };
+    const short = pushed(0);
+    const long = pushed(200);
+    expect(long.board.tasks.map((task) => task.id).sort()).toEqual(
+      ["child", "filed", "old-parent", "recent"].sort(),
+    );
+    expect(long.board.tasks.find((task) => task.id === long.filed)?.foundOn).toBe(long.originKey);
+    expect(long.board.tasks.find((task) => task.id === "old-parent")?.children).toEqual({
+      total: 1,
+      closed: 0,
+    });
+    expect(long.board.projects).toEqual(short.board.projects);
+    expect(long.rows).toBe(short.rows);
   });
 
   it("shows only live blockers while retaining closed edges and the dropped-start gate", () => {

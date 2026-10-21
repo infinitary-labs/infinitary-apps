@@ -1777,8 +1777,14 @@ function migrate(db: AppDatabase, throughVersion?: number): void {
     run();
   });
   // An optional query index adds no saved-data format or migration version.
+  // The task ones keep a read of the live set, or of what closed this week,
+  // from scanning a long record's closed rows on every crew event.
   if (through === DATABASE_VERSION)
-    db.exec("CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at)");
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS usage_events_account_at ON usage_events (account_id, at);
+      CREATE INDEX IF NOT EXISTS tasks_status ON tasks (status);
+      CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
+    `);
   // An edit to views.ts reaches an existing database without a migration of
   // its own: the views are derived, so a drift is re-created, never altered.
   if (through >= VIEWS_VERSION && !viewsCurrent(db)) db.transaction(() => createViews(db))();

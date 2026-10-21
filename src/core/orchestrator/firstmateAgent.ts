@@ -3466,8 +3466,9 @@ export class FirstmateAgent {
   private renderTaskIndex(): string[] {
     const tasks = this.options.tasks;
     const byProject = new Map<string, TaskRecord[]>();
-    for (const record of tasks.list()) {
-      if (record.status !== "open" && record.status !== "active") continue;
+    // The live set alone: reading a long record's closed rows each turn
+    // costs the main process time a keystroke waits on (INF-703).
+    for (const record of tasks.listLive()) {
       const rows = byProject.get(record.projectId) ?? [];
       rows.push(record);
       byProject.set(record.projectId, rows);

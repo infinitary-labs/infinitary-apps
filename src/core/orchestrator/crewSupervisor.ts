@@ -10281,11 +10281,8 @@ export class CrewSupervisor {
       if (this.workPosture(record).state === "active") working += 1;
       else idle += 1;
     }
-    return {
-      working,
-      idle,
-      queued: this.options.tasks.listOpen().filter((record) => record.kind === "work").length,
-    };
+    // Counted, not read: every crew event asks, and planned work only counts.
+    return { working, idle, queued: this.options.tasks.count("open", "work") };
   }
 
   private broadcastCrewCounts(): void {

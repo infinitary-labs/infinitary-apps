@@ -32,6 +32,7 @@ import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import type { AppDatabase } from "../storage/db";
 import { ProjectStore } from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
+import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
 
 /**
@@ -223,7 +224,7 @@ export class RepoRegistry {
   }
 
   get(id: string): RepoView | undefined {
-    const row = this.db.prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE id = ?`).get(id) as
+    const row = prepared(this.db, `SELECT ${ROW_COLUMNS} FROM repos WHERE id = ?`).get(id) as
       | Row
       | undefined;
     return row ? fromRow(row) : undefined;

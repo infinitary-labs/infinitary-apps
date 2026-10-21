@@ -267,40 +267,38 @@ export class TaskProtocol {
   board(): TaskBoard {
     const { tasks } = this.options;
     const now = this.now();
-    const all = tasks.list();
-    const byId = new Map(all.map((record) => [record.id, record]));
-    const graph = this.graphOf(all, tasks.allLinks());
     const cutoff = now - BOARD_RECENT_MS;
+    const minimizedTasks = [
+      ...new Set(
+        this.options.cards
+          .snapshot()
+          .filter((card) => card.minimized && card.taskId)
+          .map((card) => card.taskId as string),
+      ),
+    ];
+    // Only the rows the board shows are read: the live set, the last
+    // week's closed work and any minimized card's task. A long record is
+    // mostly closed rows from before that, and a crew event pushes the
+    // board, so reading them all stalled the main process (INF-703).
     const shown = new Map<string, TaskRecord>();
-    const minimizedTasks = new Set(
-      this.options.cards
-        .snapshot()
-        .filter((card) => card.minimized)
-        .map((card) => card.taskId),
-    );
-    for (const record of all) {
-      if (
-        !TaskService.isClosed(record) ||
-        (record.closedAt ?? 0) >= cutoff ||
-        minimizedTasks.has(record.id)
-      ) {
-        shown.set(record.id, record);
-      }
-    }
+    for (const record of tasks.listLiveOrClosedSince(cutoff)) shown.set(record.id, record);
+    for (const record of tasks.getMany(minimizedTasks.filter((id) => !shown.has(id))))
+      shown.set(record.id, record);
     // Parents of shown rows ride along, however old, so a child is never
     // orphaned on the board; the walk is bounded by the hierarchy cap.
     for (const record of [...shown.values()]) {
       let parentId = record.parentId;
       let depth = 0;
       while (parentId && !shown.has(parentId) && depth < 64) {
-        const parent = byId.get(parentId);
+        const parent = tasks.get(parentId);
         if (!parent) break;
         shown.set(parent.id, parent);
         parentId = parent.parentId;
         depth += 1;
       }
     }
-    const rows = all.filter((record) => shown.has(record.id));
+    const rows = [...shown.values()];
+    const graph = this.graphFor(rows);
     const tiers = this.tiersOf(rows);
     const views = rows.map((record) => this.viewOf(record, graph, tiers));
     const viewed = new Map(views.map((view) => [view.id, view]));
@@ -312,7 +310,9 @@ export class TaskProtocol {
     return {
       seq: tasks.boardSeq(),
       at: now,
-      projects: this.projectViews(all, graph, now, viewed),
+      // The shown rows hold every row a count reads: live work and work
+      // done within the window.
+      projects: this.projectViews(rows, graph, now, viewed),
       tasks: sortBoardTasks(views),
       links: sortBoardLinks(links),
     };
@@ -527,9 +527,10 @@ export class TaskProtocol {
   }
 
   projects(): ProjectView[] {
-    const { tasks } = this.options;
-    const all = tasks.list();
-    return this.projectViews(all, this.graphOf(all, tasks.allLinks()), this.now());
+    const now = this.now();
+    // Live work and work done within the window hold every count.
+    const rows = this.options.tasks.listLiveOrClosedSince(now - BOARD_RECENT_MS);
+    return this.projectViews(rows, this.graphFor(rows), now);
   }
 
   // ---- the emitter --------------------------------------------------------
@@ -616,7 +617,32 @@ export class TaskProtocol {
 
   // ---- view building ------------------------------------------------------
 
-  private graphOf(all: TaskRecord[], links: TaskLink[]): Graph {
+  /**
+   * The graph around these rows, read from them alone: the edges touching
+   * them, the rows at those edges' other ends, and each row's child counts.
+   * Holds every fact `viewOf` reads for these rows while they include the
+   * whole live set (a gate, a ready decision and a standing wait name live
+   * work).
+   */
+  private graphFor(rows: readonly TaskRecord[]): Graph {
+    const { tasks } = this.options;
+    const ids = rows.map((record) => record.id);
+    const known = new Set(ids);
+    const links = tasks.linksTouching(ids);
+    const ends = new Set<string>();
+    for (const link of links) {
+      if (!known.has(link.fromId)) ends.add(link.fromId);
+      if (!known.has(link.toId)) ends.add(link.toId);
+    }
+    const all = [...rows, ...tasks.getMany([...ends])];
+    return this.graphOf(all, links, tasks.childCounts(ids));
+  }
+
+  private graphOf(
+    all: readonly TaskRecord[],
+    links: TaskLink[],
+    childCounts?: Map<string, { total: number; closed: number }>,
+  ): Graph {
     const byId = new Map(all.map((record) => [record.id, record]));
     const blockersOf = new Map<string, TaskRecord[]>();
     const blockingOf = new Map<string, TaskRecord[]>();
@@ -630,13 +656,15 @@ export class TaskProtocol {
       push(blockingOf, link.fromId, to);
       if (link.holdsMerge) mergeHolds.add(`${link.toId}\0${link.fromId}`);
     }
-    const children = new Map<string, { total: number; closed: number }>();
-    for (const record of all) {
-      if (!record.parentId) continue;
-      const entry = children.get(record.parentId) ?? { total: 0, closed: 0 };
-      entry.total += 1;
-      if (TaskService.isClosed(record)) entry.closed += 1;
-      children.set(record.parentId, entry);
+    const children = childCounts ?? new Map<string, { total: number; closed: number }>();
+    if (!childCounts) {
+      for (const record of all) {
+        if (!record.parentId) continue;
+        const entry = children.get(record.parentId) ?? { total: 0, closed: 0 };
+        entry.total += 1;
+        if (TaskService.isClosed(record)) entry.closed += 1;
+        children.set(record.parentId, entry);
+      }
     }
     // Each task's first crewmate-filed discovered-from edge, read once per view build.
     const filedFrom = new Map<string, TaskLink>();
@@ -816,7 +844,7 @@ export class TaskProtocol {
 
   /** Each project's counts; `viewed` holds views already built for this read, by id. */
   private projectViews(
-    all: TaskRecord[],
+    all: readonly TaskRecord[],
     graph: Graph,
     now: number,
     viewed: ReadonlyMap<string, TaskView> = new Map(),

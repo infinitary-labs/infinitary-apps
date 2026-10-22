@@ -6217,6 +6217,13 @@ export class CrewSupervisor {
       } else if (task.interruptRequested) {
         task.interruptRequested = false;
         this.turnComplete(task, { interrupted: true });
+      } else if (isSignInFailure(task.session?.controlProfile, message)) {
+        // A sign-in the provider refused as the turn started (Pi's "No API
+        // key found") is the captain's to fix, like one a turn reports: the
+        // task stays open and idle with its working copy and the card up,
+        // never closed failed (INF-849).
+        task.lastTurnError ??= message;
+        this.turnComplete(task);
       } else {
         this.finish(task, "failed", message);
       }
@@ -6565,9 +6572,13 @@ export class CrewSupervisor {
           };
       if (signInFailure) {
         if (!accountTells) this.hooks.notifyOp(failedOp, "agent", task.id);
+        // Auth-required is never silent (docs/architecture.md section 6): a
+        // decision card offers the way back to a signed-in provider. Its
+        // head reads the task's key and title, never the crewmate counter a
+        // restart renumbers.
         this.cards.addAuthDecisionCard(
           crewSignInCardId(task.id),
-          task.crewmate,
+          task.title,
           this.signInCardBody(task),
           { taskId: task.id },
         );
@@ -8940,15 +8951,6 @@ export class CrewSupervisor {
     // purges what is queued about it (INF-721: a choice outranks a cancel).
     // The settle releases the runtime once the abort returns.
     if (task.settling) return;
-    if (status === "failed" && error && isSignInFailure(task.session?.controlProfile, error)) {
-      // Auth-required is never silent (docs/architecture.md section 6): a
-      // decision card offers the way back to a signed-in provider.
-      this.cards.addAuthDecisionCard(
-        crewSignInCardId(task.id),
-        task.crewmate,
-        this.signInCardBody(task),
-      );
-    }
     // A finished task's background jobs die with it, quietly (R2).
     this.options.killJobs?.(task.id);
     // This is a terminal close, not an idle boundary: closeRecord retires

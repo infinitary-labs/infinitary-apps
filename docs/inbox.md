@@ -17,6 +17,7 @@ A task lane has nowhere else to go, exactly as the first mate's lane has none.
   Each attempt's measured usage is recorded either way; only the provisional failure and its closing text are withheld.
 - The provider answering on a lane - any clean turn - ends its outage (`InboxStore.endOutage`): every row still backing off is due at once.
 - Attempts still count what the ladder was built for: a steer or a resume that throws, and a sign-in failure (which also raises the sign-in card, once).
+  A sign-in the provider refuses as a turn starts, thrown instead of reported, is the same failed turn: the task stays open and idle with its working copy, and the sign-in card names it by its key and title.
   Three of those still escalate loudly and stop.
   A refusal's row is due one `INBOX_GRACE_MS` after its attempt began; `pending` reads `next_attempt_at` instead of a fixed grace.
   A development or end-to-end run may shorten that grace with `INFINITARY_INBOX_GRACE_MS`, so a journey that quits mid-turn sees its redelivery without waiting 90 s; a packaged build always uses `INBOX_GRACE_MS`.

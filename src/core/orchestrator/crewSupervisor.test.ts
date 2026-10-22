@@ -790,10 +790,16 @@ describe("CrewSupervisor", () => {
     ).rejects.toThrow(/Unknown repo_id/);
   });
 
+  // INF-849: the captain's "this card should display task key, not crewmate
+  // number" - a sign-in refused as a turn starts keeps the task, so the card
+  // carries it and the head reads its key and title.
   it("raises a decision card and notifies the agent when a task fails auth-shaped", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, cards, ops } = setup(crewmate);
-    await supervisor.commission({ title: "t", intent: intentOf("do something") });
+    const { supervisor, cards, ops, tasks, workspace } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Promote the latest alpha",
+      intent: intentOf("do something"),
+    });
     // The turn must be in flight before it can fail: a fixed tick lost the
     // race under a loaded suite and `failPrompt` failed nothing.
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
@@ -809,7 +815,13 @@ describe("CrewSupervisor", () => {
     // The agent-down set keeps its host card, with exactly its one way out.
     expect(decision?.author).toBe("host");
     expect(decision?.actions.map((a) => a.id)).toEqual(["open-settings"]);
+    expect(decision?.taskId).toBe(taskId);
+    expect(decision?.meta).toBe("Promote the latest alpha");
     expect(ops.at(-1)).toContain("failed");
+    // The task stays open and idle with its working copy, never closed failed.
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     const result = supervisor.act(decision?.id ?? "", "open-settings");
     // Sign-in is on the Intelligence tab: the way out lands there, not on General.
     expect(result.effect).toEqual({ kind: "open", target: "subscriptions" });

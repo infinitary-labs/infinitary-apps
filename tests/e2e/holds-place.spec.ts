@@ -75,9 +75,13 @@ test("a declared continuity card keeps replies, closes choices, returns forward 
     // No input into the main prompt is needed after restart: the same card accepts a question.
     // Boot preserves ordinary stack order, so reach it with the existing pager.
     await showCard(app.page, FM_THREAD_CARD_TITLE);
+    // The thread survives restart too: the first answer is back before the new question.
+    const answers = shownEntry(app.page).getByText(FM_THREAD_PROSE_ANSWER);
+    await expect(answers).toHaveCount(1);
     await cardReply(app.page).field.fill(THREAD_PROSE_REPLY);
     await pressKey(cardReply(app.page).field, "Enter");
-    await expect(shownEntry(app.page).getByText(FM_THREAD_PROSE_ANSWER)).toBeVisible();
+    await expect(answers).toHaveCount(2);
+    await expect(answers.last()).toBeVisible();
     await expect(shownCard(app.page, FM_THREAD_CARD_TITLE)).toBeVisible();
   } finally {
     await app.close();

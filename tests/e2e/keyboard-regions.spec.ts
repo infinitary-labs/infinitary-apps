@@ -103,6 +103,14 @@ test("F6 and Shift+F6 go round the window's parts, and the arrows move through t
     });
 
     await test.step("in the Tasks list, the arrows move between rows, the keyboard's rest opens a summary, and Enter opens the task", async () => {
+      // The second task may still be starting: its row moves from queued to
+      // working when its crewmate begins, and a row that changes group is
+      // drawn anew, so the focus resting on it would go. The arrows start
+      // once both rows sit in working.
+      await expect(nowFrame(page).locator('[data-now-group="working"] [data-now-row]')).toHaveCount(
+        2,
+        { timeout: 30_000 },
+      );
       let at = await focusedRegion(page);
       while (at !== "panel:now") at = await regionAfter(app, page, at, "F6");
       await expect.poll(() => focusedRowKey(page)).not.toBeNull();

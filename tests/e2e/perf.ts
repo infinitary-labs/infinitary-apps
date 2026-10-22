@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { GRADES_BUDGETS } from "../helpers/budgets";
 
 /**
  * Durations, and the one place they are graded (captain's B1, "one clock,
@@ -20,7 +21,7 @@ import { expect, test } from "@playwright/test";
 export const PERF_TAG = "@perf";
 
 /** Whether this run grades the budgets: a perf run, on a quiet host. */
-export const GRADES_BUDGETS = process.env.INFINITARY_PERF_BUDGETS === "1";
+export { GRADES_BUDGETS };
 
 const p95 = (values: number[]) =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length * 0.95)] ?? 0;

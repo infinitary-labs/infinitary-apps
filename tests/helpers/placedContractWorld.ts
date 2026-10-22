@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { Type } from "typebox";
+import { vi } from "vitest";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
 import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
@@ -203,11 +204,14 @@ export async function placedContractWorld(
   if (!run.ok) throw new Error(run.reason);
   started.runs.push(run.run);
   // In reach, and its roster read: the home knows where the task's folders are.
-  const deadline = Date.now() + 5_000;
-  while (!placed.ready(deviceId, CREWMATE_TASK)) {
-    if (Date.now() > deadline) throw new Error("The computer never came into reach.");
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
+  // Its window holds only on a graded run (`waitWindow.ts`).
+  await vi.waitFor(
+    () => {
+      if (!placed.ready(deviceId, CREWMATE_TASK))
+        throw new Error("The computer never came into reach.");
+    },
+    { timeout: 5_000, interval: 10 },
+  );
   const there = placed.factories(deviceId)?.[inner.factory.backend];
   if (!there) throw new Error(`The home has no ${inner.factory.backend} factory for it.`);
   const factory: SessionFactory = {

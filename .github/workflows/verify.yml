@@ -15,7 +15,9 @@ name: verify
 # The e2e paint and latency budgets are graded only on request, on a quiet
 # host (captain's B1, 2026-09-24; tests/e2e/perf.ts): every e2e run prints
 # them, and `-f perf=true` adds a run of the @perf-tagged specs that holds
-# them to their budgets.
+# them to their budgets. The same input holds linux-checks' vitest tests to
+# their time limits, which no other run keeps (INF-857, docs/test-cohorts.md
+# "Budgets").
 #
 # Deliberately no pull_request, push or schedule trigger (captain's call):
 # the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
@@ -59,7 +61,7 @@ on:
           - alpha
         default: stable
       perf:
-        description: Also grade the e2e paint and latency budgets (run this on a quiet host)
+        description: Also grade the e2e paint and latency budgets and the unit tests' time limits (run this on a quiet host)
         required: false
         type: boolean
         default: false
@@ -156,6 +158,9 @@ jobs:
         run: pnpm lint:adherence
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm test
+        env:
+          # Test time limits hold only on a graded run (docs/test-cohorts.md, "Budgets").
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
       # The unit suite on macOS too: some suites are darwin-only (the local
       # code signing contract in tests/local-codesign.test.ts, among others)
       # and skip on the Linux PR check, so this is the only CI that runs them.

@@ -61,8 +61,9 @@ import { DevicePairing } from "./pairing";
 // Apple silicon Mac; on a Mac, a download from a local HTTPS release with
 // curl, shasum, ditto and a stand-in codesign, the slowest 3.7 s (a paced
 // download, and one that stalls for its two seconds). A poll waits for a
-// computer that crosses the connection and starts again, so it waits up to 5 s.
-vi.setConfig({ testTimeout: 10_000, expect: { poll: { timeout: 5_000 } } });
+// computer that crosses the connection and starts again, so it waits for the
+// rest of the test's budget (tests/helpers/waitWindow.ts).
+vi.setConfig({ testTimeout: 10_000 });
 
 /** This Mac's version of Firstmate in these tests. */
 const HOME_APP = "0.1.29";

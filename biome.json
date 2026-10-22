@@ -416,6 +416,7 @@
         "!tests/install-clones.test.ts",
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
+        "!tests/wait-window.test.ts",
         "!tests/virtual-mac-phone.test.ts",
         "!tests/phone-release-process.test.ts",
         "!tests/phone-certificates.test.ts",

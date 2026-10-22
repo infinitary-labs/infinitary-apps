@@ -111,6 +111,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // A test's time limit, and a wait's window, hold only on a run that grades
+    // budgets (tests/helpers/budgets.ts, INF-857): the patched runner and
+    // waitWindow.ts read it; elsewhere a test waits for its work.
     // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
     globalSetup: ["./tests/helpers/vitestGlobalSetup.ts"],
     projects: [
@@ -121,7 +124,11 @@ export default defineConfig({
           maxWorkers: Math.max(2, os.availableParallelism() - 1),
           include: ["src/shared/**/*.test.ts"],
           isolate: false,
-          setupFiles: ["./tests/helpers/pureProject.ts", "./tests/helpers/scratchDirCleanup.ts"],
+          setupFiles: [
+            "./tests/helpers/pureProject.ts",
+            "./tests/helpers/scratchDirCleanup.ts",
+            "./tests/helpers/waitWindow.ts",
+          ],
         },
       },
       {
@@ -132,7 +139,11 @@ export default defineConfig({
           include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
           exclude: ["src/shared/**/*.test.ts", ...integration, ...isolatedUnit],
           isolate: false,
-          setupFiles: ["./tests/helpers/pureProject.ts", "./tests/helpers/scratchDirCleanup.ts"],
+          setupFiles: [
+            "./tests/helpers/pureProject.ts",
+            "./tests/helpers/scratchDirCleanup.ts",
+            "./tests/helpers/waitWindow.ts",
+          ],
         },
       },
       {
@@ -142,7 +153,7 @@ export default defineConfig({
           maxWorkers: Math.max(2, os.availableParallelism() - 1),
           include: isolatedUnit,
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
         },
       },
       {
@@ -155,7 +166,7 @@ export default defineConfig({
             (path) => /\.test\.tsx?$/.test(path) && !PROBE_FILES.includes(path),
           ),
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
           // Real git, pnpm and child processes: eight on Mac, four elsewhere, after the
           // in-memory cohorts finish, so the suite is not its own load
           // generator. Each file states its own budget; the default stays 5 s.
@@ -169,7 +180,7 @@ export default defineConfig({
           name: "probe",
           include: [...PROBE_FILES],
           isolate: true,
-          setupFiles: ["./tests/helpers/scratchDirCleanup.ts"],
+          setupFiles: ["./tests/helpers/scratchDirCleanup.ts", "./tests/helpers/waitWindow.ts"],
           // The integration cohort's workers, in a group of their own after it,
           // so a whole run never loads the host with both at once.
           maxWorkers: process.platform === "darwin" ? 8 : 4,

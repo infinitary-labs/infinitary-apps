@@ -1,0 +1,16 @@
+diff --git a/dist/chunk-artifact.js b/dist/chunk-artifact.js
+index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..6f6add045cc97ac7ecdad507fde809a0f4def313 100644
+--- a/dist/chunk-artifact.js
++++ b/dist/chunk-artifact.js	
+@@ -2259,7 +2259,10 @@ async function runWithSuite(suite, fn) {
+ 	collectorContext.currentSuite = prev;
+ }
+ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+-	if (timeout <= 0 || timeout === Number.POSITIVE_INFINITY) {
++	// Infinitary (INF-857): a test's or hook's time limit holds only on a run that
++	// grades budgets, INFINITARY_PERF_BUDGETS=1 on a quiet host; elsewhere it waits
++	// for its work with no clock, and the job's own time limit stops a stuck one.
++	if (timeout <= 0 || timeout === Number.POSITIVE_INFINITY || globalThis.process?.env?.INFINITARY_PERF_BUDGETS !== "1") {
+ 		return fn;
+ 	}
+ 	const { setTimeout, clearTimeout } = getSafeTimers();

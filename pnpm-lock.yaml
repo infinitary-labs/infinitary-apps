@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@vitest/runner@4.1.10': b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0
   electron-vite@5.0.0: 60e136d369686e9fbedf28afd014aeee35f6fbf0f78f7d0c277bfb63d93ecb7c
   playwright-core@1.62.1: 770136d540fffcfa8a50d30cf464f902800ff7eb939761bb43d0e31d371114c3
 
@@ -5492,7 +5493,7 @@ snapshots:
     dependencies:
       tinyrainbow: 3.1.1
 
-  '@vitest/runner@4.1.10':
+  '@vitest/runner@4.1.10(patch_hash=b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0)':
     dependencies:
       '@vitest/utils': 4.1.10
       pathe: 2.0.3
@@ -8174,7 +8175,7 @@ snapshots:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
-      '@vitest/runner': 4.1.10
+      '@vitest/runner': 4.1.10(patch_hash=b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0)
       '@vitest/snapshot': 4.1.10
       '@vitest/spy': 4.1.10
       '@vitest/utils': 4.1.10

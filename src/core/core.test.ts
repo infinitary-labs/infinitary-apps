@@ -86,12 +86,14 @@ vi.mock("./utilityQos", async (importOriginal) =>
 
 type OpenedUrl = string;
 
+/** Waits for a core push; its window holds only on a graded run (`tests/helpers/waitWindow.ts`). */
 async function waitFor(condition: () => boolean, timeoutMs = 2_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!condition()) {
-    if (Date.now() > deadline) throw new Error("timed out waiting for a core push");
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
+  await vi.waitFor(
+    () => {
+      if (!condition()) throw new Error("timed out waiting for a core push");
+    },
+    { timeout: timeoutMs, interval: 10 },
+  );
 }
 
 function fakeHost(

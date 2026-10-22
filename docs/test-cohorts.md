@@ -80,6 +80,12 @@ A file whose cases chain the product's git and are not about that clamp runs the
 `src/core/utilityQos.test.ts` holds the clamp itself, and `src/core/workspace/git.test.ts` keeps running the app's own git under it.
 
 A budget lives in the file, as `vi.setConfig({ testTimeout })` for the whole file, or on the describe or test that carries the work when only part of the file spawns.
+A budget holds only on a run that grades budgets, `INFINITARY_PERF_BUDGETS=1` on a quiet host (`verify.yml` with `perf`), as journeys' durations do (captain's B1, and his INF-857 choice to grade durations only on a quiet run).
+On every other run a busy Mac can freeze a test's processes for seconds at a time, so a test, a hook and an `expect.poll` or `vi.waitFor` wait for their work with no clock: our patch to `@vitest/runner` drops the limit there, and `tests/helpers/waitWindow.ts` drops the wait's window.
+A stuck test then holds its run until the job's own time limit stops it, and the graded run names it.
+On a graded run a wait keeps a `timeout` it names, and one that names none waits for the rest of its test's budget, not vitest's one second, ending just before it so a stuck wait reports its own mismatch.
+A file sets no default window for its polls.
+`tests/wait-window.test.ts` holds both runs against a child the test freezes.
 A budget an author already set above the rule stays as it was, and a test whose time is a fixed product timeout rather than load-scaled work (hostEnv's hanging-shell test waits out a 3 s timeout) keeps the budget sized to that timeout.
 A file whose slowest test fits the 5 s default under the rule carries none.
 
@@ -107,6 +113,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, one Claude case cut mid-answer on one, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
+| `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts` | 10 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes, `ps` and Python kernel-lock probes, on macOS/Linux | 5 s default |
 | `tests/virtual-mac-phone.test.ts` | guest-service settings, clean shutdown, runtime import and phone scripts against stand-ins, real git, bash and tar on a scratch working copy | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |

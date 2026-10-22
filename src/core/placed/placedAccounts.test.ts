@@ -84,8 +84,8 @@ import { WorkDevices } from "./workDevices";
 // Integration (docs/test-cohorts.md): real git makes each side's workspace,
 // and every turn crosses the connection. The slowest case took 0.34 s at its
 // fastest of three runs on an Apple silicon Mac, so the file keeps vitest's
-// 5 s default; a poll waits up to 4 s for work that crosses the connection.
-vi.setConfig({ expect: { poll: { timeout: 4_000 } } });
+// 5 s default; a poll waits for work that crosses the connection for the
+// rest of that budget (tests/helpers/waitWindow.ts).
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

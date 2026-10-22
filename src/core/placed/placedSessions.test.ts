@@ -113,9 +113,9 @@ import { NO_PLACED_TASK } from "./placedWork";
 // silicon Mac, with git unclamped as below. A poll waits for work that
 // crosses the connection and runs git on both sides - a closed task's
 // working copy kept, brought home and deleted took 0.46 s alone and 1.7 s
-// with sixteen copies of this file running at once - so it waits up to
-// 5 s, never Vitest's 1 s.
-vi.setConfig({ testTimeout: 10_000, expect: { poll: { timeout: 5_000 } } });
+// with sixteen copies of this file running at once - so it waits for the
+// rest of the test's budget, never Vitest's 1 s (tests/helpers/waitWindow.ts).
+vi.setConfig({ testTimeout: 10_000 });
 
 // On a Mac the product runs every git below the UI (`taskpolicy -c
 // utility`, utilityQos.ts), where it yields to every busier process. A case

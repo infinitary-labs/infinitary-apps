@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { NearbyMacsView } from "@shared/nearbyMacs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { standInDnsSd } from "../../../tests/helpers/dnsSdStandIn";
 import { runDnsSd, runDnsSdHeld } from "./dnsSd";
 import { NearbyMacs } from "./nearby";
@@ -16,8 +16,8 @@ import { NearbyMacs } from "./nearby";
 // Integration budget (docs/test-cohorts.md): a shell script per run, the
 // slowest case 1.40 s at its fastest of three runs on an Apple silicon Mac
 // (the held run, which waits out a one-second `-t`), so vitest's 5 s
-// default; a poll waits up to 3 s for a run to end.
-vi.setConfig({ expect: { poll: { timeout: 3_000 } } });
+// default; a poll waits for a run to end for the rest of it
+// (tests/helpers/waitWindow.ts).
 
 /** Every run the stand-in started, by its process id. */
 function runs(program: string): number[] {

@@ -70,13 +70,21 @@ afterEach(async () => {
   await Promise.all(stores.splice(0).map((store) => store.flushed()));
 });
 
-/** The host's one clock, moved by hand: each tick runs what registered on it. */
+/**
+ * The host's one clock, moved by hand: each tick runs what registered on it.
+ * `reads` counts the session's reads of it, each a moment it recorded - an
+ * interrupt or a cut it was asked for among them.
+ */
 function handClock() {
   let now = Date.now();
+  let reads = 0;
   const runs: ((now: number) => void)[] = [];
   return {
     clock: {
-      now: () => now,
+      now: () => {
+        reads += 1;
+        return now;
+      },
       register: (_name: string, _every: number, run: (now: number) => void) => {
         runs.push(run);
         return () => {
@@ -85,6 +93,7 @@ function handClock() {
       },
     },
     now: () => now,
+    reads: () => reads,
     tick: () => {
       now += TICK_PERIOD_MS;
       for (const run of [...runs]) run(now);
@@ -170,13 +179,14 @@ function clientProcess(): number {
   return client.pid;
 }
 
-/** One minute of the host's clock and a second of the real one, `count` times. */
-async function minutes(hand: ReturnType<typeof handClock>, count: number): Promise<void> {
-  for (let i = 0; i < count; i += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-    hand.tick();
-  }
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
+/**
+ * One minute of the host's clock, once the session has recorded what it was
+ * asked since `before` - an order's arrival, not a second of the real clock,
+ * which a busy Mac can outlast (INF-857).
+ */
+async function minuteOnceAsked(hand: ReturnType<typeof handClock>, before: number): Promise<void> {
+  await expect.poll(() => hand.reads()).toBeGreaterThan(before);
+  hand.tick();
 }
 
 /** INB-9's turn up to the wedge: open, prompt, the model's request left unanswered, a steer delivered. */
@@ -204,6 +214,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
     const client = clientProcess();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
+    const before = at.hand.reads();
 
     const answered: string[] = [];
     void at
@@ -212,15 +223,16 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
     void at
       .order("inf:session:close", { orderId: `close:${TASK}` })
       .then((answer) => answered.push(`close ${JSON.stringify(answer)}`));
-    await minutes(at.hand, 1);
+    await minuteOnceAsked(at.hand, before);
 
     // The client is stopped outright, and both orders are answered in turn.
     await expect
       .poll(() => answered, { timeout: STOPPED_MS })
       .toEqual(['abort {"ok":true}', 'close {"ok":true}']);
-    expect(at.homeEvents).toContainEqual(
-      expect.objectContaining({ type: "turn_ended", turn: 1, outcome: "done" }),
-    );
+    // The home takes the turn's end as the work computer sends it, after the answers.
+    await expect
+      .poll(() => at.homeEvents)
+      .toContainEqual(expect.objectContaining({ type: "turn_ended", turn: 1, outcome: "done" }));
     const roster = (await at.host.answer("inf:session:roster", [])) as {
       tasks: { task: string; running?: unknown; closed: boolean }[];
     };
@@ -234,17 +246,20 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
     const client = clientProcess();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
+    const before = at.hand.reads();
 
     let answered = false;
     void at.order("inf:session:close", { orderId: `close:${TASK}` }).then(() => {
       answered = true;
     });
-    await minutes(at.hand, 1);
+    await minuteOnceAsked(at.hand, before);
 
     await expect.poll(() => answered, { timeout: STOPPED_MS }).toBe(true);
-    expect(at.homeEvents).toContainEqual(
-      expect.objectContaining({ type: "turn_ended", turn: 1, outcome: "interrupted" }),
-    );
+    await expect
+      .poll(() => at.homeEvents)
+      .toContainEqual(
+        expect.objectContaining({ type: "turn_ended", turn: 1, outcome: "interrupted" }),
+      );
   });
 
   it("fails the turn a bound's cut ends, with the bound's failure", async () => {
@@ -253,6 +268,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
     const client = clientProcess();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
+    const before = at.hand.reads();
 
     let answer: unknown;
     void at
@@ -263,7 +279,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
       .then((answered) => {
         answer = answered;
       });
-    await minutes(at.hand, 1);
+    await minuteOnceAsked(at.hand, before);
 
     await expect.poll(() => answer, { timeout: STOPPED_MS }).toEqual({ ok: true });
     await expect.poll(() => at.homeEvents.some((event) => event.type === "turn_ended")).toBe(true);

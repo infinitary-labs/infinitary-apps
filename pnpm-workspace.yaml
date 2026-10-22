@@ -35,8 +35,13 @@ allowBuilds:
   # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
   dugite: false
 minimumReleaseAge: 0
-# Each patch carries one fix its package's next release already has; drop it
-# when the package is upgraded to that release.
+# Each patch but the first carries one fix its package's next release already
+# has; drop it when the package is upgraded to that release.
+# - @vitest/runner: ours, kept across upgrades. A test's or hook's time limit
+#   holds only on a run that grades budgets (INFINITARY_PERF_BUDGETS=1, on a
+#   quiet host); elsewhere a test waits for its work with no clock and the
+#   job's own time limit stops a stuck one (captain, INF-857;
+#   docs/test-cohorts.md, "Budgets"). Re-make it on an upgrade.
 # - electron-vite: its CommonJS shim goes after a main chunk's last real
 #   import, found by parsing the chunk, never inside a string or comment that
 #   reads like an import (electron-vite 6.0.0-beta.4, docs/architecture.md
@@ -46,5 +51,6 @@ minimumReleaseAge: 0
 #   failing the test with "Target crashed" (docs/e2e-contracts.md, "A crashed
 #   page").
 patchedDependencies:
+  '@vitest/runner@4.1.10': patches/@vitest__runner@4.1.10.patch
   electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
   playwright-core@1.62.1: patches/playwright-core@1.62.1.patch

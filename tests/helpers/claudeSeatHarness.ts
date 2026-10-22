@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, watch } from "node:fs";
+import { type FSWatcher, mkdirSync, readdirSync, readFileSync, rmSync, watch } from "node:fs";
 import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { ClaudeRateLimit } from "../../src/core/claude/claudeEvents";
@@ -63,6 +63,14 @@ export function afterLastToolCall(request: StubRequest): string {
 /**
  * Resolves once the client's own transcript of a session carries a line the
  * predicate accepts: an order the client itself writes, never a clock.
+ *
+ * The client makes its project folder and transcript only when it first
+ * writes, after the wait began, and then writes in bursts. So every folder
+ * the transcript can sit in (`projects` and each folder in it, as
+ * `locateClaudeTranscript` reads) is watched before it is read: a line written
+ * after a watch is set wakes it, and a line written before is in the read that
+ * follows. One recursive watch on `projects` lost a line on Linux under Node
+ * 24.21, which read a new transcript before watching it (INF-802).
  */
 export function clientRecords(
   b: Pick<ClaudeSeatBox, "configDir" | "cwd"> & Partial<Pick<ClaudeSeatBox, "onCleanup">>,
@@ -71,7 +79,14 @@ export function clientRecords(
 ): Promise<void> {
   const projects = join(b.configDir, "projects");
   mkdirSync(projects, { recursive: true });
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const watchers = new Map<string, FSWatcher>();
+    let done = false;
+    const stop = () => {
+      done = true;
+      for (const watcher of watchers.values()) watcher.close();
+      watchers.clear();
+    };
     const found = () => {
       const file = locateClaudeTranscript({ configDir: b.configDir, cwd: b.cwd, sessionId });
       if (!file) return false;
@@ -85,16 +100,27 @@ export function clientRecords(
           }
         });
     };
-    const watcher = watch(projects, { recursive: true }, () => {
-      if (!found()) return;
-      watcher.close();
+    const look = () => {
+      if (done) return;
+      try {
+        if (!watchers.has(projects)) watchers.set(projects, watch(projects, look));
+        for (const folder of readdirSync(projects, { withFileTypes: true })) {
+          const dir = join(projects, folder.name);
+          if (folder.isDirectory() && !watchers.has(dir)) watchers.set(dir, watch(dir, look));
+        }
+        if (!found()) return;
+      } catch (error) {
+        stop();
+        // A folder that went missing means the box's home is gone: its test
+        // has ended, and so has the wait.
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") reject(error);
+        return;
+      }
+      stop();
       resolve();
-    });
-    b.onCleanup?.(() => watcher.close());
-    if (found()) {
-      watcher.close();
-      resolve();
-    }
+    };
+    b.onCleanup?.(stop);
+    look();
   });
 }
 

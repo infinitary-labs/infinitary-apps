@@ -94,6 +94,8 @@ const isolatedUnit = [
   "tests/phone-keyboard.test.ts",
   // Its fixed-clock migration comparison must not inherit a warmed template.
   "tests/helpers/database.test.ts",
+  // It loads the Claude SDK through the seat's harness.
+  "tests/helpers/claudeSeatHarness.test.ts",
 ];
 
 export default defineConfig({

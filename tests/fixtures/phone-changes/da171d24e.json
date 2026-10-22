@@ -1,0 +1,21 @@
+{
+  "commit": "da171d24ecae26616556c3409e934a2e329d0e41",
+  "subject": "fix(ci): prepare the shared Mac image for isolated proofs",
+  "paths": [
+    ".github/workflows/republish-casks.yml",
+    ".github/workflows/verify.yml",
+    "docs/alpha.md",
+    "docs/test-cohorts.md",
+    "docs/testing.md",
+    "release-notes/changes/isolated-mac-proof.json",
+    "scripts/virtual-mac/guest-services.sh",
+    "scripts/virtual-mac/image.sh",
+    "scripts/virtual-mac/provision.sh",
+    "scripts/virtual-mac/runtime.sh",
+    "scripts/virtual-mac/vm.sh",
+    "tests/release-contract.test.ts",
+    "tests/virtual-mac-phone.test.ts"
+  ],
+  "testDiff": "",
+  "testFiles": {}
+}

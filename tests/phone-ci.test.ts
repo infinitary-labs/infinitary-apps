@@ -78,7 +78,14 @@ const OFF = "";
 const IN_TURN = "in-turn";
 const TOGETHER = "together";
 const VIRTUAL_MAC_STEPS = ["Start a fresh virtual Mac", "Delete the virtual Mac"];
-type Step = { id?: string; name?: string; uses?: string; if?: string; run?: string };
+type Step = {
+  id?: string;
+  name?: string;
+  uses?: string;
+  if?: string;
+  run?: string;
+  env?: Record<string, string>;
+};
 type Plain = { [key: string]: string | Plain };
 const STATUS = ["success", "always", "cancelled", "failure"];
 
@@ -153,20 +160,37 @@ describe("the native pull-request gate", () => {
     "tests/helpers/phoneHome.ts",
     // INF-355: changing the native registration witness must exercise its simulator consumer.
     "tests/helpers/phoneKeyboard.ts",
-    "scripts/phone-test-home.ts",
-    "scripts/affected-phone.ts",
     "scripts/with-mac-check.py",
-    "scripts/replaced-phone-runs.ts",
     // INF-663: the gate's checks before its simulator tests.
     "scripts/phone-checks.ts",
     "scripts/phone-test-plan.ts",
-    // INF-524: the virtual Mac path the switch turns on.
-    "scripts/virtual-mac/phone.sh",
-    "scripts/virtual-mac/phone-job.sh",
-    "scripts/virtual-mac/vm.sh",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });
+  // INF-827 (the captain's "skip changes to unused setup"): the device gates never run the
+  // chooser, the replacement script or the local test home, nor the virtual Mac scripts while
+  // the switch is off.
+  it.each([
+    "scripts/phone-test-home.ts",
+    "scripts/affected-phone.ts",
+    "scripts/replaced-phone-runs.ts",
+    "scripts/virtual-mac/phone.sh",
+    "scripts/virtual-mac/phone-job.sh",
+    "scripts/virtual-mac/vm.sh",
+  ])("skips setup the device gates do not use, %s alone", (path) => {
+    expect(eligible(phoneDecision([path]).run)).toBe("false");
+  });
+  // INF-524: the virtual Mac path the switch turns on.
+  it.each([
+    "scripts/virtual-mac/phone.sh",
+    "scripts/virtual-mac/phone-job.sh",
+    "scripts/virtual-mac/vm.sh",
+  ])(
+    "runs the actual workflow condition when %s changes with the virtual Mac switch on",
+    (path) => {
+      expect(eligible(phoneDecision([path], undefined, { virtualMac: true }).run)).toBe("true");
+    },
+  );
   it.each([
     "src/shared/connection.ts",
     "src/shared/feed.ts",
@@ -299,13 +323,20 @@ describe("the native pull-request gate", () => {
         .map((step) => step.run),
     ).toEqual([
       [
+        // INF-827: the parts the chooser kept, none (every part) on a run on request.
+        'parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done',
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
         // INF-658: a job placed in a virtual Mac runs the gate there without the lease.
-        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
-        'python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"',
+        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
+        'python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
         "",
       ].join("\n"),
     ]);
+    // The gate reads the chooser's parts, which a run on request leaves empty.
+    expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
+      "${{ needs.choose-phone.outputs.parts }}",
+    );
+    expect(workflow.jobs["choose-phone"].outputs.parts).toBe("${{ steps.select.outputs.parts }}");
     // The gates' shell sees the switch as the repository sets it, empty when unset.
     const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
       /^\$\{\{\s*|\s*\}\}$/g,
@@ -350,7 +381,7 @@ describe("the native pull-request gate", () => {
     expect(
       stepsThatRun(TOGETHER)
         .filter(isGate)
-        .map((step) => step.run?.split("\n")[0]),
+        .map((step) => step.run?.split("\n")[1]),
     ).toEqual([
       'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
     ]);

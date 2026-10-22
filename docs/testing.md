@@ -131,7 +131,8 @@ A value other than `ci` or `local` refuses rather than guess.
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, `scripts/phone-test-home.ts`, `scripts/affected-phone.ts`, the command-lease helper `scripts/with-mac-check.py`, the replacement helper `scripts/replaced-phone-runs.ts`, the check runner `scripts/phone-checks.ts`, the test plan helper `scripts/phone-test-plan.ts` and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the command-lease helper `scripts/with-mac-check.py`, the check runner `scripts/phone-checks.ts` and the test plan helper `scripts/phone-test-plan.ts`.
+Setup the device gates never run does not select it: the chooser itself, the replacement helper `scripts/replaced-phone-runs.ts`, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh` while `PHONE_VIRTUAL_MAC` is unset.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
 The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
@@ -140,6 +141,19 @@ The same command logs also live in the smaller `phone-logs` artifact, independen
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
 That gate checks and builds once, then runs the phone journey's four parts on the iPhone and the iPad, eight in all, each on its own simulator and test home, six at a time (`docs/ios.md`, "Disposable verification").
+
+### The phone parts a pull request runs
+
+On a pull request the gate runs only the closest of the journey's four parts within a six-minute budget, as the Mac journeys do ("Journeys on the pull request"), and the nightly check of `main` runs every part.
+The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
+It reads a UI test change by its functions: each changed line counts for the test functions around it, added lines in the new version and removed ones in the old, and each part reaches its test and every function it calls by name.
+The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
+A blank or comment-only line counts for nothing; a line outside any function, or a test file it cannot read or parse, counts for every part.
+It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs rest.
+A part's minutes are its longer device's time in the newest passing on-request check of `main`, whose full gate writes `part-times.json` into its `phone-logs` artifact; with none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reaches runs.
+The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
+A part the pull request leaves is checked after it merges, by the nightly check of `main`; an author who wants every part first runs the phone check on request on their branch.
+`tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
 A manual rerun of a replaced version stops before its gate.
 Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
@@ -173,7 +187,7 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 ### The phone check on request
 
 `phone.yml` also runs on request (`workflow_dispatch`), such as the nightly check of `main`: `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A run on request skips the chooser and runs the device gate whatever changed; it starts no release, TestFlight or App Store step.
+A run on request skips the chooser and runs every part of the device gate whatever changed; it starts no release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
 No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 It takes the same `mac-mini-phone` queue and exclusive Mac check lease as a pull request's phone check.

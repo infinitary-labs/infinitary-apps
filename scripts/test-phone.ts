@@ -197,6 +197,9 @@ const everyPart = async () => {
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
   // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it.
   const folder = (device: PhoneDevice, part: string) => values.both ? join(evidence, device, part) : join(evidence, part);
+  // INF-827: each part's minutes on each device, which a pull request's chooser reads from the
+  // newest passing check of main (scripts/affected-phone.ts).
+  const times: Record<string, Record<string, number>> = {};
   const gate = async ({ device, part }: { device: PhoneDevice; part: string }) => {
     const name = `${device} ${part}`;
     const began = Date.now();
@@ -211,10 +214,13 @@ const everyPart = async () => {
       child.once("error", reject); child.once("close", resolveExit);
     }).finally(() => children.delete(child));
     console.log(`${name}: ended with ${status} after ${((Date.now() - began) / 60_000).toFixed(1)} minutes`);
+    (times[part] ??= {})[device] = Date.now() - began;
     return status === 0 ? [] : [name];
   };
   // No part stops another; any part failing fails the gate.
   const failed = (await runSideBySide(jobs, simulators, gate)).flat();
+  // Only a full gate, every part on both devices, writes them.
+  if (values.both && !values.part) writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
   if (failed.length) throw new Error(`The phone gate failed: ${failed.join(", ")}; see its results in ${evidence}`);
 };
 // A test plan copy beside the built one, naming this device's own test home.

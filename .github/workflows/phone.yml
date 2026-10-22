@@ -42,8 +42,13 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
   choose-phone:
     runs-on: ubuntu-latest
+    # INF-827: reading the newest passing check of main's part times.
+    permissions:
+      actions: read
+      contents: read
     outputs:
       run: ${{ steps.select.outputs.run }}
+      parts: ${{ steps.select.outputs.parts }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -56,12 +61,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - id: select
-        name: Check the phone gate's inputs
+      # INF-827 (the captain's approved INF-828 plan): each part's minutes come from the newest
+      # passing check of main run on request, such as the nightly one. With none readable, the
+      # chooser runs every part the change reaches and says why.
+      - id: timing-run
+        name: Find the newest passing check of main
         if: github.event_name == 'pull_request'
-        run: node scripts/affected-phone.ts --base "$BASE_REF" --head HEAD >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'phone.yml', branch: 'main', event: 'workflow_dispatch', status: 'success', per_page: 1
+            });
+            const run = data.workflow_runs[0];
+            if (!run) return;
+            core.setOutput('id', run.id);
+            await core.summary.addRaw(`Part times: [passing phone run ${run.id}](${run.html_url})\n`).write();
+      - name: Read that check's part times
+        if: steps.timing-run.outputs.id
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: phone-logs
+          run-id: ${{ steps.timing-run.outputs.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/phone-times
+      - id: select
+        name: Check the phone gate's inputs and choose its parts
+        if: github.event_name == 'pull_request'
+        run: node scripts/affected-phone.ts --base "$BASE_REF" --head HEAD --times "$RUNNER_TEMP/phone-times/part-times.json" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
         env:
           BASE_REF: origin/${{ github.base_ref }}
+          PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+      - name: Keep the chosen and left parts
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-placement
+          path: ${{ runner.temp }}/phone-placement.json
+          if-no-files-found: ignore
+          retention-days: 14
   native-phone:
     needs: choose-phone
     if: github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true'
@@ -151,24 +191,32 @@ jobs:
       # Mac with no journeys, so it takes no lease either, with the 2 simulators at a time
       # its 6 cores hold, as phone-job.sh runs them. The real Mac's place still takes it.
       # 40m is over twice the longest measured gate for both devices, 15 minutes.
+      # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
+      # parts the chooser kept; a run on request, and the virtual Mac switch, run every part.
       - id: both
         name: Read and recover on iPhone and iPad at once
         if: ${{ steps.start.outputs.replaced != 'true' }}
         run: |
+          parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
-          if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
-          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"
+          if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
+          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
+        env:
+          PHONE_PARTS: ${{ needs.choose-phone.outputs.parts }}
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete
       # Keep diagnostics independently of screenshot-heavy xcresult bundles,
       # so a failed gate can be diagnosed within the workflow reader's limits.
+      # A full gate's part times ride along for the pull requests' chooser (INF-827).
       - name: Keep the small native command logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: phone-logs
-          path: ${{ runner.temp }}/phone/**/*.log
+          path: |
+            ${{ runner.temp }}/phone/**/*.log
+            ${{ runner.temp }}/phone/part-times.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Keep native results and connection readings

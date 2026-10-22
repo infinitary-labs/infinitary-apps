@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "info-tab-return",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Return to Info without rebuilding the record",
+      "body": "Switching back to Info from the same task’s Crewmate or Browser tab reuses the populated record, keeping its open sections and reading position.",
+      "noPicture": "The layout is unchanged; this reduces the time spent rebuilding the same record during tab switches.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

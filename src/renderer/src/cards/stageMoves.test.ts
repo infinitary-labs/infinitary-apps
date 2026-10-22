@@ -26,3 +26,9 @@ describe("the move that replaces the shown card", () => {
     expect(stageMove("a", stack("r", "a", "b"), { from: "b", dir: 1 })).toEqual({ kind: "swap" });
   });
 });
+
+// INF-916: a cached Info return must not acquire a whole-card close entrance.
+it("crossfades tabs of the same task instead of closing their card", () => {
+  expect(stageMove("info", stack("crew"), null, true)).toEqual({ kind: "swap" });
+  expect(stageMove("browser", stack("info"), null, true)).toEqual({ kind: "swap" });
+});

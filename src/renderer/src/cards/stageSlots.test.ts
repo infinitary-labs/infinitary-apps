@@ -139,3 +139,37 @@ describe("stage slots", () => {
     expect(settled("a", "a").warm).toBeNull();
   });
 });
+
+// Captain's slow Info tab (INF-916): returning to a populated record must not
+// rebuild its sandboxed document, but unrelated cards keep their old lifetime.
+it("keeps the same populated mount only within its owner's tab visit", () => {
+  const first = selectSlots(emptySlots<View>(), "info", null, undefined, false, "info");
+  const key = keyOf(first, "info");
+  const away = selectSlots(first, "crew", null, view("info"), false, "info");
+  const settledAway = retireSlot(revealSlot(away, keyOf(away, "crew")), key);
+  expect(slotRoles(settledAway)).toContainEqual({ id: "info", key, role: "parked" });
+  const browser = selectSlots(settledAway, "browser", null, view("crew"), false, "info");
+  const back = selectSlots(browser, "info", null, view("browser"), true, "info");
+  expect(back.shown?.key).toBe(key);
+  expect(back.parked).toBeNull();
+  const again = selectSlots(back, "crew", null, view("info"), false, "info");
+  const parked = retireSlot(revealSlot(again, keyOf(again, "crew")), key);
+  const closed = selectSlots(parked, null, null, view("crew"));
+  expect(slotRoles(closed).some((slot) => slot.id === "info")).toBe(false);
+});
+
+it("parks the owner's document when another tab replaces its outgoing drawing before retirement", () => {
+  // INF-916: tab navigation need not wait for the previous crossfade.
+  const first = selectSlots(emptySlots<View>(), "info", null, undefined, false, "info");
+  const key = keyOf(first, "info");
+  const crew = selectSlots(first, "crew", null, view("info"), false, "info");
+  const ready = revealSlot(crew, keyOf(crew, "crew"));
+  const browser = selectSlots(ready, "browser", null, view("crew"), false, "info");
+  expect(browser.parked?.key).toBe(key);
+  expect(slotRoles(browser).map((slot) => slot.key)).toEqual([
+    ...new Set(slotRoles(browser).map((slot) => slot.key)),
+  ]);
+  const back = selectSlots(browser, "info", null, view("browser"), true, "info");
+  expect(back.shown?.key).toBe(key);
+  expect(back.parked).toBeNull();
+});

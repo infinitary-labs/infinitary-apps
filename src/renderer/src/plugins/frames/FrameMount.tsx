@@ -55,6 +55,8 @@ export const PANEL_UNRESPONSIVE_LINE = "This panel stopped responding.";
  */
 export function frameWatchPaused(frame: HTMLIFrameElement | null): boolean {
   if (document.hidden) return true;
+  // A populated task tab is retained but cannot draw while parked.
+  if (frame?.closest('[data-stage-entry="parked"]')) return true;
   const panel = frame?.closest("[data-side-panel]");
   if (!panel) return false;
   return panel.hasAttribute("hidden") || panel.hasAttribute("data-side-panel-collapsed");

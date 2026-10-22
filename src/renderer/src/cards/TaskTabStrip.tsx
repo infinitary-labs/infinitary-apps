@@ -2,6 +2,7 @@ import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { useEffect, useMemo, useRef } from "react";
 import { available } from "../app/focusRecovery";
 import { focusWithRing } from "../design/focus";
+import { useStageRole } from "./SurfaceReveal";
 import {
   goToTab,
   lendTaskTabs,
@@ -44,6 +45,7 @@ export function TaskTabStrip({
   /** The captain holds the browser: he may pick another page. */
   captain: boolean;
 }) {
+  const role = useStageRole();
   const tabs = useMemo(() => taskTabsOf(browser, crewmate), [browser, crewmate]);
   const selected = shownTabIndex(tabs, shown, browser);
   const current = browser?.state === "open" ? (browser.page ?? 1) : 1;
@@ -76,7 +78,7 @@ export function TaskTabStrip({
   // A key chose this tab on the strip the swap replaced: focus follows it,
   // once the stage shows this strip.
   useEffect(() => {
-    if (!present || !tabFocusAsked()) return;
+    if (!present || role !== "shown" || !tabFocusAsked()) return;
     let frame = 0;
     let frames = 0;
     const take = () => {
@@ -97,7 +99,7 @@ export function TaskTabStrip({
     };
     take();
     return () => cancelAnimationFrame(frame);
-  }, [present]);
+  }, [present, role]);
 
   if (!present) return null;
 

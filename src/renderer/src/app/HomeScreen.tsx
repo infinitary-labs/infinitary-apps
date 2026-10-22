@@ -561,6 +561,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       (slots.outgoing.key === departedKey.current && slots.outgoing.id === selection))
       ? retireSlot(slots, slots.outgoing.key)
       : slots;
+  const selectedTask = card?.recordTaskId ?? card?.crewmateTaskId ?? card?.browserTaskId;
   let stage = selectSlots(
     base,
     selection,
@@ -568,6 +569,8 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     frozen,
     // A task record's facts and body frame arrive in turn: it appears once ready.
     card?.recordTaskId !== undefined,
+    // Keep Info populated only for this task’s tab visit; leaving it disposes the document.
+    selectedTask ? `record:${selectedTask}` : null,
   );
   // Which move takes each drawing off the stage: the arrow pressed on it,
   // the stack it left, or neither. Decided once, when it starts to leave.
@@ -575,8 +578,19 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const moves = useRef(new Map<string, StageMove>());
   for (const key of moves.current.keys())
     if (key !== stage.outgoing?.key) moves.current.delete(key);
-  if (stage.outgoing && !moves.current.has(stage.outgoing.key))
-    moves.current.set(stage.outgoing.key, stageMove(stage.outgoing.id, shown, paged.current));
+  if (stage.outgoing && !moves.current.has(stage.outgoing.key)) {
+    const previous = stage.outgoing.view.entry;
+    const previousTask = previous.recordTaskId ?? previous.crewmateTaskId ?? previous.browserTaskId;
+    moves.current.set(
+      stage.outgoing.key,
+      stageMove(
+        stage.outgoing.id,
+        shown,
+        paged.current,
+        selectedTask !== undefined && selectedTask === previousTask,
+      ),
+    );
+  }
   // An arrow press counts for the selection it made, never a later one.
   if (selection !== (slots.shown?.id ?? null)) paged.current = null;
 
@@ -1165,7 +1179,12 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
             onFocusCapture={presentation.cancelGeometry}
           >
             {slotRoles(stage).map(({ id, key, role }) => {
-              const held = role === "outgoing" ? stage.outgoing?.view : undefined;
+              const held =
+                role === "outgoing"
+                  ? stage.outgoing?.view
+                  : role === "parked"
+                    ? stage.parked?.view
+                    : undefined;
               const entry = role === "shown" ? card : role === "warm" ? warm : held?.entry;
               const at = role === "shown" ? view : role === "warm" ? candidateView : held?.view;
               if (!entry || !at) return null;
@@ -1194,7 +1213,16 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
                       opacity: 0,
                       pointerEvents: "none",
                     }
-                  : { ...(held ? leavingBox(held) : {}), pointerEvents: "none" };
+                  : role === "parked"
+                    ? {
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: at.width,
+                        visibility: "hidden",
+                        pointerEvents: "none",
+                      }
+                    : { ...(held ? leavingBox(held) : {}), pointerEvents: "none" };
               return (
                 <StageEntry
                   key={key}

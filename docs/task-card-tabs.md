@@ -21,6 +21,10 @@ A task with nothing but Info - one no crewmate has started, with no browser - dr
 The record, the Crewmate tab and the browser view are three shell-held stack entries that replace each other, so a task has one entry on the stack.
 `openRecord`, `openCrewmateView` and `openBrowserView` each take the task's other tabs out of the stack (`src/renderer/src/app/store.ts`).
 The tabs, the record's `Open`, the view's `Task record` link, a card's door to the browser and a task row on the Tasks panel all go through them.
+Info keeps its populated document while another tab of that same task is selected, so returning does not recreate its sandbox or repeat its initial reads and readiness frames.
+The stage parks it invisibly and inert, preserves its subscriptions and reading position, and releases it when another task or card is selected or the task card is hidden.
+Initial opening still waits for populated frame readiness; returning never reveals an empty replacement.
+Tabs of the same task crossfade; replacing a tab does not play the longer entrance for closing a whole card.
 Hide or Esc closes the task's card whichever tab is shown, and the card behind it comes up.
 The record keeps its own width; the Crewmate tab and the browser view take the stage's full width.
 Each shown tab points the first mate's turn at its task, as the record does.

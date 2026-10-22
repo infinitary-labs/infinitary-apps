@@ -28,7 +28,10 @@ export function stageMove(
   left: string,
   stack: readonly { id: string }[],
   paged: PageStep | null,
+  sameTask = false,
 ): StageMove {
+  // A tab replaced the task's stack entry, not the task card itself.
+  if (sameTask) return { kind: "swap" };
   if (!stack.some((entry) => entry.id === left)) return { kind: "close" };
   if (paged?.from === left) return { kind: "page", dir: paged.dir };
   return { kind: "swap" };
@@ -73,7 +76,12 @@ export function playStageMove(
       ],
       { duration, easing, fill: "forwards" },
     );
-    out.onfinish = done;
+    out.onfinish = () => {
+      // The drawing may stay mounted as an inert tab; release its final
+      // opacity/transform instead of leaving a finished effect on its next visit.
+      out.cancel();
+      done();
+    };
     running.push(() => out.cancel());
     if (incoming) running.push(playIncoming(move, incoming, incomingDone));
     else incomingDone?.();
@@ -95,7 +103,12 @@ export function playStageMove(
     ],
     { duration, easing, fill: "forwards" },
   );
-  out.onfinish = done;
+  out.onfinish = () => {
+    // The drawing may stay mounted as an inert tab; release its final
+    // opacity/transform instead of leaving a finished effect on its next visit.
+    out.cancel();
+    done();
+  };
   running.push(() => out.cancel());
   return stop;
 }

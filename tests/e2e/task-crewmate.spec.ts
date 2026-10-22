@@ -33,7 +33,7 @@ import {
 } from "./mockProvider";
 import { encodePng } from "./pictureFixtures";
 import { heroShot, regionShot } from "./pictures";
-import { expandDock, openGroup, pressRow, recordCard, taskKey } from "./rails";
+import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } from "./rails";
 import { taskTabs } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
 import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
@@ -242,13 +242,43 @@ test("a closed task's Crewmate tab replays its crewmate's session: calls, folds,
     await shoot(recordCard(page), "record-tabs-dark.png");
 
     await test.step("the record's tabs read Info and Crewmate, and the keys show the Crewmate tab in its place", async () => {
+      // INF-916: returning to Info reuses its populated document, not just its chrome.
+      const infoBody = await recordFrame(page).locator("body").elementHandle();
+      const infoCard = await recordCard(page).elementHandle();
+      if (!infoBody || !infoCard) throw new Error("Info has not drawn");
       await crewmateByKeys(page);
       const view = crewmateView(page, REPLAY);
       await expect(view).toHaveAttribute("data-crew-state", "closed");
-      await expect(page.locator(`[data-task-record="${REPLAY}"]`)).toHaveCount(0);
+      await expect(recordCard(page)).toHaveCount(0);
+      expect(
+        await infoCard.evaluate((node) => {
+          const stage = node.closest("[data-stage-entry]");
+          return {
+            connected: node.isConnected,
+            inert: stage?.hasAttribute("inert"),
+            hidden: stage?.getAttribute("aria-hidden"),
+          };
+        }),
+      ).toEqual({ connected: true, inert: true, hidden: "true" });
       const { selected } = taskTabs(page);
       await expect(selected).toHaveText(CREWMATE_TAB_LABEL);
       await untilFocused(selected);
+      // Let Info's outgoing motion fully retire before exercising the retained visit.
+      await expect(page.locator('[data-stage-entry="parked"]')).toHaveCount(1);
+      await runFromSearch(app, page, "cards.show-info");
+      expect(
+        await recordFrame(page)
+          .locator("body")
+          .evaluate((body, original) => body === original, infoBody),
+      ).toBe(true);
+      await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
+      await untilFocused(taskTabs(page).selected);
+      await expect(
+        recordCard(page).getByRole("button", { name: "Hide", exact: true }),
+      ).toBeInViewport();
+      await crewmateByKeys(page);
+      await infoBody.dispose();
+      await infoCard.dispose();
     });
 
     const view = crewmateView(page, REPLAY);

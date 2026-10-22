@@ -11,11 +11,13 @@ import {
 import { readingScrollTop } from "./cardKeys";
 
 const EntranceContext = createContext(false);
+const StageRoleContext = createContext<StageRole>("shown");
+export const useStageRole = () => useContext(StageRoleContext);
 let initialSurfacePainted = false;
 const BodyEntranceContext = createContext({ reveal: false, onDrawn: () => {} });
 
 /** What a stack entry is on the stage (`stageSlots.ts`). */
-export type StageRole = "shown" | "warm" | "outgoing";
+export type StageRole = "shown" | "warm" | "outgoing" | "parked";
 
 /**
  * One stack entry on the stage, keyed by entry id - never by revision,
@@ -68,23 +70,25 @@ export function StageEntry({
     if (role === "shown") initialSurfacePainted = true;
   }, [role]);
   return (
-    <EntranceContext.Provider value={reveal}>
-      <BodyEntranceContext.Provider value={{ reveal: reveal && !bodyDrawn, onDrawn }}>
-        <div
-          data-stage-entry={role}
-          data-stage-entry-id={entryId}
-          data-stage-reveal={reveal && arrived ? "entrance" : "static"}
-          inert={role !== "shown" || !ready}
-          aria-hidden={role === "shown" && ready ? undefined : true}
-          data-window-region={role === "shown" ? "card" : undefined}
-          tabIndex={role === "shown" ? -1 : undefined}
-          onKeyDown={role === "shown" ? scrollBodyByKey : undefined}
-          style={style}
-        >
-          {children}
-        </div>
-      </BodyEntranceContext.Provider>
-    </EntranceContext.Provider>
+    <StageRoleContext.Provider value={role}>
+      <EntranceContext.Provider value={reveal}>
+        <BodyEntranceContext.Provider value={{ reveal: reveal && !bodyDrawn, onDrawn }}>
+          <div
+            data-stage-entry={role}
+            data-stage-entry-id={entryId}
+            data-stage-reveal={reveal && arrived ? "entrance" : "static"}
+            inert={role !== "shown" || !ready}
+            aria-hidden={role === "shown" && ready ? undefined : true}
+            data-window-region={role === "shown" ? "card" : undefined}
+            tabIndex={role === "shown" ? -1 : undefined}
+            onKeyDown={role === "shown" ? scrollBodyByKey : undefined}
+            style={style}
+          >
+            {children}
+          </div>
+        </BodyEntranceContext.Provider>
+      </EntranceContext.Provider>
+    </StageRoleContext.Provider>
   );
 }
 

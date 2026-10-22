@@ -29,6 +29,7 @@ import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from ".
 import type { HtmlCardBody } from "./PrototypeBody";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
+import { useStageRole } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
 import { TaskTabStrip } from "./TaskTabStrip";
 import { taskKeyGesture, useTaskLinks } from "./taskLinks";
@@ -98,6 +99,7 @@ export function RecordCard({
   onDrawn: () => void;
   onPicture: ComponentProps<typeof HtmlCardBody>["onPicture"];
 }) {
+  const active = useStageRole() === "shown";
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [unreadable, setUnreadable] = useState(false);
   const [frameDrawn, setFrameDrawn] = useState(false);
@@ -120,9 +122,9 @@ export function RecordCard({
   }, [taskId]);
 
   useEffect(() => {
-    if (!detail?.filing || !detail.filingNew) return;
+    if (!active || !detail?.filing || !detail.filingNew) return;
     void window.infinitary.tasks.opened(taskId).catch(() => {});
-  }, [taskId, detail?.filing, detail?.filingNew]);
+  }, [active, taskId, detail?.filing, detail?.filingNew]);
 
   // The task keys its body writes link to their tasks, its own key aside (FI3-1271).
   const parentKey = useParentKey(detail?.parentId ?? null);

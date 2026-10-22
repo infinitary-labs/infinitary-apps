@@ -94,7 +94,7 @@ Task-pane motion is deliberately not added: FI3-309/310 supersedes that layout w
 ### Replacement presentation and the prepared successor
 
 FI3-596's approved rendering, with FI3-711's next-card rule and FI3-871's held preparation.
-The stage keeps at most two documents mounted (`stageSlots.ts`, a pure reducer with its own tests):
+The stage keeps its ordinary pair of documents mounted (`stageSlots.ts`, a pure reducer with its own tests), plus a populated Info document only during the same task’s tab visit:
 
 - **Shown**: the selected entry, in flow; the shell measures only it.
 - **Prepared successor** (`warm`): the entry a close would bring up - `dismissalSuccessor`, the same action-specific `departureIndex` rule the stack uses, never the next arrow - drawn invisibly at its own final width once its thread history is read, with only its body (no chrome), inert and hidden from assistive technology.
@@ -105,6 +105,8 @@ The stage keeps at most two documents mounted (`stageSlots.ts`, a pure reducer w
 - **Leaving drawing** (`outgoing`): the entry that was on screen, kept inert and hidden from assistive technology in exactly the box it was shown in through its move; paging and replacements may hold it until the selected entry gets ready.
 
 When the shown entry changes, a prepared successor is promoted in place: the same frame and document, never moved in the DOM or rebuilt (slots keep their birth order, because moving an iframe reloads it).
+A task’s populated Info document can also stay parked while its Crewmate or Browser tab is selected (`docs/task-card-tabs.md`).
+That document remains invisible, inert and in birth order, with live subscriptions; leaving the task releases it.
 Any other destination mounts afresh.
 Paging and replacements retain the leaving drawing while the selected card gets ready, with a shield taking clicks meant for the held drawing.
 A card that leaves the stack starts its drop immediately, independently of the next body’s readiness; choices, confirmed closes and withdrawals share this path.
@@ -167,7 +169,7 @@ The page then releases once its markup is read: the scripts go back in order und
 It reports its drawing at once rather than on its next frame, because a hidden frame's frames are throttled, and its first two frames after the release settle the drawing rather than count as a live change.
 So scripts behave like `defer` in every card, prepared or not.
 
-The bounds stay where they were: one prepared card, chosen by the same rule; at most two documents; a closed card leaves at once; a new version, width or theme prepares afresh (the draw key); a hidden window drops the prepared page; the watchdog runs from the mount.
+The bounds stay where they were: one prepared card, chosen by the same rule; the ordinary document pair plus the same-task parked Info document; a closed card leaves at once; a new version, width or theme prepares afresh (the draw key); a hidden window drops the prepared page; the watchdog runs from the mount.
 A prepared page that was refused or stopped is not shown as such: shown, the card mounts afresh, and Retry belongs to that mount.
 A prepared scripted card costs one more idle renderer process while it waits.
 Not held: animated GIF and WebP pictures, `<marquee>`, and `@starting-style` entrances.

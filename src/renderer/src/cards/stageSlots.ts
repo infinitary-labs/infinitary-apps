@@ -8,21 +8,15 @@
  * - `warm`: the entry a close would bring up (`dismissalSuccessor`),
  *   prepared invisibly while the captain reads and promoted in place.
  *
- * At most two documents: an outgoing drawing and a prepared successor never
- * coexist, so the next successor is prepared only once the outgoing drawing
- * is gone. The stage also waits until the incoming reveal and the height
- * easing have finished (`HomeScreen`) before it asks for that successor. Every slot has a key of its own and keeps its birth order, so
- * React never moves a frame that is already in the DOM (moving an iframe
- * reloads its document). Only a prepared successor is promoted with its
- * document. Any other selection mounts afresh, even of an entry whose
- * drawing is still fading out, so nothing a card held on screen outlives
- * its leaving (the existing preview lifetime: paging back starts a card
- * anew); only a drawing nothing has replaced on screen yet is shown again
- * as it is.
+ * The ordinary pair is an outgoing drawing or prepared successor plus the
+ * selected entry. An owner may additionally retain one populated document
+ * (`parked`) during its visit. It stays inert and hidden, in birth order:
+ * moving an iframe in the DOM reloads its document. Releasing the owner
+ * drops that document. Other destinations retain their existing lifetime.
  * Pure: the stage calls it on every render and keeps what it returns.
  */
 
-export type SlotRole = "shown" | "warm" | "outgoing";
+export type SlotRole = "shown" | "warm" | "outgoing" | "parked";
 
 /** One mounted entry: the stack entry's id and the key its mount is born under. */
 export type Slot = { id: string; key: string };
@@ -36,13 +30,25 @@ export type StageSlots<V> = {
   outgoing: (Slot & { view: V }) | null;
   /** The prepared successor. */
   warm: Slot | null;
+  /** A populated document retained only while its owner remains selected. */
+  parked: (Slot & { view: V }) | null;
+  retain: string | null;
   /** Birth order of every mounted slot, by key. */
   order: Readonly<Record<string, number>>;
   next: number;
 };
 
 export function emptySlots<V>(): StageSlots<V> {
-  return { shown: null, revealed: false, outgoing: null, warm: null, order: {}, next: 0 };
+  return {
+    shown: null,
+    revealed: false,
+    outgoing: null,
+    warm: null,
+    parked: null,
+    retain: null,
+    order: {},
+    next: 0,
+  };
 }
 
 /**
@@ -65,7 +71,11 @@ export function selectSlots<V>(
   warm: string | null,
   lastView: V | undefined,
   waits = false,
+  retain: string | null = null,
 ): StageSlots<V> {
+  if (state.retain !== retain) {
+    state = { ...state, retain, parked: state.parked?.id === retain ? state.parked : null };
+  }
   let next: StageSlots<V> = state;
   if (shown !== (state.shown?.id ?? null)) {
     if (!state.revealed && state.outgoing?.id === shown) {
@@ -94,6 +104,12 @@ function select<V>(
   lastView: V | undefined,
   waits: boolean,
 ): StageSlots<V> {
+  const reusable =
+    state.parked?.id === shown
+      ? state.parked
+      : state.outgoing?.id === shown && shown === state.retain
+        ? state.outgoing
+        : null;
   const previous = state.shown;
   const outgoing =
     state.revealed && previous !== null && lastView !== undefined
@@ -105,13 +121,21 @@ function select<V>(
   const selected =
     shown === null
       ? null
-      : state.warm?.id === shown
-        ? state.warm
-        : { id: shown, key: `${shown}#${born++}` };
+      : reusable
+        ? { id: reusable.id, key: reusable.key }
+        : state.warm?.id === shown
+          ? state.warm
+          : { id: shown, key: `${shown}#${born++}` };
   return {
     ...state,
     shown: selected,
     outgoing,
+    parked:
+      state.parked?.id === shown
+        ? null
+        : state.outgoing?.id === state.retain && state.outgoing !== outgoing && !reusable
+          ? state.outgoing
+          : state.parked,
     revealed: outgoing === null && !(waits && selected !== null),
     warm: state.warm?.id === shown ? null : state.warm,
     next: born,
@@ -127,7 +151,11 @@ export function revealSlot<V>(state: StageSlots<V>, key: string): StageSlots<V> 
 /** The outgoing drawing has faded out: it leaves the stage. */
 export function retireSlot<V>(state: StageSlots<V>, key: string): StageSlots<V> {
   if (state.outgoing?.key !== key) return state;
-  return withOrder({ ...state, outgoing: null });
+  return withOrder({
+    ...state,
+    parked: state.outgoing.id === state.retain ? state.outgoing : state.parked,
+    outgoing: null,
+  });
 }
 
 /**
@@ -142,6 +170,7 @@ export function expireSlot<V>(state: StageSlots<V>, key: string): StageSlots<V> 
 /** The mounted slots in birth order, each with its role. */
 export function slotRoles<V>(state: StageSlots<V>): (Slot & { role: SlotRole })[] {
   const roles: (Slot & { role: SlotRole })[] = [];
+  if (state.parked) roles.push({ id: state.parked.id, key: state.parked.key, role: "parked" });
   if (state.outgoing)
     roles.push({ id: state.outgoing.id, key: state.outgoing.key, role: "outgoing" });
   if (state.shown) roles.push({ ...state.shown, role: "shown" });
@@ -151,7 +180,7 @@ export function slotRoles<V>(state: StageSlots<V>): (Slot & { role: SlotRole })[
 
 /** Keeps birth order for the mounted keys only; a new key is born last. */
 function withOrder<V>(state: StageSlots<V>): StageSlots<V> {
-  const keys = [state.outgoing?.key, state.shown?.key, state.warm?.key].filter(
+  const keys = [state.parked?.key, state.outgoing?.key, state.shown?.key, state.warm?.key].filter(
     (key): key is string => key !== undefined,
   );
   const known = Object.keys(state.order);

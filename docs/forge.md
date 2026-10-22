@@ -389,6 +389,7 @@ FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the
 `github_write` keeps, instead of sending, a write outside the task's own project, any other write of a task that only answers - cancelling a run included - and any write through the github.com sign-in.
 The merge guard runs first: a merge or default-branch move on the task's own project is refused with its pointer to the merge card, asked or not, and so is deleting a GitLab project or a GraphQL call.
 The kept write is a `WriteAsk` on the task's delivery facts - its host, whose sign-in sends it (`project` or `account`), the method, the policy's path, the JSON body, and for a release file the path of that file in the working copy - kept through `TaskService` (`keepWriteAsk`), newest first, at most 8 (`WRITE_ASK_CAP`).
+An integration's action that changes or sends is kept in the same list as an ask of kind `integration`, carried by the same `request_write` card and taken once by the same click, which runs it through its integration rather than this gateway (`docs/integrations.md`, "The rules").
 A release file's bytes are read when the click sends it, not when the ask is kept.
 The answer names the ask's id and tells the crewmate to put it on a card.
 `emit_card` takes an action whose effect is `{ kind: "request_write", ask }`, beside the crewmate's own Not now and its words on why.

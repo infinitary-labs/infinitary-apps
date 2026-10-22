@@ -113,7 +113,12 @@ import { appLauncher } from "./helper/launcher";
 import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
-import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "./integrations";
+import {
+  FileIntegrationSecrets,
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { workingCopyFacts } from "./knowledge/gitFacts";
 import { KnowledgeService } from "./knowledge/knowledgeService";
@@ -1715,6 +1720,14 @@ export async function createServices(
       }),
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),
+    // The bridge until the secret manager takes the keys over (INF-775, q3).
+    secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
+    asks: {
+      keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+      take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+      record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+    },
+    now: ticker.now,
     push: (view) => emit("inf:integrations", view),
   });
   integrationsChanged = () => integrations.changed();
@@ -2037,7 +2050,12 @@ export async function createServices(
     },
     mergePullRequest: (taskId, guard, beforeDispatch) => prCi.merge(taskId, guard, beforeDispatch),
     mergeReview: (taskId, reviewId) => prCi.mergeReview(taskId, reviewId),
-    sendWriteAsk: (taskId, askId) => githubGateway.sendAsk(taskId, askId),
+    // An integration's ask runs through its binding; every other is a forge write.
+    sendWriteAsk: (taskId, askId) =>
+      tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind ===
+      "integration"
+        ? integrations.sendAsk(taskId, askId)
+        : githubGateway.sendAsk(taskId, askId),
     reviewGate: (taskId, reviewId) => prCi.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
     closePullRequest: (taskId) => prCi.close(taskId),

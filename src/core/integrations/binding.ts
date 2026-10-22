@@ -29,6 +29,19 @@ export type IntegrationActionSpec = {
   input: z.ZodType;
 };
 
+/**
+ * A key a kind signs in with (docs/integrations.md, "Keys"): a name and
+ * words, never a value. The captain enters the value in Settings ->
+ * Integrations; the binding uses it only through `IntegrationSecrets`.
+ */
+export type IntegrationSecretSlot = {
+  name: string;
+  /** A few plain words for the Settings row ("Linear key"). */
+  label: string;
+  /** Its actions run without it. */
+  optional?: true;
+};
+
 /** One connection of a kind that exists now: a sign-in there. */
 export type IntegrationConnection = {
   id: string;
@@ -43,6 +56,15 @@ export type IntegrationAnswer = { text: string; refused?: "refused" | "invalid" 
 export type IntegrationBinding = {
   kind: IntegrationKind;
   actions: readonly IntegrationActionSpec[];
+  /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
+  secrets?: readonly IntegrationSecretSlot[];
+  /**
+   * The binding keeps its own asks for an action that changes or sends
+   * (GitHub's are the forge's write asks, `docs/forge.md`). Absent, the
+   * service keeps one on the caller's task and runs the action only on
+   * the captain's click.
+   */
+  keepsAsks?: true;
   /** The connections of this kind that exist now. */
   connections: () => IntegrationConnection[];
   /** Ask the place who the person is now, and keep its answer as the health. */

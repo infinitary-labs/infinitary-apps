@@ -1,5 +1,9 @@
 import { join } from "node:path";
-import { IntegrationSettingsStore, IntegrationsService } from "../../src/core/integrations";
+import {
+  FileIntegrationSecrets,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../../src/core/integrations";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
 import { FirstmateAgent } from "../../src/core/orchestrator/firstmateAgent";
@@ -64,6 +68,7 @@ export async function firstmateTools(): Promise<BoundTool[]> {
     integrations: new IntegrationsService({
       bindings: [],
       store: new IntegrationSettingsStore(paths.integrationsDir),
+      secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
     }),
     scheduler: {} as Scheduler,
     supervisionLog: () => [],

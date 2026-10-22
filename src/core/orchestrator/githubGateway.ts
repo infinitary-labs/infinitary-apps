@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
-import type { WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
+import type { ForgeWriteAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import {
   API_CALLS_PER_TASK,
   API_RESPONSE_MAX_BYTES,
@@ -60,7 +60,7 @@ const REREAD_DELAY_MS = 2000;
 type Target = {
   api: ForgeApi;
   forge: Forge;
-  via: WriteAsk["via"];
+  via: ForgeWriteAsk["via"];
   /** Asked through the GitHub integration (docs/integrations.md), whatever the task's project is. */
   integration?: true;
 };
@@ -255,7 +255,14 @@ export class GithubGatewayService {
     if ("refused" in taken) {
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     }
-    const { ask } = taken;
+    if (taken.ask.kind === "integration") {
+      // An integration's ask runs through its binding (`IntegrationsService.sendAsk`).
+      const why =
+        "an integration's action is not a write where a project lives, so it was not sent";
+      this.options.tasks.recordWriteAskOutcome(taskId, taken.ask.id, { kind: "refused", why });
+      return { ok: false, call: "", place: "", outcome: { kind: "refused", why } };
+    }
+    const ask = taken.ask;
     const done = (outcome: WriteAskOutcome, answer?: string): WriteAskSent => {
       this.options.tasks.recordWriteAskOutcome(taskId, ask.id, outcome);
       return {
@@ -423,13 +430,13 @@ export class GithubGatewayService {
     file?: string,
     validationEffect?: string,
   ): string {
-    const ask: WriteAsk = {
+    const ask: ForgeWriteAsk = {
       id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       kind: target.forge.kind === "gitlab" ? "gitlab" : "github",
       host: target.forge.host ?? GITHUB_HOST,
       place: target.api.place,
       via: target.via,
-      method: route.method as WriteAsk["method"],
+      method: route.method as ForgeWriteAsk["method"],
       path: route.path,
       ...(body !== undefined ? { body } : {}),
       ...(file !== undefined ? { file } : {}),

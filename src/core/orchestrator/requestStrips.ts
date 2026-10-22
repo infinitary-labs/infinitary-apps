@@ -1,5 +1,5 @@
 import type { MergeReview } from "@shared/mergeReview";
-import type { WriteAsk } from "@shared/writeAsk";
+import type { IntegrationAsk, WriteAsk } from "@shared/writeAsk";
 import { gitlabReleaseFileCalls } from "../forge";
 import { escapeCardText } from "./cardText";
 
@@ -41,6 +41,7 @@ export function skipRulesStrip(review: MergeReview, place: string): string {
  * path, and its JSON body as it was kept, shown whole and scrolled inside.
  */
 export function writeAskStrip(ask: WriteAsk): string {
+  if (ask.kind === "integration") return integrationAskStrip(ask);
   let body = ask.body;
   if (body !== undefined) {
     try {
@@ -68,6 +69,28 @@ export function writeAskStrip(ask: WriteAsk): string {
     callLine,
     body !== undefined ? `<pre data-inf-call-body>${escapeCardText(body)}</pre>` : file,
     `<p class="inf-muted">Nothing is sent before your click.${through ? ` ${through}` : ""}</p>`,
+    "</div>",
+  ].join("");
+}
+
+/**
+ * An integration's action a crewmate asked to run (docs/integrations.md,
+ * "The rules"): which integration, the action, and its input as it was
+ * kept, shown whole.
+ */
+function integrationAskStrip(ask: IntegrationAsk): string {
+  let input = ask.input;
+  try {
+    input = JSON.stringify(JSON.parse(input), null, 2);
+  } catch {
+    // Kept as checked; the service only keeps JSON text.
+  }
+  return [
+    '<div class="inf-call" data-inf-call="write">',
+    `<div class="inf-call-k">Your click runs this on ${escapeCardText(ask.place)}, once</div>`,
+    `<div class="inf-call-line" data-inf-call-line>${escapeCardText(ask.action)}</div>`,
+    `<pre data-inf-call-body>${escapeCardText(input)}</pre>`,
+    `<p class="inf-muted">Nothing runs before your click. It runs with your ${escapeCardText(ask.place)} sign-in.</p>`,
     "</div>",
   ].join("");
 }

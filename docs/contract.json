@@ -15037,6 +15037,35 @@
                       "rule"
                     ]
                   }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -15214,6 +15243,35 @@
                       "rule"
                     ]
                   }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -15360,6 +15418,35 @@
                       "rule"
                     ]
                   }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -15504,6 +15591,226 @@
                       "effect",
                       "enabled",
                       "rule"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
+    "inf:integrations:secret": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,47}$"
+          },
+          {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+          },
+          {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        ],
+        "minItems": 3,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
                     ]
                   }
                 }
@@ -52259,6 +52566,35 @@
                       "effect",
                       "enabled",
                       "rule"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "kept": {
+                        "type": "boolean"
+                      },
+                      "optional": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "kept"
                     ]
                   }
                 }

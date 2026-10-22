@@ -68,6 +68,7 @@ export function githubIntegration(options: GithubIntegrationOptions): Integratio
   return {
     kind: "github",
     actions: ACTIONS,
+    keepsAsks: true,
     connections: () => {
       const health = options.signIns.stateOf(host);
       if (health === undefined) return [];

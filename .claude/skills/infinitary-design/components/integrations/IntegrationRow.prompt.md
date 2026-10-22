@@ -11,5 +11,8 @@ A refused sign-in carries one small primary "Sign in again", as a forge row does
 Its `RowMenu` holds "Check now", "Pause" (detail "Nobody reaches it until you resume it") or "Resume", and, behind a separator, "Sign out and remove" (danger).
 With nothing connected the box holds one quiet line, "Nothing connected yet.", never a warning.
 Open, the row is followed by its actions, indented to the name: each a row of its label in `--text-sm --fg-1`, an outline `Badge` with what it does ("reads", "changes", "sends"), its rule in mono `--fg-3` ("Allowed", "Asks you", "Off"), and a `Switch` whose name is "<label> on".
+A kind that signs in with keys follows its actions with its keys, indented the same: the `--text-xs --fg-3` head "Keys", then each key as its label in `--text-sm --fg-1` with "Kept on this computer" in mono `--fg-3` or "Not entered" in `--danger`, and under it one write-only mono password `Input` ("Paste it here") beside a small primary "Save" ("Replace" once kept) and, once kept, a small ghost "Remove".
+The field starts empty every time and never shows a kept value; one `--text-xs --fg-3` line closes the keys, "It stays on this computer.
+Your first mate and your crew use it but never see it."
 The foot is the `ConnectChips` row: one chip per kind not yet connected ("+ GitHub"), whose sign-in aside is `ForgeRow`'s device-code aside, under the chip or under the row signing in again.
 Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub sign-in is in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".

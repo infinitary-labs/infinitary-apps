@@ -11,7 +11,10 @@ import { forgeSignInStateSchema } from "./forges";
  * Integrations draws and the first mate reads.
  *
  * Nothing here carries a secret: a kind's sign-in stays with its own owner
- * (GitHub's with the forge's 0600 store, `docs/forge.md`).
+ * (GitHub's with the forge's 0600 store, `docs/forge.md`), and a slot a
+ * kind declares is shown only as kept or not (`docs/integrations.md`,
+ * "Keys"). The one request that carries a value is
+ * `inf:integrations:secret`, and nothing hands it back.
  */
 
 /** The kinds the app can connect. GitHub is the first; a new kind is one more binding. */
@@ -66,6 +69,34 @@ export const integrationIdSchema = z
   .string()
   .regex(/^[a-z][a-z0-9-]{0,47}$/, "an integration is named by its id");
 
+/**
+ * A secret slot's name, as its kind declares it: a word or an environment
+ * variable's name ("api_key", "LINEAR_API_KEY").
+ */
+export const integrationSecretNameSchema = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/, "a key is named in letters, digits and underscores");
+
+/** A slot as Settings draws it: its name, its words, and whether a value is kept. Never the value. */
+export const integrationSecretViewSchema = z
+  .object({
+    name: integrationSecretNameSchema,
+    /** A few plain words for the slot ("Linear key"). */
+    label: z.string().min(1).max(64),
+    /** A value is kept for it. */
+    kept: z.boolean(),
+    /** Its actions run without it. */
+    optional: z.boolean().optional(),
+  })
+  .strict();
+export type IntegrationSecretView = z.infer<typeof integrationSecretViewSchema>;
+
+/** A value the captain enters for a slot, once; nothing hands it back. */
+export const integrationSecretValueSchema = z
+  .string()
+  .min(1)
+  .max(16 * 1024);
+
 export const integrationViewSchema = z
   .object({
     id: integrationIdSchema,
@@ -79,6 +110,8 @@ export const integrationViewSchema = z
     /** Paused: nobody reaches it until it is resumed. */
     paused: z.boolean(),
     actions: z.array(integrationActionViewSchema).max(64),
+    /** The keys its kind signs in with, kept or not; absent when it declares none. */
+    secrets: z.array(integrationSecretViewSchema).max(32).optional(),
   })
   .strict();
 export type IntegrationView = z.infer<typeof integrationViewSchema>;
@@ -113,6 +146,18 @@ export const INTEGRATIONS_WORDS = {
   quiet: "Nothing connected yet.",
   pointer: "Your GitHub sign-in is in Integrations.",
   open: "Open Integrations",
+} as const;
+
+/** The words an open row's keys show (design skill `components/integrations/IntegrationRow`). */
+export const INTEGRATION_SECRET_WORDS = {
+  heading: "Keys",
+  kept: "Kept on this computer",
+  missing: "Not entered",
+  placeholder: "Paste it here",
+  save: "Save",
+  replace: "Replace",
+  remove: "Remove",
+  stays: "It stays on this computer. Your first mate and your crew use it but never see it.",
 } as const;
 
 /** The words for what an action does, as its row shows them. */

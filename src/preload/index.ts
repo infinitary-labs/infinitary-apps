@@ -509,6 +509,7 @@ const api: FirstmateApi = {
     configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
     remove: (id) => invoke("inf:integrations:remove", id),
     check: (id) => invoke("inf:integrations:check", id),
+    secret: (id, slot, value) => invoke("inf:integrations:secret", id, slot, value),
     onChange: (listener) => subscribe("inf:integrations", listener),
   },
   observe: {

@@ -125,6 +125,8 @@ import {
   type IntegrationSettingsPatch,
   type IntegrationsView,
   integrationIdSchema,
+  integrationSecretNameSchema,
+  integrationSecretValueSchema,
   integrationSettingsPatchSchema,
   integrationsViewSchema,
 } from "./integrations";
@@ -1637,7 +1639,8 @@ export const invokeContract = {
   // Integrations (docs/integrations.md): connections outside the person's
   // projects the first mate and the crew reach. A connection is made by
   // its kind's own sign-in (GitHub's is `inf:forges:sign-in`); these
-  // change its settings, forget it, or check it. No schema carries a secret.
+  // change its settings, forget it, or check it. Only `secret` carries a
+  // value, the captain's own entry, and nothing hands it back.
   "inf:integrations:list": {
     effect: "read",
     surface: "core",
@@ -1664,6 +1667,19 @@ export const invokeContract = {
     surface: "core",
     reach: "home",
     request: z.tuple([integrationIdSchema]),
+    response: integrationsViewSchema,
+  },
+  // A key the captain enters for one slot (docs/integrations.md, "Keys"),
+  // or null to forget it. The answer says only whether each slot is kept.
+  "inf:integrations:secret": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([
+      integrationIdSchema,
+      integrationSecretNameSchema,
+      integrationSecretValueSchema.nullable(),
+    ]),
     response: integrationsViewSchema,
   },
   "inf:settings:firstmate-account:get": {
@@ -3447,6 +3463,8 @@ export type FirstmateApi = {
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;
     remove: (id: string) => Promise<IntegrationsView>;
     check: (id: string) => Promise<IntegrationsView>;
+    /** Keep the captain's key for one slot, or forget it with null; nothing hands it back. */
+    secret: (id: string, slot: string, value: string | null) => Promise<IntegrationsView>;
     onChange: (listener: (view: IntegrationsView) => void) => () => void;
   };
   observe: {

@@ -7,7 +7,10 @@
  * The host stores the exact call; the card names it by `id` and never
  * carries the call itself, so only what was stored is ever sent.
  */
-export type WriteAsk = {
+export type WriteAsk = ForgeWriteAsk | IntegrationAsk;
+
+/** A write where a project lives, through its host's REST API. */
+export type ForgeWriteAsk = {
   id: string;
   /** The host's kind: GitHub, including Enterprise, or GitLab. */
   kind: "github" | "gitlab";
@@ -32,8 +35,31 @@ export type WriteAsk = {
   outcome?: WriteAskOutcome;
 };
 
+/**
+ * An integration's action a crewmate asked to run that changes or sends
+ * something outside (`docs/integrations.md`, "The rules"): kept the same
+ * way, with the exact checked input, and run once on the captain's click
+ * through the integration's own binding.
+ */
+export type IntegrationAsk = {
+  id: string;
+  kind: "integration";
+  /** The integration's id, such as `gmail`. */
+  integration: string;
+  /** Its name when it was asked, as the card says it. */
+  place: string;
+  action: string;
+  /** The action's input as JSON text, after its schema checked it. */
+  input: string;
+  at: number;
+  sentAt?: number;
+  outcome?: WriteAskOutcome;
+};
+
 export type WriteAskOutcome =
   | { kind: "answered"; status: number; requestId: string | null }
+  /** An integration's action ran and answered. */
+  | { kind: "ran" }
   | { kind: "unknown"; why: string }
   | { kind: "refused"; why: string };
 

@@ -11,6 +11,7 @@ export type {
   IntegrationBinding,
   IntegrationCaller,
   IntegrationConnection,
+  IntegrationSecretSlot,
 } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
 export {
@@ -19,6 +20,15 @@ export {
   githubIntegration,
 } from "./providers/github";
 export {
+  FileIntegrationSecrets,
+  type IntegrationSecrets,
+  MissingSecret,
+  REDACTED,
+  type SecretRequestInit,
+} from "./secrets";
+export {
+  type IntegrationAskSent,
+  type IntegrationAskStore,
   IntegrationRefusal,
   IntegrationsService,
   type IntegrationsServiceOptions,

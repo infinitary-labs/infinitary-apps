@@ -7957,12 +7957,12 @@ export class CrewSupervisor {
       const ask = this.writeAskOf(task.id, writes[0]?.ask ?? "");
       if (!ask) {
         throw new Error(
-          `Card refused: ask ${writes[0]?.ask} is not on this task. Name the id github_write answered with.`,
+          `Card refused: ask ${writes[0]?.ask} is not on this task. Name the id github_write or an integration's call answered with.`,
         );
       }
       if (ask.sentAt !== undefined) {
         throw new Error(
-          `Card refused: ask ${ask.id} was already sent once and is ${NEVER_SENT_AGAIN}. Make a new write with github_write to ask again. ${fixedHoldWords("sent-once")}`,
+          `Card refused: ask ${ask.id} was already sent once and is ${NEVER_SENT_AGAIN}. Make a new write with github_write, or call the integration again, to ask again. ${fixedHoldWords("sent-once")}`,
         );
       }
     }
@@ -11417,7 +11417,9 @@ export class CrewSupervisor {
                 place: sent.place,
                 outcome: sent.outcome.kind,
                 ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
-                ...(sent.outcome.kind !== "answered" ? { why: sent.outcome.why } : {}),
+                ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
+                  ? { why: sent.outcome.why }
+                  : {}),
                 ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
               },
               once: `write-answered:${askId}`,
@@ -12489,6 +12491,8 @@ function writeSentLine(sent: WriteAskSent): string {
   switch (sent.outcome.kind) {
     case "answered":
       return `Sent ${sent.call} to ${sent.place} once, on the captain's click: it answered ${sent.outcome.status}.`;
+    case "ran":
+      return `Ran ${sent.call} on ${sent.place} once, on the captain's click.`;
     case "unknown":
       return `Sent ${sent.call} to ${sent.place} once, on the captain's click; what came of it is unknown (${sent.outcome.why}). It is never sent again.`;
     default:

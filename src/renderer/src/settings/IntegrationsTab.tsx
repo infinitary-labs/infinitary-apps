@@ -2,6 +2,7 @@ import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
   INTEGRATION_EFFECT_WORDS,
   INTEGRATION_RULE_WORDS,
+  INTEGRATION_SECRET_WORDS,
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
   type IntegrationSettingsPatch,
@@ -10,7 +11,7 @@ import {
 } from "@shared/integrations";
 import { useCallback, useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Badge, Button, RowMenu, StatusDot, Switch } from "../design";
+import { Badge, Button, Input, RowMenu, StatusDot, Switch } from "../design";
 import "./integrations.css";
 import { forgeRowView, HostChip, SignInAside } from "./ForgeSection";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
@@ -143,6 +144,14 @@ export function IntegrationsTab() {
                 integration={integration}
                 onAction={(name, enabled) =>
                   configure(integration.id, { actions: { [name]: enabled } })
+                }
+              />
+            )}
+            {open === integration.id && integration.secrets && (
+              <IntegrationKeys
+                integration={integration}
+                onSave={(slot, value) =>
+                  change(() => window.infinitary.integrations.secret(integration.id, slot, value))
                 }
               />
             )}
@@ -320,5 +329,73 @@ function IntegrationActions({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * An open row's keys (docs/integrations.md, "Keys"): each slot its kind
+ * declares, whether a value is kept, and a write-only field. The field
+ * starts empty every time, and no call this component makes ever returns
+ * a kept value.
+ */
+function IntegrationKeys({
+  integration,
+  onSave,
+}: {
+  integration: IntegrationView;
+  onSave: (slot: string, value: string | null) => void;
+}) {
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const words = INTEGRATION_SECRET_WORDS;
+  return (
+    <div className="fm-integrations-keys" data-integration-keys={integration.id}>
+      <div className="fm-integrations-keys-head">{words.heading}</div>
+      <ul aria-label={`${integration.name} ${words.heading.toLowerCase()}`}>
+        {(integration.secrets ?? []).map((slot) => {
+          const draft = drafts[slot.name] ?? "";
+          const save = () => {
+            if (!draft.trim()) return;
+            onSave(slot.name, draft);
+            setDrafts((all) => ({ ...all, [slot.name]: "" }));
+          };
+          return (
+            <li key={slot.name} data-integration-key={slot.name} data-kept={slot.kept}>
+              <span className="fm-integrations-action-label">{slot.label}</span>
+              <span className="fm-forges-state" data-tone={slot.kept ? undefined : "danger"}>
+                {slot.kept ? words.kept : words.missing}
+              </span>
+              <form
+                className="fm-integrations-key-entry"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  save();
+                }}
+              >
+                <Input
+                  type="password"
+                  mono
+                  autoComplete="off"
+                  aria-label={slot.label}
+                  placeholder={words.placeholder}
+                  value={draft}
+                  onChange={(event) =>
+                    setDrafts((all) => ({ ...all, [slot.name]: event.target.value }))
+                  }
+                />
+                <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={save}>
+                  {slot.kept ? words.replace : words.save}
+                </Button>
+                {slot.kept && (
+                  <Button variant="ghost" size="sm" onClick={() => onSave(slot.name, null)}>
+                    {words.remove}
+                  </Button>
+                )}
+              </form>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="fm-integrations-keys-note">{words.stays}</p>
+    </div>
   );
 }

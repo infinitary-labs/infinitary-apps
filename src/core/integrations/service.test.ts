@@ -2,7 +2,12 @@ import { join } from "node:path";
 import type { ForgeSignInState } from "@shared/forges";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from ".";
+import {
+  FileIntegrationSecrets,
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from ".";
 
 /**
  * INF-775 piece 1: Settings -> Integrations and the first mate's
@@ -37,6 +42,7 @@ describe("IntegrationsService", () => {
       new IntegrationsService({
         bindings: [github(signIns)],
         store: new IntegrationSettingsStore(dir),
+        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
       });
 
     const first = open();

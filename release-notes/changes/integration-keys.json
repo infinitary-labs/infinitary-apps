@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "integration-keys",
+      "reason": "Internal: integrations can now keep the keys they sign in with and ask on a card before changing anything, but no integration that uses either exists yet; GitHub looks and works as before, and the later integrations that use them carry their own notes."
+    }
+  ]
+}

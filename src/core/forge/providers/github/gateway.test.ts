@@ -4,9 +4,11 @@ import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
+import type { ForgeWriteAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
+  FileIntegrationSecrets,
   githubIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
@@ -651,7 +653,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(seen.filter((item) => item.method === "POST")).toHaveLength(1);
     await writeWithoutProject.run({ ...input, validationEffect: "shared-2" });
     expect(guard).toHaveBeenCalledTimes(1);
-    const ask = tasks.get("task-2")?.delivery?.writeAsks?.at(-1);
+    const ask = tasks.get("task-2")?.delivery?.writeAsks?.at(-1) as ForgeWriteAsk | undefined;
     expect(ask?.validationEffect).toBe("shared-2");
     await service.sendAsk("task-2", ask!.id);
     expect(guard).toHaveBeenNthCalledWith(2, "task-2", "shared-2", exact);
@@ -732,6 +734,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         }),
       ],
       store: new IntegrationSettingsStore(join(scratchDir("fm-integrations-"), "integrations")),
+      secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-keys-"), "secrets")),
     });
     const crewmate = integrations.forTask("task-1");
     const other = await crewmate.call("GitHub", "read", { path: "/repos/acme/site/issues" });
@@ -1288,7 +1291,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       path: "/repos/acme/site/releases/3/assets?name=app.dmg",
       body: "release-bytes",
     });
-    const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0] as ForgeWriteAsk | undefined;
     expect(ask?.file).toBe("app.dmg");
     expect(ask && writeAskStrip(ask)).toContain(
       "A file from this task's working copy. It is read only when you click.",

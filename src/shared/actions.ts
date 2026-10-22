@@ -891,6 +891,14 @@ const actionLines = {
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Changed integration ${v.id}`,
   },
+  "integration-key": guidance(
+    "integrations",
+    "hands",
+    "The captain enters or removes an integration's key in Settings → Integrations, never in a message, a card or a task; integrations shows only whether each is kept.",
+    ["inf:integrations:secret"],
+    "settings",
+    "integration key changed",
+  ),
   "integration-check": {
     area: "integrations",
     tier: "asked",

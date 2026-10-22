@@ -10,6 +10,7 @@ import { Button, IconButton, Input, SlotBadge, Switch, useRestLabel } from "../d
 import { thisDesktop } from "../design/core/desktop";
 import {
   ALWAYS_USE_LEAD,
+  chipDisplayParts,
   type DropPlan,
   dropPlan,
   type LevelTarget,
@@ -325,14 +326,16 @@ export function ModelLevels({
       : null;
 
   const face = (model: SlotModelView) => {
-    const prefix = providerPrefix(model);
+    const parts = chipDisplayParts(model);
     return (
       <>
-        {prefix && <span>{prefix}</span>}
-        <span className="fm-models-chip-label">
-          {model.label}
-          {isPinned(model) ? " ✱" : ""}
-        </span>
+        {parts.provider && <span>{parts.provider}</span>}
+        {(parts.label || isPinned(model)) && (
+          <span className="fm-models-chip-label">
+            {parts.label}
+            {isPinned(model) ? " ✱" : ""}
+          </span>
+        )}
         {model.place && <span className="fm-models-place">{model.place}</span>}
         {model.isNew && <span className="fm-models-new">new</span>}
       </>

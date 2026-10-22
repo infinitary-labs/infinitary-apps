@@ -29,6 +29,8 @@ import {
   setLevelInPanel,
 } from "./modelsBoard";
 import { claudeStarter } from "./starters";
+import { setThemeViaSettings } from "./theme";
+import { pressKey } from "./windowKeys";
 
 /**
  * The Subscriptions "Models" section, run against the REAL catalog path -
@@ -359,4 +361,61 @@ test("dragging a model moves it, ⌥ keeps both levels, and Not in use takes it 
   });
   await expect(modelPill(models, from, key)).toBeVisible();
   await expect(modelPill(models, "off", key)).toHaveCount(0);
+});
+
+// INF-910 direction A: actual catalog names keep one muted provider in both themes.
+// Real signed-in Claude/Grok catalogs; completion is computed type/color and unchanged names.
+// Uses the hermetic desktop launcher only, with no shared account or device state.
+test("crew chip providers use muted UI type without renaming their models", async () => {
+  const { page } = launched;
+  const models = await openModels(page);
+  const catalog = await page.evaluate(() => window.infinitary.models.slots());
+  for (const theme of ["light", "dark"] as const) {
+    await setThemeViaSettings(page, theme, { close: false });
+    for (const model of catalog.models) {
+      const pill = modelPill(models, model.slots[0] ?? "off", `${model.provider}/${model.id}`);
+      const name = pill.getByRole("button").first();
+      await expect(name).toHaveAccessibleName(model.label);
+      const face = await name.evaluate((button) => {
+        const provider = button.firstElementChild;
+        if (!provider) throw new Error("Missing provider text");
+        return {
+          provider: provider.textContent,
+          providerColor: getComputedStyle(provider).color,
+          providerFont: getComputedStyle(provider).fontFamily,
+          mutedColor: getComputedStyle(button).color,
+          uiFont: getComputedStyle(button).fontFamily,
+        };
+      });
+      expect(face.provider).toBe(model.providerLabel);
+      expect(face.providerColor).toBe(face.mutedColor);
+      expect(face.providerFont).toBe(face.uiFont);
+    }
+  }
+  const model = catalog.models.find(
+    (row) => row.provider === "anthropic-claude" && row.slots.length > 0,
+  );
+  if (!model) throw new Error("No placed Claude model to open by keyboard");
+  const level = model.slots[0];
+  if (!level) throw new Error("The placed model has no level");
+  const key = `${model.provider}/${model.id}`;
+  const pill = modelPill(models, level, key);
+  await pressKey(modelName(pill, model.label), "Enter");
+  const panel = models.getByRole("complementary", { name: `${model.label} levels`, exact: true });
+  await expect(panel).toBeVisible();
+  await pressKey(panel.getByRole("button", { name: /^Close / }), "Enter");
+  await expect(panel).toHaveCount(0);
+  await pressKey(modelName(pill, model.label), "Tab");
+  const remove = pill.getByRole("button", {
+    name: `Remove ${model.label} from ${level}`,
+    exact: true,
+  });
+  await expect(remove).toBeFocused();
+  await pressKey(remove, "Enter");
+  await expect(pill).toHaveCount(0);
+  const saved = await page.evaluate(() => window.infinitary.models.slots());
+  expect(saved.models.find((row) => `${row.provider}/${row.id}` === key)?.slots).toEqual(
+    model.slots.filter((slot) => slot !== level),
+  );
+  expect(saved.models.find((row) => `${row.provider}/${row.id}` === key)?.label).toBe(model.label);
 });

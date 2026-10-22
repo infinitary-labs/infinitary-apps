@@ -477,3 +477,73 @@ describe("ModelsSection - facts a pill holds", () => {
     expect(pill).toContain(`aria-description="${removeFromLevelOnly("medium")}"`);
   });
 });
+
+// INF-910 direction A applies to every shared board chip, without renaming its controls.
+describe("ModelsSection - muted provider display", () => {
+  it("separates provider words in every level and Not in use, preserving full accessible names", () => {
+    const models: ModelSlotsView["models"] = [
+      {
+        provider: "anthropic-claude",
+        providerLabel: "Claude",
+        id: "claude-fable-5-1",
+        label: "Claude Fable 5.1",
+        slots: ["premium", "high", "medium", "low"],
+      },
+      {
+        provider: "openai-codex",
+        providerLabel: "Codex",
+        id: "gpt-6-astra",
+        label: "GPT-6 Astra",
+        slots: [],
+      },
+      { provider: "xai", providerLabel: "Grok", id: "grok-4.7", label: "Grok 4.7", slots: [] },
+      {
+        provider: "openrouter",
+        providerLabel: "OpenRouter",
+        id: "anthropic/claude-fable-latest",
+        label: "Anthropic: Claude Fable Latest",
+        slots: [],
+      },
+    ];
+    const html = render({ models, byName: [], usingDefaults: false });
+    expect(
+      html.match(/<span>Claude<\/span><span class="fm-models-chip-label">Fable 5.1<\/span>/g),
+    ).toHaveLength(4);
+    expect(html.match(/aria-label="Claude Fable 5.1"/g)).toHaveLength(4);
+    for (const [provider, label] of [
+      ["Codex", "GPT-6 Astra"],
+      ["Grok", "4.7"],
+      ["OpenRouter", "Anthropic: Claude Fable Latest"],
+    ]) {
+      expect(html).toContain(
+        `<span>${provider}</span><span class="fm-models-chip-label">${label}</span>`,
+      );
+    }
+    expect(html).toContain('aria-label="Remove Claude Fable 5.1 from premium"');
+  });
+
+  it("renders a provider-only label once without empty model text and retains its pinned star", () => {
+    const slots: ModelSlotsView = {
+      models: [
+        {
+          provider: "anthropic-claude",
+          providerLabel: "Claude",
+          id: "claude",
+          label: "Claude",
+          slots: ["high"],
+        },
+      ],
+      byName: [],
+      usingDefaults: false,
+    };
+    const html = render(slots);
+    expect(html).toContain("<span>Claude</span>");
+    expect(html).not.toContain('<span class="fm-models-chip-label"></span>');
+    const pinned = render(slots, DECISIONS, {
+      ...ROUTING,
+      pins: [{ provider: "claude", id: "claude" }],
+    });
+    expect(pinned).toContain('aria-label="Claude ✱"');
+    expect(pinned).toContain('<span class="fm-models-chip-label"> ✱</span>');
+  });
+});

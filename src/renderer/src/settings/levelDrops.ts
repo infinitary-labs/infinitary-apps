@@ -60,6 +60,20 @@ export function providerPrefix(model: Pick<SlotModelView, "providerLabel" | "lab
     : model.providerLabel;
 }
 
+/** INF-910 direction A: split display words only; stored and accessible labels stay intact. */
+export function chipDisplayParts(model: Pick<SlotModelView, "providerLabel" | "label">): {
+  provider: string;
+  label: string;
+} {
+  const { providerLabel: provider, label } = model;
+  const rest = label.slice(provider.length);
+  const matches =
+    provider.length > 0 &&
+    label.slice(0, provider.length).toLowerCase() === provider.toLowerCase() &&
+    !/^[\p{L}\p{N}_]/u.test(rest);
+  return { provider, label: matches ? rest.trimStart() : label };
+}
+
 /** How the always-use banner opens, before the model's name. */
 export const ALWAYS_USE_LEAD = "All crew work goes to";
 

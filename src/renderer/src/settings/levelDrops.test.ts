@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Slot } from "../../../shared/modelSlots";
-import { dropPlan, levelList, newModelNote, providerPrefix, usedLine } from "./levelDrops";
+import {
+  chipDisplayParts,
+  dropPlan,
+  levelList,
+  newModelNote,
+  providerPrefix,
+  usedLine,
+} from "./levelDrops";
 
 describe("what a drop on the Models board does", () => {
   const sol = { slots: ["high", "medium"] as const };
@@ -90,4 +97,27 @@ describe("the words the Models board uses for a model", () => {
       expect(usedLine({ slots, isNew: true })).toBe(newModelNote({ slots }));
     }
   });
+});
+
+// Accepted INF-910 direction A: provider styling must not lose or duplicate model words.
+describe("chip display parts", () => {
+  it.each([
+    ["Claude", "Claude Fable 5.1", "Fable 5.1"],
+    ["Claude", "claude Opus 5.5", "Opus 5.5"],
+    ["Grok", "Grok 4.7", "4.7"],
+    ["Codex", "GPT-6 Astra", "GPT-6 Astra"],
+    ["OpenRouter", "Anthropic: Claude Fable Latest", "Anthropic: Claude Fable Latest"],
+    ["Claude", "Claude", ""],
+    ["Grok", "Grokking", "Grokking"],
+    ["Claude", "Claude_Opus", "Claude_Opus"],
+    ["Claude", "Claude-Opus", "-Opus"],
+    ["", "Claude Opus 5.5", "Claude Opus 5.5"],
+  ])(
+    "keeps %s / %s intact apart from its leading provider word",
+    (providerLabel, label, remaining) => {
+      const model = { providerLabel, label };
+      expect(chipDisplayParts(model)).toEqual({ provider: providerLabel, label: remaining });
+      expect(model).toEqual({ providerLabel, label });
+    },
+  );
 });

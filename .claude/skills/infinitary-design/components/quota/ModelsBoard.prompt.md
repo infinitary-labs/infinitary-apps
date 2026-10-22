@@ -1,5 +1,9 @@
 The Models board (Settings → Intelligence → Models): one lane per level - premium, high, medium, low - and a Not in use lane under them, each model a pill in every level it is used at.
-A pill reads provider then model label in mono (the provider is dropped where the label already starts with it: "Claude Opus 5.5", "Grok 4.7"), a `new` micro label on a model that arrived after this install had seen its provider, and `✱` on a model set to always use.
+A pill reads the provider once in muted UI type (`--fg-3`), then the model name in mono with its existing model-state color, a `new` micro label on a model that arrived after this install had seen its provider, and `✱` on a model set to always use.
+A matching leading provider word is separated for display only, case-insensitively at a word boundary: "Claude Opus 5.5" displays muted Claude then mono Opus 5.5.
+Stored and accessible names stay complete; unmatched labels stay intact after the provider, and a provider-only label has no empty model text.
+OpenRouter keeps its own provider name followed by the complete model label, including its vendor.
+The same rule holds in every level, Not in use and the drag ghost; selected borders, focus rings and pinned or unused model colors stay unchanged.
 The `new` mark stays a week, through restarts, or until the person changes that model's levels (`docs/model-lists.md`, "The news").
 A pill's name is described by its provider, "new" on a new model, and that micro label's note, which also shows on rest, the pointer's or the keyboard's focus on the pill; the × says "Remove from high only" the same way (readme, "Facts shown on rest").
 The note says where the model is used wherever its pill sits: "New here - it is used at medium." for an arrival its starting levels placed, "New here - it is not in use until you give it a level." for one they did not; the model panel's line on where it is used reads the same note.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-stops-after-merge",
+      "reason": "CI work: a pull request's phone check now stops before its device gate when the pull request merged or closed while the check waited in the phone line, so open pull requests are not held behind it. Nothing in the app changes."
+    }
+  ]
+}

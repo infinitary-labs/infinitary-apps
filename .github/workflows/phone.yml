@@ -15,7 +15,8 @@ permissions:
 # while its native job waits for the Mac mini would hold the newer version behind
 # it for hours. cancel-replaced cancels the older runs of this pull request whose
 # native job has not started its device gate, and a replaced version ends its own
-# run before that gate, a manual rerun of an older version included.
+# run before that gate, a manual rerun of an older version included. INF-895: so
+# does a run whose pull request merged or closed while it waited in the phone line.
 # A started gate is never cancelled: it deletes its own simulator.
 
 jobs:
@@ -172,10 +173,11 @@ jobs:
         name: Start a fresh virtual Mac
         if: ${{ vars.PHONE_VIRTUAL_MAC }}
         run: scripts/virtual-mac/phone.sh start "$RUNNER_TEMP/phone"
-      # No simulator exists before a device gate. A rerun of a replaced version has no
-      # newer run to cancel it, so it stops here. A failed reading runs the gate.
+      # No simulator exists before a device gate. A rerun of a replaced version, and the
+      # run of a pull request that merged or closed, has no newer run to cancel it, so it
+      # stops here (INF-895). A failed reading runs the gate.
       - id: start
-        name: Stop before the gates if a newer push replaced this version
+        name: Stop before the gates if a newer push replaced this version or the pull request closed
         continue-on-error: true
         run: node scripts/replaced-phone-runs.ts stop-if-replaced
         env:

@@ -377,6 +377,7 @@ Its `cancel-replaced` job cancels the pull request's older phone runs whose nati
 A device gate that already started is never cancelled; it finishes and deletes its own simulators.
 No simulator exists right before the gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
 That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches the Mac mini.
+It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the nightly check of `main` checks what merged.
 Only native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and the native device gate an exclusive one, taken once for both devices; a gate inside a virtual Mac takes none ("A phone check the placement service puts in a virtual Mac").

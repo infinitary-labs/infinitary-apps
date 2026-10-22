@@ -1,0 +1,68 @@
+{
+  "readAt": "2026-10-22T19:20:00Z",
+  "about": "GitHub REST answers for three phone.yml runs and their pull requests, trimmed to the fields scripts/replaced-phone-runs.ts reads (INF-891, INF-895). PR #184 merged at 15:46:17Z while run 439 waited in the phone line; PR #162 closed without merging; PR #285 is open at its run's version. Each run's pull is the number its pull_request event carries, because a closed pull request's run lists none in pull_requests.",
+  "runs": {
+    "39807451798": {
+      "id": 39807451798,
+      "run_number": 439,
+      "event": "pull_request",
+      "head_branch": "fm/task-d8f35ffa",
+      "head_sha": "2010bacf72be084e8b5cbf2b6f06fb33bd89f2bc",
+      "created_at": "2026-10-22T15:43:08Z",
+      "pull": 184
+    },
+    "39319253914": {
+      "id": 39319253914,
+      "run_number": 191,
+      "event": "pull_request",
+      "head_branch": "fm/task-c2706472",
+      "head_sha": "85609578dd6337e41e1b0d774ea062d64bca38f7",
+      "created_at": "2026-10-19T20:25:57Z",
+      "pull": 162
+    },
+    "39805546269": {
+      "id": 39805546269,
+      "run_number": 433,
+      "event": "pull_request",
+      "head_branch": "fm/task-229caf0b",
+      "head_sha": "398c1cbccc6b51b48d8393125ab949414ac60a32",
+      "created_at": "2026-10-22T15:30:54Z",
+      "pull": 285
+    }
+  },
+  "pulls": {
+    "184": {
+      "number": 184,
+      "state": "closed",
+      "merged": true,
+      "closed_at": "2026-10-22T15:46:17Z",
+      "merged_at": "2026-10-22T15:46:17Z",
+      "head": {
+        "ref": "fm/task-d8f35ffa",
+        "sha": "2010bacf72be084e8b5cbf2b6f06fb33bd89f2bc"
+      }
+    },
+    "162": {
+      "number": 162,
+      "state": "closed",
+      "merged": false,
+      "closed_at": "2026-10-19T22:49:28Z",
+      "merged_at": null,
+      "head": {
+        "ref": "fm/task-c2706472",
+        "sha": "85609578dd6337e41e1b0d774ea062d64bca38f7"
+      }
+    },
+    "285": {
+      "number": 285,
+      "state": "open",
+      "merged": false,
+      "closed_at": null,
+      "merged_at": null,
+      "head": {
+        "ref": "fm/task-229caf0b",
+        "sha": "398c1cbccc6b51b48d8393125ab949414ac60a32"
+      }
+    }
+  }
+}

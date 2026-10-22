@@ -51,13 +51,22 @@ export async function cancelOlderRuns(api: Api, current: PhoneRun): Promise<stri
   return lines.length > 0 ? lines : ["No older phone run of this pull request is still going."];
 }
 
-/** Before each device gate no simulator exists: a replaced version cancels its own run there. */
+/**
+ * Before each device gate no simulator exists: a replaced version cancels its own run there.
+ * INF-895: so does the run of a pull request that merged or closed while its native job waited
+ * in the phone line, which no newer run cancels; the nightly check of main checks what merged.
+ */
 export async function stopIfReplaced(api: Api, current: PhoneRun): Promise<{ replaced: boolean; line: string }> {
-  const { head } = await api.get(`/repos/${current.repository}/pulls/${current.pull}`) as { head: { sha: string } };
-  if (head.sha === current.headSha) return { replaced: false, line: "This version is still the pull request's latest." };
+  const pull = await api.get(`/repos/${current.repository}/pulls/${current.pull}`) as { state: string; merged: boolean; head: { sha: string } };
+  const why = pull.state === "closed"
+    ? `Pull request #${current.pull} ${pull.merged ? "merged" : "closed without merging"}, so this run stops before its next device gate.`
+    : pull.head.sha !== current.headSha
+      ? `A newer push (${pull.head.sha.slice(0, 8)}) replaced this version, so this run stops before its next device gate.`
+      : undefined;
+  if (!why) return { replaced: false, line: "This version is still the open pull request's latest." };
   const status = await api.post(`/repos/${current.repository}/actions/runs/${current.runId}/cancel`);
-  if (status !== 202) throw new Error(`Cancelling this replaced run answered ${status}`);
-  return { replaced: true, line: `A newer push (${head.sha.slice(0, 8)}) replaced this version, so this run stops before its next device gate.` };
+  if (status !== 202) throw new Error(`Cancelling this run answered ${status}`);
+  return { replaced: true, line: why };
 }
 
 /** This run as a pull request's phone run, or undefined when no pull request started it (an on-request run). */

@@ -51,7 +51,7 @@ function asOf(jobs: readonly Reading[], instant: string): Job[] {
   });
 }
 
-function github(): Api & { cancelled: string[] } {
+function github(pulls = readings.pulls): Api & { cancelled: string[] } {
   const cancelled: string[] = [];
   return {
     cancelled,
@@ -65,7 +65,7 @@ function github(): Api & { cancelled: string[] } {
           : undefined;
       const jobs = /\/actions\/runs\/(\d+)\/jobs$/.exec(url.pathname)?.[1];
       const pull = /\/pulls\/(\d+)$/.exec(url.pathname)?.[1];
-      const answer = runs ?? (jobs ? readings.jobs[jobs] : pull ? readings.pulls[pull] : undefined);
+      const answer = runs ?? (jobs ? readings.jobs[jobs] : pull ? pulls[pull] : undefined);
       if (!answer) throw new Error(`GET ${path} answered 404`);
       return answer;
     },
@@ -152,6 +152,44 @@ describe("a replaced phone run", () => {
     expect(api.cancelled).toEqual(["39208139891"]);
     expect(await stopIfReplaced(api, run154)).toMatchObject({ replaced: false });
     expect(api.cancelled).toEqual(["39208139891"]);
+  });
+});
+
+// INF-895 (found by INF-891): PR #184 merged at 8:46 AM on 2026-10-22, its head unmoved, and its
+// phone run 439 still started a 28-minute device gate at 11:45 AM while PR #285's run 433 waited
+// in the same one-at-a-time phone line. GitHub's answers for those pull requests, trimmed.
+const closings = JSON.parse(readFileSync("tests/fixtures/phone-runs/2026-10-22.json", "utf8")) as {
+  runs: Record<
+    string,
+    { id: number; run_number: number; head_branch: string; head_sha: string; pull: number }
+  >;
+  pulls: Record<string, unknown>;
+};
+const closingRun = (id: string): PhoneRun => {
+  const reading = closings.runs[id];
+  if (!reading) throw new Error(`No reading of run ${id}`);
+  return run(reading.id, reading.run_number, reading.pull, reading.head_branch, reading.head_sha);
+};
+
+describe("a phone run whose pull request merged or closed", () => {
+  it("cancels its own run before the device gate once its pull request merged", async () => {
+    const api = github(closings.pulls);
+    const stop = await stopIfReplaced(api, closingRun("39807451798"));
+    expect(stop).toMatchObject({ replaced: true });
+    expect(stop.line).toContain("#184 merged");
+    expect(api.cancelled).toEqual(["39807451798"]);
+  });
+  it("cancels its own run before the device gate once its pull request closed without merging", async () => {
+    const api = github(closings.pulls);
+    const stop = await stopIfReplaced(api, closingRun("39319253914"));
+    expect(stop).toMatchObject({ replaced: true });
+    expect(stop.line).toContain("#162 closed without merging");
+    expect(api.cancelled).toEqual(["39319253914"]);
+  });
+  it("still starts the device gate of an open pull request at its latest version", async () => {
+    const api = github(closings.pulls);
+    expect(await stopIfReplaced(api, closingRun("39805546269"))).toMatchObject({ replaced: false });
+    expect(api.cancelled).toEqual([]);
   });
 });
 

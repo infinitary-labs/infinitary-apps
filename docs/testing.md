@@ -161,6 +161,7 @@ A part the pull request leaves is checked after it merges, by the nightly check 
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
 A manual rerun of a replaced version stops before its gate.
+So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
 Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
 Desktop journey jobs from different pull requests remain parallel.
 The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; the native device gate takes an exclusive lease against the same runner-account cache file, once for both devices.

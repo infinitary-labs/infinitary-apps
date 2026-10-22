@@ -201,6 +201,7 @@ It takes the same `mac-mini-phone` queue and exclusive Mac check lease as a pull
 
 A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run and sums each journey file's measured Mac durations.
+It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
 A missing or expired result fails the chooser rather than silently dropping journeys; run full verification to supply fresh timings.
 `scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path and screen readers, with filename ties.
 It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.

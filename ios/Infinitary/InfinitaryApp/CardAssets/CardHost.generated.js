@@ -1489,7 +1489,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 }
 /* Native details owns the hidden body, including bare text. No wrappers or
    author-script changes. Initial open markup has no previous style and is
-   static; only a closed-to-open change transitions. Close removes transition. */
+   static; only a closed-to-open change transitions. Close removes transition.
+   Content visibility never transitions: an opening one starts from hidden
+   until the animation's first frame, and its controls cannot take focus. */
 details::details-content {
   opacity: 0;
   transform: translateY(calc(-1 * var(--space-1)));
@@ -1499,8 +1501,7 @@ details[open]::details-content {
   transform: translateY(0);
   transition:
     opacity var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out),
-    content-visibility var(--dur-fast) allow-discrete;
+    transform var(--dur-fast) var(--ease-out);
 }
 `,pd=`/* Infinitary — color system. Dark ("deep space") is the default theme; light opts in via [data-theme="light"]. */
 :root {

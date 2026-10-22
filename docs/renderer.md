@@ -199,6 +199,8 @@ Card first draw retains its stage-owned policy.
 Native `details::details-content` transitions in the shared stylesheet cover bare text as well as elements, including record bodies, without rewriting markup or author scripts.
 Initially open markup has no previous style and is static.
 Only opening has a transition; closing cuts content visibility.
+Content visibility itself never transitions, so an opened body's controls take focus at once: a transition to it would hold the body hidden until the fade draws its first frame, and a key pressed right after opening would miss them.
+`tests/renderer/detailsReveal.spec.ts` owns that rule.
 The reduced-motion tokens cut in-place drift and details transitions; the existing opacity-only frame first-draw opt-in uses `--dur-fade`.
 
 ## Solid cards and task-record stack

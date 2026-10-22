@@ -201,26 +201,24 @@ function follow(
 }
 
 /**
- * Runs `body` with setTimeout and clearTimeout faked, only while the test
- * whose signal it takes still runs (INF-722). Vitest moves on from a test
- * past its budget but lets its body go on, and a late body on the fake clock
- * fires the next tests' timers and fails each of them. So a late body fakes
- * nothing, a timeout during `body` hands real timers back before the next
- * test starts, and the body goes no further.
+ * Runs `body` with setTimeout and clearTimeout faked, in one go: it is
+ * synchronous (its type refuses an async body), so no other code runs while
+ * the fake clock is installed, and only the timers `body` sets land on it
+ * (INF-761). A link's own retry, due on
+ * the real clock, would otherwise fire inside the section on a loaded Mac and
+ * leave its next dial and retry on the fake clock, where an advance spins
+ * through them or real timers drop them. A body past its test's budget fakes
+ * nothing (INF-722): Vitest moves on from such a test but lets its body go on,
+ * and a late body would fake the clock under the next test.
  */
-async function withFakeTimers(signal: AbortSignal, body: () => Promise<void>): Promise<void> {
+function withFakeTimers(signal: AbortSignal, body: () => undefined): void {
   signal.throwIfAborted();
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  const restore = () => vi.useRealTimers();
-  signal.addEventListener("abort", restore, { once: true });
   try {
-    await body();
+    body();
   } finally {
-    signal.removeEventListener("abort", restore);
-    // Once aborted, real timers are back already, and the next test may have faked its own.
-    if (!signal.aborted) restore();
+    vi.useRealTimers();
   }
-  signal.throwIfAborted();
 }
 
 describe("the device's side of the connection", () => {
@@ -470,13 +468,13 @@ describe("a computer that runs work, on its side of the connection", () => {
         await at.quit();
         await until(() => states.at(-1)?.contact !== "in-reach");
       }
-      await withFakeTimers(signal, async () => {
+      withFakeTimers(signal, () => {
         setTimeout(() => controller.abort(reason), PLACED_REQUEST_WAIT_MS);
-        await vi.advanceTimersByTimeAsync(PLACED_REQUEST_WAIT_MS);
-        expect(await outcome).toMatchObject([
-          { status: "rejected", reason: { name: "Error", everSent: sent, cause: reason } },
-        ]);
+        vi.advanceTimersByTime(PLACED_REQUEST_WAIT_MS);
       });
+      expect(await outcome).toMatchObject([
+        { status: "rejected", reason: { name: "Error", everSent: sent, cause: reason } },
+      ]);
       expect(link.waiting()).toBe(0);
       const requests = at.asked.length;
       await at.listen();

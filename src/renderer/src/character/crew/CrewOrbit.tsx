@@ -21,6 +21,7 @@ import "./computers.css";
 import { CrewSummary } from "./CrewSummary";
 import {
   type CrewColors,
+  drawConstellation,
   drawCrewmate,
   drawDependencyLink,
   drawPacket,
@@ -163,6 +164,9 @@ function paintFrame(
   const cx = box.width / 2;
   const cy = box.height / 2;
   const byId = new Map(frame.crew.map((cm) => [cm.id, cm]));
+  // A constellation lies flat at its mark's depth, under the crew it seats.
+  for (const program of frame.programs)
+    drawConstellation(program.depth >= 0.5 ? near.ctx : far.ctx, program, cx, cy, colors);
   for (const link of frame.links) {
     const from = byId.get(link.fromId);
     const to = byId.get(link.toId);
@@ -815,6 +819,18 @@ export function CrewOrbit({
     if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
     const orbiting = planeCrew.map((ids) => ids.join(" ")).join("|");
     if (near.canvas.dataset.planeCrew !== orbiting) near.canvas.dataset.planeCrew = orbiting;
+    // Each task with parts by its branches, and the parts whose crewmate is
+    // drawn at its node, so a journey reads the constellation it painted.
+    const constellation = frame.programs
+      .map((p) => `${p.id}=${p.branches.map((b) => `${b.fromId}>${b.toId}`).join(" ")}`)
+      .join("|");
+    if (near.canvas.dataset.constellation !== constellation)
+      near.canvas.dataset.constellation = constellation;
+    const seated = frame.programs
+      .flatMap((p) => p.nodes.filter((n) => n.crewed).map((n) => n.id))
+      .join(" ");
+    if (near.canvas.dataset.constellationCrew !== seated)
+      near.canvas.dataset.constellationCrew = seated;
     if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
       rootRef.current?.style.setProperty("--crew-plane-blend", blend);
     }
@@ -827,7 +843,8 @@ export function CrewOrbit({
       ariaRef.current = label;
       nearRef.current?.setAttribute("aria-label", label);
     }
-    const empty = frame.crew.length === 0 && frame.packets.length === 0;
+    const empty =
+      frame.crew.length === 0 && frame.packets.length === 0 && frame.programs.length === 0;
     if (empty && !paintedRef.current) return;
     paintedRef.current = !empty;
     if (

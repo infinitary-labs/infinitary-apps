@@ -106,3 +106,12 @@ Continuing, paused and unknown work keep their slots, colors, solids, labels and
 Clearing the wait removes the cue and the offset glides home on the existing springs.
 Reduced motion paints one settled frame.
 Row inspection does not pause the stage; pointing at the glyph still does.
+
+A task split into parts (captain's INF-799 choice, the branching constellation): the parent is a small hollow ring on the inner orbit, travelling with it, and each part hangs from the parts it waits on, so parallel parts are siblings, a pipeline is a chain and a part after a barrier joins several branches.
+Layers grow outward from the ring, 60 px for the first and each later one 0.82 of the one before, each layer spread evenly across 70 degrees and ordered by its parents' angles so a chain stays straight; the whole graph scales about the ring when a node would leave the stage.
+A branch has the wait arrow's weight (`--fg-3` at 0.28, 1 px, no arrowhead) and lights in the accent at 0.7 and 1.4 px while a result rides it.
+A working or idle part keeps its own solid, heat, label and spark, seated at its node with its slot reserved; a finished part is a small filled node and an unstarted one a hollow node; a dropped part leaves no node.
+A part's report climbs its branches to the ring, which lights as it lands; a part filed from finished parts takes a result down each branch it hangs from.
+When the parent closes done the tree folds into its ring, which falls home into the first mate as the one result home; a dropped parent fades where it stands.
+A parent with a crewmate of its own keeps today's look, and only branches the graph recorded are drawn.
+Reduced motion paints one settled frame.

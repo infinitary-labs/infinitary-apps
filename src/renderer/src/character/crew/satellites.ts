@@ -14,6 +14,8 @@ type Vec3 = [number, number, number];
 /** Half the home formation's square, scene px. Remote clusters scale after this. */
 const SCENE_HALF_PX = 280;
 const SCENE_MARGIN_PX = 18;
+/** How far from the center a seat off the slot may sit, scene px, each axis. */
+export const SCENE_REACH_PX = SCENE_HALF_PX - SCENE_MARGIN_PX;
 
 export function planeAxes(plane: number, angle: number): { radial: Vec3; normal: Vec3 } {
   const p = CROWDED_PLANES[plane];
@@ -65,8 +67,5 @@ export function satellitePhase(
  * another crewmate is fine: the stage has no collision avoidance (INF-304).
  */
 export function satelliteFits(point: { x: number; y: number }): boolean {
-  return (
-    Math.abs(point.x) <= SCENE_HALF_PX - SCENE_MARGIN_PX &&
-    Math.abs(point.y) <= SCENE_HALF_PX - SCENE_MARGIN_PX
-  );
+  return Math.abs(point.x) <= SCENE_REACH_PX && Math.abs(point.y) <= SCENE_REACH_PX;
 }

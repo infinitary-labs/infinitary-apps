@@ -1266,7 +1266,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     void window.infinitary.tasks
       .board()
       .then((board) => {
-        seedCrew(crewOrbit(), board.tasks, stageNow());
+        seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
         set({
           crewActivity: Object.fromEntries(
             board.tasks
@@ -1319,7 +1319,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     void window.infinitary.tasks
       .board()
       .then((board) => {
-        seedCrew(crewOrbit(), board.tasks, stageNow());
+        seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
         set({
           crewActivity: Object.fromEntries(
             board.tasks
@@ -1329,8 +1329,11 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         });
       })
       .catch(() => {});
-    // A new or cleared wait arrives on the sequenced board, not on task_changed.
-    window.infinitary.tasks.onBoard((board) => applyCrewDependencies(crewOrbit(), board.tasks));
+    // A new or cleared wait, and a task's parts and their links, arrive on the
+    // sequenced board, not on task_changed.
+    window.infinitary.tasks.onBoard((board) =>
+      applyCrewDependencies(crewOrbit(), board.tasks, board.links, stageNow()),
+    );
     setInterval(() => get().collapseStaleNotes(), NOTE_COLLAPSE_TICK_MS);
     // The activity feed is not shell state: its rail panel reads it from
     // the core over the read catalog (feed.recent - docs/ui-plugins.md),

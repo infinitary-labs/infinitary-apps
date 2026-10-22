@@ -175,6 +175,7 @@ export const APPLICATION_SUITES = [
   "phase5-model-catalog.spec.ts",
   "phase5-quota.spec.ts",
   "preferences.spec.ts",
+  "program-constellation.spec.ts",
   "projects-folder.spec.ts",
   "quota-live-sensor.spec.ts",
   "record-controls.spec.ts",

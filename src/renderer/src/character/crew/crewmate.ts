@@ -27,7 +27,8 @@
 import type { Slot } from "@shared/modelSlots";
 import { noise1, TAU } from "../face";
 import { FLICKER_TUNING, filamentWaver } from "../flicker";
-import type { CrewmateFrame, DependencyLink, PacketFrame } from "./orbit";
+import { CONSTELLATION } from "./constellation";
+import type { CrewmateFrame, DependencyLink, PacketFrame, ProgramFrame } from "./orbit";
 
 export type Rgb = [number, number, number];
 export type CrewColors = { accent: Rgb; hot: Rgb; boost: number; quiet?: Rgb };
@@ -505,4 +506,83 @@ export function drawPacket(
   ctx.beginPath();
   ctx.arc(x, y, 2.4, 0, TAU);
   ctx.fill();
+}
+
+/** How far a branch keeps clear of what it joins: a crewmate, a part's node, the mark. */
+const BRANCH = { crewPx: 14, nodePx: 4, markPx: CONSTELLATION.rootMarkPx + 2 } as const;
+
+/**
+ * A task with parts as its constellation (INF-799): a branch for every link
+ * a part hangs from, at the wait arrow's weight and lit in the accent while a
+ * result rides it; a small node for a part with no crewmate drawn there -
+ * filled once done, hollow while unstarted; and the program's mark, a
+ * hollow ring that lights as a result lands. A live part's crewmate is
+ * painted by `drawCrewmate` at its node.
+ */
+export function drawConstellation(
+  ctx: CanvasRenderingContext2D,
+  program: ProgramFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  if (program.alpha <= 0.01) return;
+  const quiet = colors.quiet ?? colors.accent;
+  const ends = new Map<string, { x: number; y: number; clear: number }>();
+  ends.set(program.id, { x: program.x, y: program.y, clear: BRANCH.markPx });
+  for (const node of program.nodes)
+    ends.set(node.id, { x: node.x, y: node.y, clear: node.crewed ? BRANCH.crewPx : BRANCH.nodePx });
+  ctx.save();
+  ctx.globalAlpha = program.alpha;
+  for (const branch of program.branches) {
+    const a = ends.get(branch.fromId);
+    const b = ends.get(branch.toId);
+    if (!a || !b) continue;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+    if (length <= a.clear + b.clear) continue;
+    dx /= length;
+    dy /= length;
+    ctx.strokeStyle = rgba(branch.lit ? colors.accent : quiet, branch.lit ? 0.7 : 0.28);
+    ctx.lineWidth = branch.lit ? 1.4 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + a.x + dx * a.clear, cy + a.y + dy * a.clear);
+    ctx.lineTo(cx + b.x - dx * b.clear, cy + b.y - dy * b.clear);
+    ctx.stroke();
+  }
+  for (const node of program.nodes) {
+    if (node.crewed) continue;
+    ctx.beginPath();
+    ctx.arc(cx + node.x, cy + node.y, 2.2, 0, TAU);
+    if (node.state === "open") {
+      ctx.strokeStyle = rgba(quiet, 0.45);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = rgba(node.state === "live" ? colors.accent : quiet, 0.6);
+      ctx.fill();
+    }
+  }
+  const x = cx + program.x;
+  const y = cy + program.y;
+  const r = CONSTELLATION.rootMarkPx;
+  if (program.lit > 0.01) {
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    glow.addColorStop(0, rgba(colors.accent, 0.3 * program.lit));
+    glow.addColorStop(1, rgba(colors.accent, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3, 0, TAU);
+    ctx.fill();
+  }
+  ctx.strokeStyle = rgba(
+    mix(quiet, colors.accent, program.lit),
+    (0.5 + 0.5 * program.lit) * colors.boost,
+  );
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
 }

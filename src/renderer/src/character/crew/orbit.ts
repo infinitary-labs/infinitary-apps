@@ -38,9 +38,18 @@ import { type CenterCue, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { Slot } from "@shared/modelSlots";
 import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
+import {
+  CONSTELLATION,
+  layerGlyphShare,
+  layoutProgram,
+  type NodePlace,
+  type PartState,
+  type Program,
+  type ProgramPart,
+} from "./constellation";
 import { CROWDED_PLANES, planePhase, projectPlane } from "./orbitalPlanes";
 import { CREW_RUSH, streakArc } from "./rush";
-import { satelliteFits, satelliteOffset, satellitePhase } from "./satellites";
+import { SCENE_REACH_PX, satelliteFits, satelliteOffset, satellitePhase } from "./satellites";
 
 export type OrbitProjection = (
   point: { x: number; y: number; depth: number },
@@ -271,6 +280,26 @@ export type PacketFrame = {
 export type DependencyLink = { fromId: string; toId: string; kind: "wait" | "review" };
 
 /**
+ * A task with parts as a branching constellation (./constellation.ts): the
+ * program's mark on the inner orbit, a node for every part and a branch for
+ * every link it hangs from. A live part's crewmate is drawn at its node; a
+ * finished or unstarted part is a small node of its own. Px from the
+ * Firstmate's center, like a crewmate.
+ */
+export type ProgramFrame = {
+  id: string;
+  x: number;
+  y: number;
+  depth: number;
+  alpha: number;
+  /** 0..1: a result has just landed on the mark. */
+  lit: number;
+  nodes: Array<{ id: string; x: number; y: number; state: PartState; crewed: boolean }>;
+  /** `fromId` is the program's own id at the root. */
+  branches: Array<{ fromId: string; toId: string; lit: boolean }>;
+};
+
+/**
  * An orbit as the crew travel it on screen: an ellipse around `x, y` with
  * semi-axes `major` and `minor`, its major axis at `angle` radians, px from
  * the Firstmate's center.
@@ -304,9 +333,25 @@ export type OrbitFrame = {
   idle: number;
   /** An arrow for every wait and review on this orbit, circling or on a slot. Empty when there are none. */
   links: DependencyLink[];
+  /** Every task with parts on this orbit, as a constellation. Empty when there are none. */
+  programs: ProgramFrame[];
 };
 
 type Packet = { direction: PacketDirection; at: number };
+
+/** A result riding a constellation's branches: node ids from where it starts, the program's id at the root. */
+type RoutePacket = { route: string[]; at: number; home: boolean };
+
+type ProgramState = {
+  id: string;
+  parts: ProgramPart[];
+  /** Where the mark sits on the inner orbit, travelling with it. */
+  rootSlot: number;
+  leaving: LeaveMode | null;
+  leaveAt: number;
+  litAt: number;
+  packets: RoutePacket[];
+};
 
 type Crewmate = {
   id: string;
@@ -376,6 +421,8 @@ export class CrewOrbit {
   private reviews = new Map<string, string>();
   /** Recorded waits. The slot stays reserved; only the painted offset moves. */
   private dependencies = new Map<string, CenterCue>();
+  /** Tasks with parts, by the parent's id; a part's slot stays reserved like a wait's. */
+  private programs = new Map<string, ProgramState>();
   private nextOrder = 0;
   private lastSpawnAt = Number.NEGATIVE_INFINITY;
   private cues: Cue[] = [];
@@ -482,6 +529,87 @@ export class CrewOrbit {
   }
 
   /**
+   * The board's tasks with parts (./constellation.ts). A program first
+   * draws once one of its parts is underway; a part filed from finished
+   * parts' results takes a packet down each branch it hangs from; the
+   * parent's close folds the tree into its mark (done), which then falls
+   * home, or fades it (dropped). A closed program the stage never drew
+   * draws nothing.
+   */
+  setPrograms(list: readonly Program[], now: number): void {
+    let changed = false;
+    const seen = new Set<string>();
+    for (const program of list) {
+      seen.add(program.id);
+      const had = this.programs.get(program.id);
+      if (!had) {
+        if (program.state !== "live" || !program.parts.some((part) => part.state === "live"))
+          continue;
+        this.programs.set(program.id, {
+          id: program.id,
+          parts: program.parts,
+          rootSlot: this.openPlaneSlot(0),
+          leaving: null,
+          leaveAt: 0,
+          litAt: Number.NEGATIVE_INFINITY,
+          packets: [],
+        });
+        changed = true;
+        continue;
+      }
+      if (had.leaving) continue;
+      const before = new Set(had.parts.map((part) => part.id));
+      for (const part of program.parts) {
+        if (before.has(part.id)) continue;
+        for (const parent of part.parents)
+          had.packets.push({ route: [parent, part.id], at: now, home: false });
+      }
+      const key = (parts: readonly ProgramPart[]) =>
+        parts.map((part) => `${part.id}:${part.state}:${part.parents.join("+")}`).join();
+      if (key(had.parts) !== key(program.parts)) {
+        had.parts = program.parts;
+        changed = true;
+      }
+      if (program.state !== "live") {
+        this.endProgram(had, program.state === "done" ? "home" : "away", now);
+        changed = true;
+      }
+    }
+    for (const had of this.programs.values()) {
+      if (seen.has(had.id) || had.leaving) continue;
+      this.endProgram(had, "away", now);
+      changed = true;
+    }
+    if (changed) this.bump();
+  }
+
+  private endProgram(program: ProgramState, mode: LeaveMode, now: number): void {
+    program.leaving = mode;
+    program.leaveAt = now;
+    program.packets = [];
+  }
+
+  /** The program a crewmate is a part of, on this orbit. */
+  private programOfPart(id: string): ProgramState | undefined {
+    for (const program of this.programs.values())
+      if (!program.leaving && program.parts.some((part) => part.id === id)) return program;
+    return undefined;
+  }
+
+  /** A part's way up to the mark, by its first parent at each step. */
+  private routeHome(program: ProgramState, id: string): string[] {
+    const byId = new Map(program.parts.map((part) => [part.id, part]));
+    const route = [id];
+    let at = byId.get(id);
+    while (at?.parents[0] && !route.includes(at.parents[0])) {
+      route.push(at.parents[0]);
+      at = byId.get(at.parents[0]);
+    }
+    route.push(program.id);
+    return route;
+  }
+
+  /**
    * A crewmate starts: the Firstmate sends it out. Several spawns at once
    * are staggered so they read as one, two, three - never a clump - and
    * the ring opens every new slot immediately, so the others re-space once.
@@ -584,6 +712,20 @@ export class CrewOrbit {
   /** A report goes in, a steer goes out - the same line, direction tells which. */
   signal(id: string, direction: PacketDirection, now: number): void {
     const c = this.crew.get(id);
+    if (direction === "report") {
+      // A part's report is its result: it climbs its branches to the mark.
+      // The program's own report, with no crewmate of its own here, is the
+      // one result home.
+      const owner = c && c.phase !== "leaving" ? this.programOfPart(id) : undefined;
+      const program = this.programs.get(id);
+      if (owner) owner.packets.push({ route: this.routeHome(owner, id), at: now, home: false });
+      else if (!c && program && !program.leaving)
+        program.packets.push({ route: [id], at: now, home: true });
+      if (owner || (!c && program)) {
+        this.bump();
+        return;
+      }
+    }
     if (!c || c.phase === "leaving") return;
     c.packets.push({ direction, at: now });
     if (direction === "steer") {
@@ -829,7 +971,8 @@ export class CrewOrbit {
   private layout(): { ringR: number; glyphK: number; n: number } {
     const roster = this.roster();
     const n = roster.length;
-    const crowded = this.formation === "adaptive" && n > 0;
+    // A task with parts keeps the planes while its next parts are filed.
+    const crowded = this.formation === "adaptive" && (n > 0 || this.programs.size > 0);
     if (crowded && !this.crowded) this.spacePlaneSlots(roster);
     this.crowded = crowded;
     return { ringR: ringRadiusFor(n, this.tuning), glyphK: glyphScaleFor(n), n };
@@ -1114,7 +1257,18 @@ export class CrewOrbit {
     }
     for (const id of gone) this.crew.delete(id);
     if (gone.length > 0) this.bump();
-    const links = this.applyCompanions(crewFrames, scenes, now, settled, dt);
+    const layouts = this.layoutPrograms(slotTime, ringR, mix);
+    const seats = new Map<string, { x: number; y: number; z: number }>();
+    for (const layout of layouts) {
+      if (layout.program.leaving) continue;
+      for (const part of layout.program.parts) {
+        const place = layout.places.get(part.id);
+        if (part.state === "live" && place)
+          seats.set(part.id, { x: place.x, y: place.y, z: layout.root.z });
+      }
+    }
+    const links = this.applyCompanions(crewFrames, scenes, now, settled, dt, seats);
+    const programs = this.programFrames(layouts, crewFrames, now, settled, packets);
     // Packets ride the line to where the crewmate is drawn, circle included.
     for (const frame of crewFrames) {
       const anchor = anchors.get(frame.id);
@@ -1128,6 +1282,7 @@ export class CrewOrbit {
       orbits: this.orbitPaths(occupied, ringR, mix),
       packets,
       links,
+      programs,
       formation: this.crowded ? "planes" : "ring",
       planeBlend: mix,
       travel,
@@ -1137,6 +1292,155 @@ export class CrewOrbit {
       working,
       idle,
     };
+  }
+
+  /**
+   * Each program's mark and the layout of its parts, in scene space before a
+   * remote cluster's projection. The mark rides the inner orbit at its own
+   * angle; the planes must be settled in, as for a waiting crewmate's circle.
+   */
+  private layoutPrograms(
+    slotTime: number,
+    ringR: number,
+    mix: number,
+  ): Array<{
+    program: ProgramState;
+    root: { x: number; y: number; z: number; depth: number; radius: number };
+    places: Map<string, NodePlace>;
+  }> {
+    if (this.formation !== "adaptive" || mix < 0.999) return [];
+    const radius = ringR + ((CROWDED_PLANES[0]?.radius ?? ringR) - ringR) * mix;
+    return [...this.programs.values()].map((program) => {
+      const angle = program.rootSlot + planePhase(0, slotTime);
+      const scene = this.scenePoint(0, angle, radius);
+      const root = { ...scene, radius };
+      const places = layoutProgram(program.parts, root, SCENE_REACH_PX);
+      return { program, root, places };
+    });
+  }
+
+  /**
+   * Paint-ready constellations, and their results in flight among the
+   * packets: a branch lights while a result rides it, the mark lights when
+   * one lands, and a result that reaches the core is received there. A
+   * closing program folds into its mark, which then falls home, or fades.
+   */
+  private programFrames(
+    layouts: ReturnType<CrewOrbit["layoutPrograms"]>,
+    crew: CrewmateFrame[],
+    now: number,
+    settled: boolean,
+    packets: PacketFrame[],
+  ): ProgramFrame[] {
+    const frames: ProgramFrame[] = [];
+    const drawn = new Map(crew.filter((c) => c.phase !== "leaving").map((c) => [c.id, c]));
+    const ended: string[] = [];
+    for (const { program, root, places } of layouts) {
+      const tuning = this.tuning;
+      const t = program.leaving
+        ? settled
+          ? 1
+          : (now - program.leaveAt) /
+            (program.leaving === "home" ? tuning.homeMs + tuning.packetMs : tuning.awayMs)
+        : 0;
+      if (t >= 1) {
+        ended.push(program.id);
+        continue;
+      }
+      const home = program.leaving === "home";
+      const foldMs = tuning.homeMs / (tuning.homeMs + tuning.packetMs);
+      const fold = home && CONSTELLATION.collapse === "fold" ? easeInOut(clamp01(t / foldMs)) : 0;
+      const fade = program.leaving
+        ? home
+          ? CONSTELLATION.collapse === "fold"
+            ? 1
+            : 1 - clamp01(t / foldMs)
+          : 1 - easeIn(clamp01(t))
+        : 1;
+      const rootPoint = this.projectScene(root, root.radius);
+      const at = new Map<string, Point>();
+      const nodes: ProgramFrame["nodes"] = [];
+      const share = layerGlyphShare(program.parts, places);
+      for (const part of program.parts) {
+        const place = places.get(part.id);
+        if (!place) continue;
+        const scene = {
+          x: place.x + (root.x - place.x) * fold,
+          y: place.y + (root.y - place.y) * fold,
+          depth: root.depth,
+        };
+        const point = this.projectScene(scene, root.radius);
+        const mate = part.state === "live" ? drawn.get(part.id) : undefined;
+        if (mate) mate.size *= share;
+        const where = mate ? { x: mate.x, y: mate.y } : { x: point.x, y: point.y };
+        at.set(part.id, where);
+        nodes.push({ id: part.id, ...where, state: part.state, crewed: Boolean(mate) });
+      }
+      // The mark falls home over the last stretch of a done close.
+      const fall = home ? easeIn(clamp01((t - foldMs) / (1 - foldMs))) : 0;
+      const mark = { x: rootPoint.x * (1 - fall), y: rootPoint.y * (1 - fall) };
+      at.set(program.id, mark);
+      const lit = new Set<string>();
+      const keep: RoutePacket[] = [];
+      for (const packet of program.packets) {
+        const points = packet.route.map((id) => at.get(id)).filter((p): p is Point => !!p);
+        if (packet.home) points.push({ x: 0, y: 0 });
+        const legs = Math.max(1, points.length - 1);
+        const dur = tuning.packetMs * (0.6 + 0.4 * legs);
+        const u = settled ? 1 : clamp01((now - packet.at) / dur);
+        if (u >= 1 || points.length < 2) {
+          if (packet.home) this.cues.push({ kind: "receive" });
+          else program.litAt = now;
+          continue;
+        }
+        keep.push(packet);
+        const along = easeInOut(u) * legs;
+        const leg = Math.min(legs - 1, Math.floor(along));
+        const a = points[leg] as Point;
+        const b = points[leg + 1] as Point;
+        const s = along - leg;
+        const from = packet.route[leg];
+        const to = packet.route[leg + 1];
+        if (from && to) lit.add(`${from}>${to}`).add(`${to}>${from}`);
+        packets.push({
+          direction: "report",
+          x: a.x + (b.x - a.x) * s,
+          y: a.y + (b.y - a.y) * s,
+          t: u,
+          alpha: Math.sin(u * Math.PI) ** 0.5,
+        });
+      }
+      program.packets = keep;
+      const branches: ProgramFrame["branches"] = [];
+      for (const part of program.parts) {
+        if (!at.has(part.id)) continue;
+        const parents = part.parents.filter((id) => at.has(id));
+        for (const fromId of parents.length ? parents : [program.id])
+          branches.push({ fromId, toId: part.id, lit: lit.has(`${fromId}>${part.id}`) });
+      }
+      if (home && t > 0) {
+        // The fall is the one result home: it lands in the core.
+        if (fall > 0)
+          packets.push({ direction: "report", x: mark.x, y: mark.y, t: fall, alpha: 1 - fall });
+      }
+      frames.push({
+        id: program.id,
+        x: mark.x,
+        y: mark.y,
+        depth: rootPoint.depth,
+        alpha: fade * (1 - fall),
+        lit: settled ? 0 : clamp01(1 - (now - program.litAt) / FLASH_MS),
+        nodes: fold >= 1 ? [] : nodes,
+        branches: fold >= 1 ? [] : branches,
+      });
+    }
+    for (const id of ended) {
+      const program = this.programs.get(id);
+      this.programs.delete(id);
+      if (program?.leaving === "home" && !settled) this.cues.push({ kind: "receive" });
+    }
+    if (ended.length > 0) this.bump();
+    return frames;
   }
 
   /** Advance one crewmate's packets along the live line between it and the core. */
@@ -1248,11 +1552,19 @@ export class CrewOrbit {
     now: number,
     settled: boolean,
     dt: number,
+    seats: ReadonlyMap<string, { x: number; y: number; z: number }> = new Map(),
   ): DependencyLink[] {
     const links: DependencyLink[] = [];
     const cues = this.withReviewCues();
+    // A part is seated at its node, and its branches replace any arrow to it.
+    for (const [id, cue] of cues) {
+      if (seats.has(id)) cues.delete(id);
+      else if (cue.mode === "satellite" && seats.has(cue.blockerId))
+        cues.set(id, { ...cue, mode: "tether", index: 0, count: 1 });
+    }
     if (
       cues.size === 0 &&
+      seats.size === 0 &&
       ![...this.crew.values()].some((c) => c.companionX.x || c.companionY.x || c.companionZ.x)
     )
       return links;
@@ -1303,6 +1615,11 @@ export class CrewOrbit {
             : { x: 0, y: 0, z: 0, arrows: [blockerId] },
         );
       }
+    }
+    for (const [id, seat] of seats) {
+      const slot = scenes.get(id);
+      if (!slot) continue;
+      wanted.set(id, { x: seat.x - slot.x, y: seat.y - slot.y, z: seat.z - slot.z, arrows: [] });
     }
     for (const frame of frames) {
       const mate = this.crew.get(frame.id);

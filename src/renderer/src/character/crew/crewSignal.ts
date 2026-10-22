@@ -1,11 +1,12 @@
 import { type CenterNode, centerCues, crewedWaits } from "@shared/dependencyVisual";
 import type { FmEvent } from "@shared/events";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
-import type { TaskView } from "@shared/tasks";
+import type { TaskLinkView, TaskView } from "@shared/tasks";
 import { requestFirstmateFlicker, tokenIntensity, usageTotal } from "../flicker";
 import { prefersReducedMotion } from "../reducedMotion";
 import { stageNow } from "../stageClock";
 import { ComputerOrbits } from "./computers";
+import { programsOf } from "./constellation";
 import type { CrewOrbit, CrewStatus, LeaveMode } from "./orbit";
 
 // Side channel from the store's event stream to the crew orbit, as a module
@@ -49,11 +50,20 @@ function centerNode(task: TaskView): CenterNode {
   };
 }
 
-/** The sequenced board's waits, for whichever orbit holds each crewmate. */
-export function applyCrewDependencies(model: CrewOrbit, tasks: readonly TaskView[]): void {
+/**
+ * The sequenced board's waits, for whichever orbit holds each crewmate, and
+ * its tasks with parts, drawn from the board's own links as constellations.
+ */
+export function applyCrewDependencies(
+  model: CrewOrbit,
+  tasks: readonly TaskView[],
+  links: readonly TaskLinkView[] = [],
+  now: number = stageNow(),
+): void {
   const nodes = tasks.map(centerNode);
   model.setDependencies(centerCues(nodes));
   if (model instanceof ComputerOrbits) model.setWaits(crewedWaits(nodes));
+  model.setPrograms(programsOf(tasks, links), now);
 }
 
 function leaveModeOf(status: TaskView["status"]): LeaveMode {
@@ -129,7 +139,12 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
  * settled. Restart is not a spawn - no re-emission theatre for work that
  * was already there.
  */
-export function seedCrew(model: CrewOrbit, tasks: readonly TaskView[], now: number): void {
+export function seedCrew(
+  model: CrewOrbit,
+  tasks: readonly TaskView[],
+  now: number,
+  links: readonly TaskLinkView[] = [],
+): void {
   for (const task of tasks) {
     if (task.kind !== "work" || task.status !== "active") continue;
     if (model instanceof ComputerOrbits && task.executionDeviceId !== undefined)
@@ -151,6 +166,6 @@ export function seedCrew(model: CrewOrbit, tasks: readonly TaskView[], now: numb
     if (task.kind === "work" && task.status === "active" && task.reviewOf)
       model.setReview(task.id, task.reviewOf);
   }
-  applyCrewDependencies(model, tasks);
+  applyCrewDependencies(model, tasks, links, now);
   model.settleBootRoster(now);
 }

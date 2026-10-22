@@ -153,6 +153,32 @@ Reduced motion paints one settled frame.
 
 `crewSignal.test.ts` checks the live review start/close, the board's own hold, departure on close, packets and send-off, unrelated children, a reviewer of an absent builder, the three seats and the slot fallback with every reviewer's arrow, settled frames and boot; `computers.test.ts` checks a reviewer on a remote computer, another computer's reviewer and its arrow across, waits across computers that move nobody, the builder's hold on a remote reviewer drawing nothing, two reviews, mixed companions with their arrows, and a waiting crewmate and a reviewer that keep their circles and their arrows through a minute of other crew passing close.
 
+## A task with parts
+
+A task split into parts draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings he staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
+The program's shape and the demo's parts and pace were the preview's only.
+`constellation.ts` reads it from the board alone (`programsOf`): a parent with work children and no crewmate of its own, and the recorded `blocks` links among those children, closed ones included.
+A part hangs from the siblings it waits on, and a part that waits on none hangs from the root, so parallel parts are siblings, a pipeline is a chain and a part after a barrier joins several branches.
+A link to a task outside the parent is not a branch, a host-commissioned review is the builder's cue and never a part, and nothing is inferred from a title, an order or a script.
+A parent with a crewmate of its own keeps today's look: its crewmate is the work, and its children orbit as before.
+A basis or a branch-from that is not also a recorded wait draws no branch, since the board does not carry them; a program's runner files each part's inputs as its waits.
+
+The root is a small hollow ring on the inner orbit at the widest gap when the program first draws, travelling with that orbit.
+`layoutProgram` lays the parts in layers outward from it: the first layer 60 px out and each later one 0.82 of the one before, each layer spread evenly across 70 degrees round the root's outward direction and ordered by its parents' mean angle, so a chain stays straight and a barrier's join sits between its branches.
+When a node would leave the stage the whole graph scales about its root, and a layer wider than nine shrinks its glyphs as the preview did.
+A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, with its slot reserved, and any wait arrow between two parts gives way to their branch.
+A finished part is a small filled node, an unstarted one a hollow node, a live part on another computer a filled accent node; a dropped part leaves no node.
+A branch has the wait arrow's weight, `--fg-3` at 0.28 and 1 px, and lights in the accent at 0.7 and 1.4 px while a result rides it.
+
+A part's report is its result: its packet climbs its branches by first parents to the root instead of flying to the first mate, and the root lights as it lands.
+A part filed while the parts it waits on are finished takes a packet down each branch it hangs from.
+The parent's own report, when it has no crewmate here, is a packet from the root into the first mate.
+When the parent closes done the tree folds into its root over the fall home's time, and the root then falls into the first mate as the one result home; a dropped parent fades where it stands.
+A program first draws once one of its parts is underway, and keeps the planes while its next parts are filed.
+Reduced motion paints one settled frame, and the pointer's slowdown and pause apply as to every crewmate.
+The near crew canvas publishes each program's branches as `data-constellation` and the parts seated at their nodes as `data-constellation-crew`, compare-before-write.
+`constellation.test.ts` checks the graph read from a board, the layout, the seats, the packets up and down, the fold home and the settled frame; `tests/e2e/program-constellation.spec.ts` seeds a review program and reads its branches off the painted stage before and after a part is dropped.
+
 ## Tier solids
 
 Each crewmate's solid is the intelligence slot it is served on (captain's board verdict, 2026-09-23; rules in the design skill's `components/mate/Crewmate.prompt.md`):

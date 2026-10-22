@@ -495,6 +495,7 @@ The captain's words are one recorded override on the task (`delivery.override`, 
 How long is the first mate's reading of his words: `version`, the version it was declared at, or `task`, the rest of the task's life.
 The first mate declares it with `update_task override` (`holds`, `until`), only in a turn that carries the captain's own words, and the host keeps those words as its reason without reading them.
 The host refuses it in any other turn, and a crewmate never records one: its refusal tells it to report his words.
+An override that names a fixed limit, or a soft hold with its own way, is refused whole before consent is read: nothing is recorded, and the refusal ends with each such hold's own sentence (`overrideRefusal`).
 Empty `holds` takes it back, and a new declaration replaces the old one.
 The row is a `note` event on the timeline with one feed line, quoting his words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.

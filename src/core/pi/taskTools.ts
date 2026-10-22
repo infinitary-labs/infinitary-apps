@@ -1,4 +1,4 @@
-import { OVERRIDABLE_HOLDS, type OverridableHold } from "@shared/holds";
+import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { WorkShapeAsk } from "@shared/routingPolicy";
@@ -303,7 +303,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       override: Type.Optional(
         Type.Object(
           {
-            holds: Type.Array(stringEnum(OVERRIDABLE_HOLDS)),
+            // Every kind, so one the override cannot pass is refused in its
+            // own words below rather than by the schema (INF-762).
+            holds: Type.Array(stringEnum(HOLD_KINDS)),
             until: stringEnum(["version", "task"]),
           },
           {
@@ -354,12 +356,16 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         return { text: await delegate.startAgain({ task: params.task }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
-      if (params.override)
+      if (params.override) {
+        const { holds, until } = params.override;
+        const refusal = overrideRefusal(holds);
+        if (refusal) return { text: refusal };
         return {
-          text: params.override.holds.length
-            ? delegate.override({ task: params.task, ...params.override })
+          text: holds.length
+            ? delegate.override({ task: params.task, holds: holds.filter(isOverridable), until })
             : delegate.withdrawOverride({ task: params.task }),
         };
+      }
       if (params.drop) {
         const reason = params.reason?.trim();
         if (!reason) throw new Error("reason is required when dropping a task.");

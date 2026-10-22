@@ -129,9 +129,17 @@ export type FixedHold = {
   [K in HoldKind]: (typeof HOLDS)[K] extends { level: "fixed" } ? K : never;
 }[HoldKind];
 
-export const OVERRIDABLE_HOLDS = (Object.keys(HOLDS) as HoldKind[]).filter(
+/** Every hold kind, in the registry's order. */
+export const HOLD_KINDS = Object.keys(HOLDS) as HoldKind[];
+
+export const OVERRIDABLE_HOLDS = HOLD_KINDS.filter(
   (kind) => HOLDS[kind].level === "soft" && !("way" in HOLDS[kind]),
 ) as OverridableHold[];
+
+/** Whether the recorded override passes this hold. */
+export function isOverridable(kind: HoldKind): kind is OverridableHold {
+  return (OVERRIDABLE_HOLDS as HoldKind[]).includes(kind);
+}
 
 /**
  * The captain's one recorded override on a task: his own words, the soft
@@ -192,6 +200,24 @@ export function softHoldWords(
 /** The sentence a fixed limit's refusal ends with: no one's word passes it. */
 export function fixedHoldWords(kind: FixedHold): string {
   return `This is the fixed limit ${kind}: no one's word passes it.`;
+}
+
+/**
+ * The refusal of an override that names a hold it cannot pass (INF-762): a
+ * fixed limit, which no one's word passes, or a soft hold the captain's
+ * words pass another way. Nothing is recorded, and the refusal ends with
+ * each such hold's own sentence, so the first mate reads the fact that
+ * holds it. `undefined` when the override passes every hold named.
+ */
+export function overrideRefusal(kinds: readonly HoldKind[]): string | undefined {
+  const held = [...new Set(kinds)].filter((kind) => !isOverridable(kind));
+  if (held.length === 0) return undefined;
+  const sentences = held.map((kind) =>
+    HOLDS[kind].level === "fixed"
+      ? fixedHoldWords(kind as FixedHold)
+      : softHoldWords(kind as Exclude<HoldKind, FixedHold>, "firstmate"),
+  );
+  return `Override refused: nothing was recorded. ${sentences.join(" ")}`;
 }
 
 /**

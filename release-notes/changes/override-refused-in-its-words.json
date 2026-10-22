@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "override-refused-in-its-words",
+      "reason": "Internal: when the first mate tries to pass a limit no one's word passes, such as a rule set where the project lives, the app now tells it which limit holds instead of a bare format error; nothing a person sees changes and nothing more merges."
+    }
+  ]
+}

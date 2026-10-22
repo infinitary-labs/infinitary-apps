@@ -92,7 +92,6 @@ import {
   HOLDS,
   type HoldOverride,
   holdNames,
-  OVERRIDABLE_HOLDS,
   type OverridableHold,
   overridePasses,
   overrideSpan,
@@ -7410,8 +7409,10 @@ export class CrewSupervisor {
    * captain's words, which the first mate heard in this turn, pass the soft
    * holds it declares, for this version or the task's life. The host keeps
    * his words as the row's reason and never reads them; it checks only that
-   * the task is live and each hold is soft. One override stands at a time:
-   * a new one replaces it. Naming a counted limit reopens it now.
+   * the task is live, since update_task has already refused a hold the
+   * override cannot pass, in that hold's own words (`overrideRefusal`). One
+   * override stands at a time: a new one replaces it. Naming a counted limit
+   * reopens it now.
    */
   declareOverride(
     taskId: string,
@@ -7422,7 +7423,7 @@ export class CrewSupervisor {
     const handle = `${record.key || record.id} "${record.title}"`;
     if (TaskService.isClosed(record))
       return { ok: false, text: `${handle} is closed, so no hold is left to pass.` };
-    const holds = [...new Set(input.holds)].filter((kind) => OVERRIDABLE_HOLDS.includes(kind));
+    const holds = [...new Set(input.holds)];
     if (holds.length === 0)
       return { ok: false, text: "Name at least one soft hold the captain's words pass." };
     const head = record.delivery?.headSha;

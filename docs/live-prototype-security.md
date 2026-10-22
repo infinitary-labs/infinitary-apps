@@ -210,7 +210,7 @@ Only the shown card has a frame, so a panel's cards waiting their turn hold no p
 
 **Isolation.**
 Each panel mount is its own host, so its own site and renderer process, like a scripted card; a runaway panel wedges only itself.
-The frame watchdog is armed for an added panel: it is torn down to "This panel stopped responding." with a Retry, and its served document goes with it.
+The frame watchdog is armed for an added panel: it is torn down and its served document goes with it; the panel mounts once more on its own, and a second stop shows "This panel stopped responding." with a Retry.
 
 **Measured through the real path** (`tests/e2e/installed-panel-containment.spec.ts`): a hostile panel added by talking - fetched from a folder, checked, consented on the host's card - that assembles its URL and the app's API name at run time to get past the install tidy-up, then tries: `fetch`, `sendBeacon`, a WebSocket, an image and an iframe on a live local server, top-level navigation, `window.open`, the parent's DOM, `eval`, `new Function`, `localStorage`, `window.infinitary`, an unpinned lib file, another mount's host, the fonts host and the personal-extension scheme as scripts, an undeclared read, a gesture, the mediated fetch, and another panel's store slice.
 Every one is refused; the server counts zero requests; the other slice is untouched and the write landed in its own.
@@ -260,6 +260,7 @@ The pins protect the lib's integrity, not its correctness.
     Scripted card mounts are capped separately (`CARD_MOUNT_CAP`), so cards cannot exhaust the template mounts the app's own panels use.
   - A runaway script (`while (true)`, a hot animation loop) wedges only its own renderer process (Isolation, above).
     The frame watchdog in `FrameController`, armed for scripted card mounts, pings the bridge every `FRAME_WATCHDOG_INTERVAL_MS`; a frame that leaves `FRAME_WATCHDOG_MISSES` pings in a row unanswered is torn down, and the card body shows "This card stopped responding." with a Retry.
+    A tick at which the main process has not answered the previous tick's question (`inf:frames:alive`) counts nothing, because the frame's answers pass through that process; a page that is stuck on its own is still torn down.
     The clock starts when the host points the iframe at the mount, not at the bridge's `ready`: a script that loops at parse time can wedge its frame before that `ready` reaches the host (observed in the e2e), so a document not born within the same number of intervals is torn down too.
     The iframe is removed and the served document unmounted; the browser reaps the orphaned process on its own.
     A miss is counted only when a tick finds the previous ping unanswered, so a throttled host clock pings less often but never invents a miss.

@@ -453,7 +453,11 @@ describe("FrameController", () => {
   });
 
   describe("the watchdog", () => {
-    function armed(onUnresponsive: () => void, paused?: () => boolean) {
+    function armed(
+      onUnresponsive: () => void,
+      paused?: () => boolean,
+      askMain?: () => Promise<unknown>,
+    ) {
       let tick: () => void = () => {};
       const cleared: unknown[] = [];
       const posted: HostMessage[] = [];
@@ -464,6 +468,7 @@ describe("FrameController", () => {
           executor: new ReadExecutor(fakeApi()),
           fetch: vi.fn(),
           ...(paused ? { paused } : {}),
+          ...(askMain ? { askMain } : {}),
           timers: {
             setInterval: (callback, ms) => {
               expect(ms).toBe(FRAME_WATCHDOG_INTERVAL_MS);
@@ -576,6 +581,50 @@ describe("FrameController", () => {
       for (let round = 0; round < FRAME_WATCHDOG_MISSES * 3; round++) tick();
       expect(onUnresponsive).not.toHaveBeenCalled();
       expect(pings()).toEqual([]);
+    });
+
+    // INF-935: every message between the window and a frame passes through
+    // the main process, so a main-process pause of four seconds stopped an
+    // idle panel ("This panel stopped responding.").
+    it("counts nothing while the main process has not answered, and still stops a frame that is stuck", async () => {
+      const onUnresponsive = vi.fn();
+      let answer: () => void = () => {};
+      const askMain = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            answer = resolve;
+          }),
+      );
+      const { controller, tick, pings } = armed(onUnresponsive, undefined, askMain);
+      controller.receive({ fm: 2, type: "ready" });
+      tick();
+      expect(askMain).toHaveBeenCalledTimes(1);
+      // The main process is busy: neither the question nor the frame's answer comes back.
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES * 3; round++) tick();
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      expect(askMain).toHaveBeenCalledTimes(1);
+      expect(pings()).toHaveLength(1);
+      // It answers, and the frame's held answer arrives with it.
+      answer();
+      await flush();
+      controller.receive({ fm: 2, type: "pong", seq: 1 });
+      tick();
+      expect(pings()).toHaveLength(2);
+      // A frame stuck on its own while the main process answers is still stopped.
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) {
+        answer();
+        await flush();
+        tick();
+      }
+      expect(onUnresponsive).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not count an unborn document while the main process has not answered", async () => {
+      const onUnresponsive = vi.fn();
+      const { controller, tick } = armed(onUnresponsive, undefined, () => new Promise(() => {}));
+      controller.expectDocument();
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES * 3; round++) tick();
+      expect(onUnresponsive).not.toHaveBeenCalled();
     });
 
     it("never arms for a frame that asked for no watchdog, and disarms on dispose", () => {

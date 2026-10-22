@@ -203,7 +203,7 @@ export type FrameMountSpec = {
    * not born or leaves FRAME_WATCHDOG_MISSES pings in a row unanswered - its
    * event loop wedged by a runaway script - is reported once. The caller
    * tears the frame down. Misses are not counted while `paused` says the
-   * page is hidden.
+   * page is hidden, or while the main process has not answered `askMain`.
    */
   onUnresponsive?: () => void;
   /**
@@ -260,6 +260,13 @@ export type FrameControllerDeps = {
    * Absent, every miss counts, as a showing card does.
    */
   paused?: () => boolean;
+  /**
+   * Asks the main process for an answer that changes nothing. Every message
+   * between the window and a frame passes through the main process, so a
+   * second in which it has not answered says nothing about the frame: that
+   * tick counts no miss (INF-935). Absent, every tick counts.
+   */
+  askMain?: () => Promise<unknown>;
 };
 
 const V = FRAME_BRIDGE_VERSION;
@@ -308,6 +315,8 @@ export class FrameController {
   private answeredSeq = 0;
   private missed = 0;
   private unborn = 0;
+  private mainAsked = 0;
+  private mainAnswered = 0;
   private stopStoreNotices: (() => void) | null = null;
   private activated = false;
   private revealSeq = 0;
@@ -715,7 +724,9 @@ export class FrameController {
    * often - it never counts a miss the frame did not make. A tick while the
    * page is hidden counts nothing and sends nothing: a collapsed panel, or
    * the window while the screen is off, may not run, and that is not a wedge.
-   * The streak starts again when the page is showing.
+   * The streak starts again when the page is showing. A tick while the
+   * main process has not answered the last tick's question counts nothing
+   * and sends nothing either: the frame's answers wait in that same process.
    */
   private armWatchdog(): void {
     this.disarmWatchdog();
@@ -731,6 +742,7 @@ export class FrameController {
         this.answeredSeq = this.pingSeq;
         return;
       }
+      if (!this.mainAnswering()) return;
       if (!this.ready) {
         this.unborn += 1;
         if (this.unborn >= FRAME_WATCHDOG_MISSES) this.unresponsive();
@@ -748,6 +760,24 @@ export class FrameController {
       this.pingSeq += 1;
       this.port.post({ fm: V, type: "ping", seq: this.pingSeq });
     }, FRAME_WATCHDOG_INTERVAL_MS);
+  }
+
+  /**
+   * Whether the main process answered the question the last tick asked; if
+   * so, asks the next one. One question is in flight at a time.
+   */
+  private mainAnswering(): boolean {
+    const ask = this.deps.askMain;
+    if (!ask) return true;
+    if (this.mainAnswered < this.mainAsked) return false;
+    this.mainAsked += 1;
+    const seq = this.mainAsked;
+    // A refusal is an answer too: the main process ran to give it.
+    const heard = () => {
+      if (seq > this.mainAnswered) this.mainAnswered = seq;
+    };
+    void ask().then(heard, heard);
+    return true;
   }
 
   private unresponsive(): void {

@@ -159,6 +159,8 @@ export function registerIpc(options: IpcOptions): void {
     return { ok: true as const };
   });
 
+  handleInvoke("inf:frames:alive", rendererSource, () => ({ ok: true as const }));
+
   // The captain's view of a task's browser (docs/task-browser.md, "The
   // view"): pictures of its page go to the window that watches it, and stop
   // when that window unwatches, loads another document or goes. The core

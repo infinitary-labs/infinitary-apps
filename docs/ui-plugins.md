@@ -459,8 +459,9 @@ Four pieces:
   A module that will not import or a render that throws shows the app window's quiet line (`personal/panelBoundary.tsx`).
 - **The host side**: `FrameMount` given `panel` instead of `template`, with the panel stylesheet (`panelStylesheet()`: the tokens, the typefaces, and exactly the side panel body's context - not `FRAME_BASE_STYLE`, which dresses a card's bare markup).
   The controller binds the store verb to the mount's extension id (`FrameMountSpec.store`) - the frame names a key, never whose slice - and an added panel declares only the card actions every panel has and receives only its header buttons' presses as view state ("A panel's cards" above).
-  Its watchdog is armed: a panel whose page is showing and leaves four pings unanswered is torn down to "This panel stopped responding." with a Retry, and its header says that instead of the counts the page last sent.
+  Its watchdog is armed: a panel whose page is showing and leaves four pings unanswered is torn down and mounted again once on its own; a second stop after that start shows "This panel stopped responding." with a Retry, and its header says that instead of the counts the page last sent.
   A collapsed panel, one off its rail, or any frame while the window is hidden is not stopped for missed pings, so it keeps refreshing when it can run again.
+  Every message between the window and a frame passes through the main process, so each tick also asks the main process (`inf:frames:alive`); a tick whose question it has not answered counts against no frame, and a pause of the app's own main process never stops a page (INF-935).
   The bridge reports a body's exact height, and a panel mount takes it unrounded, so it lays out exactly as the same panel does in the window.
 
 The compiler is unchanged but for one option: an added panel is compiled with `realm: "frame"`, which points its host imports at `app-frame://lib/<file>` instead of the window's `app-plugin://host/` shims (a different version of the same sources; the allowlist is the same).

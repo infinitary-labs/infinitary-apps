@@ -528,6 +528,7 @@ const api: FirstmateApi = {
   plugins: {
     mountFrame: (request) => invoke("inf:frames:mount", request),
     unmountFrame: (mountId) => invoke("inf:frames:unmount", mountId),
+    mainAlive: () => invoke("inf:frames:alive"),
     read: <N extends ReadName>(name: N, args: ReadArgs<N>, grant?: ReadGrant) =>
       invokeRead(name, args, grant) as Promise<ReadResult<N>>,
     fetch: (call) => invoke("inf:plugins:fetch", call),

@@ -152,6 +152,7 @@ export function useFrameController(
         fetch: (call) => window.infinitary.plugins.fetch(call),
         store: window.infinitary.plugins.db,
         paused: () => frameWatchPaused(frameRef.current),
+        askMain: () => window.infinitary.plugins.mainAlive(),
       },
       port,
     );
@@ -274,9 +275,11 @@ export function FrameMount({
   const [height, setHeight] = useState(minAutoHeight);
   const [drawnDocument, setDrawnDocument] = useState<string | null>(null);
   // A watchdog-armed mount that stopped answering, and the retry that
-  // remounts it: a fresh document, from the same source.
+  // remounts it: a fresh document, from the same source. The first stop
+  // after each start remounts on its own; a second shows Retry (INF-936).
   const [wedged, setWedged] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const reloadedRef = useRef(false);
   const onMountErrorRef = useRef(onMountError);
   onMountErrorRef.current = onMountError;
   // A panel source is compared by content: its owner hands a fresh object
@@ -351,6 +354,11 @@ export function FrameMount({
               if (wedgedMount) {
                 void window.infinitary.plugins.unmountFrame(wedgedMount.mountId).catch(() => {});
               }
+              if (!reloadedRef.current) {
+                reloadedRef.current = true;
+                setAttempt((n) => n + 1);
+                return;
+              }
               setWedged(true);
               spec.onUnresponsive?.();
             },
@@ -383,7 +391,14 @@ export function FrameMount({
         <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
           {PANEL_UNRESPONSIVE_LINE}
         </p>
-        <Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            reloadedRef.current = false;
+            setAttempt((n) => n + 1);
+          }}
+        >
           Retry
         </Button>
       </div>

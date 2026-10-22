@@ -238,6 +238,7 @@ describe("ipc contract", () => {
       "inf:devices:this-mac",
       "inf:files:choose",
       "inf:files:inspect",
+      "inf:frames:alive",
       "inf:frames:mount",
       "inf:frames:unmount",
       "inf:keyboard:keymap",

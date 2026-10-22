@@ -2706,6 +2706,15 @@ export const invokeContract = {
     request: z.tuple([z.string().min(1).max(64)]),
     response: okSchema,
   },
+  // The frame watchdog's question to the main process, which every message
+  // between the window and a frame passes through: an answer that changes
+  // nothing says the main process is running (INF-935).
+  "inf:frames:alive": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([]),
+    response: okSchema,
+  },
   // A crewmate's conversation held on a computer that runs work: what that
   // computer asks its home, with the shapes in src/shared/work.ts
   // (docs/helper.md, "Holding a conversation").
@@ -3547,6 +3556,8 @@ export type FirstmateApi = {
   plugins: {
     mountFrame: (request: FrameMountRequest) => Promise<FrameMount>;
     unmountFrame: (mountId: string) => Promise<{ ok: true }>;
+    /** Answers once the main process runs; the frame watchdog asks it each tick. */
+    mainAlive: () => Promise<{ ok: true }>;
     /**
      * Executes one read-catalog entry (src/shared/reads.ts) by name. `grant`
      * is what the plugin host adds from the plugin's manifest (the views a

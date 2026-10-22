@@ -3,7 +3,7 @@ import { type ElectronApplication, expect, type Page, test } from "@playwright/t
 import Database from "better-sqlite3";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
-import { frameIn, panelElement } from "./frames";
+import { frameIn, panelBody, panelElement } from "./frames";
 import { knowledgePanel, knowledgeSummary } from "./knowledgeBrowser";
 import { seedKnowledge } from "./knowledgeSeed";
 import { launchApp } from "./launch";
@@ -142,8 +142,41 @@ test("a collapsed panel paused past the watchdog still shows new knowledge, and 
   }
 });
 
-test("a panel the watchdog stops does not keep its old counts in the header", async () => {
+// INF-935: every message between the window and a panel's page passes
+// through the main process, so a main-process pause of four seconds or more
+// stopped an idle, showing panel ("This panel stopped responding.").
+test("an open panel keeps its page through a pause of the app's main process", async () => {
   test.setTimeout(90_000);
+  const userDataDir = scratchDir("infinitary-knowledge-main-pause-");
+  await seedKnowledge(userDataDir);
+  const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const knowledge = knowledgePanel(page);
+    await expect(knowledgeSummary(page)).toContainText("9 concepts", { timeout: 30_000 });
+    await knowledge.getByRole("button", { name: "Expand Knowledge" }).click();
+    await expect(knowledge).not.toHaveAttribute("data-side-panel-collapsed", "");
+    const frame = frameIn(knowledge);
+    await expect(panelBody(page, "knowledge").locator("body")).toBeVisible();
+    const src = await frame.getAttribute("src");
+    expect(src).toBeTruthy();
+
+    // The window's watchdog ticks on while the main process holds still.
+    await app.evaluate((_electron, ms) => {
+      const until = Date.now() + ms;
+      while (Date.now() < until) {}
+    }, PAUSE_MS);
+
+    // The same page, neither stopped nor mounted again, and it still draws.
+    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
+    await expect(frame).toHaveAttribute("src", src ?? "");
+    await expect(panelBody(page, "knowledge").locator("body")).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test("a panel the watchdog stops mounts again once, and a second stop does not keep its old counts in the header", async () => {
+  test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-knowledge-stopped-");
   await seedKnowledge(userDataDir);
   const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
@@ -154,10 +187,20 @@ test("a panel the watchdog stops does not keep its old counts in the header", as
     await knowledge.getByRole("button", { name: "Expand Knowledge" }).click();
     await expect(knowledge).not.toHaveAttribute("data-side-panel-collapsed", "");
     await expect(frameIn(knowledge)).toBeVisible();
+    const first = await frameIn(knowledge).getAttribute("src");
+    expect(first).toBeTruthy();
 
+    // The first stop mounts a fresh page on its own, with no Retry (INF-936).
     await pauseProcess(await pagePid(app, page, "knowledge"));
+    await expect(frameIn(knowledge)).not.toHaveAttribute("src", first ?? "", { timeout: 30_000 });
+    await expect(panelBody(page, "knowledge").locator("body")).toBeVisible({ timeout: 30_000 });
+    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
 
-    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toBeVisible();
+    // A second stop of the fresh page is left to the captain's Retry.
+    await pauseProcess(await pagePid(app, page, "knowledge"));
+    await expect(knowledge.locator("[data-frame-mount-unresponsive]")).toBeVisible({
+      timeout: 30_000,
+    });
     await knowledge.getByRole("button", { name: "Collapse Knowledge" }).click();
     await expect(summary).toContainText("stopped responding");
     await expect(summary).not.toContainText("9 concepts");

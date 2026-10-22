@@ -725,7 +725,7 @@ async function writeAskJourney(title: string, evidenceName: string): Promise<str
     await resizeWindow(launched.app, page, { width: 1100, height: 860 });
     await page.screenshot({ path: join(evidence, `${evidenceName}.png`) });
     if (evidenceName === "write-ask-other-repository") {
-      await heroShot(page, {
+      await heroShot(launched.app, page, {
         region: card,
         anchors: [page.getByRole("button", { name: sendWriteWords("GitHub"), exact: true })],
         name: "write-asks",

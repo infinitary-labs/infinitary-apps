@@ -1,8 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { expect, type Locator, type Page } from "@playwright/test";
+import { type ElectronApplication, expect, type Locator, type Page } from "@playwright/test";
 import { readPicture } from "../../src/core/pictureFormat";
 import { MAX_HERO_BYTES, MAX_HERO_WIDTH, PICTURES_DIR } from "../../src/core/releaseNotes/catalog";
+import type { PushChannel } from "../../src/shared/ipc";
+import type { ShellPreferences, Theme } from "../../src/shared/preferences";
 import { atRest, within } from "./layout";
 
 /**
@@ -82,9 +84,10 @@ function saved(png: Buffer, path?: string): Buffer {
  * The crop is the component that holds the new thing plus the anchors that
  * say where it is, padded out to a landscape between 16 by 9 and 2 by 1
  * inside the window; both themes come from that one clip in one run, so the
- * pair matches to the pixel, at whatever Size the window is at. Nothing is
- * drawn on the pictures. Encoding is the app's own Chromium (a canvas), so no
- * dependency is added.
+ * pair matches to the pixel, at whatever Size the window is at. The theme is
+ * only shown, never saved (`themed`), so neither picture holds a line the
+ * switch wrote. Nothing is drawn on the pictures. Encoding is the app's own
+ * Chromium (a canvas), so no dependency is added.
  */
 
 export type HeroShot = {
@@ -139,10 +142,36 @@ export function heroClip(boxes: Box[], window: { width: number; height: number }
   };
 }
 
-/** Switches the app's theme and waits until the window and every card body show it at rest. */
-async function themed(page: Page, theme: "dark" | "light"): Promise<void> {
-  await page.evaluate((next) => window.infinitary.settings.setAppearance({ theme: next }), theme);
-  await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe(theme);
+/**
+ * Shows the window in one theme, or with none in the captain's saved one, and
+ * waits until the window and every card body show it at rest.
+ *
+ * Nothing is saved: the window gets the captain's saved preferences with the
+ * theme in place, as the core pushes them after a change, and the window
+ * material follows as the main process keeps it (src/main/app.ts). Switching
+ * through Settings is the captain's own change, which writes its line in
+ * Activity (docs/orchestrator-contract.md, "Settled runs"): a picture of
+ * Activity, or of its newest line on a collapsed panel, would hold it in one
+ * theme and not the other.
+ */
+async function themed(app: ElectronApplication, page: Page, theme?: Theme): Promise<void> {
+  const saved = await page.evaluate(() => window.infinitary.settings.getPreferences());
+  const shown: ShellPreferences = theme
+    ? { ...saved, appearance: { ...saved.appearance, theme } }
+    : saved;
+  const channel: PushChannel = "inf:shell:preferences";
+  await app.evaluate(
+    ({ BrowserWindow, nativeTheme }, { channel, shown }) => {
+      // The app's own window is its first, as every journey's window helper reads it.
+      const appWindow = BrowserWindow.getAllWindows()[0];
+      if (!appWindow) throw new Error("No window to show the theme in");
+      nativeTheme.themeSource = shown.appearance.theme;
+      appWindow.webContents.send(channel, shown);
+    },
+    { channel, shown },
+  );
+  const next = shown.appearance.theme;
+  await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe(next);
   await expect
     .poll(async () => {
       const themes = await Promise.all(
@@ -153,7 +182,7 @@ async function themed(page: Page, theme: "dark" | "light"): Promise<void> {
             frame.evaluate(() => document.documentElement.dataset.theme ?? "").catch(() => ""),
           ),
       );
-      return themes.every((value) => value === "" || value === theme);
+      return themes.every((value) => value === "" || value === next);
     })
     .toBe(true);
   // A transition the theme change cut short is at rest too: its `finished`
@@ -337,10 +366,12 @@ async function clipShot(page: Page, clip: Box, motion: "still" | "allow"): Promi
   return Buffer.from(base64, "base64");
 }
 
-/** Photographs one clip in both themes and writes the pair; the theme is put back after. */
-export async function heroShot(page: Page, shot: HeroShot): Promise<HeroPair> {
-  const before =
-    (await page.evaluate(() => document.body.dataset.theme)) === "light" ? "light" : "dark";
+/** Photographs one clip in both themes and writes the pair; the saved theme shows again after. */
+export async function heroShot(
+  app: ElectronApplication,
+  page: Page,
+  shot: HeroShot,
+): Promise<HeroPair> {
   const dir = shot.dir ?? PICTURES_DIR;
   mkdirSync(dir, { recursive: true });
   let clip: Box | undefined;
@@ -348,7 +379,7 @@ export async function heroShot(page: Page, shot: HeroShot): Promise<HeroPair> {
   let size = { width: 0, height: 0 };
   try {
     for (const theme of ["dark", "light"] as const) {
-      await themed(page, theme);
+      await themed(app, page, theme);
       await shot.ready?.();
       if (!clip) {
         const boxes = await Promise.all(
@@ -370,7 +401,7 @@ export async function heroShot(page: Page, shot: HeroShot): Promise<HeroPair> {
       size = readPicture(webp)?.size ?? size;
     }
   } finally {
-    await themed(page, before);
+    await themed(app, page);
   }
   return { dark: pair.dark ?? "", light: pair.light ?? "", ...size };
 }

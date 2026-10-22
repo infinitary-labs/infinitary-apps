@@ -120,7 +120,7 @@ test("external check changes refresh the completion strip and task facts", async
       ),
     );
     if (process.env.INFINITARY_CAPTURE_CHECK_HERO === "1") {
-      await heroShot(app.page, {
+      await heroShot(app.app, app.page, {
         name: "live-pull-request-checks",
         region: cardSurface(app.page),
         anchors: [rowSummary(app.page)],

@@ -411,7 +411,7 @@ test("a change's hero pair, taken with heroShot from the view it changed, passes
     const [top] = await stack(page);
     const highlights = cardBody(page, top?.title ?? "").getByRole("region", { name: "Highlights" });
     await expect(highlights.getByRole("img", { name: HERO_ALT })).toBeVisible();
-    const pair = await heroShot(page, {
+    const pair = await heroShot(launched.app, page, {
       region: highlights.getByRole("heading", { name: titleOf("levels") }),
       anchors: [highlights.getByRole("img", { name: HERO_ALT })],
       name: "levels",

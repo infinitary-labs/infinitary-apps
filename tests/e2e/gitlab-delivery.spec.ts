@@ -215,7 +215,7 @@ for (const host of HOSTS) {
           join(pictures, `${host}-completion-facts-after.png`),
         );
         if (host === "gitlab.com") {
-          await heroShot(page, { region: card, name: "gitlab-merge-requests" });
+          await heroShot(launched.app, page, { region: card, name: "gitlab-merge-requests" });
         }
       }
 

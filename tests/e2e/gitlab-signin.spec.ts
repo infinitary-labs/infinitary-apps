@@ -111,7 +111,7 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
       if (evidence) {
         await regionShot(section, join(evidence, `${host}-signed-in.png`));
         if (host === "gitlab.com")
-          await heroShot(page, { region: section, name: "gitlab-sign-in" });
+          await heroShot(launched.app, page, { region: section, name: "gitlab-sign-in" });
       }
       const add = page.locator("[data-add-project]");
       const name = host === "gitlab.com" ? "GitLab" : host;

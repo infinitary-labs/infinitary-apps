@@ -162,7 +162,7 @@ test("a merge card's risk chart sits at its top right, and each dot opens its ow
     await expect(risk.note("blast")).toContainText(RISK.declared.blast.why);
     if (process.env.INFINITARY_RISK_PICTURES) {
       await page.screenshot({ path: `${process.env.INFINITARY_RISK_PICTURES}/after.png` });
-      await heroShot(page, {
+      await heroShot(app, page, {
         region: risk.chart,
         anchors: [risk.note("blast")],
         name: "self-reported-risk",

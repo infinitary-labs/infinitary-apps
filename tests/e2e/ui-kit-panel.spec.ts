@@ -156,7 +156,7 @@ test.describe("the fixture extensions the data skills teach", () => {
     const pictures = process.env.INFINITARY_GITLAB_PICTURES;
     if (pictures) {
       await regionShot(openPrs, join(pictures, "open-changes-panel.png"));
-      await heroShot(page, { region: openPrs, name: "gitlab-open-changes" });
+      await heroShot(launched.app, page, { region: openPrs, name: "gitlab-open-changes" });
     }
 
     const quota = page.locator('[data-side-panel="quota-glance"]');

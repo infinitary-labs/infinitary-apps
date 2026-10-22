@@ -146,7 +146,7 @@ test("keyboard requests change queued policies, show their sources and Activity,
       .toBe(true);
     await recordCard(app.page).screenshot({ path: evidence("record-after.png") });
     if (process.env.INFINITARY_POLICY_HERO === "1")
-      await heroShot(app.page, {
+      await heroShot(app.app, app.page, {
         region: recordFrame(app.page).locator('[data-record-section="details"]'),
         name: "live-task-policies",
       });

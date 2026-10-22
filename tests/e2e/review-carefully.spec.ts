@@ -130,7 +130,7 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
     await regionShot(card, test.info().outputPath(`merge-card-${theme}.png`));
   }
   await setThemeViaSettings(page, "dark");
-  await heroShot(page, {
+  await heroShot(app, page, {
     region: card,
     name: "review-carefully",
     dir: test.info().outputPath("hero"),

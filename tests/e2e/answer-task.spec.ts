@@ -310,7 +310,7 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
     // The failing check from the reproduction: the note is still shown after the close.
     await expect(shownCard(page, OWN_RENT_CARD_TITLE)).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("answer-note-stays.png") });
-    await heroShot(page, {
+    await heroShot(own.app, page, {
       region: shownEntry(page),
       name: "answer-card-stays",
       dir: test.info().outputPath("hero"),

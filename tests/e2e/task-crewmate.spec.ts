@@ -349,7 +349,7 @@ test("a closed task's Crewmate tab replays its crewmate's session: calls, folds,
       await lift();
       await shoot(open, "crewmate-underway-dark.png");
       if (process.env.INFINITARY_CREWMATE_HERO) {
-        await heroShot(page, { region: open, name: "task-card-crewmate-tab", ready: lift });
+        await heroShot(app, page, { region: open, name: "task-card-crewmate-tab", ready: lift });
       }
     });
   } finally {

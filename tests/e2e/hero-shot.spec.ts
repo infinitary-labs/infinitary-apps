@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { UI_SIZES } from "../../src/shared/preferences";
 import { chooseSize, markCorners, readMarkers } from "./captureMarkers";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot } from "./pictures";
+import { activityFrame } from "./rails";
 
 test("a hero pair holds the whole region it measured at every Size", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -19,7 +20,7 @@ test("a hero pair holds the whole region it measured at every Size", async () =>
         await chooseSize(app, page, size);
         await resizeWindow(app, page, { width: 960, height: 640 });
         await markCorners(page, region);
-        const pair = await heroShot(page, { region, name: `message-box-${size}`, dir });
+        const pair = await heroShot(app, page, { region, name: `message-box-${size}`, dir });
         for (const file of [pair.dark, pair.light]) {
           const found = (await readMarkers(page, readFileSync(join(dir, file)))).counts;
           console.log(`${file} corner markers: ${JSON.stringify(found)}`);
@@ -69,12 +70,71 @@ test("a hero pair is taken while something in the window keeps moving", async ()
       )
       .toBeGreaterThan(0);
     const dir = test.info().outputPath("hero");
-    const pair = await heroShot(page, { region, name: "message-box-moving", dir });
+    const pair = await heroShot(app, page, { region, name: "message-box-moving", dir });
     for (const file of [pair.dark, pair.light]) {
       const found = (await readMarkers(page, readFileSync(join(dir, file)), MOVING)).counts;
       console.log(`${file} moving marker: ${JSON.stringify(found)}`);
       expect(found.moving, `${file} holds the moving marker at rest`).toBeGreaterThanOrEqual(100);
     }
+  } finally {
+    await launched.close();
+  }
+});
+
+/** Activity's lines as the core keeps them, oldest first. */
+async function activityLines(page: Page): Promise<string[]> {
+  return (await page.evaluate(() => window.infinitary.feed.recent())).map((line) => line.text);
+}
+
+/** The titles of the operations on the record. */
+async function operations(page: Page): Promise<string[]> {
+  const board = await page.evaluate(() => window.infinitary.tasks.board());
+  return board.tasks.filter((task) => task.kind === "operation").map((task) => task.title);
+}
+
+// INF-752's report: a hero pair of the Activity dock came out mismatched,
+// because the theme switch between the pictures wrote the captain's own
+// "switched to the light theme" line into Activity for the light one only.
+test("a hero pair of Activity shows the same lines in both themes, none of its own", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1100, height: 760 });
+    // Activity holds the captain's own changes, as it does after a few in Settings.
+    await chooseSize(app, page, 110);
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+    await page.getByRole("switch", { name: "Crew model names" }).click();
+    await page.keyboard.press("Escape");
+    const region = page.locator('[data-side-panel="activity"]');
+    const rows = activityFrame(page).locator("[data-feed-row]");
+    await expect(rows).toHaveCount(2);
+    const lines = await activityLines(page);
+    const shown = await rows.allInnerTexts();
+    const filed = await operations(page);
+    const theme = (await page.evaluate(() => window.infinitary.settings.getAppearance())).theme;
+    const seen: { lines: string[]; shown: string[] }[] = [];
+    const dir = test.info().outputPath("hero");
+    await heroShot(app, page, {
+      region,
+      name: "activity",
+      dir,
+      ready: async () => {
+        seen.push({ lines: await activityLines(page), shown: await rows.allInnerTexts() });
+      },
+    });
+    console.log(`Activity at each picture: ${JSON.stringify(seen)}`);
+    expect(seen, "each picture shows Activity as it stood").toEqual([
+      { lines, shown },
+      { lines, shown },
+    ]);
+    expect(await activityLines(page)).toEqual(lines);
+    expect(await operations(page), "the pictures file nothing on the record").toEqual(filed);
+    // The saved theme never moved, and the window shows it again.
+    expect((await page.evaluate(() => window.infinitary.settings.getAppearance())).theme).toBe(
+      theme,
+    );
+    expect(await page.evaluate(() => document.body.dataset.theme)).toBe(theme);
   } finally {
     await launched.close();
   }

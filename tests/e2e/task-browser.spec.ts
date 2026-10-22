@@ -544,7 +544,7 @@ test("the captain opens a task's browser from its record and watches the crewmat
       // The strip the swap drew holds focus on the shown tab.
       await untilFocused(selected);
       await shoot(recordCard(page), "tabs-info-dark.png");
-      if (evidence) await heroShot(page, { region: recordCard(page), name: "task-card-tabs" });
+      if (evidence) await heroShot(app, page, { region: recordCard(page), name: "task-card-tabs" });
       await runFromSearch(app, page, "cards.show-browser");
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "watching");
       await expect(selected).toHaveText(browserTabLabel("Sign up"));

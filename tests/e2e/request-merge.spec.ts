@@ -238,7 +238,7 @@ test("a request_merge of an adopted pull request merges that pull request and le
     expect(github.merges()).toEqual([]);
     expect(github.requests().some((request) => request.startsWith("PUT "))).toBe(false);
     await regionShot(card, test.info().outputPath("adopted-review.png"));
-    await heroShot(page, {
+    await heroShot(launched.app, page, {
       region: card,
       anchors: [page.getByRole("button", { name: MERGE, exact: true })],
       name: "merge-a-pull-request-you-did-not-open",
@@ -427,7 +427,7 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
       // in a window tall enough to show the whole strip.
       await resizeWindow(launched.app, page, { width: 1100, height: 860 });
       await regionShot(card, join(evidence, "skip-rules-card.png"));
-      await heroShot(page, {
+      await heroShot(launched.app, page, {
         region: card,
         anchors: [page.getByRole("button", { name: SKIP_RULES_MERGE_WORDS, exact: true })],
         name: "merge-past-branch-rules",

@@ -444,7 +444,7 @@ It is part of the change, not evidence, so it is the one picture the pull reques
 Take it at build time, from one of the After views above, with `heroShot` (`tests/e2e/pictures.ts`) in the same throwaway script or spec run:
 
 ```ts
-await heroShot(page, { region: card, anchors: [panelTitle], name: "<entry id>" });
+await heroShot(app, page, { region: card, anchors: [panelTitle], name: "<entry id>" });
 ```
 
 It unions the region and its anchors, pads the clip out to landscape inside the window, photographs that one clip in both themes, encodes WebP in the app's own Chromium, and writes `release-notes/pictures/<entry id>-dark.webp` and `-light.webp`; `ready` brings a view back that a theme switch let go of, such as a pointer resting on a row.
@@ -456,6 +456,9 @@ A clip handed to Chromium also briefly crops its drawing surface, which a record
 All three hide the caret as Playwright's `caret: "hide"` does, and `heroShot` also holds motion still as `animations: "disabled"` does.
 After each theme switch it waits for motion that ends, never for motion that does not, as `atRest` does, so a view with something that keeps moving, such as the working dots, still takes its pair, with that motion held at its start.
 `tests/e2e/hero-shot.spec.ts` checks this at every Size by decoding synthetic corner markers in both pictures, and with a marker that pulses without end.
+It shows each theme without saving it: the main process hands the window the captain's saved preferences with that theme, as the core pushes them after a change, and sets the window material to match, then puts the saved theme back.
+Switching through Settings would be the captain's own change, which writes its line in Activity (`docs/orchestrator-contract.md`, "Settled runs"), so a pair of Activity, or of the newest line a collapsed Activity shows, would hold that line in one picture and not the other.
+`tests/e2e/hero-shot.spec.ts` checks that Activity shows the same lines at both pictures and that the pair files nothing on the record.
 The recipe:
 
 1. Crop to the component that holds the new thing, plus one anchor that says where it is: the card, the panel with its title, the row with its neighbors, the character with its line.

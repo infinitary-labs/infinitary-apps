@@ -216,7 +216,7 @@ test("a saved story pairs the states of each view and preserves the old drawing"
         }
       }
       if (version === 2 && process.env.INFINITARY_STORY_HERO) {
-        const hero = await heroShot(page, {
+        const hero = await heroShot(app, page, {
           region: body.locator("section").first(),
           name: "before-after-table-on-merge-cards",
         });

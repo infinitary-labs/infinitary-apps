@@ -243,7 +243,7 @@ test("a message sent mid-turn receives its own card answer, not the running turn
   await regionShot(page.locator("[data-last-turn]"), test.info().outputPath("mid-turn.png"));
   await page.screenshot({ path: test.info().outputPath("mid-turn-window.png") });
   if (process.env.FM_REPLY_HERO === "1") {
-    await heroShot(page, {
+    await heroShot(launched.app, page, {
       region: page.locator("[data-last-turn]"),
       anchors: [promptInput(page)],
       name: "read-message-reply",
@@ -321,7 +321,7 @@ test("filing work with no closing words replies with the filed task instead of a
   // Filing should identify the task a captain can refer to next, not merely acknowledge the ask.
   expect(turn?.reply?.text).toContain(task?.key);
   if (process.env.FM_ACTION_REPLY_HERO === "1") {
-    await heroShot(page, {
+    await heroShot(launched.app, page, {
       region: page.locator("[data-last-turn]"),
       anchors: [promptInput(page)],
       name: "action-reply-line",

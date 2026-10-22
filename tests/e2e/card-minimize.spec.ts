@@ -62,7 +62,7 @@ test("minimize preserves the decision and restores it from its own task row", as
       await regionShot(page.locator('[data-side-panel="now"]'), join(evidence, "tasks-after.png"));
     }
     if (process.env.MINIMIZE_HERO === "1")
-      await heroShot(page, { region: shownEntry(page), name: "card-minimize" });
+      await heroShot(app, page, { region: shownEntry(page), name: "card-minimize" });
     const answer = () => cardBody(page, TITLE).getByRole("radio", { name: "Friday", exact: true });
     await clickInBody(answer());
     await cardReply(page).field.fill("Keep the review beside it.");

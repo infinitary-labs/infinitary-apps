@@ -123,7 +123,7 @@ for (const status of ["ready", "streaming"] as const) {
           `${process.env.FM_KEEP_PICTURES}/${status === "ready" ? "ready" : "working"}-after.png`,
         );
         if (status === "ready")
-          await heroShot(page, {
+          await heroShot(launched.app, page, {
             region: shownEntry(page),
             anchors: [],
             name: "retire-saved-revise",

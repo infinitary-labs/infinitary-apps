@@ -191,7 +191,7 @@ test("a cardless wait opens its record with the reported reason, while a real ch
     await expectRecordBody(page);
     if (dir) await regionShot(recordCard(page), join(dir, "record.png"));
     if (process.env.FM_WAIT_HERO)
-      await heroShot(page, { region: recordCard(page), name: "task-wait-reason" });
+      await heroShot(app.app, page, { region: recordCard(page), name: "task-wait-reason" });
     await hideRecord(page).click();
     await openBoardButton(page).click();
     if (dir) {
@@ -263,7 +263,7 @@ test("a queued premium ask held for premium allowance says in its record why it 
       await regionShot(recordCard(page), join(dir, "held-record.png"));
     }
     if (process.env.FM_WAIT_HERO)
-      await heroShot(page, { region: recordCard(page), name: "held-task-says-why" });
+      await heroShot(app.app, page, { region: recordCard(page), name: "held-task-says-why" });
   } finally {
     await app.close();
   }

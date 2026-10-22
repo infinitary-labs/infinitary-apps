@@ -118,7 +118,7 @@ test("custom turns remain in Usage without counts and exact catalog ids receive 
       await usage.unit("usd").check();
     }
     if (evidence)
-      await heroShot(page, {
+      await heroShot(app, page, {
         region: usage.section.locator("[data-usage-models]"),
         name: "custom-usage",
       });

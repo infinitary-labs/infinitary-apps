@@ -176,7 +176,10 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
         if (evidence && index === 3)
           await regionShot(shownEntry(page), join(evidence, "round-midway.png"));
         if (process.env.INFINITARY_LESSON_HERO === "1" && index === 3)
-          await heroShot(page, { name: "lessons-in-one-card", region: shownEntry(page) });
+          await heroShot(launched.app, page, {
+            name: "lessons-in-one-card",
+            region: shownEntry(page),
+          });
         await clickInBody(choice(item.correct));
         await expect(body.locator("#feedback")).not.toHaveText("");
         await clickInBody(body.locator("#advance"));

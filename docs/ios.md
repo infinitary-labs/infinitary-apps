@@ -110,6 +110,7 @@ Native WebKit messages are admitted from the trusted main frame alone, never fro
 The parent checks source identity, document identity, shared message schemas and declared action ids; native code checks effect-free action ids again and stamps every such request as `frame`, never `chrome`.
 The native footer is the only path to an effect-bearing action.
 A native watchdog removes a body that stops answering without removing its native controls, and offers Retry.
+The watchdog counts only while the body is on screen, loaded and in front, since WebKit pauses a card behind another tab or in the background, and any answer since its last look counts, however slow.
 A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
 `CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
 A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
@@ -295,6 +296,8 @@ Each part on each device is its own gate with its own simulator and test home, a
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 No part stops another, and any part failing fails the gate.
+A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.
+With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it fifteen minutes after boot.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
 Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.
@@ -362,6 +365,7 @@ A run on request (`workflow_dispatch`, such as the nightly check of `main`) skip
 Inside a gate, a failed generator check or Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The native job uses `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
+A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.
 A newer push never waits behind its pull request's older phone run: `phone.yml` has no run-level concurrency group.
 Its `cancel-replaced` job cancels the pull request's older phone runs whose native job has not started its device gate, so a replaced version gives up its place in the Mac mini's line (`scripts/replaced-phone-runs.ts`).

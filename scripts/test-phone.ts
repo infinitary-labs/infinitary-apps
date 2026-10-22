@@ -68,6 +68,45 @@ const run = async (command: string, args: string[]) => {
 };
 let simulator: string | undefined;
 const phoneBundle = "com.getinfinitary.infinitary";
+// The processes behind a failed part's photo and card steps: the app, its card pages and Photos.
+const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.WebKit" OR process CONTAINS[c] "photo"'
+  + ' OR process == "assetsd" OR process == "mediaanalysisd"'
+  + ' OR (process == "runningboardd" AND (eventMessage CONTAINS "WebKit" OR eventMessage CONTAINS "Infinitary"))';
+// INF-804: on a fresh simulator Photos hands over a chosen photo only once it has opened its shared-with-you
+// library, which took up to six minutes after boot with simulators booting side by side. A part that chooses a
+// photo waits for Photos to say so, and fails rather than wait past fifteen minutes after boot.
+const PHOTOS_LOG = 'process == "assetsd" AND eventMessage CONTAINS "opened syndication photo library"';
+const PHOTOS_OPENED = /\sassetsd\[[^\]]*\].* opened syndication photo library/;
+const logTime = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} `
+  + `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+const photosOpened = async (device: string, booting: Date) => {
+  const stream = spawn("xcrun", ["simctl", "spawn", device, "log", "stream", "--style", "compact", "--predicate", PHOTOS_LOG],
+    { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "ignore"] });
+  children.add(stream);
+  let listening!: () => void;
+  const started = new Promise<void>((resolve) => { listening = resolve; });
+  const opened = new Promise<void>((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error("Photos had not opened its shared-with-you library fifteen minutes after boot,"
+      + " and a part that chooses a photo needs it")), booting.getTime() + 15 * 60_000 - Date.now());
+    stream.once("error", (error) => { clearTimeout(deadline); reject(error); });
+    stream.once("close", () => {
+      clearTimeout(deadline); children.delete(stream);
+      reject(new Error("The simulator's Photos log stopped before Photos opened its shared-with-you library"));
+    });
+    createInterface({ input: stream.stdout }).on("line", (line) => {
+      if (line.startsWith("Filtering the log data using ")) listening();
+      else if (PHOTOS_OPENED.test(line)) resolve();
+    });
+  });
+  opened.catch(() => {});
+  try {
+    await Promise.race([started, opened]);
+    // The stream sees only what follows its start; the kept log covers the time from boot until then.
+    if (!PHOTOS_OPENED.test(await run("xcrun", ["simctl", "spawn", device, "log", "show", "--style", "compact",
+      "--start", logTime(booting), "--predicate", PHOTOS_LOG]))) await opened;
+    console.log(`Photos had opened its shared-with-you library ${Math.round((Date.now() - booting.getTime()) / 1000)} seconds after boot`);
+  } finally { stream.kill("SIGTERM"); }
+};
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
@@ -189,8 +228,12 @@ const onePart = async () => {
   if (!runtime || !device) throw new Error("Install an iOS 18 or newer simulator runtime and the requested device type in Xcode");
   simulator = (await run("xcrun", ["simctl", "create", "Infinitary isolated test", device.identifier, runtime.identifier])).trim();
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
+  const booting = new Date();
   await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
   await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
+  // Photos opens its libraries while the rest of the part gets ready; the part's tests start once it has.
+  const photos = PHONE_PARTS.find((part) => part.name === values.part![0])?.photos ? photosOpened(simulator, booting) : undefined;
+  photos?.catch(() => {});
   keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
   if (values.demo) await run("ffmpeg", ["-version"]);
@@ -199,11 +242,17 @@ const onePart = async () => {
   const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${simulator}`,
     "-resultBundlePath", join(evidence, "phone.xcresult")];
   const plan = await planFor(values.xctestrun!, fixture.url);
+  await photos;
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!), "test-without-building"])
-    .catch((error: Error & { output?: string }) => {
+    .catch(async (error: Error & { output?: string }) => {
       // The CI job log names why a part failed; its results archive is often too large to fetch.
       for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
         console.log(line);
+      // INF-804: what the app, Photos and WebKit logged on this simulator, kept with the command logs.
+      await run("xcrun", ["simctl", "spawn", simulator!, "log", "show", "--last", "20m", "--style", "compact", "--info",
+        "--predicate", SIMULATOR_LOG])
+        .then(() => console.log(`The simulator's log is in ${number}-xcrun.log`))
+        .catch((problem: Error) => console.log(`The simulator's log could not be kept: ${problem.message}`));
       throw error;
     });
   if (values.demo) for (const { name, raw } of recordings) {

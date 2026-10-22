@@ -59,14 +59,20 @@ import SwiftUI
         <script src="app-frame://runtime/CardHost.generated.js"></script></head><body></body></html>
         """, baseURL: nil)
         watchdog = Task { [weak self] in
+            var answered = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled, let self else { return }
-                guard UIApplication.shared.applicationState == .active else { self.missed = 0; continue }
-                if !self.drawn || self.heard < self.sent { self.missed += 1 } else { self.missed = 0 }
+                // INF-804: only a shown card can stall. WebKit pauses a card behind another tab or in the background,
+                // and a page still loading is WebKit starting the card's own process, which a busy device can take a while to do.
+                guard UIApplication.shared.applicationState == .active, let page = self.view, page.window != nil, !page.isLoading
+                else { self.missed = 0; continue }
+                // A stall is a card that answered nothing since the last look; a slow answer is still an answer.
+                if (self.drawn && self.heard >= self.sent) || self.heard > answered { self.missed = 0 } else { self.missed += 1 }
+                answered = self.heard
                 if self.missed >= 3 { self.fail(); return }
                 self.sent += 1
-                self.view?.evaluateJavaScript("window.phoneCard?.ping(\(self.sent))", completionHandler: nil)
+                page.evaluateJavaScript("window.phoneCard?.ping(\(self.sent))", completionHandler: nil)
             }
         }
         return view

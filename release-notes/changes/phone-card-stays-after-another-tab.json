@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-stays-after-another-tab",
+      "kind": "fix",
+      "title": "A card on your phone stays after you look at another tab",
+      "body": "On iPhone and iPad, a card could be replaced by \"This card stopped responding\" after you visited Activity or Tasks, or while a busy device was still opening it. Infinitary now waits only on a card you can see, and a slow answer counts as an answer. A card that really stops answering still offers Retry.",
+      "area": "devices",
+      "noPicture": "The fix removes a wrong message; the card itself looks as it did before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

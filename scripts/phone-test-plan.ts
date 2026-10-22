@@ -16,13 +16,15 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
 // tests, and each runs alone from its own fresh simulator and test home, side by side with the
 // others. The order is the start order, longest first as measured on Oct 19 and 20: join and
 // recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and past choices 0.7.
+// INF-804: `photos` marks a part that chooses a library photo; its runner waits for Photos to open
+// its shared-with-you library first, since Photos hands over no chosen photo before then.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
 export const PHONE_PARTS = [
-  { name: "join", test: "testJoinAndRecover" },
-  { name: "talk", test: "testTalkAndTasks" },
-  { name: "cards", test: "testCards" },
+  { name: "join", test: "testJoinAndRecover", photos: false },
+  { name: "talk", test: "testTalkAndTasks", photos: true },
+  { name: "cards", test: "testCards", photos: false },
   // The last part runs every test no other part names: the app-hosted tests and any new one.
-  { name: "rest", test: "testCharacterAndPastChoices" },
+  { name: "rest", test: "testCharacterAndPastChoices", photos: true },
 ] as const;
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 export type PhoneDevice = "iphone" | "ipad";

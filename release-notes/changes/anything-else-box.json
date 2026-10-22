@@ -3,6 +3,7 @@
     {
       "id": "anything-else-box",
       "kind": "feature",
+      "highlight": 1,
       "area": "cards",
       "title": "Add a comment to any choice you make on a card",
       "body": "Cards that ask you to choose now have an Anything else? box just above their buttons. Write what you want the crewmate or your first mate to know, then click any button: your words go with your choice. A reply you send meanwhile carries them too, and closing the card asks before it discards them.",

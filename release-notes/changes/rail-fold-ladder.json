@@ -4,7 +4,7 @@
       "id": "rail-fold-ladder",
       "kind": "feature",
       "title": "Crowded rails keep every panel within reach",
-      "body": "When space runs short, panels near the middle fold to their headers, then gather in More. Expand a panel to keep it open longer. Choosing one from More moves it closer to its rail’s end and keeps that order after reopening Infinitary.",
+      "body": "When the window is too short for every panel on a side, the panels nearest the middle fold to their headers, then gather in a More row. Expand a panel yourself to keep it open longer. Choosing one from More moves it closer to the end of its side, and it keeps that place after you reopen Infinitary.",
       "area": "settings",
       "picture": {
         "dark": "rail-fold-ladder-dark.webp",

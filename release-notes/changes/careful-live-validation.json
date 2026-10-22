@@ -3,8 +3,8 @@
     {
       "id": "careful-live-validation",
       "kind": "improvement",
-      "title": "Careful changes keep reviewed live proof",
-      "body": "Careful changes now keep live proof for independent review. The merge card shows results and gaps, with supporting history in the task record. An untested required result waits for your decision and never counts as a pass. Tests that leave changes visible to other people ask for your approval first.",
+      "title": "Careful changes are shown working and reviewed before you merge",
+      "body": "When a change is Careful, its crewmate now shows the change working for real, and an independent reviewer checks that proof before the merge card comes to you. The merge card shows what was shown and what could not be, with the rest in the task's record. A required result nobody could show waits for your decision and never counts as passed. A check that would leave something other people can see asks you first.",
       "area": "tasks",
       "picture": {
         "dark": "careful-live-validation-dark.webp",

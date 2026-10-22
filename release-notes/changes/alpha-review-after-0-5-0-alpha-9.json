@@ -1,0 +1,33 @@
+{
+  "entries": [
+    {
+      "id": "protocol-eleven",
+      "kind": "removal",
+      "highlight": 3,
+      "area": "devices",
+      "title": "Update Infinitary on your other computers, iPhone and iPad",
+      "body": "This version changes how your computers work together again. A computer that runs work for you takes no new work until it runs this version too, and you can update it from Devices. A computer, iPhone or iPad that controls your first mate can look but not change anything until it is updated.",
+      "noPicture": "This changes which versions of Infinitary work together, not the layout or words of a screen.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["b4be239be2ea0ee8af3114717e5f0f52f77c58ca"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-5-0-alpha-9",
+      "reason": "Release review for the alpha after 0.5.0-alpha.9: ranks the Anything else? box, Review carefully and the protocol 11 update; adds that update's note; names your first mate in three notes; drops Pi and Claude Code from two; rewords the Careful proof and crowded-rails notes; folds the second smooth-typing note into the first. Nothing in the app changes."
+    },
+    {
+      "id": "docs-shapes-the-code-has",
+      "reason": "Documentation and code comments only: the docs and two comments describe the shapes and behavior the code has today. Nothing in the app changes.",
+      "covers": ["2c57a0f89d57dc1c8e5d1d1592e55c0f51bfde0e"]
+    },
+    {
+      "id": "narrow-window-record-before-rails-fold",
+      "reason": "Test only: the record controls journey opens a task's record in a narrow window before the side rails fold its Tasks panel. Nothing in the app changes.",
+      "covers": ["9bd85b5731e7c95ac7702f4f66abd229f66bfc59"]
+    }
+  ]
+}

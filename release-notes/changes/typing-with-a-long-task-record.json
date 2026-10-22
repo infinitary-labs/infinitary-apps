@@ -1,13 +1,8 @@
 {
-  "entries": [
+  "exclusions": [
     {
       "id": "typing-with-a-long-task-record",
-      "kind": "fix",
-      "area": "message-box",
-      "title": "Typing stays smooth while crewmates work, however many tasks you have finished",
-      "body": "With thousands of finished tasks, typing in the message box could still pause for a moment while several crewmates started or were messaged at once. Your keys now appear without that delay.",
-      "noPicture": "The fix removes a short delay between a key and its letter, which a still picture cannot show.",
-      "provenance": { "origin": "change" }
+      "reason": "Release review: this fix finishes the same smooth-typing result that typing-during-crew-activity describes, and both ship in the same alpha, so that one note now covers thousands of finished tasks too rather than a second note repeating it."
     }
   ]
 }

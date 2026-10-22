@@ -4,8 +4,8 @@
       "id": "automatic-tells-no-computer-runs-a-task",
       "kind": "fix",
       "area": "projects",
-      "title": "Firstmate hears at once when no computer runs the system a task needs",
-      "body": "When a task in a project set to Automatic needs Linux, macOS or Windows and none of your computers runs it, Firstmate now hears so as soon as the task waits. It can tell you, or move the task to a system one of your computers runs. Before, the task waited quietly until someone noticed.",
+      "title": "Your first mate hears at once when no computer runs the system a task needs",
+      "body": "When a task in a project set to Automatic needs Linux, macOS or Windows and none of your computers runs it, your first mate now hears so as soon as the task waits. It can tell you, or move the task to a system one of your computers runs. Before, the task waited quietly until someone noticed.",
       "noPicture": "What changes is that Firstmate hears of the wait and answers in its own words; the task shows the same waiting reason it showed before.",
       "provenance": { "origin": "change" }
     }

@@ -4,7 +4,7 @@
       "id": "claude-crewmate-tools-follow-task",
       "kind": "fix",
       "title": "A crewmate on Claude works with the tools its task has now",
-      "body": "When an update adds or removes one of a crewmate's tools, or its task's tools change, a crewmate on Claude now continues in a new conversation with the tools it has now, and reads its task's record to pick up where it was. Before, with recent versions of Claude Code, a reopened crewmate kept the tools its conversation started with: it never saw a new one, and was still offered one its task no longer had.",
+      "body": "When an update adds or removes one of a crewmate's tools, or its task's tools change, a crewmate on Claude now continues in a new conversation with the tools it has now, and reads its task's record to pick up where it was. Before, a reopened crewmate on Claude kept the tools its conversation started with: it never saw a new one, and was still offered one its task no longer had.",
       "area": "crewmates",
       "noPicture": "Nothing new on screen: the crewmate's tools change, and its task's timeline already notes a new conversation.",
       "provenance": { "origin": "change" }

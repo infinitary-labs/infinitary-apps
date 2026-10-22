@@ -1196,6 +1196,14 @@ const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
 ]);
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
+/**
+ * The tool's answer when a completion card's revision went up while its
+ * checks run (INF-834 friction 4): the words are the captain's to read now,
+ * and the merge waits for the checks on its own.
+ */
+export const COMPLETION_REVISED_WHILE_RUNNING =
+  "Your revision is up while the checks still run: its merge waits for them to pass, so do not emit it again for that. If they fail, fix them as usual.";
+
 export class CardChoiceUnavailableError extends Error {
   constructor(reason: "not-ready" | "task-closed" | "undeclared" | "action-changed" = "not-ready") {
     super(
@@ -8283,17 +8291,22 @@ export class CrewSupervisor {
       ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."
       : "";
     const answer = (text: string) => `${text}${advisory}${pausedWords}`;
+    // A revision that went up while the checks run says what still holds
+    // the merge, and what to do once they pass.
+    const gated = (risk?: RiskAssessment) =>
+      (gate as Promise<"checked" | "running">).then((reading) => {
+        const shown = publish(true, risk);
+        return reading === "checked" ? shown : `${shown} ${COMPLETION_REVISED_WHILE_RUNNING}`;
+      });
     if (riskDeclaration) {
       return gate
-        ? gate.then(() => publish(true, { declared: riskDeclaration })).then(answer)
+        ? gated({ declared: riskDeclaration }).then(answer)
         : answer(publish(false, { declared: riskDeclaration }));
     }
     if (paused) {
-      return paused
-        .then(() => (gate ? gate.then(() => publish(true)) : publish(false)))
-        .then(answer);
+      return paused.then(() => (gate ? gated() : publish(false))).then(answer);
     }
-    return gate ? gate.then(() => publish(true)).then(answer) : answer(publish(false));
+    return gate ? gated().then(answer) : answer(publish(false));
   }
 
   /**
@@ -8705,16 +8718,27 @@ export class CrewSupervisor {
    * or missing reading can never let a red or pending build masquerade as a
    * ready review. Returns undefined (no gate) when `checkCi` is not wired
    * (tests, replay) or the card carries no merge decision on a direct-pr
-   * task; otherwise a promise that resolves once CI reads green, or rejects
-   * with the tool's refusal text.
+   * task; otherwise a promise that resolves `checked` once CI reads green,
+   * or rejects with the tool's refusal text.
+   *
+   * One exception (INF-834 friction 4): a revision of the completion card
+   * already on the captain's stack goes up while the checks still run, so
+   * his reply is answered in the card's own words at once. It resolves
+   * `running`: the revision's offer is kept at the version whose checks
+   * run, so its button reads Merge when checks pass and a click waits on
+   * them (`mergeLabel`, the kept approval); a new card still waits for green.
    */
-  private pendingCiGate(taskId: string, input: EmittedCardInput): Promise<void> | undefined {
+  private pendingCiGate(
+    taskId: string,
+    input: EmittedCardInput,
+  ): Promise<"checked" | "running"> | undefined {
     const requested = input.actions.map((action) => requestMergeEffectOf(action)).find(Boolean);
     if (requested) {
       if (!this.options.reviewGate) return undefined;
       const reviewId = requested.review;
       return this.options.reviewGate(taskId, reviewId).then((refusal) => {
         if (refusal) throw new CardRefusedError(refusal, "checks", refusal);
+        return "checked" as const;
       });
     }
     const carriesMerge = input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
@@ -8732,11 +8756,14 @@ export class CrewSupervisor {
       if (capped) throw capped;
       // A pull request merged outside the app has nothing left to check:
       // the captain's click closes the task as merged (FI3-213).
-      if (overall === "green" || overall === "merged") return;
+      if (overall === "green" || overall === "merged") return "checked";
       // The captain's override on the checks lets the card go up at the
       // version it covers; the merge reads the same record.
       const delivery = this.options.tasks.get(taskId)?.delivery;
-      if (overall !== "no-pr" && overridePasses(delivery, "checks", delivery?.headSha)) return;
+      if (overall !== "no-pr" && overridePasses(delivery, "checks", delivery?.headSha))
+        return "checked";
+      if (overall === "pending" && this.cards.openCompletionCard(taskId, input.id))
+        return "running";
       const state = overall === "no-pr" ? "nothing - no open PR was found" : CHECK_WORDS[overall];
       throw new CardRefusedError(
         `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${this.waitingReplyNote(taskId)}${overall === "no-pr" ? "" : ` ${softHoldWords("checks", "crewmate")}`}`,

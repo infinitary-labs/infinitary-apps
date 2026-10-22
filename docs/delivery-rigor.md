@@ -391,6 +391,7 @@ The captain's merge click on a completion card is an approval of that change, an
 
 - **The baseline.**
   When a crewmate's completion card clears the checks gate (`pendingCiGate`), `CrewSupervisor.recordCompletionOffer` keeps the shown offer's id with the head those checks read and its pull request (`delivery.completionOffers`, the newest four).
+  A revision of the completion card already open on the stack clears that gate while the checks run, not only once they pass (INF-834 friction 4), so the captain reads the crewmate's new words at once; its offer is kept at the running head, its button then reads Merge when checks pass, and a new completion card still waits for green.
   An offer that shows the same content at another head keeps no baseline.
   A new completion card supersedes any standing approval: the crewmate is asking again.
 - **The approval.**

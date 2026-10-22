@@ -141,6 +141,7 @@ import {
 import {
   type AccountAttachment,
   CardChoiceUnavailableError,
+  COMPLETION_REVISED_WHILE_RUNNING,
   CrewSupervisor,
   type CrewSupervisorOptions,
   type FirstmateHooks,
@@ -3687,6 +3688,77 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
     });
 
+    // INF-834 friction 4, the captain's ask: "A crewmate can revise a
+    // completion card's words while its checks run". INF-638's revision
+    // was refused while its checks ran, so he closed a stale card and waited.
+    it("revises the completion card's words while the checks run, and its merge waits for them", async () => {
+      const REVISED = "revised00004";
+      const h = await approved();
+      const merge = () =>
+        h
+          .cards()
+          .find((card) => card.id === h.card.id)
+          ?.actions.find(
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+          );
+      const revise = (reply?: string, id = h.card.id) =>
+        h.specs[0]?.onCard?.({
+          requiredActions: [],
+          id,
+          title: "Ready to merge",
+          body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
+          actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+          ...(reply ? { reply } : {}),
+        });
+      // The captain asks for a smaller change; the rebuilt version's checks run.
+      h.supervisor.replyToCard(h.card.id, "this is over-engineering a bit");
+      await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
+      h.forge.headSha = REVISED;
+      h.forge.states = ["success", "pending"];
+      // A revision still answers his reply in the thread (FI3-643).
+      await expect(revise()).rejects.toThrow(/waits on your answer/);
+      const answer = await revise("I cut it down to one setting; the checks are running.");
+      expect(answer).toContain(h.card.id);
+      expect(answer).toContain(COMPLETION_REVISED_WHILE_RUNNING);
+      // A new completion card still waits for green.
+      await expect(revise(undefined, "another")).rejects.toThrow(
+        /Card refused: the checks read running, not passed/,
+      );
+      h.crewmate.finishPrompt();
+      await tick();
+      const shown = h.cards().find((card) => card.id === h.card.id);
+      expect(shown?.body).toContain("The change is one setting now.");
+      expect(h.cardStore.messages(h.card.id).map((message) => message.text)).toContain(
+        "I cut it down to one setting; the checks are running.",
+      );
+      expect(merge()?.label).toBe(MERGE_WHEN_CHECKS_PASS_WORDS);
+      // His click merges nothing while they run and keeps his approval for the revised version.
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
+      expect(h.authorization()?.approvedHead).toBe(REVISED);
+      expect(h.forge.merges).toEqual([]);
+      // They pass, and the next idle boundary merges the revised version with no second click.
+      await repairTurn(h, async () => {
+        h.forge.states = ["success"];
+      });
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([REVISED]));
+    });
+
+    it("refuses a revision of the completion card while its checks have failed", async () => {
+      const h = await approved();
+      h.forge.headSha = "revised00004";
+      h.forge.states = ["failure"];
+      await expect(
+        h.specs[0]?.onCard?.({
+          requiredActions: [],
+          id: h.card.id,
+          title: "Ready to merge",
+          body: completionBody("<p>The change is one setting now.</p><p>Pushed.</p>"),
+          actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+        }),
+      ).rejects.toThrow(/Card refused: the checks read failed, not passed/);
+    });
+
     it("an already-autonomous task can merge through its routine completion offer", async () => {
       const h = await approved();
       const repoId = h.tasks.get(h.taskId)?.repoId;
@@ -5874,9 +5946,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
     await tick();
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
-    const completion = (body: string) => ({
+    const completion = (body: string, id = "ready") => ({
       requiredActions: [],
-      id: "ready",
+      id,
       title: "Ready to merge",
       body: completionBody(body),
       actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
@@ -5887,7 +5959,11 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     // The captain asks for a change, which restarts the checks.
     supervisor.replyToCard(card.id, "rename the flag first");
     overall = "pending";
-    const refused = specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>"));
+    // A revision of that card goes up while they run (INF-834 friction 4);
+    // a new completion card still waits for them.
+    const refused = specs[0]?.onCard?.(
+      completion("<p>The flag is renamed.</p><p>Pushed.</p>", "renamed"),
+    );
     await expect(refused).rejects.toThrow(/Card refused: the checks read running, not passed/);
     await expect(refused).rejects.toThrow(
       "The captain's reply in your card's thread is still unanswered: answer it now with reply",
@@ -5895,7 +5971,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     // Once the thread has its answer, the refusal is the checks' alone.
     specs[0]?.onReply?.({ cardId: card.id, text: "Renamed; the checks are running again." });
     await expect(
-      specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>")),
+      specs[0]?.onCard?.(completion("<p>The flag is renamed.</p><p>Pushed.</p>", "renamed")),
     ).rejects.not.toThrow(/still unanswered/);
   });
 

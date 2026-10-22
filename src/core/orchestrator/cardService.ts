@@ -403,12 +403,28 @@ export class CardService {
         this.cardSeq += 1;
         return `card-${taskId}-${this.cardSeq}`;
       },
-      // Idempotent, like resolveFirstmateCardId: emit_card hands the model
-      // back the resolved id, so a crewmate revising its own card resends
-      // that id. Prefixing it again would mint a duplicate instead.
-      resolveId: (stableId) =>
-        stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`,
+      resolveId: (stableId) => crewmateCardId(taskId, stableId),
     });
+  }
+
+  /**
+   * The open completion card a crewmate's emit would revise in place: the
+   * card its declared id names on this task's stack, still carrying a merge.
+   * Undefined for a new card, another task's card or one already answered.
+   */
+  openCompletionCard(taskId: string, declaredId: string | undefined): Card | undefined {
+    let stableId: string | undefined;
+    try {
+      stableId = parseStableCardId(declaredId);
+    } catch {
+      return undefined;
+    }
+    if (!stableId) return undefined;
+    const card = this.cards.get(crewmateCardId(taskId, stableId));
+    if (card?.taskId !== taskId || card.author !== "crewmate") return undefined;
+    return card.actions.some((action) => settleEffectOf(action)?.mode === "merge")
+      ? card
+      : undefined;
   }
 
   /**
@@ -2562,4 +2578,13 @@ function buildEmittedCard(
     ...(input.designOnly ? { designOnly: true as const } : {}),
     ...(input.holdsPlace ? { holdsPlace: true as const } : {}),
   };
+}
+
+/**
+ * A crewmate card's id on its task. Idempotent, like resolveFirstmateCardId:
+ * emit_card hands the model back the resolved id, so a crewmate revising its
+ * own card resends that id. Prefixing it again would mint a duplicate instead.
+ */
+function crewmateCardId(taskId: string, stableId: string): string {
+  return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;
 }

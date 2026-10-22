@@ -18,18 +18,19 @@ import { forgeSignInStateSchema } from "./forges";
  */
 
 /**
- * The kinds the app can connect: GitHub, and any MCP server the person
- * adds (each its own row). A new kind is one more binding. `stand-in` is
- * a development or end-to-end run's stand-in that tells events from a
- * folder (`INFINITARY_STAND_IN_INTEGRATION`), never connected in a
- * packaged build.
+ * The kinds the app can connect: GitHub, Google (one row for Gmail and
+ * Calendar, signed in once), and any MCP server the person adds (each its
+ * own row). A new kind is one more binding. `stand-in` is a development or
+ * end-to-end run's stand-in that tells events from a folder
+ * (`INFINITARY_STAND_IN_INTEGRATION`), never connected in a packaged build.
  */
-export const integrationKindSchema = z.enum(["github", "mcp", "stand-in"]);
+export const integrationKindSchema = z.enum(["github", "google", "mcp", "stand-in"]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
 
 /** What each kind is called on screen. */
 export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
   github: "GitHub",
+  google: "Google",
   mcp: "MCP server",
   "stand-in": "Stand-in",
 };
@@ -249,14 +250,37 @@ export const INTEGRATION_RULE_WORDS: Record<IntegrationRule, string> = {
 /** The host whose sign-in lives in Settings -> Integrations rather than Projects. */
 export const INTEGRATIONS_SIGN_IN_HOST = "github.com";
 
+/** The kinds that sign in in the person's browser rather than by a code or a form. */
+const browserSignInKindSchema = integrationKindSchema.exclude(["github", "mcp", "stand-in"]);
+
+/**
+ * Whether a card's `signIn` names a sign-in Settings -> Integrations starts
+ * on arrival: GitHub's by its host, or a kind that signs in in the browser
+ * by its own name (`google`).
+ */
+export function isIntegrationSignIn(signIn: string | null | undefined): boolean {
+  return signIn === INTEGRATIONS_SIGN_IN_HOST || browserSignInKindSchema.safeParse(signIn).success;
+}
+
 /**
  * The Settings section an `open` effect lands on: its target, except that
- * a GitHub sign-in opens Settings -> Integrations, which owns it (INF-775,
- * the captain's q2), so a card naming `projects` with `signIn: "github.com"`
+ * a sign-in Integrations owns opens Settings -> Integrations (INF-775, the
+ * captain's q2), so a card naming `projects` with `signIn: "github.com"`
  * - written before the move, or by a host card - lands where it lives now.
  */
 export function openedSection(effect: { target: string; signIn?: string | undefined }): string {
-  return effect.target === "projects" && effect.signIn === INTEGRATIONS_SIGN_IN_HOST
+  return effect.target === "projects" && isIntegrationSignIn(effect.signIn)
     ? "integrations"
     : effect.target;
 }
+
+/**
+ * The words of a sign-in that finishes in the person's browser (Google's,
+ * docs/integrations.md "Google"): the aside under the chip, or under the
+ * row signing in again, while the app waits for the browser to come back.
+ */
+export const INTEGRATIONS_BROWSER_SIGN_IN_WORDS = {
+  waiting: (name: string) => `Finish signing in to ${name} in your browser.`,
+  again: "Open the page again",
+  cancel: "Cancel",
+} as const;

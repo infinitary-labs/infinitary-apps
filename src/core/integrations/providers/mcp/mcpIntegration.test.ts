@@ -177,6 +177,26 @@ describe.each([
   });
 });
 
+describe("an MCP server that drops a change it took", () => {
+  it("leaves the change unknown and never runs it again", async () => {
+    // Review finding F2 on INF-784: told "sent nothing" after the server took the call, a crewmate would make the change twice.
+    const root = scratchDir("mcp-integration");
+    const { service, tasks, close } = serviceIn(root);
+    const http = await serveNotesHttp("modern");
+    opened.push({ service, http, close });
+    await service.add("mcp", { name: "Notes", runs: http.url });
+    await service.call(task, "Notes", "add_note", { text: "Pay the electric bill" });
+    const ask = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+    http.dropNextAdd();
+
+    const click = await service.sendAsk(task.taskId, ask?.id ?? "");
+    expect(click.outcome).toMatchObject({ kind: "unknown" });
+    expect(http.book.notes.filter((note) => note === "Pay the electric bill")).toHaveLength(1);
+    expect((await service.sendAsk(task.taskId, ask?.id ?? "")).ok).toBe(false);
+    expect(http.book.notes.filter((note) => note === "Pay the electric bill")).toHaveLength(1);
+  });
+});
+
 describe("an MCP server that cannot connect", () => {
   it("is refused in words and leaves no row", async () => {
     const root = scratchDir("mcp-integration");

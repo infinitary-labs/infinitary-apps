@@ -1,9 +1,8 @@
 # Integrations
 
 An integration is a connection to something outside the person's projects, signed in as the person, that the first mate and every crewmate can reach.
-GitHub is the first kind, and an MCP server the second.
+GitHub is the first kind, an MCP server the second, and Google, for Gmail and Calendar, the third.
 The captain's design is INF-775: one core primitive, a Settings tab, the same reach for the person and the first mate, and every agent reaching what is added.
-Mail and calendars are later kinds of the same record.
 
 ## The record
 
@@ -35,6 +34,7 @@ Until the secret manager's rules land, an action's rule follows from its effect 
 The service holds that rule for every kind: a call to an action that changes or sends never reaches the binding.
 A crewmate's is kept on its task as a write ask of kind `integration` (`IntegrationAsk`, `src/shared/writeAsk.ts`) with its exact checked input, and its answer tells the crewmate to put it on a card whose action is `request_write`, the way a forge write ask is (`docs/forge.md`, "A write that asks").
 The card's strip says which integration, the action and its input; the captain's click takes the ask once and runs exactly what was kept through the binding (`IntegrationsService.sendAsk`), refusing it if the integration was paused, removed or the action turned off since, and the crewmate hears its answer once.
+A click whose action failed after its request left - a timeout, a dropped connection, a server's error - is unknown, never refused (`IntegrationOutcomeUnknown`): it is never run again either way, and the crewmate reads the place before going on.
 The first mate has no task to keep an ask on, so its call is refused with a pointer to start a crewmate whose brief names the call.
 A kind whose binding keeps its own asks says so (`keepsAsks`); GitHub's are the forge's.
 A paused integration answers nobody.
@@ -47,7 +47,7 @@ A kind that signs in with a key the person makes, such as an MCP server's API ke
 The values are kept behind one interface, `IntegrationSecrets` (`src/core/integrations/secrets.ts`), which the secret manager takes over when it lands (INF-30); until then the bridge `FileIntegrationSecrets` keeps them the way the forge keeps its sign-ins, one 0700 folder per integration under `userData/integrations/secrets/` and one 0600 `secrets.json` in it, written whole (the captain's q3 on INF-775).
 Moving every value into the secret manager and removing the bridge is INF-785.
 Nothing reads a value back through the interface.
-A binding uses one in the two ways the saved secret plan names: `request` applies it as a header to one request and gives back the answer (brokered use), and `launchEnv` hands it to a program the integration starts as a named variable (protected launch).
+A binding uses one in the two ways the saved secret plan names: `request` applies it to one request, as a header or as one field of a form body, and gives back the answer (brokered use), and `launchEnv` hands it to a program the integration starts as a named variable (protected launch).
 Every answer an action gives, and every refusal, leaves the service with each kept value replaced by "[a kept key]", so a place that echoes a key back cannot pass it to a caller.
 The view Settings and the first mate read, `integrations <name>` and a crewmate's `show` say only whether each slot is kept, and the roster line says when one is missing.
 The captain enters, replaces or removes a key in the open row in Settings -> Integrations, a write-only field that never shows a kept value; that one request, `inf:integrations:secret`, is the catalog's `integration-key` line, the captain's hands only, and its trail records no value.
@@ -81,14 +81,38 @@ The servers, what each runs, its held network class and the lists it answered li
 An MCP server that lets a client subscribe to its resources tells one event, `resource_changed` ("A resource changed"): the binding subscribes when a rule first looks, through the 2026-07-28 era's `subscriptions/listen` or the 2025 era's per-resource subscribe, and keeps each change it hears with its resource's address.
 A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor from before the program last started, or older than the 500 changes kept, answers `resynced`, because nothing can say what changed while the program was down.
 
+## Google
+
+Google is one row that signs in once for Gmail and Calendar, asking every permission up front (the captain's q8 on INF-775), as Infinitary's own Google client (q4 on the same task), in `src/core/integrations/providers/google/`.
+Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events` and `calendar.readonly` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, so Calendar's are asked now for the Calendar piece (INF-786).
+Google's device flow does not reach Gmail or Calendar, so the sign-in is the installed-app flow (`signIn.ts`): the app listens on `127.0.0.1` at a port the system picks, opens Google's consent page in the person's browser with PKCE (S256), a state, offline access and consent every time, and trades the code the browser brings back for the sign-in.
+The listener turns away anything without the sign-in's state and closes once the browser answers or the sign-in is cancelled; a second sign-in ends the first.
+Two rows never share a name, so while another row has the name the Google row would take - its own, or Google for a new one - the sign-in is refused before the browser opens, naming that row.
+A sign-in in which the person unchecked Gmail's permission is handed back to Google and kept nowhere.
+The access key and the lasting key are kept in the integration's key store ("Keys") under `access_token` and `refresh_token` and used only through it: the access key as each Gmail request's bearer, the lasting key as the renewal's form field and, on removal, the revocation's.
+The row declares no key slots, so it has no key fields; who it is signed in as, what Google granted, when the access runs out and its health are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
+The access renews when it has less than one request's time left, and once more when Gmail refuses it; health is `needs_reauth` only when Google refuses the lasting key or refuses a request again after a real renewal, and `unavailable` when Google cannot be reached or fails.
+When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
+Removing the row asks Google to revoke the sign-in, as far as Google can be reached, and forgets it here either way.
+
+Gmail's actions (`gmail.ts`) are `search_mail` and `read_message`, which read, `label_message` (removing INBOX archives) and `draft_message`, which change, and `send_message`, which sends; each change or send asks the captain on a card ("The rules").
+A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.
+A message is built as plain-text RFC 2822 with a subject outside ASCII in encoded words, a reply carries its thread and In-Reply-To, and an address or subject with a line break is refused before anything is asked.
+Gmail tells `message_received` ("A message arrives") from its history of messages added to the inbox: the cursor is the history id and the mailbox it belongs to, each item's summary is its sender and subject, and a history id Gmail no longer keeps (404) or a cursor from another mailbox answers `resynced`.
+Calendar's actions and events are INF-786.
+
+A packaged build signs in only as `GOOGLE_OAUTH_CLIENT`, which stays empty until Infinitary registers its client with Google and passes Google's verification and the security assessment Gmail's permissions need, so until then a packaged build has no Google row and offers no Google chip.
+An unpackaged run may name a client and a stand-in Google: `INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET` and `INFINITARY_GOOGLE_URL`, every address under that one (`googleSetup`).
+
 ## Settings -> Integrations
 
 The tab sits between Automation and Devices (`IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), and opens from command search as Open Integrations (`settings.integrations`).
 Each row shows its health dot, its name, who it is signed in as or what it runs, and how many actions are on; its chevron opens its actions, each with what it does, its rule and a switch, then what it can tell, and its menu checks it now, pauses or resumes it, or signs out and removes it.
 The chips at the foot connect a kind not yet connected; for GitHub that starts the device flow and shows the code in the tab.
+For Google it opens Google's page in the browser (`inf:integrations:sign-in`), and an aside says to finish there, with Open the page again and Cancel (`inf:integrations:sign-in-cancel`); the new row opens once the browser is back, and a sign-in that did not finish says why in the tab.
 The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
 GitHub's sign-in moved here from Settings -> Projects (the captain's q2), which keeps GitHub Enterprise and GitLab and a pointer line to Integrations.
-A card's `open` effect that names `projects` with `signIn: "github.com"` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives.
+A card's `open` effect that names `projects` with `signIn: "github.com"` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's page.
 Like Projects, the tab does not show on a paired view.
 
 ## How the first mate reaches them
@@ -96,7 +120,7 @@ Like Projects, the tab does not show on a paired view.
 The first mate's context block carries one `integrations` line naming each connected integration and who it is signed in as, so an integration nobody uses costs one name.
 `integrations` lists them, or one's actions with their effect, rule and input schema; `use_integration` runs one action (`src/core/pi/integrationTools.ts`).
 Their words never change with what is connected, so a seat never starts over when an integration comes or goes.
-It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab (a sign-in is the captain's to make), `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
+It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab for GitHub or Google (a sign-in is the captain's to make), refusing a kind this build cannot sign in to, `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
 
 ## How a crewmate reaches them
 
@@ -122,6 +146,8 @@ A computer without the change, or without a task channel, gives its crewmates ne
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.
 `src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a write is kept here as an ask and sends nothing, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
-`src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a changed resource is told, and an address leaving its class or redirecting is refused.
+`src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a change the server took before its connection dropped is unknown and never run again, a changed resource is told, and an address leaving its class or redirecting is refused.
 `tests/e2e/integrations-mcp.spec.ts` adds the stand-in from Settings by keyboard and has a crewmate call one of its reads from its shell.
+`src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
+`tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in and has a message arriving fire a rule to the first mate.
 `src/core/orchestrator/schedulerEvents.test.ts` fires Automation from the stand-in's events, and `tests/e2e/automation-events.spec.ts` saves an event rule by keys and reads the one first mate turn three items make.

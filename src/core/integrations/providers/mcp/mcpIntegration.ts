@@ -20,13 +20,14 @@ import {
 } from "@shared/integrations";
 import { z } from "zod";
 import { findOnPath, isExecutable } from "../../../userBin";
-import type {
-  IntegrationActionSpec,
-  IntegrationAnswer,
-  IntegrationBinding,
-  IntegrationConnection,
-  IntegrationEventSpec,
-  IntegrationLook,
+import {
+  type IntegrationActionSpec,
+  type IntegrationAnswer,
+  type IntegrationBinding,
+  type IntegrationConnection,
+  type IntegrationEventSpec,
+  type IntegrationLook,
+  IntegrationOutcomeUnknown,
 } from "../../binding";
 import {
   guardedMcpFetch,
@@ -350,12 +351,17 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       // A tool that changes something reaches here only on the captain's
       // click: the service keeps the call as an ask until then.
       const link = await linkOf(id);
-      return toolAnswer(
-        (await link.client.callTool({
+      let result: CallToolResult;
+      try {
+        result = (await link.client.callTool({
           name: tool.tool,
           arguments: input as Record<string, unknown>,
-        })) as CallToolResult,
-      );
+        })) as CallToolResult;
+      } catch (error) {
+        // The call left for the server: whether its tool acted is not known.
+        throw new IntegrationOutcomeUnknown(error instanceof Error ? error.message : String(error));
+      }
+      return toolAnswer(result);
     },
 
     look: async (id, event, cursor): Promise<IntegrationLook> => {

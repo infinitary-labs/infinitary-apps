@@ -22,6 +22,12 @@ export {
   type GithubIntegrationOptions,
   githubIntegration,
 } from "./providers/github";
+export { GOOGLE_OAUTH_CLIENT, GOOGLE_SCOPES, googleSetup } from "./providers/google/client";
+export { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT } from "./providers/google/gmail";
+export {
+  type GoogleIntegrationOptions,
+  googleIntegration,
+} from "./providers/google/googleIntegration";
 export { type McpIntegrationOptions, mcpIntegration } from "./providers/mcp/mcpIntegration";
 export {
   STAND_IN_EVENT,

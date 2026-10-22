@@ -112,7 +112,7 @@ function specFrom(params: {
     const event = params.on_event.slice(at + 1).trim();
     if (at < 0 || !integration || !event) {
       throw new Error(
-        `on_event "${params.on_event}" is not integration/event, such as gmail/message_received.`,
+        `on_event "${params.on_event}" is not integration/event, such as google/message_received.`,
       );
     }
     return { kind: "event", integration, event };

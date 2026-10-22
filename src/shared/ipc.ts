@@ -122,10 +122,12 @@ import {
   forgesViewSchema,
 } from "./forges";
 import {
+  type IntegrationKind,
   type IntegrationMcpAdd,
   type IntegrationSettingsPatch,
   type IntegrationsView,
   integrationIdSchema,
+  integrationKindSchema,
   integrationMcpAddSchema,
   integrationSecretNameSchema,
   integrationSecretValueSchema,
@@ -1657,8 +1659,9 @@ export const invokeContract = {
   },
   // Integrations (docs/integrations.md): connections outside the person's
   // projects the first mate and the crew reach. A connection is made by
-  // its kind's own sign-in (GitHub's is `inf:forges:sign-in`), or added
-  // from the person's words (an MCP server, `inf:integrations:add`); these
+  // its kind's own sign-in (GitHub's is `inf:forges:sign-in`, Google's
+  // `inf:integrations:sign-in`), or added from the person's words (an MCP
+  // server, `inf:integrations:add`); these
   // change its settings, forget it, or check it. Only `secret` carries a
   // value, the captain's own entry, and nothing hands it back.
   "inf:integrations:list": {
@@ -1708,6 +1711,22 @@ export const invokeContract = {
     reach: "home",
     request: z.tuple([integrationMcpAddSchema]),
     response: z.object({ id: integrationIdSchema, view: integrationsViewSchema }).strict(),
+  },
+  // Sign in to a kind that signs in in the person's browser (Google): the
+  // answer comes once the browser is back, and the cancel ends the wait.
+  "inf:integrations:sign-in": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([integrationKindSchema]),
+    response: z.object({ id: integrationIdSchema, view: integrationsViewSchema }).strict(),
+  },
+  "inf:integrations:sign-in-cancel": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: integrationsViewSchema,
   },
   "inf:settings:firstmate-account:get": {
     effect: "read",
@@ -3499,12 +3518,19 @@ export type FirstmateApi = {
    * Integrations (docs/integrations.md): the rows Settings -> Integrations
    * draws, and the changes it makes through the same catalog lines the
    * first mate's `app_change` uses. A connection is made by its kind's own
-   * sign-in (GitHub's is `forges.signIn`), or added from the person's
-   * words (an MCP server, `addMcp`).
+   * sign-in (GitHub's is `forges.signIn`, Google's `signIn`), or added from
+   * the person's words (an MCP server, `addMcp`).
    */
   integrations: {
     list: () => Promise<IntegrationsView>;
     addMcp: (server: IntegrationMcpAdd) => Promise<{ id: string; view: IntegrationsView }>;
+    /**
+     * Sign in to a kind that signs in in the person's browser (Google): it
+     * opens the page there and answers once the browser comes back.
+     */
+    signIn: (kind: IntegrationKind) => Promise<{ id: string; view: IntegrationsView }>;
+    /** End the sign-in waiting for the browser. */
+    cancelSignIn: () => Promise<IntegrationsView>;
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;
     remove: (id: string) => Promise<IntegrationsView>;
     check: (id: string) => Promise<IntegrationsView>;

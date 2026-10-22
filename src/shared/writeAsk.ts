@@ -44,7 +44,7 @@ export type ForgeWriteAsk = {
 export type IntegrationAsk = {
   id: string;
   kind: "integration";
-  /** The integration's id, such as `gmail`. */
+  /** The integration's id, such as `google`. */
   integration: string;
   /** Its name when it was asked, as the card says it. */
   place: string;

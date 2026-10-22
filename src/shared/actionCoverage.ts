@@ -29,6 +29,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:accounts:custom:discover": "Sign-in discovery",
   "inf:accounts:custom:cancel": "Sign-in cancellation",
   "inf:forges:cancel": "Sign-in cancellation",
+  "inf:integrations:sign-in-cancel": "Sign-in cancellation",
   "inf:devices:stop": "Closes the captain's own open link; nothing is set",
   "inf:devices:keep":
     "Keep it: takes back the captain's own wait to remove a computer once it is back; nothing is set",

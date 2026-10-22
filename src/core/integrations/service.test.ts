@@ -93,7 +93,7 @@ describe("IntegrationsService", () => {
       refused: "refused",
     });
 
-    restarted.remove("github");
+    await restarted.remove("github");
     expect(signIns.has("github.com")).toBe(false);
     expect(restarted.view()).toEqual({
       integrations: [],

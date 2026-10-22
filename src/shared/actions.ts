@@ -845,15 +845,19 @@ const actionLines = {
     handover: "projects",
     change: null,
     current: "inf:integrations:list",
+    channels: ["inf:integrations:sign-in"],
     // An MCP server is added from a form; a stand-in is a test run's own, never connected by hand.
     value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp", "stand-in"]) }),
-    line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started. A sign-in is always their hands.",
+    line: "Connect an integration (kind: github, or google for Gmail and Calendar in one sign-in) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started. A sign-in is always their hands.",
     alwaysTrail: true,
     offer: (v, current) => {
       const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
       const name = INTEGRATION_KIND_NAMES[kind];
-      if ((current as IntegrationsView).integrations.some((row) => row.kind === kind))
+      const view = current as IntegrationsView;
+      if (view.integrations.some((row) => row.kind === kind))
         throw new Error(`${name} is already connected; integrations lists it.`);
+      if (!view.addable.some((entry) => entry.kind === kind))
+        throw new Error(`${name} cannot be signed in to in this version of the app.`);
       return {
         cardId: `app-integration-add-${kind}`,
         title: `Connect ${name}`,
@@ -863,7 +867,8 @@ const actionLines = {
         ],
         label: "Open Integrations",
         decline: "Not now",
-        arrival: { signIn: INTEGRATIONS_SIGN_IN_HOST },
+        // GitHub's sign-in is the forge's, by its host; any other kind signs in by its kind.
+        arrival: { signIn: kind === "github" ? INTEGRATIONS_SIGN_IN_HOST : kind },
       };
     },
     toRequest: () => [],

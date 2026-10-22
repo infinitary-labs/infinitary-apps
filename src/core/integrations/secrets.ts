@@ -24,8 +24,9 @@ export interface IntegrationSecrets {
   forget(id: string, slot?: string): void;
   /**
    * Brokered use: send one request with the slot's value applied as a
-   * header (`prefix` before it, such as "Bearer "), and give back the
-   * answer. The value never comes back.
+   * header (`prefix` before it, such as "Bearer "), or as one field of a
+   * form body (a sign-in's renewal), and give back the answer. The value
+   * never comes back.
    */
   request(id: string, slot: string, url: string, init: SecretRequestInit): Promise<Response>;
   /**
@@ -38,13 +39,23 @@ export interface IntegrationSecrets {
   redact(text: string): string;
 }
 
-/** One request a slot's value is applied to. */
-export type SecretRequestInit = Omit<RequestInit, "headers"> & {
+/** One request a slot's value is applied to: in a header, or in a form body's field. */
+export type SecretRequestInit = Omit<RequestInit, "headers" | "body"> & {
   headers?: Record<string, string>;
-  /** The header the value goes in, such as `authorization`. */
-  header: string;
-  prefix?: string;
-};
+} & (
+    | {
+        /** The header the value goes in, such as `authorization`. */
+        header: string;
+        prefix?: string;
+        body?: RequestInit["body"];
+      }
+    | {
+        /** The form field the value goes in, such as `refresh_token`. */
+        field: string;
+        /** The form's other fields; the body is sent as `application/x-www-form-urlencoded`. */
+        form: Record<string, string>;
+      }
+  );
 
 /** The words a kept value is replaced with. */
 export const REDACTED = "[a kept key]";
@@ -89,6 +100,14 @@ export class FileIntegrationSecrets implements IntegrationSecrets {
 
   async request(id: string, slot: string, url: string, init: SecretRequestInit): Promise<Response> {
     const value = this.valueOf(id, slot);
+    if ("field" in init) {
+      const { field, form, headers, ...rest } = init;
+      return this.fetchImpl(url, {
+        ...rest,
+        headers: { ...headers, "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ ...form, [field]: value }),
+      });
+    }
     const { header, prefix, headers, ...rest } = init;
     return this.fetchImpl(url, {
       ...rest,

@@ -9,12 +9,13 @@ import {
   integrationRule,
 } from "@shared/integrations";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
-import type {
-  IntegrationAnswer,
-  IntegrationBinding,
-  IntegrationCaller,
-  IntegrationConnection,
-  IntegrationLook,
+import {
+  type IntegrationAnswer,
+  type IntegrationBinding,
+  type IntegrationCaller,
+  type IntegrationConnection,
+  type IntegrationLook,
+  IntegrationOutcomeUnknown,
 } from "./binding";
 import type { IntegrationSecrets } from "./secrets";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
@@ -114,6 +115,9 @@ export type IntegrationListen = {
 export class IntegrationRefusal extends Error {}
 
 export class IntegrationsService {
+  /** The sign-in waiting for the person's browser, at most one at a time. */
+  private signingIn: AbortController | undefined;
+
   constructor(private readonly options: IntegrationsServiceOptions) {}
 
   view(): IntegrationsView {
@@ -265,7 +269,7 @@ export class IntegrationsService {
       };
     if (spec.effect !== "reads" && !row.binding.keepsAsks)
       return this.keepAsk(caller, row, view.name, spec.name, parsed.data);
-    return this.run(row, view.name, spec.name, parsed.data, caller);
+    return (await this.run(row, view.name, spec.name, parsed.data, caller)).answer;
   }
 
   /**
@@ -309,10 +313,11 @@ export class IntegrationsService {
     const parsed = spec.input.safeParse(JSON.parse(ask.input));
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
-    const answer = await this.run(row, view.name, spec.name, parsed.data, {
+    const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, {
       kind: "task",
       taskId,
     });
+    if (unknown) return done({ kind: "unknown", why: answer.text });
     return answer.refused
       ? done({ kind: "refused", why: answer.text })
       : done({ kind: "ran" }, answer.text);
@@ -331,24 +336,31 @@ export class IntegrationsService {
     return this.changed();
   }
 
-  /** Run one action through its binding; its answer leaves with every kept key replaced. */
+  /**
+   * Run one action through its binding; its answer leaves with every kept
+   * key replaced. `unknown` says it failed after the request left, so what
+   * came of it is not known.
+   */
   private async run(
     row: Row,
     name: string,
     action: string,
     input: unknown,
     caller: IntegrationCaller,
-  ): Promise<IntegrationAnswer> {
+  ): Promise<{ answer: IntegrationAnswer; unknown?: true }> {
     const redact = (text: string) => this.options.secrets.redact(text);
     try {
       const answer = await row.binding.call(row.connection.id, action, input, caller);
-      return { ...answer, text: redact(answer.text) };
+      return { answer: { ...answer, text: redact(answer.text) } };
     } catch (error) {
       return {
-        text: redact(
-          `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        refused: "refused",
+        answer: {
+          text: redact(
+            `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          refused: "refused",
+        },
+        ...(error instanceof IntegrationOutcomeUnknown ? { unknown: true as const } : {}),
       };
     }
   }
@@ -426,6 +438,51 @@ export class IntegrationsService {
     return { id, view: this.changed() };
   }
 
+  /**
+   * Sign in to a kind that signs in in the person's browser (Google): the
+   * binding opens the page and waits for it to come back, and the new row
+   * shows who it is. A second sign-in ends the first, and so does
+   * `cancelSignIn`; an ended one throws words.
+   */
+  async signIn(kind: IntegrationKind): Promise<{ id: string; view: IntegrationsView }> {
+    const binding = this.options.bindings.find((entry) => entry.kind === kind);
+    if (!binding?.signIn)
+      throw new IntegrationRefusal(
+        `${INTEGRATION_KIND_NAMES[kind]} is not signed in to from here in this version of the app.`,
+      );
+    // Two rows never share a name: the row keeps its name, or a new one takes
+    // its kind's, so another row under that name stops the sign-in before the
+    // browser opens and before any key is kept.
+    const kindName = INTEGRATION_KIND_NAMES[kind];
+    const own = this.rows().find((row) => row.binding.kind === kind);
+    const name = own ? this.viewOf(own).name : kindName;
+    const holder = this.holderOf(name, (row) => row.binding.kind === kind);
+    if (holder) {
+      const held = INTEGRATION_KIND_NAMES[holder.binding.kind];
+      throw new IntegrationRefusal(
+        `The ${held} named ${this.viewOf(holder).name} already uses that name, so ${kindName} cannot be added beside it. Remove that ${held} in Settings → Integrations, or ask your first mate to rename it, then sign in to ${kindName} again.`,
+      );
+    }
+    this.signingIn?.abort();
+    const controller = new AbortController();
+    this.signingIn = controller;
+    try {
+      const id = await binding.signIn(controller.signal);
+      return { id, view: this.changed() };
+    } catch (error) {
+      if (controller.signal.aborted) throw new IntegrationRefusal("The sign-in was cancelled.");
+      throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (this.signingIn === controller) this.signingIn = undefined;
+    }
+  }
+
+  /** End the sign-in waiting for the browser, if one is. */
+  cancelSignIn(): void {
+    this.signingIn?.abort();
+    this.signingIn = undefined;
+  }
+
   /** Look for one of an integration's events since the cursor (`IntegrationBinding.look`). */
   async look(id: string, event: string, cursor: string | null): Promise<IntegrationLook> {
     const row = this.byId(id);
@@ -443,6 +500,7 @@ export class IntegrationsService {
 
   /** Stop whatever a binding started, as the app quits. */
   async dispose(): Promise<void> {
+    this.cancelSignIn();
     await Promise.all(this.options.bindings.map((binding) => binding.close?.()));
   }
 
@@ -483,10 +541,20 @@ export class IntegrationsService {
     return this.changed();
   }
 
-  /** Forget the connection's sign-in and its settings. */
-  remove(id: string): IntegrationsView {
+  /**
+   * Forget the connection's sign-in and its settings. The binding first
+   * tells the place to forget it where it can (Google's revocation), and
+   * the row goes whatever the place answered.
+   */
+  async remove(id: string): Promise<IntegrationsView> {
     const row = this.byId(id);
-    row.binding.remove(row.connection.id);
+    try {
+      await row.binding.remove(row.connection.id);
+    } catch (error) {
+      console.warn(
+        `[integrations] ${id} could not be signed out where it lives; forgetting it here: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
     this.options.secrets.forget(row.connection.id);
     const all = this.options.store.read();
     if (all[id]) {
@@ -563,16 +631,21 @@ export class IntegrationsService {
 
   /** Two rows never share a name: a name is how the crew and the first mate reach one. */
   private assertNameFree(name: string, except?: string): void {
-    const wanted = name.trim().toLowerCase();
-    const taken = this.rows().find(
-      (row) =>
-        row.connection.id !== except &&
-        (row.connection.id === wanted || this.viewOf(row).name.toLowerCase() === wanted),
-    );
+    const taken = this.holderOf(name, (row) => row.connection.id === except);
     if (taken)
       throw new IntegrationRefusal(
         `An integration is already named ${this.viewOf(taken).name}. Choose another name.`,
       );
+  }
+
+  /** The row a name already reaches, by its id or its name in any case, besides the rows `except` names. */
+  private holderOf(name: string, except: (row: Row) => boolean): Row | undefined {
+    const wanted = name.trim().toLowerCase();
+    return this.rows().find(
+      (row) =>
+        !except(row) &&
+        (row.connection.id === wanted || this.viewOf(row).name.toLowerCase() === wanted),
+    );
   }
 
   /** A row's keys, kept or not; nothing when its kind declares none. */

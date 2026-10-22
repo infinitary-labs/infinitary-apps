@@ -219,6 +219,8 @@ export const REQUEST_COPY = {
   },
   // The binding's own words already say why the server could not connect.
   "inf:integrations:add": { fallback: "Could not add this server. Please try again.", prefix: "" },
+  // The binding's own words already say why the sign-in did not finish.
+  "inf:integrations:sign-in": { fallback: "Could not sign in. Please try again.", prefix: "" },
 } as const;
 
 type ReadableRequestChannel = keyof typeof REQUEST_COPY;

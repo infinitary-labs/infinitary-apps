@@ -136,6 +136,8 @@ export type NotesHttpServer = {
   book: NotesBook;
   /** Add a note as the person would elsewhere, and tell every subscribed client. */
   addNote: (text: string) => void;
+  /** The next add_note is taken, and its connection drops before the server answers. */
+  dropNextAdd: () => void;
   close: () => Promise<void>;
 };
 
@@ -203,12 +205,24 @@ export async function serveNotesHttp(era: StandInEra): Promise<NotesHttpServer> 
       await session.transport.handleRequest(request, reply, body);
     };
   }
+  let dropAdd = false;
   const http = createServer((request, reply) => {
     const chunks: Buffer[] = [];
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
     request.on("end", () => {
       const text = Buffer.concat(chunks).toString("utf8");
-      void respond(request, reply, text ? JSON.parse(text) : undefined).catch(() => {
+      const body = text ? JSON.parse(text) : undefined;
+      const call = body as {
+        method?: string;
+        params?: { name?: string; arguments?: { text?: string } };
+      };
+      if (dropAdd && call?.method === "tools/call" && call.params?.name === "add_note") {
+        dropAdd = false;
+        book.notes.push(call.params.arguments?.text ?? "");
+        request.socket.destroy();
+        return;
+      }
+      void respond(request, reply, body).catch(() => {
         if (!reply.headersSent) reply.writeHead(500);
         reply.end();
       });
@@ -222,6 +236,9 @@ export async function serveNotesHttp(era: StandInEra): Promise<NotesHttpServer> 
     addNote: (text) => {
       book.notes.push(text);
       tell();
+    },
+    dropNextAdd: () => {
+      dropAdd = true;
     },
     close: async () => {
       await stop();

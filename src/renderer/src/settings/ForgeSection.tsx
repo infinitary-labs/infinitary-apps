@@ -13,7 +13,11 @@ import {
   forgeKeyProblemText,
   GITHUB_ENTERPRISE,
 } from "@shared/forges";
-import { INTEGRATIONS_SIGN_IN_HOST, INTEGRATIONS_WORDS } from "@shared/integrations";
+import {
+  INTEGRATIONS_SIGN_IN_HOST,
+  INTEGRATIONS_WORDS,
+  isIntegrationSignIn,
+} from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { CopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
@@ -164,7 +168,7 @@ export function ForgeSection() {
   // the code - or, for a host on the person's own server, its key form - is
   // on screen when the section opens.
   useEffect(() => {
-    if (!pending || !loaded || pending === INTEGRATIONS_SIGN_IN_HOST) return;
+    if (!pending || !loaded || isIntegrationSignIn(pending)) return;
     useShellStore.getState().clearPendingForgeSignIn();
     const known = [...view.hosts, ...view.signIns].find((entry) => entry.host === pending);
     if (view.hosts.some((entry) => entry.host === pending && !entry.server)) signIn(pending);

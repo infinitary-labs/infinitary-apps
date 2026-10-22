@@ -116,6 +116,8 @@ import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
 import {
   FileIntegrationSecrets,
   githubIntegration,
+  googleIntegration,
+  googleSetup,
   IntegrationSettingsStore,
   IntegrationsService,
   mcpIntegration,
@@ -130,6 +132,7 @@ import { CardNotifier } from "./notifications";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
+import { isAllowedOpenExternalUrl } from "./openExternal";
 import { ChangePresentations } from "./orchestrator/changePresentations";
 import { CrewSupervisor, type PersonalLiveDelegate } from "./orchestrator/crewSupervisor";
 import { FirstmateAgent } from "./orchestrator/firstmateAgent";
@@ -1710,7 +1713,8 @@ export async function createServices(
     now: ticker.now,
   });
   // Integrations (docs/integrations.md): GitHub over the forge's own sign-in
-  // and the gateway's calls through it, and the MCP servers the person adds,
+  // and the gateway's calls through it, Google over its own sign-in in the
+  // person's browser, and the MCP servers the person adds,
   // each program a child with the host's environment, below the UI. A new
   // kind is one more binding here. An unpackaged run that names a folder
   // connects the stand-in, which tells an event for each line added there
@@ -1718,6 +1722,11 @@ export async function createServices(
   const standInIntegrationDir = host.app.packaged
     ? undefined
     : settingFrom(process.env, "STAND_IN_INTEGRATION")?.trim();
+  // Google only where the run has a client: a packaged build has none until
+  // Infinitary registers its own (`GOOGLE_OAUTH_CLIENT`), so it offers no
+  // Google row until then.
+  const google = googleSetup({ packaged: host.app.packaged });
+  const integrationSecrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1728,6 +1737,22 @@ export async function createServices(
           readAsSeat: (input) => githubGateway.readAsSeat(input),
         },
       }),
+      ...(google
+        ? [
+            googleIntegration({
+              root: paths.integrationsDir,
+              secrets: integrationSecrets,
+              ...google,
+              open: async (url) => {
+                if (!isAllowedOpenExternalUrl(url))
+                  throw new Error("The Google sign-in page's address was refused.");
+                await host.openExternal(url);
+              },
+              now: ticker.now,
+              changed: () => integrationsChanged(),
+            }),
+          ]
+        : []),
       mcpIntegration({
         root: paths.integrationsDir,
         env: () => hostEnv(),
@@ -1740,7 +1765,7 @@ export async function createServices(
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),
     // The bridge until the secret manager takes the keys over (INF-775, q3).
-    secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
+    secrets: integrationSecrets,
     asks: {
       keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
       take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),

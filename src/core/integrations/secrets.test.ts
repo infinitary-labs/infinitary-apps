@@ -162,7 +162,7 @@ describe("integration keys", () => {
     });
     expect(() => integrations.setSecret("linear", "OTHER", "x")).toThrow("has no key named OTHER");
 
-    integrations.remove("linear");
+    await integrations.remove("linear");
     expect(existsSync(folder)).toBe(false);
   });
 

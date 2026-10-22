@@ -91,6 +91,14 @@ export type IntegrationConnection = {
 /** An action's answer: words for the caller, or a refusal that says why and what to do. */
 export type IntegrationAnswer = { text: string; refused?: "refused" | "invalid" };
 
+/**
+ * What a binding's `call` throws when it failed after the request left for
+ * the place - a timeout, a dropped connection, a server error - so whether
+ * the place acted on it is not known. A kept ask that meets one is never
+ * run again, and its crewmate reads the place before going on.
+ */
+export class IntegrationOutcomeUnknown extends Error {}
+
 export type IntegrationBinding = {
   kind: IntegrationKind;
   /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
@@ -111,10 +119,16 @@ export type IntegrationBinding = {
    * what it runs) and answer its id; throws words when it cannot connect.
    */
   add?: (input: unknown) => Promise<string>;
+  /**
+   * Sign in where the person signs in in their own browser (Google's
+   * loopback sign-in) and answer the connection's id once it comes back;
+   * throws words when it cannot, and ends when `signal` aborts.
+   */
+  signIn?: (signal: AbortSignal) => Promise<string>;
   /** Ask the place who the person is now, and keep its answer as the health. */
   check: (id: string) => Promise<void>;
-  /** Forget the connection's sign-in. */
-  remove: (id: string) => void;
+  /** Forget the connection's sign-in, and tell the place to forget it where it can. */
+  remove: (id: string) => void | Promise<void>;
   /** Run one action whose input already passed its schema. */
   call: (
     id: string,

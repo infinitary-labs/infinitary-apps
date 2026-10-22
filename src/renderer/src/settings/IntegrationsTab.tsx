@@ -1,14 +1,18 @@
 import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
   INTEGRATION_EFFECT_WORDS,
+  INTEGRATION_KIND_NAMES,
   INTEGRATION_RULE_WORDS,
   INTEGRATION_SECRET_WORDS,
+  INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
+  type IntegrationKind,
   type IntegrationSettingsPatch,
   type IntegrationsView,
   type IntegrationView,
+  isIntegrationSignIn,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
@@ -34,8 +38,11 @@ import "./forges.css";
  * GitHub is the first kind, and its sign-in is the forge's device flow
  * (`docs/forge.md`): this tab starts it, shows the code, and follows the
  * `inf:forges` push for how it ends, as Settings -> Projects did before the
- * sign-in moved here (INF-775, the captain's q2). Every change here goes
- * through the same channels the first mate's `app_change` lines reach.
+ * sign-in moved here (INF-775, the captain's q2). Google signs in in the
+ * person's browser (`integrations.signIn`): while the app waits for the
+ * browser to come back, an aside says so, opens the page again or cancels,
+ * and the new row opens once it is back. Every change here goes through
+ * the same channels the first mate's `app_change` lines reach.
  */
 
 const EMPTY: IntegrationsView = { integrations: [], addable: [] };
@@ -50,6 +57,9 @@ export function IntegrationsTab() {
   const [adding, setAdding] = useState(false);
   const addChip = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The kind whose sign-in waits for the person's browser. */
+  const [browser, setBrowser] = useState<IntegrationKind | null>(null);
+  const browserRun = useRef(0);
   const pending = useShellStore((s) => s.pendingForgeSignIn);
 
   useEffect(() => {
@@ -80,13 +90,48 @@ export function IntegrationsTab() {
       .finally(() => setStarting(false));
   }, []);
 
+  // A sign-in in the browser: a second one ends the first, whose answer is
+  // then nobody's, and so does Cancel.
+  const signInInBrowser = useCallback((kind: IntegrationKind) => {
+    const run = ++browserRun.current;
+    setError(null);
+    setBrowser(kind);
+    window.infinitary.integrations
+      .signIn(kind)
+      .then(({ id, view: next }) => {
+        if (browserRun.current !== run) return;
+        setBrowser(null);
+        setView(next);
+        setOpen(id);
+      })
+      .catch((caught: unknown) => {
+        if (browserRun.current !== run) return;
+        setBrowser(null);
+        setError(caught instanceof Error ? caught.message : String(caught));
+      });
+  }, []);
+  const cancelBrowser = () => {
+    browserRun.current++;
+    setBrowser(null);
+    void window.infinitary.integrations.cancelSignIn().then(setView);
+  };
+
   // A card's "Sign in to GitHub" lands here with the sign-in to start, so
-  // the code is on screen when the tab opens.
+  // the code is on screen when the tab opens; a card's Google sign-in opens
+  // Google's page.
   useEffect(() => {
-    if (pending !== INTEGRATIONS_SIGN_IN_HOST || !loaded) return;
+    if (!loaded || !isIntegrationSignIn(pending)) return;
+    if (pending === INTEGRATIONS_SIGN_IN_HOST) {
+      useShellStore.getState().clearPendingForgeSignIn();
+      signIn();
+      return;
+    }
     useShellStore.getState().clearPendingForgeSignIn();
-    signIn();
-  }, [pending, loaded, signIn]);
+    const kind =
+      view.addable.find((entry) => entry.kind === pending)?.kind ??
+      view.integrations.find((row) => row.kind === pending)?.kind;
+    if (kind) signInInBrowser(kind);
+  }, [pending, loaded, signIn, view, signInInBrowser]);
 
   const change = (run: () => Promise<IntegrationsView>) => {
     setError(null);
@@ -109,6 +154,21 @@ export function IntegrationsTab() {
       }}
       onRetry={signIn}
     />
+  );
+  const browserAside = browser && (
+    <div className="fm-connect-aside fm-forges-aside" data-integration-signing-in={browser}>
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+        {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(INTEGRATION_KIND_NAMES[browser])}
+      </div>
+      <div className="fm-forges-aside-actions">
+        <Button variant="secondary" size="sm" onClick={() => signInInBrowser(browser)}>
+          {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.again}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={cancelBrowser}>
+          {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.cancel}
+        </Button>
+      </div>
+    </div>
   );
 
   return (
@@ -136,11 +196,13 @@ export function IntegrationsTab() {
             <IntegrationRow
               integration={integration}
               open={open === integration.id}
-              busy={starting}
+              busy={integration.kind === "github" ? starting : browser === integration.kind}
               onToggle={() =>
                 setOpen((current) => (current === integration.id ? null : integration.id))
               }
-              onSignIn={signIn}
+              onSignIn={
+                integration.kind === "github" ? signIn : () => signInInBrowser(integration.kind)
+              }
               onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
               onPause={(paused) => configure(integration.id, { paused })}
               onRemove={() => change(() => window.infinitary.integrations.remove(integration.id))}
@@ -162,6 +224,7 @@ export function IntegrationsTab() {
               />
             )}
             {integration.kind === "github" && aside}
+            {browser === integration.kind && browserAside}
           </div>
         ))}
         {view.addable.length > 0 && (
@@ -188,11 +251,17 @@ export function IntegrationsTab() {
                       {plusIcon}
                       <span>{INTEGRATIONS_MCP_WORDS.add}</span>
                     </button>
-                  ) : (
+                  ) : kind.kind === "github" ? (
                     <HostChip
                       host={{ host: INTEGRATIONS_SIGN_IN_HOST, name: kind.name }}
                       busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
                       onConnect={signIn}
+                    />
+                  ) : (
+                    <HostChip
+                      host={{ host: kind.kind, name: kind.name }}
+                      busy={browser === kind.kind}
+                      onConnect={() => signInInBrowser(kind.kind)}
                     />
                   )}
                 </span>
@@ -211,6 +280,7 @@ export function IntegrationsTab() {
               />
             )}
             {!github && aside}
+            {browser && !view.integrations.some((row) => row.kind === browser) && browserAside}
           </div>
         )}
       </div>

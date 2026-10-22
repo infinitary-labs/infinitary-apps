@@ -47,6 +47,7 @@ These writes are machinery: no timeline event of their own - the card and cap ev
 An `at-time` gate on an active row is a timed wait.
 The sweep's active branch walks `listActive()`: it heals each work row's captain gate, and a due `at-time` gate is cleared into **one steer on the task's own lane** - the idle ladder's steer path, actor `supervisor` (`timedWaitOver`, worded by `renderWake`) - never a dispatch.
 A wait on another task ends the same way when that task closes: one `dependency-closed` steer per closed task, once (`docs/report-sort.md`, "A wait on work underway moves on its own").
+A baseline wait also resumes sooner, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake").
 A wait the first mate recorded can end sooner: a report from the task it waits on wakes the first mate, which passes on a finding the waiter was held for and removes the link (`docs/report-sort.md`, "A hold on a task's finding ends when that task reports it").
 The wait's end opens a new idle episode, so the turn it starts is the task's own.
 Phase 1 adds no writer of an active `at-time` gate.

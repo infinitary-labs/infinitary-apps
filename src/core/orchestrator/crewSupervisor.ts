@@ -399,6 +399,7 @@ import {
   withDeliveryLine,
   withoutOriginReadLine,
 } from "./intentBrief";
+import { type MainBranchReading, MainCheckWatcher } from "./mainCheckWake";
 import {
   ASSESSMENT_BOUND_MS,
   approvableOffer,
@@ -730,6 +731,12 @@ export type CrewSupervisorOptions = {
    * nothing is watched and a standing watch never holds the idle ladder.
    */
   readCheckWatch?: (taskId: string) => Promise<WatchedReading>;
+  /**
+   * The default branch's checks for projects with a standing baseline wait
+   * (INF-833 Fix 4, `PrCiService.readDefaultBranchChecks`). Absent means a
+   * main failure still resumes only when the named task closes.
+   */
+  readMainChecks?: (repoId: string) => Promise<MainBranchReading>;
   readRunWatch?: (taskId: string, runId: number) => Promise<RunReading>;
   /**
    * Extra work on the shared 60s tick. Credential-health is the fourth
@@ -1348,6 +1355,8 @@ export class CrewSupervisor {
   private readonly ladder: IdleLadder;
   /** The host's watch on crewmates' checks; absent when no read is wired. */
   private readonly checkWatch: CheckWatcher | undefined;
+  /** Wakes baseline waits when the default branch's own run of that check passes. */
+  private readonly mainCheckWake: MainCheckWatcher | undefined;
   private readonly runWatch: RunWatcher | undefined;
   private recoveredPendingSettles = false;
 
@@ -1487,6 +1496,23 @@ export class CrewSupervisor {
               decision: null,
               cardId: null,
             }),
+        })
+      : undefined;
+    const readMainChecks = options.readMainChecks;
+    this.mainCheckWake = readMainChecks
+      ? new MainCheckWatcher({
+          tasks: options.tasks,
+          inbox: options.inbox,
+          read: readMainChecks,
+          steer: async (taskId, wake) => {
+            this.options.tasks.endIdle(taskId);
+            await this.steerInternal(taskId, wake, {
+              actor: "supervisor",
+              via: "supervision",
+              decision: null,
+              cardId: null,
+            });
+          },
         })
       : undefined;
   }
@@ -9849,10 +9875,16 @@ export class CrewSupervisor {
   /**
    * The check watch's pass (docs/forge.md, "The check watch"): every due
    * watch reads its change's checks once, and a watch whose checks
-   * finished wakes its crewmate once. Runs on the shared tick.
+   * finished wakes its crewmate once. The same tick reads the default
+   * branch for standing baseline waits (docs/forge.md, "A main failure's
+   * wake"). Runs on the shared tick.
    */
   async pollCheckWatches(now: number): Promise<void> {
-    await Promise.all([this.checkWatch?.poll(now), this.runWatch?.poll(now)]);
+    await Promise.all([
+      this.checkWatch?.poll(now),
+      this.runWatch?.poll(now),
+      this.mainCheckWake?.poll(now),
+    ]);
     this.cards.refreshSettleFacts();
   }
 

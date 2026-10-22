@@ -274,6 +274,13 @@ export interface Forge {
   updateChangeBody?(change: ForgeChange, body: string, title?: string): Promise<void>;
   /** Read the pushed branch before opening a story-bound change. */
   branchHead?(branch: string): Promise<string>;
+  /**
+   * The default branch's own checks, and the commit they were read on
+   * (INF-833 Fix 4). Absent where the host cannot read a branch's checks
+   * apart from a proposed change; the close of the named task remains the
+   * resume there.
+   */
+  branchChecks?(): Promise<{ sha: string; checks: ForgeChecks }>;
   /** The open proposed change for a branch, or null when there is none. */
   changeFor(branch: string): Promise<ForgeChange | null>;
   /** Host-owned readiness transition for this version, never the public write gateway. */

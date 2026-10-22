@@ -31,6 +31,28 @@ export function baselineStands(
 }
 
 /**
+ * The checks a task's standing baseline waits name (INF-833 Fix 4): each
+ * check of a baseline-blocked diagnosis that still stands, once. The host
+ * reads the default branch's own run of these and wakes the task when one
+ * passes, without waiting for the named task to close.
+ */
+export function standingBaselineChecks(delivery: TaskDelivery | null | undefined): string[] {
+  if (!delivery) return [];
+  const names = new Set<string>();
+  for (const diagnosis of delivery.ciRepair?.diagnoses ?? []) {
+    if (
+      diagnosis.classification !== "baseline-blocked" ||
+      !diagnosis.dependencyTask ||
+      !baselineStands(delivery, diagnosis)
+    ) {
+      continue;
+    }
+    names.add(diagnosis.check);
+  }
+  return [...names];
+}
+
+/**
  * The tasks a task's standing baseline waits name (FI3-671): the
  * dependencyTask of each baseline-blocked diagnosis that still stands
  * (`baselineStands`), with when the earliest of them was declared

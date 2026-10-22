@@ -99,7 +99,9 @@ The third unsuccessful repair is a blocker report (no completion card), which th
 An evidenced suspected flake may reserve **one failed-job rerun per task allowance**, before running it without code changes.
 A repeated reservation is refused, including after restart.
 If it fails again, investigate or reclassify with evidence, never rerun in a loop.
-A confirmed baseline failure needs untouched-main reproduction evidence and a separately owned task id; the first mate coordinates its dependency; the host resumes the waiting crewmate when that task closes (FI3-250).
+A confirmed baseline failure needs untouched-main reproduction evidence and a separately owned task id.
+The first mate coordinates its dependency.
+The host resumes the waiting crewmate when the default branch's own run of that check passes, and still when that task closes (FI3-250, INF-833 Fix 4).
 The declaration's answer says where that task stands (FI3-671): nobody has started it, so the crewmate leads its report with its key and that report wakes the first mate on any backend (`docs/report-sort.md`, row 2a), which starts it, steers the crewmate to fold the fix into its own branch when that is smaller, or asks the captain in one card; it is underway or queued, so the crewmate reports the wait once and ends its turn, and nothing nudges it until the sweep's one steer says that task closed; it is done, so the crewmate brings its change up to date.
 A blocking follow-up nobody started wakes the first mate the same way.
 Before accepting a current non-green-head baseline diagnosis, the host checks the same live-wait graph used by ordinary blocker insertion (`docs/task-graph.md`, "Combining repairs after a circular-wait refusal").

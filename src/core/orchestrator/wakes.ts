@@ -711,6 +711,17 @@ export type WakeFacts =
       excerpt?: string;
     }
   | {
+      /**
+       * The default branch's own run of a check a baseline wait named has
+       * passed (INF-833 Fix 4): one steer, before the named task closes.
+       */
+      kind: "main-check-passed";
+      /** The check, as the forge names it on the pull request and on the default branch. */
+      check: string;
+      /** The default branch commit the passing run was read on. */
+      sha: string;
+    }
+  | {
       /** Work an active task waited on closed (FI3-250): its one steer. */
       kind: "dependency-closed";
       /** The work that closed, by its key and title. */
@@ -1078,6 +1089,24 @@ const ASSESSED_FINDING: Record<Extract<WakeFacts, { kind: "repair-assessed" }>["
  */
 function renderRepairAssessed(facts: Extract<WakeFacts, { kind: "repair-assessed" }>): string {
   return `${REPAIR_ASSESSED_OPENING} at ${facts.head} ${ASSESSED_FINDING[facts.verdict]}, so the captain's kept merge approval ended and he decides again. Drive the checks green on the change as it is now and put up a new completion card${facts.verdict === "changed-work" ? " that says what changed from the version he approved" : ""}; do not declare the repair again.${facts.excerpt ? `\n\nThe assessment's report:\n${facts.excerpt}` : ""}`;
+}
+
+/** A passing default-branch run's one steer, in the crewmate's words (INF-833 Fix 4). */
+function renderMainCheckPassed(facts: Extract<WakeFacts, { kind: "main-check-passed" }>): string {
+  return `The default branch's own run of ${facts.check} passed at ${facts.sha.slice(0, 7)}. Bring your change up to date and read the checks again.`;
+}
+
+/** The name that steer's once-key uses: one per check and default-branch commit. */
+export function mainCheckPassedOnce(check: string, sha: string): string {
+  return `main-check-passed:${check}:${sha}`;
+}
+
+/** The one steer when the default branch's own run of a waited-on check passes. */
+export function mainCheckPassedWake(check: string, sha: string): TypedWake {
+  return {
+    facts: { kind: "main-check-passed", check, sha },
+    once: mainCheckPassedOnce(check, sha),
+  };
 }
 
 /** A closed dependency's one steer, in the crewmate's words (FI3-250). */
@@ -1702,6 +1731,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return renderRunWatch(facts);
     case "checks-settled":
       return renderChecksSettled(facts);
+    case "main-check-passed":
+      return renderMainCheckPassed(facts);
     case "dependency-closed":
       return renderDependencyClosed(facts);
     case "repair-assessed":

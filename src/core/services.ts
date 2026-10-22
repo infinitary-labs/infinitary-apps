@@ -2088,6 +2088,7 @@ export async function createServices(
     githubRead: (taskId, input) => githubGateway.read(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
     readCheckWatch: (taskId) => prCi.readWatched(taskId),
+    readMainChecks: (repoId) => prCi.readDefaultBranchChecks(repoId),
     readRunWatch: (taskId, runId) => workflowEvidence.readWatched(taskId, runId),
     killJobs: (taskId) => jobs.killForOwner(taskId),
     personal: personalLive,

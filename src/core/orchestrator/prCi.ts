@@ -55,6 +55,7 @@ import {
   outstandingRepair,
 } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
+import type { MainBranchReading } from "./mainCheckWake";
 import {
   candidateHead,
   declareMergeGuidance,
@@ -1332,6 +1333,26 @@ export class PrCiService {
         transient: isTransientForgeFailure(caught),
         problem: caught instanceof Error ? caught.message : String(caught),
       };
+    }
+  }
+
+  /**
+   * The default branch's own checks (INF-833 Fix 4): the commit they were
+   * read on, and each check as `checks()` names it. A host that cannot read
+   * a branch's checks apart from a proposed change is unsupported, and the
+   * named task's close remains the resume.
+   */
+  async readDefaultBranchChecks(repoId: string): Promise<MainBranchReading> {
+    const repo = this.options.repos.get(repoId);
+    if (!repo) return { kind: "unsupported" };
+    const forge = this.options.forgeFor(repo);
+    if (!forge.hasChecks || !forge.branchChecks) return { kind: "unsupported" };
+    try {
+      const read = await forge.branchChecks();
+      return { kind: "read", sha: read.sha, items: read.checks.items };
+    } catch (caught) {
+      console.warn("[crew] could not read the default branch's checks:", caught);
+      return { kind: "failed" };
     }
   }
 

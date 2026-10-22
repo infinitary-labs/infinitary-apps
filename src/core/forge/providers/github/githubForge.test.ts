@@ -180,6 +180,46 @@ describe("GitHubForge", () => {
     expect(conflicted.items[0]?.name).toContain("brought up to date");
   });
 
+  it("reads the default branch's own check runs, not a pull request's (INF-833 Fix 4)", async () => {
+    const sha = "a".repeat(40);
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter": () => ({ json: { default_branch: "main" } }),
+      "GET /repos/octo/meter/git/ref/heads/main": () => ({
+        json: { object: { type: "commit", sha } },
+      }),
+      [`GET /repos/octo/meter/commits/${sha}/check-runs`]: () => ({
+        json: {
+          total_count: 1,
+          check_runs: [
+            {
+              name: "linux-checks",
+              status: "completed",
+              conclusion: "success",
+              started_at: "2026-10-22T06:00:00Z",
+              completed_at: "2026-10-22T06:12:00Z",
+            },
+          ],
+        },
+      }),
+      [`GET /repos/octo/meter/commits/${sha}/status`]: () => ({ json: { statuses: [] } }),
+      "GET /repos/octo/meter/actions/runs": () => ({ json: { total_count: 1, workflow_runs: [] } }),
+    });
+    await expect(forge.branchChecks()).resolves.toMatchObject({
+      sha,
+      checks: {
+        overall: "green",
+        items: [expect.objectContaining({ name: "linux-checks", state: "success" })],
+      },
+    });
+    expect(seen.map((request) => request.url.split("?")[0])).toEqual([
+      "/repos/octo/meter",
+      "/repos/octo/meter/git/ref/heads/main",
+      `/repos/octo/meter/commits/${sha}/check-runs`,
+      `/repos/octo/meter/commits/${sha}/status`,
+      "/repos/octo/meter/actions/runs",
+    ]);
+  });
+
   it("reads check runs and commit statuses together by the one green rule", async () => {
     let runs: { name: string; status: string; conclusion: string | null }[] = [];
     let statuses: { context: string; state: string }[] = [];

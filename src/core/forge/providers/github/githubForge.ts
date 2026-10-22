@@ -18,6 +18,7 @@ import {
   type ForgeChange,
   type ForgeCheck,
   type ForgeCheckState,
+  type ForgeChecks,
   ForgeError,
   type ForgeLocation,
   type ForgeProject,
@@ -348,6 +349,12 @@ export class GitHubForge implements Forge {
     if (answer.status !== 201)
       throw changeWriteError(answer.status, "opening the pull request", answer.body);
     return changeOf(JSON.parse(answer.body) as PullJson, input.branch);
+  }
+
+  async branchChecks(): Promise<{ sha: string; checks: ForgeChecks }> {
+    const branch = await this.defaultBranch();
+    const sha = await this.branchHead(branch);
+    return { sha, checks: await this.checks({ branch, headSha: sha, url: null }) };
   }
 
   async branchHead(branch: string): Promise<string> {

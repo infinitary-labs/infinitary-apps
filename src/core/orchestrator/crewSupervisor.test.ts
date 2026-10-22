@@ -334,6 +334,7 @@ type SetupExtras = {
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   checkCi?: (taskId: string) => Promise<import("./prCi").PrCiOverall>;
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
+  readMainChecks?: CrewSupervisorOptions["readMainChecks"];
   /** The home's knowledge, over this setup's projects. */
   knowledge?: (repos: RepoRegistry) => KnowledgeService;
   /** The kind classifier (S3); absent keeps S2's every-shape-unclear behaviour. */
@@ -489,6 +490,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),
     ...(extras.downloadArtifact ? { downloadArtifact: extras.downloadArtifact } : {}),
     ...(extras.readCheckWatch ? { readCheckWatch: extras.readCheckWatch } : {}),
+    ...(extras.readMainChecks ? { readMainChecks: extras.readMainChecks } : {}),
     ...(extras.classifier ? { classifier: extras.classifier } : {}),
     ...(extras.browsers ? { browsers: extras.browsers } : {}),
     ...(extras.browsers
@@ -11408,7 +11410,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           hostNow,
         );
         expect(declared.text).toContain(`${owner.key} "Fix the shared fixture" is underway`);
-        expect(declared.text).toContain("you are resumed when it closes");
+        expect(declared.text).toContain(
+          "you are resumed when the default branch's own run of that check passes, and when it closes",
+        );
       }
       return { ...harness, owner };
     }
@@ -11434,6 +11438,77 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         });
       },
     );
+
+    it("the shared tick wakes a waiting pull request when the default branch's run of its check passes (INF-833 Fix 4)", async () => {
+      const main = "a".repeat(40);
+      let items: { name: string; state: ForgeCheckState }[] = [
+        { name: "linux-checks", state: "failure" },
+      ];
+      const crewmate = fakeCrewmate();
+      const harness = wakesThroughInbox(
+        clockedSetup(crewmate, {
+          readMainChecks: async () => ({ kind: "read", sha: main, items }),
+        }),
+      );
+      const { repo } = await harness.repos.setup({ kind: "init", name: "watched" });
+      const { taskId } = await harness.supervisor.commission({
+        title: "Ship it",
+        intent: intentOf("Ship the fix"),
+        repoId: repo.id,
+      });
+      await tick();
+      await endTurn(crewmate, taskId, "Waiting on the phone failure.");
+      const owner = seedTask(harness.tasks, {
+        id: "main-owner",
+        title: "Fix the phone failure",
+        status: "running",
+        repoId: repo.id,
+      });
+      harness.tasks.recordDelivery(taskId, {
+        headSha: "head-1",
+        ci: "red",
+        prNumber: 290,
+        ...observeCheckRepair(
+          undefined,
+          "head-1",
+          [{ name: "linux-checks", state: "failure" }],
+          hostNow,
+        ),
+      });
+      expect(
+        declareCheckAction(
+          harness.tasks,
+          taskId,
+          {
+            diagnosis: {
+              headSha: "head-1",
+              check: "linux-checks",
+              classification: "baseline-blocked",
+              evidence: "The same assertion fails on untouched main",
+              dependencyTask: owner.id,
+            },
+          },
+          hostNow,
+        ).text,
+      ).toContain("Diagnosis recorded");
+      const prompts = crewmate.promptCalls.length;
+      await harness.supervisor.pollCheckWatches(hostNow);
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      items = [{ name: "linux-checks", state: "success" }];
+      await harness.supervisor.pollCheckWatches(hostNow);
+      await tick();
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        "The default branch's own run of linux-checks passed",
+      );
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        "Bring your change up to date and read the checks again.",
+      );
+      expect(harness.tasks.get(taskId)?.idleSince).toBeNull();
+      await harness.supervisor.pollCheckWatches(hostNow);
+      await tick();
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+    });
 
     it("a report on a Pi crewmate waiting on work underway wakes nobody", async () => {
       const { crewmate, ops, sorts, supervisor, taskId } = await waitingOn("baseline");

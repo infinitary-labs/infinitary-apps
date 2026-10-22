@@ -17,12 +17,14 @@ export const CHECK_DIAGNOSIS_NEXT =
  */
 function dependencyWords(tasks: TaskService, dependency: TaskRecord): string {
   const name = `${dependency.key || dependency.id} "${dependency.title}"`;
+  const resumed =
+    "you are resumed when the default branch's own run of that check passes, and when it closes.";
   if (dependency.status === "done")
     return ` ${name} is already done: bring your change up to date and read the checks again.`;
   if (dependency.status === "active")
-    return ` ${name} is underway: report the wait once and end your turn; you are resumed when it closes.`;
+    return ` ${name} is underway: report the wait once and end your turn; ${resumed}`;
   if (!tasks.awaitsStart(dependency))
-    return ` ${name} is queued and starts by itself: report the wait once and end your turn; you are resumed when it closes.`;
+    return ` ${name} is queued and starts by itself: report the wait once and end your turn; ${resumed}`;
   return ` Nobody has started ${name}. Lead your report with its key, that it has not started and what starting it unblocks: that report wakes the first mate, which starts it or steers you.`;
 }
 
@@ -168,6 +170,7 @@ export function declareCheckAction(
     ledger.diagnoses = ledger.diagnoses.filter((d) => !same(d, diagnosis));
     // When the wait began: the sweep resumes a crewmate only for work that
     // closed after it (FI3-250), never for work already done when declared.
+    // A passing run on the default branch resumes it sooner (mainCheckWake).
     ledger.diagnoses.push({ ...diagnosis, at });
   }
   const repair = input.repair;

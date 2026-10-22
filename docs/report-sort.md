@@ -113,6 +113,7 @@ The task reads as waiting: its posture is `dependency` ("Blocked by another task
 When that work closes, done or dropped, the ready sweep's active branch ends the wait as it ends a timed one: one typed steer on the task's own lane (`dependency-closed`, actor supervisor), named by that work so the inbox queues it once even across a restart, and a new idle episode.
 It goes only for work that closed after the wait began (the link's `createdAt`, the diagnosis's host-stamped `at`) and after the task started - so a continuation its origin's close started hears nothing - and while the task has not gone idle since the close.
 The words say what the close means: a link's done or dropped work no longer holds the task, so it carries on; a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which row 2a turns into the first mate's wake.
+A baseline wait also resumes before that close, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake"): one `main-check-passed` steer, once per check and commit, and the close still resumes it if that run has not passed.
 A record cancelled from its record or stall card runs the sweep at once, as every close does.
 
 **"Still moving" is decidable because only the host starts a turn.**

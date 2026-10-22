@@ -11294,12 +11294,21 @@ export class CrewSupervisor {
         body: `<p>This question changed, so I accepted no answer.</p><p>The crewmate must ask about the current validation facts.</p>${card.body}`,
       });
       this.cards.showOpenCard(card.id);
-      void this.steerCrewmate(card.taskId, {
-        facts: {
-          kind: "validation-question-stale",
-          card: card.id,
-          reason: error.message,
+      // The app's own notice (INF-765): the captain's click was refused, so
+      // it is neither his answer nor the first mate's steer, and it reopens
+      // no cap either would.
+      void this.steerInternal(
+        card.taskId,
+        {
+          facts: {
+            kind: "validation-question-stale",
+            card: card.id,
+            reason: error.message,
+          },
         },
+        { actor: "supervisor", via: "supervision", decision: null, cardId: card.id },
+      ).catch((caught: unknown) => {
+        console.warn("[crew] stale validation notice not delivered:", caught);
       });
       throw new CardChoiceUnavailableError("action-changed");
     }

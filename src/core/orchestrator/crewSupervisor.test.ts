@@ -16625,6 +16625,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         wait: { reason: "Read the validation question", cardId },
       });
       await reportTurn(builder, taskId, "The reproduction waits for an answer.");
+      // INF-765: the builder is at a review cap only the first mate's steer reopens.
+      const capAt = Date.now();
+      tasks.recordDelivery(taskId, {
+        reviewRounds: 3,
+        reviewCapAt: capAt,
+        reviewCapOwner: "firstmate",
+      });
       tasks.recordDelivery(taskId, { validationHead: "b".repeat(40) });
       const before = supervisor.cardsSnapshot().find((card) => card.id === cardId);
       expect(() => supervisor.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
@@ -16635,6 +16642,17 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       ).toBe(true);
       await tick();
       expect(builder.promptCalls.at(-1)).toContain("fresh request with a new identity");
+      // INF-765: the app sent that notice, not the first mate, so it reopens no rounds.
+      const notice = tasks
+        .timeline(taskId)
+        .findLast((event) => event.kind === "steered" && event.text.includes("new identity"));
+      expect(notice).toMatchObject({ actor: "supervisor", data: { cardId } });
+      expect(tasks.get(taskId)?.delivery).toMatchObject({
+        reviewRounds: 3,
+        reviewCapAt: capAt,
+        reviewCapOwner: "firstmate",
+      });
+      expect(tasks.timeline(taskId).some((event) => event.kind === "cap_reset")).toBe(false);
       console.log(
         "INF-203 stale question",
         JSON.stringify({

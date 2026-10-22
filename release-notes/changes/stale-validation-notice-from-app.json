@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "stale-validation-notice-from-app",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A refused answer to a validation question no longer reads as your first mate's message",
+      "body": "When you answer a crewmate's validation question after its facts changed, the app refuses the answer and tells the crewmate to ask again. The Crewmate tab now shows that message as from the app, not from your first mate, and it no longer reopens the task's review rounds.",
+      "noPicture": "The change is one sender label on a rare message in the Crewmate tab and a review-rounds line in Activity that no longer appears; the words say it as well as a picture would.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

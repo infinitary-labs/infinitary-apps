@@ -35,6 +35,7 @@ type FakeRuntime = {
   getAuth: ReturnType<typeof vi.fn>;
   getAvailableSnapshot: () => { provider: string; id: string }[];
   getModel: () => undefined;
+  getModels: () => [];
 };
 
 const fakes = vi.hoisted(() => ({
@@ -71,6 +72,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
           { provider: "anthropic", id: "claude-opus-5" },
         ],
         getModel: () => undefined,
+        getModels: () => [],
       };
       fakes.runtimes.push({ authPath: options.authPath, runtime });
       return runtime;

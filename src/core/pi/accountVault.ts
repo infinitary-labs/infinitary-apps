@@ -45,6 +45,7 @@ import {
 } from "../accounts/credentialHealth";
 import type { AppPaths } from "../paths";
 import { COPILOT_PROVIDER_ID, copilotMeterAuth } from "./copilotMeter";
+import { modelLookup } from "./modelRuntime";
 import { authPathIn, enforceAuthFileMode, PiAccountBackend } from "./piAccountBackend";
 import type { AuthInteractionBridge, ResolvedProviderAuth } from "./piAuth";
 import { piReasoningCapabilities } from "./reasoning";
@@ -941,6 +942,7 @@ export class AccountVault {
         const runtime = this.pi.settledRuntime(account.id);
         if (!runtime) continue;
         const filter = this.options.piModelFilter?.(account.id);
+        const defOf = modelLookup(runtime);
         for (const model of runtime.getAvailableSnapshot()) {
           if (model.provider === "anthropic" || isRetiredProvider(model.provider)) continue;
           if (
@@ -955,9 +957,7 @@ export class AccountVault {
             provider: model.provider,
             id: model.id,
             name: model.name,
-            reasoningCapabilities: piReasoningCapabilities(
-              runtime.getModel(model.provider, model.id),
-            ),
+            reasoningCapabilities: piReasoningCapabilities(defOf(model.provider, model.id)),
           });
         }
       }

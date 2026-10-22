@@ -101,6 +101,7 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   };
   // Offline: the bundled catalog and this store's last overlay, no network.
   const runtime = await ModelRuntime.create({ ...base, allowModelNetwork: false });
+  if (options.connectionProvider) connectionProviders.set(runtime, options.connectionProvider);
   // Every session resolves its routed model through getModel, so this one
   // wrap is the request-parameter correction for the whole app.
   const getModel = runtime.getModel.bind(runtime);
@@ -125,6 +126,41 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   if (!options.connectionProvider)
     void tracked(refreshInBackground(runtime, options.onCatalogRefreshed));
   return runtime;
+}
+
+/** The one provider a connection-owned runtime serves, read by `modelLookup`. */
+const connectionProviders = new WeakMap<ModelRuntime, string>();
+
+type ModelDef = NonNullable<ReturnType<ModelRuntime["getModel"]>>;
+
+/**
+ * `getModel` for a read that resolves many models at once. Pi's getModel
+ * rebuilds the provider's whole catalog to find one model, so calling it
+ * once per listed model costs the square of the catalog size; with
+ * OpenRouter's 401 models that blocked the main process for seconds right
+ * after a key sign-in (INF-803). This lists each provider's catalog once
+ * and answers every lookup from it, with the same defs `getModel` serves:
+ * the first match by id, corrected by withHonestReasoning, and nothing for
+ * a provider a connection-owned runtime does not serve. Make one per read,
+ * never keep it: the catalog grows when a refresh lands.
+ */
+export function modelLookup(
+  runtime: ModelRuntime,
+): (providerId: string, modelId: string) => ModelDef | undefined {
+  const connectionProvider = connectionProviders.get(runtime);
+  const byProvider = new Map<string, Map<string, ModelDef>>();
+  return (providerId, modelId) => {
+    if (connectionProvider && providerId !== connectionProvider) return undefined;
+    let defs = byProvider.get(providerId);
+    if (!defs) {
+      defs = new Map();
+      for (const model of runtime.getModels(providerId))
+        if (!defs.has(model.id)) defs.set(model.id, model);
+      byProvider.set(providerId, defs);
+    }
+    const model = defs.get(modelId);
+    return model && withHonestReasoning(model);
+  };
 }
 
 const refreshing = new Set<Promise<unknown>>();

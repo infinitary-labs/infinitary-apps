@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "openrouter-sign-in-stalls",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Signing in with an OpenRouter key no longer freezes the app",
+      "body": "Right after you add an OpenRouter key, the app reads its long model list without pausing. On a busy computer the welcome card no longer shows \"This card stopped responding\".",
+      "noPicture": "The fix removes a pause; the screens look the same as before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

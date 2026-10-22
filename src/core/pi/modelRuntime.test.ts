@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { createModelRuntime, MODEL_REFRESH_TIMEOUT_MS } from "./modelRuntime";
+import { createModelRuntime, MODEL_REFRESH_TIMEOUT_MS, modelLookup } from "./modelRuntime";
 
 /**
  * The captain's hard requirements on the live pi.dev catalog: every failure
@@ -76,6 +76,45 @@ function staticGrokIds(runtime: {
 }): string[] {
   return runtime.getModels("xai").map((model) => model.id);
 }
+
+/**
+ * The exact defs pi.dev served the captain's dogfood install (2026-09-01):
+ * grok-build-0.1 claims `reasoning: true` on the openai-responses api while
+ * its thinkingLevelMap pins no level to an effort token, and grok-4.6 pins
+ * real tokens.
+ */
+const DOGFOOD_GROK_DEFS = [
+  {
+    id: "grok-build-0.1",
+    name: "Grok Build 0.1",
+    api: "openai-responses",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 1, output: 2, cacheRead: 0.2, cacheWrite: 0 },
+    contextWindow: 256000,
+    maxTokens: 256000,
+    thinkingLevelMap: { off: null, minimal: null },
+  },
+  {
+    id: "grok-4.6",
+    name: "Grok 4.6",
+    api: "openai-responses",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0 },
+    contextWindow: 500000,
+    maxTokens: 500000,
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "xhigh",
+      max: null,
+    },
+  },
+];
 
 describe("createModelRuntime", () => {
   it("falls back to the static catalog when the catalog host errors", async () => {
@@ -155,46 +194,44 @@ describe("createModelRuntime", () => {
     // must come out of getModel as non-reasoning so no session ever sends
     // one; grok-4.6's map has real tokens and must stay untouched.
     const catalogBaseUrl = await startCatalog(({ status }) =>
-      status(
-        200,
-        JSON.stringify([
-          {
-            id: "grok-build-0.1",
-            name: "Grok Build 0.1",
-            api: "openai-responses",
-            reasoning: true,
-            input: ["text", "image"],
-            cost: { input: 1, output: 2, cacheRead: 0.2, cacheWrite: 0 },
-            contextWindow: 256000,
-            maxTokens: 256000,
-            thinkingLevelMap: { off: null, minimal: null },
-          },
-          {
-            id: "grok-4.6",
-            name: "Grok 4.6",
-            api: "openai-responses",
-            reasoning: true,
-            input: ["text", "image"],
-            cost: { input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0 },
-            contextWindow: 500000,
-            maxTokens: 500000,
-            thinkingLevelMap: {
-              off: null,
-              minimal: null,
-              low: "low",
-              medium: "medium",
-              high: "high",
-              xhigh: "xhigh",
-              max: null,
-            },
-          },
-        ]),
-        { "last-modified": new Date(Date.now() + 60_000).toUTCString() },
-      ),
+      status(200, JSON.stringify(DOGFOOD_GROK_DEFS), {
+        "last-modified": new Date(Date.now() + 60_000).toUTCString(),
+      }),
     );
     const { runtime, refreshed } = await createWithRefresh({ ...signedInStore(), catalogBaseUrl });
     await refreshed;
     expect(runtime.getModel("xai", "grok-build-0.1")?.reasoning).toBe(false);
     expect(runtime.getModel("xai", "grok-4.6")?.reasoning).toBe(true);
+  });
+
+  it("modelLookup serves getModel's defs from one catalog listing per provider", async () => {
+    // INF-803: the account model list resolved each listed model through
+    // getModel, which rebuilds the provider's whole catalog per call; with
+    // OpenRouter's catalog that blocked the main process for seconds after
+    // a key sign-in. One read now lists each provider once and must still
+    // serve exactly the corrected defs getModel serves.
+    const catalogBaseUrl = await startCatalog(({ status }) =>
+      status(200, JSON.stringify(DOGFOOD_GROK_DEFS), {
+        "last-modified": new Date(Date.now() + 60_000).toUTCString(),
+      }),
+    );
+    const { runtime, refreshed } = await createWithRefresh({ ...signedInStore(), catalogBaseUrl });
+    await refreshed;
+    const refs = ["xai", "openrouter"].flatMap((provider) =>
+      runtime.getModels(provider).map((model) => ({ provider, id: model.id })),
+    );
+    expect(refs.length).toBeGreaterThan(100);
+    const expected = refs.map((ref) => runtime.getModel(ref.provider, ref.id));
+    const listings: (string | undefined)[] = [];
+    const getModels = runtime.getModels.bind(runtime);
+    runtime.getModels = (provider?: string) => {
+      listings.push(provider);
+      return getModels(provider);
+    };
+    const defOf = modelLookup(runtime);
+    expect(refs.map((ref) => defOf(ref.provider, ref.id))).toEqual(expected);
+    expect(defOf("xai", "grok-build-0.1")?.reasoning).toBe(false);
+    expect(defOf("xai", "no-such-model")).toBeUndefined();
+    expect(listings).toEqual(["xai", "openrouter"]);
   });
 });

@@ -67,6 +67,7 @@ vi.mock("@earendil-works/pi-coding-agent", async () => {
             getAuth: vi.fn(async () => ({ auth: { apiKey: "resolved-token" } })),
             getAvailableSnapshot: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
             getModel: () => undefined,
+            getModels: () => [],
           };
         },
       ),

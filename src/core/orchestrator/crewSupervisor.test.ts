@@ -24677,7 +24677,8 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     expect(tasks.list()).toHaveLength(0);
   });
 
-  describe("branch_from", () => {
+  // Real git, so the same limit as the file's other real-git groups.
+  describe("branch_from", { timeout: 60_000 }, () => {
     function git(dir: string, ...args: string[]) {
       return execFileSync(
         "git",

@@ -122,7 +122,12 @@ import type { FirstmatePaused, SettingsStore } from "../storage/settingsStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { queryTasks } from "../tasks/taskQuery";
-import { type TaskCardClick, TaskGraphRefusal, TaskService } from "../tasks/taskService";
+import {
+  type SettleRefusal,
+  type TaskCardClick,
+  TaskGraphRefusal,
+  TaskService,
+} from "../tasks/taskService";
 import { locateProject, renderLocated } from "../workspace/projectLocator";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
@@ -2169,13 +2174,18 @@ export class FirstmateAgent {
         this.replyEmote("nod");
         return delivery;
       },
-      interruptCrewmate: async (taskId, mode) => {
+      interruptCrewmate: async (taskId, mode, closingSentence) => {
         this.asks.attach(taskId, "interrupt_crewmate");
-        await supervisor.interruptCrewmate(taskId, mode, {
-          actor: "firstmate",
-          via: "tool",
-          decision: this.decisions.current() ?? null,
-        });
+        await supervisor.interruptCrewmate(
+          taskId,
+          mode,
+          {
+            actor: "firstmate",
+            via: "tool",
+            decision: this.decisions.current() ?? null,
+          },
+          closingSentence,
+        );
         this.deliveredThisTurn = true;
         this.noteDelivery({
           outcome: "action",
@@ -2189,14 +2199,30 @@ export class FirstmateAgent {
       // label read, so `escalate_from` is reachable only from a turn that
       // carries the captain's own words.
       isCaptainTurn: () => this.turnOrigin === "captain-turn",
-      settleTask: async (taskId, mode, confirm, proceedWithOpen, releaseEvidence) => {
+      settleTask: async (
+        taskId,
+        mode,
+        confirm,
+        proceedWithOpen,
+        releaseEvidence,
+        closingSentence,
+      ) => {
         this.asks.attach(taskId, "settle_task");
-        const result =
+        const settle = async (): Promise<{ text: string; refusal?: SettleRefusal }> =>
           mode === "answered"
             ? { text: (await supervisor.closeAnswerUsedAsBasis(taskId)).text }
             : mode === "released"
               ? await supervisor.closeExternallyReleased(taskId, releaseEvidence ?? "")
               : await supervisor.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
+        // The close carries the first mate's sentence (INF-547), keyed by
+        // the record whichever reference named it.
+        const result = closingSentence
+          ? await supervisor.withClosingSentence(
+              this.options.tasks.resolve(taskId)?.id ?? taskId,
+              closingSentence,
+              settle,
+            )
+          : await settle();
         const status = this.options.tasks.get(taskId)?.status;
         if (!result.refusal && (status === "done" || status === "dropped")) {
           this.deliveredThisTurn = true;

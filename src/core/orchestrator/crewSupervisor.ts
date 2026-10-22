@@ -7498,6 +7498,28 @@ export class CrewSupervisor {
     taskId: string,
     mode: "interrupt" | "cancel",
     source: InterruptSource = { actor: "firstmate", via: "tool", decision: null },
+    closingSentence?: string,
+  ): Promise<void> {
+    if (mode !== "cancel" || !closingSentence) return this.interruptOnce(taskId, mode, source);
+    // The first mate's cancel carries its sentence to the close it brings
+    // about, now or when the stopped turn ends (INF-547), keyed by the
+    // record the close names.
+    const id = this.options.tasks.resolve(taskId)?.id ?? taskId;
+    this.settle.expectClosingSentence(id, closingSentence);
+    try {
+      await this.interruptOnce(taskId, mode, source);
+    } catch (caught) {
+      this.settle.forgetClosingSentence(id);
+      throw caught;
+    }
+    // With no turn left to end, no later close will take it.
+    if (!this.tasks.has(id)) this.settle.forgetClosingSentence(id);
+  }
+
+  private async interruptOnce(
+    taskId: string,
+    mode: "interrupt" | "cancel",
+    source: InterruptSource,
   ): Promise<void> {
     const task = this.tasks.get(taskId);
     // A stop or a cancel reaches the crewmate: its spark flies first.
@@ -7514,7 +7536,7 @@ export class CrewSupervisor {
       if (TaskService.isResumable(record)) {
         if (mode === "cancel") {
           this.recordInterrupt(taskId, mode, source, "cancelled-record");
-          this.settle.closeRecord(record.id, "cancelled", undefined, "captain");
+          this.settle.closeRecord(record.id, "cancelled", undefined, source.actor);
           this.options.broadcastEvent({
             type: "task_finished",
             taskId,
@@ -7928,19 +7950,28 @@ export class CrewSupervisor {
   ): string | Promise<string> {
     if (input.presentationRevision !== undefined) {
       const revision = input.presentationRevision;
-      if (
-        !this.options.completionPresentation ||
-        input.actions.length !== 1 ||
-        !input.actions[0] ||
-        settleEffectOf(input.actions[0])?.mode !== "merge"
-      )
-        throw new Error("A saved-story card is only a completion offer for this task.");
+      const offer =
+        input.actions.length === 1 &&
+        input.actions[0] !== undefined &&
+        settleEffectOf(input.actions[0])?.mode === "merge";
+      // A task that merges on its own shows the same story as a note before
+      // its first mate merges it (INF-547, the captain's direction C): no
+      // button, since the merge is not theirs to click, and no risk chart or
+      // required actions, which ride only a merge offer.
+      const note = input.actions.length === 0 && this.taskAutonomy(task.id);
+      if (!this.options.completionPresentation || (!offer && !note))
+        throw new Error(
+          "A saved-story card is only a completion offer for this task, or its note when the task merges on its own.",
+        );
       return this.options.completionPresentation(task.id, revision).then(async (story) => {
         try {
           const head = this.options.tasks.get(task.id)?.delivery?.presentation?.published?.head;
           if (!head) throw new Error("The current story has not been published.");
           const { presentationRevision: _revision, ...rest } = input;
-          return await this.addCrewmateCard(task, { ...rest, ...story }, undefined, {
+          const shown = offer
+            ? story
+            : { title: story.title, body: story.body, pictures: story.pictures };
+          return await this.addCrewmateCard(task, { ...rest, ...shown }, undefined, {
             revision,
             head,
           });
@@ -8038,7 +8069,7 @@ export class CrewSupervisor {
       (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
     ) {
       throw new Error(
-        "Card refused: this task builds in place on the personal workspace - there is no merge, land, or discard, and a completion card is never emitted. Report what you built with report instead; a card is only for a genuine decision the captain must make.",
+        "Card refused: this task builds in place on the personal workspace - there is no merge, land, or discard. Show what you built on a note with no actions, then report; a card with actions is only for a genuine decision the captain must make.",
       );
     }
     if (
@@ -9052,6 +9083,14 @@ export class CrewSupervisor {
     proceedWithOpen = false,
   ): Promise<string> {
     return this.settle.settleTask(taskId, mode, confirm, actor, proceedWithOpen);
+  }
+
+  /**
+   * One of the first mate's settles with its closing sentence (INF-547):
+   * the close it makes carries the sentence.
+   */
+  withClosingSentence<T>(taskId: string, sentence: string, run: () => Promise<T>): Promise<T> {
+    return this.settle.withClosingSentence(taskId, sentence, run);
   }
 
   /** The settle a tool runs (WI-12): its prose, and the structured refusal when there is one. */

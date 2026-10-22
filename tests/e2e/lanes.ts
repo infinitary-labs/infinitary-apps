@@ -126,6 +126,7 @@ export const APPLICATION_SUITES = [
   "claude-seat-cutoff.spec.ts",
   "claude-seat-instructions.spec.ts",
   "claude-seat.spec.ts",
+  "closing-note.spec.ts",
   "composer-safety.spec.ts",
   "decision-models.spec.ts",
   "dependency-wait.spec.ts",

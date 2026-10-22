@@ -599,6 +599,22 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { wake: "ci cap" },
     says: "Its completion card and its re-reviews are held until the captain answers and your steer reopens its rounds.",
   },
+  // INF-547's closing sentence: settle_task and the core no longer restate each other.
+  {
+    rule: "a settle names the task id from crew_status",
+    home: { tool: "settle_task" },
+    says: "Use crew_status to pick the task id; never guess among several matches.",
+  },
+  {
+    rule: "a settle refused for open children runs its ways out, keeping them planned on the captain's choice",
+    home: "core",
+    says: "a merge that keeps a task's open children planned is settle merge with proceed_with_open",
+  },
+  {
+    rule: "proceed_with_open settles and keeps open children planned",
+    home: { tool: "settle_task", parameter: "proceed_with_open" },
+    says: "Settle and keep open children planned, after the captain chose",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {

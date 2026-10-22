@@ -740,8 +740,9 @@ describe("the task protocol (task-system P3)", () => {
     // The feed says what a failure means; the raw error stays on the record.
     expect(lines).toContain("Failed: something went wrong - try again");
     expect(tasks.timeline("c").find((event) => event.kind === "failed")?.text).toBe("failed: boom");
-    // An open row dropped by hand was never a crewmate's; its task remains the subject.
-    expect(lines).toContain("Updated: dropped - not needed");
+    // The first mate's drop reads as its own sentence (INF-547: "Dropped: …",
+    // the same sentence as its note).
+    expect(lines).toContain("Dropped: not needed");
   });
 
   it("finds closed work beyond the board's window, and dropped work, only for typed text", () => {

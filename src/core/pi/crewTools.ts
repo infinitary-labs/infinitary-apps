@@ -133,7 +133,11 @@ export type CrewDelegate = {
     model?: NamedModel;
   }>;
   steerCrewmate(taskId: string, message: string): Promise<SteerDelivery>;
-  interruptCrewmate(taskId: string, mode: "interrupt" | "cancel"): Promise<void>;
+  interruptCrewmate(
+    taskId: string,
+    mode: "interrupt" | "cancel",
+    closingSentence?: string,
+  ): Promise<void>;
   crewStatus(taskId?: string): CrewStatusEntry[];
   /** Whether the named lineage has a higher rung left; unknown tasks defer to the card rule. */
   escalationEligible?(taskId: string): boolean;
@@ -156,8 +160,22 @@ export type CrewDelegate = {
     confirm?: boolean,
     proceedWithOpen?: boolean,
     releaseEvidence?: string,
+    closingSentence?: string,
   ): Promise<{ text: string; refusal?: SettleRefusal }>;
 };
+
+/**
+ * The first mate's closing sentence (INF-547): a top-level parameter on
+ * both of its close tools, so its rule reaches a Claude first mate whole.
+ * settle_task's says it once; interrupt_crewmate's points there.
+ */
+export const CLOSING_SENTENCE_DESCRIPTION =
+  "Required except answered: one plain sentence for the captain on what became of the work and why.";
+
+/** A close of started work refused for want of its sentence: what is missing and how to answer. */
+export function closingSentenceMissing(mode: string): string {
+  return `Not closed: ${mode} needs closing_sentence, one plain sentence for the captain on what became of this task's work and why. Call it again with one.`;
+}
 
 /** What `internal_step` means, shared by spawn_crewmate and create_task. */
 export const INTERNAL_STEP_DESCRIPTION =
@@ -538,9 +556,18 @@ export function createCrewTools(delegate: CrewDelegate) {
     parameters: Type.Object({
       task_id: Type.String(),
       mode: stringEnum(["interrupt", "cancel"]),
+      closing_sentence: Type.Optional(
+        Type.String({ description: "Required with cancel, as settle_task's." }),
+      ),
     }),
     run: async (params) => {
-      await delegate.interruptCrewmate(params.task_id, params.mode);
+      const sentence = params.closing_sentence?.trim();
+      if (params.mode === "cancel" && !sentence) return { text: closingSentenceMissing("cancel") };
+      await delegate.interruptCrewmate(
+        params.task_id,
+        params.mode,
+        ...(params.mode === "cancel" && sentence ? [sentence] : []),
+      );
       return {
         text:
           params.mode === "cancel"
@@ -554,19 +581,18 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "Merge a pull request, merge a local branch, or discard a task. merge-pr rechecks the checks and merges the " +
-      "pull request where the project lives (on GitHub; a fast-forward of the default branch " +
-      "on a plain Git host), then closes the task and removes its worktree. land merges the " +
-      "local branch into the local checkout, then closes the task and removes its worktree; " +
-      "never use land for direct-PR delivery. discard removes the worktree without merging and " +
-      "closes the task as discarded. answered closes an idle answer task you opened " +
+      "Close a task. merge-pr rechecks the " +
+      "checks and merges the pull request (on a plain Git host, a fast-forward of the default " +
+      "branch); land merges the local branch into the local checkout, never for direct-PR " +
+      "delivery; both then close the task and remove its worktree. discard removes the " +
+      "worktree without merging and closes the task as discarded. answered closes an idle answer task you opened " +
       "as an internal_step once a planned or started task names it as its basis or waits on it " +
       "through a blocks link (the close clears that wait), or an answer task whose crewmate " +
       "reported it finished. released closes a reported, idle work task only after you independently verify its " +
-      "delivery through an external release process; pass release_evidence naming the " +
-      "release and what proves delivery; a missing change or dismissed note alone is never proof. Closing the " +
-      "captain's settle card keeps an idle task resumable. The task record and its session stay on file in every case. Use " +
-      "crew_status to pick the task id; never guess among several matches.",
+      "delivery through an external release process, with release_evidence; a missing change or " +
+      "dismissed note alone is never proof. Closing the " +
+      "captain's settle card keeps an idle task resumable. Its record and session stay. " +
+      "Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),
       mode: stringEnum(["merge-pr", "land", "discard", "answered", "released"]),
@@ -583,14 +609,19 @@ export function createCrewTools(delegate: CrewDelegate) {
           description: "Settle and keep open children planned, after the captain chose",
         }),
       ),
+      closing_sentence: Type.Optional(Type.String({ description: CLOSING_SENTENCE_DESCRIPTION })),
     }),
     run: async (params) => {
+      const sentence = params.closing_sentence?.trim();
+      if (params.mode !== "answered" && !sentence)
+        return { text: closingSentenceMissing(params.mode) };
       const { text, refusal } = await delegate.settleTask(
         params.task_id,
         params.mode,
         params.confirm,
         params.proceed_with_open,
         params.release_evidence,
+        ...(params.mode !== "answered" && sentence ? [sentence] : []),
       );
       return { text, ...(refusal ? { details: { refusal } } : {}) };
     },

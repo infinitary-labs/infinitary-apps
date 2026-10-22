@@ -2180,12 +2180,22 @@ export class TaskService {
         });
         dropped.push(this.mustGet(descendant.id));
       }
+      // The first mate's reason is its closing sentence (INF-547): what
+      // Activity's line for the drop says.
+      const closingSentence = input.actor === "firstmate" ? input.reason.trim() : "";
       this.close(id, {
         status: "dropped",
         reason: "cancelled",
         actor: input.actor,
         text: input.text ?? `dropped - ${input.reason}`,
-        ...(replacement ? { data: { replacedBy: replacement.id } } : {}),
+        ...(replacement || closingSentence
+          ? {
+              data: {
+                ...(replacement ? { replacedBy: replacement.id } : {}),
+                ...(closingSentence ? { closingSentence } : {}),
+              },
+            }
+          : {}),
       });
       return dropped;
     });

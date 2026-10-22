@@ -153,6 +153,7 @@ import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } 
 import { REVIEW_FIX_RULES, renderRigorSection, type SpawnIntent } from "./intentBrief";
 import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
+import { closingNoteTitle, droppedLine } from "./settleWords";
 import { Ticker } from "./ticker";
 import {
   CAREFUL_NOTICE,
@@ -1948,6 +1949,107 @@ describe("CrewSupervisor", () => {
     );
     // Settled means settled: a second discard has nothing to do.
     expect(await supervisor.settleTask(taskId, "discard")).toContain("already discarded");
+  });
+
+  // INF-547, the captain's words: "the tasks were done but i never got any
+  // update". Started work the first mate closes without their click leaves its
+  // one sentence as the first mate's own note when nothing else of the task
+  // is on their stack, and Activity's line for a drop says "Dropped:" and the
+  // same sentence.
+  describe("the first mate's closing note (INF-547)", () => {
+    const SENTENCE = "Moved to the app project, where the notice fix belongs.";
+    const left = (cards: Card[], taskId: string) =>
+      cards
+        .filter((card) => card.taskId === taskId)
+        .map((card) => ({ author: card.author, title: card.title, actions: card.actions }));
+
+    async function idleTask() {
+      const crewmate = fakeCrewmate();
+      const harness = setup(crewmate);
+      const { taskId } = await harness.supervisor.commission({
+        title: "Rename the notice",
+        intent: intentOf("rename the notice"),
+      });
+      await tick();
+      crewmate.finishPrompt();
+      await tick();
+      expect(legacyStateOf(harness.tasks.get(taskId))).toBe("idle");
+      return { ...harness, crewmate, taskId, key: harness.tasks.get(taskId)?.key ?? "" };
+    }
+
+    it("puts up the first mate's sentence when it discards started work, and Activity says Dropped: and the same words", async () => {
+      const h = await idleTask();
+      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settleTask(h.taskId, "discard"),
+      );
+      await tick();
+      expect(left(h.cards(), h.taskId)).toEqual([
+        { author: "firstmate", title: closingNoteTitle(h.key, "dropped"), actions: [] },
+      ]);
+      expect(h.cards().find((card) => card.taskId === h.taskId)?.body).toContain(SENTENCE);
+      const record = h.tasks.get(h.taskId);
+      const close = h.tasks.timeline(h.taskId).find((event) => event.kind === "status");
+      if (!record || !close) throw new Error("The discard left no close");
+      expect(taskFeedLine(record, close)?.text).toBe(droppedLine(SENTENCE));
+    });
+
+    it("adds nothing when the captain's own click closes the work", async () => {
+      const h = await idleTask();
+      // Even with the first mate's sentence pending, their close carries none.
+      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settleTask(h.taskId, "discard", undefined, "captain"),
+      );
+      await tick();
+      expect(h.tasks.get(h.taskId)?.status).toBe("dropped");
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+    });
+
+    it("puts up the sentence when the first mate cancels idle work", async () => {
+      const h = await idleTask();
+      await h.supervisor.interruptCrewmate(h.taskId, "cancel", undefined, SENTENCE);
+      await tick();
+      expect(legacyStateOf(h.tasks.get(h.taskId))).toBe("cancelled");
+      expect(left(h.cards(), h.taskId)).toEqual([
+        { author: "firstmate", title: closingNoteTitle(h.key, "dropped"), actions: [] },
+      ]);
+    });
+
+    it("carries a running crewmate's cancel to the close its stopped turn brings", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, cards, tasks } = setup(crewmate);
+      const { taskId } = await supervisor.commission({
+        title: "long",
+        intent: intentOf("long running work"),
+      });
+      await tick();
+      await supervisor.interruptCrewmate(taskId, "cancel", undefined, SENTENCE);
+      crewmate.failPrompt("aborted");
+      await tick();
+      expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
+      expect(left(cards(), taskId)).toEqual([
+        {
+          author: "firstmate",
+          title: closingNoteTitle(tasks.get(taskId)?.key ?? "", "dropped"),
+          actions: [],
+        },
+      ]);
+    });
+
+    it("adds no note for work no crewmate started, though Activity still says what the drop was", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, cards, tasks } = setup(crewmate);
+      tasks.create({ id: "t-open", title: "Never started", prompt: "p", repoId: null });
+      await supervisor.withClosingSentence("t-open", SENTENCE, () =>
+        supervisor.settleTask("t-open", "discard"),
+      );
+      await tick();
+      const record = tasks.get("t-open");
+      const close = tasks.timeline("t-open").find((event) => event.kind === "status");
+      if (!record || !close) throw new Error("The discard left no close");
+      expect(record.status).toBe("dropped");
+      expect(taskFeedLine(record, close)?.text).toBe(droppedLine(SENTENCE));
+      expect(left(cards(), "t-open")).toEqual([]);
+    });
   });
 
   it("announces an intelligence downgrade in the feed, never silently (P7)", async () => {
@@ -3855,6 +3957,73 @@ describe("CrewSupervisor", () => {
       await h.supervisor.settleTask(h.taskId, "merge-pr");
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
       expect(h.forge.merges).toHaveLength(1);
+    });
+
+    // INF-547: started work the first mate merges without the captain's
+    // click leaves its one sentence, unless the crewmate's own story is
+    // still on their stack (the captain's direction C).
+    describe("the first mate's closing note on a merge (INF-547)", () => {
+      const SENTENCE = "The meter reads on time now.";
+      const selfMerging = async () => {
+        const h = await approved();
+        const repoId = h.tasks.get(h.taskId)?.repoId;
+        if (!repoId) throw new Error("Missing project");
+        h.repos.configure(repoId, { autonomy: true });
+        return h;
+      };
+      const left = (h: Awaited<ReturnType<typeof approved>>) =>
+        h
+          .cards()
+          .filter((card) => card.taskId === h.taskId)
+          .map((card) => ({ author: card.author, title: card.title, actions: card.actions }));
+
+      it("puts up the sentence with the pull request when nothing of the task stays up", async () => {
+        const h = await selfMerging();
+        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        );
+        await tick();
+        const record = h.tasks.get(h.taskId);
+        expect(record).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(left(h)).toEqual([
+          {
+            author: "firstmate",
+            title: closingNoteTitle(record?.key ?? "", "merged"),
+            actions: [],
+          },
+        ]);
+        const body = h.cards().find((card) => card.taskId === h.taskId)?.body ?? "";
+        expect(body).toContain(SENTENCE);
+        expect(body).toContain(`>PR #${record?.delivery?.prNumber}</a>`);
+      });
+
+      it("leaves the crewmate's own story and adds nothing beside it", async () => {
+        const h = await selfMerging();
+        await repairTurn(h, async () => {
+          await h.specs[0]?.onCard?.({
+            title: "The meter reads on time",
+            body: completionBody("<p>The meter reads on the first paint.</p>"),
+            actions: [],
+          });
+        });
+        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        );
+        await tick();
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(left(h)).toEqual([
+          { author: "crewmate", title: "The meter reads on time", actions: [] },
+        ]);
+      });
+
+      it("adds nothing when the captain's click merges it", async () => {
+        const h = await approved();
+        h.supervisor.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.status).toBe("done"));
+        await tick();
+        expect(left(h)).toEqual([]);
+      });
     });
 
     it("an explicit live self-merging request releases only the routine completion wait and permits ready work", async () => {
@@ -6247,6 +6416,87 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     if (!card) throw new Error("Missing completion card");
     expect(() => supervisor.act(card.id, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
+  });
+
+  // INF-547, the captain's direction C: a task that merges on its own shows
+  // the crewmate's same story before the merge, on a note with no button.
+  it("shows the published story on a note only when the task merges on its own (INF-547)", async () => {
+    const crewmate = fakeCrewmate();
+    let story: ChangePresentation;
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const completionPresentation = vi.fn(async () => ({
+      title: story.title,
+      body: presentationCardBody(story),
+      riskDeclaration: story.risk,
+      requiredActions: story.requiredActions,
+      pictures: story.pictures,
+    }));
+    const { supervisor, tasks, specs, cards } = setup(crewmate, {
+      checkCi: async () => "green",
+      completionPresentation,
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    story = {
+      version: 1,
+      taskId,
+      revision: 1,
+      destination: {
+        host: "github.com",
+        projectId: 1,
+        fullName: "octo/meter",
+        visibility: "private",
+      },
+      title: "The upload survives restart",
+      base: head,
+      head,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    };
+    const region = presentationMarkdown(story, new Map(), "passed");
+    const publication = {
+      revision: 1,
+      head,
+      state: "confirmed" as const,
+      region,
+      regionHash: createHash("sha256").update(region).digest("hex"),
+      number: 1,
+    };
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication,
+      published: publication,
+    }));
+    tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
+    const note = { title: "Ignored", body: "", presentationRevision: 1, actions: [] };
+    // A task that asks first gets the story only as its merge offer.
+    const autonomy = vi.spyOn(supervisor, "taskAutonomy").mockReturnValue(false);
+    await expect(Promise.resolve().then(() => specs[0]?.onCard?.(note))).rejects.toThrow(
+      /or its note when the task merges on its own/,
+    );
+    autonomy.mockReturnValue(true);
+    const id = await specs[0]?.onCard?.(note);
+    await tick();
+    const card = cards().find((entry) => entry.id === id);
+    expect(card).toMatchObject({ author: "crewmate", title: story.title, actions: [] });
+    expect(card?.body).toContain(presentationCardBody(story));
   });
 
   it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {

@@ -33,6 +33,7 @@ import {
   type WorkspaceService,
 } from "../workspace/workspaceService";
 import { type CardService, cardEmitter } from "./cardService";
+import { escapeCardText } from "./cardText";
 import {
   approvableOffer,
   candidateHead,
@@ -48,6 +49,8 @@ import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
 import { reviewCoversHead } from "./reviewCarry";
 import {
   cannotMergeText,
+  closedWithoutClick,
+  closingNoteTitle,
   discardedText,
   folderNotUpdatedText,
   pullLeftOpenText,
@@ -338,12 +341,88 @@ export class SettleService {
 
   private readonly sentMerges = new Set<string>();
   private readonly retirements = new Map<string, Promise<"removed" | "kept" | "none">>();
+  /**
+   * The first mate's closing sentence for a task it is closing now
+   * (INF-547): the one sentence the captain reads about started work that
+   * closed without their click. Only the first mate's own close tools set
+   * one, so a captain's click never carries it; the close that follows
+   * takes it (`takeClosingSentence`).
+   */
+  private readonly closingSentences = new Map<string, string>();
 
   mergeWasSent(taskId: string): boolean {
     return this.sentMerges.has(taskId);
   }
 
   constructor(private readonly host: SettleServiceHost) {}
+
+  /**
+   * Runs one of the first mate's settles with its closing sentence, which
+   * lasts only as long as that settle: the close it makes carries it.
+   */
+  async withClosingSentence<T>(
+    taskId: string,
+    sentence: string,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    this.closingSentences.set(taskId, sentence);
+    try {
+      return await run();
+    } finally {
+      this.closingSentences.delete(taskId);
+    }
+  }
+
+  /**
+   * The first mate cancelled this task: its close comes when the turn it
+   * stopped ends (`closeRecord`), and carries the sentence then.
+   */
+  expectClosingSentence(taskId: string, sentence: string): void {
+    this.closingSentences.set(taskId, sentence);
+  }
+
+  /** A cancel that will not close the task after all leaves no sentence behind. */
+  forgetClosingSentence(taskId: string): void {
+    this.closingSentences.delete(taskId);
+  }
+
+  /** The sentence a close takes; never a captain's, whose click carries none. */
+  private takeClosingSentence(taskId: string, actor: TaskClose["actor"]): string | undefined {
+    const sentence = this.closingSentences.get(taskId);
+    if (sentence === undefined || actor === "captain") return undefined;
+    this.closingSentences.delete(taskId);
+    return sentence;
+  }
+
+  /**
+   * The first mate's note on started work it closed (INF-547, the
+   * captain's direction C with their answers): when the close leaves nothing
+   * of the task on their stack - no crewmate's story, no other note - its
+   * sentence goes up as the first mate's own note on that task. A note
+   * holds nothing and asks nothing; only their close takes it down.
+   */
+  private leaveClosingNote(
+    record: TaskRecord,
+    reason: TaskClose["reason"],
+    sentence: string,
+  ): void {
+    const outcome = closedWithoutClick(reason);
+    if (!outcome || record.startedAt === null) return;
+    if ([...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
+    const closed = this.host.tasks.get(record.id) ?? record;
+    const prUrl = closed.delivery?.prUrl;
+    const prNumber = closed.delivery?.prNumber;
+    const pullRequest =
+      outcome === "merged" && prUrl && prNumber !== undefined
+        ? `<p>Merged <a class="inf-mono" href="${escapeCardText(prUrl)}">PR #${prNumber}</a>.</p>`
+        : "";
+    this.host.cards.addFirstmateCard({
+      title: closingNoteTitle(record.key || record.id, outcome),
+      body: `<p>${escapeCardText(sentence)}</p>${pullRequest}`,
+      actions: [],
+      taskId: record.id,
+    });
+  }
 
   /** Where the task's project lives, in the person's words ("GitHub", "GitLab", a host's address). */
   private placeOf(record: TaskRecord | undefined): string {
@@ -2356,7 +2435,17 @@ export class SettleService {
     // A row already done or dropped keeps its close; a discard there only
     // clears the worktree it kept (WI-7).
     let answerHandoffQueued = false;
+    let sentence: string | undefined;
     if (record && record.status !== "done" && record.status !== "dropped") {
+      sentence = this.takeClosingSentence(taskId, close.actor);
+      const data =
+        close.data || close.answerHandoff || sentence
+          ? {
+              ...close.data,
+              ...(close.answerHandoff ? { choice: close.answerHandoff.choice.label } : {}),
+              ...(sentence ? { closingSentence: sentence } : {}),
+            }
+          : undefined;
       this.closeAndPurge([taskId], () => {
         // A standing approval ends with its task: spent by a merge, revoked
         // by any other close (FI3-304), in the close's own transaction.
@@ -2383,15 +2472,9 @@ export class SettleService {
           ...(close.delivery ? { delivery: close.delivery } : {}),
           ...(close.feed === false ? { feed: false } : {}),
           // The captain's choice on an answer's card is a fact of the
-          // close, so work built on the answer can be told what was chosen.
-          ...(close.data || close.answerHandoff
-            ? {
-                data: {
-                  ...close.data,
-                  ...(close.answerHandoff ? { choice: close.answerHandoff.choice.label } : {}),
-                },
-              }
-            : {}),
+          // close, so work built on the answer can be told what was chosen;
+          // so is the first mate's sentence on a close of its own.
+          ...(data ? { data } : {}),
         });
         if (close.answerHandoff) {
           answerHandoffQueued =
@@ -2410,6 +2493,7 @@ export class SettleService {
     // poking here cannot race the lane purge that precedes its insertion.
     if (answerHandoffQueued) this.host.pokeInbox();
     this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
+    if (record && sentence) this.leaveClosingNote(record, close.reason, sentence);
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();
     if (record?.worktreeDir && record.workspaceState !== "removed") {
@@ -2464,9 +2548,16 @@ export class SettleService {
     actor: "captain" | "firstmate" | "host",
     typed?: TypedFailure,
   ): void {
+    const record = this.host.tasks.get(taskId);
+    const sentence = status === "cancelled" ? this.takeClosingSentence(taskId, actor) : undefined;
     this.closeAndPurge([taskId], () => {
       if (status === "cancelled") {
-        this.host.tasks.close(taskId, { status: "dropped", reason: "cancelled", actor });
+        this.host.tasks.close(taskId, {
+          status: "dropped",
+          reason: "cancelled",
+          actor,
+          ...(sentence ? { data: { closingSentence: sentence } } : {}),
+        });
       } else {
         this.host.tasks.close(taskId, {
           status: "dropped",
@@ -2486,6 +2577,7 @@ export class SettleService {
     });
     void this.closeOpenPullRequest(taskId);
     this.host.cards.retireTaskCards(taskId, status);
+    if (record && sentence) this.leaveClosingNote(record, "cancelled", sentence);
     void this.retireDeliveryChildren(taskId, this.host.tasks.get(taskId)?.title);
     void this.retireWorkspace(taskId);
   }

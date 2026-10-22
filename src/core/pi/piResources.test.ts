@@ -1065,15 +1065,20 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(FIRSTMATE_PROMPT_CORE).not.toContain("are yours to draw");
   });
 
-  it("offers an outcome card for finished captain work except personal-workspace builds on both tool surfaces", () => {
+  // INF-547: work that merges on its own, or builds in place on the personal
+  // workspace, shows its story on a note the captain closes himself.
+  it("offers an outcome card for finished captain work, a note where no click merges it, on both tool surfaces", () => {
     for (const tool of [
       CREWMATE_EMIT_CARD_DESCRIPTION,
       CREWMATE_TOOLS.find((item) => item.name === "emit_card")?.description,
     ]) {
       expect(tool).toContain(
-        "For finished change work (not a plan's preview, review, internal step or personal workspace), show the outcome on a card before reporting",
+        "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting",
       );
       expect(tool).toContain("Without one, emit a factual note with no settle action");
+      expect(tool).toContain(
+        "A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain closes it.",
+      );
       // The prompt already says when to report waiting_on_captain and finished.
       expect(tool).not.toContain("waiting_on_captain");
       expect(tool).toContain(
@@ -1084,9 +1089,9 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(prompt).toContain(
       "the card is the deliverable and the captain's choice on it closes the task",
     );
-    expect(prompt).toContain("your completion is a report, never a card");
+    expect(prompt).toContain("your completion is a note showing what you built, then your report");
     expect(prompt).toContain(
-      "the outcome card for finished change work (except personal-workspace builds, which finish by report only): a completion decision when there is a pull request or branch to merge, or a factual note when there is none",
+      "the outcome card for finished change work: a completion decision when there is a pull request or branch for the captain to merge, or a note when there is none, when the task merges on its own, or when it builds in place on the personal workspace",
     );
   });
 

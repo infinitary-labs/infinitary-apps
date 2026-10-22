@@ -360,6 +360,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Flags (`blocked`, `held`, `needsYou`, `ready`) and `waitingCardId` are derived on read from links, gates and the open card stack.
   The feed is a VIEW since P3: `inf:feed:recent` merges `task_events` (feed=1, line authored by `src/core/tasks/taskFeed.ts` from event + record, keyed by `taskKey`) with the task-less `activity_events`; `feedLineFrom` no longer authors the task-bound runtime events (`task_started`, `task_report`, `task_landed`, `task_finished`, a crewmate's `turn_failed` - those FmEvents still flow for the character, Observe and the strip), and `broadcastEvent` never persists a `task_event` line (it already lives in the timeline).
   The `task_event` FmEvent's `text` is the feed line when `feed` is true, else the timeline text.
+  A drop the first mate made carries its closing sentence in the close's data, and its line reads `Dropped:` and that sentence (INF-547; `docs/card-authoring.md`, "Work that closed without the captain's click").
   The two pinned surfaces moved: `window.infinitary` gained `tasks` and `projects` (`phase0-guardrails.spec.ts`); the self-map's channel and event lists are read from the contract itself.
 
 ### By-key closing resolution

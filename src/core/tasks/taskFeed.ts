@@ -1,6 +1,7 @@
 import { type FeedLine, reportSummary, taskFeedKind } from "@shared/feed";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CHECK_WORDS } from "@shared/vocabulary";
+import { droppedLine } from "../orchestrator/settleWords";
 import type { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskStore";
@@ -60,7 +61,12 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       break;
     case "status": {
       const reason = text(data.reason);
-      if (data.container === true) {
+      const sentence = text(data.closingSentence);
+      if (status === "dropped" && sentence) {
+        // A drop the first mate made carries its own sentence (INF-547):
+        // the line says what the drop was, the same words as its note.
+        line = droppedLine(sentence);
+      } else if (data.container === true) {
         // A parent that carried no crewmate closed with its children (the
         // container rule): its line says what became of the work under it.
         line =

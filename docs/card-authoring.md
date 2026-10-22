@@ -702,6 +702,19 @@ The close wakes no first mate (the captain's Q4a stands for its own cards; a cre
 The stall card follows the same rule; its rung 3 stays terminal.
 No reader of whose turn it is finds a card by its id pattern any more - a card is found by its task.
 
+## Work that closed without the captain's click
+
+The captain's words on INF-547: "the tasks were done but i never got any update."
+Started work that closes without the captain's click leaves them one card about it, and only their close takes it down.
+A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with no button, risk chart or required actions (`CrewSupervisor.addCrewmateCard` refuses a saved-story note on a task that asks first).
+A crewmate on the personal workspace shows what it built on a note the same way, and the done close keeps notes.
+Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
+The sentence is a fact of the close (`closingSentence` in its timeline data).
+When the close leaves nothing of the task on the stack, the sentence goes up as the first mate's own note, titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge (`SettleService.leaveClosingNote`).
+A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
+The note has no actions, so it places no gate and nothing in the whose-turn sort reads it.
+Activity's line for a drop the first mate made reads `Dropped:` and the same sentence (`droppedLine`), and an `update_task` drop's reason is that sentence too.
+
 ## Copy rules
 
 Sentence case everywhere, factual tone, data in mono, no exclamation points, no emoji (design skill content fundamentals).

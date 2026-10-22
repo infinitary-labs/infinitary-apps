@@ -199,6 +199,9 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
   While it is up the task is the captain's turn and nothing repeats.
   It leaves on a click, on the captain's close (the keep: no more wakes or cards this episode, and the task's standing line stays), when the task moves (a new turn retires it), or when the task closes.
 
+**The first mate's closing note** (INF-547, the captain's choice of 2026-10-19) is the other card the host raises about work: started work the first mate closed without the captain's click, when nothing else of the task is on their stack.
+It carries the first mate's own sentence, has no actions, places no gate, and no rung reads it (`docs/card-authoring.md`, "Work that closed without the captain's click").
+
 **A request the first mate leaves unanswered is raised again** (FI3-714, filed from FI3-710).
 A crewmate's request that the first mate act wakes it once, at the report (row 0a).
 A woken turn that ends without acting on it used to leave the request with the crewmate's open card holding the turn, which nothing climbs past.

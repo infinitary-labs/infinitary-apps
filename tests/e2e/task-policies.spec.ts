@@ -21,6 +21,7 @@ import { resizeWindow } from "./layout";
 import {
   AUTONOMY_PROMPT_MARKER,
   MOCK_AUTONOMY_CARD_TITLE,
+  MOCK_CLOSING_SENTENCES,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot } from "./pictures";
@@ -243,7 +244,16 @@ for (const checks of ["success", "failure"] as const)
         app,
         `Let ${key} merge on its own now.`,
         { task: key, autonomy: "on" },
-        [{ name: "settle_task", args: { task_id: row.id, mode: "merge-pr" } }],
+        [
+          {
+            name: "settle_task",
+            args: {
+              task_id: row.id,
+              mode: "merge-pr",
+              closing_sentence: MOCK_CLOSING_SENTENCES["merge-pr"],
+            },
+          },
+        ],
       );
       if (checks === "failure") {
         expect(github.merges()).toHaveLength(0);
@@ -254,7 +264,14 @@ for (const checks of ["success", "failure"] as const)
         );
         github.setChecks([{ name: "linux-checks", status: "completed", conclusion: "success" }]);
         await request(app, `Check ${key} again.`, [
-          { name: "settle_task", args: { task_id: row.id, mode: "merge-pr" } },
+          {
+            name: "settle_task",
+            args: {
+              task_id: row.id,
+              mode: "merge-pr",
+              closing_sentence: MOCK_CLOSING_SENTENCES["merge-pr"],
+            },
+          },
         ]);
       }
       await expect.poll(detail, { timeout: 30_000 }).toMatchObject({

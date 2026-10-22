@@ -1,10 +1,13 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
 import { crewPlaneCounts, waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { CANCEL_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, statusLine, taskKey } from "./rails";
+import { expectNoCard, showCard } from "./stack";
+import { runFromSearch } from "./windowKeys";
 
 /**
  * The crew in orbit around the Firstmate (src/renderer/src/character/crew/):
@@ -154,6 +157,12 @@ test("a cancelled crewmate leaves the ring", async () => {
     .toMatchObject({ status: "dropped", closedReason: "cancelled" });
   await expect.poll(() => crewCounts(page)).toMatchObject({ working: 0, idle: 0 });
   await expect.poll(() => ringSize(page), { timeout: 15_000 }).toBe(0);
+  // The first mate's closing note goes up (INF-547), and the ring is not
+  // painted behind a card: close it to see the ring again.
+  const note = closingNoteTitle(key, "dropped");
+  await showCard(page, note);
+  await runFromSearch(launched.app, page, "cards.close");
+  await expectNoCard(page, note);
   await expect.poll(async () => (await paint(page)).count, { timeout: 5_000 }).toBe(0);
   await evidence(page, "cancelled");
 });

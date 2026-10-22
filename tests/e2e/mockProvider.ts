@@ -2941,6 +2941,18 @@ export const RELEASE_PROMPT_MARKER = "verified external release for the task ";
  */
 export const FINISH_PROMPT_MARKER = "finish the task ";
 export const CANCEL_PROMPT_MARKER = "cancel the task ";
+/**
+ * The mock Firstmate's one sentence for each close of started work it makes
+ * (INF-547): the tools refuse such a close without one, and a close that
+ * leaves nothing of the task on the stack puts it up as the Firstmate's note.
+ */
+export const MOCK_CLOSING_SENTENCES = {
+  "merge-pr": "The pull request is merged, as the captain asked.",
+  land: "The branch is merged into the project, as the captain asked.",
+  discard: "Not needed any more, as the captain asked.",
+  released: "It went out in the verified external release.",
+  cancel: "Stopped, as the captain asked.",
+} as const;
 export const AMBIGUOUS_PROMPT_MARKER = "which project should take this";
 /** The one decision card the mock Firstmate asks with on an ambiguous request. */
 export const MOCK_WHICH_PROJECT_TITLE = "Which project?";
@@ -5111,14 +5123,26 @@ export async function startMockProvider(
             const needle = settleNeedle(latestUserTail, marker);
             const taskId =
               findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
-            return { name: "settle_task", args: { task_id: taskId, mode } };
+            return {
+              name: "settle_task",
+              args: { task_id: taskId, mode, closing_sentence: MOCK_CLOSING_SENTENCES[mode] },
+            };
           };
           // Cards as threads, phase 1: the crewmate closed its card and
           // handed the captain's words up. The Firstmate runs the settle it
           // would have run had he typed them in the main input.
           if (!hasToolResults && latestUserTail.includes(THREAD_HANDOFF_PHRASE)) {
             const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "land" } }]);
+            streamToolCalls([
+              {
+                name: "settle_task",
+                args: {
+                  task_id: taskId,
+                  mode: "land",
+                  closing_sentence: MOCK_CLOSING_SENTENCES.land,
+                },
+              },
+            ]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(RELEASE_PROMPT_MARKER)) {
@@ -5133,6 +5157,7 @@ export async function startMockProvider(
                   mode: "released",
                   release_evidence:
                     "Release v1.2.3 verified in the release manifest and published artifact",
+                  closing_sentence: MOCK_CLOSING_SENTENCES.released,
                 },
               },
             ]);
@@ -5142,7 +5167,16 @@ export async function startMockProvider(
             const needle = settleNeedle(latestUserTail, MERGE_PROMPT_MARKER);
             const taskId =
               findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
-            streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "merge-pr" } }]);
+            streamToolCalls([
+              {
+                name: "settle_task",
+                args: {
+                  task_id: taskId,
+                  mode: "merge-pr",
+                  closing_sentence: MOCK_CLOSING_SENTENCES["merge-pr"],
+                },
+              },
+            ]);
             return;
           }
           const land = settleCall(LAND_PROMPT_MARKER, "land");
@@ -5167,7 +5201,14 @@ export async function startMockProvider(
             const taskId =
               findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
             streamToolCalls([
-              { name: "interrupt_crewmate", args: { task_id: taskId, mode: "cancel" } },
+              {
+                name: "interrupt_crewmate",
+                args: {
+                  task_id: taskId,
+                  mode: "cancel",
+                  closing_sentence: MOCK_CLOSING_SENTENCES.cancel,
+                },
+              },
             ]);
             return;
           }

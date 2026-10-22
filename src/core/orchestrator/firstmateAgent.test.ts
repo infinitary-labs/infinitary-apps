@@ -5975,8 +5975,14 @@ describe("FirstmateAgent capture", () => {
     await agent.converse("stop the flaky-test work and finish pagination");
     const settle = toolsOf(specs).get("settle_task");
     const interrupt = toolsOf(specs).get("interrupt_crewmate");
-    await interrupt?.execute("i1", { task_id: "t2", mode: "cancel" });
-    await settle?.execute("s1", { task_id: "t1", mode: "finish" }).catch(() => undefined);
+    await interrupt?.execute("i1", {
+      task_id: "t2",
+      mode: "cancel",
+      closing_sentence: "The captain stopped the flaky-test work.",
+    });
+    await settle
+      ?.execute("s1", { task_id: "t1", mode: "finish", closing_sentence: "Pagination is done." })
+      .catch(() => undefined);
     const [ask] = tasks.listAsks();
     expect(ask?.taskId).toBe("t2");
     expect(ask?.attachedVia).toBe("tool:interrupt_crewmate");

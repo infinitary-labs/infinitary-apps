@@ -512,7 +512,7 @@ describe("account evaluation stop reasons", () => {
     // The evaluation refuses real-work settlement, so a merge call stops the case.
     const api = await scriptedEndpoint({
       name: "settle_task",
-      args: { task_id: "BUILD", mode: "merge-pr" },
+      args: { task_id: "BUILD", mode: "merge-pr", closing_sentence: "The build is merged." },
     });
     closeProvider = api.close;
     const opts = options(root);
@@ -967,7 +967,7 @@ describe("Claude evaluation usage artifacts", () => {
       writeAnthropicToolUse(res, 1, {
         id: `tool_settle_${n}`,
         name: settle!.name,
-        args: { task_id: "BUILD", mode: "merge-pr" },
+        args: { task_id: "BUILD", mode: "merge-pr", closing_sentence: "The build is merged." },
       });
     });
     const opts = options(root, "claude");

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { type CrewDelegate, createCrewTools, groupSpawnArgs } from "./crewTools";
+import {
+  type CrewDelegate,
+  closingSentenceMissing,
+  createCrewTools,
+  groupSpawnArgs,
+} from "./crewTools";
 import { piToolsOf } from "./toolSpec";
 
 /**
@@ -409,53 +414,107 @@ describe("crew tools", () => {
 
   it("interrupt carries the lifecycle mode", async () => {
     const { delegate, byName } = toolset();
-    await byName.get("interrupt_crewmate")?.execute("t1", { task_id: "ab12", mode: "cancel" });
-    expect(delegate.interruptCrewmate).toHaveBeenCalledWith("ab12", "cancel");
+    await byName.get("interrupt_crewmate")?.execute("t1", { task_id: "ab12", mode: "interrupt" });
+    expect(delegate.interruptCrewmate).toHaveBeenCalledWith("ab12", "interrupt");
+    await byName.get("interrupt_crewmate")?.execute("t1", {
+      task_id: "ab12",
+      mode: "cancel",
+      closing_sentence: "The captain no longer needs the meter fix.",
+    });
+    expect(delegate.interruptCrewmate).toHaveBeenCalledWith(
+      "ab12",
+      "cancel",
+      "The captain no longer needs the meter fix.",
+    );
+  });
+
+  // INF-547: a close of started work the captain did not click carries the
+  // first mate's one sentence, so it is refused without one.
+  it("refuses a cancel or a settle that closes work without its sentence", async () => {
+    const { delegate, byName } = toolset();
+    const cancel = await byName
+      .get("interrupt_crewmate")
+      ?.execute("t1", { task_id: "ab12", mode: "cancel", closing_sentence: "  " });
+    expect(cancel?.content[0]?.text).toBe(closingSentenceMissing("cancel"));
+    expect(delegate.interruptCrewmate).not.toHaveBeenCalled();
+    for (const mode of ["merge-pr", "land", "discard", "released"] as const) {
+      const settled = await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode });
+      expect(settled?.content[0]?.text).toBe(closingSentenceMissing(mode));
+    }
+    expect(delegate.settleTask).not.toHaveBeenCalled();
+    await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode: "answered" });
+    expect(delegate.settleTask).toHaveBeenCalledWith(
+      "ab12",
+      "answered",
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it("settle_task routes PR merge, local land, and discard", async () => {
     const { delegate, byName } = toolset();
-    await byName.get("settle_task")?.execute("t0", { task_id: "ab12", mode: "merge-pr" });
+    const sentence = "The meter fix is merged.";
+    await byName
+      .get("settle_task")
+      ?.execute("t0", { task_id: "ab12", mode: "merge-pr", closing_sentence: sentence });
     expect(delegate.settleTask).toHaveBeenCalledWith(
       "ab12",
       "merge-pr",
       undefined,
       undefined,
       undefined,
+      sentence,
     );
 
     const landed = await byName
       .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "land" });
+      ?.execute("t1", { task_id: "ab12", mode: "land", closing_sentence: sentence });
     expect(delegate.settleTask).toHaveBeenCalledWith(
       "ab12",
       "land",
       undefined,
       undefined,
       undefined,
+      sentence,
     );
     expect(landed?.content[0]?.text).toBe("settled");
 
-    await byName
-      .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "discard", confirm: true });
-    expect(delegate.settleTask).toHaveBeenCalledWith("ab12", "discard", true, undefined, undefined);
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "discard",
+      confirm: true,
+      closing_sentence: sentence,
+    });
+    expect(delegate.settleTask).toHaveBeenCalledWith(
+      "ab12",
+      "discard",
+      true,
+      undefined,
+      undefined,
+      sentence,
+    );
 
-    await byName
-      .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "merge-pr", proceed_with_open: true });
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "merge-pr",
+      proceed_with_open: true,
+      closing_sentence: sentence,
+    });
     expect(delegate.settleTask).toHaveBeenCalledWith(
       "ab12",
       "merge-pr",
       undefined,
       true,
       undefined,
+      sentence,
     );
 
     await byName.get("settle_task")?.execute("t2", {
       task_id: "ab12",
       mode: "released",
       release_evidence: "v1.2.3 published and verified",
+      closing_sentence: sentence,
     });
     expect(delegate.settleTask).toHaveBeenCalledWith(
       "ab12",
@@ -463,6 +522,7 @@ describe("crew tools", () => {
       undefined,
       undefined,
       "v1.2.3 published and verified",
+      sentence,
     );
   });
 
@@ -483,9 +543,11 @@ describe("crew tools", () => {
     const { byName } = toolset({
       settleTask: vi.fn(async () => ({ text: refusal.text, refusal })),
     });
-    const result = (await byName
-      .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "merge-pr" })) as unknown as {
+    const result = (await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "merge-pr",
+      closing_sentence: "The parent's work is merged.",
+    })) as unknown as {
       content: { text: string }[];
       details: { refusal?: unknown };
     };

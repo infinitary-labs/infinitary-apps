@@ -72,7 +72,7 @@ export const REPORT_TOOL_DESCRIPTION = [
   "Call it when you have something new for the captain: plain words, lead with the outcome, a few sentences.",
   "Always pass summary too: one plain sentence saying what happened (not a heading, not the ask restated); the captain reads it as the task's headline.",
   "Never for progress (that is note_progress) and never to repeat a report you already made.",
-  "If your current policies say autonomy on, the task merges on its own: at green, when no standing direction's exception covers your final change, emit no completion card; report needs_firstmate to merge the pull request. When an exception covers it, emit the usual completion card and report needs_firstmate to set the task to ask first, citing the direction.",
+  "If your current policies say autonomy on, the task merges on its own: at green, when no standing direction's exception covers your final change, put up your completion story as a note with no actions, then report needs_firstmate to merge the pull request. When an exception covers it, emit the usual completion card and report needs_firstmate to set the task to ask first, citing the direction.",
 ].join(" ");
 
 export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [

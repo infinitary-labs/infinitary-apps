@@ -8,9 +8,10 @@ import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 /**
  * The feed's receipt of a settle the captain clicked, in the app's words
  * (`SettleService`): a discard that went through, and a merge that did not,
- * said in what its failure means (`plainProblem`). A plain module, so a
- * journey reads the receipt from its owner; `crewSupervisor.test.ts` owns
- * the sentences.
+ * said in what its failure means (`plainProblem`); and the words around
+ * the first mate's own sentence when it closes started work without their
+ * click. A plain module, so a journey reads the receipt from its owner;
+ * `crewSupervisor.test.ts` owns the sentences.
  */
 
 /** A discard that closed the task, then what became of its pull request, when it had one. */
@@ -90,4 +91,29 @@ export function pullLeftOpenText(repair: { key: string; filed: boolean }): strin
   return repair.filed
     ? `Infinitary started ${repair.key} "${PULL_REPAIR_TITLE}" to close it.`
     : `${repair.key} "${PULL_REPAIR_TITLE}" is already closing it.`;
+}
+
+/**
+ * What became of started work the first mate closed without the captain's
+ * click (INF-547), from the close's own reason: the word the first mate's
+ * note leads with and the one Activity's line for a drop opens with.
+ */
+export type ClosedWithoutClick = "merged" | "released" | "dropped";
+
+/** The close reasons a first mate's closing sentence rides, by what they mean. */
+export function closedWithoutClick(reason: string): ClosedWithoutClick | undefined {
+  if (reason === "merged" || reason === "landed") return "merged";
+  if (reason === "released") return "released";
+  if (reason === "discarded" || reason === "cancelled") return "dropped";
+  return undefined;
+}
+
+/** The first mate's note on a task it closed: its key and what became of it. */
+export function closingNoteTitle(key: string, outcome: ClosedWithoutClick): string {
+  return `${key} ${outcome}`;
+}
+
+/** Activity's line for a drop that carries the first mate's sentence. */
+export function droppedLine(sentence: string): string {
+  return `Dropped: ${sentence}`;
 }

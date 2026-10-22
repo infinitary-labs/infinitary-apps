@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
+import type { Card } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew } from "./claudeCrew";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -63,9 +65,19 @@ async function closedWithoutChoices(
       waitingCardId: null,
       flags: { needsYou: false },
     });
-  await expect.poll(() => page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
-  await expect(page.locator("[data-card-layer]")).toHaveCount(0);
   const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
+  // The decision is retired. A cancel the first mate made leaves only its
+  // own note with its closing sentence (INF-547); a failure leaves nothing.
+  const left = (cards: Card[]) =>
+    cards.map((card) => ({ author: card.author, title: card.title, actions: card.actions }));
+  await expect
+    .poll(async () => left(await page.evaluate(() => window.infinitary.cards.list())))
+    .toEqual(
+      reason === "cancelled"
+        ? [{ author: "firstmate", title: closingNoteTitle(detail.key, "dropped"), actions: [] }]
+        : [],
+    );
+  await expect(page.locator("[data-card-layer]")).toHaveCount(reason === "cancelled" ? 1 : 0);
   writeFileSync(
     test.info().outputPath(`${reason}-state.json`),
     JSON.stringify(

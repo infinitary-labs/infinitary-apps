@@ -195,6 +195,15 @@ test("names switched off stay off while the crew grows to a second orbit and bac
     await expect.poll(onStage, { timeout: 30_000 }).toBe(count + 1);
     await send(`${CANCEL_PROMPT_MARKER}${title}`);
     await expect.poll(onStage, { timeout: 30_000 }).toBe(count);
+    // The first mate's cancel leaves its closing note over the stage
+    // (INF-547); the captain closes it to see the crew again.
+    const notes = () => app.page.evaluate(() => window.infinitary.cards.list());
+    await expect
+      .poll(async () => (await notes()).map((card) => card.author))
+      .toEqual(["firstmate"]);
+    const [note] = await notes();
+    await app.page.evaluate((id) => window.infinitary.cards.close(id), note?.id ?? "");
+    await expect.poll(notes).toEqual([]);
     // The captain's off survived both changes.
     await expect(crewModelNames(page)).toHaveCount(0);
     expect(await showNames()).toBe(false);

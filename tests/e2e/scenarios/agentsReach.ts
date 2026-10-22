@@ -3,6 +3,7 @@ import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds"
 import {
   contextRepos,
   findCrewTaskId,
+  MOCK_CLOSING_SENTENCES,
   MOCK_STANDARD_CARD_BODY,
   REVIEWED_TIER_PROMPT_MARKER,
   type Scenario,
@@ -127,7 +128,14 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
             name: "update_task",
             args: { task, override: { holds: REACH_RULE_HOLDS, until: "version" } },
           },
-          { name: "settle_task", args: { task_id: task, mode: "merge-pr" } },
+          {
+            name: "settle_task",
+            args: {
+              task_id: task,
+              mode: "merge-pr",
+              closing_sentence: MOCK_CLOSING_SENTENCES["merge-pr"],
+            },
+          },
         ],
       };
     // The emote is motion only; the closing words are the reply line (INF-772).

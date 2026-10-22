@@ -139,6 +139,7 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "feed",
     "files",
     "forges",
+    "integrations",
     "keyboard",
     "knowledge",
     "models",

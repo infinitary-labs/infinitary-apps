@@ -29,6 +29,7 @@ import type { ThisMac } from "@shared/devices";
 import type { DictationSettings } from "@shared/dictation";
 import type { FmEvent } from "@shared/events";
 import type { CrewWord, FirstRunView } from "@shared/firstRun";
+import { openedSection } from "@shared/integrations";
 import type { LastTurn } from "@shared/lastTurn";
 import type {
   PanelCardEmit,
@@ -1868,7 +1869,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       } else if (effect?.kind === "open") {
         set({
           view: "settings",
-          ...(effect.target !== "settings" ? { settingsSection: effect.target } : {}),
+          ...(effect.target !== "settings" ? { settingsSection: openedSection(effect) } : {}),
           ...(effect.restoreAccountId ? { pendingRestoreAccountId: effect.restoreAccountId } : {}),
           ...(effect.signIn ? { pendingForgeSignIn: effect.signIn } : {}),
           ...(effect.target === "devices" ? deviceArrival(effect) : {}),

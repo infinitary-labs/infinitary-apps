@@ -57,7 +57,16 @@ const REREAD_DELAY_MS = 2000;
  * and reruns also arm the independent run watch from their exact run number.
  */
 /** Where a task's calls go, and whose sign-in sends them. */
-type Target = { api: ForgeApi; forge: Forge; via: WriteAsk["via"] };
+type Target = {
+  api: ForgeApi;
+  forge: Forge;
+  via: WriteAsk["via"];
+  /** Asked through the GitHub integration (docs/integrations.md), whatever the task's project is. */
+  integration?: true;
+};
+
+/** Whose allowance the first mate's own reads count against: it has no task. */
+const SEAT_CALLS = "seat:firstmate";
 
 /** The host's address a forge with none of its own stands for. */
 const GITHUB_HOST = "github.com";
@@ -106,82 +115,100 @@ export class GithubGatewayService {
    * allowance. Every try asks for fewer items than the last, so the tries
    * end; an answer no smaller page would shrink is refused, saying why.
    */
-  read(taskId: string, input: GithubReadInput): Promise<string> {
-    return this.answer(taskId, async ({ api }) => {
-      const route = api.route(input.method ?? "GET", input.path);
-      if (route.write) throw new ForgeError("refused", "github_read sends GET or HEAD only.");
-      let path = route.path;
-      let served: number | undefined;
-      for (;;) {
-        try {
-          const response = await this.send(taskId, api, route.method, path);
-          const asked = new URLSearchParams(route.path.split("?")[1]).get("per_page");
-          const paged =
-            served === undefined
-              ? []
-              : [
-                  `The answer ${asked === null ? "at the default page size" : `at per_page=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at per_page=${served}; nextPath continues at that size.`,
-                ];
-          return render(response, api, paged);
-        } catch (caught) {
-          if (!(caught instanceof OversizedAnswer) || route.method !== "GET") throw caught;
-          const smaller = smallerPage(path, caught, api.defaultPerPage);
-          if ("refused" in smaller)
-            throw new ForgeError("refused", `${caught.message} ${smaller.refused}`);
-          path = api.route("GET", smaller.path).path;
-          served = smaller.perPage;
-        }
-      }
-    });
+  read(taskId: string, input: GithubReadInput, through?: "account"): Promise<string> {
+    return this.answer(taskId, ({ api }) => this.readOn(taskId, api, input), through);
   }
 
-  write(taskId: string, input: GithubWriteInput): Promise<string> {
-    return this.answer(taskId, async (target) => {
-      const { api, forge } = target;
-      if (input.file !== undefined) {
-        if (input.validationEffect !== undefined)
-          throw new ForgeError(
-            "refused",
-            "A validation effect binds a JSON request, not a release file. No file was sent.",
-          );
-        return this.writeFile(taskId, target, input);
+  /**
+   * The first mate's read through the github.com sign-in (the GitHub
+   * integration, docs/integrations.md): it has no task, so its calls count
+   * against the seat's own allowance, under the same shape checks and caps.
+   */
+  readAsSeat(input: GithubReadInput): Promise<string> {
+    return this.answerWith(
+      () => this.accountTarget(),
+      ({ api }) => this.readOn(SEAT_CALLS, api, input),
+    );
+  }
+
+  private async readOn(caller: string, api: ForgeApi, input: GithubReadInput): Promise<string> {
+    const route = api.route(input.method ?? "GET", input.path);
+    if (route.write) throw new ForgeError("refused", "github_read sends GET or HEAD only.");
+    let path = route.path;
+    let served: number | undefined;
+    for (;;) {
+      try {
+        const response = await this.send(caller, api, route.method, path);
+        const asked = new URLSearchParams(route.path.split("?")[1]).get("per_page");
+        const paged =
+          served === undefined
+            ? []
+            : [
+                `The answer ${asked === null ? "at the default page size" : `at per_page=${asked}`} exceeds the ${API_RESPONSE_MAX_BYTES / 1024} KiB read limit, so this is ${api.place}'s page at per_page=${served}; nextPath continues at that size.`,
+              ];
+        return render(response, api, paged);
+      } catch (caught) {
+        if (!(caught instanceof OversizedAnswer) || route.method !== "GET") throw caught;
+        const smaller = smallerPage(path, caught, api.defaultPerPage);
+        if ("refused" in smaller)
+          throw new ForgeError("refused", `${caught.message} ${smaller.refused}`);
+        path = api.route("GET", smaller.path).path;
+        served = smaller.perPage;
       }
-      const body = input.body;
-      let parsed: unknown;
-      if (body !== undefined) {
-        try {
-          parsed = JSON.parse(body);
-        } catch {
-          throw new ForgeError("refused", "body must be JSON text.");
+    }
+  }
+
+  write(taskId: string, input: GithubWriteInput, through?: "account"): Promise<string> {
+    return this.answer(
+      taskId,
+      async (target) => {
+        const { api, forge } = target;
+        if (input.file !== undefined) {
+          if (input.validationEffect !== undefined)
+            throw new ForgeError(
+              "refused",
+              "A validation effect binds a JSON request, not a release file. No file was sent.",
+            );
+          return this.writeFile(taskId, target, input);
         }
-      }
-      const route = api.route(
-        input.method,
-        input.path,
-        body === undefined ? 0 : Buffer.byteLength(body),
-      );
-      if (!route.write)
-        throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
-      // Merges and default-branch moves keep the merge card, asked or not (piece 1).
-      if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
-        await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
-      }
-      this.guardPresentationWrite(taskId, forge, route, parsed);
-      const why = this.askReason(taskId, route, target);
-      if (why)
-        return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
-      const response = await this.send(
-        taskId,
-        api,
-        route.method,
-        route.path,
-        body,
-        input.validationEffect,
-        forge.host ?? GITHUB_HOST,
-      );
-      const answered = render(response, api);
-      return `${answered}${await this.afterWrite(taskId, target, route, response)}`;
-    });
+        const body = input.body;
+        let parsed: unknown;
+        if (body !== undefined) {
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            throw new ForgeError("refused", "body must be JSON text.");
+          }
+        }
+        const route = api.route(
+          input.method,
+          input.path,
+          body === undefined ? 0 : Buffer.byteLength(body),
+        );
+        if (!route.write)
+          throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
+        // Merges and default-branch moves keep the merge card, asked or not (piece 1).
+        if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
+          await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
+        }
+        this.guardPresentationWrite(taskId, forge, route, parsed);
+        const why = this.askReason(taskId, route, target);
+        if (why)
+          return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
+        const response = await this.send(
+          taskId,
+          api,
+          route.method,
+          route.path,
+          body,
+          input.validationEffect,
+          forge.host ?? GITHUB_HOST,
+        );
+        const answered = render(response, api);
+        return `${answered}${await this.afterWrite(taskId, target, route, response)}`;
+      },
+      through,
+    );
   }
 
   /**
@@ -244,7 +271,10 @@ export class GithubGatewayService {
     let route: ApiRoute;
     let located: LocatedReleaseFile | undefined;
     try {
-      target = this.targetOf(taskId);
+      // A write asked through the github.com sign-in goes through it, as
+      // asked - the GitHub integration's included, whatever the task's
+      // project became (docs/integrations.md).
+      target = ask.via === "account" ? this.accountTarget() : this.targetOf(taskId);
       if (
         target.via !== ask.via ||
         target.forge.kind !== ask.kind ||
@@ -365,6 +395,9 @@ export class GithubGatewayService {
    * (INF-729 way D), or it goes through the github.com sign-in.
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
+    if (target.integration) {
+      return "it goes through the GitHub integration, and every change there asks the captain";
+    }
     if (target.via === "account") {
       return this.options.tasks.get(taskId)?.repoId
         ? "this task's project has no API where it lives, so its writes go through the captain's github.com sign-in, and each one asks the captain"
@@ -421,9 +454,11 @@ export class GithubGatewayService {
    * lives where the app has no JSON API - kept on this computer, or on a
    * plain Git host (FI3-1571 pieces 3 and 4).
    */
-  private targetOf(taskId: string): Target {
+  private targetOf(taskId: string, through?: "account"): Target {
     const task = this.options.tasks.get(taskId);
     if (!task) throw new ForgeError("not-found", "The task is no longer available.");
+    // The GitHub integration reaches GitHub itself, whatever the task's project is.
+    if (through === "account") return { ...this.accountTarget(), integration: true };
     const repo = task.repoId ? this.options.repos.get(task.repoId) : undefined;
     if (task.repoId && !repo) {
       throw new ForgeError("not-found", "The task's project is no longer registered.");
@@ -433,6 +468,13 @@ export class GithubGatewayService {
     const account = this.options.accountForge?.();
     if (account?.api) return { api: account.api, forge: account, via: "account" };
     throw new ForgeError("unsupported", "This project's host has no JSON API the app can reach.");
+  }
+
+  /** The github.com sign-in's own target. */
+  private accountTarget(): Target {
+    const account = this.options.accountForge?.();
+    if (account?.api) return { api: account.api, forge: account, via: "account" };
+    throw new ForgeError("unsupported", "The app has no GitHub connection to call.");
   }
 
   private locateFile(taskId: string, file: string): LocatedReleaseFile {
@@ -648,10 +690,21 @@ export class GithubGatewayService {
   }
 
   /** Run a call against the task's host; a failure is its answer, naming that host. */
-  private async answer(taskId: string, run: (target: Target) => Promise<string>): Promise<string> {
+  private answer(
+    taskId: string,
+    run: (target: Target) => Promise<string>,
+    through?: "account",
+  ): Promise<string> {
+    return this.answerWith(() => this.targetOf(taskId, through), run);
+  }
+
+  private async answerWith(
+    targetOf: () => Target,
+    run: (target: Target) => Promise<string>,
+  ): Promise<string> {
     let place = "GitHub";
     try {
-      const target = this.targetOf(taskId);
+      const target = targetOf();
       place = target.api.place;
       return await run(target);
     } catch (caught) {

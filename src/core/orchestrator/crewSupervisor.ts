@@ -222,6 +222,7 @@ import type {
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
+import type { TaskIntegrations } from "../integrations";
 import { jobExitWake } from "../jobs/jobManager";
 import {
   knowledgeShortlist,
@@ -772,8 +773,16 @@ export type CrewSupervisorOptions = {
    * `infinitary-browser-axi` in its shell. Absent, no crewmate has a browser.
    */
   taskCommands?: {
-    grant: (taskId: string, tools: { browser: CrewmateBrowser }) => TaskShell;
+    grant: (
+      taskId: string,
+      tools: { browser?: CrewmateBrowser; integrations?: TaskIntegrations },
+    ) => TaskShell;
   };
+  /**
+   * Integrations (docs/integrations.md): a crewmate on this Mac reaches them
+   * through `infinitary-integrations-axi` on its task channel. Absent, it has none.
+   */
+  integrations?: { forTask: (taskId: string) => TaskIntegrations };
   /**
    * Each task's own browser (docs/task-browser.md), on this Mac or on the
    * computer its task runs on ("On another computer"): absent, its crewmate
@@ -5334,12 +5343,14 @@ export class CrewSupervisor {
       ...this.knowledgeHooks(task, machine),
       ...this.panelToolHooks(task, personal),
       ...this.forgeToolHooks(task),
-      ...this.browserHooks(task, machine),
+      ...this.taskCommandHooks(task, machine),
     };
   }
 
   /**
-   * The task's own browser, through `infinitary-browser-axi` in its crewmate's
+   * The task's commands in its crewmate's shell: its integrations, through
+   * `infinitary-integrations-axi` on this Mac (docs/integrations.md), and
+   * the task's own browser, through `infinitary-browser-axi` in its crewmate's
    * shell (docs/axi-commands.md). It runs on the computer the task runs on,
    * beside that shell, and reaches that computer's own pages: on this Mac
    * through this Mac's task channel, and on a computer that runs work
@@ -5347,21 +5358,30 @@ export class CrewSupervisor {
    * (docs/task-browser.md, "On another computer"). With no channel, or a
    * computer that keeps none, there is no way to reach one.
    */
-  private browserHooks(
+  private taskCommandHooks(
     task: TaskRuntime,
     machine: string,
-  ): Pick<CrewmateSpec, "browser" | "shell"> {
-    const { browsers, taskCommands } = this.options;
-    if (!browsers) return {};
+  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations"> {
+    const { browsers, taskCommands, integrations } = this.options;
     if (machine !== LOCAL_MACHINE_ID) {
       // Its shell there is granted the command; this Mac reads its browser for the captain.
-      return this.options.machines?.keepsBrowsers?.(machine)
+      return browsers && this.options.machines?.keepsBrowsers?.(machine)
         ? { browser: browsers.forTask(task.id) }
         : {};
     }
     if (!taskCommands) return {};
-    const browser = browsers.forTask(task.id);
-    return { browser, shell: taskCommands.grant(task.id, { browser }) };
+    const browser = browsers?.forTask(task.id);
+    // Every crewmate here reaches the integrations (docs/integrations.md).
+    const reach = integrations?.forTask(task.id);
+    if (!browser && !reach) return {};
+    return {
+      ...(browser ? { browser } : {}),
+      ...(reach ? { integrations: true as const } : {}),
+      shell: taskCommands.grant(task.id, {
+        ...(browser ? { browser } : {}),
+        ...(reach ? { integrations: reach } : {}),
+      }),
+    };
   }
 
   /**

@@ -65,6 +65,9 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // The sign-ins where projects live (git integration PR 1.2): the Projects
   // section subscribes directly; `forge.changes` re-reads when one changes.
   "inf:forges": (_channel, listener) => window.infinitary.forges.onChange(listener),
+  // Integrations (docs/integrations.md): no read names it; Settings ->
+  // Integrations subscribes directly.
+  "inf:integrations": (_channel, listener) => window.infinitary.integrations.onChange(listener),
   // A computer's own sign-ins (docs/helper.md, "Its own sign-ins"): no read
   // names these; Settings -> Intelligence subscribes directly.
   "inf:devices:sign-ins": (_channel, listener) => window.infinitary.devices.onSignIns(listener),

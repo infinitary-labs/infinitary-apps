@@ -77,6 +77,7 @@ describe("the built-in plugin", () => {
       ["subscriptions", "Intelligence", "wide"],
       ["usage", "Usage", "wide"],
       ["automation", "Automation", "wide"],
+      ["integrations", "Integrations", "wide"],
       ["devices", "Devices", "wide"],
       ["observe", "Observe", "wide"],
     ]);

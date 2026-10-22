@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { IntegrationSettingsStore, IntegrationsService } from "../../src/core/integrations";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
 import { FirstmateAgent } from "../../src/core/orchestrator/firstmateAgent";
@@ -59,6 +60,10 @@ export async function firstmateTools(): Promise<BoundTool[]> {
     knowledge: new KnowledgeService({
       projects: { get: (id) => repos.get(id), list: () => repos.list() },
       gitFacts: async () => ({ commit: null, dirty: true }),
+    }),
+    integrations: new IntegrationsService({
+      bindings: [],
+      store: new IntegrationSettingsStore(paths.integrationsDir),
     }),
     scheduler: {} as Scheduler,
     supervisionLog: () => [],

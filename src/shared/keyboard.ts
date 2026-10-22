@@ -415,6 +415,16 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["schedule", "scheduled", "recurring", "reminder", "pause"],
   },
+  // Settings → Integrations (docs/integrations.md), chosen by name: no default key.
+  "settings.integrations": {
+    label: "Open Integrations",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["github", "connection", "connect", "sign in"],
+  },
   // Every running automation paused at once, as Settings → Automation's
   // Pause all does; it opens Automation so the change is seen. No default key.
   "automation.pause-all": {

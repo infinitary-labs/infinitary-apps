@@ -122,6 +122,13 @@ import {
   forgesViewSchema,
 } from "./forges";
 import {
+  type IntegrationSettingsPatch,
+  type IntegrationsView,
+  integrationIdSchema,
+  integrationSettingsPatchSchema,
+  integrationsViewSchema,
+} from "./integrations";
+import {
   isPanelCommandId,
   MAIN_COMMAND_IDS,
   type MainCommandId,
@@ -1627,6 +1634,38 @@ export const invokeContract = {
     request: z.tuple([]),
     response: forgeChangesViewSchema,
   },
+  // Integrations (docs/integrations.md): connections outside the person's
+  // projects the first mate and the crew reach. A connection is made by
+  // its kind's own sign-in (GitHub's is `inf:forges:sign-in`); these
+  // change its settings, forget it, or check it. No schema carries a secret.
+  "inf:integrations:list": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: integrationsViewSchema,
+  },
+  "inf:integrations:configure": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([integrationIdSchema, integrationSettingsPatchSchema]),
+    response: integrationsViewSchema,
+  },
+  "inf:integrations:remove": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([integrationIdSchema]),
+    response: integrationsViewSchema,
+  },
+  "inf:integrations:check": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([integrationIdSchema]),
+    response: integrationsViewSchema,
+  },
   "inf:settings:firstmate-account:get": {
     effect: "read",
     surface: "core",
@@ -2823,6 +2862,8 @@ export const pushContract = {
   "inf:release-notes": { payload: releaseNotesViewSchema, surface: "core" },
   // The sign-ins where projects live, whole, after every change (PR 1.2).
   "inf:forges": { payload: forgesViewSchema, surface: "core" },
+  // The integrations, whole, after every change to one or to a sign-in it reads.
+  "inf:integrations": { payload: integrationsViewSchema, surface: "core" },
   // The whisper model download the renderer drives; the shell serves it.
   "inf:voice:progress": { payload: voiceDownloadProgressSchema, surface: "core" },
   // Your devices, whole, after any change to the list or to what the home
@@ -3394,6 +3435,19 @@ export type FirstmateApi = {
     /** The person's open proposed changes there, newest first (the `forge.changes` read). */
     changes: () => Promise<ForgeChangesView>;
     onChange: (listener: (view: ForgesView) => void) => () => void;
+  };
+  /**
+   * Integrations (docs/integrations.md): the rows Settings -> Integrations
+   * draws, and the changes it makes through the same catalog lines the
+   * first mate's `app_change` uses. A connection is made by its kind's own
+   * sign-in (GitHub's is `forges.signIn`).
+   */
+  integrations: {
+    list: () => Promise<IntegrationsView>;
+    configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;
+    remove: (id: string) => Promise<IntegrationsView>;
+    check: (id: string) => Promise<IntegrationsView>;
+    onChange: (listener: (view: IntegrationsView) => void) => () => void;
   };
   observe: {
     enabled: () => Promise<{ enabled: boolean }>;

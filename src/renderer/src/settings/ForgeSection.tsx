@@ -13,6 +13,7 @@ import {
   forgeKeyProblemText,
   GITHUB_ENTERPRISE,
 } from "@shared/forges";
+import { INTEGRATIONS_SIGN_IN_HOST, INTEGRATIONS_WORDS } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { useShellStore } from "../app/store";
 import {
@@ -71,7 +72,7 @@ const plusIcon = (
 const EMPTY_VIEW: ForgesView = { signIns: [], hosts: [], flow: null, ended: null };
 
 /** The row's dot and its one word, from the sign-in's health alone. */
-export function forgeRowView(signIn: ForgeSignInView): {
+export function forgeRowView(signIn: Pick<ForgeSignInView, "state" | "name">): {
   tone: StatusDotTone;
   label: string;
   reauth: boolean;
@@ -103,8 +104,25 @@ export function forgeRowSub(signIn: ForgeSignInView): string {
 /** Server sign-in setup on screen: the host it is for ("" for a new address) and the kind of server. */
 type KeyForm = { host: string; server: ForgeServerView; method?: "key" };
 
+/**
+ * The forges view without GitHub itself, whose sign-in Settings ->
+ * Integrations owns (INF-775, the captain's q2): Projects keeps GitHub
+ * Enterprise and GitLab, and a pointer to Integrations.
+ */
+export function withoutIntegrationHost(view: ForgesView): ForgesView {
+  const other = (host: string) => host !== INTEGRATIONS_SIGN_IN_HOST;
+  return {
+    ...view,
+    signIns: view.signIns.filter((row) => other(row.host)),
+    hosts: view.hosts.filter((row) => other(row.host)),
+    flow: view.flow && other(view.flow.host) ? view.flow : null,
+    ended: view.ended && other(view.ended.host) ? view.ended : null,
+  };
+}
+
 export function ForgeSection() {
-  const [view, setView] = useState<ForgesView>(EMPTY_VIEW);
+  const [whole, setView] = useState<ForgesView>(EMPTY_VIEW);
+  const view = withoutIntegrationHost(whole);
   const [loaded, setLoaded] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
   const [keyForm, setKeyForm] = useState<KeyForm | null>(null);
@@ -144,7 +162,7 @@ export function ForgeSection() {
   // the code - or, for a host on the person's own server, its key form - is
   // on screen when the section opens.
   useEffect(() => {
-    if (!pending || !loaded) return;
+    if (!pending || !loaded || pending === INTEGRATIONS_SIGN_IN_HOST) return;
     useShellStore.getState().clearPendingForgeSignIn();
     const known = [...view.hosts, ...view.signIns].find((entry) => entry.host === pending);
     if (view.hosts.some((entry) => entry.host === pending && !entry.server)) signIn(pending);
@@ -263,6 +281,16 @@ export function ForgeSection() {
             {keyForm && !signedIn.has(keyForm.host) && keyAside}
           </div>
         )}
+        <div className="fm-forges-pointer" data-integrations-pointer="">
+          <span>{INTEGRATIONS_WORDS.pointer}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => useShellStore.setState({ settingsSection: "integrations" })}
+          >
+            {INTEGRATIONS_WORDS.open}
+          </Button>
+        </div>
         <DeviceForgeRows onAny={setDevices} />
       </div>
     </section>
@@ -330,7 +358,7 @@ function ForgeRow({
   );
 }
 
-function HostChip({
+export function HostChip({
   host,
   busy,
   onConnect,
@@ -533,7 +561,13 @@ function CopyCode({ code }: { code: string }) {
 }
 
 /** The device-code aside: the code, the host's page, and how it ended. */
-function SignInAside({ view, onRetry }: { view: ForgesView; onRetry: (host: string) => void }) {
+export function SignInAside({
+  view,
+  onRetry,
+}: {
+  view: ForgesView;
+  onRetry: (host: string) => void;
+}) {
   const flow: ForgeSignInFlow | null = view.flow;
   const name = (host: string) =>
     view.hosts.find((entry) => entry.host === host)?.name ??

@@ -7,6 +7,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer, CrewmateBrowser } from "../browser/taskBrowsers";
+import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
@@ -112,6 +113,7 @@ function shell(
   granted: TaskShell | undefined,
   args: string[],
   extra: NodeJS.ProcessEnv = {},
+  command = "infinitary-browser-axi",
 ): Promise<Run> {
   const env: NodeJS.ProcessEnv = {
     PATH: [...(granted?.path ?? [BIN_DIR]), process.env.PATH ?? ""].join(":"),
@@ -120,15 +122,10 @@ function shell(
     ...extra,
   };
   return new Promise((done) => {
-    execFile(
-      "/bin/sh",
-      ["-c", 'infinitary-browser-axi "$@"', "sh", ...args],
-      { env },
-      (error, stdout) => {
-        const exitCode = error ? Number((error as { code?: number }).code ?? 1) : 0;
-        done({ stdout, exitCode });
-      },
-    );
+    execFile("/bin/sh", ["-c", `${command} "$@"`, "sh", ...args], { env }, (error, stdout) => {
+      const exitCode = error ? Number((error as { code?: number }).code ?? 1) : 0;
+      done({ stdout, exitCode });
+    });
   });
 }
 
@@ -426,5 +423,70 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     held?.();
     expect(late.exitCode).toBe(0);
     expect(decode(late.stdout)).toMatchObject({ running: "click" });
+  });
+});
+
+// INF-775 piece 1, the captain's q1: one command on the task channel, discover then call.
+describe("the infinitary-integrations-axi command", () => {
+  /** A task's integrations as `IntegrationsService.forTask` answers them; every call recorded. */
+  function integrationsStandIn(): TaskIntegrations & { calls: unknown[][] } {
+    const calls: unknown[][] = [];
+    const github = { name: "GitHub", id: "github", kind: "github", account: "octo", health: "ok" };
+    return {
+      calls,
+      list: () => [{ ...github, actions: "read (reads, Allowed), write (changes, Asks you)" }],
+      show: (name) =>
+        name === "GitHub"
+          ? { integration: "GitHub", actions: [{ name: "read", effect: "reads", rule: "allow" }] }
+          : ({ text: `No integration is named ${name}.`, refused: "refused" } as IntegrationAnswer),
+      call: async (name, action, input) => {
+        calls.push([name, action, input]);
+        return action === "write"
+          ? {
+              text: "Not sent: it goes through the GitHub integration. Kept as ask a1.",
+              refused: "refused",
+            }
+          : { text: '{"status": 200, "body": {"login": "octo"}}' };
+      },
+    };
+  }
+  const run = (granted: TaskShell | undefined, args: string[]) =>
+    shell(granted, args, {}, "infinitary-integrations-axi");
+
+  it("lists, shows and calls only the integrations its task was granted", async () => {
+    const channel = await openChannel();
+    const integrations = integrationsStandIn();
+    const granted = channel.grant("task-a", { integrations });
+
+    const home = await run(granted, []);
+    expect(home.exitCode).toBe(0);
+    expect(decode(home.stdout.split("\nhelp")[0] ?? "")).toMatchObject({
+      integrations: [{ name: "GitHub", account: "octo" }],
+    });
+    const shown = await run(granted, ["show", "GitHub"]);
+    expect(shown.exitCode).toBe(0);
+    expect(shown.stdout).toContain("read");
+    expect((await run(granted, ["show", "Gmail"])).exitCode).toBe(1);
+
+    const read = await run(granted, ["call", "GitHub", "read", '{"path":"/user"}']);
+    expect(read.exitCode).toBe(0);
+    expect(read.stdout).toContain('"login": "octo"');
+    const write = await run(granted, ["call", "GitHub", "write", '{"method":"POST","path":"/x"}']);
+    expect(write.exitCode).toBe(1);
+    expect(decode(write.stdout)).toMatchObject({ code: "REFUSED" });
+    expect(write.stdout).toContain("Kept as ask a1");
+
+    // A malformed input never reaches the integration.
+    expect((await run(granted, ["call", "GitHub", "read", "{nope"])).exitCode).toBe(2);
+    expect((await run(granted, ["call", "GitHub", "read", "[1]"])).exitCode).toBe(2);
+    expect(integrations.calls).toEqual([
+      ["GitHub", "read", { path: "/user" }],
+      ["GitHub", "write", { method: "POST", path: "/x" }],
+    ]);
+
+    // A task granted only a browser has no integrations command, and the other way round.
+    const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
+    expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
+    expect((await shell(granted, ["snapshot"])).stdout).toContain("code: NO_TOOL");
   });
 });

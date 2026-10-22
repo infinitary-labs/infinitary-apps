@@ -270,6 +270,7 @@ describe("the core, driven with no Electron in the process", () => {
     expect(ownWords).toEqual([
       "project-remove",
       "panel-remove",
+      "integration-remove",
       "forge-sign-out",
       "account-disconnect",
       "projects-folder",

@@ -107,7 +107,15 @@ export function createAppTools(delegate: AppToolsDelegate) {
         "Look at app actions, their permissions, value schemas and current values. captainAllowed and firstmateAllowed consistently flag who may act; asked means the captain asked in any form, own-words in his typed words, judgment on your own reason, each at any wake. No changes.",
       parameters: Type.Object({
         area: Type.Optional(
-          stringEnum(["projects", "appearance", "general", "panels", "intelligence", "automation"]),
+          stringEnum([
+            "projects",
+            "appearance",
+            "general",
+            "panels",
+            "intelligence",
+            "integrations",
+            "automation",
+          ]),
         ),
       }),
       run: async (params) => {

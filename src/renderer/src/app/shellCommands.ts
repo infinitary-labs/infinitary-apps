@@ -255,6 +255,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "whats-new.show": () => showReleaseNote(null),
   "settings.usage": openUsage,
   "settings.automation": openAutomation,
+  "settings.integrations": openIntegrations,
   "automation.pause-all": () => {
     openAutomation();
     window.infinitary.automation.pauseAll().catch((error: unknown) => {
@@ -286,6 +287,21 @@ function openAutomation(): void {
     },
   );
 }
+
+/** Settings → Integrations, with focus on its first row or add chip, from anywhere. */
+function openIntegrations(): void {
+  useShellStore.setState({ view: "settings", settingsSection: "integrations" });
+  whenReady(
+    () => document.querySelector(INTEGRATIONS_FIRST) !== null,
+    () => {
+      const first = document.querySelector<HTMLElement>(INTEGRATIONS_FIRST);
+      if (first) focusWithRing(first);
+    },
+  );
+}
+
+/** The tab's first control: a row's disclosure, or an add chip with nothing connected. */
+const INTEGRATIONS_FIRST = "[data-integration-toggle], [data-integration-add]";
 
 /** Settings → Usage, with focus on its unit switch, from anywhere, Settings included. */
 function openUsage(): void {

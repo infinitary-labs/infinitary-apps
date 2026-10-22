@@ -41,7 +41,8 @@ Bitbucket is recognised by name and behaves as a plain host.
 
 ## The app's own sign-in (PR 1.2)
 
-The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-in already on the Mac; GitHub only for now; the sign-in lives in Settings -> Projects; and nothing ever makes a host look required.
+The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-in already on the Mac; and nothing ever makes a host look required.
+The github.com sign-in is shown in Settings -> Integrations as the GitHub integration (INF-775, the captain's q2; `docs/integrations.md`), and Settings -> Projects keeps GitHub Enterprise and GitLab and a pointer to it.
 
 - **The flow** (`providers/github/oauth.ts`): `POST /login/device/code` with the registered client id `GITHUB_OAUTH_CLIENT_ID` (public; there is no secret) and the scopes `repo workflow read:org`, then `POST /login/oauth/access_token` every `interval` seconds - `authorization_pending` waits, `slow_down` adds five seconds (or takes GitHub's new interval), `expired_token` ends as "The code expired." with a fresh code on request, `access_denied` ends quietly.
   The Settings aside shows the current code with a keyboard-accessible "Copy code" button; a polite live status confirms clipboard success or honestly reports failure, resetting for each code/sign-in attempt.
@@ -68,7 +69,7 @@ The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-
   A renewal fires `onRenewed`, which takes down a card a git refusal raised and dispatches the work held behind `forge-sign-in:<host>`.
   The health log dates each renewal (`sign-in renewed, short-lived until <ISO>`) and each refusal.
   A sign-in GitHub issues without a refresh token behaves as before.
-- **The one host card**: `card-forge-<host>`, "Sign in to GitHub again", raised only on `needs_reauth`, naming how many proposed changes wait on it; its one action is `open projects` with `signIn`, which lands on Settings -> Projects with the code already on screen.
+- **The one host card**: `card-forge-<host>`, "Sign in to GitHub again", raised only on `needs_reauth`, naming how many proposed changes wait on it; its one action is `open projects` with `signIn`, which lands on Settings -> Integrations, where the github.com sign-in lives, with the code already on screen (`openedSection`, `docs/integrations.md`).
   It takes itself down when GitHub answers again.
   An unreachable GitHub is one feed line ("Could not reach GitHub - trying again."); a 403 on opening a change is one feed line asking for write access.
   No card for either.
@@ -94,7 +95,7 @@ The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-
   A host that cannot be read makes the read unreachable this time, never a guessed row; a GitLab 401 counts as a sign-in only once GitLab no longer answers for the key.
   The `github-prs` authoring skill teaches it; no panel shells out for it.
   `tests/gitlabStub.test.ts` reads GitLab's rows on both kinds of host, and `tests/e2e/ui-kit-panel.spec.ts` shows a GitLab merge request as `!1` beside GitHub's pull requests in the panel that skill teaches.
-- **Where it shows**: Settings -> Projects, section "Where your projects live" (`src/renderer/src/settings/ForgeSection.tsx`; design skill `components/projects/ForgeRow`).
+- **Where it shows**: github.com in Settings -> Integrations as the GitHub row (`src/renderer/src/settings/IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), and every other host in Settings -> Projects, section "Where your projects live" (`src/renderer/src/settings/ForgeSection.tsx`; design skill `components/projects/ForgeRow`), which ends with a pointer line to Integrations.
   With nothing signed in it is one quiet line and a chip.
   The first launch never shows it.
 

@@ -1,6 +1,6 @@
 # Task AXI commands
 
-A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: today its task's browser, as `infinitary-browser-axi` (the captain's approved design on FI3-1429, after his AXI principles and chrome-devtools-axi).
+A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: its task's browser, as `infinitary-browser-axi`, and the integrations, as `infinitary-integrations-axi` (`docs/integrations.md`) (the captain's approved design on FI3-1429, after his AXI principles and chrome-devtools-axi).
 A command costs a crewmate nothing until it runs one, so the tools it replaces leave every crewmate's standing context.
 Every command answers in its task alone, through the app, and every rule its tool keeps stays with that tool's owner: the browser's with `TaskBrowsers` (`docs/task-browser.md`).
 
@@ -107,6 +107,15 @@ It shows content first, following the captain's ten AXI principles:
 The words a crewmate reads in an answer name the commands, through `browserCommand` (`src/core/browser/commandWords.ts`).
 A refusal is typed by `TaskBrowsers`, never read off its words (`BrowserAnswer.refused`).
 
+## The integrations command
+
+`infinitary-integrations-axi` (`src/core/axi/integrationCommands.ts`) reaches the integrations the captain connected (`docs/integrations.md`): discover, then call (the captain's q1 on INF-775).
+The bare command lists them with who each is signed in as and its actions, `show <name>` lists one's actions with what each does, its rule and its input's JSON Schema, and `call <name> <action> '<json input>'` runs one.
+The input is one JSON object, checked before it is sent, and a malformed one exits 2.
+Every decision stays `IntegrationsService`'s: a paused integration, an action turned off and a change that asks the captain each print the service's words as an error with exit 1 (`REFUSED`).
+A task on this Mac is granted it whenever the host has a command process; a computer that runs work does not grant it yet.
+Its kept answers follow the shell's limit as the browser's do.
+
 ## Tests
 
 `cli.test.ts` holds the runtime: content-first home, flags, help and version without a task, refused updates and literal content.
@@ -118,4 +127,5 @@ A command whose app is held up from before the channel's deadline until after Pi
 `tests/e2e/task-browser.spec.ts` and `tests/e2e/task-browser-booking.spec.ts` drive every browser journey through the command on Pi crewmates, and the booking journeys on Claude crewmates too, in the hermetic app; the scripted crewmate reads its answers through one helper (`toolAnswers` and `lookingAgain` in `tests/e2e/mockProvider.ts`), which looks again when the channel answered `running` or `BUSY`, and the take journey holds that its wait answered with `running`, its answer came with the next look, and it was run once.
 When the shell itself becomes a background job, the helper ends the turn until that job's exit wake supplies its output, ignoring the receipt's partial output and unrelated or repeated job exits rather than running the browser action again.
 `tests/mockProvider.test.ts` exercises those answers through the provider's request interface using the shell tool's receipt and the host's rendered exit wake, including a job whose output itself asks for the next look.
-`tests/release-contract.test.ts` holds the launcher and its link shipped outside the archive.
+`channel.test.ts` also runs `infinitary-integrations-axi`: list, show and call reach only the integrations the task was granted, a refusal exits 1, a malformed input exits 2 before reaching them, and a task without the command is answered `NO_TOOL`.
+`tests/release-contract.test.ts` holds the launcher and its links shipped outside the archive.

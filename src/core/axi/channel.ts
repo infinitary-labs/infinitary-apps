@@ -7,13 +7,16 @@ import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import type { HostChildProcess, HostChildSpawner } from "../host";
+import { INTEGRATIONS_COMMAND, type TaskIntegrations } from "../integrations";
 import { ownTaskCommand } from "./names";
 import type {
   AxiCallMessage,
   AxiChildMessage,
   BrowserOp,
-  BrowserReply,
   ChannelAnswer,
+  ChannelReply,
+  IntegrationChannelAnswer,
+  IntegrationOpInput,
 } from "./protocol";
 
 /**
@@ -58,8 +61,14 @@ import type {
 
 export type { TaskShell } from "../session/session";
 
-/** The tools a task was granted: today its browser. */
-export type TaskTools = { browser?: CrewmateBrowser };
+/**
+ * The tools a task was granted: its browser, and the integrations its
+ * crewmate reaches (`infinitary-integrations-axi`, docs/integrations.md).
+ */
+export type TaskTools = { browser?: CrewmateBrowser; integrations?: TaskIntegrations };
+
+/** What one operation answers, for either tool. */
+type OpAnswer = ChannelAnswer | IntegrationChannelAnswer;
 
 export type AxiChannelOptions = {
   /** Starts the process that runs one command: a utility process in the app, a fork in tests. */
@@ -109,8 +118,12 @@ type Grant = {
   keyFile: string;
   digest: string;
   tools: TaskTools;
-  /** An operation that ran past its shell's limit, kept for the task's next command. */
-  parked?: { command: string; work: Promise<ChannelAnswer> };
+  /**
+   * An operation that ran past its shell's limit, kept for the task's next
+   * command of the same tool: a browser's answer never reaches an
+   * integrations command, nor the other way.
+   */
+  parked: Map<string, { command: string; work: Promise<OpAnswer> }>;
 };
 
 type Outcome = { exitCode: number; stdout: string };
@@ -224,7 +237,7 @@ export class AxiChannel {
       const key = randomBytes(32).toString("hex");
       const keyFile = join(this.dir, `${randomBytes(9).toString("hex")}.key`);
       writeFileSync(keyFile, `${KEY_HEADER}: ${key}\n`, { mode: 0o600, flag: "wx" });
-      grant = { taskId, keyFile, digest: digestOf(key), tools };
+      grant = { taskId, keyFile, digest: digestOf(key), tools, parked: new Map() };
       this.grants.set(taskId, grant);
       this.byDigest.set(grant.digest, grant);
     } else {
@@ -315,7 +328,10 @@ export class AxiChannel {
     // Firstmate 3000's name for a command is the same command.
     const tool = ownTaskCommand(form.get("tool") ?? "");
     const deadline = shellDeadline(received, form.get("cap"), form.get("started"));
-    if (tool !== BROWSER_COMMAND || !grant.tools.browser) {
+    const has =
+      (tool === BROWSER_COMMAND && grant.tools.browser !== undefined) ||
+      (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined);
+    if (!has) {
       answer(
         failed(
           `This task has no ${tool || "such"} command: it runs only where its task has that tool.`,
@@ -389,7 +405,7 @@ export class AxiChannel {
           return;
         }
         if (message?.type === "call") {
-          void this.call(grant, message, command.deadline).then((reply) => {
+          void this.call(grant, command.tool, message, command.deadline).then((reply) => {
             if (!finished) child.postMessage({ type: "result", id: message.id, reply });
           });
         }
@@ -406,42 +422,79 @@ export class AxiChannel {
   }
 
   /**
-   * One operation on the task's browser, within the shell's limit. A kept
-   * answer goes first: the command that comes after one gets it instead of
-   * running, or hears that it still runs.
+   * One operation on the task's tool, within the shell's limit. A kept
+   * answer goes first: the command of that tool that comes after one gets
+   * it instead of running, or hears that it still runs.
    */
   private async call(
     grant: Grant,
+    tool: string,
     message: AxiCallMessage,
     deadline: number | undefined,
-  ): Promise<BrowserReply> {
-    const parked = grant.parked;
+  ): Promise<ChannelReply<OpAnswer>> {
+    const parked = grant.parked.get(tool);
     if (parked) {
       const settled = await within(parked.work, deadline);
       if (settled === TIMEOUT) return { kind: "busy", command: parked.command };
-      if (grant.parked === parked) grant.parked = undefined;
+      if (grant.parked.get(tool) === parked) grant.parked.delete(tool);
       return { kind: "earlier", command: parked.command, answer: settled };
     }
-    const work = this.operate(grant, message);
+    const work: Promise<OpAnswer> =
+      tool === INTEGRATIONS_COMMAND ? this.integrate(grant, message) : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
-      grant.parked = { command: message.command, work };
+      grant.parked.set(tool, { command: message.command, work });
       return { kind: "running", command: message.command };
     }
     return { kind: "answer", answer: settled };
   }
 
+  /** One of the integrations' operations, for this task alone (`IntegrationsService.forTask`). */
+  private async integrate(
+    grant: Grant,
+    message: AxiCallMessage,
+  ): Promise<IntegrationChannelAnswer> {
+    const integrations = grant.tools.integrations;
+    if (!integrations) return { text: "This task has no integrations.", refused: "refused" };
+    try {
+      switch (message.op) {
+        case "integrations.list":
+          return { data: { integrations: integrations.list() } };
+        case "integrations.show": {
+          const { name } = (message.input ?? {}) as IntegrationOpInput["integrations.show"];
+          const shown = integrations.show(String(name ?? ""));
+          return "refused" in shown && typeof shown.text === "string"
+            ? { text: shown.text, refused: shown.refused as "refused" | "invalid" }
+            : { data: shown as Record<string, unknown> };
+        }
+        case "integrations.call": {
+          const { name, action, input } = (message.input ??
+            {}) as IntegrationOpInput["integrations.call"];
+          return await integrations.call(String(name ?? ""), String(action ?? ""), input);
+        }
+        default:
+          return { text: "That is not an integrations operation.", refused: "invalid" };
+      }
+    } catch (error) {
+      return {
+        text: `The integration could not do that: ${error instanceof Error ? error.message : String(error)}.`,
+        refused: "refused",
+      };
+    }
+  }
+
   /** The browser's own operation, never its picture's bytes. */
   private async operate(grant: Grant, message: AxiCallMessage): Promise<ChannelAnswer> {
     const browser = grant.tools.browser;
-    if (!browser || !OPS.has(message.op)) {
+    const op = message.op as BrowserOp;
+    if (!browser || !OPS.has(op)) {
       return { text: "This task has no browser.", refused: "refused" };
     }
     const input = (message.input ?? {}) as never;
     try {
-      const { image: _image, ...answer } = await (message.op === "pages"
+      const { image: _image, ...answer } = await (op === "pages"
         ? browser.pages()
-        : browser[message.op](input));
+        : browser[op](input));
       return answer;
     } catch (error) {
       return {

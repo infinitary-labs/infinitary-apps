@@ -5,6 +5,7 @@ import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { BROWSER_COMMAND } from "../browser/commandWords";
+import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { renderReferenceImport } from "../knowledge/context";
 import {
   CARD_AUTHORING,
@@ -195,6 +196,7 @@ export function buildCrewmateSystemPrompt(
   procedure?: CrewmateProcedureFacts,
   tempDir?: string,
   computer?: string,
+  integrations?: boolean,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 You work on exactly one task inside an isolated git worktree, which is your working directory. Changes you make there are yours to commit; nothing outside the worktree is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names, the host commits what you changed when each of your turns ends, and your completion is a report, never a card. A task whose brief says its deliverable is an answer ships nothing: no commit, no push, no pull request, no completion card; the card is the deliverable and the captain's choice on it closes the task, unless the brief says the task is a step whose report the next step builds on.
@@ -231,6 +233,7 @@ The user sees cards and their threads, never a chat of your own; emit_card shows
     ...(timeZone ? [crewmateTimeZoneNote(timeZone)] : []),
     ...(computer ? [crewmateComputerNote(computer)] : []),
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
+    ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),
   ].join("\n\n");
 }
 

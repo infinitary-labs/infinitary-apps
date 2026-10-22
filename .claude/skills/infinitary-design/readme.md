@@ -91,7 +91,8 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
 - **Subscriptions** - users add AI subscriptions (Claude, Codex, Grok, Kimi Code, Copilot) and connect OpenRouter with a browser sign-in or API key.
   The app discovers each subscription's models; you place them in four slots - premium, high, medium, low - and a starter placement is filled in when a subscription connects; it routes tasks by slot and remaining quota.
   Users can override model choice.
-- **Where your projects live** - an optional section at the top of Settings -> Projects (`components/projects/ForgeRow`): the app's own sign-in to the place projects live (GitHub and GitLab), a chip row and a browser-code aside like the subscriptions', one quiet line when nothing is signed in.
+- **Where your projects live** - an optional section at the top of Settings -> Projects (`components/projects/ForgeRow`): the app's own sign-in to the place projects live (GitHub Enterprise and GitLab), a chip row and a browser-code aside like the subscriptions', one quiet line when nothing is signed in, and a pointer line to Integrations, where GitHub's own sign-in lives.
+- **Integrations** - Settings -> Integrations, between Automation and Devices (`components/integrations/IntegrationRow`): one row per connection outside the projects, signed in as the person, on the forge rows' rhythm, with a chevron that opens its actions.
   A project kept on this computer never needs it, and nothing anywhere suggests it does.
 - **Projects folder** - the first row of the Projects list in Settings -> Projects (`components/projects/ProjectsFolder`): the folder the first mate clones into and starts new projects in, chosen with the system's folder picker, "default" while it is the app's own.
   Projects already set up never move.

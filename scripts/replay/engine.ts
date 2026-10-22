@@ -279,8 +279,9 @@ export type SessionReport = {
  * answer as recorded, like the repo tools they replaced, which recordings
  * from before the catalog still name. It binds no preferences writer, plugin
  * installer or knowledge store either: `personalize`, `install_plugin` and
- * the knowledge pair answer as recorded too. `check_pr_ci` is retired and
- * answers as recorded for the same reason.
+ * the knowledge pair answer as recorded too, and so does the integrations
+ * pair, which reaches GitHub through the captain's sign-in. `check_pr_ci` is
+ * retired and answers as recorded for the same reason.
  */
 const RECORDED_ANSWER_TOOLS = new Set([
   "crew_status",
@@ -298,6 +299,8 @@ const RECORDED_ANSWER_TOOLS = new Set([
   "install_plugin",
   "knowledge",
   "record_knowledge",
+  "integrations",
+  "use_integration",
 ]);
 
 /** A successful call to one of these is the Firstmate acting on a wake. */

@@ -114,6 +114,9 @@ export const builtinManifest: PluginManifest = parsePluginManifest({
       // The schedules Firstmate runs, as rules (docs/automation.md). A Mac
       // that controls it reads and changes the same rules.
       { id: "automation", label: "Automation", order: 23, width: "wide" },
+      // What the first mate and the crew reach outside the projects, signed
+      // in as the person (docs/integrations.md); GitHub's sign-in lives here.
+      { id: "integrations", label: "Integrations", order: 24, width: "wide" },
       // Your devices (docs/devices.md): what was added, each with Remove,
       // the link that adds a Mac, and the address a link sends it to.
       { id: "devices", label: "Devices", order: 25, width: "wide" },

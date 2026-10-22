@@ -12,12 +12,10 @@ import type { HostKeychain, HostKeychainQuery } from "../../src/core/host";
 import { configureGitSignIn, hostEnv } from "../../src/core/hostEnv";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import type { QuotaHttp } from "../../src/core/quota/http";
-import {
-  DEVICE_FORGE_ROLE,
-  THIS_MAC_FORGE_ROLE,
-} from "../../src/renderer/src/settings/deviceForgeWords";
+import { DEVICE_FORGE_ROLE } from "../../src/renderer/src/settings/deviceForgeWords";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
+import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
 import { customApiBlock, fillCustomApi, saveCustomApi } from "./customApi";
@@ -566,14 +564,16 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("tab", { name: "Projects", exact: true }).click();
 
-  // This Mac's own row says its part; the computer's row is under it, not signed in.
-  await expect(page.locator('[data-forge-row="github.com"]')).toHaveAttribute(
-    "data-forge-state",
-    "ok",
+  // This Mac's own GitHub sign-in is in Integrations (INF-775, the captain's q2),
+  // so Projects points there; the computer's row is here, not signed in.
+  await expect(page.locator("[data-forges]").locator('[data-forge-row="github.com"]')).toHaveCount(
+    0,
+  );
+  await expect(page.locator("[data-integrations-pointer]")).toContainText(
+    INTEGRATIONS_WORDS.pointer,
   );
   const row = page.locator(`[data-device-forge-row="${deviceId}"]`);
   await expect(row).toHaveAttribute("data-forge-state", "none");
-  await expect(page.locator('[data-forge-row="github.com"]')).toContainText(THIS_MAC_FORGE_ROLE);
 
   // GitHub's code to read, here; the computer finishes the sign-in itself.
   await row.getByRole("button", { name: "Sign in", exact: true }).click();

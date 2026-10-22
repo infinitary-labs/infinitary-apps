@@ -15,6 +15,7 @@ import {
   GITHUB_ENTERPRISE,
   LOCAL_PROJECTS_UNAFFECTED,
 } from "../../src/shared/forges";
+import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import {
   CHECK_WORDS,
   MERGE_WORDS,
@@ -88,7 +89,8 @@ import { focusOn, pressKey } from "./windowKeys";
  * every push goes to a bare repository on this Mac through git's own
  * `insteadOf`.
  *
- * Settings -> Projects offers the sign-in as optional; a code the person
+ * Settings -> Integrations offers the sign-in as optional, and Settings ->
+ * Projects points there (INF-775, the captain's q2); a code the person
  * cancels, refuses on GitHub, or lets run out ends quietly or with a fresh
  * code on request; an approved code signs in and the row says who; the
  * Firstmate lists the projects there; a crewmate sends its branch up, opens
@@ -262,6 +264,12 @@ async function openProjects(page: Page) {
   await page.getByRole("tab", { name: "Projects" }).click();
 }
 
+/** Settings -> Integrations, where the github.com sign-in lives (INF-775, the captain's q2). */
+async function openIntegrations(page: Page) {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title }).click();
+}
+
 async function send(page: Page, text: string) {
   const input = promptInput(page);
   await input.click();
@@ -269,12 +277,20 @@ async function send(page: Page, text: string) {
   await input.press("Enter");
 }
 
-const section = (page: Page) => page.locator("[data-forges]");
+/** The tab that holds GitHub's sign-in. */
+const section = (page: Page) => page.locator("[data-integrations]");
 
-test("Settings -> Projects offers the GitHub sign-in as optional, and each way a code can end", async () => {
+test("Settings -> Integrations offers the GitHub sign-in as optional, and each way a code can end", async () => {
   await arrange({ signedIn: false });
   const { page } = launched;
+  // Projects no longer offers GitHub itself: it points to Integrations.
   await openProjects(page);
+  const pointer = page.locator("[data-integrations-pointer]");
+  await expect(pointer).toContainText(INTEGRATIONS_WORDS.pointer);
+  await expect(
+    page.locator("[data-forges]").getByRole("button", { name: "Sign in to GitHub", exact: true }),
+  ).toHaveCount(0);
+  await pointer.getByRole("button", { name: INTEGRATIONS_WORDS.open }).click();
   const forges = section(page);
   expect(await signInStates(page)).toEqual([]);
   await expect(forges).toBeVisible();
@@ -296,7 +312,7 @@ test("Settings -> Projects offers the GitHub sign-in as optional, and each way a
   // Cancel: the code is gone and nothing else changed.
   await forges.getByRole("button", { name: "Cancel" }).click();
   await expect(page.locator("[data-forge-flow]")).toHaveCount(0);
-  await expect(page.locator("[data-forges-quiet]")).toBeVisible();
+  await expect(page.locator("[data-integrations-quiet]")).toBeVisible();
 
   // The person says no on GitHub's page: quiet - the aside simply closes.
   await chip.click();
@@ -322,7 +338,7 @@ test("Settings -> Projects offers the GitHub sign-in as optional, and each way a
   await expect(row).toContainText("GitHub", { timeout: 15_000 });
   await expect(row).toContainText(STUB_LOGIN);
   await expect(row).toHaveAttribute("data-forge-state", "ok");
-  await expect(page.locator("[data-forges-quiet]")).toHaveCount(0);
+  await expect(page.locator("[data-integrations-quiet]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign in to GitHub", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("forge-signin-signed-in.png") });
 
@@ -358,7 +374,7 @@ const finishCopy = (page: Page, success: boolean) =>
 test("the GitHub code can be copied by keyboard, with honest feedback scoped to the current code", async () => {
   await arrange({ signedIn: false });
   const { page } = launched;
-  await openProjects(page);
+  await openIntegrations(page);
   await page.evaluate(() => {
     const probe: CopyProbe = { writes: [] };
     (window as unknown as { __fmCopy: CopyProbe }).__fmCopy = probe;
@@ -485,7 +501,7 @@ test("a refused native clipboard write leaves the GitHub sign-in code available"
   });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
-  await openProjects(page);
+  await openIntegrations(page);
   await page.getByRole("button", { name: "Sign in to GitHub", exact: true }).click();
   const forges = section(page);
   const copy = forges.getByRole("button", { name: "Copy code", exact: true });
@@ -1060,7 +1076,7 @@ test("when GitHub stops accepting the sign-in: one card, gone once signed in aga
 
   // Signed in again from the row itself: the card takes itself down the
   // moment GitHub answers again.
-  await openProjects(page);
+  await openIntegrations(page);
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toHaveAttribute("data-forge-state", "needs_reauth");
   await expect(row).toContainText(FORGE_SECTION_WORDS.reauth);
@@ -1074,7 +1090,7 @@ test("when GitHub stops accepting the sign-in: one card, gone once signed in aga
   await expectNoCard(page, SIGN_IN_AGAIN);
 
   // Refused again: the card's one action is the one-step way back - it
-  // lands on Settings -> Projects with the code already on screen.
+  // lands on Settings -> Integrations with the code already on screen.
   await refuse();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Sign in again", exact: true }).click();
@@ -1111,10 +1127,11 @@ test("a project kept on this Mac never names a host or a sign-in, and signing ou
   await expect(expanded).not.toContainText(/GitHub|sign in/i);
   await expanded.click();
 
-  // Sign out: the folder goes, and the section reads as it did at first.
+  // Sign out and remove in Integrations: the folder goes, and the tab reads as it did at first.
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title }).click();
   await page.getByRole("button", { name: "GitHub actions" }).click();
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page.locator("[data-forges-quiet]")).toHaveText(FORGE_SECTION_WORDS.quiet);
+  await page.getByRole("menuitem", { name: "Sign out and remove" }).click();
+  await expect(page.locator("[data-integrations-quiet]")).toHaveText(INTEGRATIONS_WORDS.quiet);
   await expect(page.locator("[data-forge-row]")).toHaveCount(0);
   expect(existsSync(join(userDataDir, "forges", "github.com"))).toBe(false);
   await page.keyboard.press("Escape");
@@ -1135,7 +1152,7 @@ test("a sign-in on file is still signed in after a real quit and start of the ap
   await launched.close();
   launched = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
   const { page } = launched;
-  await openProjects(page);
+  await openIntegrations(page);
   await expect(page.locator('[data-forge-row="github.com"]')).toHaveAttribute(
     "data-forge-state",
     "ok",
@@ -1151,7 +1168,7 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   // owner's first sign-in died eight hours in when the app kept only the
   // access token.
   github.issueShortLived();
-  await openProjects(page);
+  await openIntegrations(page);
   await page.getByRole("button", { name: "Sign in to GitHub", exact: true }).click();
   await expect(page.locator("[data-forge-code]")).toHaveText(STUB_USER_CODE, { timeout: 15_000 });
   github.device.approve("gho_e2e_short_lived");
@@ -1175,7 +1192,7 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   await expect.poll(() => stored().token, { timeout: 15_000 }).toBe("gho_e2e_renewed_1");
   expect(stored().refreshToken).toBe("ghr_e2e_refresh_2");
   expect(github.refreshes()).toEqual(["ghr_e2e_refresh_1"]);
-  await openProjects(page);
+  await openIntegrations(page);
   await expect(row).toHaveAttribute("data-forge-state", "ok");
   await page.keyboard.press("Escape");
   await expectNoCard(page, SIGN_IN_AGAIN);

@@ -1,6 +1,13 @@
 import { browserAxi } from "./browserCommands";
-import { runTaskAxiCli } from "./cli";
-import type { AxiChildMessage, AxiParentMessage, AxiRunMessage, BrowserReply } from "./protocol";
+import { runTaskAxiCli, type TaskAxiCli } from "./cli";
+import { integrationsAxi } from "./integrationCommands";
+import type {
+  AxiChildMessage,
+  AxiParentMessage,
+  AxiRunMessage,
+  BrowserOp,
+  IntegrationOp,
+} from "./protocol";
 
 /**
  * The command process's entry (docs/axi-commands.md, "The channel"): one
@@ -49,13 +56,22 @@ function parentPort(): Port {
   throw new Error("the command process has no parent to answer");
 }
 
+/** A command's connection: each operation sent to the app and its reply, whatever the tool. */
+type Connection = {
+  call: (command: string, op: BrowserOp | IntegrationOp, input: unknown) => Promise<never>;
+};
+
 /** The commands this process can run, by the name the shell ran. */
-const TOOLS = {
-  "infinitary-browser-axi": browserAxi,
-} as const;
+const TOOLS: Record<
+  string,
+  (version: string, connect: () => Promise<Connection>) => TaskAxiCli<Connection>
+> = {
+  "infinitary-browser-axi": browserAxi as never,
+  "infinitary-integrations-axi": integrationsAxi as never,
+};
 
 const port = parentPort();
-const waiting = new Map<number, (reply: BrowserReply) => void>();
+const waiting = new Map<number, (reply: never) => void>();
 let calls = 0;
 let started = false;
 
@@ -70,9 +86,7 @@ async function run(message: AxiRunMessage): Promise<void> {
   // The SDK names the command by the path the shell ran it from.
   process.argv[1] = message.bin;
   process.exitCode = 0;
-  const make = Object.hasOwn(TOOLS, message.tool)
-    ? TOOLS[message.tool as keyof typeof TOOLS]
-    : undefined;
+  const make = Object.hasOwn(TOOLS, message.tool) ? TOOLS[message.tool] : undefined;
   if (!make) {
     port.send({
       type: "done",
@@ -83,7 +97,7 @@ async function run(message: AxiRunMessage): Promise<void> {
   }
   const tool = make(message.version, async () => ({
     call: (command, op, input) =>
-      new Promise<BrowserReply>((resolve) => {
+      new Promise<never>((resolve) => {
         calls += 1;
         waiting.set(calls, resolve);
         port.send({ type: "call", id: calls, command, op, input });
@@ -109,6 +123,6 @@ port.listen((message) => {
   if (message.type === "result") {
     const resolve = waiting.get(message.id);
     waiting.delete(message.id);
-    resolve?.(message.reply);
+    resolve?.(message.reply as never);
   }
 });

@@ -267,6 +267,8 @@ const REFUSALS: Readonly<
   "settings.usage": usageRefusal,
   // Automation is the home's own, like Usage: the schedules run on that Mac.
   "settings.automation": usageRefusalFor("Automation"),
+  // Integrations sign in as the person on the home, like Projects.
+  "settings.integrations": usageRefusalFor("Integrations"),
   "automation.pause-all": usageRefusalFor("Automation"),
   "usage.unit": usageRefusal,
   // Devices is the home's own: a Mac that controls another has none (docs/devices.md).

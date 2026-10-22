@@ -33,17 +33,40 @@ export type BrowserOpInput = {
 export type ChannelAnswer = Omit<BrowserAnswer, "image">;
 
 /**
+ * The integrations' operations a command may ask for (docs/integrations.md,
+ * "How a crewmate reaches them"): the roster, one integration's actions,
+ * and one call - `IntegrationsService`'s, for this task, nothing more.
+ */
+export type IntegrationOp = "integrations.list" | "integrations.show" | "integrations.call";
+
+export type IntegrationOpInput = {
+  "integrations.list": Record<string, never>;
+  "integrations.show": { name: string };
+  "integrations.call": { name: string; action: string; input: unknown };
+};
+
+/** An integrations answer: structured rows, a call's words, or a refusal's. */
+export type IntegrationChannelAnswer = {
+  data?: Record<string, unknown>;
+  text?: string;
+  refused?: "refused" | "invalid";
+};
+
+/**
  * How the app answered one operation. Within the shell's own limit it is
  * the answer. Past it, the operation keeps running and its answer is kept
  * for the task's next command (`running`), which then gets it instead of
  * running (`earlier`), or hears that it still runs (`busy`): an action is
  * never sent twice.
  */
-export type BrowserReply =
-  | { kind: "answer"; answer: ChannelAnswer }
+export type ChannelReply<Answer> =
+  | { kind: "answer"; answer: Answer }
   | { kind: "running"; command: string }
-  | { kind: "earlier"; command: string; answer: ChannelAnswer }
+  | { kind: "earlier"; command: string; answer: Answer }
   | { kind: "busy"; command: string };
+
+export type BrowserReply = ChannelReply<ChannelAnswer>;
+export type IntegrationReply = ChannelReply<IntegrationChannelAnswer>;
 
 /** The app's first and only instruction to a command process. */
 export type AxiRunMessage = {
@@ -66,11 +89,15 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp;
+  op: BrowserOp | IntegrationOp;
   input: unknown;
 };
 
-export type AxiResultMessage = { type: "result"; id: number; reply: BrowserReply };
+export type AxiResultMessage = {
+  type: "result";
+  id: number;
+  reply: BrowserReply | IntegrationReply;
+};
 
 export type AxiDoneMessage = { type: "done"; stdout: string; exitCode: number };
 

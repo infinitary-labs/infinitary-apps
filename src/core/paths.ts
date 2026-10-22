@@ -22,6 +22,11 @@ export type AppPaths = {
    */
   forgesDir: string;
   /**
+   * Integrations' own settings (docs/integrations.md): one 0700 folder
+   * written only by `IntegrationsService`; no sign-in is kept there.
+   */
+  integrationsDir: string;
+  /**
    * Pairing (docs/devices.md): the home's key and the list of paired
    * devices, 0700 with every file 0600, written only by `DevicePairing`.
    */
@@ -118,6 +123,7 @@ export function appPathsFor(userData: string): AppPaths {
     modelsPath: join(userData, "auth", "models.json"),
     accountsDir: join(userData, "accounts"),
     forgesDir: join(userData, "forges"),
+    integrationsDir: join(userData, "integrations"),
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
     taskChannelDir: join(userData, "task-channel"),

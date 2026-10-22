@@ -504,6 +504,13 @@ const api: FirstmateApi = {
     changes: () => invoke("inf:forges:changes"),
     onChange: (listener) => subscribe("inf:forges", listener),
   },
+  integrations: {
+    list: () => invoke("inf:integrations:list"),
+    configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
+    remove: (id) => invoke("inf:integrations:remove", id),
+    check: (id) => invoke("inf:integrations:check", id),
+    onChange: (listener) => subscribe("inf:integrations", listener),
+  },
   observe: {
     enabled: () => invoke("inf:observe:enabled"),
     sessions: () => invoke("inf:observe:sessions"),

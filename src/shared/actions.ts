@@ -13,6 +13,14 @@ import {
   userDisplayName,
 } from "./devices";
 import type { ForgesView } from "./forges";
+import {
+  INTEGRATION_KIND_NAMES,
+  INTEGRATIONS_SIGN_IN_HOST,
+  type IntegrationsView,
+  integrationIdSchema,
+  integrationKindSchema,
+  integrationSettingsPatchSchema,
+} from "./integrations";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
 import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
@@ -53,7 +61,14 @@ export type ActionLine = {
   alwaysTrail?: boolean;
   /** Settings owned inside a shared request object (or its selector enum). */
   fields?: string[];
-  area: "projects" | "appearance" | "general" | "panels" | "intelligence" | "automation";
+  area:
+    | "projects"
+    | "appearance"
+    | "general"
+    | "panels"
+    | "intelligence"
+    | "automation"
+    | "integrations";
   tier: ActionTier;
   change: CoreInvokeChannel | null;
   channels?: CoreInvokeChannel[];
@@ -126,8 +141,22 @@ export type HandoverOffer = {
     | { remove: string }
     | { add: string }
     | { update: string }
+    | { signIn: string }
     | { signInOn: { deviceId: string; providerId: string } };
 };
+
+/** An integration as the catalog reads it back: its settings, without its actions' words. */
+function integrationsBrief(view: IntegrationsView): Record<string, unknown>[] {
+  return view.integrations.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    name: row.name,
+    account: row.account,
+    health: row.health,
+    paused: row.paused,
+    actionsOff: row.actions.filter((action) => !action.enabled).map((action) => action.name),
+  }));
+}
 
 /** Whether a line is a multi-machine one (`multiMachine`). */
 export function isMultiMachineLine(line: Pick<ActionLine, "handover" | "multiMachine">): boolean {
@@ -681,7 +710,7 @@ const actionLines = {
   "forge-sign-in": guidance(
     "projects",
     "hands",
-    "Sign in to GitHub, GitHub Enterprise, or GitLab in Settings → Projects.",
+    "Sign in to GitHub Enterprise or GitLab in Settings → Projects; GitHub itself is integration-add.",
     ["inf:forges:sign-in", "inf:forges:sign-in-key", "inf:forges:sign-in-browser"],
     "projects",
     "Project sign-in started",
@@ -805,6 +834,73 @@ const actionLines = {
     tier: "asked",
     value: z.strictObject({}),
     toRequest: () => [],
+  },
+  // Integrations (docs/integrations.md): Settings -> Integrations and
+  // app_change write through these four lines alike. A sign-in is always
+  // the captain's hands; removal forgets one only on his own words.
+  "integration-add": {
+    area: "integrations",
+    tier: "hands",
+    handover: "projects",
+    change: null,
+    current: "inf:integrations:list",
+    value: z.strictObject({ kind: integrationKindSchema }),
+    line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and his click opens Settings → Integrations with the sign-in started. A sign-in is always his hands.",
+    alwaysTrail: true,
+    offer: (v, current) => {
+      const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
+      const name = INTEGRATION_KIND_NAMES[kind];
+      if ((current as IntegrationsView).integrations.some((row) => row.kind === kind))
+        throw new Error(`${name} is already connected; integrations lists it.`);
+      return {
+        cardId: `app-integration-add-${kind}`,
+        title: `Connect ${name}`,
+        paragraphs: [
+          `Your first mate and your crew can then reach ${name} with your sign-in: reads run, and every change asks you on a card first.`,
+          `Open Integrations to sign in to ${name}.`,
+        ],
+        label: "Open Integrations",
+        decline: "Not now",
+        arrival: { signIn: INTEGRATIONS_SIGN_IN_HOST },
+      };
+    },
+    toRequest: () => [],
+    readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
+    done: (v) =>
+      `${INTEGRATION_KIND_NAMES[v.kind as keyof typeof INTEGRATION_KIND_NAMES]} sign-in started`,
+  },
+  "integration-remove": {
+    area: "integrations",
+    tier: "own-words",
+    change: "inf:integrations:remove",
+    current: "inf:integrations:list",
+    value: z.strictObject({ id: integrationIdSchema }),
+    line: "Remove an integration and forget its sign-in only on the captain's typed words. For GitHub it signs the app out of GitHub, so private clones and pull requests stop until he signs in again.",
+    toRequest: (v) => [v.id],
+    readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
+    done: (v) => `Removed integration ${v.id}`,
+  },
+  "integration-settings": {
+    area: "integrations",
+    tier: "asked",
+    change: "inf:integrations:configure",
+    current: "inf:integrations:list",
+    value: z.strictObject({ id: integrationIdSchema, changes: integrationSettingsPatchSchema }),
+    line: "Change an integration when asked: rename it (name; null restores its kind's name), pause or resume it (paused), or turn actions on or off by name (actions: { read: false }). A paused integration and an action turned off answer nobody.",
+    toRequest: (v) => [v.id, v.changes],
+    readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
+    done: (v) => `Changed integration ${v.id}`,
+  },
+  "integration-check": {
+    area: "integrations",
+    tier: "asked",
+    change: "inf:integrations:check",
+    current: "inf:integrations:list",
+    value: z.strictObject({ id: integrationIdSchema }),
+    line: "Check an integration's connection now when asked; its row and integrations read the same answer.",
+    toRequest: (v) => [v.id],
+    readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
+    done: (v) => `Checked integration ${v.id}`,
   },
   "forge-sign-out": {
     area: "projects",

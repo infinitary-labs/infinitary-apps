@@ -135,6 +135,8 @@ export function SettingsScreen() {
           onKeyDown={onTabKey}
           style={{
             display: "flex",
+            // A row too long for a narrow window wraps rather than scroll sideways.
+            flexWrap: "wrap",
             gap: 4,
             marginBottom: 28,
             borderBottom: "1px solid var(--line-1)",

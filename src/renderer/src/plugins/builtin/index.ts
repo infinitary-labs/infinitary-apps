@@ -17,6 +17,7 @@ import { AppearanceTab } from "../../settings/AppearanceTab";
 import { AutomationTab } from "../../settings/AutomationTab";
 import { DevicesTab } from "../../settings/DevicesTab";
 import { GeneralTab } from "../../settings/GeneralTab";
+import { IntegrationsTab } from "../../settings/IntegrationsTab";
 import { KeyboardTab } from "../../settings/KeyboardTab";
 import { ProjectsTab } from "../../settings/ProjectsTab";
 import { SubscriptionsTab } from "../../settings/SubscriptionsTab";
@@ -120,6 +121,7 @@ export const builtinBindings: PluginBindings = {
     usage: { Component: UsageTab },
     // On a Mac that controls another, the same rules, which run there (docs/automation.md).
     automation: { Component: AutomationTab, onAView: true },
+    integrations: { Component: IntegrationsTab },
     devices: {
       Component: DevicesTab,
       // On a Mac that controls another it holds Leave; otherwise the core's word.

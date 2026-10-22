@@ -464,6 +464,9 @@ describe("electron-builder configuration", () => {
     expect(readlinkSync(join(root, "resources/axi-bin/infinitary-browser-axi"))).toBe(
       "infinitary-axi",
     );
+    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-integrations-axi"))).toBe(
+      "infinitary-axi",
+    );
     // Firstmate 3000's name for the command stays, for a crewmate told it before the rename.
     expect(readlinkSync(join(root, "resources/axi-bin/fm-browser-axi"))).toBe("infinitary-axi");
   });

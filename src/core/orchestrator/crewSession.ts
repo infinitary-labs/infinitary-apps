@@ -63,6 +63,11 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   /** What its shell carries: its task's commands (docs/axi-commands.md). */
   shell?: TaskShell;
   /**
+   * Its shell runs `infinitary-integrations-axi` (docs/integrations.md):
+   * its instructions carry the command's one line.
+   */
+  integrations?: true;
+  /**
    * Delivery and care already known at dispatch. Absent keeps the full
    * prompt, which is the unknown-case fallback.
    */
@@ -193,6 +198,7 @@ export function crewmateSessionSpec(
     spec.procedure,
     spec.tempDir,
     spec.computer,
+    spec.integrations === true && spec.shell !== undefined,
   );
   const tools = bindTools(CREWMATE_TOOLS, spec);
   return {

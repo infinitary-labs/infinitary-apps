@@ -7,6 +7,11 @@ import type { ValidationForgeWrite } from "@shared/liveValidation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../../../integrations";
+import {
   CLONE_TOKEN_NOTE,
   DOWNLOAD_TOKEN_NOTE,
   GithubGatewayService,
@@ -708,6 +713,67 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       ).text,
     ).toContain("Not sent: this task has no project");
     expect(seen).toHaveLength(1);
+  });
+
+  // INF-775 piece 1: GitHub as an integration, every caller through the github.com sign-in;
+  // a read runs and a change asks the captain (the captain's q5).
+  it("reaches GitHub through the integration: reads run, a crewmate's change waits for the captain's click, the first mate's is refused", async () => {
+    const { service, seen, tasks } = await fixture();
+    const integrations = new IntegrationsService({
+      bindings: [
+        githubIntegration({
+          signIns: {
+            stateOf: () => "ok",
+            loginOf: () => "octo",
+            checkNow: async () => {},
+            signOut: () => {},
+          },
+          gateway: service,
+        }),
+      ],
+      store: new IntegrationSettingsStore(join(scratchDir("fm-integrations-"), "integrations")),
+    });
+    const crewmate = integrations.forTask("task-1");
+    const other = await crewmate.call("GitHub", "read", { path: "/repos/acme/site/issues" });
+    expect(JSON.parse(other.text)).toMatchObject({ status: 200, body: [{ number: 5 }] });
+
+    // Even on the task's own project, a change through the integration is kept as an ask.
+    const comment = {
+      method: "POST",
+      path: "/repos/octo/meter/issues/1/comments",
+      body: JSON.stringify({ body: "Thanks" }),
+    };
+    const kept = await crewmate.call("github", "write", comment);
+    expect(kept.text).toContain("Not sent: it goes through the GitHub integration");
+    expect(seen.filter((request) => request.method === "POST")).toEqual([]);
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
+    expect(ask).toMatchObject({ method: "POST", path: comment.path, via: "account" });
+    const click = await service.sendAsk("task-1", ask?.id ?? "");
+    expect(click).toMatchObject({ ok: true, outcome: { kind: "answered", status: 201 } });
+    expect(seen.filter((request) => request.method === "POST")).toEqual([
+      {
+        method: "POST",
+        path: comment.path,
+        auth: "Bearer gho_fixture_owned_by_app",
+        body: comment.body,
+      },
+    ]);
+
+    // The first mate reads as its seat, and has no card to carry a change.
+    const firstmate = { kind: "firstmate" } as const;
+    const repos = await integrations.call(firstmate, "github", "read", { path: "/user/repos" });
+    expect(JSON.parse(repos.text)).toMatchObject({ status: 200 });
+    const before = seen.length;
+    const refused = await integrations.call(firstmate, "github", "write", comment);
+    expect(refused).toMatchObject({ refused: "refused" });
+    expect(seen).toHaveLength(before);
+
+    // An action turned off in Settings reaches nobody.
+    integrations.configure("github", { actions: { read: false } });
+    expect(await crewmate.call("github", "read", { path: "/user/repos" })).toMatchObject({
+      refused: "refused",
+    });
+    expect(seen).toHaveLength(before);
   });
 
   it("keeps another project's and the account's writes, refuses GraphQL and invalid JSON before any request, and leaves an account read to GitHub", async () => {

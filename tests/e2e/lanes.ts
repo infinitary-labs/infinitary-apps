@@ -58,6 +58,7 @@ export const APPLICATION_SUITES = [
   "forge-signin.spec.ts",
   "gitlab-delivery.spec.ts",
   "installed-devices.spec.ts",
+  "integrations.spec.ts",
   "model-lists.spec.ts",
   "past-card-show.spec.ts",
   "card-width.spec.ts",

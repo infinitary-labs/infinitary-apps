@@ -597,6 +597,8 @@ export const FIRSTMATE_TOOLS: readonly { name: string; module: string }[] = [
   { name: "flag_duplicate", module: "src/core/pi/supervisionTools.ts" },
   { name: "knowledge", module: "src/core/knowledge/knowledgeTools.ts" },
   { name: "record_knowledge", module: "src/core/knowledge/knowledgeTools.ts" },
+  { name: "integrations", module: "src/core/pi/integrationTools.ts" },
+  { name: "use_integration", module: "src/core/pi/integrationTools.ts" },
   { name: "app_state", module: "src/core/pi/appTools.ts" },
   { name: "app_change", module: "src/core/pi/appTools.ts" },
   { name: "personalize", module: "src/core/pi/personalizeTool.ts" },

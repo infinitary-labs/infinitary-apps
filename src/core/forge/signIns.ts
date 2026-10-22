@@ -635,6 +635,11 @@ export class ForgeSignIns {
     await Promise.all(this.signedInHosts().map((host) => this.checkHost(host)));
   }
 
+  /** Ask one host now, as the tick would (the integration's Check now). */
+  checkNow(host: string): Promise<void> {
+    return this.checkHost(host);
+  }
+
   /**
    * A forge request the host refused as the sign-in (a 401): not proof on
    * its own - the health read asks the host again, and its answer is what

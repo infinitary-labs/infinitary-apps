@@ -97,7 +97,10 @@ const OPERATE_TOOLS = [
 /** Reading: it serves a class, it is never one. A turn that only read has
  * still answered the user out of what it read. `app_state` looks at the
  * action catalog and `knowledge` at what the crew learned; neither changes
- * anything. */
+ * anything. `integrations` lists what the captain connected and
+ * `use_integration` reads through one: a change there waits for the
+ * captain's click on a card the host raises, not on the first mate's move
+ * (docs/integrations.md). */
 const READ_TOOLS = [
   "crew_status",
   "supervision_log",
@@ -105,6 +108,8 @@ const READ_TOOLS = [
   "tasks",
   "app_state",
   "knowledge",
+  "integrations",
+  "use_integration",
 ];
 /** Card hygiene: neutral inside any turn, and self-management on its own. */
 const BOOKKEEPING_TOOLS = ["close_card"];

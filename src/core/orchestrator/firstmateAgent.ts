@@ -46,6 +46,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { encode } from "@toon-format/toon";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
+import type { IntegrationsService } from "../integrations";
 import { contextKnowledge, knowledgeShortlist } from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
 import { type KnowledgeService, PRIVATE_SCOPE } from "../knowledge/knowledgeService";
@@ -72,6 +73,7 @@ import {
 } from "../pi/cardTool";
 import { type CrewDelegate, createCrewTools } from "../pi/crewTools";
 import { createEmoteTool } from "../pi/emoteTool";
+import { createIntegrationTools } from "../pi/integrationTools";
 import { createLocateProjectTool } from "../pi/locateTool";
 import {
   createPersonalizeTool,
@@ -313,6 +315,12 @@ export type FirstmateAgentOptions = {
       host: string,
     ) => { name: string; login: string | null; state: ForgeSignInState } | null | undefined;
   };
+  /**
+   * Integrations (docs/integrations.md): the `integrations` and
+   * `use_integration` pair, and the context block's roster line. Absent in
+   * tests that do not exercise them.
+   */
+  integrations?: IntegrationsService;
   broadcastEvent: (event: FmEvent) => void;
   /** Synchronous acceptance witness; applies to main input and card-thread turns alike. */
   onCaptainTurnAccepted?: () => void;
@@ -2465,6 +2473,8 @@ export class FirstmateAgent {
             },
           )
         : []),
+      // Two fixed tools whatever is connected (docs/integrations.md).
+      ...(this.options.integrations ? createIntegrationTools(this.options.integrations) : []),
       ...createAppTools({
         ...(this.options.platform ? { platform: this.options.platform } : {}),
         dispatch: (channel, args, actor) => {
@@ -3276,6 +3286,7 @@ export class FirstmateAgent {
         )
       : undefined;
     const surfaces = this.renderSurfaces();
+    const integrations = this.options.integrations?.rosterLine();
     const captainResolutions = this.renderCaptainResolutions(Date.now());
     const threadActivity = this.renderThreadActivity(Date.now());
     const modelBuckets = this.renderModelBuckets();
@@ -3354,6 +3365,8 @@ export class FirstmateAgent {
       ...(knowledge ? { knowledge } : {}),
       ...(directions ? { directions } : {}),
       ...(surfaces ? { surfaces } : {}),
+      // One name per connected integration; its actions are read on request.
+      ...(integrations ? { integrations } : {}),
       ...(modelBuckets.length > 0 ? { models_by_intelligence_bucket: modelBuckets } : {}),
       quota: this.options.quotaLine(),
       // The zone CARD_AUTHORING's time rule says times in (FI3-1006).

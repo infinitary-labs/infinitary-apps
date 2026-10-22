@@ -14940,6 +14940,614 @@
         ]
       }
     },
+    "inf:integrations:list": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
+    "inf:integrations:configure": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,47}$"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "paused": {
+                "type": "boolean"
+              },
+              "actions": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                },
+                "additionalProperties": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
+    "inf:integrations:remove": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,47}$"
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
+    "inf:integrations:check": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,47}$"
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
+        ]
+      }
+    },
     "inf:settings:firstmate-account:get": {
       "effect": "read",
       "reach": "home",
@@ -51559,6 +52167,139 @@
           "hosts",
           "flow",
           "ended"
+        ]
+      }
+    },
+    "inf:integrations": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "maxItems": 64,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,47}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "account": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_reauth",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "paused": {
+                  "type": "boolean"
+                },
+                "actions": {
+                  "maxItems": 64,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,47}$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "effect": {
+                        "type": "string",
+                        "enum": [
+                          "reads",
+                          "changes",
+                          "sends"
+                        ]
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "rule": {
+                        "type": "string",
+                        "enum": [
+                          "allow",
+                          "ask",
+                          "never"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "label",
+                      "effect",
+                      "enabled",
+                      "rule"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "account",
+                "health",
+                "paused",
+                "actions"
+              ]
+            }
+          },
+          "addable": {
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "integrations",
+          "addable"
         ]
       }
     },

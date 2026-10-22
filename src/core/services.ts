@@ -113,6 +113,7 @@ import { appLauncher } from "./helper/launcher";
 import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
+import { githubIntegration, IntegrationSettingsStore, IntegrationsService } from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { workingCopyFacts } from "./knowledge/gitFacts";
 import { KnowledgeService } from "./knowledge/knowledgeService";
@@ -307,6 +308,8 @@ export type CoreServices = {
    * optional, one per host, read by the forge and the app's git helper.
    */
   forges: ForgeSignIns;
+  /** Integrations (docs/integrations.md): the one writer over userData/integrations/. */
+  integrations: IntegrationsService;
   /**
    * Pairing (docs/devices.md): the one writer over userData/devices, and the
    * connection's pairing seam. Nothing is on disk until the first link.
@@ -486,6 +489,8 @@ export async function createServices(
   // it. The dev/e2e endpoint overrides are read only by an unpackaged app.
   const forgeEndpoints = { packaged: host.app.packaged };
   let onForgeHealth: (change: ForgeHealthChange) => void = () => {};
+  // The integrations read the github.com sign-in: each change to it is one of theirs.
+  let integrationsChanged: () => void = () => {};
   let onForgeRenewed: (forgeHost: string) => void = () => {};
   const forgeSignIns = new ForgeSignIns({
     store: new ForgeSignInStore(paths.forgesDir),
@@ -502,7 +507,10 @@ export async function createServices(
     // A host now known: its projects stamped plain Git hosts are its kind's.
     onSignedIn: (known) => repos.stampKnownHosts([known]),
     projectsOn: (forgeHost) => repos.list().filter((repo) => repo.host?.name === forgeHost).length,
-    push: (view) => emit("inf:forges", view),
+    push: (view) => {
+      emit("inf:forges", view);
+      integrationsChanged();
+    },
     onHealthChange: (change) => onForgeHealth(change),
     onRenewed: (forgeHost) => onForgeRenewed(forgeHost),
     log: (message) => console.info(message),
@@ -1693,6 +1701,23 @@ export async function createServices(
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
     now: ticker.now,
   });
+  // Integrations (docs/integrations.md): GitHub over the forge's own sign-in
+  // and the gateway's calls through it. A new kind is one more binding here.
+  const integrations = new IntegrationsService({
+    bindings: [
+      githubIntegration({
+        signIns: forgeSignIns,
+        gateway: {
+          read: (taskId, input, through) => githubGateway.read(taskId, input, through),
+          write: (taskId, input, through) => githubGateway.write(taskId, input, through),
+          readAsSeat: (input) => githubGateway.readAsSeat(input),
+        },
+      }),
+    ],
+    store: new IntegrationSettingsStore(paths.integrationsDir),
+    push: (view) => emit("inf:integrations", view),
+  });
+  integrationsChanged = () => integrations.changed();
   // Personal extensions: seed the workspace, compile what is there, watch it.
   // Presence and the running dot derive from the store and the task record,
   // so the service subscribes to both. Started before the supervisor because
@@ -1897,38 +1922,37 @@ export async function createServices(
   // The task channel (docs/axi-commands.md): a crewmate reaches its task's
   // browser through `infinitary-browser-axi` in its shell, each command in a process
   // of its own. With no such process, or no browser, no crewmate has one.
-  const taskCommands =
-    localBrowsers && host.axiProcess
-      ? await AxiChannel.open({
-          spawner: host.axiProcess,
-          binDir: host.app.packaged
-            ? join(host.app.resourcesDir, "axi-bin")
-            : join(host.app.appDir, "resources", "axi-bin"),
-          version: host.app.version,
-          keysDir: paths.taskChannelDir,
-          // A command that reached the app keeps Pi's shell waiting for its answer.
-          answering: (shell) => jobs.answering(shell),
-        }).catch((error: unknown) => {
-          console.warn(
-            `[task-commands] no task channel, so no crewmate has a browser: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          return undefined;
-        })
-      : undefined;
-  if (browsers) {
-    browserFactOf = (taskId) => browsers.fact(taskId);
+  const taskCommands = host.axiProcess
+    ? await AxiChannel.open({
+        spawner: host.axiProcess,
+        binDir: host.app.packaged
+          ? join(host.app.resourcesDir, "axi-bin")
+          : join(host.app.appDir, "resources", "axi-bin"),
+        version: host.app.version,
+        keysDir: paths.taskChannelDir,
+        // A command that reached the app keeps Pi's shell waiting for its answer.
+        answering: (shell) => jobs.answering(shell),
+      }).catch((error: unknown) => {
+        console.warn(
+          `[task-commands] no task channel, so no crewmate has a browser or integrations: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return undefined;
+      })
+    : undefined;
+  if (browsers || taskCommands) {
+    if (browsers) browserFactOf = (taskId) => browsers.fact(taskId);
     tasks.onChange((change) => {
       for (const taskId of change.removed) {
-        browsers.closeTask(taskId, { gone: true });
+        browsers?.closeTask(taskId, { gone: true });
         taskCommands?.revoke(taskId);
       }
       for (const taskId of change.taskIds) {
-        if (!browsers.isOpen(taskId) && !taskCommands?.granted(taskId)) continue;
+        if (!browsers?.isOpen(taskId) && !taskCommands?.granted(taskId)) continue;
         const status = tasks.get(taskId)?.status;
         if (status !== "done" && status !== "dropped") continue;
         // A closed task's key answers nothing more, whatever its browser did.
         taskCommands?.revoke(taskId);
-        if (browsers.isOpen(taskId)) browsers.closeTask(taskId);
+        if (browsers?.isOpen(taskId)) browsers.closeTask(taskId);
       }
     });
   }
@@ -2034,6 +2058,7 @@ export async function createServices(
     ...(host.typefaceProbe ? { probeTypeface: host.typefaceProbe } : {}),
     ...(browsers ? { browsers } : {}),
     ...(taskCommands ? { taskCommands } : {}),
+    integrations,
     quotaGateRefValid,
     quotaGateCleared: (ref) =>
       quotaGateCleared(ref, { availableModels, slotsOf: (model) => slots.slotsOf(model), quota }),
@@ -2458,6 +2483,7 @@ export async function createServices(
     settings,
     onCaptainTurnAccepted: () => onCaptainTurnAccepted(),
     forges: forgeAccess,
+    integrations,
     // Diagnostics' turn events: who the turn answered and, failed, its kind.
     onTurnSettled: (outcome) =>
       sharing.record(
@@ -2919,6 +2945,7 @@ export async function createServices(
     projectChanges,
     workspace,
     forges: forgeSignIns,
+    integrations,
     devices,
     computers,
     inviteDevice,

@@ -1,34 +1,34 @@
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 
 /**
- * The Firstmate's reply line (FI3-1089's plan, the captain's Approve and
+ * The Firstmate's reply line (INF-772's plan, the captain's Approve and
  * build; docs/composer.md "The last turn"): the one line the captain reads
- * beside their last message once the turn that read it ends. It is chosen
- * from typed facts the turn recorded where each call succeeded, never from
- * the closing words, which stay off the window.
+ * beside their last message once the turn that read it ends.
  *
- * The latest authored reply after the newest message was read wins over app words.
- * An action or words-only card-thread answer is a fallback, never a reply
- * that overwrites an authored reply or app words.
+ * Its closing words say it, one short sentence by instruction alone (the
+ * host cuts nothing it did not write), whenever something took effect.
+ * The typed facts the turn recorded where each call succeeded decide
+ * whether anything did, and give the line when the turn closed with no
+ * words: the latest card it showed, else the app's own words, else Got it.
+ * Nothing took effect: no line, and the answer check retries.
  */
 export type ReplyFacts = {
-  /** Latest authored emote words or shown/revised card title. */
+  /** The turn's closing words. */
+  closing?: string;
+  /** Latest shown or revised card title. */
   latest?: string;
   /** Latest app-written reply, used only when the Firstmate gave no words. */
   app?: string;
-  /** A card whose thread was answered only in words, when nothing else replied. */
-  thread?: string;
   /** Some action took effect. */
   acted?: boolean;
 };
 
 export function replyLine(facts: ReplyFacts): string | undefined {
-  return (
-    facts.latest ??
-    facts.app ??
-    facts.thread ??
-    (facts.acted ? AUTOMATIC_EMOTE_WORDS.nod : undefined)
-  );
+  const typed = facts.latest ?? facts.app ?? (facts.acted ? AUTOMATIC_EMOTE_WORDS.nod : undefined);
+  if (typed === undefined) return undefined;
+  // One line: every whitespace run, line breaks included, is one space.
+  const closing = facts.closing?.replace(/\s+/gu, " ").trim();
+  return closing || typed;
 }
 
 /** Starting work says what took effect, not just the work still to do. */

@@ -61,7 +61,7 @@ The repeated-runaway refusal (point 5 above) reads the error text the seat repor
 
 ## Close protocol
 
-The turn ends with an extremely concise response that is not shown to the user (captain decision fm3000-firstmate-empty-turn-instruction, revised 2026-09-03).
+The turn ends with one plain sentence of about 40 characters saying what took effect, which the captain reads as the reply line beside their message (captain decision fm3000-firstmate-empty-turn-instruction, revised 2026-09-03; shown since INF-772, the captain's Approve and build, `docs/composer.md` "The last turn").
 The exact token `done` is never required.
 Empty output is not a close.
 The turn ends on the model's natural stop; the host does not wait for a magic word.
@@ -78,7 +78,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Never remove that event or a failed turn goes silent again.
   A turn Pi recovers is not a failed turn: `PiRollingSession` holds a context overflow's `turn_end` until Pi says what it does next, drops it when a compaction ends ready to retry, and delivers it unchanged whenever Pi moves on without that retry.
   Auth classification lives ONLY in `src/shared/authFailure.ts`, keyed on real signal (401/403 in status positions, provider auth codes, Pi preflight text) - never substring-match arbitrary error or tool text ("token generation" and "authoritative" were real false positives).
-- The first mate's own turn is bounded (captain decision fm3000-firstmate-empty-turn-instruction, revised 2026-09-03): the cards-only contract ends a turn with an extremely concise response that is not shown to the user - never an empty turn ("write nothing" drove grok into a 21-minute silence loop) and never the exact token `done` (grok-4.6 fixated and looped on it).
+- The first mate's own turn is bounded (captain decision fm3000-firstmate-empty-turn-instruction, revised 2026-09-03): the contract ends a turn with one short sentence, the reply line since INF-772 - never an empty turn ("write nothing" drove grok into a 21-minute silence loop) and never the exact token `done` (grok-4.6 fixated and looped on it).
   The turn still ends on the model's natural stop; the instruction just requires some brief output.
   `FIRSTMATE_OPERATIONAL_THINKING_LEVEL` (`low`) is the Pi-native effort Pi actually sends on openai-responses / xAI; `FIRSTMATE_MAX_OUTPUT_TOKENS` still clamps `model.maxTokens` but xAI does not apply `max_output_tokens` to reasoning (Pi gap).
   `PI_PROVIDER_TIMEOUT_MS` is Pi's `retry.provider.timeoutMs`; a continuously streaming thinking loop can ignore it, so `FIRSTMATE_REQUEST_TIMEOUT_MS` aborts one uninterrupted inference internally (not a user-facing `inf:firstmate:abort`; `FIRSTMATE_TURN_TIMEOUT_MS` is only a loose last-resort backstop).

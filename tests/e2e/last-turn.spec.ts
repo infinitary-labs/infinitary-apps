@@ -5,13 +5,14 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, resizeWindow, settled } from "./layout";
 import {
   ANSWER_PROMPT_MARKER,
-  EMOTE_WORDS_PROMPT_MARKER,
   FILE_TASK_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
-  MOCK_EMOTE_WORDS,
+  MOCK_FM_DONE_TEXT,
+  SALUTE_PROMPT_MARKER,
   SLOW_CLOSE_PROMPT_MARKER,
   SPAWN_PROMPT_MARKER,
   TALL_ANSWER_PROMPT_MARKER,
+  WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
@@ -20,8 +21,9 @@ import { cardSurface } from "./stack";
 /**
  * The last turn above the input (docs/composer.md "The last turn"): the
  * captain's message shows at once, the Firstmate's bubble says it is working
- * while its turn runs and turns into its reply as the turn ends, a new
- * message replaces the pair, and the pair comes back after a relaunch.
+ * while its turn runs and turns into its reply as the turn ends - the turn's
+ * closing words, or the app's typed line when it closed with none (INF-772) -
+ * a new message replaces the pair, and the pair comes back after a relaunch.
  * Driven through the real Firstmate session and the mock provider.
  *
  * Every timing claim is an ORDER on the page's own log, never a window: the
@@ -132,8 +134,8 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
   await expect(input).toBeEnabled({ timeout: 30_000 });
   const inputBefore = await box(input);
 
-  await test.step("your message shows at once, and the Firstmate's bubble works, then replies", async () => {
-    const sent = `${EMOTE_WORDS_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`;
+  await test.step("your message shows at once, and the Firstmate's bubble works, then replies in its closing words", async () => {
+    const sent = `${SALUTE_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`;
     const from = await say(page, sent);
     await expect(bubbleWords(yourBubble(page))).toHaveText(sent);
     const seen = await saw(page, "mate:reply", from);
@@ -146,7 +148,7 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     const fall = seen.indexOf("busy:false", reply);
     expect(fall, said).toBeGreaterThan(reply);
     expect(seen.indexOf("mate:reply", fall), said).toBeGreaterThan(fall);
-    await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_EMOTE_WORDS);
+    await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_FM_DONE_TEXT);
   });
 
   await test.step("the pair sits above the input, and the input never moved", async () => {
@@ -158,9 +160,10 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     }
   });
 
-  await test.step("a new message replaces the pair, and a card's title is its reply", async () => {
-    const from = await say(page, ANSWER_PROMPT_MARKER);
-    await expect(bubbleWords(yourBubble(page))).toHaveText(ANSWER_PROMPT_MARKER);
+  const wordless = `${ANSWER_PROMPT_MARKER} ${WORDLESS_CLOSE_PROMPT_MARKER}`;
+  await test.step("a new message replaces the pair, and a turn that closed with no words replies with its card's title", async () => {
+    const from = await say(page, wordless);
+    await expect(bubbleWords(yourBubble(page))).toHaveText(wordless);
     await saw(page, "mate:reply", from);
     await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_ANSWER_TITLE);
     // The card on the stage keeps clear of the pair.
@@ -175,7 +178,7 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
     await launched.close();
     launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
     const again = launched.page;
-    await expect(bubbleWords(yourBubble(again))).toHaveText(ANSWER_PROMPT_MARKER);
+    await expect(bubbleWords(yourBubble(again))).toHaveText(wordless);
     await expect(mateBubble(again)).toHaveAttribute("data-state", "reply");
     await expect(bubbleWords(mateBubble(again))).toHaveText(MOCK_ANSWER_TITLE);
   });
@@ -205,10 +208,10 @@ test("under reduced motion a turn still shows working, then the reply, while the
   const { page } = launched;
   await recordOnPage(page);
   await settleReducedMotion(page);
-  const from = await say(page, `${EMOTE_WORDS_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`);
+  const from = await say(page, `${SALUTE_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`);
   const seen = await saw(page, "mate:reply", from);
   expect(seen, seen.join(" > ")).toContain("mate:working");
-  await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_EMOTE_WORDS);
+  await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_FM_DONE_TEXT);
   // The character never left its still frame: no state change from before
   // the captain typed until the reply was in place.
   expect(
@@ -222,17 +225,19 @@ test("a message sent mid-turn receives its own card answer, not the running turn
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 960, height: 640 });
   await recordOnPage(page);
-  const from = await say(page, `${EMOTE_WORDS_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`);
+  const from = await say(page, `${SALUTE_PROMPT_MARKER}, ${SLOW_CLOSE_PROMPT_MARKER}`);
   await saw(page, "emote", from);
-  // The first reply happened, but its model request is still running.
-  const sent = await say(page, ANSWER_PROMPT_MARKER);
+  // The first reply happened, but its model request is still running. The
+  // new message closes with no words, so its line is its own card's title.
+  const later = `${ANSWER_PROMPT_MARKER} ${WORDLESS_CLOSE_PROMPT_MARKER}`;
+  const sent = await say(page, later);
   await saw(page, "mate:reply", sent);
-  await expect(bubbleWords(yourBubble(page))).toHaveText(ANSWER_PROMPT_MARKER);
+  await expect(bubbleWords(yourBubble(page))).toHaveText(later);
   await expect(bubbleWords(mateBubble(page))).toHaveText(MOCK_ANSWER_TITLE);
   const kept = await page.evaluate(() => window.infinitary.conversation.lastTurn());
   writeFileSync(test.info().outputPath("mid-turn-state.json"), JSON.stringify(kept, null, 2));
   expect(kept).toMatchObject({
-    you: ANSWER_PROMPT_MARKER,
+    you: later,
     reply: { text: MOCK_ANSWER_TITLE },
   });
   await regionShot(page.locator("[data-last-turn]"), test.info().outputPath("mid-turn.png"));
@@ -273,13 +278,13 @@ test("both lines remain in sight with a tallest card at the smallest window", as
   );
 });
 
-test("starting work replies with what happened rather than echoing the task", async () => {
+test("starting work with no closing words replies with what happened rather than echoing the task", async () => {
   launched = await launchApp({ withMockProvider: true });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
   const title = "Promote alpha 0.1.31-alpha.46 to the stable release";
   await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
-  await askFirstmate(page, `${SPAWN_PROMPT_MARKER} ${title}`);
+  await askFirstmate(page, `${WORDLESS_CLOSE_PROMPT_MARKER}, ${SPAWN_PROMPT_MARKER} ${title}`);
   const turn = await page.evaluate(() => window.infinitary.conversation.lastTurn());
   await expect(bubbleWords(mateBubble(page))).toHaveText(turn?.reply?.text ?? "");
   await regionShot(page.locator("[data-last-turn]"), test.info().outputPath("started-reply.png"));
@@ -293,13 +298,13 @@ test("starting work replies with what happened rather than echoing the task", as
   expect(turn?.reply?.text).not.toBe(title);
 });
 
-test("filing work replies with the filed task instead of a generic acknowledgment", async () => {
+test("filing work with no closing words replies with the filed task instead of a generic acknowledgment", async () => {
   launched = await launchApp({ withMockProvider: true });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
   const title = "Build personal panels in isolation, swap in when ready";
   await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
-  await askFirstmate(page, `${FILE_TASK_PROMPT_MARKER} ${title}`);
+  await askFirstmate(page, `${WORDLESS_CLOSE_PROMPT_MARKER}, ${FILE_TASK_PROMPT_MARKER} ${title}`);
   const turn = await page.evaluate(() => window.infinitary.conversation.lastTurn());
   const task = await page.evaluate(
     async (title) =>

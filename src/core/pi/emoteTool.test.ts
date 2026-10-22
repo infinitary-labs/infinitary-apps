@@ -10,7 +10,7 @@ type AnyTool = {
   parameters: { properties: Record<string, { description?: string }>; required?: string[] };
   execute: (
     id: string,
-    params: { emote: (typeof FIRSTMATE_EMOTES)[number]; text?: string },
+    params: { emote: (typeof FIRSTMATE_EMOTES)[number] },
   ) => Promise<{
     content: Array<{ type: string; text?: string }>;
   }>;
@@ -27,72 +27,28 @@ describe("emote tool", () => {
     const request = vi.fn();
     const tool = piToolOf(createEmoteTool(request)) as unknown as AnyTool;
     for (const emote of FIRSTMATE_EMOTES) {
-      await tool.execute(`call-${emote}`, { emote, text: "All set" });
-      expect(request).toHaveBeenLastCalledWith(emote, "All set");
+      await tool.execute(`call-${emote}`, { emote });
+      expect(request).toHaveBeenLastCalledWith(emote);
       // The event the agent broadcasts is one the wire schema accepts.
-      expect(
-        fmEventSchema.safeParse({ type: "firstmate_emote", emote, text: "All set" }).success,
-        emote,
-      ).toBe(true);
+      expect(fmEventSchema.safeParse({ type: "firstmate_emote", emote }).success, emote).toBe(true);
     }
     expect(fmEventSchema.safeParse({ type: "firstmate_emote", emote: "shake" }).success).toBe(
       false,
     );
   });
 
-  it("refuses an emote with no words, requesting nothing", async () => {
-    // FI3-798, the captain: "let's make the words required".
+  it("takes no words: the emote is motion only", async () => {
+    // INF-772's plan, the captain's "drop them": what happened is the
+    // turn's closing sentence, never an emote's words.
     const request = vi.fn();
     const tool = piToolOf(createEmoteTool(request)) as unknown as AnyTool;
-    for (const text of [undefined, "", "   ", "\n\t", "\u0007"]) {
-      const result = await tool.execute("call-1", { emote: "salute", text });
-      expect(result.content[0]?.text, JSON.stringify(text)).toBe(
-        `Refused: an emote needs words that say what the captain should know about what happened, at most ${EMOTE_WORDS_MAX} characters. Nothing was shown.`,
-      );
-    }
-    expect(request).not.toHaveBeenCalled();
+    expect(Object.keys(tool.parameters.properties)).toEqual(["emote"]);
+    const result = await tool.execute("call-1", { emote: "salute" });
+    expect(request).toHaveBeenCalledWith("salute");
+    expect(result.content[0]?.text).toBe("Emote requested: salute");
   });
 
-  it("requires the words as a top-level parameter that says what they tell and their limit", () => {
-    const tool = piToolOf(createEmoteTool(vi.fn())) as unknown as AnyTool;
-    expect(tool.parameters.required).toEqual(expect.arrayContaining(["emote", "text"]));
-    // Top level, so a Claude seat is served it too (docs/claude-client.md).
-    const said = tool.parameters.properties.text?.description;
-    expect(said).toContain("what the captain should know about what happened");
-    expect(said).toContain(`${EMOTE_WORDS_MAX} characters`);
-    expect(said).toContain("never an answer");
-  });
-
-  it("passes the words through cleaned: one space for every run, line breaks included", async () => {
-    const request = vi.fn();
-    const tool = piToolOf(createEmoteTool(request)) as unknown as AnyTool;
-    const result = await tool.execute("call-1", {
-      emote: "ponder",
-      text: "  Let me\n\n look\u0007 \t again ",
-    });
-    expect(request).toHaveBeenCalledWith("ponder", "Let me look again");
-    expect(result.content[0]?.text).toBe(
-      'Emote requested: ponder, with the words "Let me look again"',
-    );
-  });
-
-  it("accepts words of exactly the limit and refuses one character more, requesting nothing", async () => {
-    const request = vi.fn();
-    const tool = piToolOf(createEmoteTool(request)) as unknown as AnyTool;
-    // Counted in characters, not code units: an emoji is one.
-    const atLimit = `${"a".repeat(EMOTE_WORDS_MAX - 1)}👋`;
-    await tool.execute("call-1", { emote: "aww", text: atLimit });
-    expect(request).toHaveBeenLastCalledWith("aww", atLimit);
-
-    request.mockClear();
-    const over = await tool.execute("call-2", { emote: "aww", text: `${atLimit}!` });
-    expect(request).not.toHaveBeenCalled();
-    expect(over.content[0]?.text).toBe(
-      `Refused: the words are ${EMOTE_WORDS_MAX + 1} characters; keep them to ${EMOTE_WORDS_MAX} or fewer. Nothing was shown.`,
-    );
-  });
-
-  it("holds the event to the same rule: clean words within the limit, or none", () => {
+  it("holds the host's own emote words to the shared rule: clean within the limit, or none", () => {
     const parses = (text: string) =>
       fmEventSchema.safeParse({ type: "firstmate_emote", emote: "salute", text }).success;
     expect(parses("On it")).toBe(true);

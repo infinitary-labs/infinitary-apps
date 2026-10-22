@@ -637,7 +637,7 @@ export class FirstmateAgent {
   private turnCanCreate = false;
   /** The capture guarantee: asks open per turn, attached by tools or the host. */
   private readonly asks: AskCapture;
-  /** The closing assistant text of the running turn (a fallback question's answer). */
+  /** The closing assistant text of the running turn: its reply line, a card-thread answer, a fallback question's answer. */
   private lastTurnText: string | undefined;
   private deliveredThisTurn = false;
   /** What the running turn did that can be its reply line (./replyLine). */
@@ -2309,11 +2309,10 @@ export class FirstmateAgent {
         });
         return result;
       }),
-      createEmoteTool((emote, text) => {
+      createEmoteTool((emote) => {
         this.deliveredThisTurn = true;
-        this.replyFacts.latest = text;
         this.noteDelivery({ outcome: "action", kind: "reaction", tool: "emote" });
-        this.options.broadcastEvent({ type: "firstmate_emote", emote, text });
+        this.options.broadcastEvent({ type: "firstmate_emote", emote });
       }),
       ...createCrewTools(delegate),
       // The graph (task-system P2): file on request by default or start when ready,
@@ -3911,13 +3910,8 @@ export class FirstmateAgent {
     );
     // The reply line goes out before the busy signal falls, so the
     // working line turns straight into it; an answer in a card's replies
-    // is an answer on that card.
-    if (!failed && threadAnswer && answered.size > 0) {
-      const cards = this.options.supervisor.cardsSnapshot();
-      const title = cards.find((card) => card.id === [...answered].at(-1))?.title;
-      if (title) this.replyFacts.thread = title;
-      this.replyFacts.acted = true;
-    }
+    // is an answer on that card, and its words are the line too.
+    if (!failed && threadAnswer && answered.size > 0) this.replyFacts.acted = true;
     this.replyToLastMessage(
       [...this.readThisTurn],
       failed ? plainProblem(this.turnError, cutOff ? { cutOff } : undefined) : undefined,
@@ -3953,8 +3947,8 @@ export class FirstmateAgent {
   /**
    * The reply line beside the captain's newest message (docs/composer.md
    * "The last turn"), when the turn that just ended read it: the problem's
-   * plain words for a turn that failed, else the line its facts choose
-   * (./replyLine). It is kept beside the message for the next launch and
+   * plain words for a turn that failed, else the line its closing words
+   * and facts choose (./replyLine). It is kept beside the message for the next launch and
    * sent to the window. A turn that did not read the newest message, or
    * where nothing took effect, leaves the line as it is.
    */
@@ -4239,6 +4233,9 @@ export class FirstmateAgent {
     this.decisions.noteSessionEvent(event);
     if (event.type === "turn_closed") {
       if (event.text) this.lastTurnText = event.text;
+      // The reply line takes the words of the turn's last model request,
+      // and only after the newest message was read (./replyLine).
+      if (this.running) this.replyFacts.closing = event.text;
       return;
     }
     if (event.type === "tool_start") this.turnTools.push(event.toolName);

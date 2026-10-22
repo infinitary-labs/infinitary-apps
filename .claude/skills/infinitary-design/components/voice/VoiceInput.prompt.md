@@ -48,6 +48,7 @@ Each line's words sit inside quotation marks drawn in `--fg-3`, 1 px from the wo
 Both are centered on the axis the character and the input share.
 The captain's words come first, `--text-sm` in `--fg-2` on an 18 px row (the captain's pick of grey over `--captain` violet); 4 px below, the reply is the same `--text-sm` in `--fg-1` on an 18 px row, 40 px in all.
 A message of pictures alone reads "A picture" with no quotation marks, since it said no words.
+The reply is the first mate's closing sentence, about 40 characters saying what took effect (INF-772), and the app's own words, such as a card's title or "Started:" with the task's title, when it wrote none.
 Each line takes at most 80% of the width, and its words are cut with an ellipsis inside the marks.
 While the first mate works its line shows three 4 px `--hot` dots (ember, the working color a busy crewmate and a busy row's dot share), 3 px apart, each brightening in turn over 1.2 s, and "Working…" in `--fg-3`, with no quotation marks; a failed turn's words are `--danger` inside the `--fg-3` marks.
 A new pair rises 6 px into place over `--dur-med` as the old one leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`; under reduced motion every move is a cut and the dots stand still.

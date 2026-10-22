@@ -355,8 +355,8 @@ export function extractTurnsFromJsonl(
 
   for (const turn of turns) {
     // G5: the turn closed with some assistant text. The close used to
-    // mandate the exact token `done`; it now asks for an extremely concise
-    // response that is not shown to the user. Empty output is still not a
+    // mandate the exact token `done`; it now asks for one short sentence
+    // the captain reads beside their message. Empty output is still not a
     // close (that was the 21-minute silence loop).
     const lastLine = turn.assistant.trim().split(/\n/).pop() ?? "";
     turn.doneClose = lastLine.trim().length > 0;

@@ -53,7 +53,7 @@ The floor is code; the ceiling is the prompt, the index, the about line and the 
 
 ## Answer delivery
 
-A captain message the first mate read and then did nothing visible about is a hidden answer: its closing words are never a card, so the captain sees no sign it was heard.
+A captain message the first mate read and then did nothing visible about is a hidden answer: its closing words are never a card, and they become the reply line only when something took effect (`docs/composer.md` "The last turn"), so the captain sees no sign it was heard.
 The host checks each message for one thing - **at least one action took effect after the first mate read it** - and never whether the answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
 
 What counts, recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect:

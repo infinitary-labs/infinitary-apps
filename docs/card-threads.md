@@ -69,6 +69,7 @@ A card already on the stage that its crewmate revises keeps showing what it show
 A card awaiting an answer never collapses into its task record while it waits.
 
 **The first mate's own cards** keep working as they did (the captain's Q3 A): they go up and redraw at once, its turn's end is its close-out, and its closing words are its thread answer - for the reply its turn was about and, since contract v4.14, for one it read mid-turn - unless it revised the card, whose `reply` is then its answer.
+Those closing words are one sentence, and the same words show as its reply line beside the captain's message (INF-772, the captain's "both places"; `docs/composer.md` "The last turn").
 When the answer needs a crewmate, that crewmate shows it on its own card; the first mate answers the thread with one line naming it, never a new card.
 
 **The hidden state lives in the core** (the captain's Q4 A): `Card.awaiting` on the card snapshot - `answer` while the captain's line is the newest on the thread, `close-out` while the author has written and not yet closed out, absent on a card the stage shows; a card waiting for its first close-out is off the stage, while a reply with other cards removes it until the answer; kept replies and legacy stamped cards remain on it.

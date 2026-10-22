@@ -401,28 +401,33 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     }
     // The null outcome is first-class: an op wake may need nothing.
     expect(core).toContain(
-      "An operational wake that needs none of them gets no tool calls and ends with the same concise non-empty response.",
+      "An operational wake that needs none of them gets no tool calls and ends with the same short sentence, which nobody reads.",
     );
   });
 
-  it("keeps the cards-only output contract and a brief non-empty close", () => {
-    expect(core).toContain("cards you emit with emit_card, and a quiet activity feed");
-    expect(core).toContain("Plain assistant text is never shown to anyone");
+  it("keeps the cards-only output contract and closes with one short sentence the captain reads", () => {
+    // INF-772's plan, the captain's Approve and build: the closing sentence is
+    // the line beside the captain's message, about 40 characters by
+    // instruction alone, what took effect and never the answer.
     expect(core).toContain(
-      "End every turn with an extremely concise non-empty response after tool calls",
+      "cards you emit with emit_card, a quiet activity feed, and your closing sentence beside their message",
     );
-    expect(core).toContain("It is hidden from the user");
-    expect(core).toContain("extremely concise non-empty response");
+    expect(core).toContain("Other plain assistant text is never shown to anyone");
     expect(core).toContain(
-      "It is hidden from the user, not a card action; a turn ends with this response, never close_card.",
+      "End every turn after tool calls with one plain sentence of about 40 characters saying what took effect this turn",
+    );
+    expect(core).toContain("an answer goes on a card, never here");
+    expect(core).toContain("in your card's thread when the turn answers a reply under it");
+    expect(core).toContain(
+      "It is not a card action; a turn ends with this sentence, never close_card.",
     );
     expect(core).toContain(
       "A card emitted as this turn's answer is current, not obsolete, and must not be withdrawn this turn.",
     );
     expect(core).toContain(
-      "Zero cards plus this response is correct whenever nothing needs the captain",
+      "Zero cards plus this sentence is correct whenever nothing needs the captain",
     );
-    expect(core).toContain("call emote before it");
+    expect(core).toContain("call emote before it for one reaction, motion only");
     expect(core).toContain("never instead of a required card or action");
     // Revises infinitary-firstmate-empty-turn-instruction option B: no magic token,
     // and do not revert to "write nothing" (the 21-minute silence loop).

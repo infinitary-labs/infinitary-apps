@@ -2888,15 +2888,16 @@ export const KNOWLEDGE_RETIRE_PROMPT_MARKER = "retire these knowledge entries";
 export const SLOW_CLOSE_PROMPT_MARKER = "and take your time closing";
 export const MOCK_SLOW_CLOSE_MS = 2_500;
 /**
- * The emote's words (docs/composer.md "The last turn"): the mock Firstmate
- * answers a turn carrying EMOTE_WORDS_PROMPT_MARKER with one emote call, a
- * salute with MOCK_EMOTE_WORDS, which become the turn's reply line. Beside
+ * The reply line (docs/composer.md "The last turn"): the mock Firstmate
+ * answers a turn carrying SALUTE_PROMPT_MARKER with one wordless salute, and
+ * closes with MOCK_FM_DONE_TEXT, which becomes the turn's reply line. Beside
  * SLOW_CLOSE_PROMPT_MARKER the turn stays open after the call, so the
- * Firstmate's bubble works a while before the reply. Every emote the mock
- * asks for carries words, as the tool requires.
+ * Firstmate's bubble works a while before the reply. A turn carrying
+ * WORDLESS_CLOSE_PROMPT_MARKER closes with no words after its tool calls,
+ * so the line is the app's typed fallback.
  */
-export const EMOTE_WORDS_PROMPT_MARKER = "salute me with a few words";
-export const MOCK_EMOTE_WORDS = "On it";
+export const SALUTE_PROMPT_MARKER = "salute me";
+export const WORDLESS_CLOSE_PROMPT_MARKER = "and close without words";
 /**
  * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers each of
  * these with ONE personalize call and no card, the way the contract says.
@@ -5008,7 +5009,7 @@ export async function startMockProvider(
                 },
               ]);
             } else {
-              streamToolCalls([{ name: "emote", args: { emote: "nod", text: "Got it" } }]);
+              streamToolCalls([{ name: "emote", args: { emote: "nod" } }]);
             }
             return;
           }
@@ -5019,7 +5020,7 @@ export async function startMockProvider(
             latestUserTail.includes("[user]") &&
             latestUserTail.includes(REACT_PROMPT_MARKER)
           ) {
-            streamToolCalls([{ name: "emote", args: { emote: "nod", text: "Got it" } }]);
+            streamToolCalls([{ name: "emote", args: { emote: "nod" } }]);
             return;
           }
           // A captain message the mock answers with closing words only: no
@@ -5901,8 +5902,8 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(EMOTE_WORDS_PROMPT_MARKER)) {
-            streamToolCalls([{ name: "emote", args: { emote: "salute", text: MOCK_EMOTE_WORDS } }]);
+          if (!hasToolResults && latestUserTail.includes(SALUTE_PROMPT_MARKER)) {
+            streamToolCalls([{ name: "emote", args: { emote: "salute" } }]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(FORGET_PROMPT_MARKER)) {
@@ -5918,6 +5919,10 @@ export async function startMockProvider(
                 },
               },
             ]);
+            return;
+          }
+          if (hasToolResults && latestUserTail.includes(WORDLESS_CLOSE_PROMPT_MARKER)) {
+            streamText("");
             return;
           }
           if (hasToolResults && latestUserTail.includes(SLOW_CLOSE_PROMPT_MARKER)) {

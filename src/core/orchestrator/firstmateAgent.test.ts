@@ -525,9 +525,7 @@ function reactingSeats(
         reacting.add(opened);
         const react = (text: string) => {
           if (parseServedInput(text)?.some((segment) => segment.kind === "user")) {
-            void spec.tools
-              .find((tool) => tool.name === "emote")
-              ?.run({ emote: "nod", text: "Got it" });
+            void spec.tools.find((tool) => tool.name === "emote")?.run({ emote: "nod" });
           }
         };
         const pending = new Map<string, string>();
@@ -2383,19 +2381,9 @@ describe("FirstmateAgent", () => {
     ]);
     expect(tools.some((tool) => tool.name === "consult")).toBe(false);
     const emote = tools.find((tool) => tool.name === "emote");
-    const emoteResult = await emote?.execute(
-      "c3",
-      { emote: "ponder", text: "Looking into it" },
-      undefined,
-      undefined,
-      {},
-    );
+    const emoteResult = await emote?.execute("c3", { emote: "ponder" }, undefined, undefined, {});
     expect(emoteResult?.content[0]?.text).toContain("Emote requested: ponder");
-    expect(events).toContainEqual({
-      type: "firstmate_emote",
-      emote: "ponder",
-      text: "Looking into it",
-    });
+    expect(events).toContainEqual({ type: "firstmate_emote", emote: "ponder" });
   });
 
   it("lists surfaces for catalog actions and retains standing instructions in personalize", async () => {
@@ -7491,7 +7479,7 @@ describe("FirstmateAgent answer delivery", () => {
         task_id: "t58",
       }),
     ).rejects.toThrow(/revise card card-t58-1/);
-    await tools.get("emote")?.execute("e1", { emote: "nod", text: "Got it" });
+    await tools.get("emote")?.execute("e1", { emote: "nod" });
     await finish(f, "SECRET closing words <script>alert(1)</script>");
     await drained(f.session, 2);
     expect(states(f)).toEqual(["retrying"]);
@@ -7604,7 +7592,7 @@ describe("FirstmateAgent answer delivery", () => {
     await drained(f.session, 2);
     expect(f.session.prompts[1]).toContain("[user]\nsecond question");
     expect(retries(f)).toEqual([]);
-    await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "nod", text: "Got it" });
+    await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "nod" });
     await finish(f);
     expect(states(f)).toEqual(["covered", "covered"]);
   });
@@ -7676,7 +7664,7 @@ describe("FirstmateAgent answer delivery", () => {
     await f.agent.converse("tell the crew to use cursors");
     expect(f.session.steers).toEqual([]);
     expect(new InboxStore(f.db).allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
-    await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "nod", text: "Got it" });
+    await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "nod" });
     await finish(f);
     expect(states(f)).toEqual(["covered", "pending"]);
     // Still open: the turn that serves it attaches it to the work it acts on.
@@ -7711,13 +7699,12 @@ describe("FirstmateAgent answer delivery", () => {
 });
 
 /**
- * The emote's words (FI3-622's plan, contract v4.64; required since FI3-798):
- * the Firstmate's own emote carries a few plain words for the line above the
- * character. They cross on the same event; a call refused for its length or
- * for having no words plays nothing and takes no action. The host's own
- * replies carry the app's own words (FI3-1077), marked automatic.
+ * The emote (INF-772's plan, the captain's "drop them"): motion only, with
+ * no words of the Firstmate's own; it is an action that covers a message.
+ * The host's own replies carry the app's own words (FI3-1077), marked
+ * automatic, as the typed line's fallback.
  */
-describe("FirstmateAgent emote words", () => {
+describe("FirstmateAgent emote", () => {
   const emoteEvents = (events: FmEvent[]) =>
     events.filter((event) => event.type === "firstmate_emote");
   const localSeat = {
@@ -7727,42 +7714,18 @@ describe("FirstmateAgent emote words", () => {
     source: "setting" as const,
   };
 
-  it.each([
-    ["refused for its length", "x".repeat(41), true],
-    ["refused for having no words", "  ", true],
-    ["with words", "On it", false],
-  ])(
-    "counts an emote %s as an action only when it plays (local seat's no-answer guard)",
-    async (_, text, refused) => {
-      const f = setup({ silent: true });
-      await f.agent.setLocalOrchestrator(localSeat);
-      await f.agent.converse("ship the meter fix");
-      const result = await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "salute", text });
-      expect(result?.content[0]?.text?.startsWith("Refused:")).toBe(refused);
-      expect(emoteEvents(f.events)).toHaveLength(refused ? 0 : 1);
-      f.session.emitTurnEnd("On it.");
-      f.session.resolveNextPrompt();
-      await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
-      // Nothing played, so the turn showed no answer and took no action.
-      expect(Boolean(new CardStore(f.db).get("card-fm-turn-failure"))).toBe(refused);
-      f.agent.dispose();
-      f.db.close();
-    },
-  );
-
-  it.each([
-    ["covers it with an emote that carries words", "On it", "covered"],
-    ["retries it after an emote refused for its length", "x".repeat(41), "retrying"],
-    ["retries it after an emote refused for having no words", "", "retrying"],
-  ])("answer delivery %s", async (_, text, delivery) => {
+  it("plays with no words and counts as an action (local seat's no-answer guard)", async () => {
     const f = setup({ silent: true });
-    await f.agent.converse("thanks, carry on");
-    await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "salute", text });
-    f.session.emitTurnEnd("Noted.");
+    await f.agent.setLocalOrchestrator(localSeat);
+    await f.agent.converse("ship the meter fix");
+    const result = await toolsOf(f.specs).get("emote")?.execute("e1", { emote: "salute" });
+    expect(result?.content[0]?.text).toBe("Emote requested: salute");
+    expect(emoteEvents(f.events)).toEqual([{ type: "firstmate_emote", emote: "salute" }]);
+    f.session.emitTurnEnd("On it.");
     f.session.resolveNextPrompt();
-    await vi.waitFor(() =>
-      expect(f.tasks.listAsks().map((ask) => ask.delivery)).toEqual([delivery]),
-    );
+    await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
+    expect(new CardStore(f.db).get("card-fm-turn-failure")).toBeUndefined();
+    expect(f.tasks.listAsks().map((ask) => ask.delivery)).toEqual(["covered"]);
     f.agent.dispose();
     f.db.close();
   });
@@ -7804,16 +7767,18 @@ describe("FirstmateAgent emote words", () => {
 });
 
 /**
- * The reply line beside the captain's last message (FI3-1089's plan;
- * docs/composer.md "The last turn"): chosen from what the turn did, sent
- * before the busy signal falls so the working line turns straight into it,
- * and kept beside the message for the next launch. The scripted model is
- * silent here, so each test says what the turn did.
+ * The reply line beside the captain's last message (INF-772's plan;
+ * docs/composer.md "The last turn"): the turn's closing words when
+ * something took effect, else the typed line chosen from what the turn did,
+ * sent before the busy signal falls so the working line turns straight into
+ * it, and kept beside the message for the next launch. The scripted model
+ * closes with no words unless a test gives some, so each test says what the
+ * turn did and the typed fallback shows.
  */
 describe("FirstmateAgent reply line", () => {
   type Fixture = ReturnType<typeof setup>;
-  const finish = async (f: Fixture) => {
-    f.session.emitTurnEnd("Closing words that never reach the window.");
+  const finish = async (f: Fixture, closing = "") => {
+    f.session.emitTurnEnd(closing);
     f.session.resolveNextPrompt();
     await tick();
   };
@@ -7833,31 +7798,24 @@ describe("FirstmateAgent reply line", () => {
     standalone: true,
   });
 
-  it.each(["none", "before", "after"])(
-    "states the filed task key and title unless authored words exist (%s)",
-    async (authored) => {
+  it.each(["none", "closing"])(
+    "states the filed task key and title unless the turn closed with words (%s)",
+    async (closing) => {
       const f = setup({ silent: true });
       await f.agent.converse("file a task to build personal panels in isolation");
       const tools = toolsOf(f.specs);
-      if (authored === "before")
-        await tools
-          .get("emote")
-          ?.execute("words", { emote: "tuck", text: "I filed the panel build" });
       const title = "Build personal panels in isolation, swap in when ready";
       await tools.get("create_task")?.execute("file", {
         title,
         goal: "Build panels in isolation",
         user_words: "file a task to build personal panels in isolation",
       });
-      if (authored === "after")
-        await tools
-          .get("emote")
-          ?.execute("words", { emote: "tuck", text: "I filed the panel build" });
       const filed = f.tasks.list().find((task) => task.title === title);
       expect(filed?.status).toBe("open");
-      await finish(f);
+      const words = `Filed ${filed?.key} for the panel build.`;
+      await finish(f, closing === "closing" ? words : "");
       expect(f.tasks.lastTurn()?.reply).toEqual({
-        text: authored !== "none" ? "I filed the panel build" : `Filed ${filed?.key}: ${title}`,
+        text: closing === "closing" ? words : `Filed ${filed?.key}: ${title}`,
         eligibility: "completed",
       });
     },
@@ -8014,33 +7972,22 @@ describe("FirstmateAgent reply line", () => {
     },
   );
 
-  it.each(["before", "after"])("keeps authored words %s starting work", async (order) => {
+  it("puts the closing words ahead of every app-written reply", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("start the release");
     const tools = toolsOf(f.specs);
-    const emote = () =>
-      tools.get("emote")?.execute("words", { emote: "salute", text: "Started the release" });
-    if (order === "before") await emote();
     await tools.get("spawn_crewmate")?.execute("spawn", {
       title: "Promote the alpha",
       goal: "Promote the alpha to stable",
       user_words: "start the release",
     });
-    if (order === "after") await emote();
-    await finish(f);
+    await finish(f, "Started the alpha's promotion.");
     expect(f.tasks.lastTurn()?.reply).toEqual({
-      text: "Started the release",
+      text: "Started the alpha's promotion.",
       eligibility: "completed",
     });
-  });
 
-  it("keeps authored words when a later app acknowledgment takes effect", async () => {
-    const f = setup({ silent: true });
     await f.agent.converse("remember I squash merges");
-    const tools = toolsOf(f.specs);
-    await tools
-      .get("emote")
-      ?.execute("words", { emote: "tuck", text: "I noted your merge choice" });
     await tools.get("record_knowledge")?.execute("note", {
       action: "publish",
       request_id: "note",
@@ -8049,11 +7996,65 @@ describe("FirstmateAgent reply line", () => {
       text: "Always squash-merge",
       reason: "captain said so",
     });
+    await finish(f, "Kept your squash-merge rule.");
+    expect(heard(f)).toEqual([
+      "busy:true",
+      "reply:Started the alpha's promotion.",
+      "busy:false",
+      "busy:true",
+      "reply:Kept your squash-merge rule.",
+      "busy:false",
+    ]);
+  });
+
+  it("takes the words of the turn's last request, never ones written before the newest message was read", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("salute me");
+    const tools = toolsOf(f.specs);
+    await tools.get("emote")?.execute("e1", { emote: "salute" });
+    f.session.holdSteers();
+    await f.agent.converse("how is the alpha?");
+    // A request that closed before the new message was read.
+    f.session.emitTurnEnd("Saluted you.");
+    f.session.readSteers();
+    await tools.get("emit_card")?.execute("c1", note("alpha", "The alpha is cut"));
     await finish(f);
+    expect(f.tasks.lastTurn()).toEqual({
+      you: "how is the alpha?",
+      reply: { text: "The alpha is cut", eligibility: "completed" },
+    });
+  });
+
+  it("shows no closing words when nothing took effect, and the answer check retries", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("what is PR 58's state?");
+    await finish(f, "PR 58 merged an hour ago.");
+    await drained(f.session, 2);
+    expect(f.tasks.lastTurn()).toEqual({ you: "what is PR 58's state?", reply: null });
+    expect(f.tasks.listAsks().at(-1)?.delivery).toBe("retrying");
+  });
+
+  it("shows the closing words of a reply under its own card on the line and in the thread", async () => {
+    // INF-772, the captain's answer: "The closing words show in both places".
+    const f = setup({ silent: true });
+    const cardId = f.supervisor.addFirstmateCard({
+      title: "Pick one",
+      body: "<p>A or B.</p>",
+      actions: [{ id: "a", label: "A", default: true }],
+    });
+    f.supervisor.replyToCard(cardId, "why A?");
+    await drained(f.session, 1);
+    await finish(f, "A keeps the queue in order.");
     expect(f.tasks.lastTurn()?.reply).toEqual({
-      text: "I noted your merge choice",
+      text: "A keeps the queue in order.",
       eligibility: "completed",
     });
+    expect(
+      f.supervisor
+        .cardThread(cardId)
+        .messages.filter((message) => message.who === "firstmate")
+        .map((message) => message.text),
+    ).toEqual(["A keeps the queue in order."]);
   });
 
   it("is the title of the card the turn showed, sent before busy falls and kept beside the message", async () => {
@@ -8071,14 +8072,17 @@ describe("FirstmateAgent reply line", () => {
     }
   });
 
-  it("uses a later emote after a card, and app words after keeping a note", async () => {
+  it("keeps the card's title over a later wordless emote, and app words after keeping a note", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("show me the alpha and salute");
     const tools = toolsOf(f.specs);
     await tools.get("emit_card")?.execute("c1", note("alpha", "The alpha is cut"));
-    await tools.get("emote")?.execute("e1", { emote: "salute", text: "On it" });
+    await tools.get("emote")?.execute("e1", { emote: "salute" });
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply).toEqual({ text: "On it", eligibility: "completed" });
+    expect(f.tasks.lastTurn()?.reply).toEqual({
+      text: "The alpha is cut",
+      eligibility: "completed",
+    });
 
     await f.agent.converse("remember that I always squash-merge");
     await toolsOf(f.specs).get("record_knowledge")?.execute("r1", {
@@ -8101,12 +8105,12 @@ describe("FirstmateAgent reply line", () => {
     notifyProse(f.db, f.agent, "[fm-op] earlier work", "agent");
     await drained(f.session, 1);
     const tools = toolsOf(f.specs);
-    await tools.get("emote")?.execute("old", { emote: "tick", text: "Merged" });
+    await tools.get("emote")?.execute("old", { emote: "tick" });
     f.session.holdSteers();
     await f.agent.converse("what is next?");
     // The step already running is still about earlier work, even though
     // the message has arrived. Only the model's read witness resets it.
-    await tools.get("emote")?.execute("old-step", { emote: "salute", text: "On it" });
+    await tools.get("emote")?.execute("old-step", { emote: "salute" });
     f.session.readSteers();
     await tools.get("emit_card")?.execute("answer", note("next", "The next task"));
     await finish(f);
@@ -8117,7 +8121,7 @@ describe("FirstmateAgent reply line", () => {
 
     const g = setup({ silent: true });
     await g.agent.converse("salute then show a card");
-    await toolsOf(g.specs).get("emote")?.execute("first", { emote: "salute", text: "On it" });
+    await toolsOf(g.specs).get("emote")?.execute("first", { emote: "salute" });
     await toolsOf(g.specs).get("emit_card")?.execute("last", note("answer", "The latest answer"));
     await finish(g);
     expect(g.tasks.lastTurn()?.reply).toEqual({
@@ -8129,7 +8133,7 @@ describe("FirstmateAgent reply line", () => {
   it("does not reuse an earlier reply when a read message receives no action", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("first question");
-    await toolsOf(f.specs).get("emote")?.execute("old", { emote: "salute", text: "On it" });
+    await toolsOf(f.specs).get("emote")?.execute("old", { emote: "salute" });
     await f.agent.converse("second question");
     await finish(f);
     await drained(f.session, 2);
@@ -8141,7 +8145,7 @@ describe("FirstmateAgent reply line", () => {
   it("keeps a late unread message open with no earlier turn's reply or task attachment", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("first question");
-    await toolsOf(f.specs).get("emote")?.execute("old", { emote: "salute", text: "On it" });
+    await toolsOf(f.specs).get("emote")?.execute("old", { emote: "salute" });
     f.session.holdSteers();
     await f.agent.converse("late question");
     const late = f.tasks.listAsks().at(-1);

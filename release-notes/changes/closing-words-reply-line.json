@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "closing-words-reply-line",
+      "kind": "improvement",
+      "title": "Firstmate's reply says what it did, in its own words",
+      "body": "After each message, the line under your words is now Firstmate's own short sentence about what took effect, such as the work it started or the card it showed. When Firstmate writes nothing, the reply falls back to the app's own words, such as Started with the task's title. When you reply under one of Firstmate's cards, the same sentence answers you in that card's replies.",
+      "area": "message-box",
+      "picture": {
+        "dark": "closing-words-reply-line-dark.webp",
+        "light": "closing-words-reply-line-light.webp",
+        "alt": "Firstmate's own sentence about the work it started, under the captain's message"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

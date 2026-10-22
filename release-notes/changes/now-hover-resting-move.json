@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "now-hover-resting-move",
+      "reason": "The rapid Tasks row sweep journey ends with one resting move inside the last row, because Chromium's synthetic mouse on Linux can lose a rapid gesture's final move; test only, nothing a person notices."
+    }
+  ]
+}

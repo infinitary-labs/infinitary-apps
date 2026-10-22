@@ -136,6 +136,10 @@ test("rapid Tasks row sweeps leave unchanged offscreen geometry alone", async ()
         const [from, to] = pass % 2 === 0 ? [first, last] : [last, first];
         await slidePointer(page, from, to, sweepRows.length - 1);
       }
+      // Chromium's synthetic mouse on Linux can lose the final move of a rapid
+      // gesture on its way into the panel's frame (INF-823). One resting move
+      // inside the last row puts the pointer there; every check below stands.
+      await slidePointer(page, last, { x: last.x + 3, y: last.y }, 1);
       // A real summary and the echoed highlight, not just native CSS :hover,
       // must reach the final row before the reading is complete.
       await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, last.id);

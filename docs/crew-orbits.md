@@ -335,7 +335,9 @@ Typing or talking does not by itself cancel the slowdown or the pause.
 The crew canvases ignore the pointer, so pointing is a hit test (`crew/hover.ts`, pure) against the frames the orbit already returns, run on pointer movement only: a crewmate drifting under a still pointer triggers neither the pause nor the summary.
 The pointer is on a crewmate within half its glyph plus 8 px of its painted centre (never less than 18 px); the nearest wins, the one nearer the camera when equally near; it stays on that crewmate out to 1.6 times that radius, and a neighbour takes over only once the pointer has left the held one's own radius.
 A departing crewmate, or a spark not yet unfolded, is not a target.
-The near crew canvas publishes the crewmates that have arrived and orbit each plane, by task id, as `data-plane-crew` (compare-before-write), so a journey's `pointAtCrewmate` sweeps only once the crewmate it wants is there to find.
+The near crew canvas publishes the crewmates that have arrived and orbit each plane, by task id, as `data-plane-crew`, and how far the planes have opened out as `data-plane-blend`, which reads `1` once they have settled in (both compare-before-write).
+A part of a task with parts takes its seat at its node only once the planes have settled, and is listed on its plane until then.
+So a journey's `pointAtCrewmate` waits for settled planes and the crewmate it wants, then points at a seated part's name or sweeps the orbit for any other crewmate.
 The pause begins the moment a crewmate is acquired.
 It ends when the pointer leaves it, on Esc (which keeps it closed until the pointer has left that crewmate), under a card, or when the crewmate itself is gone.
 It works at every crew size and on all three orbits, independent of the model-name switch.

@@ -130,6 +130,19 @@ async function crewOnPlanes(page: Page): Promise<string[][]> {
   return (placed ?? "").split("|").map((plane) => plane.split(" ").filter(Boolean));
 }
 
+/**
+ * Whether the planes have settled in. A first crewmate's arrival starts them
+ * opening out over a few seconds of stage time; until they have, the orbits
+ * are smaller than the ones the sweep follows, and a part of a task with
+ * parts has no seat at its node yet, so it is still listed on its plane.
+ */
+async function planesSettled(page: Page): Promise<boolean> {
+  const blend = await page
+    .locator('canvas[data-crew-layer="near"]')
+    .getAttribute("data-plane-blend");
+  return blend === "1";
+}
+
 /** The task ids a task with parts draws at its own node, off every orbit. */
 async function crewAtNodes(page: Page): Promise<string[]> {
   const seated = await page
@@ -183,7 +196,11 @@ async function pointAtSeatedCrewmate(
  * names can reach the orbit a moment later, so the sweep never begins on an
  * orbit that has nobody to find (INF-745). A part of a task with parts is
  * drawn at its own node instead, off every orbit, so the pointer goes to it
- * there (INF-870). Works at every crew size, labels or not, for a crewmate on
+ * there (INF-870). Either is read only once the planes have settled in: a
+ * part that has just started is listed on its plane until then, and glides
+ * to its seat while a sweep that began early looks for it on the orbit
+ * (INF-885). The helper moves no pointer while it waits, so the stage keeps
+ * its full speed. Works at every crew size, labels or not, for a crewmate on
  * an orbit, and returns the task id the pointer is on and where the pointer
  * was left resting on it.
  */
@@ -196,12 +213,13 @@ export async function pointAtCrewmate(
   await expect
     .poll(
       async () => {
+        if (!(await planesSettled(page))) return false;
         placed = await crewOnPlanes(page);
         seated = await crewAtNodes(page);
         return [...placed.flat(), ...seated].some((id) => !wanted || id === wanted);
       },
       {
-        message: `Crewmate${wanted ? ` ${wanted}` : ""} is not placed on the orbit`,
+        message: `Crewmate${wanted ? ` ${wanted}` : ""} is not placed on the settled orbit or at its node`,
         timeout: 30_000,
       },
     )

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "point-after-planes-settle",
+      "reason": "The journeys' pointer helper waits for the crew's planes to settle before choosing between a part's seat and the orbit, so a part that has just started is found at its node; test only, nothing a person notices."
+    }
+  ]
+}

@@ -506,6 +506,8 @@ const api: FirstmateApi = {
   },
   integrations: {
     list: () => invoke("inf:integrations:list"),
+    addMcp: (server) =>
+      readableRequest("inf:integrations:add", () => invoke("inf:integrations:add", server)),
     configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
     remove: (id) => invoke("inf:integrations:remove", id),
     check: (id) => invoke("inf:integrations:check", id),

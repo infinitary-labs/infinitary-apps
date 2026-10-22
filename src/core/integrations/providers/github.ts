@@ -67,12 +67,11 @@ export function githubIntegration(options: GithubIntegrationOptions): Integratio
   const host = INTEGRATIONS_SIGN_IN_HOST;
   return {
     kind: "github",
-    actions: ACTIONS,
     keepsAsks: true,
     connections: () => {
       const health = options.signIns.stateOf(host);
       if (health === undefined) return [];
-      return [{ id: GITHUB_ID, account: options.signIns.loginOf(host), health }];
+      return [{ id: GITHUB_ID, account: options.signIns.loginOf(host), health, actions: ACTIONS }];
     },
     check: () => options.signIns.checkNow(host),
     remove: () => options.signIns.signOut(host),

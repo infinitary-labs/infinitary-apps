@@ -11,6 +11,9 @@ export type {
   IntegrationBinding,
   IntegrationCaller,
   IntegrationConnection,
+  IntegrationEventItem,
+  IntegrationEventSpec,
+  IntegrationLook,
   IntegrationSecretSlot,
 } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
@@ -19,6 +22,7 @@ export {
   type GithubIntegrationOptions,
   githubIntegration,
 } from "./providers/github";
+export { type McpIntegrationOptions, mcpIntegration } from "./providers/mcp/mcpIntegration";
 export {
   FileIntegrationSecrets,
   type IntegrationSecrets,

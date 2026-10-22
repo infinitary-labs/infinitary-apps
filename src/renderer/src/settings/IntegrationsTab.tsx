@@ -3,17 +3,18 @@ import {
   INTEGRATION_EFFECT_WORDS,
   INTEGRATION_RULE_WORDS,
   INTEGRATION_SECRET_WORDS,
+  INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
   type IntegrationSettingsPatch,
   type IntegrationsView,
   type IntegrationView,
 } from "@shared/integrations";
-import { useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Badge, Button, Input, RowMenu, StatusDot, Switch } from "../design";
+import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
 import "./integrations.css";
-import { forgeRowView, HostChip, SignInAside } from "./ForgeSection";
+import { forgeRowView, HostChip, plusIcon, SignInAside } from "./ForgeSection";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
 import "../accounts/connectChips.css";
 import "./forges.css";
@@ -25,7 +26,10 @@ import "./forges.css";
  * in as the person. A row's chevron opens its actions, each with what it
  * does and its rule, and a switch that turns it off; its menu checks the
  * sign-in now, pauses it, or signs out and removes it. The chips at the
- * foot connect a kind not yet connected.
+ * foot connect a kind not yet connected, and add an MCP server: its form
+ * takes a name and what the server runs, connects, and opens the new row
+ * on the tools the server listed (INF-781, the captain's q7: trust the
+ * server's list and show it after).
  *
  * GitHub is the first kind, and its sign-in is the forge's device flow
  * (`docs/forge.md`): this tab starts it, shows the code, and follows the
@@ -43,6 +47,8 @@ export function IntegrationsTab() {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const addChip = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
   const pending = useShellStore((s) => s.pendingForgeSignIn);
 
@@ -167,14 +173,43 @@ export function IntegrationsTab() {
                   data-integration-add={kind.kind}
                   style={{ display: "contents" }}
                 >
-                  <HostChip
-                    host={{ host: INTEGRATIONS_SIGN_IN_HOST, name: kind.name }}
-                    busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
-                    onConnect={signIn}
-                  />
+                  {kind.kind === "mcp" ? (
+                    <button
+                      ref={addChip}
+                      type="button"
+                      className="fm-connect-chip"
+                      aria-label={INTEGRATIONS_MCP_WORDS.title}
+                      aria-expanded={adding}
+                      onClick={() => {
+                        setError(null);
+                        setAdding(true);
+                      }}
+                    >
+                      {plusIcon}
+                      <span>{INTEGRATIONS_MCP_WORDS.add}</span>
+                    </button>
+                  ) : (
+                    <HostChip
+                      host={{ host: INTEGRATIONS_SIGN_IN_HOST, name: kind.name }}
+                      busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
+                      onConnect={signIn}
+                    />
+                  )}
                 </span>
               ))}
             </div>
+            {adding && (
+              <McpAddForm
+                onAdded={(id) => {
+                  setAdding(false);
+                  setOpen(id);
+                }}
+                onCancel={() => {
+                  setAdding(false);
+                  addChip.current?.focus();
+                }}
+              />
+            )}
             {!github && aside}
           </div>
         )}
@@ -183,12 +218,40 @@ export function IntegrationsTab() {
   );
 }
 
-/** "as octo · 2 actions"; a paused one says so first. */
+/**
+ * "as octo · 2 actions", or what an MCP server runs: "npx -y @scope/notes ·
+ * 3 actions"; a paused one says so first.
+ */
 export function integrationRowSub(integration: IntegrationView): string {
   const on = integration.actions.filter((action) => action.enabled).length;
   const actions = on === 1 ? "1 action" : `${on} actions`;
   const who = integration.account ? `as ${integration.account}` : null;
-  return [integration.paused ? "paused" : null, who, actions].filter(Boolean).join(" · ");
+  return [integration.paused ? "paused" : null, who, integration.runs, actions]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** A row's dot and its words: a sign-in's for a kind that signs in, a connection's for an MCP server. */
+function integrationRowView(integration: IntegrationView): {
+  tone: StatusDotTone;
+  label: string;
+  reauth: boolean;
+  badge: string;
+  problem: string | null;
+} {
+  if (integration.kind !== "mcp") {
+    const row = forgeRowView({ name: integration.name, state: integration.health });
+    return { ...row, badge: "signed in", problem: row.reauth ? FORGE_SECTION_WORDS.reauth : null };
+  }
+  const problem = integration.health === "unavailable" ? "could not reach it" : null;
+  return {
+    tone:
+      integration.health === "ok" ? "ok" : integration.health === "unavailable" ? "danger" : "ring",
+    label: problem ?? INTEGRATIONS_MCP_WORDS.connected,
+    reauth: false,
+    badge: INTEGRATIONS_MCP_WORDS.connected,
+    problem,
+  };
 }
 
 function IntegrationRow({
@@ -210,7 +273,7 @@ function IntegrationRow({
   onPause: (paused: boolean) => void;
   onRemove: () => void;
 }) {
-  const row = forgeRowView({ name: integration.name, state: integration.health });
+  const row = integrationRowView(integration);
   return (
     <div
       className="fm-forges-row"
@@ -225,7 +288,7 @@ function IntegrationRow({
         <StatusDot
           tone={integration.paused ? "idle" : row.tone}
           label={integration.paused ? "paused" : row.label}
-          nativeTitle={row.label !== "signed in" && row.label !== "sign in again"}
+          nativeTitle={row.label !== row.badge && !row.reauth && row.problem === null}
           focusable
         />
       </span>
@@ -254,14 +317,14 @@ function IntegrationRow({
         </svg>
       </button>
       <span className="fm-forges-who">
-        {row.reauth ? (
+        {row.problem ? (
           <span className="fm-forges-state" data-tone="danger">
-            {FORGE_SECTION_WORDS.reauth}
+            {row.problem}
           </span>
         ) : integration.paused ? (
           <Badge tone="outline">paused</Badge>
         ) : (
-          <Badge tone="ok">signed in</Badge>
+          <Badge tone="ok">{row.badge}</Badge>
         )}
         <span className="fm-forges-sub">{integrationRowSub(integration)}</span>
       </span>
@@ -292,7 +355,13 @@ function IntegrationRow({
                   onSelect: () => onPause(true),
                 },
             { separator: true },
-            { id: "remove", label: "Sign out and remove", tone: "danger", onSelect: onRemove },
+            {
+              id: "remove",
+              label:
+                integration.kind === "mcp" ? INTEGRATIONS_MCP_WORDS.remove : "Sign out and remove",
+              tone: "danger",
+              onSelect: onRemove,
+            },
           ]}
         />
       </span>
@@ -300,7 +369,11 @@ function IntegrationRow({
   );
 }
 
-/** An open row's actions: what each does, its rule, and its switch. */
+/**
+ * An open row's actions: what each does, its rule, and its switch; then
+ * what it can tell - an MCP server's "A resource changed" - which a rule
+ * in Automation listens to.
+ */
 function IntegrationActions({
   integration,
   onAction,
@@ -326,6 +399,14 @@ function IntegrationActions({
             aria-label={`${action.label} on`}
             onChange={(enabled) => onAction(action.name, enabled)}
           />
+        </li>
+      ))}
+      {integration.events?.map((event) => (
+        <li key={`event-${event.name}`} data-integration-event={event.name}>
+          <span className="fm-integrations-action-label">{event.label}</span>
+          <Badge tone="outline">{INTEGRATIONS_MCP_WORDS.events}</Badge>
+          <span />
+          <span />
         </li>
       ))}
     </ul>
@@ -397,5 +478,99 @@ function IntegrationKeys({
       </ul>
       <p className="fm-integrations-keys-note">{words.stays}</p>
     </div>
+  );
+}
+
+/**
+ * The form that adds an MCP server: its name and what it runs. Connect
+ * hands both to the core, which starts the server, reads its tools and
+ * answers the new row - or says, in the status line, why it could not.
+ */
+function McpAddForm({
+  onAdded,
+  onCancel,
+}: {
+  onAdded: (id: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [runs, setRuns] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [problem, setProblem] = useState("");
+  const ids = useId();
+  const ready = name.trim() !== "" && runs.trim() !== "";
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!ready || connecting) return;
+    setConnecting(true);
+    setProblem("");
+    try {
+      const { id } = await window.infinitary.integrations.addMcp({ name, runs });
+      onAdded(id);
+    } catch (caught) {
+      setProblem(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setConnecting(false);
+    }
+  };
+  return (
+    <form
+      className="fm-connect-aside fm-forges-aside"
+      data-integration-mcp-form=""
+      aria-label={INTEGRATIONS_MCP_WORDS.title}
+      onSubmit={(event) => void submit(event)}
+    >
+      <div className="fm-forges-field">
+        <label htmlFor={`${ids}-name`}>{INTEGRATIONS_MCP_WORDS.name}</label>
+        <Input
+          id={`${ids}-name`}
+          value={name}
+          placeholder={INTEGRATIONS_MCP_WORDS.namePlaceholder}
+          autoComplete="off"
+          autoFocus
+          onChange={(event) => setName(event.target.value)}
+        />
+      </div>
+      <div className="fm-forges-field">
+        <label htmlFor={`${ids}-runs`}>{INTEGRATIONS_MCP_WORDS.runs}</label>
+        <Input
+          mono
+          id={`${ids}-runs`}
+          value={runs}
+          placeholder={INTEGRATIONS_MCP_WORDS.runsPlaceholder}
+          autoComplete="off"
+          spellCheck={false}
+          aria-describedby={`${ids}-hint`}
+          onChange={(event) => setRuns(event.target.value)}
+        />
+      </div>
+      <div id={`${ids}-hint`} style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
+        {INTEGRATIONS_MCP_WORDS.runsHint}
+      </div>
+      <span
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-integration-mcp-problem=""
+        style={{ display: "block", fontSize: "var(--text-sm)", color: "var(--danger)" }}
+      >
+        {problem}
+      </span>
+      <div className="fm-forges-aside-actions">
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          pending={connecting}
+          pendingLabel={INTEGRATIONS_MCP_WORDS.connecting}
+          disabled={!ready}
+        >
+          {INTEGRATIONS_MCP_WORDS.connect}
+        </Button>
+        <Button variant="ghost" size="sm" disabled={connecting} onClick={onCancel}>
+          {INTEGRATIONS_MCP_WORDS.cancel}
+        </Button>
+      </div>
+    </form>
   );
 }

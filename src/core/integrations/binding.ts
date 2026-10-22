@@ -27,6 +27,12 @@ export type IntegrationActionSpec = {
   description: string;
   /** Its input, checked before the call; its JSON Schema is what `show` lists. */
   input: z.ZodType;
+  /**
+   * The input's JSON Schema as the place itself declared it, shown in
+   * place of `input`'s: an MCP server's tool keeps its own, and the server
+   * checks the input it receives.
+   */
+  schema?: Record<string, unknown>;
 };
 
 /**
@@ -42,12 +48,44 @@ export type IntegrationSecretSlot = {
   optional?: true;
 };
 
-/** One connection of a kind that exists now: a sign-in there. */
+/**
+ * Something a connection can tell (docs/integrations.md, "Events"): a rule
+ * listening to it looks every `every` minutes through the binding's `look`.
+ */
+export type IntegrationEventSpec = {
+  name: string;
+  /** A few plain words for the Settings row ("The count changed"). */
+  label: string;
+  /** What it means and how to read what changed, for the first mate. */
+  description: string;
+  /** How often, in minutes, a listening rule looks. */
+  every: number;
+};
+
+/** One thing that happened, by the place's own id, in one line. */
+export type IntegrationEventItem = { id: string; summary: string };
+
+/**
+ * What a look found since the cursor: the items, and the cursor to pass
+ * next time. `resynced` says the place could not answer from that cursor -
+ * what happened in between is not known - so the rule starts again from now.
+ */
+export type IntegrationLook = { cursor: string; items: IntegrationEventItem[]; resynced?: boolean };
+
+/** One connection of a kind that exists now: a sign-in there, or a server it runs. */
 export type IntegrationConnection = {
   id: string;
-  /** Who it is signed in as; null until it has answered once. */
+  /** Who it is signed in as; null until it has answered once, or where nothing signs in. */
   account: string | null;
   health: ForgeSignInState;
+  /** Its name until the person renames it; the kind's name without one. */
+  name?: string;
+  /** What it runs, for Settings alone (`IntegrationView.runs`). */
+  runs?: string;
+  /** What it can do. */
+  actions: readonly IntegrationActionSpec[];
+  /** What it can tell. */
+  events?: readonly IntegrationEventSpec[];
 };
 
 /** An action's answer: words for the caller, or a refusal that says why and what to do. */
@@ -55,7 +93,6 @@ export type IntegrationAnswer = { text: string; refused?: "refused" | "invalid" 
 
 export type IntegrationBinding = {
   kind: IntegrationKind;
-  actions: readonly IntegrationActionSpec[];
   /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
   secrets?: readonly IntegrationSecretSlot[];
   /**
@@ -65,8 +102,15 @@ export type IntegrationBinding = {
    * the captain's click.
    */
   keepsAsks?: true;
+  /** A kind the person adds again and again, one row each (an MCP server): always addable. */
+  many?: true;
   /** The connections of this kind that exist now. */
   connections: () => IntegrationConnection[];
+  /**
+   * Add a connection from the person's own words (an MCP server's name and
+   * what it runs) and answer its id; throws words when it cannot connect.
+   */
+  add?: (input: unknown) => Promise<string>;
   /** Ask the place who the person is now, and keep its answer as the health. */
   check: (id: string) => Promise<void>;
   /** Forget the connection's sign-in. */
@@ -78,4 +122,8 @@ export type IntegrationBinding = {
     input: unknown,
     caller: IntegrationCaller,
   ) => Promise<IntegrationAnswer>;
+  /** Look for one event since the cursor (null: start from now). */
+  look?: (id: string, event: string, cursor: string | null) => Promise<IntegrationLook>;
+  /** Stop whatever the binding started (an MCP server's program) as the app quits. */
+  close?: () => Promise<void>;
 };

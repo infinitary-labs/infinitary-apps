@@ -1,15 +1,16 @@
 # Integrations
 
 An integration is a connection to something outside the person's projects, signed in as the person, that the first mate and every crewmate can reach.
-GitHub is the first kind.
+GitHub is the first kind, and an MCP server the second.
 The captain's design is INF-775: one core primitive, a Settings tab, the same reach for the person and the first mate, and every agent reaching what is added.
-Mail, calendars and MCP servers are later kinds of the same record.
+Mail and calendars are later kinds of the same record.
 
 ## The record
 
 `IntegrationsService` (`src/core/integrations/service.ts`) is the one writer and the one door for every caller.
-A row is one connection a kind's binding has now (`IntegrationBinding`, `src/core/integrations/binding.ts`): its id, who it is signed in as, its health, and its actions.
+A row is one connection a kind's binding has now (`IntegrationBinding`, `src/core/integrations/binding.ts`): its id, who it is signed in as, its health, its actions, and the events it can tell.
 Each action declares what it does to the world, `reads`, `changes` or `sends`, in its binding, never read off its name, and an input schema.
+A kind connects once, as GitHub does, or many times, as MCP servers do; a kind added from a form (`add`) answers the new row's id.
 The row's own settings - a name of the person's choosing, paused, and which actions are off - live in `userData/integrations/settings.json`, 0600 in a 0700 folder, written whole (`IntegrationSettingsStore`).
 No sign-in is kept there: a kind's sign-in stays with its own owner, and a key it signs in with is kept apart ("Keys").
 The wire shape Settings draws and the first mate reads is `src/shared/integrations.ts`.
@@ -47,11 +48,32 @@ A crewmate's write is kept on its task as a write ask, the way a write to anothe
 The first mate has no task to keep an ask on, so its write is refused with a pointer to start a crewmate whose brief names the call; its reads count against its seat's own allowance.
 Pull requests, checks and merges stay the forge's and the project's.
 
+## MCP servers
+
+An MCP server is added by its name and what it runs (`src/core/integrations/providers/mcp/`, INF-781): a program and its arguments, or the server's https address.
+The binding speaks MCP through the SDK's second version (`@modelcontextprotocol/client`), which reaches a server in either protocol era, the 2025 one or 2026-07-28's; the first version stays for the in-process Claude tool server.
+What it runs is read by no shell (`runs.ts`): quotes group words, leading `NAME=value` words set the program's environment, and a pipe, a redirect, a `$` or a backtick is refused in words.
+A program starts as a child on this computer with `hostEnv()` below the window (`atUtilityQos`), in the person's home folder, on the first call or when a rule listens to it, and stops after five minutes with no call and no look from a rule; every program stops when the app does.
+An address is reached the way a custom API is (`guardedFetch.ts`): its network class - this computer, a private network or the public internet - is read when it is added and held on every request, which resolves the name again, connects only to checked addresses with the normal certificate roots, and refuses a redirect or another origin; plain http is only for a server on this computer.
+Adding connects at once and keeps the server's own list (the captain's q7, "trust the server's list and show it after"): each tool is an action under the name it had when first seen, in snake case, with the server's own JSON Schema as its input, and a server that cannot connect is refused with why and leaves no row.
+A tool the server marks read-only (`readOnlyHint`) reads; every other tool changes.
+A server with resources gains one more read, `read_resource`, which reads one by its address.
+Its reads run, and a tool that changes asks the way every kind's does ("The rules"): a crewmate's call is kept on its task, and the captain's click runs the tool once.
+The list is read again each time the program starts, and Check now starts it again.
+The servers, what each runs, its held network class and the lists it answered live in `userData/integrations/mcp.json`, 0600 in the same folder; what a server runs is never shown to the first mate or a crewmate.
+
+## Events
+
+A row may tell its events, which a rule in Automation listens to (INF-782).
+An MCP server that lets a client subscribe to its resources tells one event, `resource_changed` ("A resource changed"): the binding subscribes when a rule first looks, through the 2026-07-28 era's `subscriptions/listen` or the 2025 era's per-resource subscribe, and keeps each change it hears with its resource's address.
+A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor from before the program last started, or older than the 500 changes kept, answers `resynced`, because nothing can say what changed while the program was down.
+
 ## Settings -> Integrations
 
 The tab sits between Automation and Devices (`IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), and opens from command search as Open Integrations (`settings.integrations`).
-Each row shows its health dot, its name, who it is signed in as and how many actions are on; its chevron opens its actions, each with what it does, its rule and a switch, and its menu checks it now, pauses or resumes it, or signs out and removes it.
+Each row shows its health dot, its name, who it is signed in as or what it runs, and how many actions are on; its chevron opens its actions, each with what it does, its rule and a switch, then what it can tell, and its menu checks it now, pauses or resumes it, or signs out and removes it.
 The chips at the foot connect a kind not yet connected; for GitHub that starts the device flow and shows the code in the tab.
+The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
 GitHub's sign-in moved here from Settings -> Projects (the captain's q2), which keeps GitHub Enterprise and GitLab and a pointer line to Integrations.
 A card's `open` effect that names `projects` with `signIn: "github.com"` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives.
 Like Projects, the tab does not show on a paired view.
@@ -61,7 +83,7 @@ Like Projects, the tab does not show on a paired view.
 The first mate's context block carries one `integrations` line naming each connected integration and who it is signed in as, so an integration nobody uses costs one name.
 `integrations` lists them, or one's actions with their effect, rule and input schema; `use_integration` runs one action (`src/core/pi/integrationTools.ts`).
 Their words never change with what is connected, so a seat never starts over when an integration comes or goes.
-It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab (a sign-in is his to make), `integration-remove` needs his own words, and `integration-settings` and `integration-check` are asked actions.
+It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab (a sign-in is his to make), `integration-add-mcp` adds an MCP server he named, `integration-remove` needs his own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
 
 ## How a crewmate reaches them
 
@@ -87,3 +109,5 @@ A computer without the change, or without a task channel, gives its crewmates ne
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.
 `src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a write is kept here as an ask and sends nothing, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
+`src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a changed resource is told, and an address leaving its class or redirecting is refused.
+`tests/e2e/integrations-mcp.spec.ts` adds the stand-in from Settings by keyboard and has a crewmate call one of its reads from its shell.

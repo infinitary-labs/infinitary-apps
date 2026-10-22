@@ -17,12 +17,18 @@ import { forgeSignInStateSchema } from "./forges";
  * `inf:integrations:secret`, and nothing hands it back.
  */
 
-/** The kinds the app can connect. GitHub is the first; a new kind is one more binding. */
-export const integrationKindSchema = z.enum(["github"]);
+/**
+ * The kinds the app can connect: GitHub, and any MCP server the person
+ * adds (each its own row). A new kind is one more binding.
+ */
+export const integrationKindSchema = z.enum(["github", "mcp"]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
 
 /** What each kind is called on screen. */
-export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = { github: "GitHub" };
+export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
+  github: "GitHub",
+  mcp: "MCP server",
+};
 
 /**
  * What an action does to the world, as the kind's binding declares it,
@@ -64,10 +70,31 @@ export const integrationActionViewSchema = z
   .strict();
 export type IntegrationActionView = z.infer<typeof integrationActionViewSchema>;
 
-/** An integration's id: lowercase words joined by dashes ("github"). */
+/**
+ * Something an integration can tell (docs/integrations.md, "Events"): an
+ * event a rule may listen to, looked for every `every` minutes.
+ */
+export const integrationEventViewSchema = z
+  .object({
+    name: integrationActionNameSchema,
+    /** The event in a few plain words ("The count changed"). */
+    label: z.string().min(1).max(64),
+    /** How often, in minutes, a listening rule looks for it. */
+    every: z.number().int().min(1),
+  })
+  .strict();
+export type IntegrationEventView = z.infer<typeof integrationEventViewSchema>;
+
+/** An integration's id: lowercase words joined by dashes ("github", "mcp-linear"). */
 export const integrationIdSchema = z
   .string()
   .regex(/^[a-z][a-z0-9-]{0,47}$/, "an integration is named by its id");
+
+/**
+ * The most actions one row holds: an MCP server that lists more is refused
+ * in words when it is added, and keeps its first ones if its list grows.
+ */
+export const INTEGRATION_ACTIONS_MAX = 256;
 
 /**
  * A secret slot's name, as its kind declares it: a word or an environment
@@ -109,7 +136,16 @@ export const integrationViewSchema = z
     health: forgeSignInStateSchema,
     /** Paused: nobody reaches it until it is resumed. */
     paused: z.boolean(),
-    actions: z.array(integrationActionViewSchema).max(64),
+    /**
+     * What an MCP server's row runs: the program and its arguments, or its
+     * address. Settings alone shows it - a command line may hold a secret,
+     * so the first mate and the crew never read it.
+     */
+    runs: z.string().max(2048).optional(),
+    /** An MCP server lists every tool it has, so a row may carry many. */
+    actions: z.array(integrationActionViewSchema).max(INTEGRATION_ACTIONS_MAX),
+    /** What it can tell a listening rule; absent where it tells of nothing. */
+    events: z.array(integrationEventViewSchema).max(256).optional(),
     /** The keys its kind signs in with, kept or not; absent when it declares none. */
     secrets: z.array(integrationSecretViewSchema).max(32).optional(),
   })
@@ -138,6 +174,19 @@ export const integrationSettingsPatchSchema = z
   .strict();
 export type IntegrationSettingsPatch = z.infer<typeof integrationSettingsPatchSchema>;
 
+/**
+ * An MCP server to add (docs/integrations.md, "MCP servers"): the person's
+ * name for it, and what it runs - a program with its arguments, started on
+ * this computer, or an https address (http only on this computer).
+ */
+export const integrationMcpAddSchema = z
+  .object({
+    name: z.string().trim().min(1).max(64),
+    runs: z.string().trim().min(1).max(2048),
+  })
+  .strict();
+export type IntegrationMcpAdd = z.infer<typeof integrationMcpAddSchema>;
+
 /** The words Settings -> Integrations and the Projects tab's pointer show. */
 export const INTEGRATIONS_WORDS = {
   title: "Integrations",
@@ -158,6 +207,25 @@ export const INTEGRATION_SECRET_WORDS = {
   replace: "Replace",
   remove: "Remove",
   stays: "It stays on this computer. Your first mate and your crew use it but never see it.",
+} as const;
+
+/** The words of the form that adds an MCP server. */
+export const INTEGRATIONS_MCP_WORDS = {
+  add: "MCP server",
+  title: "Add an MCP server",
+  name: "Name",
+  namePlaceholder: "Linear",
+  runs: "Runs",
+  runsPlaceholder: "npx -y @example/mcp-server, or https://example.com/mcp",
+  runsHint:
+    "A program and its arguments, started on this computer when someone uses it, or the server's https address.",
+  connect: "Connect",
+  connecting: "Connecting…",
+  cancel: "Cancel",
+  connected: "connected",
+  remove: "Remove",
+  /** An event's badge, beside the actions' "reads" and "changes". */
+  events: "tells",
 } as const;
 
 /** The words for what an action does, as its row shows them. */

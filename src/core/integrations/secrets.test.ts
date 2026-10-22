@@ -11,6 +11,7 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import {
   FileIntegrationSecrets,
+  type IntegrationActionSpec,
   type IntegrationBinding,
   IntegrationSettingsStore,
   IntegrationsService,
@@ -63,6 +64,24 @@ async function standIn() {
   return { seen, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
 }
 
+/** The stand-in kind's actions: a read and a change. */
+const ACTIONS: IntegrationActionSpec[] = [
+  {
+    name: "search",
+    label: "Search issues",
+    effect: "reads",
+    description: "Search issues.",
+    input: z.strictObject({ query: z.string() }),
+  },
+  {
+    name: "create",
+    label: "Create an issue",
+    effect: "changes",
+    description: "Create an issue.",
+    input: z.strictObject({ title: z.string() }),
+  },
+];
+
 /** A kind that signs in with one key: a read and a change, both through brokered use. */
 function linear(secrets: FileIntegrationSecrets, base: string): IntegrationBinding {
   const send = async (path: string, method: string, body?: string) => {
@@ -77,23 +96,7 @@ function linear(secrets: FileIntegrationSecrets, base: string): IntegrationBindi
   return {
     kind: "github",
     secrets: [{ name: "LINEAR_API_KEY", label: "Linear key" }],
-    actions: [
-      {
-        name: "search",
-        label: "Search issues",
-        effect: "reads",
-        description: "Search issues.",
-        input: z.strictObject({ query: z.string() }),
-      },
-      {
-        name: "create",
-        label: "Create an issue",
-        effect: "changes",
-        description: "Create an issue.",
-        input: z.strictObject({ title: z.string() }),
-      },
-    ],
-    connections: () => [{ id: "linear", account: "sam", health: "ok" }],
+    connections: () => [{ id: "linear", account: "sam", health: "ok", actions: ACTIONS }],
     check: async () => {},
     remove: () => {},
     call: (_id, action, input) =>

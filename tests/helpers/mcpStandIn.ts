@@ -1,0 +1,265 @@
+/**
+ * A stand-in MCP server for the MCP integration's tests (INF-781): a
+ * small notes server, served in either protocol era - the 2025 one
+ * through the SDK's first version, the 2026-07-28 one through its second -
+ * over stdio as a child program, or over Streamable HTTP on this computer.
+ *
+ * It lists three tools, two read-only and one that changes the notes, and
+ * one resource, `notes://all`, whose changes it tells a subscribed client
+ * about. Over HTTP the test changes the notes itself; over stdio the child
+ * reads its notes from a file, writes a note it adds back to it, and tells
+ * when the file changes.
+ *
+ *   node tests/helpers/mcpStandIn.ts stdio <legacy|modern> <notes.json>
+ */
+
+import { randomUUID } from "node:crypto";
+import { readFileSync, unwatchFile, watchFile, writeFileSync } from "node:fs";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
+import { Readable } from "node:stream";
+import { McpServer as LegacyMcpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport as LegacyStdioTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport as LegacyHttpTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import {
+  isInitializeRequest,
+  SubscribeRequestSchema,
+  UnsubscribeRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { z } from "zod";
+
+export type StandInEra = "legacy" | "modern";
+
+/** The notes the server holds, the way a person keeps them. */
+export type NotesBook = { notes: string[] };
+
+export const NOTES_URI = "notes://all";
+
+/** Notes a person might keep, for a book to start from. */
+export const SAMPLE_NOTES = [
+  "Groceries: oat milk, eggs, the good bread from the corner bakery",
+  "Call the dentist to move Thursday's cleaning",
+  "Mia's birthday is on the 14th - she wanted the blue raincoat",
+];
+
+const LIST = { title: "List notes", description: "Lists every note with its number." };
+const GET = { title: "Read a note", description: "Reads one note by its number." };
+const ADD = { description: "Adds a note to the end of the list." };
+
+function listed(book: NotesBook): string {
+  return book.notes.map((note, index) => `${index + 1}. ${note}`).join("\n");
+}
+
+function noteOf(book: NotesBook, id: number): string {
+  return book.notes[id - 1] ?? `There is no note ${id}.`;
+}
+
+/** The server in the 2026-07-28 era, through the SDK's second version. */
+function modernNotes(book: NotesBook, added: () => void): McpServer {
+  const server = new McpServer(
+    { name: "notes-stand-in", version: "1.0.0" },
+    { capabilities: { resources: { subscribe: true } } },
+  );
+  server.registerTool(
+    "list_notes",
+    { ...LIST, inputSchema: z.object({}), annotations: { readOnlyHint: true } },
+    async () => ({ content: [{ type: "text", text: listed(book) }] }),
+  );
+  server.registerTool(
+    "getNote",
+    {
+      ...GET,
+      inputSchema: z.object({ id: z.number().int() }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ id }) => ({ content: [{ type: "text", text: noteOf(book, id) }] }),
+  );
+  server.registerTool(
+    "add_note",
+    { ...ADD, inputSchema: z.object({ text: z.string() }) },
+    async ({ text }) => {
+      book.notes.push(text);
+      added();
+      return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
+    },
+  );
+  server.registerResource(
+    "notes",
+    NOTES_URI,
+    { title: "All notes", mimeType: "text/plain" },
+    async (uri) => ({ contents: [{ uri: uri.href, text: listed(book) }] }),
+  );
+  return server;
+}
+
+/** The server in the 2025 era, through the SDK's first version. */
+function legacyNotes(book: NotesBook, added: () => void): LegacyMcpServer {
+  const server = new LegacyMcpServer(
+    { name: "notes-stand-in", version: "1.0.0" },
+    { capabilities: { resources: { subscribe: true } } },
+  );
+  server.server.setRequestHandler(SubscribeRequestSchema, async () => ({}));
+  server.server.setRequestHandler(UnsubscribeRequestSchema, async () => ({}));
+  server.registerTool(
+    "list_notes",
+    { ...LIST, inputSchema: {}, annotations: { readOnlyHint: true } },
+    async () => ({ content: [{ type: "text", text: listed(book) }] }),
+  );
+  server.registerTool(
+    "getNote",
+    { ...GET, inputSchema: { id: z.number().int() }, annotations: { readOnlyHint: true } },
+    async ({ id }) => ({ content: [{ type: "text", text: noteOf(book, id) }] }),
+  );
+  server.registerTool(
+    "add_note",
+    { ...ADD, inputSchema: { text: z.string() } },
+    async ({ text }) => {
+      book.notes.push(text);
+      added();
+      return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
+    },
+  );
+  server.registerResource(
+    "notes",
+    NOTES_URI,
+    { title: "All notes", mimeType: "text/plain" },
+    async (uri) => ({ contents: [{ uri: uri.href, text: listed(book) }] }),
+  );
+  return server;
+}
+
+export type NotesHttpServer = {
+  /** The server's address, on this computer. */
+  url: string;
+  book: NotesBook;
+  /** Add a note as the person would elsewhere, and tell every subscribed client. */
+  addNote: (text: string) => void;
+  close: () => Promise<void>;
+};
+
+/** Serve the notes over Streamable HTTP on 127.0.0.1, in one era. */
+export async function serveNotesHttp(era: StandInEra): Promise<NotesHttpServer> {
+  const book: NotesBook = { notes: [...SAMPLE_NOTES] };
+  let tell: () => void;
+  let stop: () => Promise<void>;
+  let respond: (request: IncomingMessage, reply: ServerResponse, body: unknown) => Promise<void>;
+  if (era === "modern") {
+    const handler = createMcpHandler(() => modernNotes(book, () => tell()), { legacy: "reject" });
+    tell = () => handler.notify.resourceUpdated(NOTES_URI);
+    stop = () => handler.close();
+    respond = async (request, reply, body) => {
+      const response = await handler.fetch(
+        new Request(`http://127.0.0.1${request.url ?? "/"}`, {
+          method: request.method,
+          headers: Object.entries(request.headers).flatMap(([name, value]) =>
+            value === undefined ? [] : [[name, Array.isArray(value) ? value.join(", ") : value]],
+          ) as [string, string][],
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        }),
+      );
+      reply.writeHead(response.status, Object.fromEntries(response.headers));
+      if (!response.body) {
+        reply.end();
+        return;
+      }
+      Readable.fromWeb(response.body as import("node:stream/web").ReadableStream).pipe(reply);
+    };
+  } else {
+    const sessions = new Map<string, { transport: LegacyHttpTransport; server: LegacyMcpServer }>();
+    tell = () => {
+      for (const { server } of sessions.values())
+        void server.server.sendResourceUpdated({ uri: NOTES_URI }).catch(() => undefined);
+    };
+    stop = async () => {
+      for (const { transport } of sessions.values()) await transport.close();
+    };
+    respond = async (request, reply, body) => {
+      const id = request.headers["mcp-session-id"];
+      let session = typeof id === "string" ? sessions.get(id) : undefined;
+      if (!session) {
+        if (request.method !== "POST" || !isInitializeRequest(body)) {
+          reply.writeHead(400, { "content-type": "application/json" });
+          reply.end(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              id: null,
+            }),
+          );
+          return;
+        }
+        const server = legacyNotes(book, () => tell());
+        const transport: LegacyHttpTransport = new LegacyHttpTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (sessionId) => {
+            sessions.set(sessionId, { transport, server });
+          },
+        });
+        session = { transport, server };
+        await server.connect(transport);
+      }
+      await session.transport.handleRequest(request, reply, body);
+    };
+  }
+  const http = createServer((request, reply) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk: Buffer) => chunks.push(chunk));
+    request.on("end", () => {
+      const text = Buffer.concat(chunks).toString("utf8");
+      void respond(request, reply, text ? JSON.parse(text) : undefined).catch(() => {
+        if (!reply.headersSent) reply.writeHead(500);
+        reply.end();
+      });
+    });
+  });
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  const { port } = http.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${port}/mcp`,
+    book,
+    addNote: (text) => {
+      book.notes.push(text);
+      tell();
+    },
+    close: async () => {
+      await stop();
+      http.closeAllConnections();
+      await new Promise<void>((resolve) => http.close(() => resolve()));
+    },
+  };
+}
+
+/** The child program: the notes from a file, told about when the file changes. */
+async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
+  const read = (): string[] => JSON.parse(readFileSync(file, "utf8")).notes;
+  const book: NotesBook = { notes: read() };
+  const servers: { sendResourceUpdated: (params: { uri: string }) => Promise<void> }[] = [];
+  const tell = () => {
+    for (const server of servers)
+      void server.sendResourceUpdated({ uri: NOTES_URI }).catch(() => undefined);
+  };
+  watchFile(file, { interval: 50 }, () => {
+    book.notes = read();
+    tell();
+  });
+  process.stdin.on("end", () => unwatchFile(file));
+  const added = () => writeFileSync(file, JSON.stringify({ notes: book.notes }));
+  if (era === "modern") {
+    serveStdio(() => {
+      const server = modernNotes(book, added);
+      servers.push(server.server);
+      return server;
+    });
+  } else {
+    const server = legacyNotes(book, added);
+    servers.push(server.server);
+    await server.connect(new LegacyStdioTransport());
+  }
+}
+
+if (process.argv[2] === "stdio") {
+  const era = process.argv[3] === "modern" ? "modern" : "legacy";
+  void serveNotesStdio(era, process.argv[4] as string);
+}

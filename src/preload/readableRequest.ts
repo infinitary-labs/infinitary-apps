@@ -217,6 +217,8 @@ export const REQUEST_COPY = {
     fallback: "Could not save these keys. Please try again.",
     prefix: "Could not save these keys: ",
   },
+  // The binding's own words already say why the server could not connect.
+  "inf:integrations:add": { fallback: "Could not add this server. Please try again.", prefix: "" },
 } as const;
 
 type ReadableRequestChannel = keyof typeof REQUEST_COPY;

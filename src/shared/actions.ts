@@ -19,6 +19,7 @@ import {
   type IntegrationsView,
   integrationIdSchema,
   integrationKindSchema,
+  integrationMcpAddSchema,
   integrationSettingsPatchSchema,
 } from "./integrations";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
@@ -836,15 +837,15 @@ const actionLines = {
     toRequest: () => [],
   },
   // Integrations (docs/integrations.md): Settings -> Integrations and
-  // app_change write through these four lines alike. A sign-in is always
-  // the captain's hands; removal forgets one only on his own words.
+  // app_change write through these lines alike. A sign-in is always the
+  // captain's hands; removal forgets one only on his own words.
   "integration-add": {
     area: "integrations",
     tier: "hands",
     handover: "projects",
     change: null,
     current: "inf:integrations:list",
-    value: z.strictObject({ kind: integrationKindSchema }),
+    value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp"]) }),
     line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and his click opens Settings → Integrations with the sign-in started. A sign-in is always his hands.",
     alwaysTrail: true,
     offer: (v, current) => {
@@ -869,13 +870,24 @@ const actionLines = {
     done: (v) =>
       `${INTEGRATION_KIND_NAMES[v.kind as keyof typeof INTEGRATION_KIND_NAMES]} sign-in started`,
   },
+  "integration-add-mcp": {
+    area: "integrations",
+    tier: "asked",
+    change: "inf:integrations:add",
+    current: "inf:integrations:list",
+    value: integrationMcpAddSchema,
+    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as he gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (read-only ones run, the rest ask him) and answers the row; a server that cannot connect is refused with why. Never put a key or token in runs.",
+    toRequest: (v) => [v],
+    readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
+    done: (v) => `Added MCP server ${v.name}`,
+  },
   "integration-remove": {
     area: "integrations",
     tier: "own-words",
     change: "inf:integrations:remove",
     current: "inf:integrations:list",
     value: z.strictObject({ id: integrationIdSchema }),
-    line: "Remove an integration and forget its sign-in only on the captain's typed words. For GitHub it signs the app out of GitHub, so private clones and pull requests stop until he signs in again.",
+    line: "Remove an integration and forget its sign-in only on the captain's typed words. For GitHub it signs the app out of GitHub, so private clones and pull requests stop until he signs in again; an MCP server's program stops and its row goes.",
     toRequest: (v) => [v.id],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Removed integration ${v.id}`,

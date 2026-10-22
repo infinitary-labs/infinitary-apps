@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   INTEGRATION_KIND_NAMES,
+  type IntegrationKind,
   type IntegrationSettingsPatch,
   type IntegrationsView,
   type IntegrationView,
@@ -13,6 +14,7 @@ import type {
   IntegrationBinding,
   IntegrationCaller,
   IntegrationConnection,
+  IntegrationLook,
 } from "./binding";
 import type { IntegrationSecrets } from "./secrets";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
@@ -108,7 +110,7 @@ export class IntegrationsService {
     return {
       integrations: rows.map((row) => this.viewOf(row)),
       addable: this.options.bindings
-        .filter((binding) => !connected.has(binding.kind))
+        .filter((binding) => binding.many || !connected.has(binding.kind))
         .map((binding) => ({ kind: binding.kind, name: INTEGRATION_KIND_NAMES[binding.kind] })),
     };
   }
@@ -143,10 +145,11 @@ export class IntegrationsService {
         name: view.name,
         id: view.id,
         kind: view.kind,
-        account: view.account ?? "not read yet",
+        ...(view.account ? { account: view.account } : {}),
         health: view.health,
         ...(view.paused ? { paused: true } : {}),
         actions: view.actions.filter((action) => action.enabled).map((action) => action.name),
+        ...(view.events ? { events: view.events.map((event) => event.name) } : {}),
       };
     });
   }
@@ -156,23 +159,33 @@ export class IntegrationsService {
     const row = this.find(name);
     if (!row) return this.unknown(name);
     const view = this.viewOf(row);
+    const events = row.connection.events ?? [];
     return {
       integration: view.name,
       id: view.id,
       kind: view.kind,
-      account: view.account ?? "not read yet",
+      ...(view.account ? { account: view.account } : {}),
       health: view.health,
       ...(view.paused ? { paused: true } : {}),
-      actions: row.binding.actions.map((spec) => {
+      actions: row.connection.actions.map((spec) => {
         const enabled = !row.settings.off?.includes(spec.name);
         return {
           name: spec.name,
           effect: spec.effect,
           rule: integrationRule(spec.effect, enabled),
           description: spec.description,
-          input: spec.input.toJSONSchema(),
+          input: spec.schema ?? spec.input.toJSONSchema(),
         };
       }),
+      ...(events.length > 0
+        ? {
+            events: events.map((spec) => ({
+              name: spec.name,
+              description: spec.description,
+              every: `${spec.every} min`,
+            })),
+          }
+        : {}),
       // Which keys are kept, never a value: one entered in Settings is used, never shown.
       ...(view.secrets
         ? { keys: view.secrets.map((slot) => ({ name: slot.label, kept: slot.kept })) }
@@ -195,10 +208,10 @@ export class IntegrationsService {
         text: `${view.name} is paused. The captain resumes it in Settings → Integrations.`,
         refused: "refused",
       };
-    const spec = row.binding.actions.find((entry) => entry.name === action);
+    const spec = row.connection.actions.find((entry) => entry.name === action);
     if (!spec)
       return {
-        text: `${view.name} has no action "${action}". Its actions: ${row.binding.actions.map((entry) => entry.name).join(", ")}.`,
+        text: `${view.name} has no action "${action}". Its actions: ${row.connection.actions.map((entry) => entry.name).join(", ")}.`,
         refused: "invalid",
       };
     if (row.settings.off?.includes(spec.name))
@@ -256,7 +269,7 @@ export class IntegrationsService {
     const row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
     const view = this.viewOf(row);
-    const spec = row.binding.actions.find((entry) => entry.name === ask.action);
+    const spec = row.connection.actions.find((entry) => entry.name === ask.action);
     if (view.paused) return done({ kind: "refused", why: `${view.name} is paused` });
     if (!spec || row.settings.off?.includes(spec.name))
       return done({ kind: "refused", why: `${view.name}'s action ${ask.action} is off` });
@@ -363,22 +376,64 @@ export class IntegrationsService {
     };
   }
 
+  /**
+   * Add a connection of a kind the person adds from their own words (an
+   * MCP server): the binding connects, and the new row shows what it found.
+   */
+  async add(kind: IntegrationKind, input: { name: string } & Record<string, unknown>) {
+    const binding = this.options.bindings.find((entry) => entry.kind === kind);
+    if (!binding?.add)
+      throw new IntegrationRefusal(
+        `${INTEGRATION_KIND_NAMES[kind]} is connected by signing in, not added from a form.`,
+      );
+    this.assertNameFree(input.name);
+    let id: string;
+    try {
+      id = await binding.add(input);
+    } catch (error) {
+      throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
+    }
+    return { id, view: this.changed() };
+  }
+
+  /** Look for one of an integration's events since the cursor (`IntegrationBinding.look`). */
+  async look(id: string, event: string, cursor: string | null): Promise<IntegrationLook> {
+    const row = this.byId(id);
+    const view = this.viewOf(row);
+    if (view.paused) throw new IntegrationRefusal(`${view.name} is paused.`);
+    const names = (row.connection.events ?? []).map((spec) => spec.name);
+    if (!row.binding.look || !names.includes(event))
+      throw new IntegrationRefusal(
+        names.length > 0
+          ? `${view.name} has no event "${event}". Its events: ${names.join(", ")}.`
+          : `${view.name} tells of nothing.`,
+      );
+    return row.binding.look(row.connection.id, event, cursor);
+  }
+
+  /** Stop whatever a binding started, as the app quits. */
+  async dispose(): Promise<void> {
+    await Promise.all(this.options.bindings.map((binding) => binding.close?.()));
+  }
+
   /** Rename, pause or resume, or turn actions on or off. */
   configure(id: string, patch: IntegrationSettingsPatch): IntegrationsView {
     const row = this.byId(id);
     const all = this.options.store.read();
     const next: IntegrationSettings = { ...(all[id] ?? {}) };
     if (patch.name !== undefined) {
-      if (patch.name === null || patch.name === INTEGRATION_KIND_NAMES[row.binding.kind])
-        delete next.name;
-      else next.name = patch.name;
+      if (patch.name === null || patch.name === this.defaultName(row)) delete next.name;
+      else {
+        this.assertNameFree(patch.name, id);
+        next.name = patch.name;
+      }
     }
     if (patch.paused !== undefined) {
       if (patch.paused) next.paused = true;
       else delete next.paused;
     }
     if (patch.actions) {
-      const known = new Set(row.binding.actions.map((spec) => spec.name));
+      const known = new Set(row.connection.actions.map((spec) => spec.name));
       const unknown = Object.keys(patch.actions).filter((name) => !known.has(name));
       if (unknown.length > 0)
         throw new IntegrationRefusal(
@@ -443,11 +498,12 @@ export class IntegrationsService {
     return {
       id: row.connection.id,
       kind: row.binding.kind,
-      name: row.settings.name ?? INTEGRATION_KIND_NAMES[row.binding.kind],
+      name: row.settings.name ?? this.defaultName(row),
       account: row.connection.account,
       health: row.connection.health,
       paused: row.settings.paused === true,
-      actions: row.binding.actions.map((spec) => {
+      ...(row.connection.runs !== undefined ? { runs: row.connection.runs } : {}),
+      actions: row.connection.actions.map((spec) => {
         const enabled = !row.settings.off?.includes(spec.name);
         return {
           name: spec.name,
@@ -457,8 +513,36 @@ export class IntegrationsService {
           rule: integrationRule(spec.effect, enabled),
         };
       }),
+      ...(row.connection.events?.length
+        ? {
+            events: row.connection.events.map((spec) => ({
+              name: spec.name,
+              label: spec.label,
+              every: spec.every,
+            })),
+          }
+        : {}),
       ...this.secretsOf(row),
     };
+  }
+
+  /** A row's name until the person renames it. */
+  private defaultName(row: Row): string {
+    return row.connection.name ?? INTEGRATION_KIND_NAMES[row.binding.kind];
+  }
+
+  /** Two rows never share a name: a name is how the crew and the first mate reach one. */
+  private assertNameFree(name: string, except?: string): void {
+    const wanted = name.trim().toLowerCase();
+    const taken = this.rows().find(
+      (row) =>
+        row.connection.id !== except &&
+        (row.connection.id === wanted || this.viewOf(row).name.toLowerCase() === wanted),
+    );
+    if (taken)
+      throw new IntegrationRefusal(
+        `An integration is already named ${this.viewOf(taken).name}. Choose another name.`,
+      );
   }
 
   /** A row's keys, kept or not; nothing when its kind declares none. */

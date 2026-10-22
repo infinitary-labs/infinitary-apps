@@ -59,6 +59,7 @@ export const APPLICATION_SUITES = [
   "gitlab-delivery.spec.ts",
   "installed-devices.spec.ts",
   "integrations.spec.ts",
+  "integrations-mcp.spec.ts",
   "model-lists.spec.ts",
   "past-card-show.spec.ts",
   "card-width.spec.ts",

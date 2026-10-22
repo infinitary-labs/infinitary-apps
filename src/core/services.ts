@@ -1,5 +1,5 @@
 import { mkdir, readdir } from "node:fs/promises";
-import { userInfo } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import { RELEASE_NOTES_PICTURE_OWNER } from "@shared/cardPictures";
@@ -118,6 +118,7 @@ import {
   githubIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
+  mcpIntegration,
 } from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { workingCopyFacts } from "./knowledge/gitFacts";
@@ -224,6 +225,7 @@ import { createAppTelemetry } from "./telemetry";
 import { readLinuxInstallation } from "./update/linuxInstall";
 import { createInstalledUpdateChecker, type UpdateChecker } from "./update/updateChecker";
 import { findOnPath } from "./userBin";
+import { atUtilityQos } from "./utilityQos";
 import { adoptBundledGit } from "./workspace/bundledGit";
 import { ProjectChanges } from "./workspace/projectChanges";
 import { ProjectSetups } from "./workspace/projectSetups";
@@ -1707,7 +1709,9 @@ export async function createServices(
     now: ticker.now,
   });
   // Integrations (docs/integrations.md): GitHub over the forge's own sign-in
-  // and the gateway's calls through it. A new kind is one more binding here.
+  // and the gateway's calls through it, and the MCP servers the person adds,
+  // each program a child with the host's environment, below the UI. A new
+  // kind is one more binding here.
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1717,6 +1721,14 @@ export async function createServices(
           write: (taskId, input, through) => githubGateway.write(taskId, input, through),
           readAsSeat: (input) => githubGateway.readAsSeat(input),
         },
+      }),
+      mcpIntegration({
+        root: paths.integrationsDir,
+        env: () => hostEnv(),
+        belowUi: (file, args) => atUtilityQos(file, args),
+        cwd: () => hostEnv().HOME ?? homedir(),
+        version: host.app.version,
+        changed: () => integrationsChanged(),
       }),
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),

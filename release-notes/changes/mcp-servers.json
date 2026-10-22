@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "mcp-servers",
+      "kind": "feature",
+      "title": "Add an MCP server in Settings → Integrations",
+      "body": "Settings → Integrations can now add an MCP server: give it a name and the program it runs or its https address, then press Connect. Its row opens on the server's own tools, each with what it does. Your first mate and your crew can use its read-only tools right away, and a tool that changes something asks you on a card first. A server that can tell when something changed lists that as well. Your first mate can add one for you when you ask.",
+      "area": "settings",
+      "picture": {
+        "dark": "mcp-servers-dark.webp",
+        "light": "mcp-servers-light.webp",
+        "alt": "Settings → Integrations with a Notes MCP server connected, its read-only tools allowed, its change asking you, and what it tells"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -67,6 +67,8 @@ export async function startCore(host: HostCapabilities): Promise<Core> {
       // the task channel with its keys.
       services.browsers?.closeAll();
       services.taskCommands?.close();
+      // Every MCP server program the app started stops with it.
+      void services.integrations.dispose();
       services.taskProtocol.dispose();
       services.quota.stop();
       services.stopLivenessSweep();

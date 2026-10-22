@@ -346,6 +346,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/shared/feed.ts": {
     FEED_REPORT_LIMIT: physical("clipped; the whole report stays on the task's record"),
   },
+  "src/shared/integrations.ts": {
+    INTEGRATION_ACTIONS_MAX: physical("refused in words at add naming the count; a grown list keeps its first"),
+  },
   "src/shared/keyboard.ts": {
     PANEL_COMMAND_ID_MAX: record("the panel's manifest is refused in words; shorten the command's id"),
   },

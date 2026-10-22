@@ -1042,6 +1042,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
+    "inf:integrations:add": (server) => services.integrations.add("mcp", server),
     "inf:integrations:configure": (id, patch) => services.integrations.configure(id, patch),
     "inf:integrations:remove": (id) => services.integrations.remove(id),
     "inf:integrations:check": (id) => services.integrations.check(id),

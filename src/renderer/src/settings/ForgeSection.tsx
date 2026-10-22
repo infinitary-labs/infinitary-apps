@@ -54,7 +54,8 @@ import { HERE } from "@shared/deviceNames";
  * requests.
  */
 
-const plusIcon = (
+/** The add chip's plus, shared with Settings -> Integrations' MCP server chip. */
+export const plusIcon = (
   <svg
     width="12"
     height="12"

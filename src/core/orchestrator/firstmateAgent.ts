@@ -4127,10 +4127,14 @@ export class FirstmateAgent {
     const oldest = rows[0];
     if (!oldest) return;
     const waited = now - oldest.createdAt;
-    // A captain's words never wait out the window, and nor does the one retry
-    // for a message nothing took effect after: someone is waiting on it.
+    // A captain's words never wait out the window, nor does the one retry
+    // for a message nothing took effect after, nor how his click on a setup
+    // card came out: someone is waiting on it.
     const waiting = rows.some(
-      (row) => row.origin === "captain" || row.facts?.kind === "answer-missing",
+      (row) =>
+        row.origin === "captain" ||
+        row.facts?.kind === "answer-missing" ||
+        row.facts?.kind === "project-setup",
     );
     if (waited < this.coalesceMs && !waiting) {
       this.scheduleCoalesceDrain(this.coalesceMs - waited);

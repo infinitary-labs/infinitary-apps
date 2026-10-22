@@ -101,7 +101,13 @@ import { Flagship, type FlagshipOptions, type FlagshipVaultView } from "./flagsh
 import { idleStallWays } from "./holds";
 import { Scheduler } from "./scheduler";
 import { keptMessageWords } from "./seat";
-import { ANSWER_MISSING_OPENING, captainTurn, renderWake, type TypedWake } from "./wakes";
+import {
+  ANSWER_MISSING_OPENING,
+  captainTurn,
+  renderWake,
+  SETUP_CARD_FAILED_WORDS,
+  type TypedWake,
+} from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -1494,6 +1500,29 @@ describe("FirstmateAgent", () => {
     await tick();
     expect(session.prompts).toHaveLength(1);
     expect(session.prompts[0]).toContain("aa11");
+    session.emitTurnEnd("Noted.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
+  it("tells how the captain's Add project came out at once, without waiting out the window", async () => {
+    // INF-835: a refused clone's sign-in card arrived after the journey's
+    // 5 seconds on a slow Mac, because its wake sat out the 3-second window.
+    const { agent, session } = setup({ coalesceMs: 10_000 });
+    agent.notifyOp(
+      {
+        facts: {
+          kind: "project-setup",
+          outcome: "failed",
+          name: "private",
+          reason: "GitHub needs your sign-in before Infinitary can clone octo/private.",
+        },
+      },
+      "agent",
+    );
+    await tick();
+    expect(session.prompts).toHaveLength(1);
+    expect(session.prompts[0]).toContain(SETUP_CARD_FAILED_WORDS);
     session.emitTurnEnd("Noted.");
     session.resolveNextPrompt();
     await tick();

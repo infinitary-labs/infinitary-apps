@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "project-setup-answer-at-once",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Your first mate answers your Add project click right away",
+      "body": "After you click Add project on a setup card, the first mate answers at once instead of a few seconds later. When the project could not be added, such as a clone that needs your GitHub sign-in, the card with the way forward appears sooner.",
+      "noPicture": "This changes how soon an existing card appears, not what any view shows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

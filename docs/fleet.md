@@ -16,6 +16,7 @@ A folder with a remote is linked where it is by default, and the card offers a f
 Add project and Not now carry host ops (`add-project`, `decline-project`) whose argument is the card's own offer; an effect is never declared to the body's frame, so only the captain's click on the card's own button adds a project.
 Add project runs, as the captain, the same dispatcher Settings uses: the setup, then the settings he chose that differ from the new row, then Runs on; each writes its own feed line and operation, and all are saved before the first mate hears.
 The first mate then hears once, as an `[fm-op]` `project-setup` wake: added with its settings and the work the card named, which it starts; already on the list; not now, which Not now and closing the card both mean; or failed with the reason, carrying a clone's typed sign-in refusal (`docs/forge.md`).
+That wake skips the inbox's coalescing window, so the first mate answers the click at once (`docs/inbox.md`).
 Settings' own Add project adds at once and shows no card.
 
 ## Choosing a task key

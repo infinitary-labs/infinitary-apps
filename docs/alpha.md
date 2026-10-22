@@ -288,7 +288,7 @@ So the switch publishes Infinitary under exactly those names.
 
 - **Which channels switch.**
   `packaging/old-cask-switch.json` lists them: `{"schemaVersion": 1, "channels": [...]}`, read by the resolver from the workflow's own commit.
-  It lists none until the captain's step 13 adds `alpha` and step 14 adds `stable`; from then on every Infinitary release of a listed channel switches that cask too.
+  It lists `alpha`, which the rename's step 13 added, and the captain's step 14 adds `stable`; every Infinitary release of a listed channel switches that cask too.
 - **What a switched release does.**
   After Infinitary's own tap commit, the release puts the same zip and Linux files on Firstmate 3000's tap, `kunchenguid/homebrew-tap`, under `firstmate-3000-v<version>` or `firstmate-3000-alpha-v<version>`, fetches them back without a credential, and moves that tap's casks, `firstmate-3000-updates.json` and `firstmate-3000-builds.json` in one commit (`scripts/publish-tap.sh` with `NAMES=firstmate`, `scripts/tap-publication.ts --names firstmate`).
   The token is `OLD_TAP_TOKEN`, never Infinitary's tap's own.

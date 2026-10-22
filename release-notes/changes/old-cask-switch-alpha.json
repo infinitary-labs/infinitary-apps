@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "old-cask-switch-alpha",
+      "reason": "Step 13 of the Infinitary rename: release work that turns on the old-cask switch for alpha, so the usual Firstmate 3000 alpha update installs Infinitary. What a person who moves sees is the now-infinitary note; nothing in Infinitary itself changes."
+    }
+  ]
+}

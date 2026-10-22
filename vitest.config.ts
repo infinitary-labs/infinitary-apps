@@ -75,6 +75,8 @@ const isolatedUnit = [
   "src/renderer/src/app/store.test.ts",
   "src/renderer/src/cards/cardTask.test.ts",
   "src/renderer/src/cards/taskLinks.test.ts",
+  // Its useCrewBoard mock must reach CrewSummary, which other files load unmocked.
+  "src/renderer/src/design/core/TaskFacts.test.tsx",
   "src/renderer/src/plugins/panelCards.test.ts",
   "src/renderer/src/plugins/panelPoint.test.ts",
   "src/renderer/src/plugins/point/openTask.test.ts",

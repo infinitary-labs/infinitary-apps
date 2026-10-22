@@ -79,6 +79,10 @@ const phoneBundle = "com.getinfinitary.infinitary";
 const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.WebKit" OR process CONTAINS[c] "photo"'
   + ' OR process == "assetsd" OR process == "mediaanalysisd"'
   + ' OR (process == "runningboardd" AND (eventMessage CONTAINS "WebKit" OR eventMessage CONTAINS "Infinitary"))';
+// INF-819: the simulator's own system, keyboard and accessibility processes, which answer XCUITest's
+// "Check for interrupting elements"; on a few iPhone talk parts they stopped answering after a keyboard switch.
+const SYSTEM_LOG = 'process IN {"SpringBoard", "backboardd", "AccessibilityUIServer", "testmanagerd", "kbd"}'
+  + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility"';
 // INF-804: on a fresh simulator Photos hands over a chosen photo only once it has opened its shared-with-you
 // library, which took up to six minutes after boot with simulators booting side by side. A part that chooses a
 // photo waits for Photos to say so, and fails rather than wait past fifteen minutes after boot.
@@ -256,6 +260,7 @@ const onePart = async () => {
     "-resultBundlePath", join(evidence, "phone.xcresult")];
   const plan = await planFor(values.xctestrun!, fixture.url);
   await photos;
+  const testing = new Date();
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!), "test-without-building"])
     .catch(async (error: Error & { output?: string }) => {
       // The CI job log names why a part failed; its results archive is often too large to fetch.
@@ -266,6 +271,11 @@ const onePart = async () => {
         "--predicate", SIMULATOR_LOG])
         .then(() => console.log(`The simulator's log is in ${number}-xcrun.log`))
         .catch((problem: Error) => console.log(`The simulator's log could not be kept: ${problem.message}`));
+      // INF-819: what the simulator's system logged from the part's first test to its failure, in its own log.
+      await run("xcrun", ["simctl", "spawn", simulator!, "log", "show", "--start", logTime(testing), "--style", "compact",
+        "--info", "--predicate", SYSTEM_LOG])
+        .then(() => console.log(`The simulator's system log is in ${number}-xcrun.log`))
+        .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
       throw error;
     });
   if (values.demo) for (const { name, raw } of recordings) {
